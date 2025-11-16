@@ -4,6 +4,54 @@ Este archivo proporciona contexto a Claude Code sobre el sistema completo de lot
 
 ---
 
+## 🚨 MIGRACIÓN EN CURSO - INFORMACIÓN CRÍTICA
+
+### Objetivo Principal
+**Migrar aplicación de Vue.js a React + Vite SIN código fuente disponible.**
+
+### Aplicación Original (Vue.js)
+- **URL:** https://la-numbers.apk.lol
+- **Usuario:** oliver
+- **Contraseña:** oliver0597@
+- **Framework:** Vue.js (versión a determinar)
+- **Estado:** En producción, funcional
+
+### Estrategia de Migración
+1. **Análisis con Playwright** - Automatizar navegación para entender flujos
+2. **Ingeniería inversa** - Inspeccionar red, DOM, comportamientos
+3. **Replicar funcionalidad** - Crear equivalente en React + Vite
+4. **Conectar a API existente** - Usar endpoints ya documentados
+
+### Herramientas de Análisis
+```bash
+# Playwright para automatización
+npx playwright install
+npx playwright codegen https://la-numbers.apk.lol
+
+# DevTools del navegador
+# - Network tab: capturar endpoints y payloads
+# - Elements: analizar estructura de componentes
+# - Vue DevTools: si está disponible
+```
+
+### Tareas Pendientes de Migración
+- [x] Mapear todas las rutas/vistas de la app Vue (70+ rutas documentadas)
+- [x] Documentar endpoints consumidos (API: api.lotocompany.com/api/v1/)
+- [x] Identificar flujos de usuario principales (23 módulos)
+- [ ] Replicar lógica de negocio en React
+- [ ] Migrar estilos y componentes UI
+- [ ] Interceptar payloads completos de endpoints
+- [ ] Mapear endpoints Vue → .NET API
+
+### Documentación Generada
+- **`docs/migration/VUE_APP_ANALYSIS.md`** - Análisis completo de la app Vue.js
+  - 70+ rutas mapeadas
+  - 70+ loterías/sorteos identificados
+  - Endpoints de API documentados
+  - Módulos y funcionalidades detallados
+
+---
+
 ## 📦 ESTRUCTURA DEL MONOREPO
 
 ```
@@ -394,6 +442,90 @@ CREATE TABLE betting_pool_prize_config (
 
 ---
 
+## 🆕 NUEVAS FUNCIONALIDADES (2025-11-16)
+
+### Mass Edit Betting Pools / Edición Masiva de Bancas
+
+**Commit:** `5017ba3`
+
+Componente para actualizar múltiples bancas simultáneamente, replicando la funcionalidad de la aplicación Vue.js original.
+
+#### Archivos Creados
+
+**V1 (Bootstrap):**
+- `frontend-v1/src/components/MassEditBancas.jsx` - Componente principal
+- `frontend-v1/src/components/common/form/` - Componentes reutilizables:
+  - `ToggleButtonGroup.jsx` - Botones toggle (ENCENDER/APAGAR/NO CAMBIAR)
+  - `IPhoneToggle.jsx` - Switch estilo iOS
+  - `SelectableBadgeGroup.jsx` - Badges clickeables para selección
+  - `constants.js` - Constantes de estilos (colores, tamaños)
+  - `index.js` - Exports
+
+**V2 (Material-UI):**
+- `frontend-v2/src/components/features/betting-pools/MassEditBettingPools/index.jsx`
+
+#### Layout Implementado
+
+```
+┌─────────────────────────────────────────────────┐
+│ SECCIÓN 1 (Full-width)                          │
+│ ├─ Zona (label izq, select der)                 │
+│ ├─ Tipo de caída (6 botones en UNA línea)       │
+│ ├─ Balance de desactivación                     │
+│ └─ Límite de venta diaria                       │
+├─────────────────────────────────────────────────┤
+│ SECCIÓN 2 (Dos columnas lado a lado)            │
+│ │ Columna Izquierda  │ Columna Derecha         │
+│ │ ─────────────────  │ ─────────────────       │
+│ │ Imprimir copia...  │ Idioma                  │
+│ │ Activa             │ Modo de impresión       │
+│ │ Control tickets... │ Proveedor descuento     │
+│ │ Usar premios...    │ Modo de descuento       │
+│ │ Permitir pasar...  │ Permitir cambiar pwd    │
+│ │ Minutos cancelar   │                          │
+│ │ Tickets cancelar   │                          │
+├─────────────────────────────────────────────────┤
+│ SECCIÓN 3 (Full-width)                          │
+│ ├─ SORTEOS (badges/chips clickeables)           │
+│ ├─ BANCAS (badges/chips clickeables)            │
+│ ├─ ZONAS (badges/chips clickeables)             │
+│ ├─ Switch "Actualizar valores generales"        │
+│ └─ Botón ACTUALIZAR                             │
+└─────────────────────────────────────────────────┘
+```
+
+#### Características Clave
+
+- **Labels y botones centrados verticalmente** (alignItems: center)
+- **Tipo de caída**: 6 botones en una sola línea (OFF, COBRO, DIARIA, MENSUAL, SEMANAL CON ACUMULADO, SEMANAL SIN ACUMULADO)
+- **Color emerald** (#5bc0be) para seleccionados con hover effects
+- **Botones más grandes**: font-size 11px, padding 4px 10px
+- **Responsive**: Dos columnas se adaptan en pantallas anchas (1400px+)
+
+#### Rutas
+
+- **V1**: `/bancas/edicion-masiva` → `MassEditBancas`
+- **V2**: `/betting-pools/mass-edit` → `MassEditBettingPools`
+
+#### API Endpoint
+
+```javascript
+PATCH /api/betting-pools/mass-update
+{
+  bettingPoolIds: [1, 2, 3],
+  drawIds: [1, 2],
+  zoneIds: [1],
+  configuration: {
+    fallType: 'DIARIA',
+    deactivationBalance: '1000',
+    printTicketCopy: 'NO CAMBIAR',
+    // ... más campos
+  }
+}
+```
+
+---
+
 ## 🔧 FIXES RECIENTES (2025-11-14)
 
 ### Fix Principal: Missing Prize Input Fields
@@ -648,6 +780,151 @@ useEffect(() => { ... }, [selectedSorteo?.sorteo_id]);  // Solo cuando ID cambia
 
 ---
 
+## 🎨 ESTILOS Y PATRONES UI - FRONTEND V1
+
+### Variables CSS del Sistema (FormStyles.css)
+
+```css
+:root {
+  /* Colores */
+  --form-label-color: rgb(120, 120, 120);
+  --form-input-text-color: rgb(60, 60, 60);
+  --form-input-border-color: rgb(221, 221, 221);
+  --form-input-focus-color: #51cbce;          /* Color principal turquesa */
+  --form-button-active-bg: rgb(81, 203, 206);  /* #51cbce */
+  --form-toggle-active-bg: #51cbce;
+
+  /* Tipografía */
+  --form-font-family: Montserrat, "Helvetica Neue", Arial, sans-serif;
+  --form-label-size: 12px;
+  --form-input-size: 14px;
+  --form-button-size: 14px;
+
+  /* Espaciado */
+  --form-label-width: 280px;
+  --form-input-height: 31px;
+  --form-border-radius: 4px;
+}
+```
+
+### Clases CSS Principales
+
+| Clase | Uso | Descripción |
+|-------|-----|-------------|
+| `create-branch-container` | Contenedor principal | Fondo gris #f5f5f5, padding 20px |
+| `page-title h1` | Título página | 24px, Montserrat, centrado |
+| `tabs-container` | Contenedor de tabs | Flex, border-bottom 2px |
+| `tab` | Tab individual | 14px, color #51cbce, height 40px |
+| `tab.active` | Tab activo | Background #51cbce, color white |
+| `branch-form` | Contenedor formulario | Background white, shadow, padding 30px |
+| `form-tab-container` | Contenido del tab | Background white, padding 20px |
+| `form-group` | Grupo de campo | Flex, align-items flex-start, margin-bottom 8px |
+| `form-label` | Etiqueta | 12px, width 280px, color gris |
+| `form-control` | Input/Select | 14px, height 31px, border-radius 4px |
+
+### Patrones de Componentes
+
+#### 1. Badges Seleccionables (Sorteos, Bancas, Zonas)
+```javascript
+const badgeStyle = {
+  padding: '4px 12px',
+  border: '1px solid #51cbce',
+  borderRadius: '3px',
+  cursor: 'pointer',
+  fontSize: '12px',
+  background: '#fff',
+  color: '#51cbce',
+  userSelect: 'none',
+  whiteSpace: 'nowrap',
+  display: 'inline-block',
+  margin: '2px'
+};
+
+const badgeSelectedStyle = {
+  ...badgeStyle,
+  background: '#51cbce',  // Fondo turquesa cuando seleccionado
+  color: '#fff'
+};
+```
+
+#### 2. Toggle Buttons (ENCENDER/APAGAR/NO CAMBIAR)
+```jsx
+<button
+  className={`btn btn-sm ${value === opt ? 'btn-info' : 'btn-outline-secondary'}`}
+  style={{
+    fontSize: '12px',
+    padding: '4px 10px',
+    borderRadius: '4px'
+  }}
+>
+  {opt}
+</button>
+```
+
+#### 3. Option Buttons (Radio-like)
+- Click para seleccionar
+- Click de nuevo para deseleccionar (null)
+- Múltiples opciones, solo una activa
+
+### Archivos CSS Importantes
+
+```
+frontend-v1/src/assets/css/
+├── FormStyles.css          # Variables y clases base de formularios
+├── CreateBranchGeneral.css # Contenedores y tabs
+├── PremiosComisiones.css   # Tab de premios
+├── HorariosSorteos.css     # Tab de horarios
+└── Sorteos.css             # Tab de sorteos
+```
+
+### Importaciones Requeridas
+
+```javascript
+import '../assets/css/FormStyles.css';
+import '../assets/css/CreateBranchGeneral.css';
+// Agregar según necesidad:
+// import '../assets/css/PremiosComisiones.css';
+// import '../assets/css/HorariosSorteos.css';
+```
+
+### Componentes Creados (2025-11-16)
+
+#### MassEditBancas.jsx
+- **Ubicación:** `frontend-v1/src/components/MassEditBancas.jsx`
+- **Ruta:** `/bancas/edicion-masiva`
+- **Funcionalidad:** Actualización masiva de configuración de bancas
+- **Estructura:**
+  - 4 tabs (Configuración, Pies de página, Premios & Comisiones, Sorteos)
+  - Badges seleccionables para Sorteos/Bancas/Zonas
+  - Toggle buttons para opciones booleanas
+  - Integración con API paginada
+
+#### MassEditBettingPools (V2)
+- **Ubicación:** `frontend-v2/src/components/features/betting-pools/MassEditBettingPools/index.jsx`
+- **Ruta:** `/betting-pools/mass-edit`
+- **Usa:** Material-UI components (ToggleButtonGroup, Checkbox, etc.)
+
+### Manejo de Respuestas Paginadas de API
+
+```javascript
+// API devuelve objetos paginados:
+{
+  items: [...],
+  pageNumber: 1,
+  pageSize: 50,
+  totalCount: 16,
+  ...
+}
+
+// Pattern correcto:
+const [zonesData, drawsData, poolsData] = await Promise.all([...]);
+setZones(zonesData?.items || zonesData || []);
+setDraws(drawsData?.items || drawsData || []);
+setBettingPools(poolsData?.items || poolsData || []);
+```
+
+---
+
 ## 📞 CONTACTO Y SOPORTE
 
 Para reportar issues o solicitar features:
@@ -658,7 +935,7 @@ Para reportar issues o solicitar features:
 
 ---
 
-**Generado:** 2025-11-14
-**Versión:** 1.0
+**Generado:** 2025-11-16
+**Versión:** 1.1
 **Autor:** Claude Code
 **Status:** ✅ Todos los proyectos funcionando y sincronizados
