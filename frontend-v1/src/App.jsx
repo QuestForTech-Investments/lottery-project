@@ -9,6 +9,7 @@ import BancasList from '@components/BancasList'
 import CreateBanca from '@components/CreateBanca'
 import CreateTickets from '@components/CreateTickets'
 import EditBanca from '@components/EditBanca'
+import MassEditBancas from '@components/MassEditBancas'
 import UserAdministradores from '@components/UserAdministradores'
 import UserIniciosSesion from '@components/UserIniciosSesion'
 import UserSesionesBloqueadas from '@components/UserSesionesBloqueadas'
@@ -58,6 +59,7 @@ function App() {
                 <Route path="/bancas/lista" element={<BancasList />} />
                 <Route path="/bancas/crear" element={<CreateBanca />} />
                 <Route path="/bancas/editar/:id" element={<EditBanca />} />
+                <Route path="/bancas/edicion-masiva" element={<MassEditBancas />} />
                 <Route path="/tickets/crear" element={<CreateTickets />} />
                 <Route path="/usuarios/administradores" element={<UserAdministradores />} />
                 <Route path="/usuarios/inicios-sesion" element={<UserIniciosSesion />} />
