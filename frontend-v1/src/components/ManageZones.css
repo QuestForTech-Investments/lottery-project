@@ -1,0 +1,250 @@
+/* ManageZones Component Styles */
+
+.manage-zones-container {
+  padding: 20px;
+  min-height: 100vh;
+}
+
+.manage-zones-container .card {
+  background-color: #ffffff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.manage-zones-container .card-header {
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #dee2e6;
+  padding: 20px;
+}
+
+.manage-zones-container .card-header h2 {
+  margin: 0 0 8px 0;
+  font-size: 1.5rem;
+  font-weight: 500;
+  color: #333;
+}
+
+.manage-zones-container .card-header .text-muted {
+  font-size: 0.875rem;
+}
+
+/* Tabs Wrapper with Navigation Buttons */
+.zones-tabs-wrapper {
+  display: flex;
+  align-items: center;
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #dee2e6;
+  position: relative;
+}
+
+.tab-scroll-button {
+  flex-shrink: 0;
+  width: 40px;
+  height: 48px;
+  background-color: #f8f9fa;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+}
+
+.tab-scroll-button:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+  color: #333;
+}
+
+.tab-scroll-button.left {
+  border-right: 1px solid #dee2e6;
+}
+
+.tab-scroll-button.right {
+  border-left: 1px solid #dee2e6;
+}
+
+/* Tabs Container */
+.zones-tabs-container {
+  flex: 1;
+  padding: 0 20px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-behavior: smooth;
+  /* Hide scrollbar but keep functionality */
+  scrollbar-width: thin;
+  scrollbar-color: #ccc #f1f1f1;
+}
+
+.zones-tabs {
+  display: flex;
+  gap: 4px;
+  min-width: min-content;
+}
+
+.zone-tab {
+  padding: 10px 20px;
+  background-color: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  color: #666;
+  font-family: Montserrat, "Helvetica Neue", Arial, sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.zone-tab:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+  color: #333;
+}
+
+.zone-tab.active {
+  background-color: #ffffff;
+  border-bottom-color: #51BCDA;
+  color: #51BCDA;
+}
+
+/* Section Container */
+.section-container {
+  border: 1px solid #e9ecef;
+  border-radius: 4px;
+  padding: 16px;
+  background-color: #f8f9fa;
+}
+
+.section-header {
+  margin-bottom: 16px;
+}
+
+.section-header h5 {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 500;
+  color: #333;
+}
+
+/* Multiselect Buttons Container */
+.multiselect-buttons-container {
+  background-color: white;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  padding: 16px;
+  max-height: 400px;
+  overflow-y: auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-content: flex-start;
+}
+
+/* Multiselect Button */
+.multiselect-btn {
+  padding: 6px 12px;
+  background-color: #ffffff;
+  border: 1.15px solid rgb(206, 212, 218);
+  border-radius: 4px;
+  color: #333;
+  font-family: Montserrat, "Helvetica Neue", Arial, sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  min-width: fit-content;
+}
+
+.multiselect-btn:hover {
+  background-color: rgba(81, 188, 218, 0.1);
+  border-color: #51BCDA;
+}
+
+.multiselect-btn.selected {
+  background-color: #51BCDA;
+  border-color: #51BCDA;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.multiselect-btn.selected:hover {
+  background-color: #3da8c8;
+  border-color: #3da8c8;
+}
+
+/* Card Footer */
+.manage-zones-container .card-footer {
+  background-color: #f8f9fa;
+  border-top: 1px solid #dee2e6;
+  padding: 20px;
+}
+
+.manage-zones-container .d-flex.gap-2 {
+  gap: 12px;
+}
+
+.manage-zones-container .btn-round {
+  border-radius: 30px;
+  padding: 11px 23px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-family: Montserrat, "Helvetica Neue", Arial, sans-serif;
+  transition: 0.15s linear;
+}
+
+.manage-zones-container .btn-info {
+  background-color: rgb(81, 188, 218);
+  border-color: rgb(81, 188, 218);
+}
+
+.manage-zones-container .btn-info:hover {
+  background-color: rgb(61, 168, 198);
+  border-color: rgb(61, 168, 198);
+}
+
+.manage-zones-container .btn-info:disabled {
+  background-color: #b0dae6;
+  border-color: #b0dae6;
+  cursor: not-allowed;
+}
+
+/* Scrollbar styling */
+.multiselect-buttons-container::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.multiselect-buttons-container::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.multiselect-buttons-container::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+.multiselect-buttons-container::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+.zones-tabs-container::-webkit-scrollbar {
+  height: 4px;
+}
+
+.zones-tabs-container::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+.zones-tabs-container::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 2px;
+}
+
+.zones-tabs-container::-webkit-scrollbar-thumb:hover {
+  background: #999;
+}

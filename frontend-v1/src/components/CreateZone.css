@@ -1,0 +1,203 @@
+/* CreateZone Component Styles */
+/* Based on provided formulario.css */
+
+.create-zone-container {
+  padding: 20px;
+  font-family: Montserrat, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* Form container */
+.create-zone-form {
+  font-family: Montserrat, "Helvetica Neue", Arial, sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  color: rgb(37, 36, 34);
+  line-height: 21px;
+}
+
+/* Tabs styling */
+.tabs.tabs-content {
+  margin-top: 20px;
+}
+
+.nav-tabs {
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.nav-tabs .nav-link {
+  font-family: Montserrat, "Helvetica Neue", Arial, sans-serif;
+  font-weight: 500;
+  color: #666;
+  border: none;
+  border-bottom: 3px solid transparent;
+  padding: 12px 24px;
+  transition: all 0.3s ease;
+}
+
+.nav-tabs .nav-link:hover {
+  color: rgb(81, 188, 218);
+  border-bottom-color: rgb(81, 188, 218);
+}
+
+.nav-tabs .nav-link.active {
+  color: rgb(81, 188, 218);
+  background-color: transparent;
+  border-bottom-color: rgb(81, 188, 218);
+  font-weight: 600;
+}
+
+/* Form zone */
+.form-zone {
+  padding: 20px 0;
+}
+
+.margin-left-right-auto {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Form field - matching provided CSS exactly */
+.form-field-custom {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 10px;
+  background: rgb(255, 255, 255);
+  color: rgb(102, 97, 91);
+  font-family: Montserrat, "Helvetica Neue", Arial, sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  border: 1.15px solid rgb(221, 221, 221);
+  border-radius: 4px;
+  transition: color 0.3s ease-in-out, border-color 0.3s ease-in-out, background-color 0.3s ease-in-out;
+}
+
+.form-field-custom:focus {
+  outline: none;
+  border-color: rgb(81, 188, 218);
+  box-shadow: 0 0 0 0.2rem rgba(81, 188, 218, 0.25);
+}
+
+/* Button - matching provided CSS exactly */
+.form-button {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin: 10px 1px;
+  padding: 11px 23px;
+  background: rgb(81, 188, 218);
+  color: rgb(255, 255, 255);
+  font-family: Montserrat, "Helvetica Neue", Arial, sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  border: 0;
+  border-radius: 30px;
+  text-align: center;
+  line-height: 16.2px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: 0.15s linear;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.form-button:hover {
+  background: rgb(61, 168, 198);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  transform: translateY(-1px);
+}
+
+.form-button:active {
+  transform: translateY(0);
+}
+
+.form-button:disabled {
+  background: rgb(180, 180, 180);
+  cursor: not-allowed;
+}
+
+/* Contacts table */
+.contacts-table {
+  font-family: Montserrat, "Helvetica Neue", Arial, sans-serif;
+  margin-top: 20px;
+}
+
+.contacts-table thead th {
+  font-weight: 600;
+  font-size: 14px;
+  background-color: #f5f5f5;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.contacts-table tbody td {
+  font-size: 14px;
+  vertical-align: middle;
+}
+
+/* Contact form section */
+.contact-form-section {
+  background-color: #f9f9f9;
+}
+
+/* Tab content */
+.tab-content {
+  padding: 20px 0;
+}
+
+.tab-pane {
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Card styling */
+.card-header h2 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 500;
+  font-family: Montserrat, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* Alerts */
+.alert {
+  font-family: Montserrat, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* Gap utility for buttons */
+.d-flex.gap-2 {
+  gap: 0.5rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .create-zone-container {
+    padding: 15px;
+  }
+
+  .nav-tabs .nav-link {
+    padding: 10px 16px;
+    font-size: 13px;
+  }
+
+  .col-sm-2.offset-sm-2,
+  .col-sm-4 {
+    width: 100%;
+    max-width: 100%;
+    margin-left: 0;
+  }
+
+  .form-zone .row {
+    flex-direction: column;
+  }
+
+  .col-form-label {
+    text-align: left !important;
+    margin-bottom: 8px;
+  }
+}

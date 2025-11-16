@@ -1,0 +1,232 @@
+/**
+ * EXTRACTOR DE CONTROLES DEL TAB CONFIGURACIÓN
+ * Copia y pega este código completo en la consola de Chrome
+ */
+
+(function() {
+    console.log('🚀 Iniciando extracción del tab Configuración...');
+    
+    // ========== PASO 1: ENCONTRAR EL TAB CONFIGURACIÓN ==========
+    function findConfigTab() {
+        // Buscar el tab panel activo visible
+        const panels = document.querySelectorAll('[role="tabpanel"], .tab-pane, .tab-content > div');
+        
+        for (let panel of panels) {
+            const isVisible = panel.offsetParent !== null && 
+                            !panel.classList.contains('hidden') && 
+                            panel.style.display !== 'none';
+            
+            if (isVisible) {
+                console.log('✅ Tab encontrado:', panel);
+                return panel;
+            }
+        }
+        
+        // Si no encuentra, intentar buscar por el contenedor principal visible
+        const mainContent = document.querySelector('.tab-content, [class*="tab"]');
+        if (mainContent) {
+            return mainContent;
+        }
+        
+        return null;
+    }
+    
+    // ========== PASO 2: EXTRAER INFORMACIÓN DE CONTROLES ==========
+    function extractControlInfo(element, index) {
+        const rect = element.getBoundingClientRect();
+        const computed = window.getComputedStyle(element);
+        
+        // Identificar tipo de control
+        let controlType = element.tagName.toLowerCase();
+        if (element.tagName === 'INPUT') {
+            controlType = `input-${element.type}`;
+        }
+        
+        // Información básica del control
+        const info = {
+            index: index,
+            tipo: controlType,
+            id: element.id || null,
+            nombre: element.name || null,
+            clase: element.className || null,
+            
+            // Texto y valores
+            etiqueta: element.textContent?.trim().substring(0, 50) || null,
+            valor: element.value || null,
+            placeholder: element.placeholder || null,
+            
+            // Posición y dimensiones
+            posicion: {
+                x: Math.round(rect.left + window.scrollX),
+                y: Math.round(rect.top + window.scrollY),
+                ancho: Math.round(rect.width),
+                alto: Math.round(rect.height)
+            },
+            
+            // Atributos especiales
+            requerido: element.required || false,
+            deshabilitado: element.disabled || false,
+            visible: element.offsetParent !== null
+        };
+        
+        // Para checkboxes y switches
+        if (element.type === 'checkbox' || element.classList.contains('switch')) {
+            info.checked = element.checked;
+        }
+        
+        // Para selects
+        if (element.tagName === 'SELECT') {
+            info.opciones = Array.from(element.options).map(opt => ({
+                valor: opt.value,
+                texto: opt.text,
+                seleccionado: opt.selected
+            }));
+        }
+        
+        return info;
+    }
+    
+    function extractControlStyles(element, index) {
+        const computed = window.getComputedStyle(element);
+        
+        return {
+            index: index,
+            tipo: element.tagName.toLowerCase(),
+            id: element.id || null,
+            clase: element.className || null,
+            
+            estilos: {
+                // Tipografía
+                fontFamily: computed.fontFamily,
+                fontSize: computed.fontSize,
+                fontWeight: computed.fontWeight,
+                color: computed.color,
+                textAlign: computed.textAlign,
+                
+                // Fondo y bordes
+                backgroundColor: computed.backgroundColor,
+                border: computed.border,
+                borderRadius: computed.borderRadius,
+                
+                // Espaciado
+                padding: computed.padding,
+                margin: computed.margin,
+                
+                // Dimensiones
+                width: computed.width,
+                height: computed.height,
+                minWidth: computed.minWidth,
+                minHeight: computed.minHeight,
+                
+                // Efectos
+                boxShadow: computed.boxShadow,
+                opacity: computed.opacity,
+                
+                // Display
+                display: computed.display,
+                position: computed.position
+            }
+        };
+    }
+    
+    // ========== PASO 3: PROCESAR TODOS LOS CONTROLES ==========
+    function extractAllControls(container) {
+        console.log('📦 Extrayendo controles del contenedor...');
+        
+        // Selectores de controles de formulario
+        const selectors = [
+            'input',
+            'select',
+            'textarea',
+            'button',
+            '[class*="switch"]',
+            '[class*="toggle"]',
+            '[class*="chip"]',
+            '[class*="tag"]',
+            'label'
+        ];
+        
+        const controls = container.querySelectorAll(selectors.join(', '));
+        console.log(`✅ ${controls.length} controles encontrados`);
+        
+        const componentsData = [];
+        const stylesData = [];
+        
+        controls.forEach((control, index) => {
+            componentsData.push(extractControlInfo(control, index));
+            stylesData.push(extractControlStyles(control, index));
+        });
+        
+        return { componentsData, stylesData };
+    }
+    
+    // ========== PASO 4: DESCARGAR ARCHIVOS ==========
+    function downloadJSON(data, filename) {
+        const json = JSON.stringify(data, null, 2);
+        const blob = new Blob([json], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        console.log(`💾 Descargado: ${filename}`);
+    }
+    
+    // ========== EJECUTAR EXTRACCIÓN ==========
+    const configTab = findConfigTab();
+    
+    if (!configTab) {
+        console.error('❌ No se encontró el tab de Configuración');
+        console.log('💡 Ejecuta manualmente:');
+        console.log('   const container = document.querySelector("TU_SELECTOR");');
+        console.log('   extractManual(container);');
+        return;
+    }
+    
+    const { componentsData, stylesData } = extractAllControls(configTab);
+    
+    // Crear estructura final con metadata
+    const componentesArchivo = {
+        fecha: new Date().toISOString(),
+        url: window.location.href,
+        totalControles: componentsData.length,
+        controles: componentsData
+    };
+    
+    const estilosArchivo = {
+        fecha: new Date().toISOString(),
+        url: window.location.href,
+        totalControles: stylesData.length,
+        estilos: stylesData
+    };
+    
+    // Descargar archivos
+    downloadJSON(componentesArchivo, 'configuracion-componentes.json');
+    downloadJSON(estilosArchivo, 'configuracion-estilos.json');
+    
+    console.log('✅ EXTRACCIÓN COMPLETADA');
+    console.log('📊 Total de controles extraídos:', componentsData.length);
+    console.log('📁 Archivos descargados:');
+    console.log('   1. configuracion-componentes.json');
+    console.log('   2. configuracion-estilos.json');
+    
+    // Función auxiliar para extracción manual
+    window.extractManual = function(container) {
+        if (!container) {
+            console.error('❌ Proporciona un elemento válido');
+            return;
+        }
+        const { componentsData, stylesData } = extractAllControls(container);
+        downloadJSON({ controles: componentsData }, 'configuracion-componentes.json');
+        downloadJSON({ estilos: stylesData }, 'configuracion-estilos.json');
+        console.log('✅ Extracción manual completada');
+    };
+    
+    return {
+        componentes: componentesArchivo,
+        estilos: estilosArchivo
+    };
+})();

@@ -1,0 +1,24 @@
+# Azure Credentials - NEVER COMMIT
+.env.azure
+azure-sql-credentials.json
+AZURE_CREDENTIALS.txt
+CREDENTIALS.md
+
+# Local Configuration
+.claude/settings.local.json
+
+# Temporary files
+*.tmp
+*.bak
+*~
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*.backup

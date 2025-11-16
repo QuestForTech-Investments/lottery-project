@@ -1,0 +1,338 @@
+/* React Multiselect Component Styles - Vue Multiselect inspired */
+
+.react-multiselect-container {
+  position: relative;
+  width: 100%;
+}
+
+.react-multiselect {
+  position: relative;
+  min-height: 40px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+  transition: border-color 0.2s ease;
+}
+
+.react-multiselect:hover {
+  border-color: #999;
+}
+
+.react-multiselect.is-open {
+  border-color: #51cbce; /* Corporate primary color */
+  box-shadow: 0 0 0 2px rgba(81, 203, 206, 0.25);
+}
+
+.react-multiselect.is-disabled {
+  background-color: #f8f9fa;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Tags container */
+.react-multiselect__tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  padding: 6px 8px;
+  min-height: 28px;
+  gap: 4px;
+}
+
+/* Individual tags - Corporate colors */
+.react-multiselect__tag {
+  display: inline-flex;
+  align-items: center;
+  background: #51cbce; /* Corporate primary color */
+  color: white;
+  border-radius: 3px;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin: 1px;
+  max-width: 200px;
+  border: 1px solid #51cbce;
+  transition: all 0.2s ease;
+}
+
+.react-multiselect__tag-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-right: 4px;
+}
+
+.react-multiselect__tag-remove {
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+  padding: 0;
+  margin-left: 4px;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background-color 0.2s ease;
+}
+
+.react-multiselect__tag-remove:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.react-multiselect__tag-remove:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* Tag hover effect */
+.react-multiselect__tag:hover {
+  background: #34b5b8; /* Corporate primary hover color */
+  border-color: #34b5b8;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Search input */
+.react-multiselect__input {
+  border: none;
+  outline: none;
+  background: transparent;
+  padding: 2px 4px;
+  flex: 1;
+  min-width: 100px;
+  font-size: 14px;
+}
+
+.react-multiselect__input:disabled {
+  cursor: not-allowed;
+}
+
+.react-multiselect__input::placeholder {
+  color: #999;
+}
+
+/* Dropdown arrow */
+.react-multiselect__arrow {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #666;
+  pointer-events: none;
+  transition: transform 0.2s ease;
+}
+
+.react-multiselect.is-open .react-multiselect__arrow {
+  transform: translateY(-50%) rotate(180deg);
+}
+
+/* Dropdown content */
+.react-multiselect__content {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #ddd;
+  border-top: none;
+  border-radius: 0 0 4px 4px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+/* Action buttons */
+.react-multiselect__actions {
+  display: flex;
+  gap: 4px;
+  padding: 8px;
+  border-bottom: 1px solid #f0f0f0;
+  background-color: #f8f9fa;
+}
+
+.react-multiselect__action-btn {
+  flex: 1;
+  padding: 4px 8px;
+  border: 1px solid #ddd;
+  background: white;
+  color: #333;
+  border-radius: 3px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.react-multiselect__action-btn:hover:not(:disabled) {
+  background-color: #e9ecef;
+  border-color: #adb5bd;
+}
+
+.react-multiselect__action-btn:disabled {
+  background-color: #f8f9fa;
+  color: #6c757d;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.react-multiselect__action-btn i {
+  font-size: 10px;
+}
+
+/* Options list */
+.react-multiselect__options {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.react-multiselect__option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: all 0.2s ease; /* Smooth transition for all properties */
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.react-multiselect__option:last-child {
+  border-bottom: none;
+}
+
+.react-multiselect__option:hover {
+  background-color: #f8f9fa;
+}
+
+.react-multiselect__option.is-selected {
+  background-color: #51cbce; /* Corporate primary color as background */
+  color: white; /* White text for better contrast */
+  font-weight: 500; /* Slightly bolder text for selected items */
+}
+
+.react-multiselect__option.is-selected:hover {
+  background-color: #34b5b8; /* Corporate primary hover color */
+  color: white;
+}
+
+/* Option content */
+.react-multiselect__option-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.react-multiselect__option-title {
+  font-weight: 500;
+  font-size: 14px;
+  margin-bottom: 2px;
+}
+
+.react-multiselect__option-description {
+  font-size: 12px;
+  color: #666;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Option check mark */
+.react-multiselect__option-check {
+  color: white; /* White check mark for better visibility on corporate background */
+  margin-left: 8px;
+  flex-shrink: 0;
+  font-weight: bold; /* Bolder check mark */
+}
+
+/* Check mark for non-selected items */
+.react-multiselect__option:not(.is-selected) .react-multiselect__option-check {
+  color: #51cbce; /* Corporate primary color for non-selected items */
+}
+
+/* No options message */
+.react-multiselect__no-options {
+  padding: 12px;
+  text-align: center;
+  color: #666;
+  font-style: italic;
+}
+
+.react-multiselect__no-options i {
+  margin-right: 6px;
+}
+
+/* Loading state */
+.react-multiselect-loading {
+  padding: 12px;
+  text-align: center;
+  color: #666;
+}
+
+.react-multiselect-loading i {
+  margin-right: 6px;
+}
+
+/* Error state */
+.react-multiselect-error {
+  padding: 12px;
+  text-align: center;
+  color: #dc3545;
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+  border-radius: 4px;
+}
+
+.react-multiselect-error i {
+  margin-right: 6px;
+}
+
+/* Summary */
+.react-multiselect__summary {
+  margin-top: 4px;
+  padding: 0 4px;
+}
+
+.react-multiselect__summary i {
+  margin-right: 4px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .react-multiselect__tag {
+    max-width: 150px;
+    font-size: 11px;
+  }
+  
+  .react-multiselect__content {
+    max-height: 150px;
+  }
+  
+  .react-multiselect__option {
+    padding: 6px 8px;
+  }
+  
+  .react-multiselect__option-title {
+    font-size: 13px;
+  }
+  
+  .react-multiselect__option-description {
+    font-size: 11px;
+  }
+}
+
+/* Focus styles for accessibility */
+.react-multiselect:focus-within {
+  border-color: #51cbce; /* Corporate primary color */
+  box-shadow: 0 0 0 2px rgba(81, 203, 206, 0.25);
+}
+
+.react-multiselect__option:focus {
+  outline: 2px solid #51cbce; /* Corporate primary color */
+  outline-offset: -2px;
+}

@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Manual Test - Load Banca 9</title>
+    <style>
+        body { font-family: monospace; padding: 20px; }
+        .log { margin: 10px 0; }
+        .error { color: red; }
+        .success { color: green; }
+        .info { color: blue; }
+        pre { background: #f5f5f5; padding: 10px; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Manual Test - Open Banca 9 Edit Page</h1>
+    <div id="instructions">
+        <h2>Instructions:</h2>
+        <ol>
+            <li>Open browser dev tools (F12)</li>
+            <li>Go to Console tab</li>
+            <li>Click the link below</li>
+            <li>Look for console logs starting with "🔍 [prizeFieldsToJsonConfig]"</li>
+        </ol>
+        <br/>
+        <a href="http://localhost:3000/bancas/editar/9" target="_blank" style="font-size: 20px; padding: 10px; background: blue; color: white; text-decoration: none; border-radius: 5px;">
+            📝 OPEN EDIT BANCA 9
+        </a>
+        <br/><br/>
+        <p><strong>What to look for in console:</strong></p>
+        <ul>
+            <li>🔍 [prizeFieldsToJsonConfig] Called with: {...}</li>
+            <li>Should show: isArray: true, length: X</li>
+            <li>Should show: totalFields count</li>
+            <li>Should show: directo_primer_pago value</li>
+        </ul>
+    </div>
+</body>
+</html>

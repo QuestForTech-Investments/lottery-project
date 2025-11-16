@@ -1,0 +1,714 @@
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using LotteryApi.Data;
+using LotteryApi.Models;
+using LotteryApi.DTOs;
+using System.Text.Json;
+
+namespace LotteryApi.Controllers;
+
+[ApiController]
+[Route("api/betting-pools/{bettingPoolId}/sortitions")]
+public class BettingPoolSortitionsController : ControllerBase
+{
+    private readonly LotteryDbContext _context;
+    private readonly ILogger<BettingPoolSortitionsController> _logger;
+
+    public BettingPoolSortitionsController(
+        LotteryDbContext context,
+        ILogger<BettingPoolSortitionsController> _logger)
+    {
+        _context = context;
+        this._logger = _logger;
+    }
+
+    /// <summary>
+    /// Get all sortitions for a betting pool with lottery and game types information
+    /// DEPRECATED: This endpoint proxies to betting_pool_draws for backward compatibility.
+    /// Use /api/betting-pools/{bettingPoolId}/draws instead.
+    /// </summary>
+    [HttpGet]
+    public async Task<ActionResult<List<BettingPoolSortitionDto>>> GetSortitions(int bettingPoolId)
+    {
+        try
+        {
+            var bettingPoolExists = await _context.BettingPools
+                .AnyAsync(bp => bp.BettingPoolId == bettingPoolId);
+
+            if (!bettingPoolExists)
+            {
+                return NotFound(new { message = "Banca no encontrada" });
+            }
+
+            // ✅ UPDATED: Query betting_pool_draws instead of betting_pool_sortitions
+            var draws = await _context.BettingPoolDraws
+                .AsNoTracking()
+                .Where(bpd => bpd.BettingPoolId == bettingPoolId)
+                .Include(bpd => bpd.Draw)
+                    .ThenInclude(d => d!.Lottery)
+                .ToListAsync();
+
+            if (!draws.Any())
+            {
+                return Ok(new List<BettingPoolSortitionDto>());
+            }
+
+            // Extract lottery IDs and draw IDs
+            var lotteryIds = draws
+                .Where(d => d.Draw?.LotteryId != null)
+                .Select(d => d.Draw!.LotteryId)
+                .Distinct()
+                .ToList();
+
+            var drawIds = draws.Select(d => d.DrawId).ToList();
+
+            // ✅ UPDATED: Load game types from draw_game_compatibility
+            var gameTypesByDraw = await _context.DrawGameCompatibilities
+                .Where(dgc => drawIds.Contains(dgc.DrawId) && dgc.IsActive)
+                .Include(dgc => dgc.GameType)
+                .Where(dgc => dgc.GameType != null && dgc.GameType.IsActive)
+                .OrderBy(dgc => dgc.DrawId)
+                .ThenBy(dgc => dgc.GameType!.DisplayOrder ?? int.MaxValue)
+                .ThenBy(dgc => dgc.GameType!.GameName)
+                .Select(dgc => new
+                {
+                    dgc.DrawId,
+                    GameType = new GameTypeDto
+                    {
+                        GameTypeId = dgc.GameType!.GameTypeId,
+                        GameTypeCode = dgc.GameType.GameTypeCode,
+                        GameName = dgc.GameType.GameName,
+                        PrizeMultiplier = dgc.GameType.PrizeMultiplier,
+                        NumberLength = dgc.GameType.NumberLength,
+                        RequiresAdditionalNumber = dgc.GameType.RequiresAdditionalNumber,
+                        DisplayOrder = dgc.GameType.DisplayOrder
+                    }
+                })
+                .ToListAsync();
+
+            var gameTypesDict = gameTypesByDraw
+                .GroupBy(x => x.DrawId)
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.Select(x => x.GameType).ToList()
+                );
+
+            // Load enabled game types from betting_pool_draw_game_types
+            var enabledGameTypes = await _context.BettingPoolDrawGameTypes
+                .Where(bpdgt => bpdgt.BettingPoolId == bettingPoolId &&
+                               drawIds.Contains(bpdgt.DrawId) &&
+                               bpdgt.IsActive)
+                .ToListAsync();
+
+            var enabledGameTypesDict = enabledGameTypes
+                .GroupBy(x => x.DrawId)
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.Select(x => x.GameTypeId).ToList()
+                );
+
+            // Build DTOs in old sortition format for backward compatibility
+            var result = new List<BettingPoolSortitionDto>();
+
+            foreach (var draw in draws)
+            {
+                if (draw.Draw?.Lottery == null) continue;
+
+                var dto = new BettingPoolSortitionDto
+                {
+                    SortitionId = draw.BettingPoolDrawId, // Map draw ID to sortition ID
+                    BettingPoolId = draw.BettingPoolId,
+                    SortitionType = draw.Draw.Lottery.LotteryName ?? string.Empty,
+                    IsEnabled = draw.IsActive,
+                    LotteryId = draw.Draw.LotteryId,
+                    LotteryName = draw.Draw.Lottery.LotteryName,
+                    AnticipatedClosing = draw.AnticipatedClosingMinutes,
+                    EnabledGameTypeIds = enabledGameTypesDict.TryGetValue(draw.DrawId, out var enabled)
+                        ? enabled
+                        : new List<int>(),
+                    AvailableGameTypes = gameTypesDict.TryGetValue(draw.DrawId, out var available)
+                        ? available
+                        : new List<GameTypeDto>(),
+                    SpecificConfig = null // No longer using JSON config
+                };
+
+                result.Add(dto);
+            }
+
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener sorteos para la banca {BettingPoolId}", bettingPoolId);
+            return StatusCode(500, new { message = $"Error al obtener sorteos: {ex.Message}" });
+        }
+    }
+
+    /// <summary>
+    /// Get a specific sortition by ID with full details
+    /// </summary>
+    [HttpGet("{sortitionId}")]
+    public async Task<ActionResult<BettingPoolSortitionDto>> GetSortition(
+        int bettingPoolId,
+        int sortitionId)
+    {
+        try
+        {
+            var sortition = await _context.BettingPoolSortitions
+                .FirstOrDefaultAsync(s => s.BettingPoolId == bettingPoolId &&
+                                         s.SortitionId == sortitionId);
+
+            if (sortition == null)
+            {
+                return NotFound(new { message = "Sorteo no encontrado" });
+            }
+
+            // ✅ OPTIMIZED: Build DTO without helper method (avoiding extra queries)
+            var dto = new BettingPoolSortitionDto
+            {
+                SortitionId = sortition.SortitionId,
+                BettingPoolId = sortition.BettingPoolId,
+                SortitionType = sortition.SortitionType,
+                IsEnabled = sortition.IsEnabled,
+                SpecificConfig = sortition.SpecificConfig,
+                AvailableGameTypes = new List<GameTypeDto>()
+            };
+
+            // Parse config and load related data
+            if (!string.IsNullOrEmpty(sortition.SpecificConfig))
+            {
+                try
+                {
+                    using var doc = JsonDocument.Parse(sortition.SpecificConfig);
+                    var root = doc.RootElement;
+
+                    if (root.TryGetProperty("lotteryId", out var lotteryIdProp))
+                    {
+                        var lotteryId = lotteryIdProp.GetInt32();
+                        dto.LotteryId = lotteryId;
+
+                        // Load lottery name
+                        var lottery = await _context.Lotteries
+                            .Where(l => l.LotteryId == lotteryId)
+                            .Select(l => l.LotteryName)
+                            .FirstOrDefaultAsync();
+                        dto.LotteryName = lottery;
+
+                        // Load game types
+                        dto.AvailableGameTypes = await _context.LotteryGameCompatibilities
+                            .Where(lgc => lgc.LotteryId == lotteryId && lgc.IsActive)
+                            .Include(lgc => lgc.GameType)
+                            .Where(lgc => lgc.GameType != null && lgc.GameType.IsActive)
+                            .OrderBy(lgc => lgc.GameType!.DisplayOrder ?? int.MaxValue)
+                            .ThenBy(lgc => lgc.GameType!.GameName)
+                            .Select(lgc => new GameTypeDto
+                            {
+                                GameTypeId = lgc.GameType!.GameTypeId,
+                                GameTypeCode = lgc.GameType.GameTypeCode,
+                                GameName = lgc.GameType.GameName,
+                                PrizeMultiplier = lgc.GameType.PrizeMultiplier,
+                                NumberLength = lgc.GameType.NumberLength,
+                                RequiresAdditionalNumber = lgc.GameType.RequiresAdditionalNumber,
+                                DisplayOrder = lgc.GameType.DisplayOrder
+                            })
+                            .ToListAsync();
+                    }
+
+                    if (root.TryGetProperty("enabledGameTypeIds", out var gameTypesProp))
+                    {
+                        dto.EnabledGameTypeIds = JsonSerializer.Deserialize<List<int>>(
+                            gameTypesProp.GetRawText()) ?? new List<int>();
+                    }
+
+                    if (root.TryGetProperty("anticipatedClosing", out var closingProp) &&
+                        closingProp.ValueKind != JsonValueKind.Null)
+                    {
+                        dto.AnticipatedClosing = closingProp.GetInt32();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Error al parsear configuración de sorteo {SortitionId}",
+                        sortition.SortitionId);
+                }
+            }
+
+            return Ok(dto);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al obtener sorteo {SortitionId}", sortitionId);
+            return StatusCode(500, new { message = $"Error al obtener sorteo: {ex.Message}" });
+        }
+    }
+
+    /// <summary>
+    /// Create a new sortition with lottery and game types configuration
+    /// </summary>
+    [HttpPost]
+    public async Task<ActionResult<BettingPoolSortitionDto>> CreateSortition(
+        int bettingPoolId,
+        [FromBody] CreateBettingPoolSortitionDto dto)
+    {
+        try
+        {
+            var bettingPoolExists = await _context.BettingPools
+                .AnyAsync(bp => bp.BettingPoolId == bettingPoolId);
+
+            if (!bettingPoolExists)
+            {
+                return NotFound(new { message = "Banca no encontrada" });
+            }
+
+            // Validate lottery exists
+            var lottery = await _context.Lotteries
+                .FirstOrDefaultAsync(l => l.LotteryId == dto.LotteryId);
+
+            if (lottery == null)
+            {
+                return BadRequest(new { message = "Lotería no encontrada" });
+            }
+
+            // Check if sortition for this lottery already exists
+            var exists = await _context.BettingPoolSortitions
+                .AnyAsync(s => s.BettingPoolId == bettingPoolId &&
+                              s.SortitionType == lottery.LotteryType);
+
+            if (exists)
+            {
+                return BadRequest(new { message = "Ya existe un sorteo para esta lotería en esta banca" });
+            }
+
+            // Validate game types if provided
+            if (dto.EnabledGameTypeIds != null && dto.EnabledGameTypeIds.Any())
+            {
+                var validGameTypes = await _context.LotteryGameCompatibilities
+                    .Where(lgc => lgc.LotteryId == dto.LotteryId &&
+                                  dto.EnabledGameTypeIds.Contains(lgc.GameTypeId) &&
+                                  lgc.IsActive)
+                    .CountAsync();
+
+                if (validGameTypes != dto.EnabledGameTypeIds.Count)
+                {
+                    return BadRequest(new { message = "Algunos tipos de apuesta no son válidos para esta lotería" });
+                }
+            }
+
+            // Build specific config JSON
+            var config = new
+            {
+                lotteryId = dto.LotteryId,
+                enabledGameTypeIds = dto.EnabledGameTypeIds ?? new List<int>(),
+                anticipatedClosing = dto.AnticipatedClosing
+            };
+
+            var sortition = new BettingPoolSortition
+            {
+                BettingPoolId = bettingPoolId,
+                SortitionType = lottery.LotteryType ?? lottery.LotteryName, // Store lottery type/code
+                IsEnabled = dto.IsEnabled,
+                SpecificConfig = JsonSerializer.Serialize(config),
+                CreatedAt = DateTime.UtcNow
+            };
+
+            _context.BettingPoolSortitions.Add(sortition);
+            await _context.SaveChangesAsync();
+
+            var result = await BuildSortitionDto(sortition);
+
+            return CreatedAtAction(
+                nameof(GetSortition),
+                new { bettingPoolId, sortitionId = sortition.SortitionId },
+                result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al crear sorteo para la banca {BettingPoolId}", bettingPoolId);
+            return StatusCode(500, new { message = $"Error al crear sorteo: {ex.Message}" });
+        }
+    }
+
+    /// <summary>
+    /// Update an existing sortition
+    /// </summary>
+    [HttpPut("{sortitionId}")]
+    public async Task<ActionResult<BettingPoolSortitionDto>> UpdateSortition(
+        int bettingPoolId,
+        int sortitionId,
+        [FromBody] UpdateBettingPoolSortitionDto dto)
+    {
+        try
+        {
+            var sortition = await _context.BettingPoolSortitions
+                .FirstOrDefaultAsync(s => s.BettingPoolId == bettingPoolId &&
+                                         s.SortitionId == sortitionId);
+
+            if (sortition == null)
+            {
+                return NotFound(new { message = "Sorteo no encontrado" });
+            }
+
+            // Parse existing config
+            var existingConfig = string.IsNullOrEmpty(sortition.SpecificConfig)
+                ? new { lotteryId = 0, enabledGameTypeIds = new List<int>(), anticipatedClosing = (int?)null }
+                : JsonSerializer.Deserialize<dynamic>(sortition.SpecificConfig);
+
+            int currentLotteryId = 0;
+            var currentGameTypeIds = new List<int>();
+            int? currentAnticipatedClosing = null;
+
+            try
+            {
+                if (existingConfig != null)
+                {
+                    if (existingConfig.TryGetProperty("lotteryId", out JsonElement lotteryIdProp))
+                    {
+                        currentLotteryId = lotteryIdProp.GetInt32();
+                    }
+
+                    if (existingConfig.TryGetProperty("enabledGameTypeIds", out JsonElement gameTypesProp))
+                    {
+                        currentGameTypeIds = JsonSerializer.Deserialize<List<int>>(gameTypesProp.GetRawText()) ?? new List<int>();
+                    }
+
+                    if (existingConfig.TryGetProperty("anticipatedClosing", out JsonElement closingProp) &&
+                        closingProp.ValueKind != JsonValueKind.Null)
+                    {
+                        currentAnticipatedClosing = closingProp.GetInt32();
+                    }
+                }
+            }
+            catch { }
+
+            // Update lottery if provided
+            if (dto.LotteryId.HasValue)
+            {
+                var lottery = await _context.Lotteries
+                    .FirstOrDefaultAsync(l => l.LotteryId == dto.LotteryId.Value);
+
+                if (lottery == null)
+                {
+                    return BadRequest(new { message = "Lotería no encontrada" });
+                }
+
+                // Check if another sortition with this lottery exists
+                var exists = await _context.BettingPoolSortitions
+                    .AnyAsync(s => s.BettingPoolId == bettingPoolId &&
+                                  s.SortitionType == (lottery.LotteryType ?? lottery.LotteryName) &&
+                                  s.SortitionId != sortitionId);
+
+                if (exists)
+                {
+                    return BadRequest(new { message = "Ya existe un sorteo para esta lotería en esta banca" });
+                }
+
+                sortition.SortitionType = lottery.LotteryType ?? lottery.LotteryName;
+                currentLotteryId = dto.LotteryId.Value;
+            }
+
+            // Update enabled state
+            if (dto.IsEnabled.HasValue)
+            {
+                sortition.IsEnabled = dto.IsEnabled.Value;
+            }
+
+            // Update anticipated closing
+            if (dto.AnticipatedClosing.HasValue)
+            {
+                currentAnticipatedClosing = dto.AnticipatedClosing.Value;
+            }
+
+            // Update game types if provided
+            if (dto.EnabledGameTypeIds != null)
+            {
+                if (dto.EnabledGameTypeIds.Any())
+                {
+                    var validGameTypes = await _context.LotteryGameCompatibilities
+                        .Where(lgc => lgc.LotteryId == currentLotteryId &&
+                                      dto.EnabledGameTypeIds.Contains(lgc.GameTypeId) &&
+                                      lgc.IsActive)
+                        .CountAsync();
+
+                    if (validGameTypes != dto.EnabledGameTypeIds.Count)
+                    {
+                        return BadRequest(new { message = "Algunos tipos de apuesta no son válidos para esta lotería" });
+                    }
+                }
+                currentGameTypeIds = dto.EnabledGameTypeIds;
+            }
+
+            // Rebuild config JSON
+            var newConfig = new
+            {
+                lotteryId = currentLotteryId,
+                enabledGameTypeIds = currentGameTypeIds,
+                anticipatedClosing = currentAnticipatedClosing
+            };
+
+            sortition.SpecificConfig = JsonSerializer.Serialize(newConfig);
+            sortition.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+
+            var result = await BuildSortitionDto(sortition);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al actualizar sorteo {SortitionId}", sortitionId);
+            return StatusCode(500, new { message = $"Error al actualizar sorteo: {ex.Message}" });
+        }
+    }
+
+    /// <summary>
+    /// Delete a sortition
+    /// </summary>
+    [HttpDelete("{sortitionId}")]
+    public async Task<IActionResult> DeleteSortition(
+        int bettingPoolId,
+        int sortitionId)
+    {
+        try
+        {
+            var sortition = await _context.BettingPoolSortitions
+                .FirstOrDefaultAsync(s => s.BettingPoolId == bettingPoolId &&
+                                         s.SortitionId == sortitionId);
+
+            if (sortition == null)
+            {
+                return NotFound(new { message = "Sorteo no encontrado" });
+            }
+
+            _context.BettingPoolSortitions.Remove(sortition);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Sorteo eliminado exitosamente" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al eliminar sorteo {SortitionId}", sortitionId);
+            return StatusCode(500, new { message = $"Error al eliminar sorteo: {ex.Message}" });
+        }
+    }
+
+    /// <summary>
+    /// Create or update multiple sortitions in bulk (upsert operation)
+    /// </summary>
+    [HttpPost("bulk")]
+    public async Task<ActionResult<List<BettingPoolSortitionDto>>> CreateOrUpdateSortitionsBulk(
+        int bettingPoolId,
+        [FromBody] List<CreateBettingPoolSortitionDto> sortitions)
+    {
+        try
+        {
+            var bettingPool = await _context.BettingPools
+                .Include(b => b.Sortitions)
+                .FirstOrDefaultAsync(b => b.BettingPoolId == bettingPoolId);
+
+            if (bettingPool == null)
+            {
+                return NotFound(new { message = "Banca no encontrada" });
+            }
+
+            var resultSortitions = new List<BettingPoolSortition>();
+
+            // Load all existing sortitions for this betting pool to check in memory
+            var allExistingSortitions = await _context.BettingPoolSortitions
+                .Where(s => s.BettingPoolId == bettingPoolId)
+                .ToListAsync();
+
+            // STEP 1: Disable all sortitions that are NOT in the payload (full replacement)
+            var lotteryIdsInPayload = sortitions.Select(s => s.LotteryId).ToHashSet();
+            foreach (var existing in allExistingSortitions)
+            {
+                try
+                {
+                    // Parse the lotteryId from SpecificConfig
+                    if (!string.IsNullOrEmpty(existing.SpecificConfig))
+                    {
+                        using var doc = JsonDocument.Parse(existing.SpecificConfig);
+                        if (doc.RootElement.TryGetProperty("lotteryId", out var lotteryIdProp))
+                        {
+                            var existingLotteryId = lotteryIdProp.GetInt32();
+                            // If this lottery is NOT in the payload, disable it
+                            if (!lotteryIdsInPayload.Contains(existingLotteryId))
+                            {
+                                existing.IsEnabled = false;
+                                existing.UpdatedAt = DateTime.UtcNow;
+                                _logger.LogInformation("Deshabilitando sortition para lottery {LotteryId} (no está en el payload)", existingLotteryId);
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Error al parsear SpecificConfig para sortition {SortitionId}", existing.SortitionId);
+                }
+            }
+
+            // STEP 2: Upsert sortitions from the payload
+            foreach (var dto in sortitions)
+            {
+                // Validate lottery exists
+                var lottery = await _context.Lotteries
+                    .FirstOrDefaultAsync(l => l.LotteryId == dto.LotteryId);
+
+                if (lottery == null)
+                {
+                    _logger.LogWarning("Lotería {LotteryId} no encontrada, saltando", dto.LotteryId);
+                    continue;
+                }
+
+                // Check if sortition already exists for this lottery by parsing specific_config
+                BettingPoolSortition? existingSortition = null;
+                foreach (var existing in allExistingSortitions)
+                {
+                    try
+                    {
+                        if (!string.IsNullOrEmpty(existing.SpecificConfig))
+                        {
+                            using var doc = JsonDocument.Parse(existing.SpecificConfig);
+                            if (doc.RootElement.TryGetProperty("lotteryId", out var lotteryIdProp) &&
+                                lotteryIdProp.GetInt32() == dto.LotteryId)
+                            {
+                                existingSortition = existing;
+                                break;
+                            }
+                        }
+                    }
+                    catch { }
+                }
+
+                if (existingSortition != null)
+                {
+                    // UPDATE existing sortition
+                    var config = new
+                    {
+                        lotteryId = dto.LotteryId,
+                        enabledGameTypeIds = dto.EnabledGameTypeIds ?? new List<int>(),
+                        anticipatedClosing = dto.AnticipatedClosing
+                    };
+
+                    existingSortition.IsEnabled = dto.IsEnabled;
+                    existingSortition.SpecificConfig = JsonSerializer.Serialize(config);
+                    existingSortition.UpdatedAt = DateTime.UtcNow;
+
+                    resultSortitions.Add(existingSortition);
+                }
+                else
+                {
+                    // CREATE new sortition
+                    var config = new
+                    {
+                        lotteryId = dto.LotteryId,
+                        enabledGameTypeIds = dto.EnabledGameTypeIds ?? new List<int>(),
+                        anticipatedClosing = dto.AnticipatedClosing
+                    };
+
+                    var sortition = new BettingPoolSortition
+                    {
+                        BettingPoolId = bettingPoolId,
+                        SortitionType = lottery.LotteryType ?? lottery.LotteryName,
+                        IsEnabled = dto.IsEnabled,
+                        SpecificConfig = JsonSerializer.Serialize(config),
+                        CreatedAt = DateTime.UtcNow
+                    };
+
+                    _context.BettingPoolSortitions.Add(sortition);
+                    resultSortitions.Add(sortition);
+                }
+            }
+
+            await _context.SaveChangesAsync();
+
+            // Build response DTOs
+            var result = new List<BettingPoolSortitionDto>();
+            foreach (var sortition in resultSortitions)
+            {
+                var dto = await BuildSortitionDto(sortition);
+                result.Add(dto);
+            }
+
+            _logger.LogInformation("Procesados {Count} sorteos para banca {BettingPoolId}",
+                result.Count, bettingPoolId);
+
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al procesar sorteos en bulk para banca {BettingPoolId}", bettingPoolId);
+            return StatusCode(500, new { message = $"Error al procesar sorteos: {ex.Message}" });
+        }
+    }
+
+    /// <summary>
+    /// Helper method to build a complete BettingPoolSortitionDto from entity
+    /// </summary>
+    private async Task<BettingPoolSortitionDto> BuildSortitionDto(BettingPoolSortition sortition)
+    {
+        var dto = new BettingPoolSortitionDto
+        {
+            SortitionId = sortition.SortitionId,
+            BettingPoolId = sortition.BettingPoolId,
+            SortitionType = sortition.SortitionType,
+            IsEnabled = sortition.IsEnabled,
+            SpecificConfig = sortition.SpecificConfig
+        };
+
+        // Parse config to extract lottery ID, game types, and anticipated closing
+        if (!string.IsNullOrEmpty(sortition.SpecificConfig))
+        {
+            try
+            {
+                using var doc = JsonDocument.Parse(sortition.SpecificConfig);
+                var root = doc.RootElement;
+
+                if (root.TryGetProperty("lotteryId", out var lotteryIdProp))
+                {
+                    dto.LotteryId = lotteryIdProp.GetInt32();
+
+                    // Load lottery name
+                    var lottery = await _context.Lotteries
+                        .FirstOrDefaultAsync(l => l.LotteryId == dto.LotteryId);
+                    dto.LotteryName = lottery?.LotteryName;
+
+                    // Load available game types for this lottery
+                    dto.AvailableGameTypes = await _context.LotteryGameCompatibilities
+                        .Where(lgc => lgc.LotteryId == dto.LotteryId && lgc.IsActive)
+                        .Include(lgc => lgc.GameType)
+                        .Where(lgc => lgc.GameType != null && lgc.GameType.IsActive)
+                        .OrderBy(lgc => lgc.GameType!.DisplayOrder ?? int.MaxValue)
+                        .ThenBy(lgc => lgc.GameType!.GameName)
+                        .Select(lgc => new GameTypeDto
+                        {
+                            GameTypeId = lgc.GameType!.GameTypeId,
+                            GameTypeCode = lgc.GameType.GameTypeCode,
+                            GameName = lgc.GameType.GameName,
+                            PrizeMultiplier = lgc.GameType.PrizeMultiplier,
+                            NumberLength = lgc.GameType.NumberLength,
+                            RequiresAdditionalNumber = lgc.GameType.RequiresAdditionalNumber,
+                            DisplayOrder = lgc.GameType.DisplayOrder
+                        })
+                        .ToListAsync();
+                }
+
+                if (root.TryGetProperty("enabledGameTypeIds", out var gameTypesProp))
+                {
+                    dto.EnabledGameTypeIds = JsonSerializer.Deserialize<List<int>>(gameTypesProp.GetRawText()) ?? new List<int>();
+                }
+
+                if (root.TryGetProperty("anticipatedClosing", out var closingProp) &&
+                    closingProp.ValueKind != JsonValueKind.Null)
+                {
+                    dto.AnticipatedClosing = closingProp.GetInt32();
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Error al parsear configuración de sorteo {SortitionId}", sortition.SortitionId);
+            }
+        }
+
+        return dto;
+    }
+}

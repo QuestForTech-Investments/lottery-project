@@ -1,0 +1,308 @@
+// Lottery Database Schema - Draw-Centric Architecture
+// Generated: 2025-11-14
+// Database: lottery-db-dev
+//
+// Instructions:
+// 1. Go to https://dbdiagram.io
+// 2. Click "Go to App"
+// 3. Delete the example code
+// 4. Copy and paste this entire file
+// 5. The diagram will render automatically
+//
+// Architecture Notes:
+// - Draw-centric design: draw_id is the primary business entity
+// - lottery_id only exists in lotteries and draws tables (for branding/metadata)
+// - N:M relationships for betting_pools <-> draws <-> game_types
+// - Compatibility tables define which games/bets each draw supports
+
+//==============================================================================
+// CORE GEOGRAPHY AND ORGANIZATION
+//==============================================================================
+
+Table countries {
+  country_id int [pk, increment, not null]
+  country_name nvarchar(100) [not null]
+  country_code nvarchar(10) [not null]
+  is_active bit [default: 1]
+  created_at datetime2 [default: `GETUTCDATE()`]
+  created_by int
+  updated_at datetime2
+  updated_by int
+
+  Note: 'Master list of countries where lotteries operate'
+}
+
+Table zones {
+  zone_id int [pk, increment, not null]
+  zone_name nvarchar(100) [not null]
+  country_id int [not null]
+  is_active bit [default: 1]
+  created_at datetime2 [default: `GETUTCDATE()`]
+  created_by int
+  updated_at datetime2
+  updated_by int
+
+  Note: 'Geographic zones/regions within countries'
+}
+
+Table banks {
+  bank_id int [pk, increment, not null]
+  bank_name nvarchar(100) [not null]
+  bank_code nvarchar(20)
+  is_active bit [default: 1]
+  created_at datetime2 [default: `GETUTCDATE()`]
+  created_by int
+  updated_at datetime2
+  updated_by int
+
+  Note: 'Financial institutions servicing betting pools'
+}
+
+Table lotteries {
+  lottery_id int [pk, increment, not null]
+  country_id int [not null]
+  lottery_name nvarchar(100) [not null]
+  lottery_type nvarchar(50)
+  description nvarchar(500)
+  display_order int
+  is_active bit [default: 1]
+  created_at datetime2 [default: `GETUTCDATE()`]
+  created_by int
+  updated_at datetime2
+  updated_by int
+
+  Note: 'Lottery brands/organizations - METADATA ONLY, not used in business logic'
+}
+
+Table draws {
+  draw_id int [pk, increment, not null]
+  draw_name nvarchar(100) [not null]
+  draw_time time [not null]
+  description nvarchar(500)
+  abbreviation varchar(10)
+  display_color varchar(20)
+  is_active bit [default: 1]
+  created_at datetime2 [default: `GETUTCDATE()`]
+  created_by int
+  updated_at datetime2
+  updated_by int
+  lottery_id int
+
+  Note: 'Core business entity - actual drawing events (sorteos)'
+}
+
+//==============================================================================
+// BETTING POOL CONFIGURATION
+//==============================================================================
+
+Table betting_pools {
+  betting_pool_id int [pk, increment, not null]
+  betting_pool_code nvarchar(50) [not null]
+  betting_pool_name nvarchar(100) [not null]
+  zone_id int [not null]
+  bank_id int
+  address nvarchar(200)
+  phone nvarchar(20)
+  location varchar(100)
+  reference varchar(100)
+  comment text
+  username nvarchar(50)
+  password_hash varchar(255)
+  is_active bit [default: 1]
+  created_at datetime2 [default: `GETUTCDATE()`]
+  created_by int
+  updated_at datetime2
+  updated_by int
+  deleted_at datetime2
+  deleted_by int
+  deletion_reason nvarchar(500)
+
+  Note: 'Physical or virtual betting locations (bancas)'
+}
+
+Table betting_pool_draws {
+  betting_pool_draw_id int [pk, increment, not null]
+  betting_pool_id int [not null]
+  draw_id int [not null]
+  is_active bit [default: 1]
+  anticipated_closing_minutes int
+  created_at datetime2 [default: `GETUTCDATE()`]
+  created_by int
+  updated_at datetime2
+  updated_by int
+
+  Indexes {
+    (betting_pool_id, draw_id) [unique, name: 'UQ_betting_pool_draw']
+  }
+
+  Note: 'N:M relationship - which draws each banca accepts bets for'
+}
+
+Table betting_pool_draw_game_types {
+  betting_pool_draw_game_type_id int [pk, increment, not null]
+  betting_pool_id int [not null]
+  draw_id int [not null]
+  game_type_id int [not null]
+  is_active bit [default: 1]
+  created_at datetime2 [default: `GETUTCDATE()`]
+  updated_at datetime2
+
+  Indexes {
+    (betting_pool_id, draw_id, game_type_id) [unique, name: 'UQ_pool_draw_game']
+  }
+
+  Note: 'Which game types are enabled for each draw at each banca'
+}
+
+//==============================================================================
+// GAME CONFIGURATION
+//==============================================================================
+
+Table game_categories {
+  category_id int [pk, increment, not null]
+  category_name nvarchar(100) [not null]
+  description nvarchar(500)
+  is_active bit [default: 1]
+  created_at datetime2 [default: `GETUTCDATE()`]
+  created_by int
+  updated_at datetime2
+  updated_by int
+
+  Note: 'Categories of games (e.g., Straight, Box, Combination)'
+}
+
+Table game_types {
+  game_type_id int [pk, increment, not null]
+  category_id int [not null]
+  game_type_code varchar(20) [not null]
+  game_name nvarchar(100) [not null]
+  description nvarchar(500)
+  prize_multiplier decimal(10,2)
+  requires_additional_number bit [default: 0]
+  number_length int
+  display_order int
+  is_active bit [default: 1]
+  created_at datetime2 [default: `GETUTCDATE()`]
+  created_by int
+  updated_at datetime2
+  updated_by int
+
+  Note: 'Specific game types (e.g., Pale, Tripleta, Quiniela)'
+}
+
+Table draw_game_compatibility {
+  compatibility_id int [pk, increment, not null]
+  draw_id int [not null]
+  game_type_id int [not null]
+  is_active bit [default: 1]
+  created_at datetime2 [default: `GETUTCDATE()`]
+  updated_at datetime2
+
+  Note: 'Defines which game types each draw supports'
+}
+
+Table draw_bet_type_compatibility {
+  compatibility_id int [pk, increment, not null]
+  draw_id int [not null]
+  bet_type_id int [not null]
+  is_active bit [default: 1]
+  created_at datetime2 [default: `GETUTCDATE()`]
+  updated_at datetime2
+
+  Note: 'Defines which bet types each draw allows'
+}
+
+//==============================================================================
+// USER MANAGEMENT
+//==============================================================================
+
+Table roles {
+  role_id int [pk, increment, not null]
+  role_name nvarchar(50) [not null]
+  description nvarchar(500)
+  is_active bit [default: 1]
+  created_at datetime2 [default: `GETUTCDATE()`]
+  created_by int
+  updated_at datetime2
+  updated_by int
+
+  Note: 'User roles for access control'
+}
+
+Table permissions {
+  permission_id int [pk, increment, not null]
+  permission_code nvarchar(50) [not null]
+  permission_name nvarchar(100) [not null]
+  category nvarchar(50) [not null]
+  description nvarchar(500)
+  is_active bit [default: 1]
+  created_at datetime2 [default: `GETUTCDATE()`]
+  created_by int
+  updated_at datetime2
+  updated_by int
+
+  Note: 'Granular permissions for authorization'
+}
+
+Table users {
+  user_id int [pk, increment, not null]
+  username nvarchar(50) [not null]
+  password_hash nvarchar(255) [not null]
+  email nvarchar(100)
+  full_name nvarchar(100)
+  phone nvarchar(20)
+  role_id int
+  commission_rate decimal(5,2)
+  is_active bit [default: 1]
+  last_login_at datetime2
+  created_at datetime2 [default: `GETUTCDATE()`]
+  updated_at datetime2 [default: `GETUTCDATE()`]
+  created_by int
+  updated_by int
+  deleted_at datetime2
+  deleted_by int
+  deletion_reason nvarchar(500)
+  last_modified_ip varchar(50)
+
+  Note: 'System users with full audit trail'
+}
+
+//==============================================================================
+// RELATIONSHIPS
+//==============================================================================
+
+// Geography Hierarchy
+Ref: countries.country_id < lotteries.country_id
+Ref: countries.country_id < zones.country_id
+
+// Lottery -> Draws (one lottery has many draws)
+Ref: lotteries.lottery_id < draws.lottery_id
+
+// Betting Pool Location and Banking
+Ref: zones.zone_id < betting_pools.zone_id
+Ref: banks.bank_id < betting_pools.bank_id
+
+// Betting Pool <-> Draws N:M Relationship
+Ref: betting_pools.betting_pool_id < betting_pool_draws.betting_pool_id
+Ref: draws.draw_id < betting_pool_draws.draw_id
+
+// Betting Pool <-> Draw <-> Game Types (N:M:M)
+Ref: betting_pools.betting_pool_id < betting_pool_draw_game_types.betting_pool_id
+Ref: draws.draw_id < betting_pool_draw_game_types.draw_id
+Ref: game_types.game_type_id < betting_pool_draw_game_types.game_type_id
+
+// Draw Compatibility Tables
+Ref: draws.draw_id < draw_game_compatibility.draw_id
+Ref: game_types.game_type_id < draw_game_compatibility.game_type_id
+Ref: draws.draw_id < draw_bet_type_compatibility.draw_id
+
+// Game Categories
+Ref: game_categories.category_id < game_types.category_id
+
+// User Management
+Ref: roles.role_id < users.role_id
+
+// Self-referential User Audit Trail
+Ref: users.user_id < users.created_by
+Ref: users.user_id < users.updated_by
+Ref: users.user_id < users.deleted_by

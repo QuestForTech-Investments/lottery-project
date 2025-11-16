@@ -1,0 +1,10 @@
+USE [lottery-db];
+GO
+
+-- Check if prize_fields table exists
+SELECT TABLE_NAME
+FROM INFORMATION_SCHEMA.TABLES
+WHERE TABLE_TYPE = 'BASE TABLE'
+  AND (TABLE_NAME LIKE '%prize%' OR TABLE_NAME LIKE '%campo%')
+ORDER BY TABLE_NAME;
+GO

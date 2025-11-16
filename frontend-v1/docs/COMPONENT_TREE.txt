@@ -1,0 +1,340 @@
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         GASTOS AUTOMÁTICOS - ARQUITECTURA                   │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+📁 PROJECT STRUCTURE
+═══════════════════════════════════════════════════════════════════════════════
+
+src/
+│
+├── 📂 components/
+│   │
+│   ├── CreateBanca.jsx (1875 líneas) ⚠️ MODIFICADO
+│   │   └── imports GastosAutomaticosTab
+│   │
+│   ├── 📂 tabs/                        ⭐ NUEVO DIRECTORIO
+│   │   │
+│   │   ├── GastosAutomaticosTab.jsx (230 líneas) ✅ NUEVO
+│   │   │   ├── uses: useExpenses hook
+│   │   │   ├── uses: ExpenseRow component
+│   │   │   ├── uses: Pagination component
+│   │   │   └── imports: expenseConfig
+│   │   │
+│   │   └── README.md                  ✅ NUEVO
+│   │
+│   └── 📂 shared/                      ⭐ NUEVO DIRECTORIO
+│       │
+│       ├── FormField.jsx (90 líneas)   ✅ NUEVO
+│       │   └── Reusable input component
+│       │
+│       ├── SelectField.jsx (100 líneas) ✅ NUEVO
+│       │   └── Reusable select component
+│       │
+│       ├── ExpenseRow.jsx (140 líneas)  ✅ NUEVO
+│       │   ├── uses: FormField
+│       │   ├── uses: SelectField
+│       │   └── React.memo optimized
+│       │
+│       └── Pagination.jsx (110 líneas)  ✅ NUEVO
+│           └── React.memo optimized
+│
+├── 📂 hooks/                           ⭐ NUEVO DIRECTORIO
+│   │
+│   └── useExpenses.js (185 líneas)     ✅ NUEVO
+│       ├── useState
+│       ├── useCallback
+│       ├── useMemo
+│       └── Custom business logic
+│
+├── 📂 config/                          ⭐ NUEVO DIRECTORIO
+│   │
+│   └── expenseConfig.js (60 líneas)    ✅ NUEVO
+│       ├── EXPENSE_TYPES
+│       ├── FREQUENCY_OPTIONS
+│       ├── WEEKDAYS
+│       ├── DEFAULT_EXPENSE
+│       └── PAGINATION_OPTIONS
+│
+└── 📂 assets/css/
+    │
+    └── GastosAutomaticos.css (450 líneas) ✅ NUEVO
+        ├── Component styles
+        ├── Responsive design
+        ├── Accessibility states
+        └── Print styles
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          COMPONENT HIERARCHY                                │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+CreateBanca
+│
+└─┬─ (activeTab === 'Gastos automáticos')
+  │
+  └─── 🎯 GastosAutomaticosTab
+       │   Props: { formData, onChange, error, success }
+       │   State: useExpenses hook
+       │
+       ├─── 📊 Header
+       │    ├─── Title + Subtitle
+       │    └─── "Agregar nuevo gasto" button
+       │
+       ├─── 🚨 Alerts (if error/success)
+       │
+       ├─── 🎛️ Controls
+       │    ├─── Items per page selector
+       │    └─── Quick filter input + clear button
+       │
+       ├─── 📋 Table
+       │    │
+       │    ├─── <thead>
+       │    │    └─── Column headers (Tipo, Descripción, etc.)
+       │    │
+       │    ├─── <tbody>
+       │    │    │
+       │    │    └─── ExpenseRow (per expense) 🔄 MAPPED
+       │    │         │   Props: { expense, index, onUpdate, onRemove, errors }
+       │    │         │   Memo: React.memo()
+       │    │         │
+       │    │         ├─── 📝 SelectField (Tipo)
+       │    │         │    Props: { value, options: EXPENSE_TYPES, onChange }
+       │    │         │    Memo: React.memo()
+       │    │         │
+       │    │         ├─── 📝 FormField (Descripción)
+       │    │         │    Props: { type: 'text', value, onChange }
+       │    │         │    Memo: React.memo()
+       │    │         │
+       │    │         ├─── 📝 SelectField (Frecuencia)
+       │    │         │    Props: { value, options: FREQUENCY_OPTIONS, onChange }
+       │    │         │    Memo: React.memo()
+       │    │         │
+       │    │         ├─── 📝 FormField (Monto)
+       │    │         │    Props: { type: 'number', value, onChange }
+       │    │         │    Memo: React.memo()
+       │    │         │
+       │    │         ├─── 📝 Dynamic Field (Día/Fecha)
+       │    │         │    │   Conditional based on frequency
+       │    │         │    │
+       │    │         │    ├─── if weekly: SelectField (WEEKDAYS)
+       │    │         │    ├─── if monthly: FormField (1-31)
+       │    │         │    └─── else: FormField (date)
+       │    │         │
+       │    │         └─── 🗑️ Remove Button
+       │    │
+       │    └─── <tfoot>
+       │         └─── Total row (sum of amounts)
+       │
+       ├─── 📄 Footer
+       │    ├─── Showing X of Y entries
+       │    └─── Pagination
+       │         │   Props: { currentPage, totalPages, ... }
+       │         │   Memo: React.memo()
+       │         │
+       │         ├─── << First page
+       │         ├─── < Previous
+       │         ├─── [Current page]
+       │         ├─── > Next
+       │         └─── >> Last page
+       │
+       └─── 🈳 Empty State (if no expenses)
+            ├─── Icon
+            ├─── "No hay gastos configurados"
+            └─── Help text
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                            DATA FLOW                                        │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+1️⃣ USER ACTION: Click "Agregar nuevo gasto"
+   │
+   └─→ GastosAutomaticosTab.addExpense()
+       │
+       └─→ useExpenses.addExpense()
+           │
+           ├─→ Create new expense with DEFAULT_EXPENSE
+           ├─→ Update local state: setExpenses([...expenses, newExpense])
+           │
+           └─→ onUpdate(updatedExpenses)
+               │
+               └─→ GastosAutomaticosTab.onChange()
+                   │
+                   └─→ CreateBanca.handleInputChange()
+                       │
+                       └─→ setFormData({ ...formData, autoExpenses: updatedExpenses })
+                           │
+                           └─→ ✅ State synchronized
+
+
+2️⃣ USER ACTION: Edit expense field
+   │
+   └─→ ExpenseRow.handleFieldChange('amount')
+       │
+       └─→ onUpdate(index, 'amount', value)
+           │
+           └─→ useExpenses.updateExpense(index, field, value)
+               │
+               └─→ ... (same flow as above)
+
+
+3️⃣ USER ACTION: Filter expenses
+   │
+   └─→ GastosAutomaticosTab.handleFilterChange()
+       │
+       └─→ useExpenses.setFilter(searchTerm)
+           │
+           ├─→ Update filter state
+           │
+           └─→ useMemo recalculates filteredExpenses
+               │
+               └─→ Only matching expenses shown
+
+
+4️⃣ USER ACTION: Change page
+   │
+   └─→ Pagination.handleNextPage()
+       │
+       └─→ onPageChange(currentPage + 1)
+           │
+           └─→ useExpenses.setCurrentPage(newPage)
+               │
+               └─→ useMemo recalculates paginatedExpenses
+                   │
+                   └─→ Only current page items shown
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        PERFORMANCE OPTIMIZATIONS                            │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+🚀 React.memo()
+   ├─── FormField       → Only re-renders if props change
+   ├─── SelectField     → Only re-renders if props change
+   ├─── ExpenseRow      → Only re-renders if expense/index/handlers change
+   └─── Pagination      → Only re-renders if page/total changes
+
+🎯 useCallback()
+   ├─── ExpenseRow.handleFieldChange  → Memoized per field
+   ├─── ExpenseRow.handleRemove       → Memoized per row
+   └─── Pagination.handlePageChange   → Memoized
+
+💾 useMemo()
+   ├─── filteredExpenses    → Only recalc when expenses/filter change
+   ├─── paginatedExpenses   → Only recalc when filtered/page change
+   ├─── totalPages          → Only recalc when filtered/items change
+   └─── totalAmount         → Only recalc when expenses change
+
+📊 Pagination
+   └─── Render only 20 items instead of 1000+
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                             FILE SIZES                                      │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+✅ Created Files (Total: ~1,375 lines)
+   ├── GastosAutomaticosTab.jsx      230 lines
+   ├── ExpenseRow.jsx                140 lines
+   ├── FormField.jsx                  90 lines
+   ├── SelectField.jsx               100 lines
+   ├── Pagination.jsx                110 lines
+   ├── useExpenses.js                185 lines
+   ├── expenseConfig.js               60 lines
+   ├── GastosAutomaticos.css         450 lines
+   └── Documentation                  10 lines
+
+⚠️ Modified Files
+   └── CreateBanca.jsx               -68 lines (1943 → 1875)
+       ├── Removed: addAutoExpense()         (7 lines)
+       ├── Removed: removeAutoExpense()      (7 lines)
+       ├── Removed: updateAutoExpense()      (7 lines)
+       ├── Removed: Inline JSX               (65 lines)
+       └── Added: Import + Usage             (18 lines)
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          DEPENDENCIES GRAPH                                 │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+expenseConfig.js (0 deps) ────┐
+                              │
+                              ├─→ useExpenses.js (1 dep)
+                              │   │
+                              │   └─→ GastosAutomaticosTab.jsx (4 deps)
+                              │       │
+                              ├───────┤
+                              │       │
+FormField.jsx (0 deps) ───────┼───────┤
+                              │       │
+SelectField.jsx (0 deps) ─────┼───────┤
+                              │       │
+                              │       └─→ CreateBanca.jsx (1 dep)
+                              │
+Pagination.jsx (0 deps) ──────┤
+                              │
+ExpenseRow.jsx (3 deps) ──────┘
+   ├── FormField.jsx
+   ├── SelectField.jsx
+   └── expenseConfig.js
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         ACCESSIBILITY FEATURES                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+✅ Semantic HTML
+   ├── <table> with <thead>, <tbody>, <tfoot>
+   ├── <label> associated with inputs (htmlFor)
+   └── <button> for actions
+
+✅ ARIA Attributes
+   ├── aria-label on icon-only buttons
+   ├── aria-invalid on error fields
+   ├── aria-describedby linking to error messages
+   └── role="alert" on error/success messages
+
+✅ Keyboard Navigation
+   ├── All interactive elements tabbable
+   ├── Enter/Space on buttons
+   └── Tab order logical
+
+✅ Focus States
+   ├── :focus-visible for keyboard users
+   └── Visible outline on focused elements
+
+✅ Screen Reader Support
+   ├── Descriptive labels
+   ├── Error messages announced
+   └── Status changes announced
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                            TESTING CHECKLIST                                │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+Manual Testing:
+   [ ] Add expense
+   [ ] Edit expense fields
+   [ ] Remove expense
+   [ ] Filter expenses
+   [ ] Change page
+   [ ] Change items per page
+   [ ] Check responsive design (mobile/tablet/desktop)
+   [ ] Test keyboard navigation
+   [ ] Test with screen reader
+   [ ] Check error handling
+   [ ] Verify data syncs with parent
+
+Automated Testing (TODO):
+   [ ] Unit tests for useExpenses hook
+   [ ] Unit tests for utility functions
+   [ ] Component tests for each component
+   [ ] Integration test for full flow
+   [ ] Accessibility tests (jest-axe)
+   [ ] Visual regression tests
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                              ✨ IMPLEMENTATION COMPLETE ✨
+═══════════════════════════════════════════════════════════════════════════════

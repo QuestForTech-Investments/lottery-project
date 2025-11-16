@@ -1,0 +1,46 @@
+{
+  "common": {
+    "add": "Ajouter",
+    "create": "Créer",
+    "publish": "Publier",
+    "block": "Bloquer",
+    "select": "Sélectionner",
+    "payment": "PAIEMENT",
+    "collection": "ENCAISSEMENT",
+    "amount": "Montant",
+    "noResults": "Aucun jeu trouvé"
+  },
+  "dashboard": {
+    "title": "Tableau de bord"
+  },
+  "widgets": {
+    "quickBlock": {
+      "title": "BLOCAGE RAPIDE DES NUMÉROS",
+      "draw": "Tirage",
+      "playType": "Type de jeu",
+      "play": "Jeu"
+    },
+    "payments": {
+      "bankCode": "Code bancaire"
+    },
+    "drawPlays": {
+      "title": "Jeux par tirage",
+      "drawOption": "QUOTIDIEN 11H",
+      "playType": "Type de jeu",
+      "play": "Jeu"
+    },
+    "quickPublish": {
+      "title": "Publication rapide des résultats"
+    }
+  },
+  "language": {
+    "spanish": "Español",
+    "english": "English",
+    "french": "Français",
+    "creole": "Kreyòl"
+  },
+  "menu": {
+    "inicio": "ACCUEIL"
+  }
+}
+

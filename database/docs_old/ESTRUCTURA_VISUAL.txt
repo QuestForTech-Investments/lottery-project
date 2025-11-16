@@ -1,0 +1,165 @@
+╔═══════════════════════════════════════════════════════════════════════════╗
+║                    ESTRUCTURA DE BASE DE DATOS - LOTERÍA                  ║
+╚═══════════════════════════════════════════════════════════════════════════╝
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│                        MÓDULO: BETTING POOLS                            │
+│                    (Sistema Modular Refactorizado)                      │
+└─────────────────────────────────────────────────────────────────────────┘
+
+                            ┌──────────────────┐
+                            │  betting_pools   │ ◄─── TABLA PRINCIPAL
+                            │   (13 campos)    │      (Solo datos básicos)
+                            └────────┬─────────┘
+                                     │
+                ┌────────────────────┼────────────────────┐
+                │                    │                    │
+                ▼                    ▼                    ▼
+    ┌───────────────────┐ ┌───────────────────┐ ┌───────────────────┐
+    │ betting_pool_     │ │ betting_pool_     │ │ betting_pool_     │
+    │ config            │ │ print_config      │ │ discount_config   │
+    │ (1:1)             │ │ (1:1)             │ │ (1:1)             │
+    └───────────────────┘ └───────────────────┘ └───────────────────┘
+         TAB: CONFIGURACIÓN    TAB: CONFIGURACIÓN    TAB: CONFIGURACIÓN
+         (Config general)      (Impresión)           (Descuentos)
+
+                                     │
+                ┌────────────────────┼────────────────────┐
+                │                    │                    │
+                ▼                    ▼                    ▼
+    ┌───────────────────┐ ┌───────────────────┐ ┌───────────────────┐
+    │ betting_pool_     │ │ betting_pool_     │ │ betting_pool_     │
+    │ footers           │ │ prizes_           │ │ schedules         │
+    │ (1:1)             │ │ commissions       │ │ (1:N - 7 días)    │
+    └───────────────────┘ │ (1:N - por        │ └───────────────────┘
+      TAB: PIES            │  lotería/juego)   │   TAB: HORARIOS
+                           └───────────────────┘
+                             TAB: PREMIOS
+
+                                     │
+                ┌────────────────────┼────────────────────┐
+                │                    │                    │
+                ▼                    ▼                    ▼
+    ┌───────────────────┐ ┌───────────────────┐ ┌───────────────────┐
+    │ betting_pool_     │ │ betting_pool_     │ │ betting_pool_     │
+    │ draws             │ │ styles            │ │ automatic_        │
+    │ (N:M con draws)   │ │ (1:1)             │ │ expenses          │
+    └───────────────────┘ └───────────────────┘ │ (1:N)             │
+      TAB: SORTEOS           TAB: ESTILOS        └───────────────────┘
+                                                   TAB: GASTOS
+
+                                     │
+                                     ▼
+                          ┌───────────────────┐
+                          │ betting_pool_     │
+                          │ sortitions        │
+                          │ (1:N)             │
+                          └───────────────────┘
+                            (Config adicional)
+
+                                     │
+                                     ▼
+                          ┌───────────────────┐
+                          │ balances          │
+                          │ (1:1)             │
+                          └───────────────────┘
+                            (Saldos actuales)
+
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    MÓDULO: USUARIOS Y PERMISOS                          │
+└─────────────────────────────────────────────────────────────────────────┘
+
+              ┌──────────────┐
+              │    users     │
+              └──────┬───────┘
+                     │
+        ┌────────────┼────────────┐
+        │            │            │
+        ▼            ▼            ▼
+  ┌─────────┐  ┌─────────┐  ┌─────────┐
+  │  roles  │  │  zones  │  │ betting │
+  │   (1)   │  │  (N:M)  │  │ pools   │
+  └────┬────┘  └─────────┘  │ (N:M)   │
+       │                     └─────────┘
+       ▼
+  ┌─────────────────┐
+  │  permissions    │
+  │   (N:M directo  │
+  │   + por rol)    │
+  └─────────────────┘
+
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│                      MÓDULO: TICKETS Y APUESTAS                         │
+└─────────────────────────────────────────────────────────────────────────┘
+
+    ┌──────────────┐         ┌──────────────┐
+    │   tickets    │────────►│ ticket_lines │
+    └──────────────┘         └──────┬───────┘
+           │                        │
+           │                        ▼
+           │                 ┌──────────────┐
+           │                 │    draws     │
+           │                 └──────────────┘
+           │
+           ▼
+    ┌──────────────┐         ┌──────────────┐
+    │    prizes    │◄────────│   results    │
+    └──────────────┘         └──────────────┘
+
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         STORED PROCEDURES                               │
+└─────────────────────────────────────────────────────────────────────────┘
+
+📋 PERMISOS:
+   • sp_GrantPermissionToUser
+   • sp_RevokePermissionFromUser
+   • sp_GetUserPermissions
+   • sp_GetUsersWithPermission
+   • sp_GrantMultiplePermissions
+   • sp_ExpireOldPermissions
+
+📋 COPIA DE CONFIGURACIÓN:
+   • sp_CopyBettingPoolConfig        ← Copia TODO
+   • sp_CopyBettingPoolSection       ← Copia por sección
+
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│                              VISTAS ÚTILES                              │
+└─────────────────────────────────────────────────────────────────────────┘
+
+👁️ PERMISOS:
+   • vw_users_with_direct_permissions
+   • vw_user_permissions_summary
+   • vw_expiring_permissions
+
+👁️ RELACIONES:
+   • vw_users_multiple_betting_pools
+   • vw_users_multiple_zones
+
+👁️ CONFIGURACIÓN:
+   • vw_betting_pool_complete_config  ← Vista consolidada
+
+
+╔═══════════════════════════════════════════════════════════════════════════╗
+║                           RESUMEN ESTADÍSTICO                             ║
+╚═══════════════════════════════════════════════════════════════════════════╝
+
+📊 TOTALES:
+   ✓ 32+ Tablas
+   ✓ 12 Tablas de configuración de bancas (modular)
+   ✓ 8 Stored Procedures
+   ✓ 6 Vistas
+   ✓ 5 Relaciones N:M
+   ✓ Triggers automáticos en tablas críticas
+   ✓ Índices optimizados
+
+🎯 CARACTERÍSTICAS:
+   ✓ 0% Duplicidad de datos
+   ✓ 100% Modular
+   ✓ Auditoría completa
+   ✓ Soft delete
+   ✓ Copia granular por sección
+

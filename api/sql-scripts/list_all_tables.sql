@@ -1,0 +1,13 @@
+USE [lottery-db];
+GO
+
+PRINT 'Listing all tables in database:';
+GO
+
+SELECT
+    TABLE_SCHEMA + '.' + TABLE_NAME AS FullTableName,
+    TABLE_NAME
+FROM INFORMATION_SCHEMA.TABLES
+WHERE TABLE_TYPE = 'BASE TABLE'
+ORDER BY TABLE_NAME;
+GO

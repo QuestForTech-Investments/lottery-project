@@ -1,0 +1,107 @@
+/* Branch Selector Component Styles */
+
+.branch-selector-container {
+  position: relative;
+  width: 100%;
+}
+
+.branch-selector-loading,
+.branch-selector-error,
+.branch-selector-info,
+.branch-selector-warning {
+  padding: 12px;
+  text-align: center;
+  border-radius: 4px;
+  margin-bottom: 8px;
+}
+
+.branch-selector-loading {
+  color: #666;
+  background-color: #f8f9fa;
+  border: 1px solid #e9ecef;
+}
+
+.branch-selector-loading i {
+  margin-right: 6px;
+}
+
+.branch-selector-error {
+  color: #dc3545;
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+}
+
+.branch-selector-error i {
+  margin-right: 6px;
+}
+
+.branch-selector-info {
+  color: #0c5460;
+  background-color: #d1ecf1;
+  border: 1px solid #bee5eb;
+}
+
+.branch-selector-info i {
+  margin-right: 6px;
+}
+
+.branch-selector-warning {
+  color: #856404;
+  background-color: #fff3cd;
+  border: 1px solid #ffeaa7;
+  margin-top: 8px;
+}
+
+.branch-selector-warning i {
+  margin-right: 6px;
+}
+
+.branch-selector-summary {
+  margin-top: 4px;
+  padding: 0 4px;
+}
+
+.branch-selector-summary i {
+  margin-right: 4px;
+}
+
+/* Custom select styling to match corporate theme */
+.branch-selector-container select.form-control {
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 8px 12px;
+  font-size: 14px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.branch-selector-container select.form-control:focus {
+  border-color: #51cbce; /* Corporate primary color */
+  box-shadow: 0 0 0 2px rgba(81, 203, 206, 0.25);
+  outline: none;
+}
+
+.branch-selector-container select.form-control:hover:not(:disabled) {
+  border-color: #999;
+}
+
+.branch-selector-container select.form-control:disabled {
+  background-color: #f8f9fa;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .branch-selector-loading,
+  .branch-selector-error,
+  .branch-selector-info,
+  .branch-selector-warning {
+    padding: 8px;
+    font-size: 14px;
+  }
+  
+  .branch-selector-container select.form-control {
+    padding: 6px 10px;
+    font-size: 13px;
+  }
+}

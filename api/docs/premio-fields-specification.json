@@ -1,0 +1,875 @@
+{
+  "version": "1.0",
+  "description": "Comprehensive specification of all 62 prize fields across 24 bet types for the lottery system",
+  "total_fields": 62,
+  "total_bet_types": 24,
+  "currency": "USD",
+  "field_type": "multiplier",
+  "field_type_description": "All monto fields are MULTIPLIERS, not fixed amounts. Prize = Bet Amount × Multiplier. Example: $10 bet × 60 = $600 payout",
+  "bet_types": [
+    {
+      "bet_type_id": 1,
+      "bet_type_code": "DIRECTO",
+      "bet_type_name": "Directo",
+      "description": "Straight bet on exact number in exact position",
+      "fields": [
+        {
+          "field_id": 1,
+          "field_code": "DIRECTO_MONTO",
+          "field_name": "Monto",
+          "default_value": 60,
+          "data_type": "decimal",
+          "required": true,
+          "min_value": 0,
+          "max_value": 9999.99
+        }
+      ]
+    },
+    {
+      "bet_type_id": 2,
+      "bet_type_code": "PALE",
+      "bet_type_name": "Palé",
+      "description": "Two digits in any order",
+      "fields": [
+        {
+          "field_id": 2,
+          "field_code": "PALE_MONTO",
+          "field_name": "Monto",
+          "default_value": 7,
+          "data_type": "decimal",
+          "required": true,
+          "min_value": 0,
+          "max_value": 9999.99
+        }
+      ]
+    },
+    {
+      "bet_type_id": 3,
+      "bet_type_code": "TRIPLETA",
+      "bet_type_name": "Tripleta",
+      "description": "Three digits in any order",
+      "fields": [
+        {
+          "field_id": 3,
+          "field_code": "TRIPLETA_MONTO",
+          "field_name": "Monto",
+          "default_value": 300,
+          "data_type": "decimal",
+          "required": true,
+          "min_value": 0,
+          "max_value": 9999.99
+        }
+      ]
+    },
+    {
+      "bet_type_id": 4,
+      "bet_type_code": "TERMINAL",
+      "bet_type_name": "Terminal",
+      "description": "Last digit matches",
+      "fields": [
+        {
+          "field_id": 4,
+          "field_code": "TERMINAL_MONTO",
+          "field_name": "Monto",
+          "default_value": 0,
+          "data_type": "decimal",
+          "required": true,
+          "min_value": 0,
+          "max_value": 9999.99
+        }
+      ]
+    },
+    {
+      "bet_type_id": 5,
+      "bet_type_code": "QUINIELA_PALE",
+      "bet_type_name": "Quiniela Palé",
+      "description": "Pale bet in quiniela format",
+      "fields": [
+        {
+          "field_id": 5,
+          "field_code": "QUINIELA_PALE_MONTO",
+          "field_name": "Monto",
+          "default_value": 10,
+          "data_type": "decimal",
+          "required": true,
+          "min_value": 0,
+          "max_value": 9999.99
+        }
+      ]
+    },
+    {
+      "bet_type_id": 6,
+      "bet_type_code": "SUPER_PALE",
+      "bet_type_name": "Super Palé",
+      "description": "Enhanced pale bet with higher payout",
+      "fields": [
+        {
+          "field_id": 6,
+          "field_code": "SUPER_PALE_MONTO",
+          "field_name": "Monto",
+          "default_value": 8,
+          "data_type": "decimal",
+          "required": true,
+          "min_value": 0,
+          "max_value": 9999.99
+        }
+      ]
+    },
+    {
+      "bet_type_id": 7,
+      "bet_type_code": "PATA_CABALLO",
+      "bet_type_name": "Pata de Caballo",
+      "description": "Special combination bet",
+      "fields": [
+        {
+          "field_id": 7,
+          "field_code": "PATA_CABALLO_MONTO",
+          "field_name": "Monto",
+          "default_value": 0,
+          "data_type": "decimal",
+          "required": true,
+          "min_value": 0,
+          "max_value": 9999.99
+        }
+      ]
+    },
+    {
+      "bet_type_id": 8,
+      "bet_type_code": "CENTENA",
+      "bet_type_name": "Centena",
+      "description": "Three digit bet",
+      "fields": [
+        {
+          "field_id": 8,
+          "field_code": "CENTENA_MONTO",
+          "field_name": "Monto",
+          "default_value": 0,
+          "data_type": "decimal",
+          "required": true,
+          "min_value": 0,
+          "max_value": 9999.99
+        }
+      ]
+    },
+    {
+      "bet_type_id": 9,
+      "bet_type_code": "PICK_TWO_FRONT",
+      "bet_type_name": "Pick Two Front",
+      "description": "First two digits exact order",
+      "fields": [
+        {
+          "field_id": 9,
+          "field_code": "PICK_TWO_FRONT_MONTO",
+          "field_name": "Monto",
+          "default_value": 50,
+          "data_type": "decimal",
+          "required": true,
+          "min_value": 0,
+          "max_value": 9999.99
+        }
+      ]
+    },
+    {
+      "bet_type_id": 10,
+      "bet_type_code": "PICK_TWO_BACK",
+      "bet_type_name": "Pick Two Back",
+      "description": "Last two digits exact order",
+      "fields": [
+        {
+          "field_id": 10,
+          "field_code": "PICK_TWO_BACK_MONTO",
+          "field_name": "Monto",
+          "default_value": 50,
+          "data_type": "decimal",
+          "required": true,
+          "min_value": 0,
+          "max_value": 9999.99
+        }
+      ]
+    },
+    {
+      "bet_type_id": 11,
+      "bet_type_code": "PICK_TWO_MIDDLE",
+      "bet_type_name": "Pick Two Middle",
+      "description": "Middle two digits exact order",
+      "fields": [
+        {
+          "field_id": 11,
+          "field_code": "PICK_TWO_MIDDLE_MONTO",
+          "field_name": "Monto",
+          "default_value": 50,
+          "data_type": "decimal",
+          "required": true,
+          "min_value": 0,
+          "max_value": 9999.99
+        }
+      ]
+    },
+    {
+      "bet_type_id": 12,
+      "bet_type_code": "PICK_THREE_STRAIGHT",
+      "bet_type_name": "Pick Three Straight",
+      "description": "Three digits in exact order",
+      "fields": [
+        {
+          "field_id": 12,
+          "field_code": "PICK_THREE_STRAIGHT_MONTO",
+          "field_name": "Monto",
+          "default_value": 500,
+          "data_type": "decimal",
+          "required": true,
+          "min_value": 0,
+          "max_value": 9999.99
+        }
+      ]
+    },
+    {
+      "bet_type_id": 13,
+      "bet_type_code": "PICK_THREE_BOX",
+      "bet_type_name": "Pick Three Box",
+      "description": "Three digits in any order",
+      "fields": [
+        {
+          "field_id": 13,
+          "field_code": "PICK_THREE_BOX_MONTO",
+          "field_name": "Monto",
+          "default_value": 80,
+          "data_type": "decimal",
+          "required": true,
+          "min_value": 0,
+          "max_value": 9999.99
+        }
+      ]
+    },
+    {
+      "bet_type_id": 14,
+      "bet_type_code": "PICK_THREE_STRAIGHT_BOX",
+      "bet_type_name": "Pick Three Straight/Box",
+      "description": "Combination of straight and box bet",
+      "fields": [
+        {
+          "field_id": 14,
+          "field_code": "PICK_THREE_STRAIGHT_BOX_STRAIGHT",
+          "field_name": "Straight Monto",
+          "default_value": 250,
+          "data_type": "decimal",
+          "required": true,
+          "min_value": 0,
+          "max_value": 9999.99
+        },
+        {
+          "field_id": 15,
+          "field_code": "PICK_THREE_STRAIGHT_BOX_BOX",
+          "field_name": "Box Monto",
+          "default_value": 40,
+          "data_type": "decimal",
+          "required": true,
+          "min_value": 0,
+          "max_value": 9999.99
+        }
+      ]
+    },
+    {
+      "bet_type_id": 15,
+      "bet_type_code": "PICK_THREE_COMBO",
+      "bet_type_name": "Pick Three Combo",
+      "description": "Multiple straight bets covering all combinations",
+      "fields": [
+        {
+          "field_id": 16,
+          "field_code": "PICK_THREE_COMBO_MONTO",
+          "field_name": "Monto",
+          "default_value": 500,
+          "data_type": "decimal",
+          "required": true,
+          "min_value": 0,
+          "max_value": 9999.99
+        }
+      ]
+    },
+    {
+      "bet_type_id": 16,
+      "bet_type_code": "PICK_THREE_FRONT_PAIR",
+      "bet_type_name": "Pick Three Front Pair",
+      "description": "First two digits match",
+      "fields": [
+        {
+          "field_id": 17,
+          "field_code": "PICK_THREE_FRONT_PAIR_MONTO",
+          "field_name": "Monto",
+          "default_value": 50,
+          "data_type": "decimal",
+          "required": true,
+          "min_value": 0,
+          "max_value": 9999.99
+        }
+      ]
+    },
+    {
+      "bet_type_id": 17,
+      "bet_type_code": "PICK_THREE_BACK_PAIR",
+      "bet_type_name": "Pick Three Back Pair",
+      "description": "Last two digits match",
+      "fields": [
+        {
+          "field_id": 18,
+          "field_code": "PICK_THREE_BACK_PAIR_MONTO",
+          "field_name": "Monto",
+          "default_value": 50,
+          "data_type": "decimal",
+          "required": true,
+          "min_value": 0,
+          "max_value": 9999.99
+        }
+      ]
+    },
+    {
+      "bet_type_id": 18,
+      "bet_type_code": "PICK_FOUR_STRAIGHT",
+      "bet_type_name": "Pick Four Straight",
+      "description": "Four digits in exact order",
+      "fields": [
+        {
+          "field_id": 19,
+          "field_code": "PICK_FOUR_STRAIGHT_MONTO",
+          "field_name": "Monto",
+          "default_value": 5000,
+          "data_type": "decimal",
+          "required": true,
+          "min_value": 0,
+          "max_value": 9999.99
+        }
+      ]
+    },
+    {
+      "bet_type_id": 19,
+      "bet_type_code": "PICK_FOUR_BOX_24",
+      "bet_type_name": "Pick Four Box (24-way)",
+      "description": "Four different digits in any order",
+      "fields": [
+        {
+          "field_id": 20,
+          "field_code": "PICK_FOUR_BOX_24_MONTO",
+          "field_name": "Monto",
+          "default_value": 200,
+          "data_type": "decimal",
+          "required": true,
+          "min_value": 0,
+          "max_value": 9999.99
+        }
+      ]
+    },
+    {
+      "bet_type_id": 20,
+      "bet_type_code": "PICK_FOUR_BOX_12",
+      "bet_type_name": "Pick Four Box (12-way)",
+      "description": "One pair of digits in any order",
+      "fields": [
+        {
+          "field_id": 21,
+          "field_code": "PICK_FOUR_BOX_12_MONTO",
+          "field_name": "Monto",
+          "default_value": 400,
+          "data_type": "decimal",
+          "required": true,
+          "min_value": 0,
+          "max_value": 9999.99
+        }
+      ]
+    },
+    {
+      "bet_type_id": 21,
+      "bet_type_code": "PICK_FOUR_BOX_6",
+      "bet_type_name": "Pick Four Box (6-way)",
+      "description": "Two pairs of digits in any order",
+      "fields": [
+        {
+          "field_id": 22,
+          "field_code": "PICK_FOUR_BOX_6_MONTO",
+          "field_name": "Monto",
+          "default_value": 800,
+          "data_type": "decimal",
+          "required": true,
+          "min_value": 0,
+          "max_value": 9999.99
+        }
+      ]
+    },
+    {
+      "bet_type_id": 22,
+      "bet_type_code": "PICK_FOUR_BOX_4",
+      "bet_type_name": "Pick Four Box (4-way)",
+      "description": "Three same digits in any order",
+      "fields": [
+        {
+          "field_id": 23,
+          "field_code": "PICK_FOUR_BOX_4_MONTO",
+          "field_name": "Monto",
+          "default_value": 1200,
+          "data_type": "decimal",
+          "required": true,
+          "min_value": 0,
+          "max_value": 9999.99
+        }
+      ]
+    },
+    {
+      "bet_type_id": 23,
+      "bet_type_code": "PICK_FOUR_STRAIGHT_BOX",
+      "bet_type_name": "Pick Four Straight/Box",
+      "description": "Combination straight and box bet for Pick 4",
+      "fields": [
+        {
+          "field_id": 24,
+          "field_code": "PICK_FOUR_STRAIGHT_BOX_STRAIGHT",
+          "field_name": "Straight Monto",
+          "default_value": 3100,
+          "data_type": "decimal",
+          "required": true,
+          "min_value": 0,
+          "max_value": 9999.99
+        },
+        {
+          "field_id": 25,
+          "field_code": "PICK_FOUR_STRAIGHT_BOX_BOX_24",
+          "field_name": "Box 24-way Monto",
+          "default_value": 100,
+          "data_type": "decimal",
+          "required": true,
+          "min_value": 0,
+          "max_value": 9999.99
+        },
+        {
+          "field_id": 26,
+          "field_code": "PICK_FOUR_STRAIGHT_BOX_BOX_12",
+          "field_name": "Box 12-way Monto",
+          "default_value": 200,
+          "data_type": "decimal",
+          "required": true,
+          "min_value": 0,
+          "max_value": 9999.99
+        },
+        {
+          "field_id": 27,
+          "field_code": "PICK_FOUR_STRAIGHT_BOX_BOX_6",
+          "field_name": "Box 6-way Monto",
+          "default_value": 400,
+          "data_type": "decimal",
+          "required": true,
+          "min_value": 0,
+          "max_value": 9999.99
+        },
+        {
+          "field_id": 28,
+          "field_code": "PICK_FOUR_STRAIGHT_BOX_BOX_4",
+          "field_name": "Box 4-way Monto",
+          "default_value": 600,
+          "data_type": "decimal",
+          "required": true,
+          "min_value": 0,
+          "max_value": 9999.99
+        }
+      ]
+    },
+    {
+      "bet_type_id": 24,
+      "bet_type_code": "PICK_FOUR_COMBO",
+      "bet_type_name": "Pick Four Combo",
+      "description": "All straight combinations for Pick 4",
+      "fields": [
+        {
+          "field_id": 29,
+          "field_code": "PICK_FOUR_COMBO_24_WAY",
+          "field_name": "Combo 24-way Monto",
+          "default_value": 5000,
+          "data_type": "decimal",
+          "required": true,
+          "min_value": 0,
+          "max_value": 9999.99
+        },
+        {
+          "field_id": 30,
+          "field_code": "PICK_FOUR_COMBO_12_WAY",
+          "field_name": "Combo 12-way Monto",
+          "default_value": 5000,
+          "data_type": "decimal",
+          "required": true,
+          "min_value": 0,
+          "max_value": 9999.99
+        },
+        {
+          "field_id": 31,
+          "field_code": "PICK_FOUR_COMBO_6_WAY",
+          "field_name": "Combo 6-way Monto",
+          "default_value": 5000,
+          "data_type": "decimal",
+          "required": true,
+          "min_value": 0,
+          "max_value": 9999.99
+        },
+        {
+          "field_id": 32,
+          "field_code": "PICK_FOUR_COMBO_4_WAY",
+          "field_name": "Combo 4-way Monto",
+          "default_value": 5000,
+          "data_type": "decimal",
+          "required": true,
+          "min_value": 0,
+          "max_value": 9999.99
+        },
+        {
+          "field_id": 33,
+          "field_code": "PICK_FOUR_FRONT_PAIR",
+          "field_name": "Front Pair Monto",
+          "default_value": 50,
+          "data_type": "decimal",
+          "required": true,
+          "min_value": 0,
+          "max_value": 9999.99
+        },
+        {
+          "field_id": 34,
+          "field_code": "PICK_FOUR_BACK_PAIR",
+          "field_name": "Back Pair Monto",
+          "default_value": 50,
+          "data_type": "decimal",
+          "required": true,
+          "min_value": 0,
+          "max_value": 9999.99
+        },
+        {
+          "field_id": 35,
+          "field_code": "PICK_FOUR_SPLIT_PAIR",
+          "field_name": "Split Pair Monto",
+          "default_value": 50,
+          "data_type": "decimal",
+          "required": true,
+          "min_value": 0,
+          "max_value": 9999.99
+        },
+        {
+          "field_id": 36,
+          "field_code": "PICK_FIVE_STRAIGHT",
+          "field_name": "Pick Five Straight Monto",
+          "default_value": 50000,
+          "data_type": "decimal",
+          "required": true,
+          "min_value": 0,
+          "max_value": 99999.99
+        },
+        {
+          "field_id": 37,
+          "field_code": "PICK_FIVE_BOX_120",
+          "field_name": "Pick Five Box 120-way Monto",
+          "default_value": 400,
+          "data_type": "decimal",
+          "required": true,
+          "min_value": 0,
+          "max_value": 99999.99
+        },
+        {
+          "field_id": 38,
+          "field_code": "PICK_FIVE_BOX_60",
+          "field_name": "Pick Five Box 60-way Monto",
+          "default_value": 800,
+          "data_type": "decimal",
+          "required": true,
+          "min_value": 0,
+          "max_value": 99999.99
+        },
+        {
+          "field_id": 39,
+          "field_code": "PICK_FIVE_BOX_30",
+          "field_name": "Pick Five Box 30-way Monto",
+          "default_value": 1600,
+          "data_type": "decimal",
+          "required": true,
+          "min_value": 0,
+          "max_value": 99999.99
+        },
+        {
+          "field_id": 40,
+          "field_code": "PICK_FIVE_BOX_20",
+          "field_name": "Pick Five Box 20-way Monto",
+          "default_value": 2500,
+          "data_type": "decimal",
+          "required": true,
+          "min_value": 0,
+          "max_value": 99999.99
+        },
+        {
+          "field_id": 41,
+          "field_code": "PICK_FIVE_BOX_10",
+          "field_name": "Pick Five Box 10-way Monto",
+          "default_value": 5000,
+          "data_type": "decimal",
+          "required": true,
+          "min_value": 0,
+          "max_value": 99999.99
+        },
+        {
+          "field_id": 42,
+          "field_code": "PICK_FIVE_BOX_5",
+          "field_name": "Pick Five Box 5-way Monto",
+          "default_value": 10000,
+          "data_type": "decimal",
+          "required": true,
+          "min_value": 0,
+          "max_value": 99999.99
+        },
+        {
+          "field_id": 43,
+          "field_code": "PICK_FIVE_FRONT_PAIR",
+          "field_name": "Pick Five Front Pair Monto",
+          "default_value": 50,
+          "data_type": "decimal",
+          "required": true,
+          "min_value": 0,
+          "max_value": 99999.99
+        },
+        {
+          "field_id": 44,
+          "field_code": "PICK_FIVE_BACK_PAIR",
+          "field_name": "Pick Five Back Pair Monto",
+          "default_value": 50,
+          "data_type": "decimal",
+          "required": true,
+          "min_value": 0,
+          "max_value": 99999.99
+        },
+        {
+          "field_id": 45,
+          "field_code": "PICK_FIVE_FRONT_THREE",
+          "field_name": "Pick Five Front Three Monto",
+          "default_value": 500,
+          "data_type": "decimal",
+          "required": true,
+          "min_value": 0,
+          "max_value": 99999.99
+        },
+        {
+          "field_id": 46,
+          "field_code": "PICK_FIVE_BACK_THREE",
+          "field_name": "Pick Five Back Three Monto",
+          "default_value": 500,
+          "data_type": "decimal",
+          "required": true,
+          "min_value": 0,
+          "max_value": 99999.99
+        },
+        {
+          "field_id": 47,
+          "field_code": "PICK_FIVE_FRONT_FOUR",
+          "field_name": "Pick Five Front Four Monto",
+          "default_value": 5000,
+          "data_type": "decimal",
+          "required": true,
+          "min_value": 0,
+          "max_value": 99999.99
+        },
+        {
+          "field_id": 48,
+          "field_code": "PICK_FIVE_BACK_FOUR",
+          "field_name": "Pick Five Back Four Monto",
+          "default_value": 5000,
+          "data_type": "decimal",
+          "required": true,
+          "min_value": 0,
+          "max_value": 99999.99
+        },
+        {
+          "field_id": 49,
+          "field_code": "LOTTO_3_NUMBERS",
+          "field_name": "Lotto 3 Numbers Monto",
+          "default_value": 5,
+          "data_type": "decimal",
+          "required": true,
+          "min_value": 0,
+          "max_value": 99999.99
+        },
+        {
+          "field_id": 50,
+          "field_code": "LOTTO_4_NUMBERS",
+          "field_name": "Lotto 4 Numbers Monto",
+          "default_value": 50,
+          "data_type": "decimal",
+          "required": true,
+          "min_value": 0,
+          "max_value": 99999.99
+        },
+        {
+          "field_id": 51,
+          "field_code": "LOTTO_5_NUMBERS",
+          "field_name": "Lotto 5 Numbers Monto",
+          "default_value": 500,
+          "data_type": "decimal",
+          "required": true,
+          "min_value": 0,
+          "max_value": 99999.99
+        },
+        {
+          "field_id": 52,
+          "field_code": "LOTTO_6_NUMBERS",
+          "field_name": "Lotto 6 Numbers Monto",
+          "default_value": 5000,
+          "data_type": "decimal",
+          "required": true,
+          "min_value": 0,
+          "max_value": 99999.99
+        },
+        {
+          "field_id": 53,
+          "field_code": "POWERBALL_5_PLUS_POWERBALL",
+          "field_name": "Powerball 5+PB Monto",
+          "default_value": 1000000,
+          "data_type": "decimal",
+          "required": true,
+          "min_value": 0,
+          "max_value": 9999999.99
+        },
+        {
+          "field_id": 54,
+          "field_code": "POWERBALL_5_NO_POWERBALL",
+          "field_name": "Powerball 5 no PB Monto",
+          "default_value": 1000,
+          "data_type": "decimal",
+          "required": true,
+          "min_value": 0,
+          "max_value": 9999999.99
+        },
+        {
+          "field_id": 55,
+          "field_code": "POWERBALL_4_PLUS_POWERBALL",
+          "field_name": "Powerball 4+PB Monto",
+          "default_value": 100,
+          "data_type": "decimal",
+          "required": true,
+          "min_value": 0,
+          "max_value": 9999999.99
+        },
+        {
+          "field_id": 56,
+          "field_code": "POWERBALL_4_NO_POWERBALL",
+          "field_name": "Powerball 4 no PB Monto",
+          "default_value": 100,
+          "data_type": "decimal",
+          "required": true,
+          "min_value": 0,
+          "max_value": 9999999.99
+        },
+        {
+          "field_id": 57,
+          "field_code": "POWERBALL_3_PLUS_POWERBALL",
+          "field_name": "Powerball 3+PB Monto",
+          "default_value": 100,
+          "data_type": "decimal",
+          "required": true,
+          "min_value": 0,
+          "max_value": 9999999.99
+        },
+        {
+          "field_id": 58,
+          "field_code": "POWERBALL_3_NO_POWERBALL",
+          "field_name": "Powerball 3 no PB Monto",
+          "default_value": 7,
+          "data_type": "decimal",
+          "required": true,
+          "min_value": 0,
+          "max_value": 9999999.99
+        },
+        {
+          "field_id": 59,
+          "field_code": "POWERBALL_2_PLUS_POWERBALL",
+          "field_name": "Powerball 2+PB Monto",
+          "default_value": 7,
+          "data_type": "decimal",
+          "required": true,
+          "min_value": 0,
+          "max_value": 9999999.99
+        },
+        {
+          "field_id": 60,
+          "field_code": "POWERBALL_1_PLUS_POWERBALL",
+          "field_name": "Powerball 1+PB Monto",
+          "default_value": 4,
+          "data_type": "decimal",
+          "required": true,
+          "min_value": 0,
+          "max_value": 9999999.99
+        },
+        {
+          "field_id": 61,
+          "field_code": "POWERBALL_0_PLUS_POWERBALL",
+          "field_name": "Powerball 0+PB Monto",
+          "default_value": 4,
+          "data_type": "decimal",
+          "required": true,
+          "min_value": 0,
+          "max_value": 9999999.99
+        },
+        {
+          "field_id": 62,
+          "field_code": "INSTANT_WIN",
+          "field_name": "Instant Win Monto",
+          "default_value": 100,
+          "data_type": "decimal",
+          "required": true,
+          "min_value": 0,
+          "max_value": 99999.99
+        }
+      ]
+    }
+  ],
+  "validation_rules": {
+    "all_fields_required": true,
+    "multiplier_minimum": 0,
+    "multiplier_maximum": 9999999.99,
+    "decimal_places": 2,
+    "currency_symbol": "$"
+  },
+  "configuration_precedence": {
+    "level_1": {
+      "name": "System Default (Seed Data)",
+      "description": "Base multipliers defined in this specification file",
+      "priority": 1,
+      "immutable": true
+    },
+    "level_2": {
+      "name": "Banca General Configuration",
+      "description": "Custom multipliers set per banca in configuracion_general_banca table",
+      "priority": 2,
+      "overrides": "level_1"
+    },
+    "level_3": {
+      "name": "Specific Draw Override",
+      "description": "Custom multipliers for specific sorteo in configuracion_sorteo_banca table (sparse)",
+      "priority": 3,
+      "overrides": "level_1, level_2"
+    }
+  },
+  "prize_calculation_example": {
+    "bet_type": "DIRECTO",
+    "bet_amount": 10.00,
+    "multiplier_source": "Specific Draw Override",
+    "multiplier_value": 75,
+    "calculation": "10.00 × 75",
+    "prize_payout": 750.00,
+    "currency": "USD"
+  },
+  "auto_initialization": {
+    "trigger": "On banca creation",
+    "action": "Insert 62 records into configuracion_general_banca",
+    "source": "Default values from this specification",
+    "records_created": 62,
+    "description": "Each new banca automatically gets all 62 prize fields initialized with system defaults"
+  },
+  "notes": [
+    "This specification is the single source of truth for all prize field definitions",
+    "All monto fields represent MULTIPLIERS, not fixed amounts",
+    "Total of 62 fields across 24 bet types",
+    "Pick Four Combo bet type (ID 24) contains 34 fields total, including Pick Five, Lotto, Powerball, and Instant Win fields",
+    "Auto-creation ensures every banca has complete prize configuration from day one",
+    "Sparse override pattern in configuracion_sorteo_banca means only differences from general config are stored",
+    "All changes to prize configurations must be audited in auditoria_cambios_premios table"
+  ]
+}

@@ -1,0 +1,270 @@
+/* ============================================
+   ESTILOS TAB SORTEOS - Replicado del diseño original
+   ============================================ */
+
+.sorteos-container {
+  background: white;
+  padding: 0;
+  margin: 0;
+}
+
+/* Contenedor principal de botones de sorteos */
+.sorteos-btn-group {
+  display: block;
+  margin: 0 0 20px 0;
+  padding: 0;
+  width: 100%;
+}
+
+/* Contenedor unificado - Todos los botones juntos sin separaciones */
+.sorteo-btn-group-unified {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+  margin: 0 0 20px 0;
+  padding: 0;
+  width: 100%;
+}
+
+/* Labels de sorteos - Estilo bootstrap btn-outline-primary */
+.sorteo-btn-label {
+  font-family: Montserrat, "Helvetica Neue", Arial, sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.8);
+  text-align: center;
+  background-color: rgb(81, 203, 206);
+  border: 1.11111px solid rgb(81, 203, 206);
+  padding: 4px 8px;
+  margin: 0 -1px 10px 0;
+  height: 31px;
+  min-width: 56px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  white-space: nowrap;
+  border-radius: 0px;
+  box-sizing: border-box;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Primer botón con border radius en la izquierda - Solo en grupo unificado */
+.sorteo-btn-group-unified > div:first-child .sorteo-btn-label {
+  border-radius: 3.2px 0px 0px 3.2px;
+}
+
+/* Checkbox oculto dentro del label */
+.sorteo-btn-label input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  width: 13px;
+  height: 13px;
+  margin: 0;
+  padding: 0;
+  pointer-events: none;
+}
+
+/* Estado activo (checked) */
+.sorteo-btn-label.active {
+  background-color: rgb(81, 203, 206);
+  border-color: rgb(81, 203, 206);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* Estado inactivo (no checked) */
+.sorteo-btn-label:not(.active) {
+  background-color: rgba(0, 0, 0, 0);
+  border-color: rgb(81, 203, 206);
+  color: rgb(81, 203, 206);
+}
+
+/* Hover */
+.sorteo-btn-label:hover {
+  opacity: 0.9;
+}
+
+/* Botón "TODOS" - Con estilo especial */
+.sorteo-todos-container {
+  margin: 20px 0;
+  display: block;
+}
+
+.sorteo-todos-btn {
+  font-family: Montserrat, "Helvetica Neue", Arial, sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.8);
+  text-align: center;
+  background-color: rgb(81, 203, 206);
+  border: 1.11111px solid rgb(81, 203, 206);
+  border-radius: 3.2px;
+  padding: 4px 8px;
+  margin: 0;
+  width: 75px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  box-sizing: border-box;
+}
+
+.sorteo-todos-btn input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  width: 13px;
+  height: 13px;
+  margin: 0;
+  padding: 0;
+  pointer-events: none;
+}
+
+.sorteo-todos-btn.active {
+  background-color: rgb(81, 203, 206);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.sorteo-todos-btn:not(.active) {
+  background-color: rgba(0, 0, 0, 0);
+  color: rgb(81, 203, 206);
+}
+
+/* Sección de cierre anticipado */
+.cierre-anticipado-section {
+  margin: 30px 0 20px 0;
+}
+
+.cierre-anticipado-label {
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  color: #252422;
+  margin: 0 0 10px 0;
+  display: block;
+}
+
+.cierre-anticipado-select-wrapper {
+  position: relative;
+  width: 469px;
+  max-width: 100%;
+}
+
+.cierre-anticipado-select {
+  font-family: Montserrat, "Helvetica Neue", Arial, sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  color: rgb(102, 97, 91);
+  background-color: rgb(255, 255, 255);
+  border: 2px solid rgb(232, 232, 232);
+  border-radius: 5px;
+  padding: 8px 40px 8px 8px;
+  width: 100%;
+  height: 40px;
+  box-sizing: border-box;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+  background-position: right 12px center;
+  background-repeat: no-repeat;
+  background-size: 16px;
+}
+
+.cierre-anticipado-select:focus {
+  outline: none;
+  border-color: rgb(81, 203, 206);
+}
+
+.cierre-anticipado-select option {
+  padding: 8px;
+}
+
+/* Filas de sorteos - 13 por fila según el diseño */
+.sorteo-row {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0;
+  padding: 0;
+  gap: 0;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1400px) {
+  .sorteo-btn-label {
+    font-size: 13px;
+    padding: 4px 6px;
+    min-width: 50px;
+  }
+}
+
+@media (max-width: 1200px) {
+  .sorteo-row {
+    flex-wrap: wrap;
+  }
+
+  .sorteo-btn-label {
+    font-size: 12px;
+    padding: 4px 6px;
+    min-width: 45px;
+    margin: 0 -1px 8px 0;
+  }
+}
+
+@media (max-width: 992px) {
+  .sorteo-btn-label {
+    font-size: 11px;
+    padding: 3px 5px;
+    min-width: 40px;
+    height: 28px;
+  }
+
+  .cierre-anticipado-select-wrapper {
+    width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .sorteo-row {
+    justify-content: flex-start;
+  }
+
+  .sorteo-btn-label {
+    font-size: 10px;
+    padding: 3px 4px;
+    min-width: 35px;
+    height: 26px;
+    margin: 0 -1px 6px 0;
+  }
+
+  .sorteo-todos-btn {
+    width: 65px;
+    height: 26px;
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 576px) {
+  .sorteos-container {
+    padding: 10px;
+  }
+
+  .sorteo-btn-label {
+    font-size: 9px;
+    padding: 2px 3px;
+    min-width: 30px;
+    height: 24px;
+  }
+
+  .cierre-anticipado-label {
+    font-size: 12px;
+  }
+
+  .cierre-anticipado-select {
+    font-size: 13px;
+    height: 36px;
+  }
+}

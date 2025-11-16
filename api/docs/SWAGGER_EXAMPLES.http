@@ -1,0 +1,175 @@
+### Lottery API - Swagger/OpenAPI Examples
+### Este archivo puede ser usado con VS Code REST Client extension
+
+@baseUrl = https://localhost:5001
+@baseUrlDev = http://localhost:5000
+
+### ===========================================
+### SWAGGER/OPENAPI ENDPOINTS
+### ===========================================
+
+### 1. Get API Information (includes all documentation endpoints)
+GET {{baseUrl}}/api/info
+Accept: application/json
+
+### 2. Access Swagger UI (Interactive Documentation)
+# Open in browser: https://localhost:5001/swagger
+
+### 3. Get OpenAPI 3.0 Specification (JSON)
+GET {{baseUrl}}/swagger/v1-openapi3/swagger.json
+Accept: application/json
+
+### 4. Get OpenAPI 3.0 Specification (YAML)
+GET {{baseUrl}}/swagger/v1-openapi3/swagger.yaml
+Accept: application/yaml
+
+### 5. Get Swagger 2.0 Specification (JSON)
+GET {{baseUrl}}/swagger/v1-swagger2/swagger.json
+Accept: application/json
+
+### 6. Get Swagger 2.0 Specification (YAML)
+GET {{baseUrl}}/swagger/v1-swagger2/swagger.yaml
+Accept: application/yaml
+
+### ===========================================
+### HEALTH & STATUS
+### ===========================================
+
+### 7. Health Check
+GET {{baseUrl}}/health
+
+### ===========================================
+### AUTHENTICATION
+### ===========================================
+
+### 8. Login (Get JWT Token)
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "password123"
+}
+
+### 9. Register New User
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "username": "testuser",
+  "password": "Test123456",
+  "email": "test@example.com",
+  "fullName": "Test User",
+  "phone": "1234567890"
+}
+
+### ===========================================
+### LOTTERIES (Protected - Requires JWT)
+### ===========================================
+
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+# Replace with actual token from login response
+
+### 10. Get All Lotteries (Paginated)
+GET {{baseUrl}}/api/lotteries?pageNumber=1&pageSize=20
+Authorization: Bearer {{token}}
+
+### 11. Get Lottery by ID
+GET {{baseUrl}}/api/lotteries/1
+Authorization: Bearer {{token}}
+
+### 12. Get Lotteries by Country
+GET {{baseUrl}}/api/lotteries/country/2
+Authorization: Bearer {{token}}
+
+### 13. Create New Lottery
+POST {{baseUrl}}/api/lotteries
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "countryId": 2,
+  "lotteryName": "Test Lottery",
+  "lotteryType": "Daily",
+  "description": "Test lottery for API"
+}
+
+### ===========================================
+### DRAWS/SORTEOS (Protected - Requires JWT)
+### ===========================================
+
+### 14. Get All Draws (Paginated)
+GET {{baseUrl}}/api/draws?pageNumber=1&pageSize=50
+Authorization: Bearer {{token}}
+
+### 15. Get Draw by ID
+GET {{baseUrl}}/api/draws/1
+Authorization: Bearer {{token}}
+
+### 16. Get Draws by Lottery
+GET {{baseUrl}}/api/draws/lottery/5
+Authorization: Bearer {{token}}
+
+### 17. Get Draws by Country
+GET {{baseUrl}}/api/draws/country/2
+Authorization: Bearer {{token}}
+
+### ===========================================
+### DOWNLOAD SPECIFICATIONS (using curl)
+### ===========================================
+
+# OpenAPI 3.0 JSON
+# curl https://localhost:5001/swagger/v1-openapi3/swagger.json -o openapi3.json
+
+# OpenAPI 3.0 YAML
+# curl https://localhost:5001/swagger/v1-openapi3/swagger.yaml -o openapi3.yaml
+
+# Swagger 2.0 JSON
+# curl https://localhost:5001/swagger/v1-swagger2/swagger.json -o swagger2.json
+
+# Swagger 2.0 YAML
+# curl https://localhost:5001/swagger/v1-swagger2/swagger.yaml -o swagger2.yaml
+
+### ===========================================
+### IMPORT TO POSTMAN
+### ===========================================
+
+# 1. Open Postman
+# 2. Click "Import"
+# 3. Select "Link" tab
+# 4. Paste one of these URLs:
+#    - https://localhost:5001/swagger/v1-openapi3/swagger.json (Recommended)
+#    - https://localhost:5001/swagger/v1-swagger2/swagger.json (Legacy)
+# 5. Click "Continue"
+
+### ===========================================
+### VALIDATE SPECIFICATION
+### ===========================================
+
+# Using Swagger CLI:
+# npx @apidevtools/swagger-cli validate https://localhost:5001/swagger/v1-openapi3/swagger.json
+
+# Using Redocly CLI:
+# npx @redocly/cli lint https://localhost:5001/swagger/v1-openapi3/swagger.yaml
+
+### ===========================================
+### GENERATE CLIENT SDK
+### ===========================================
+
+# C# Client (OpenAPI 3.0):
+# openapi-generator-cli generate \
+#   -i https://localhost:5001/swagger/v1-openapi3/swagger.json \
+#   -g csharp \
+#   -o ./LotteryApiClient
+
+# TypeScript/Axios Client:
+# openapi-generator-cli generate \
+#   -i https://localhost:5001/swagger/v1-openapi3/swagger.json \
+#   -g typescript-axios \
+#   -o ./lottery-api-client-ts
+
+# Python Client:
+# openapi-generator-cli generate \
+#   -i https://localhost:5001/swagger/v1-openapi3/swagger.json \
+#   -g python \
+#   -o ./lottery_api_client_py

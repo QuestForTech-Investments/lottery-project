@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diagrama ER - Lottery Database</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #34495e;
+            margin-top: 30px;
+        }
+        .legend {
+            background: #ecf0f1;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .legend-item {
+            display: inline-block;
+            margin-right: 20px;
+            margin-bottom: 10px;
+        }
+        .legend-item span {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .pk { background: #e74c3c; color: white; }
+        .fk { background: #3498db; color: white; }
+        .identity { background: #2ecc71; color: white; }
+        .legacy { background: #f39c12; color: white; }
+        .mermaid {
+            text-align: center;
+            margin: 30px 0;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .stat-card h3 {
+            margin: 0;
+            font-size: 36px;
+        }
+        .stat-card p {
+            margin: 5px 0 0 0;
+            opacity: 0.9;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background: #34495e;
+            color: white;
+        }
+        tr:hover {
+            background: #f5f5f5;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 Diagrama ER - Sistema de Loterías</h1>
+
+        <div class="stats">
+            <div class="stat-card">
+                <h3>50</h3>
+                <p>Tablas Totales</p>
+            </div>
+            <div class="stat-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                <h3>30</h3>
+                <p>Loterías</p>
+            </div>
+            <div class="stat-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                <h3>69</h3>
+                <p>Sorteos</p>
+            </div>
+            <div class="stat-card" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
+                <h3>57</h3>
+                <p>Relaciones FK</p>
+            </div>
+        </div>
+
+        <div class="legend">
+            <h3>📖 Leyenda</h3>
+            <div class="legend-item">
+                <span class="pk">PK</span> Primary Key
+            </div>
+            <div class="legend-item">
+                <span class="fk">FK</span> Foreign Key
+            </div>
+            <div class="legend-item">
+                <span class="identity">IDENTITY</span> Auto-incremento
+            </div>
+            <div class="legend-item">
+                <span class="legacy">LEGACY</span> Tabla heredada
+            </div>
+        </div>
+
+        <h2>🗺️ Vista Simplificada - Módulo Core</h2>
+        <div class="mermaid">
+erDiagram
+    countries ||--o{ lotteries_copy : "has"
+    lotteries_copy ||--o{ draws : "has_many"
+    countries ||--o{ zones : "contains"
+    zones ||--o{ betting_pools : "hosts"
+
+    countries {
+        int country_id PK
+        string country_name
+        string country_code
+    }
+
+    lotteries_copy {
+        int lottery_id PK_IDENTITY
+        int country_id FK
+        string lottery_name
+        string lottery_type
+    }
+
+    draws {
+        int draw_id PK_IDENTITY
+        int lottery_id FK
+        string draw_name
+        time draw_time
+    }
+
+    zones {
+        int zone_id PK
+        int country_id FK
+        string zone_name
+    }
+
+    betting_pools {
+        int betting_pool_id PK_IDENTITY
+        int zone_id FK
+        string betting_pool_name
+        string betting_pool_code
+    }
+        </div>
+
+        <h2>👥 Vista Simplificada - Usuarios y Permisos</h2>
+        <div class="mermaid">
+erDiagram
+    roles ||--o{ users : "has"
+    users ||--o{ user_permissions : "has_direct"
+    permissions ||--o{ user_permissions : "granted"
+    users ||--o{ user_zones : "assigned_to"
+    zones ||--o{ user_zones : "contains"
+
+    roles {
+        int role_id PK
+        string role_name
+    }
+
+    users {
+        int user_id PK_IDENTITY
+        string username
+        int role_id FK
+    }
+
+    permissions {
+        int permission_id PK_IDENTITY
+        string permission_code
+        string category
+    }
+
+    user_permissions {
+        int user_permission_id PK_IDENTITY
+        int user_id FK
+        int permission_id FK
+    }
+
+    zones {
+        int zone_id PK
+        string zone_name
+    }
+
+    user_zones {
+        int user_zone_id PK_IDENTITY
+        int user_id FK
+        int zone_id FK
+    }
+        </div>
+
+        <h2>🎫 Vista Simplificada - Tickets y Resultados</h2>
+        <div class="mermaid">
+erDiagram
+    betting_pools ||--o{ tickets : "sells"
+    tickets ||--o{ ticket_lines : "contains"
+    draws ||--o{ results : "has"
+    results ||--o{ prizes : "generates"
+    ticket_lines ||--o{ prizes : "wins"
+
+    betting_pools {
+        int betting_pool_id PK_IDENTITY
+        string betting_pool_name
+    }
+
+    tickets {
+        int ticket_id PK_IDENTITY
+        int betting_pool_id FK
+        string ticket_number
+        decimal total_amount
+    }
+
+    ticket_lines {
+        int line_id PK_IDENTITY
+        int ticket_id FK
+        int draw_id FK
+        string numbers
+        decimal bet_amount
+    }
+
+    draws {
+        int draw_id PK_IDENTITY
+        string draw_name
+    }
+
+    results {
+        int result_id PK
+        int draw_id FK
+        string winning_numbers
+    }
+
+    prizes {
+        int prize_id PK
+        int result_id FK
+        int line_id FK
+        decimal prize_amount
+    }
+        </div>
+
+        <h2>📋 Tablas Principales</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Módulo</th>
+                    <th>Tabla</th>
+                    <th>Registros</th>
+                    <th>Descripción</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td rowspan="5">🌍 Core</td>
+                    <td>countries</td>
+                    <td>12</td>
+                    <td>Países del sistema</td>
+                </tr>
+                <tr>
+                    <td><strong>lotteries_copy</strong></td>
+                    <td><strong>30</strong></td>
+                    <td>✅ Loterías actuales (IDENTITY)</td>
+                </tr>
+                <tr>
+                    <td><strong>draws</strong></td>
+                    <td><strong>69</strong></td>
+                    <td>✅ Sorteos actuales (IDENTITY)</td>
+                </tr>
+                <tr>
+                    <td>zones</td>
+                    <td>16</td>
+                    <td>Zonas geográficas</td>
+                </tr>
+                <tr>
+                    <td>lotteries</td>
+                    <td>69</td>
+                    <td>⚠️ Legacy (sorteos antiguos)</td>
+                </tr>
+                <tr>
+                    <td rowspan="3">👥 Usuarios</td>
+                    <td>users</td>
+                    <td>24</td>
+                    <td>Usuarios del sistema</td>
+                </tr>
+                <tr>
+                    <td>permissions</td>
+                    <td>61</td>
+                    <td>Permisos disponibles</td>
+                </tr>
+                <tr>
+                    <td>user_permissions</td>
+                    <td>37</td>
+                    <td>Permisos directos</td>
+                </tr>
+                <tr>
+                    <td rowspan="3">🏦 Bancas</td>
+                    <td>betting_pools</td>
+                    <td>8</td>
+                    <td>Puntos de venta</td>
+                </tr>
+                <tr>
+                    <td>betting_pool_config</td>
+                    <td>8</td>
+                    <td>Configuraciones</td>
+                </tr>
+                <tr>
+                    <td>banca_prize_configs</td>
+                    <td>402</td>
+                    <td>Premios por banca</td>
+                </tr>
+                <tr>
+                    <td rowspan="2">🎲 Juegos</td>
+                    <td>bet_types</td>
+                    <td>23</td>
+                    <td>Tipos de apuesta</td>
+                </tr>
+                <tr>
+                    <td>prize_fields</td>
+                    <td>56</td>
+                    <td>Campos de premios</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2>🔗 Relaciones Clave</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Desde</th>
+                    <th>Hacia</th>
+                    <th>Tipo</th>
+                    <th>Descripción</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>lotteries_copy</td>
+                    <td>draws</td>
+                    <td>1:N</td>
+                    <td>✅ Una lotería tiene múltiples sorteos</td>
+                </tr>
+                <tr>
+                    <td>betting_pools</td>
+                    <td>tickets</td>
+                    <td>1:N</td>
+                    <td>Una banca vende muchos tickets</td>
+                </tr>
+                <tr>
+                    <td>tickets</td>
+                    <td>ticket_lines</td>
+                    <td>1:N</td>
+                    <td>Un ticket tiene múltiples líneas</td>
+                </tr>
+                <tr>
+                    <td>users</td>
+                    <td>zones</td>
+                    <td>N:M</td>
+                    <td>Usuarios asignados a múltiples zonas</td>
+                </tr>
+                <tr>
+                    <td>lotteries</td>
+                    <td>game_types</td>
+                    <td>N:M</td>
+                    <td>Compatibilidad lotería-tipo de juego</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <p style="text-align: center; color: #7f8c8d; margin-top: 40px;">
+            📅 Generado: 2025-11-11 | 🗄️ Base de datos: lottery-db
+        </p>
+    </div>
+
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'default',
+            er: {
+                useMaxWidth: true
+            }
+        });
+    </script>
+</body>
+</html>
