@@ -21,6 +21,81 @@ const TABLE_COLUMNS = [
   { key: 'accumulatedFall', label: 'Caida acumulada', align: 'right' }
 ];
 
+// Columnas específicas para cada tab
+const WINNER_COLUMNS = [
+  { key: 'ref', label: 'Número', align: 'left' },
+  { key: 'code', label: 'Código', align: 'left' },
+  { key: 'winnerName', label: 'Nombre ganador', align: 'left' },
+  { key: 'winnerPhone', label: 'Teléfono', align: 'left' },
+  { key: 'ticketNumber', label: 'Número ticket', align: 'left' },
+  { key: 'winningNumber', label: 'Número ganador', align: 'center' },
+  { key: 'betType', label: 'Tipo apuesta', align: 'left' },
+  { key: 'prizeAmount', label: 'Monto premio', align: 'right' },
+  { key: 'claimedDate', label: 'Fecha reclamo', align: 'center' },
+  { key: 'status', label: 'Estado', align: 'center' }
+];
+
+const PRIZES_COLUMNS = [
+  { key: 'ref', label: 'Número', align: 'left' },
+  { key: 'code', label: 'Código', align: 'left' },
+  { key: 'directoPrizes', label: 'Directo', align: 'right' },
+  { key: 'palePrizes', label: 'Palé', align: 'right' },
+  { key: 'tripletaPrizes', label: 'Tripleta', align: 'right' },
+  { key: 'pickTwoPrizes', label: 'Pick Two', align: 'right' },
+  { key: 'pickThreePrizes', label: 'Pick Three', align: 'right' },
+  { key: 'pickFourPrizes', label: 'Pick Four', align: 'right' },
+  { key: 'otherPrizes', label: 'Otros', align: 'right' },
+  { key: 'totalPrizes', label: 'Total premios', align: 'right' }
+];
+
+const COMMISSIONS_COLUMNS = [
+  { key: 'ref', label: 'Número', align: 'left' },
+  { key: 'code', label: 'Código', align: 'left' },
+  { key: 'directoComm', label: 'Directo', align: 'right' },
+  { key: 'paleComm', label: 'Palé', align: 'right' },
+  { key: 'tripletaComm', label: 'Tripleta', align: 'right' },
+  { key: 'pickTwoComm', label: 'Pick Two', align: 'right' },
+  { key: 'pickThreeComm', label: 'Pick Three', align: 'right' },
+  { key: 'pickFourComm', label: 'Pick Four', align: 'right' },
+  { key: 'otherComm', label: 'Otros', align: 'right' },
+  { key: 'totalComm', label: 'Total comisiones', align: 'right' }
+];
+
+const DISCOUNTS_COLUMNS = [
+  { key: 'ref', label: 'Número', align: 'left' },
+  { key: 'code', label: 'Código', align: 'left' },
+  { key: 'volumeDiscount', label: 'Por volumen', align: 'right' },
+  { key: 'loyaltyDiscount', label: 'Por fidelidad', align: 'right' },
+  { key: 'promotionalDiscount', label: 'Promocional', align: 'right' },
+  { key: 'specialDiscount', label: 'Especial', align: 'right' },
+  { key: 'otherDiscount', label: 'Otros', align: 'right' },
+  { key: 'totalDiscount', label: 'Total descuentos', align: 'right' }
+];
+
+const NET_COLUMNS = [
+  { key: 'ref', label: 'Número', align: 'left' },
+  { key: 'code', label: 'Código', align: 'left' },
+  { key: 'grossSales', label: 'Ventas brutas', align: 'right' },
+  { key: 'totalCommissions', label: 'Comisiones', align: 'right' },
+  { key: 'totalDiscounts', label: 'Descuentos', align: 'right' },
+  { key: 'totalPrizes', label: 'Premios', align: 'right' },
+  { key: 'netSales', label: 'Ventas netas', align: 'right' },
+  { key: 'profit', label: 'Ganancia', align: 'right' },
+  { key: 'profitMargin', label: 'Margen %', align: 'right' }
+];
+
+const TICKETS_COLUMNS = [
+  { key: 'ref', label: 'Número', align: 'left' },
+  { key: 'code', label: 'Código', align: 'left' },
+  { key: 'totalTickets', label: 'Total tickets', align: 'right' },
+  { key: 'pendingTickets', label: 'Pendientes', align: 'right' },
+  { key: 'winningTickets', label: 'Ganadores', align: 'right' },
+  { key: 'losingTickets', label: 'Perdedores', align: 'right' },
+  { key: 'cancelledTickets', label: 'Cancelados', align: 'right' },
+  { key: 'avgTicketValue', label: 'Valor promedio', align: 'right' },
+  { key: 'maxTicketValue', label: 'Valor máximo', align: 'right' }
+];
+
 const TABS = [
   { id: 'general', label: 'General' },
   { id: 'winner', label: 'Ganador' },
@@ -155,6 +230,35 @@ const DailySales = () => {
       const balance = Math.floor(Math.random() * 20000) - 10000;
       const accumulatedFall = fall * (1 + Math.random());
 
+      // Additional mock data for other tabs
+      const directoPrizes = prizes * 0.4;
+      const palePrizes = prizes * 0.25;
+      const tripletaPrizes = prizes * 0.15;
+      const pickTwoPrizes = prizes * 0.1;
+      const pickThreePrizes = prizes * 0.05;
+      const pickFourPrizes = prizes * 0.03;
+      const otherPrizes = prizes * 0.02;
+
+      const directoComm = commissions * 0.35;
+      const paleComm = commissions * 0.25;
+      const tripletaComm = commissions * 0.2;
+      const pickTwoComm = commissions * 0.1;
+      const pickThreeComm = commissions * 0.05;
+      const pickFourComm = commissions * 0.03;
+      const otherComm = commissions * 0.02;
+
+      const volumeDiscount = discounts * 0.4;
+      const loyaltyDiscount = discounts * 0.3;
+      const promotionalDiscount = discounts * 0.2;
+      const specialDiscount = discounts * 0.08;
+      const otherDiscount = discounts * 0.02;
+
+      const totalTickets = Math.floor(Math.random() * 500) + 10;
+      const pendingTickets = Math.floor(totalTickets * 0.1);
+      const winningTickets = Math.floor(totalTickets * 0.15);
+      const cancelledTickets = Math.floor(totalTickets * 0.05);
+      const losingTickets = totalTickets - pendingTickets - winningTickets - cancelledTickets;
+
       return {
         ...pool,
         ref: poolId,
@@ -171,7 +275,56 @@ const DailySales = () => {
         fall,
         final,
         balance,
-        accumulatedFall
+        accumulatedFall,
+        // Prizes breakdown
+        directoPrizes,
+        palePrizes,
+        tripletaPrizes,
+        pickTwoPrizes,
+        pickThreePrizes,
+        pickFourPrizes,
+        otherPrizes,
+        totalPrizes: prizes,
+        // Commissions breakdown
+        directoComm,
+        paleComm,
+        tripletaComm,
+        pickTwoComm,
+        pickThreeComm,
+        pickFourComm,
+        otherComm,
+        totalComm: commissions,
+        // Discounts breakdown
+        volumeDiscount,
+        loyaltyDiscount,
+        promotionalDiscount,
+        specialDiscount,
+        otherDiscount,
+        totalDiscount: discounts,
+        // Net calculations
+        grossSales: sales,
+        totalCommissions: commissions,
+        totalDiscounts: discounts,
+        netSales: net,
+        profit: net > 0 ? net * 0.3 : 0,
+        profitMargin: sales > 0 ? ((net / sales) * 100).toFixed(2) : '0.00',
+        // Tickets data
+        totalTickets,
+        pendingTickets,
+        winningTickets,
+        losingTickets,
+        cancelledTickets,
+        avgTicketValue: sales / (totalTickets || 1),
+        maxTicketValue: Math.random() * 500 + 50,
+        // Winner data (for pools with prizes)
+        winnerName: prizes > 0 ? `Ganador ${poolId}` : '',
+        winnerPhone: prizes > 0 ? `809-${Math.floor(Math.random() * 900 + 100)}-${Math.floor(Math.random() * 9000 + 1000)}` : '',
+        ticketNumber: prizes > 0 ? `T-${Math.floor(Math.random() * 100000)}` : '',
+        winningNumber: prizes > 0 ? Math.floor(Math.random() * 100).toString().padStart(2, '0') : '',
+        betType: prizes > 0 ? ['Directo', 'Palé', 'Tripleta', 'Pick Two'][Math.floor(Math.random() * 4)] : '',
+        prizeAmount: prizes,
+        claimedDate: prizes > 0 ? new Date().toLocaleDateString() : '',
+        status: prizes > 0 ? (Math.random() > 0.3 ? 'Pagado' : 'Pendiente') : ''
       };
     });
   }, [bettingPools]);
@@ -285,6 +438,94 @@ const DailySales = () => {
     if (orderBy !== column) return '↕';
     return order === 'asc' ? '↑' : '↓';
   };
+
+  // Helper function to render a data table for any tab
+  const renderDataTable = (columns, data, showTotals = false) => {
+    const calculateColumnTotals = () => {
+      const totals = {};
+      columns.forEach(col => {
+        if (col.align === 'right' && col.key !== 'ref') {
+          const sum = data.reduce((acc, row) => {
+            const value = parseFloat(row[col.key]) || 0;
+            return acc + value;
+          }, 0);
+          totals[col.key] = sum;
+        }
+      });
+      return totals;
+    };
+
+    const columnTotals = showTotals ? calculateColumnTotals() : {};
+
+    return (
+      <div className="table-responsive">
+        <table className="table table-striped table-hover table-bordered table-sm">
+          <thead role="rowgroup">
+            <tr role="row">
+              {columns.map((col, index) => (
+                <th
+                  key={col.key}
+                  role="columnheader"
+                  scope="col"
+                  tabIndex={['code', 'ref'].includes(col.key) ? 0 : -1}
+                  aria-colindex={index + 1}
+                  aria-label={col.label}
+                  aria-sort="none"
+                  className={`text-${col.align}`}
+                  style={{ cursor: 'default' }}
+                >
+                  {col.label}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody role="rowgroup">
+            {showTotals && (
+              <tr style={{ backgroundColor: '#e0f7fa' }}>
+                {columns.map((col, index) => (
+                  <td key={col.key} className={`text-${col.align}`} style={{ fontSize: '12px', fontWeight: 'bold' }}>
+                    {index === 0 ? '-' : index === 1 ? 'TOTALES' : (
+                      col.align === 'right' && columnTotals[col.key] !== undefined
+                        ? (col.key === 'profitMargin'
+                            ? `${(columnTotals[col.key] / (data.length || 1)).toFixed(2)}%`
+                            : formatCurrency(columnTotals[col.key]))
+                        : '-'
+                    )}
+                  </td>
+                ))}
+              </tr>
+            )}
+            {data.length === 0 ? (
+              <tr>
+                <td colSpan={columns.length} className="text-center" style={{ fontSize: '12px' }}>
+                  No hay datos disponibles
+                </td>
+              </tr>
+            ) : (
+              data.map((row) => (
+                <tr key={row.bettingPoolId || row.id || row.ref}>
+                  {columns.map(col => (
+                    <td key={col.key} className={`text-${col.align}`} style={{ fontSize: '12px' }}>
+                      {col.align === 'right'
+                        ? (col.key === 'profitMargin'
+                            ? `${row[col.key]}%`
+                            : formatCurrency(row[col.key]))
+                        : (row[col.key] || '-')}
+                    </td>
+                  ))}
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    );
+  };
+
+  // Filter data for winner tab (only pools with prizes)
+  const winnersData = useMemo(() => {
+    return filteredAndSortedData.filter(pool => pool.prizes > 0);
+  }, [filteredAndSortedData]);
 
   if (loading && bettingPools.length === 0) {
     return (
@@ -620,6 +861,54 @@ const DailySales = () => {
             </div>
 
             {/* Entry Counter */}
+            <div style={{ fontSize: '12px', color: '#9a9a9a', marginTop: '10px' }}>
+              Mostrando {filteredAndSortedData.length} de {poolsWithSalesData.length} entradas
+            </div>
+          </div>
+        ) : activeTab === 'winner' ? (
+          <div className="form-tab-container">
+            <h5 style={{ color: '#51cbce', marginBottom: '20px' }}>Ganadores del día</h5>
+            {renderDataTable(WINNER_COLUMNS, winnersData, false)}
+            <div style={{ fontSize: '12px', color: '#9a9a9a', marginTop: '10px' }}>
+              Mostrando {winnersData.length} ganadores
+            </div>
+          </div>
+        ) : activeTab === 'prizes' ? (
+          <div className="form-tab-container">
+            <h5 style={{ color: '#51cbce', marginBottom: '20px' }}>Desglose de premios por tipo de apuesta</h5>
+            {renderDataTable(PRIZES_COLUMNS, filteredAndSortedData, true)}
+            <div style={{ fontSize: '12px', color: '#9a9a9a', marginTop: '10px' }}>
+              Mostrando {filteredAndSortedData.length} de {poolsWithSalesData.length} entradas
+            </div>
+          </div>
+        ) : activeTab === 'commissions' ? (
+          <div className="form-tab-container">
+            <h5 style={{ color: '#51cbce', marginBottom: '20px' }}>Desglose de comisiones por tipo de apuesta</h5>
+            {renderDataTable(COMMISSIONS_COLUMNS, filteredAndSortedData, true)}
+            <div style={{ fontSize: '12px', color: '#9a9a9a', marginTop: '10px' }}>
+              Mostrando {filteredAndSortedData.length} de {poolsWithSalesData.length} entradas
+            </div>
+          </div>
+        ) : activeTab === 'discounts' ? (
+          <div className="form-tab-container">
+            <h5 style={{ color: '#51cbce', marginBottom: '20px' }}>Desglose de descuentos por categoría</h5>
+            {renderDataTable(DISCOUNTS_COLUMNS, filteredAndSortedData, true)}
+            <div style={{ fontSize: '12px', color: '#9a9a9a', marginTop: '10px' }}>
+              Mostrando {filteredAndSortedData.length} de {poolsWithSalesData.length} entradas
+            </div>
+          </div>
+        ) : activeTab === 'net' ? (
+          <div className="form-tab-container">
+            <h5 style={{ color: '#51cbce', marginBottom: '20px' }}>Resumen de ventas netas y ganancias</h5>
+            {renderDataTable(NET_COLUMNS, filteredAndSortedData, true)}
+            <div style={{ fontSize: '12px', color: '#9a9a9a', marginTop: '10px' }}>
+              Mostrando {filteredAndSortedData.length} de {poolsWithSalesData.length} entradas
+            </div>
+          </div>
+        ) : activeTab === 'tickets' ? (
+          <div className="form-tab-container">
+            <h5 style={{ color: '#51cbce', marginBottom: '20px' }}>Estadísticas de tickets</h5>
+            {renderDataTable(TICKETS_COLUMNS, filteredAndSortedData, true)}
             <div style={{ fontSize: '12px', color: '#9a9a9a', marginTop: '10px' }}>
               Mostrando {filteredAndSortedData.length} de {poolsWithSalesData.length} entradas
             </div>
