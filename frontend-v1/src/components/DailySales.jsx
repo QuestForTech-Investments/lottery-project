@@ -1,5 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import api from '../services/api';
+import '../assets/css/CreateBranchGeneral.css';
+import '../assets/css/FormStyles.css';
 
 const TABLE_COLUMNS = [
   { key: 'ref', label: 'Ref.', align: 'left' },
@@ -286,9 +288,11 @@ const DailySales = () => {
 
   if (loading && bettingPools.length === 0) {
     return (
-      <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '400px' }}>
-        <div className="spinner-border text-primary" role="status">
-          <span className="visually-hidden">Cargando...</span>
+      <div className="create-branch-container">
+        <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '400px' }}>
+          <div className="spinner-border" style={{ color: '#51cbce' }} role="status">
+            <span className="visually-hidden">Cargando...</span>
+          </div>
         </div>
       </div>
     );
@@ -296,14 +300,16 @@ const DailySales = () => {
 
   if (error) {
     return (
-      <div className="container-fluid p-4">
-        <div className="card">
-          <div className="card-body">
-            <h5 className="text-danger">Error: {error}</h5>
-            <button className="btn btn-primary mt-2" onClick={loadInitialData}>
-              Reintentar
-            </button>
-          </div>
+      <div className="create-branch-container">
+        <div className="branch-form">
+          <h5 className="text-danger">Error: {error}</h5>
+          <button
+            className="btn mt-2"
+            style={{ backgroundColor: '#51cbce', color: 'white' }}
+            onClick={loadInitialData}
+          >
+            Reintentar
+          </button>
         </div>
       </div>
     );
@@ -312,264 +318,316 @@ const DailySales = () => {
   console.log('📊 Rendering DailySales V1, pools:', filteredAndSortedData.length);
 
   return (
-    <div className="container-fluid p-4">
-      <div className="card">
-        <div className="card-body">
-          <h3 className="card-title mb-4">Ventas del día</h3>
+    <div className="create-branch-container">
+      <div className="page-title">
+        <h1>Ventas del día</h1>
+      </div>
 
-          {/* Tabs */}
-          <ul className="nav nav-tabs mb-4">
-            {TABS.map(tab => (
-              <li key={tab.id} className="nav-item">
-                <button
-                  className={`nav-link ${activeTab === tab.id ? 'active' : ''}`}
-                  onClick={() => setActiveTab(tab.id)}
-                >
-                  {tab.label}
-                </button>
-              </li>
-            ))}
-          </ul>
+      {/* Tabs - Using V1 custom tabs */}
+      <div className="tabs-container">
+        {TABS.map(tab => (
+          <button
+            key={tab.id}
+            className={`tab ${activeTab === tab.id ? 'active' : ''}`}
+            onClick={() => setActiveTab(tab.id)}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
 
-          {activeTab === 'general' ? (
-            <>
-              {/* Filters Section */}
-              <div className="row mb-3 align-items-center g-2">
-                <div className="col-auto">
-                  <div className="d-flex align-items-center gap-2">
-                    <label className="form-label mb-0">Fecha</label>
-                    <input
-                      type="date"
-                      className="form-control form-control-sm"
-                      style={{ width: '160px' }}
-                      value={selectedDate}
-                      onChange={(e) => setSelectedDate(e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <div className="col-auto">
-                  <div className="dropdown">
-                    <button
-                      className="btn btn-outline-secondary btn-sm dropdown-toggle"
-                      type="button"
-                      data-bs-toggle="dropdown"
-                      aria-expanded="false"
-                    >
-                      Zonas ({selectedZones.length})
-                    </button>
-                    <div className="dropdown-menu p-3" style={{ minWidth: '250px', maxHeight: '300px', overflowY: 'auto' }}>
-                      <div className="mb-2">
-                        <button
-                          className="btn btn-link btn-sm p-0 me-2"
-                          onClick={handleSelectAllZones}
-                        >
-                          Todas
-                        </button>
-                        <button
-                          className="btn btn-link btn-sm p-0"
-                          onClick={handleDeselectAllZones}
-                        >
-                          Ninguna
-                        </button>
-                      </div>
-                      {zones.map((zone) => (
-                        <div key={zone.zoneId || zone.id} className="form-check">
-                          <input
-                            className="form-check-input"
-                            type="checkbox"
-                            id={`zone-${zone.zoneId || zone.id}`}
-                            checked={selectedZones.includes(zone.zoneId || zone.id)}
-                            onChange={() => handleZoneToggle(zone.zoneId || zone.id)}
-                          />
-                          <label
-                            className="form-check-label"
-                            htmlFor={`zone-${zone.zoneId || zone.id}`}
-                          >
-                            {zone.zoneName || zone.name}
-                          </label>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="col-auto">
-                  <select
-                    className="form-select form-select-sm"
-                    value={selectedGroup}
-                    onChange={(e) => setSelectedGroup(e.target.value)}
-                    style={{ width: '150px' }}
-                  >
-                    <option value="all">Todos</option>
-                    <option value="group1">Grupo 1</option>
-                    <option value="group2">Grupo 2</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="row mb-3 g-2">
-                <div className="col-auto">
-                  <button
-                    className="btn btn-primary btn-sm"
-                    onClick={handleViewSales}
-                    disabled={loading}
-                  >
-                    <i className="fas fa-eye me-1"></i>
-                    Ver ventas
-                  </button>
-                </div>
-                <div className="col-auto">
-                  <button className="btn btn-outline-secondary btn-sm" disabled>
-                    <i className="fas fa-file-pdf me-1"></i>
-                    PDF
-                  </button>
-                </div>
-                <div className="col-auto">
-                  <button className="btn btn-outline-secondary btn-sm" disabled>
-                    <i className="fas fa-file-csv me-1"></i>
-                    CSV
-                  </button>
-                </div>
-                <div className="col-auto">
-                  <button className="btn btn-outline-secondary btn-sm" disabled>
-                    <i className="fas fa-ticket-alt me-1"></i>
-                    Procesar tickets
-                  </button>
-                </div>
-                <div className="col-auto">
-                  <button className="btn btn-outline-secondary btn-sm" disabled>
-                    <i className="fas fa-dollar-sign me-1"></i>
-                    Procesar ventas
-                  </button>
-                </div>
-              </div>
-
-              {/* Radio Filter Options */}
-              <div className="mb-3">
-                {FILTER_OPTIONS.map(option => (
-                  <div key={option.value} className="form-check form-check-inline">
-                    <input
-                      className="form-check-input"
-                      type="radio"
-                      name="filterOption"
-                      id={`filter-${option.value}`}
-                      value={option.value}
-                      checked={filterOption === option.value}
-                      onChange={(e) => setFilterOption(e.target.value)}
-                    />
-                    <label className="form-check-label" htmlFor={`filter-${option.value}`}>
-                      {option.label}
-                    </label>
-                  </div>
-                ))}
-              </div>
-
-              {/* Quick Filter */}
-              <div className="mb-3">
+      <div className="branch-form">
+        {activeTab === 'general' ? (
+          <div className="form-tab-container">
+            {/* Filters Section */}
+            <div className="d-flex align-items-center gap-3 mb-3 flex-wrap">
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label" style={{ width: 'auto', minWidth: 'auto', paddingRight: '10px' }}>
+                  Fecha
+                </label>
                 <input
-                  type="text"
-                  className="form-control form-control-sm"
-                  placeholder="Filtrado rápido"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  style={{ width: '300px' }}
+                  type="date"
+                  className="form-control"
+                  style={{ width: '160px', height: '31px' }}
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
                 />
               </div>
 
-              {/* Data Table */}
-              <div className="table-responsive">
-                <table className="table table-striped table-hover table-bordered table-sm">
-                  <thead className="table-light">
-                    <tr>
-                      {TABLE_COLUMNS.map(col => (
-                        <th
-                          key={col.key}
-                          className={`text-${col.align}`}
-                          style={{ cursor: ['code', 'ref'].includes(col.key) ? 'pointer' : 'default' }}
-                          onClick={() => ['code', 'ref'].includes(col.key) && handleSort(col.key)}
-                        >
-                          {col.label}
-                          {['code', 'ref'].includes(col.key) && ` ${getSortIcon(col.key)}`}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {/* Totals Row */}
-                    <tr className="table-info fw-bold">
-                      <td>-</td>
-                      <td>TOTALES</td>
-                      <td className="text-center">-</td>
-                      <td className="text-center">-</td>
-                      <td className="text-center">-</td>
-                      <td className="text-end">{formatCurrency(totals.total)}</td>
-                      <td className="text-end">{formatCurrency(totals.sales)}</td>
-                      <td className="text-end">{formatCurrency(totals.commissions)}</td>
-                      <td className="text-end">{formatCurrency(totals.discounts)}</td>
-                      <td className="text-end">{formatCurrency(totals.prizes)}</td>
-                      <td className="text-end" style={{ color: totals.net < 0 ? '#dc3545' : 'inherit' }}>
-                        {formatCurrency(totals.net)}
-                      </td>
-                      <td className="text-end">{formatCurrency(totals.fall)}</td>
-                      <td className="text-end" style={{ color: totals.final < 0 ? '#dc3545' : 'inherit' }}>
-                        {formatCurrency(totals.final)}
-                      </td>
-                      <td className="text-end" style={{ color: totals.balance < 0 ? '#dc3545' : 'inherit' }}>
-                        {formatCurrency(totals.balance)}
-                      </td>
-                      <td className="text-end">{formatCurrency(totals.accumulatedFall)}</td>
-                    </tr>
-                    {filteredAndSortedData.length === 0 ? (
-                      <tr>
-                        <td colSpan={15} className="text-center">
-                          No hay datos disponibles
-                        </td>
-                      </tr>
-                    ) : (
-                      filteredAndSortedData.map((pool) => (
-                        <tr key={pool.bettingPoolId || pool.id}>
-                          <td>{pool.ref}</td>
-                          <td>{pool.code}</td>
-                          <td className="text-center">{pool.p}</td>
-                          <td className="text-center">{pool.l}</td>
-                          <td className="text-center">{pool.w}</td>
-                          <td className="text-end">{formatCurrency(pool.total)}</td>
-                          <td className="text-end">{formatCurrency(pool.sales)}</td>
-                          <td className="text-end">{formatCurrency(pool.commissions)}</td>
-                          <td className="text-end">{formatCurrency(pool.discounts)}</td>
-                          <td className="text-end">{formatCurrency(pool.prizes)}</td>
-                          <td className="text-end" style={{ color: pool.net < 0 ? '#dc3545' : 'inherit' }}>
-                            {formatCurrency(pool.net)}
-                          </td>
-                          <td className="text-end">{formatCurrency(pool.fall)}</td>
-                          <td className="text-end" style={{ color: pool.final < 0 ? '#dc3545' : 'inherit' }}>
-                            {formatCurrency(pool.final)}
-                          </td>
-                          <td className="text-end" style={{ color: pool.balance < 0 ? '#dc3545' : 'inherit' }}>
-                            {formatCurrency(pool.balance)}
-                          </td>
-                          <td className="text-end">{formatCurrency(pool.accumulatedFall)}</td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
+              <div className="dropdown">
+                <button
+                  className="btn btn-sm dropdown-toggle"
+                  style={{
+                    backgroundColor: '#51cbce',
+                    color: 'white',
+                    border: 'none',
+                    fontSize: '12px',
+                    height: '31px'
+                  }}
+                  type="button"
+                  data-bs-toggle="dropdown"
+                  aria-expanded="false"
+                >
+                  Zonas ({selectedZones.length})
+                </button>
+                <div className="dropdown-menu p-3" style={{ minWidth: '250px', maxHeight: '300px', overflowY: 'auto' }}>
+                  <div className="mb-2">
+                    <button
+                      className="btn btn-link btn-sm p-0 me-2"
+                      style={{ color: '#51cbce' }}
+                      onClick={handleSelectAllZones}
+                    >
+                      Todas
+                    </button>
+                    <button
+                      className="btn btn-link btn-sm p-0"
+                      style={{ color: '#51cbce' }}
+                      onClick={handleDeselectAllZones}
+                    >
+                      Ninguna
+                    </button>
+                  </div>
+                  {zones.map((zone) => (
+                    <div key={zone.zoneId || zone.id} className="form-check">
+                      <input
+                        className="form-check-input"
+                        type="checkbox"
+                        id={`zone-${zone.zoneId || zone.id}`}
+                        checked={selectedZones.includes(zone.zoneId || zone.id)}
+                        onChange={() => handleZoneToggle(zone.zoneId || zone.id)}
+                        style={{ accentColor: '#51cbce' }}
+                      />
+                      <label
+                        className="form-check-label"
+                        htmlFor={`zone-${zone.zoneId || zone.id}`}
+                        style={{ fontSize: '12px' }}
+                      >
+                        {zone.zoneName || zone.name}
+                      </label>
+                    </div>
+                  ))}
+                </div>
               </div>
 
-              {/* Entry Counter */}
-              <div className="text-muted small">
-                Mostrando {filteredAndSortedData.length} de {poolsWithSalesData.length} entradas
-              </div>
-            </>
-          ) : (
-            <div className="text-center py-5">
-              <h5 className="text-muted">Tab "{TABS.find(t => t.id === activeTab)?.label}" - Próximamente</h5>
-              <p className="text-muted">Esta funcionalidad estará disponible en una próxima actualización.</p>
+              <select
+                className="form-control"
+                value={selectedGroup}
+                onChange={(e) => setSelectedGroup(e.target.value)}
+                style={{ width: '150px', height: '31px', fontSize: '12px' }}
+              >
+                <option value="all">Todos</option>
+                <option value="group1">Grupo 1</option>
+                <option value="group2">Grupo 2</option>
+              </select>
             </div>
-          )}
-        </div>
+
+            {/* Action Buttons */}
+            <div className="d-flex gap-2 mb-3 flex-wrap">
+              <button
+                className="btn btn-sm"
+                style={{
+                  backgroundColor: '#51cbce',
+                  color: 'white',
+                  border: 'none',
+                  fontSize: '12px'
+                }}
+                onClick={handleViewSales}
+                disabled={loading}
+              >
+                <i className="fas fa-eye me-1"></i>
+                Ver ventas
+              </button>
+              <button
+                className="btn btn-sm"
+                style={{
+                  backgroundColor: '#6c757d',
+                  color: 'white',
+                  border: 'none',
+                  fontSize: '12px',
+                  opacity: 0.6
+                }}
+                disabled
+              >
+                <i className="fas fa-file-pdf me-1"></i>
+                PDF
+              </button>
+              <button
+                className="btn btn-sm"
+                style={{
+                  backgroundColor: '#6c757d',
+                  color: 'white',
+                  border: 'none',
+                  fontSize: '12px',
+                  opacity: 0.6
+                }}
+                disabled
+              >
+                <i className="fas fa-file-csv me-1"></i>
+                CSV
+              </button>
+              <button
+                className="btn btn-sm"
+                style={{
+                  backgroundColor: '#6c757d',
+                  color: 'white',
+                  border: 'none',
+                  fontSize: '12px',
+                  opacity: 0.6
+                }}
+                disabled
+              >
+                <i className="fas fa-ticket-alt me-1"></i>
+                Procesar tickets
+              </button>
+              <button
+                className="btn btn-sm"
+                style={{
+                  backgroundColor: '#6c757d',
+                  color: 'white',
+                  border: 'none',
+                  fontSize: '12px',
+                  opacity: 0.6
+                }}
+                disabled
+              >
+                <i className="fas fa-dollar-sign me-1"></i>
+                Procesar ventas
+              </button>
+            </div>
+
+            {/* Radio Filter Options */}
+            <div className="mb-3">
+              {FILTER_OPTIONS.map(option => (
+                <div key={option.value} className="form-check form-check-inline">
+                  <input
+                    className="form-check-input"
+                    type="radio"
+                    name="filterOption"
+                    id={`filter-${option.value}`}
+                    value={option.value}
+                    checked={filterOption === option.value}
+                    onChange={(e) => setFilterOption(e.target.value)}
+                    style={{ accentColor: '#51cbce' }}
+                  />
+                  <label
+                    className="form-check-label"
+                    htmlFor={`filter-${option.value}`}
+                    style={{ fontSize: '12px', color: '#66615b' }}
+                  >
+                    {option.label}
+                  </label>
+                </div>
+              ))}
+            </div>
+
+            {/* Quick Filter */}
+            <div className="mb-3">
+              <input
+                type="text"
+                className="form-control"
+                placeholder="Filtrado rápido"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{ width: '300px', height: '31px', fontSize: '12px' }}
+              />
+            </div>
+
+            {/* Data Table */}
+            <div className="table-responsive">
+              <table className="table table-striped table-hover table-bordered table-sm">
+                <thead style={{ backgroundColor: '#f8f9fa' }}>
+                  <tr>
+                    {TABLE_COLUMNS.map(col => (
+                      <th
+                        key={col.key}
+                        className={`text-${col.align}`}
+                        style={{
+                          cursor: ['code', 'ref'].includes(col.key) ? 'pointer' : 'default',
+                          fontSize: '12px',
+                          fontWeight: '500',
+                          color: '#51cbce'
+                        }}
+                        onClick={() => ['code', 'ref'].includes(col.key) && handleSort(col.key)}
+                      >
+                        {col.label}
+                        {['code', 'ref'].includes(col.key) && ` ${getSortIcon(col.key)}`}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {/* Totals Row */}
+                  <tr style={{ backgroundColor: '#e0f7fa' }}>
+                    <td style={{ fontSize: '12px', fontWeight: 'bold' }}>-</td>
+                    <td style={{ fontSize: '12px', fontWeight: 'bold' }}>TOTALES</td>
+                    <td className="text-center" style={{ fontSize: '12px', fontWeight: 'bold' }}>-</td>
+                    <td className="text-center" style={{ fontSize: '12px', fontWeight: 'bold' }}>-</td>
+                    <td className="text-center" style={{ fontSize: '12px', fontWeight: 'bold' }}>-</td>
+                    <td className="text-end" style={{ fontSize: '12px', fontWeight: 'bold' }}>{formatCurrency(totals.total)}</td>
+                    <td className="text-end" style={{ fontSize: '12px', fontWeight: 'bold' }}>{formatCurrency(totals.sales)}</td>
+                    <td className="text-end" style={{ fontSize: '12px', fontWeight: 'bold' }}>{formatCurrency(totals.commissions)}</td>
+                    <td className="text-end" style={{ fontSize: '12px', fontWeight: 'bold' }}>{formatCurrency(totals.discounts)}</td>
+                    <td className="text-end" style={{ fontSize: '12px', fontWeight: 'bold' }}>{formatCurrency(totals.prizes)}</td>
+                    <td className="text-end" style={{ fontSize: '12px', fontWeight: 'bold', color: totals.net < 0 ? '#dc3545' : 'inherit' }}>
+                      {formatCurrency(totals.net)}
+                    </td>
+                    <td className="text-end" style={{ fontSize: '12px', fontWeight: 'bold' }}>{formatCurrency(totals.fall)}</td>
+                    <td className="text-end" style={{ fontSize: '12px', fontWeight: 'bold', color: totals.final < 0 ? '#dc3545' : 'inherit' }}>
+                      {formatCurrency(totals.final)}
+                    </td>
+                    <td className="text-end" style={{ fontSize: '12px', fontWeight: 'bold', color: totals.balance < 0 ? '#dc3545' : 'inherit' }}>
+                      {formatCurrency(totals.balance)}
+                    </td>
+                    <td className="text-end" style={{ fontSize: '12px', fontWeight: 'bold' }}>{formatCurrency(totals.accumulatedFall)}</td>
+                  </tr>
+                  {filteredAndSortedData.length === 0 ? (
+                    <tr>
+                      <td colSpan={15} className="text-center" style={{ fontSize: '12px' }}>
+                        No hay datos disponibles
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredAndSortedData.map((pool) => (
+                      <tr key={pool.bettingPoolId || pool.id}>
+                        <td style={{ fontSize: '12px' }}>{pool.ref}</td>
+                        <td style={{ fontSize: '12px' }}>{pool.code}</td>
+                        <td className="text-center" style={{ fontSize: '12px' }}>{pool.p}</td>
+                        <td className="text-center" style={{ fontSize: '12px' }}>{pool.l}</td>
+                        <td className="text-center" style={{ fontSize: '12px' }}>{pool.w}</td>
+                        <td className="text-end" style={{ fontSize: '12px' }}>{formatCurrency(pool.total)}</td>
+                        <td className="text-end" style={{ fontSize: '12px' }}>{formatCurrency(pool.sales)}</td>
+                        <td className="text-end" style={{ fontSize: '12px' }}>{formatCurrency(pool.commissions)}</td>
+                        <td className="text-end" style={{ fontSize: '12px' }}>{formatCurrency(pool.discounts)}</td>
+                        <td className="text-end" style={{ fontSize: '12px' }}>{formatCurrency(pool.prizes)}</td>
+                        <td className="text-end" style={{ fontSize: '12px', color: pool.net < 0 ? '#dc3545' : 'inherit' }}>
+                          {formatCurrency(pool.net)}
+                        </td>
+                        <td className="text-end" style={{ fontSize: '12px' }}>{formatCurrency(pool.fall)}</td>
+                        <td className="text-end" style={{ fontSize: '12px', color: pool.final < 0 ? '#dc3545' : 'inherit' }}>
+                          {formatCurrency(pool.final)}
+                        </td>
+                        <td className="text-end" style={{ fontSize: '12px', color: pool.balance < 0 ? '#dc3545' : 'inherit' }}>
+                          {formatCurrency(pool.balance)}
+                        </td>
+                        <td className="text-end" style={{ fontSize: '12px' }}>{formatCurrency(pool.accumulatedFall)}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Entry Counter */}
+            <div style={{ fontSize: '12px', color: '#9a9a9a', marginTop: '10px' }}>
+              Mostrando {filteredAndSortedData.length} de {poolsWithSalesData.length} entradas
+            </div>
+          </div>
+        ) : (
+          <div className="form-tab-container text-center py-5">
+            <h5 style={{ color: '#51cbce' }}>Tab "{TABS.find(t => t.id === activeTab)?.label}" - Próximamente</h5>
+            <p style={{ color: '#9a9a9a', fontSize: '14px' }}>Esta funcionalidad estará disponible en una próxima actualización.</p>
+          </div>
+        )}
       </div>
     </div>
   );
