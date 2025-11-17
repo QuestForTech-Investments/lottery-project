@@ -67,7 +67,7 @@ function App() {
                 <Route path="/bancas/acceso" element={<BancaAccess />} />
                 <Route path="/bancas/limpiar-pendientes" element={<CleanPendingPayments />} />
                 <Route path="/bancas/sin-ventas" element={<BettingPoolsWithoutSales />} />
-                <Route path="/bancas/reporte-dias-sin-venta" element={<DaysWithoutSalesReport />} />
+                <Route path="/bancas/reporte-dias" element={<DaysWithoutSalesReport />} />
                 <Route path="/tickets/crear" element={<CreateTickets />} />
                 <Route path="/usuarios/administradores" element={<UserAdministradores />} />
                 <Route path="/usuarios/inicios-sesion" element={<UserIniciosSesion />} />
