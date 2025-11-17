@@ -96,14 +96,75 @@ const TICKETS_COLUMNS = [
   { key: 'maxTicketValue', label: 'Valor máximo', align: 'right' }
 ];
 
+// Columnas para tabs de la app Vue.js
+const BANCA_POR_SORTEO_COLUMNS = [
+  { key: 'ref', label: 'Número', align: 'left' },
+  { key: 'code', label: 'Código', align: 'left' },
+  { key: 'sorteoName', label: 'Sorteo', align: 'left' },
+  { key: 'sales', label: 'Venta', align: 'right' },
+  { key: 'commissions', label: 'Comisiones', align: 'right' },
+  { key: 'discounts', label: 'Descuentos', align: 'right' },
+  { key: 'prizes', label: 'Premios', align: 'right' },
+  { key: 'net', label: 'Neto', align: 'right' }
+];
+
+const POR_SORTEO_COLUMNS = [
+  { key: 'sorteoId', label: 'ID', align: 'left' },
+  { key: 'sorteoName', label: 'Sorteo', align: 'left' },
+  { key: 'totalBancas', label: 'Bancas', align: 'right' },
+  { key: 'sales', label: 'Venta', align: 'right' },
+  { key: 'commissions', label: 'Comisiones', align: 'right' },
+  { key: 'discounts', label: 'Descuentos', align: 'right' },
+  { key: 'prizes', label: 'Premios', align: 'right' },
+  { key: 'net', label: 'Neto', align: 'right' }
+];
+
+const COMBINACIONES_COLUMNS = [
+  { key: 'numero', label: 'Número', align: 'center' },
+  { key: 'sorteoName', label: 'Sorteo', align: 'left' },
+  { key: 'tipoJugada', label: 'Tipo jugada', align: 'left' },
+  { key: 'cantidadJugadas', label: 'Cantidad', align: 'right' },
+  { key: 'montoTotal', label: 'Monto total', align: 'right' },
+  { key: 'montoPromedio', label: 'Monto promedio', align: 'right' }
+];
+
+const POR_ZONA_COLUMNS = [
+  { key: 'zoneId', label: 'ID', align: 'left' },
+  { key: 'zoneName', label: 'Zona', align: 'left' },
+  { key: 'totalBancas', label: 'Bancas', align: 'right' },
+  { key: 'sales', label: 'Venta', align: 'right' },
+  { key: 'commissions', label: 'Comisiones', align: 'right' },
+  { key: 'discounts', label: 'Descuentos', align: 'right' },
+  { key: 'prizes', label: 'Premios', align: 'right' },
+  { key: 'net', label: 'Neto', align: 'right' }
+];
+
+const CATEGORIA_PREMIOS_COLUMNS = [
+  { key: 'categoria', label: 'Categoría', align: 'left' },
+  { key: 'cantidadPremios', label: 'Cantidad premios', align: 'right' },
+  { key: 'montoTotal', label: 'Monto total', align: 'right' },
+  { key: 'montoMinimo', label: 'Mínimo', align: 'right' },
+  { key: 'montoMaximo', label: 'Máximo', align: 'right' },
+  { key: 'montoPromedio', label: 'Promedio', align: 'right' }
+];
+
+const CATEGORIA_PREMIOS_PALE_COLUMNS = [
+  { key: 'tipoPale', label: 'Tipo de Palé', align: 'left' },
+  { key: 'cantidadPremios', label: 'Cantidad premios', align: 'right' },
+  { key: 'montoTotal', label: 'Monto total', align: 'right' },
+  { key: 'montoMinimo', label: 'Mínimo', align: 'right' },
+  { key: 'montoMaximo', label: 'Máximo', align: 'right' },
+  { key: 'montoPromedio', label: 'Promedio', align: 'right' }
+];
+
 const TABS = [
   { id: 'general', label: 'General' },
-  { id: 'winner', label: 'Ganador' },
-  { id: 'prizes', label: 'Premios' },
-  { id: 'commissions', label: 'Comisiones' },
-  { id: 'discounts', label: 'Descuentos' },
-  { id: 'net', label: 'Neto' },
-  { id: 'tickets', label: 'Tickets' }
+  { id: 'bancaPorSorteo', label: 'Banca por sorteo' },
+  { id: 'porSorteo', label: 'Por sorteo' },
+  { id: 'combinaciones', label: 'Combinaciones' },
+  { id: 'porZona', label: 'Por zona' },
+  { id: 'categoriaPremios', label: 'Categoría de Premios' },
+  { id: 'categoriaPremiosPale', label: 'Categoría de Premios para Pale' }
 ];
 
 const FILTER_OPTIONS = [
@@ -527,6 +588,134 @@ const DailySales = () => {
     return filteredAndSortedData.filter(pool => pool.prizes > 0);
   }, [filteredAndSortedData]);
 
+  // Mock data for Banca por Sorteo tab
+  const bancaPorSorteoData = useMemo(() => {
+    const sorteos = ['Nacional 12PM', 'Nacional 3PM', 'Nacional 6PM', 'NY 10:30AM', 'NY 2:30PM'];
+    const data = [];
+    filteredAndSortedData.forEach(pool => {
+      sorteos.forEach(sorteo => {
+        if (Math.random() > 0.3) {
+          const sales = pool.sales * (0.1 + Math.random() * 0.3);
+          data.push({
+            ref: pool.ref,
+            code: pool.code,
+            sorteoName: sorteo,
+            sales,
+            commissions: sales * 0.1,
+            discounts: sales * 0.05,
+            prizes: Math.random() > 0.7 ? sales * 0.3 : 0,
+            net: sales * 0.85
+          });
+        }
+      });
+    });
+    return data.slice(0, 100); // Limit to 100 rows
+  }, [filteredAndSortedData]);
+
+  // Mock data for Por Sorteo tab
+  const porSorteoData = useMemo(() => {
+    const sorteos = [
+      { id: 1, name: 'Nacional 12PM' },
+      { id: 2, name: 'Nacional 3PM' },
+      { id: 3, name: 'Nacional 6PM' },
+      { id: 4, name: 'NY 10:30AM' },
+      { id: 5, name: 'NY 2:30PM' },
+      { id: 6, name: 'Florida 1:30PM' },
+      { id: 7, name: 'Anguila 10AM' }
+    ];
+    return sorteos.map(sorteo => {
+      const bancasCount = Math.floor(Math.random() * 50) + 10;
+      const sales = Math.random() * 50000 + 5000;
+      return {
+        sorteoId: sorteo.id,
+        sorteoName: sorteo.name,
+        totalBancas: bancasCount,
+        sales,
+        commissions: sales * 0.1,
+        discounts: sales * 0.05,
+        prizes: sales * (0.2 + Math.random() * 0.3),
+        net: sales * 0.65
+      };
+    });
+  }, []);
+
+  // Mock data for Combinaciones tab
+  const combinacionesData = useMemo(() => {
+    const data = [];
+    const tipos = ['Directo', 'Palé', 'Tripleta', 'Pick Two'];
+    const sorteos = ['Nacional 12PM', 'Nacional 3PM', 'NY 10:30AM'];
+    for (let i = 0; i < 50; i++) {
+      const numero = Math.floor(Math.random() * 100).toString().padStart(2, '0');
+      const cantidad = Math.floor(Math.random() * 100) + 1;
+      const montoTotal = cantidad * (Math.random() * 50 + 5);
+      data.push({
+        numero,
+        sorteoName: sorteos[Math.floor(Math.random() * sorteos.length)],
+        tipoJugada: tipos[Math.floor(Math.random() * tipos.length)],
+        cantidadJugadas: cantidad,
+        montoTotal,
+        montoPromedio: montoTotal / cantidad
+      });
+    }
+    return data.sort((a, b) => b.montoTotal - a.montoTotal);
+  }, []);
+
+  // Mock data for Por Zona tab
+  const porZonaData = useMemo(() => {
+    return zones.map(zone => {
+      const bancasCount = Math.floor(Math.random() * 30) + 5;
+      const sales = Math.random() * 100000 + 10000;
+      return {
+        zoneId: zone.zoneId || zone.id,
+        zoneName: zone.zoneName || zone.name,
+        totalBancas: bancasCount,
+        sales,
+        commissions: sales * 0.1,
+        discounts: sales * 0.05,
+        prizes: sales * (0.2 + Math.random() * 0.3),
+        net: sales * 0.65
+      };
+    });
+  }, [zones]);
+
+  // Mock data for Categoría de Premios tab
+  const categoriaPremiosData = useMemo(() => {
+    const categorias = ['Directo', 'Palé', 'Tripleta', 'Pick Two', 'Pick Three', 'Pick Four', 'Super Palé'];
+    return categorias.map(cat => {
+      const cantidad = Math.floor(Math.random() * 50) + 1;
+      const montoMin = Math.random() * 100 + 10;
+      const montoMax = montoMin + Math.random() * 5000;
+      const montoTotal = (montoMin + montoMax) * cantidad / 2;
+      return {
+        categoria: cat,
+        cantidadPremios: cantidad,
+        montoTotal,
+        montoMinimo: montoMin,
+        montoMaximo: montoMax,
+        montoPromedio: montoTotal / cantidad
+      };
+    });
+  }, []);
+
+  // Mock data for Categoría de Premios para Pale tab
+  const categoriaPremiosPaleData = useMemo(() => {
+    const tipos = ['Palé Normal', 'Palé con Tripleta', 'Super Palé', 'Palé Combinado'];
+    return tipos.map(tipo => {
+      const cantidad = Math.floor(Math.random() * 30) + 1;
+      const montoMin = Math.random() * 200 + 50;
+      const montoMax = montoMin + Math.random() * 3000;
+      const montoTotal = (montoMin + montoMax) * cantidad / 2;
+      return {
+        tipoPale: tipo,
+        cantidadPremios: cantidad,
+        montoTotal,
+        montoMinimo: montoMin,
+        montoMaximo: montoMax,
+        montoPromedio: montoTotal / cantidad
+      };
+    });
+  }, []);
+
   if (loading && bettingPools.length === 0) {
     return (
       <div className="create-branch-container">
@@ -865,52 +1054,52 @@ const DailySales = () => {
               Mostrando {filteredAndSortedData.length} de {poolsWithSalesData.length} entradas
             </div>
           </div>
-        ) : activeTab === 'winner' ? (
+        ) : activeTab === 'bancaPorSorteo' ? (
           <div className="form-tab-container">
-            <h5 style={{ color: '#51cbce', marginBottom: '20px' }}>Ganadores del día</h5>
-            {renderDataTable(WINNER_COLUMNS, winnersData, false)}
+            <h5 style={{ color: '#51cbce', marginBottom: '20px' }}>Ventas por banca y sorteo</h5>
+            {renderDataTable(BANCA_POR_SORTEO_COLUMNS, bancaPorSorteoData, true)}
             <div style={{ fontSize: '12px', color: '#9a9a9a', marginTop: '10px' }}>
-              Mostrando {winnersData.length} ganadores
+              Mostrando {bancaPorSorteoData.length} registros
             </div>
           </div>
-        ) : activeTab === 'prizes' ? (
+        ) : activeTab === 'porSorteo' ? (
           <div className="form-tab-container">
-            <h5 style={{ color: '#51cbce', marginBottom: '20px' }}>Desglose de premios por tipo de apuesta</h5>
-            {renderDataTable(PRIZES_COLUMNS, filteredAndSortedData, true)}
+            <h5 style={{ color: '#51cbce', marginBottom: '20px' }}>Resumen de ventas por sorteo</h5>
+            {renderDataTable(POR_SORTEO_COLUMNS, porSorteoData, true)}
             <div style={{ fontSize: '12px', color: '#9a9a9a', marginTop: '10px' }}>
-              Mostrando {filteredAndSortedData.length} de {poolsWithSalesData.length} entradas
+              Mostrando {porSorteoData.length} sorteos
             </div>
           </div>
-        ) : activeTab === 'commissions' ? (
+        ) : activeTab === 'combinaciones' ? (
           <div className="form-tab-container">
-            <h5 style={{ color: '#51cbce', marginBottom: '20px' }}>Desglose de comisiones por tipo de apuesta</h5>
-            {renderDataTable(COMMISSIONS_COLUMNS, filteredAndSortedData, true)}
+            <h5 style={{ color: '#51cbce', marginBottom: '20px' }}>Combinaciones más jugadas</h5>
+            {renderDataTable(COMBINACIONES_COLUMNS, combinacionesData, true)}
             <div style={{ fontSize: '12px', color: '#9a9a9a', marginTop: '10px' }}>
-              Mostrando {filteredAndSortedData.length} de {poolsWithSalesData.length} entradas
+              Mostrando {combinacionesData.length} combinaciones
             </div>
           </div>
-        ) : activeTab === 'discounts' ? (
+        ) : activeTab === 'porZona' ? (
           <div className="form-tab-container">
-            <h5 style={{ color: '#51cbce', marginBottom: '20px' }}>Desglose de descuentos por categoría</h5>
-            {renderDataTable(DISCOUNTS_COLUMNS, filteredAndSortedData, true)}
+            <h5 style={{ color: '#51cbce', marginBottom: '20px' }}>Ventas por zona geográfica</h5>
+            {renderDataTable(POR_ZONA_COLUMNS, porZonaData, true)}
             <div style={{ fontSize: '12px', color: '#9a9a9a', marginTop: '10px' }}>
-              Mostrando {filteredAndSortedData.length} de {poolsWithSalesData.length} entradas
+              Mostrando {porZonaData.length} zonas
             </div>
           </div>
-        ) : activeTab === 'net' ? (
+        ) : activeTab === 'categoriaPremios' ? (
           <div className="form-tab-container">
-            <h5 style={{ color: '#51cbce', marginBottom: '20px' }}>Resumen de ventas netas y ganancias</h5>
-            {renderDataTable(NET_COLUMNS, filteredAndSortedData, true)}
+            <h5 style={{ color: '#51cbce', marginBottom: '20px' }}>Premios por categoría de apuesta</h5>
+            {renderDataTable(CATEGORIA_PREMIOS_COLUMNS, categoriaPremiosData, true)}
             <div style={{ fontSize: '12px', color: '#9a9a9a', marginTop: '10px' }}>
-              Mostrando {filteredAndSortedData.length} de {poolsWithSalesData.length} entradas
+              Mostrando {categoriaPremiosData.length} categorías
             </div>
           </div>
-        ) : activeTab === 'tickets' ? (
+        ) : activeTab === 'categoriaPremiosPale' ? (
           <div className="form-tab-container">
-            <h5 style={{ color: '#51cbce', marginBottom: '20px' }}>Estadísticas de tickets</h5>
-            {renderDataTable(TICKETS_COLUMNS, filteredAndSortedData, true)}
+            <h5 style={{ color: '#51cbce', marginBottom: '20px' }}>Premios por tipo de Palé</h5>
+            {renderDataTable(CATEGORIA_PREMIOS_PALE_COLUMNS, categoriaPremiosPaleData, true)}
             <div style={{ fontSize: '12px', color: '#9a9a9a', marginTop: '10px' }}>
-              Mostrando {filteredAndSortedData.length} de {poolsWithSalesData.length} entradas
+              Mostrando {categoriaPremiosPaleData.length} tipos de palé
             </div>
           </div>
         ) : (
