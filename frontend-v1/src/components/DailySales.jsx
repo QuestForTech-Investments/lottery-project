@@ -440,11 +440,10 @@ const DailySales = () => {
               <button
                 className="btn btn-sm"
                 style={{
-                  backgroundColor: '#6c757d',
+                  backgroundColor: '#51cbce',
                   color: 'white',
                   border: 'none',
-                  fontSize: '12px',
-                  opacity: 0.6
+                  fontSize: '12px'
                 }}
                 disabled
               >
@@ -454,11 +453,10 @@ const DailySales = () => {
               <button
                 className="btn btn-sm"
                 style={{
-                  backgroundColor: '#6c757d',
+                  backgroundColor: '#51cbce',
                   color: 'white',
                   border: 'none',
-                  fontSize: '12px',
-                  opacity: 0.6
+                  fontSize: '12px'
                 }}
                 disabled
               >
@@ -468,30 +466,28 @@ const DailySales = () => {
               <button
                 className="btn btn-sm"
                 style={{
-                  backgroundColor: '#6c757d',
+                  backgroundColor: '#51cbce',
                   color: 'white',
                   border: 'none',
-                  fontSize: '12px',
-                  opacity: 0.6
+                  fontSize: '12px'
                 }}
                 disabled
               >
                 <i className="fas fa-ticket-alt me-1"></i>
-                Procesar tickets
+                Procesar tickets de hoy
               </button>
               <button
                 className="btn btn-sm"
                 style={{
-                  backgroundColor: '#6c757d',
+                  backgroundColor: '#51cbce',
                   color: 'white',
                   border: 'none',
-                  fontSize: '12px',
-                  opacity: 0.6
+                  fontSize: '12px'
                 }}
                 disabled
               >
                 <i className="fas fa-dollar-sign me-1"></i>
-                Procesar ventas
+                Procesar ventas de ayer
               </button>
             </div>
 
