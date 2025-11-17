@@ -432,7 +432,6 @@ const DailySales = () => {
                   fontSize: '12px'
                 }}
                 onClick={handleViewSales}
-                disabled={loading}
               >
                 <i className="fas fa-eye me-1"></i>
                 Ver ventas
@@ -445,7 +444,6 @@ const DailySales = () => {
                   border: 'none',
                   fontSize: '12px'
                 }}
-                disabled
               >
                 <i className="fas fa-file-pdf me-1"></i>
                 PDF
@@ -458,7 +456,6 @@ const DailySales = () => {
                   border: 'none',
                   fontSize: '12px'
                 }}
-                disabled
               >
                 <i className="fas fa-file-csv me-1"></i>
                 CSV
@@ -471,7 +468,6 @@ const DailySales = () => {
                   border: 'none',
                   fontSize: '12px'
                 }}
-                disabled
               >
                 <i className="fas fa-ticket-alt me-1"></i>
                 Procesar tickets de hoy
@@ -484,7 +480,6 @@ const DailySales = () => {
                   border: 'none',
                   fontSize: '12px'
                 }}
-                disabled
               >
                 <i className="fas fa-dollar-sign me-1"></i>
                 Procesar ventas de ayer
