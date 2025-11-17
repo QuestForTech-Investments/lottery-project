@@ -20,6 +20,9 @@ const MassEditBancas = () => {
   const [zones, setZones] = useState([]);
   const [draws, setDraws] = useState([]);
   const [bettingPools, setBettingPools] = useState([]);
+  const [betTypes, setBetTypes] = useState([]);
+  const [loadingBetTypes, setLoadingBetTypes] = useState(false);
+  const [prizesSubTab, setPrizesSubTab] = useState('premios'); // premios, comisiones, comisiones2
 
   // Form state
   const [formData, setFormData] = useState({
@@ -111,6 +114,31 @@ const MassEditBancas = () => {
     } else {
       setSelectedDraws(draws.map(d => d.drawId || d.id));
     }
+  };
+
+  // Load bet types when Premios & Comisiones tab is activated
+  const loadBetTypes = async () => {
+    if (betTypes.length > 0) return; // Already loaded
+    setLoadingBetTypes(true);
+    try {
+      const data = await api.get('/bet-types/with-fields');
+      // Transform prizeTypes to prizeFields
+      const transformed = (data || []).map(bt => ({
+        ...bt,
+        prizeFields: bt.prizeTypes || []
+      }));
+      setBetTypes(transformed);
+    } catch (error) {
+      console.error('Error loading bet types:', error);
+    } finally {
+      setLoadingBetTypes(false);
+    }
+  };
+
+  // Handle prize field change
+  const handlePrizeFieldChange = (betTypeCode, fieldCode, value) => {
+    const key = `prize_${betTypeCode}_${fieldCode}`;
+    setFormData(prev => ({ ...prev, [key]: value }));
   };
 
   const handleSubmit = async (e) => {
@@ -411,8 +439,93 @@ const MassEditBancas = () => {
           )}
 
           {activeTab === 'Premios & Comisiones' && (
-            <div className="form-tab-container" style={{ padding: '20px', color: '#999' }}>
-              En desarrollo...
+            <div className="form-tab-container" style={{ padding: '20px' }}>
+              {/* Load bet types when tab is activated */}
+              {betTypes.length === 0 && !loadingBetTypes && loadBetTypes()}
+
+              {/* Sub-tabs */}
+              <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', borderBottom: '2px solid #ddd', paddingBottom: '10px' }}>
+                <button
+                  type="button"
+                  className={`btn btn-sm ${prizesSubTab === 'premios' ? 'btn-info' : 'btn-outline-secondary'}`}
+                  onClick={() => setPrizesSubTab('premios')}
+                >
+                  Premios
+                </button>
+                <button
+                  type="button"
+                  className={`btn btn-sm ${prizesSubTab === 'comisiones' ? 'btn-info' : 'btn-outline-secondary'}`}
+                  onClick={() => setPrizesSubTab('comisiones')}
+                >
+                  Comisiones
+                </button>
+                <button
+                  type="button"
+                  className={`btn btn-sm ${prizesSubTab === 'comisiones2' ? 'btn-info' : 'btn-outline-secondary'}`}
+                  onClick={() => setPrizesSubTab('comisiones2')}
+                >
+                  Comisiones 2
+                </button>
+              </div>
+
+              {loadingBetTypes ? (
+                <div style={{ textAlign: 'center', padding: '30px' }}>
+                  Cargando tipos de apuesta...
+                </div>
+              ) : (
+                <>
+                  {/* Premios Sub-tab */}
+                  {prizesSubTab === 'premios' && (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '20px' }}>
+                      {betTypes.map(betType => (
+                        <div key={betType.betTypeId} style={{ border: '1px solid #ddd', borderRadius: '8px', padding: '15px', backgroundColor: '#fafafa' }}>
+                          <h6 style={{ color: '#51cbce', fontWeight: 'bold', marginBottom: '12px', fontSize: '14px' }}>
+                            {betType.betTypeName}
+                          </h6>
+                          {(betType.prizeFields || []).map(field => {
+                            const fieldKey = `prize_${betType.betTypeCode}_${field.fieldCode}`;
+                            return (
+                              <div key={field.prizeTypeId} style={{ marginBottom: '10px' }}>
+                                <label style={{ display: 'block', fontSize: '11px', color: '#666', marginBottom: '4px' }}>
+                                  {field.fieldName}
+                                </label>
+                                <input
+                                  type="text"
+                                  className="form-control"
+                                  style={{ fontSize: '13px', height: '30px' }}
+                                  value={formData[fieldKey] || ''}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    // Only allow numbers and decimal point
+                                    if (val === '' || /^[\d.]*$/.test(val)) {
+                                      handlePrizeFieldChange(betType.betTypeCode, field.fieldCode, val);
+                                    }
+                                  }}
+                                  placeholder={field.defaultMultiplier?.toString() || ''}
+                                />
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Comisiones Sub-tab */}
+                  {prizesSubTab === 'comisiones' && (
+                    <div style={{ color: '#999' }}>
+                      Configuración de comisiones (En desarrollo)
+                    </div>
+                  )}
+
+                  {/* Comisiones 2 Sub-tab */}
+                  {prizesSubTab === 'comisiones2' && (
+                    <div style={{ color: '#999' }}>
+                      Configuración de comisiones adicionales (En desarrollo)
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           )}
 

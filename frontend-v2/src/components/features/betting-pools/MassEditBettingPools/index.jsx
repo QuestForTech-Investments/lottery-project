@@ -40,6 +40,9 @@ const MassEditBettingPools = () => {
   const [zones, setZones] = useState([]);
   const [draws, setDraws] = useState([]);
   const [bettingPools, setBettingPools] = useState([]);
+  const [betTypes, setBetTypes] = useState([]);
+  const [loadingBetTypes, setLoadingBetTypes] = useState(false);
+  const [prizesSubTab, setPrizesSubTab] = useState(0); // 0=Premios, 1=Comisiones, 2=Comisiones2
 
   // Form state - Configuration tab
   const [formData, setFormData] = useState({
@@ -131,6 +134,31 @@ const MassEditBettingPools = () => {
       setSelectedDraws(draws.map(d => d.drawId || d.id));
     }
     setSelectAllDraws(!selectAllDraws);
+  };
+
+  // Load bet types when Premios & Comisiones tab is activated
+  const loadBetTypes = async () => {
+    if (betTypes.length > 0) return; // Already loaded
+    setLoadingBetTypes(true);
+    try {
+      const data = await api.get('/bet-types/with-fields');
+      // Transform prizeTypes to prizeFields
+      const transformed = (data || []).map(bt => ({
+        ...bt,
+        prizeFields: bt.prizeTypes || []
+      }));
+      setBetTypes(transformed);
+    } catch (error) {
+      console.error('Error loading bet types:', error);
+    } finally {
+      setLoadingBetTypes(false);
+    }
+  };
+
+  // Handle prize field change
+  const handlePrizeFieldChange = (betTypeCode, fieldCode, value) => {
+    const key = `prize_${betTypeCode}_${fieldCode}`;
+    setFormData(prev => ({ ...prev, [key]: value }));
   };
 
   const handleSubmit = async (e) => {
@@ -478,9 +506,86 @@ const MassEditBettingPools = () => {
 
             {/* Prizes Tab */}
             {activeTab === 2 && (
-              <Typography color="text.secondary">
-                Configuración de premios y comisiones (En desarrollo)
-              </Typography>
+              <Box>
+                {/* Load bet types when tab is activated */}
+                {betTypes.length === 0 && !loadingBetTypes && loadBetTypes()}
+
+                {/* Sub-tabs */}
+                <Tabs
+                  value={prizesSubTab}
+                  onChange={(e, newVal) => setPrizesSubTab(newVal)}
+                  sx={{ mb: 3, borderBottom: 1, borderColor: 'divider' }}
+                >
+                  <Tab label="Premios" />
+                  <Tab label="Comisiones" />
+                  <Tab label="Comisiones 2" />
+                </Tabs>
+
+                {loadingBetTypes ? (
+                  <Box display="flex" justifyContent="center" p={4}>
+                    <CircularProgress size={24} />
+                    <Typography sx={{ ml: 2 }}>Cargando tipos de apuesta...</Typography>
+                  </Box>
+                ) : (
+                  <>
+                    {/* Premios Sub-tab */}
+                    {prizesSubTab === 0 && (
+                      <Grid container spacing={3}>
+                        {betTypes.map(betType => (
+                          <Grid item xs={12} sm={6} md={4} lg={3} key={betType.betTypeId}>
+                            <Paper variant="outlined" sx={{ p: 2 }}>
+                              <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 'bold', color: 'primary.main' }}>
+                                {betType.betTypeName}
+                              </Typography>
+                              {(betType.prizeFields || []).map(field => {
+                                const fieldKey = `prize_${betType.betTypeCode}_${field.fieldCode}`;
+                                return (
+                                  <Box key={field.prizeTypeId} sx={{ mb: 1.5 }}>
+                                    <Typography variant="caption" color="text.secondary">
+                                      {field.fieldName}
+                                    </Typography>
+                                    <TextField
+                                      fullWidth
+                                      size="small"
+                                      type="text"
+                                      value={formData[fieldKey] || ''}
+                                      onChange={(e) => {
+                                        const val = e.target.value;
+                                        // Only allow numbers and decimal point
+                                        if (val === '' || /^[\d.]*$/.test(val)) {
+                                          handlePrizeFieldChange(betType.betTypeCode, field.fieldCode, val);
+                                        }
+                                      }}
+                                      placeholder={field.defaultMultiplier?.toString() || ''}
+                                      inputProps={{
+                                        style: { fontSize: '0.875rem' }
+                                      }}
+                                    />
+                                  </Box>
+                                );
+                              })}
+                            </Paper>
+                          </Grid>
+                        ))}
+                      </Grid>
+                    )}
+
+                    {/* Comisiones Sub-tab */}
+                    {prizesSubTab === 1 && (
+                      <Typography color="text.secondary" sx={{ p: 2 }}>
+                        Configuración de comisiones (En desarrollo)
+                      </Typography>
+                    )}
+
+                    {/* Comisiones 2 Sub-tab */}
+                    {prizesSubTab === 2 && (
+                      <Typography color="text.secondary" sx={{ p: 2 }}>
+                        Configuración de comisiones adicionales (En desarrollo)
+                      </Typography>
+                    )}
+                  </>
+                )}
+              </Box>
             )}
 
             {/* Draws Tab */}
