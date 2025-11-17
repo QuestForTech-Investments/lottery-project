@@ -30,6 +30,7 @@ import EditZone from '@components/EditZone'
 import ManageZones from '@components/ManageZones'
 import SorteosList from '@components/SorteosList'
 import CreateSorteo from '@components/CreateSorteo'
+import DailySales from '@components/DailySales'
 
 function App() {
   return (
@@ -78,6 +79,7 @@ function App() {
                 <Route path="/zones/manage" element={<ManageZones />} />
                 <Route path="/sorteos/lista" element={<SorteosList />} />
                 <Route path="/sorteos/crear" element={<CreateSorteo />} />
+                <Route path="/ventas/dia" element={<DailySales />} />
                 <Route path="/test/permissions" element={<TestPermissions />} />
                 <Route path="/test/multi-zone" element={<TestMultiZone />} />
                 <Route path="/test/react-multiselect" element={<TestReactMultiselect />} />

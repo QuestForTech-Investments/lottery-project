@@ -41,6 +41,9 @@ const ManageZonesMUI = lazy(() => import('@components/features/zones/ManageZones
 // Tickets feature components
 const CreateTicketsMUI = lazy(() => import('@components/features/tickets/CreateTickets'))
 
+// Sales feature components
+const DailySalesMUI = lazy(() => import('@components/features/sales/DailySales'))
+
 function App() {
   return (
     <>
@@ -91,6 +94,7 @@ function App() {
                           <Route path="/betting-pools/no-sales" element={<BettingPoolsWithoutSalesMUI />} />
                           <Route path="/betting-pools/days-report" element={<DaysWithoutSalesReportMUI />} />
                           <Route path="/tickets/new" element={<CreateTicketsMUI />} />
+                          <Route path="/sales/day" element={<DailySalesMUI />} />
                           <Route path="/users/administrators" element={<UserAdministratorsMUI />} />
                           <Route path="/users/login-history" element={<UserSessionsMUI />} />
                           <Route path="/users/blocked-sessions" element={<UserBlockedSessionsMUI />} />
