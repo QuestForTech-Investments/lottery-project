@@ -89,7 +89,7 @@ function App() {
                           <Route path="/betting-pools/access" element={<BettingPoolAccessMUI />} />
                           <Route path="/betting-pools/clear-pending" element={<CleanPendingPaymentsMUI />} />
                           <Route path="/betting-pools/no-sales" element={<BettingPoolsWithoutSalesMUI />} />
-                          <Route path="/betting-pools/days-without-sales" element={<DaysWithoutSalesReportMUI />} />
+                          <Route path="/betting-pools/days-report" element={<DaysWithoutSalesReportMUI />} />
                           <Route path="/tickets/new" element={<CreateTicketsMUI />} />
                           <Route path="/users/administrators" element={<UserAdministratorsMUI />} />
                           <Route path="/users/login-history" element={<UserSessionsMUI />} />
