@@ -161,6 +161,19 @@ const MassEditBettingPools = () => {
     setFormData(prev => ({ ...prev, [key]: value }));
   };
 
+  const handleCommissionChange = (betTypeCode, value) => {
+    const key = `commission_${betTypeCode}`;
+    setFormData(prev => ({ ...prev, [key]: value }));
+  };
+
+  const handleGeneralCommissionChange = (value) => {
+    setFormData(prev => ({ ...prev, generalCommission: value }));
+  };
+
+  const handleCommissionTypeChange = (value) => {
+    setFormData(prev => ({ ...prev, commissionType: value }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -572,16 +585,81 @@ const MassEditBettingPools = () => {
 
                     {/* Comisiones Sub-tab */}
                     {prizesSubTab === 1 && (
-                      <Typography color="text.secondary" sx={{ p: 2 }}>
-                        Configuración de comisiones (En desarrollo)
-                      </Typography>
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        {/* General Commission */}
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                          <Typography variant="body2" sx={{ minWidth: 200, fontWeight: 500 }}>
+                            General
+                          </Typography>
+                          <TextField
+                            size="small"
+                            type="text"
+                            value={formData.generalCommission || ''}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              if (val === '' || /^[\d.]*$/.test(val)) {
+                                handleGeneralCommissionChange(val);
+                              }
+                            }}
+                            placeholder="0"
+                            sx={{ maxWidth: 150 }}
+                          />
+                        </Box>
+                        <Divider />
+                        {/* Per Bet Type Commissions */}
+                        {loadingBetTypes ? (
+                          <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+                            <CircularProgress size={24} />
+                          </Box>
+                        ) : (
+                          betTypes.map(betType => (
+                            <Box key={betType.betTypeId} sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                              <Typography variant="body2" sx={{ minWidth: 200, fontWeight: 500 }}>
+                                {betType.betTypeName}
+                              </Typography>
+                              <TextField
+                                size="small"
+                                type="text"
+                                value={formData[`commission_${betType.betTypeCode}`] || ''}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  if (val === '' || /^[\d.]*$/.test(val)) {
+                                    handleCommissionChange(betType.betTypeCode, val);
+                                  }
+                                }}
+                                placeholder="0"
+                                sx={{ maxWidth: 150 }}
+                              />
+                            </Box>
+                          ))
+                        )}
+                      </Box>
                     )}
 
                     {/* Comisiones 2 Sub-tab */}
                     {prizesSubTab === 2 && (
-                      <Typography color="text.secondary" sx={{ p: 2 }}>
-                        Configuración de comisiones adicionales (En desarrollo)
-                      </Typography>
+                      <Box sx={{ p: 2 }}>
+                        <FormControl component="fieldset">
+                          <FormLabel component="legend" sx={{ fontWeight: 500, mb: 1 }}>
+                            Tipo de comisión
+                          </FormLabel>
+                          <RadioGroup
+                            value={formData.commissionType || ''}
+                            onChange={(e) => handleCommissionTypeChange(e.target.value)}
+                          >
+                            <FormControlLabel
+                              value="general"
+                              control={<Radio />}
+                              label="General"
+                            />
+                            <FormControlLabel
+                              value="por_jugada"
+                              control={<Radio />}
+                              label="Por jugada"
+                            />
+                          </RadioGroup>
+                        </FormControl>
+                      </Box>
                     )}
                   </>
                 )}

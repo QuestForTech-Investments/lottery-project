@@ -141,6 +141,19 @@ const MassEditBancas = () => {
     setFormData(prev => ({ ...prev, [key]: value }));
   };
 
+  const handleCommissionChange = (betTypeCode, value) => {
+    const key = `commission_${betTypeCode}`;
+    setFormData(prev => ({ ...prev, [key]: value }));
+  };
+
+  const handleGeneralCommissionChange = (value) => {
+    setFormData(prev => ({ ...prev, generalCommission: value }));
+  };
+
+  const handleCommissionTypeChange = (value) => {
+    setFormData(prev => ({ ...prev, commissionType: value }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (selectedBettingPools.length === 0) {
@@ -513,15 +526,87 @@ const MassEditBancas = () => {
 
                   {/* Comisiones Sub-tab */}
                   {prizesSubTab === 'comisiones' && (
-                    <div style={{ color: '#999' }}>
-                      Configuración de comisiones (En desarrollo)
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      {/* General Commission */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '15px', paddingBottom: '12px', borderBottom: '1px solid #ddd' }}>
+                        <label style={{ minWidth: '200px', fontSize: '13px', fontWeight: '500', color: '#555' }}>
+                          General
+                        </label>
+                        <input
+                          type="text"
+                          className="form-control"
+                          style={{ maxWidth: '150px', fontSize: '13px', height: '32px' }}
+                          value={formData.generalCommission || ''}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (val === '' || /^[\d.]*$/.test(val)) {
+                              handleGeneralCommissionChange(val);
+                            }
+                          }}
+                          placeholder="0"
+                        />
+                      </div>
+                      {/* Per Bet Type Commissions */}
+                      {loadingBetTypes ? (
+                        <div style={{ textAlign: 'center', padding: '20px' }}>
+                          <span className="spinner-border spinner-border-sm" role="status" />
+                          <span style={{ marginLeft: '10px' }}>Cargando tipos de apuesta...</span>
+                        </div>
+                      ) : (
+                        betTypes.map(betType => (
+                          <div key={betType.betTypeId} style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                            <label style={{ minWidth: '200px', fontSize: '13px', fontWeight: '500', color: '#555' }}>
+                              {betType.betTypeName}
+                            </label>
+                            <input
+                              type="text"
+                              className="form-control"
+                              style={{ maxWidth: '150px', fontSize: '13px', height: '32px' }}
+                              value={formData[`commission_${betType.betTypeCode}`] || ''}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                if (val === '' || /^[\d.]*$/.test(val)) {
+                                  handleCommissionChange(betType.betTypeCode, val);
+                                }
+                              }}
+                              placeholder="0"
+                            />
+                          </div>
+                        ))
+                      )}
                     </div>
                   )}
 
                   {/* Comisiones 2 Sub-tab */}
                   {prizesSubTab === 'comisiones2' && (
-                    <div style={{ color: '#999' }}>
-                      Configuración de comisiones adicionales (En desarrollo)
+                    <div style={{ padding: '10px 0' }}>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '15px', color: '#555' }}>
+                        Tipo de comisión
+                      </label>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px' }}>
+                          <input
+                            type="radio"
+                            name="commissionType"
+                            value="general"
+                            checked={formData.commissionType === 'general'}
+                            onChange={(e) => handleCommissionTypeChange(e.target.value)}
+                            style={{ width: '16px', height: '16px' }}
+                          />
+                          General
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px' }}>
+                          <input
+                            type="radio"
+                            name="commissionType"
+                            value="por_jugada"
+                            checked={formData.commissionType === 'por_jugada'}
+                            onChange={(e) => handleCommissionTypeChange(e.target.value)}
+                            style={{ width: '16px', height: '16px' }}
+                          />
+                          Por jugada
+                        </label>
+                      </div>
                     </div>
                   )}
                 </>
