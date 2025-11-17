@@ -55,7 +55,7 @@ export const MENU_ITEMS = [
     submenu: [
       { id: 'betting-pools-list', label: 'Lista', shortcut: 'L', path: '/betting-pools/list' },
       { id: 'create-betting-pool', label: 'Crear', shortcut: 'C', path: '/betting-pools/new' },
-      { id: 'bulk-edit', label: 'Edicion masiva', shortcut: 'E', path: '/betting-pools/bulk-edit' },
+      { id: 'bulk-edit', label: 'Edicion masiva', shortcut: 'E', path: '/betting-pools/mass-edit' },
       { id: 'access', label: 'Acceso', shortcut: 'A', path: '/betting-pools/access' },
       { id: 'clear-pending', label: 'Limpiar pendientes de pago', shortcut: 'L', path: '/betting-pools/clear-pending' },
       { id: 'no-sales-list', label: 'Lista sin ventas', shortcut: 'L', path: '/betting-pools/no-sales' },

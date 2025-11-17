@@ -40,6 +40,12 @@ const MassEditBancas = () => {
     printMode: null,
     discountProvider: null,
     discountMode: null,
+    // Footers tab
+    autoFooter: false,
+    footer1: '',
+    footer2: '',
+    footer3: '',
+    footer4: '',
   });
 
   // Selection state
@@ -337,8 +343,70 @@ const MassEditBancas = () => {
           )}
 
           {activeTab === 'Pies de página' && (
-            <div className="form-tab-container" style={{ padding: '20px', color: '#999' }}>
-              En desarrollo...
+            <div className="form-tab-container" style={{ maxWidth: '600px' }}>
+              {/* Pie de página automático */}
+              <div className="form-group">
+                <label className="form-label">Pie de página automático</label>
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  <IPhoneToggle
+                    value={formData.autoFooter}
+                    onChange={(val) => handleInputChange('autoFooter', val)}
+                    showLabel={false}
+                  />
+                </div>
+              </div>
+
+              {/* Primer pie de página */}
+              <div className="form-group">
+                <label className="form-label">Primer pie de página</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  style={{ fontSize: '14px' }}
+                  value={formData.footer1}
+                  onChange={(e) => handleInputChange('footer1', e.target.value)}
+                  placeholder="Texto del primer pie de página"
+                />
+              </div>
+
+              {/* Segundo pie de página */}
+              <div className="form-group">
+                <label className="form-label">Segundo pie de página</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  style={{ fontSize: '14px' }}
+                  value={formData.footer2}
+                  onChange={(e) => handleInputChange('footer2', e.target.value)}
+                  placeholder="Texto del segundo pie de página"
+                />
+              </div>
+
+              {/* Tercer pie de página */}
+              <div className="form-group">
+                <label className="form-label">Tercer pie de página</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  style={{ fontSize: '14px' }}
+                  value={formData.footer3}
+                  onChange={(e) => handleInputChange('footer3', e.target.value)}
+                  placeholder="Texto del tercer pie de página"
+                />
+              </div>
+
+              {/* Cuarto pie de página */}
+              <div className="form-group">
+                <label className="form-label">Cuarto pie de página</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  style={{ fontSize: '14px' }}
+                  value={formData.footer4}
+                  onChange={(e) => handleInputChange('footer4', e.target.value)}
+                  placeholder="Texto del cuarto pie de página"
+                />
+              </div>
             </div>
           )}
 

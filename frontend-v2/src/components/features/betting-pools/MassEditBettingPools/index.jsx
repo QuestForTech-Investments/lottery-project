@@ -60,6 +60,12 @@ const MassEditBettingPools = () => {
     discountProvider: null,
     discountMode: null,
     updateGeneralValues: false,
+    // Footers tab
+    autoFooter: false,
+    footer1: '',
+    footer2: '',
+    footer3: '',
+    footer4: '',
   });
 
   // Selection state
@@ -410,9 +416,64 @@ const MassEditBettingPools = () => {
 
             {/* Footers Tab */}
             {activeTab === 1 && (
-              <Typography color="text.secondary">
-                Configuración de pies de página (En desarrollo)
-              </Typography>
+              <Box sx={{ maxWidth: 600 }}>
+                {/* Pie de página automático */}
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 3, gap: 2 }}>
+                  <Typography sx={{ minWidth: 200 }}>Pie de página automático</Typography>
+                  <Switch
+                    checked={formData.autoFooter}
+                    onChange={(e) => handleInputChange('autoFooter', e.target.checked)}
+                  />
+                </Box>
+
+                {/* Primer pie de página */}
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 2 }}>
+                  <Typography sx={{ minWidth: 200 }}>Primer pie de página</Typography>
+                  <TextField
+                    value={formData.footer1}
+                    onChange={(e) => handleInputChange('footer1', e.target.value)}
+                    size="small"
+                    fullWidth
+                    placeholder="Texto del primer pie de página"
+                  />
+                </Box>
+
+                {/* Segundo pie de página */}
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 2 }}>
+                  <Typography sx={{ minWidth: 200 }}>Segundo pie de página</Typography>
+                  <TextField
+                    value={formData.footer2}
+                    onChange={(e) => handleInputChange('footer2', e.target.value)}
+                    size="small"
+                    fullWidth
+                    placeholder="Texto del segundo pie de página"
+                  />
+                </Box>
+
+                {/* Tercer pie de página */}
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 2 }}>
+                  <Typography sx={{ minWidth: 200 }}>Tercer pie de página</Typography>
+                  <TextField
+                    value={formData.footer3}
+                    onChange={(e) => handleInputChange('footer3', e.target.value)}
+                    size="small"
+                    fullWidth
+                    placeholder="Texto del tercer pie de página"
+                  />
+                </Box>
+
+                {/* Cuarto pie de página */}
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 2 }}>
+                  <Typography sx={{ minWidth: 200 }}>Cuarto pie de página</Typography>
+                  <TextField
+                    value={formData.footer4}
+                    onChange={(e) => handleInputChange('footer4', e.target.value)}
+                    size="small"
+                    fullWidth
+                    placeholder="Texto del cuarto pie de página"
+                  />
+                </Box>
+              </Box>
             )}
 
             {/* Prizes Tab */}
