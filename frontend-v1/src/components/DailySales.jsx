@@ -486,28 +486,36 @@ const DailySales = () => {
               </button>
             </div>
 
-            {/* Radio Filter Options */}
-            <div className="mb-3">
+            {/* Filter Toggle Buttons */}
+            <div className="d-flex gap-2 mb-3 flex-wrap">
               {FILTER_OPTIONS.map(option => (
-                <div key={option.value} className="form-check form-check-inline">
-                  <input
-                    className="form-check-input"
-                    type="radio"
-                    name="filterOption"
-                    id={`filter-${option.value}`}
-                    value={option.value}
-                    checked={filterOption === option.value}
-                    onChange={(e) => setFilterOption(e.target.value)}
-                    style={{ accentColor: '#51cbce' }}
-                  />
-                  <label
-                    className="form-check-label"
-                    htmlFor={`filter-${option.value}`}
-                    style={{ fontSize: '12px', color: '#66615b' }}
-                  >
-                    {option.label}
-                  </label>
-                </div>
+                <button
+                  key={option.value}
+                  className="btn btn-sm"
+                  style={{
+                    backgroundColor: filterOption === option.value ? '#51cbce' : 'white',
+                    color: filterOption === option.value ? 'white' : '#333',
+                    border: '1px solid #51cbce',
+                    fontSize: '11px',
+                    padding: '4px 10px',
+                    borderRadius: '4px',
+                    transition: 'all 0.2s ease',
+                    cursor: 'pointer'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (filterOption !== option.value) {
+                      e.target.style.backgroundColor = 'rgba(81, 203, 206, 0.1)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (filterOption !== option.value) {
+                      e.target.style.backgroundColor = 'white';
+                    }
+                  }}
+                  onClick={() => setFilterOption(option.value)}
+                >
+                  {option.label}
+                </button>
               ))}
             </div>
 
