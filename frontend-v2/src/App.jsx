@@ -27,6 +27,7 @@ const CreateBettingPoolMUI = lazy(() => import('@components/features/betting-poo
 const EditBettingPoolMUI = lazy(() => import('@components/features/betting-pools/EditBettingPool'))
 const UserBettingPoolsMUI = lazy(() => import('@components/features/betting-pools/UserBettingPools'))
 const MassEditBettingPoolsMUI = lazy(() => import('@components/features/betting-pools/MassEditBettingPools'))
+const BettingPoolAccessMUI = lazy(() => import('@components/features/betting-pools/BettingPoolAccess'))
 
 // Zones feature components
 const ZonesListMUI = lazy(() => import('@components/features/zones/ZonesList'))
@@ -82,6 +83,7 @@ function App() {
                           <Route path="/betting-pools/new" element={<CreateBettingPoolMUI />} />
                           <Route path="/betting-pools/edit/:id" element={<EditBettingPoolMUI />} />
                           <Route path="/betting-pools/mass-edit" element={<MassEditBettingPoolsMUI />} />
+                          <Route path="/betting-pools/access" element={<BettingPoolAccessMUI />} />
                           <Route path="/tickets/new" element={<CreateTicketsMUI />} />
                           <Route path="/users/administrators" element={<UserAdministratorsMUI />} />
                           <Route path="/users/login-history" element={<UserSessionsMUI />} />
