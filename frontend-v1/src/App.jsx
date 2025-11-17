@@ -12,6 +12,7 @@ import EditBanca from '@components/EditBanca'
 import MassEditBancas from '@components/MassEditBancas'
 import BancaAccess from '@components/BancaAccess'
 import CleanPendingPayments from '@components/CleanPendingPayments'
+import BettingPoolsWithoutSales from '@components/BettingPoolsWithoutSales'
 import UserAdministradores from '@components/UserAdministradores'
 import UserIniciosSesion from '@components/UserIniciosSesion'
 import UserSesionesBloqueadas from '@components/UserSesionesBloqueadas'
@@ -64,6 +65,7 @@ function App() {
                 <Route path="/bancas/edicion-masiva" element={<MassEditBancas />} />
                 <Route path="/bancas/acceso" element={<BancaAccess />} />
                 <Route path="/bancas/limpiar-pendientes" element={<CleanPendingPayments />} />
+                <Route path="/bancas/sin-ventas" element={<BettingPoolsWithoutSales />} />
                 <Route path="/tickets/crear" element={<CreateTickets />} />
                 <Route path="/usuarios/administradores" element={<UserAdministradores />} />
                 <Route path="/usuarios/inicios-sesion" element={<UserIniciosSesion />} />

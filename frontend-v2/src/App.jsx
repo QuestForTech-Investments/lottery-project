@@ -29,6 +29,7 @@ const UserBettingPoolsMUI = lazy(() => import('@components/features/betting-pool
 const MassEditBettingPoolsMUI = lazy(() => import('@components/features/betting-pools/MassEditBettingPools'))
 const BettingPoolAccessMUI = lazy(() => import('@components/features/betting-pools/BettingPoolAccess'))
 const CleanPendingPaymentsMUI = lazy(() => import('@components/features/betting-pools/CleanPendingPayments'))
+const BettingPoolsWithoutSalesMUI = lazy(() => import('@components/features/betting-pools/BettingPoolsWithoutSales'))
 
 // Zones feature components
 const ZonesListMUI = lazy(() => import('@components/features/zones/ZonesList'))
@@ -85,7 +86,8 @@ function App() {
                           <Route path="/betting-pools/edit/:id" element={<EditBettingPoolMUI />} />
                           <Route path="/betting-pools/mass-edit" element={<MassEditBettingPoolsMUI />} />
                           <Route path="/betting-pools/access" element={<BettingPoolAccessMUI />} />
-                          <Route path="/betting-pools/clean-pending-payments" element={<CleanPendingPaymentsMUI />} />
+                          <Route path="/betting-pools/clear-pending" element={<CleanPendingPaymentsMUI />} />
+                          <Route path="/betting-pools/no-sales" element={<BettingPoolsWithoutSalesMUI />} />
                           <Route path="/tickets/new" element={<CreateTicketsMUI />} />
                           <Route path="/users/administrators" element={<UserAdministratorsMUI />} />
                           <Route path="/users/login-history" element={<UserSessionsMUI />} />
