@@ -4,7 +4,7 @@ import '../assets/css/CreateBranchGeneral.css';
 import '../assets/css/FormStyles.css';
 
 const TABLE_COLUMNS = [
-  { key: 'ref', label: 'Ref.', align: 'left' },
+  { key: 'ref', label: 'Número', align: 'left' },
   { key: 'code', label: 'Código', align: 'left' },
   { key: 'p', label: 'P', align: 'center' },
   { key: 'l', label: 'L', align: 'center' },
@@ -534,17 +534,20 @@ const DailySales = () => {
             {/* Data Table */}
             <div className="table-responsive">
               <table className="table table-striped table-hover table-bordered table-sm">
-                <thead style={{ backgroundColor: '#f8f9fa' }}>
-                  <tr>
-                    {TABLE_COLUMNS.map(col => (
+                <thead role="rowgroup">
+                  <tr role="row">
+                    {TABLE_COLUMNS.map((col, index) => (
                       <th
                         key={col.key}
+                        role="columnheader"
+                        scope="col"
+                        tabIndex={['code', 'ref'].includes(col.key) ? 0 : -1}
+                        aria-colindex={index + 1}
+                        aria-label={['code', 'ref'].includes(col.key) ? `Click to sort ${order === 'asc' && orderBy === col.key ? 'Descending' : 'Ascending'}` : col.label}
+                        aria-sort={orderBy === col.key ? (order === 'asc' ? 'ascending' : 'descending') : 'none'}
                         className={`text-${col.align}`}
                         style={{
-                          cursor: ['code', 'ref'].includes(col.key) ? 'pointer' : 'default',
-                          fontSize: '12px',
-                          fontWeight: '500',
-                          color: '#51cbce'
+                          cursor: ['code', 'ref'].includes(col.key) ? 'pointer' : 'default'
                         }}
                         onClick={() => ['code', 'ref'].includes(col.key) && handleSort(col.key)}
                       >
