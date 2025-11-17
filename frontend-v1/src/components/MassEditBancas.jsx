@@ -615,8 +615,55 @@ const MassEditBancas = () => {
           )}
 
           {activeTab === 'Sorteos' && (
-            <div className="form-tab-container" style={{ padding: '20px', color: '#999' }}>
-              En desarrollo...
+            <div className="form-tab-container" style={{ padding: '20px' }}>
+              {/* Sorteos activos */}
+              <div style={{ marginBottom: '30px' }}>
+                <h5 style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '15px', color: '#555' }}>
+                  Sorteos activos
+                </h5>
+                <div style={{ border: '1px solid #ddd', borderRadius: '6px', padding: '15px', maxHeight: '300px', overflowY: 'auto', backgroundColor: '#fafafa' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '8px' }}>
+                    {draws.map(draw => {
+                      const id = draw.drawId || draw.id;
+                      const isActive = formData.activeDraws?.includes(id) || false;
+                      return (
+                        <label key={id} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '12px', color: '#555' }}>
+                          <input
+                            type="checkbox"
+                            checked={isActive}
+                            onChange={(e) => {
+                              const newActiveDraws = e.target.checked
+                                ? [...(formData.activeDraws || []), id]
+                                : (formData.activeDraws || []).filter(drawId => drawId !== id);
+                              handleInputChange('activeDraws', newActiveDraws);
+                            }}
+                            style={{ width: '16px', height: '16px' }}
+                          />
+                          {draw.drawName || draw.name}
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Aplicar cierre anticipado */}
+              <div className="form-group">
+                <label className="form-label">Aplicar cierre anticipado a</label>
+                <select
+                  className="form-control form-select"
+                  style={{ maxWidth: '400px', fontSize: '14px' }}
+                  value={formData.earlyClosingDrawId || ''}
+                  onChange={(e) => handleInputChange('earlyClosingDrawId', e.target.value)}
+                >
+                  <option value="">Ninguno</option>
+                  {draws.map(draw => (
+                    <option key={draw.drawId || draw.id} value={draw.drawId || draw.id}>
+                      {draw.drawName || draw.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           )}
 
