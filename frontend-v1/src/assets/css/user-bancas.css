@@ -834,13 +834,14 @@
 }
 
 .user-bancas-card-header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: transparent;
   padding: 20px;
   text-align: center;
+  border-bottom: none;
 }
 
 .user-bancas-header-text {
-  color: white;
+  color: #2c2c2c;
   margin: 0;
   font-size: 24px;
   font-weight: 600;

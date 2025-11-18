@@ -123,7 +123,7 @@ const CollectionsPaymentsWidget = () => {
   return (
     <Card>
       <CardContent>
-        <Typography variant="h6" component="h2" gutterBottom>
+        <Typography variant="h6" component="h2" gutterBottom align="center">
           Cobros & pagos
         </Typography>
 

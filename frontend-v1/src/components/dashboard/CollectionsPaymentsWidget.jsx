@@ -105,7 +105,7 @@ const CollectionsPaymentsWidget = () => {
   return (
     <div className="card">
       <div className="card-body">
-        <h6 className="card-title mb-3">Cobros & pagos</h6>
+        <h6 className="card-title mb-3 text-center">Cobros & pagos</h6>
 
         {/* Type selector - Radio style buttons */}
         <div className="btn-group w-100 mb-3" role="group">
