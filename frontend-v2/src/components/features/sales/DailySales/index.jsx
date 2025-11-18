@@ -24,10 +24,8 @@ import {
   OutlinedInput,
   Tabs,
   Tab,
-  Radio,
-  RadioGroup,
-  FormControlLabel,
-  FormLabel,
+  ToggleButton,
+  ToggleButtonGroup,
   Divider
 } from '@mui/material';
 import {
@@ -301,119 +299,198 @@ const DailySales = () => {
       {mainTab === 0 && (
         <Card>
           <CardContent>
-            <Typography variant="h5" gutterBottom>
+            <Typography variant="h5" align="center" gutterBottom sx={{ fontWeight: 400, mb: 3 }}>
               Venta del día
             </Typography>
 
             {/* Filters */}
-            <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap', alignItems: 'center' }}>
-              <TextField
-                type="date"
-                label="Fecha"
-                size="small"
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-                sx={{ width: 180 }}
-                InputLabelProps={{ shrink: true }}
-              />
+            <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+              <Box>
+                <Typography variant="caption" sx={{ color: 'text.secondary', mb: 0.5, display: 'block' }}>
+                  Fecha
+                </Typography>
+                <TextField
+                  type="date"
+                  size="small"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  sx={{ width: 200 }}
+                  InputLabelProps={{ shrink: true }}
+                />
+              </Box>
 
-              <FormControl sx={{ minWidth: 200 }} size="small">
-                <InputLabel>Zonas</InputLabel>
-                <Select
-                  multiple
-                  value={selectedZones}
-                  onChange={handleZoneChange}
-                  input={<OutlinedInput label="Zonas" />}
-                  renderValue={(selected) => `${selected.length} seleccionadas`}
-                >
-                  {zones.map((zone) => (
-                    <MenuItem key={zone.zoneId || zone.id} value={zone.zoneId || zone.id}>
-                      <Checkbox checked={selectedZones.indexOf(zone.zoneId || zone.id) > -1} />
-                      <ListItemText primary={zone.zoneName || zone.name} />
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+              <Box>
+                <Typography variant="caption" sx={{ color: 'text.secondary', mb: 0.5, display: 'block' }}>
+                  Zonas
+                </Typography>
+                <FormControl sx={{ minWidth: 200 }} size="small">
+                  <Select
+                    multiple
+                    value={selectedZones}
+                    onChange={handleZoneChange}
+                    input={<OutlinedInput />}
+                    renderValue={(selected) => `${selected.length} seleccionadas`}
+                  >
+                    {zones.map((zone) => (
+                      <MenuItem key={zone.zoneId || zone.id} value={zone.zoneId || zone.id}>
+                        <Checkbox checked={selectedZones.indexOf(zone.zoneId || zone.id) > -1} />
+                        <ListItemText primary={zone.zoneName || zone.name} />
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Box>
 
-              <FormControl sx={{ minWidth: 150 }} size="small">
-                <InputLabel>Grupo</InputLabel>
-                <Select
-                  value={selectedGroup}
-                  onChange={(e) => setSelectedGroup(e.target.value)}
-                  label="Grupo"
-                >
-                  <MenuItem value="">Seleccione</MenuItem>
-                  <MenuItem value="group1">Grupo 1</MenuItem>
-                  <MenuItem value="group2">Grupo 2</MenuItem>
-                </Select>
-              </FormControl>
+              <Box>
+                <Typography variant="caption" sx={{ color: 'text.secondary', mb: 0.5, display: 'block' }}>
+                  Grupo
+                </Typography>
+                <FormControl sx={{ minWidth: 150 }} size="small">
+                  <Select
+                    value={selectedGroup}
+                    onChange={(e) => setSelectedGroup(e.target.value)}
+                    displayEmpty
+                  >
+                    <MenuItem value="">Seleccione</MenuItem>
+                    <MenuItem value="group1">Grupo 1</MenuItem>
+                    <MenuItem value="group2">Grupo 2</MenuItem>
+                  </Select>
+                </FormControl>
+              </Box>
             </Box>
 
-            {/* Action Buttons */}
-            <Box sx={{ display: 'flex', gap: 1, mb: 3, flexWrap: 'wrap' }}>
+            {/* Action Buttons - Pill Style */}
+            <Box sx={{ display: 'flex', gap: 1.5, mb: 4, flexWrap: 'wrap' }}>
               <Button
                 variant="contained"
-                startIcon={<VisibilityIcon />}
                 onClick={handleSearch}
                 disabled={loading}
+                sx={{
+                  borderRadius: '30px',
+                  px: 4,
+                  py: 1.2,
+                  textTransform: 'uppercase',
+                  fontWeight: 500
+                }}
               >
                 Ver ventas
               </Button>
-              <Button variant="outlined" startIcon={<PdfIcon />} onClick={handleExportPdf}>
+              <Button
+                variant="contained"
+                onClick={handleExportPdf}
+                sx={{
+                  borderRadius: '30px',
+                  px: 4,
+                  py: 1.2,
+                  textTransform: 'uppercase',
+                  fontWeight: 500
+                }}
+              >
                 PDF
               </Button>
-              <Button variant="outlined" startIcon={<CsvIcon />} onClick={handleExportCsv}>
+              <Button
+                variant="contained"
+                onClick={handleExportCsv}
+                sx={{
+                  borderRadius: '30px',
+                  px: 4,
+                  py: 1.2,
+                  textTransform: 'uppercase',
+                  fontWeight: 500
+                }}
+              >
                 CSV
               </Button>
-              <Button variant="outlined" startIcon={<RefreshIcon />} onClick={handleProcessTodayTickets}>
+              <Button
+                variant="contained"
+                onClick={handleProcessTodayTickets}
+                sx={{
+                  borderRadius: '30px',
+                  px: 4,
+                  py: 1.2,
+                  textTransform: 'uppercase',
+                  fontWeight: 500
+                }}
+              >
                 Procesar tickets de hoy
               </Button>
-              <Button variant="outlined" startIcon={<RefreshIcon />} onClick={handleProcessYesterdaySales}>
+              <Button
+                variant="contained"
+                onClick={handleProcessYesterdaySales}
+                sx={{
+                  borderRadius: '30px',
+                  px: 4,
+                  py: 1.2,
+                  textTransform: 'uppercase',
+                  fontWeight: 500
+                }}
+              >
                 Procesar ventas de ayer
               </Button>
             </Box>
 
             {/* Net Total Summary */}
-            <Typography variant="h6" gutterBottom>
+            <Typography variant="h5" align="center" gutterBottom sx={{ fontWeight: 400, mb: 3 }}>
               Neto (banca/grupos/agentes): {formatCurrency(totals.net)}
             </Typography>
 
-            <Divider sx={{ my: 2 }} />
+            {/* Bancas Sub-Tab */}
+            <Box sx={{ mb: 3 }}>
+              <Tabs value={0} sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
+                <Tab label="Bancas" />
+              </Tabs>
 
-            {/* Bancas Section */}
-            <Typography variant="h6" gutterBottom>
-              Total: {formatCurrency(totals.sales)}
-            </Typography>
+              {/* Total with highlighted background */}
+              <Typography variant="h5" align="center" gutterBottom sx={{ fontWeight: 400, mb: 3 }}>
+                Total: <Box component="span" sx={{
+                  backgroundColor: '#e0f7fa',
+                  px: 2,
+                  py: 0.5,
+                  borderRadius: 1,
+                  color: '#00838f'
+                }}>{formatCurrency(totals.sales)}</Box>
+              </Typography>
 
-            {/* Filter Radio Group */}
-            <FormControl component="fieldset" sx={{ mb: 2 }}>
-              <FormLabel component="legend">Filtros</FormLabel>
-              <RadioGroup
-                row
-                value={filterType}
-                onChange={(e) => setFilterType(e.target.value)}
-              >
-                {FILTER_OPTIONS.map(option => (
-                  <FormControlLabel
-                    key={option.value}
-                    value={option.value}
-                    control={<Radio size="small" />}
-                    label={option.label}
-                  />
-                ))}
-              </RadioGroup>
-            </FormControl>
+              {/* Filter Toggle Buttons */}
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="caption" sx={{ color: 'text.secondary', mb: 1, display: 'block' }}>
+                  Filtros
+                </Typography>
+                <ToggleButtonGroup
+                  value={filterType}
+                  exclusive
+                  onChange={(e, newValue) => newValue && setFilterType(newValue)}
+                  size="small"
+                  sx={{ flexWrap: 'wrap' }}
+                >
+                  {FILTER_OPTIONS.map(option => (
+                    <ToggleButton
+                      key={option.value}
+                      value={option.value}
+                      sx={{
+                        textTransform: 'uppercase',
+                        fontSize: '0.75rem',
+                        px: 2,
+                        py: 0.8
+                      }}
+                    >
+                      {option.label}
+                    </ToggleButton>
+                  ))}
+                </ToggleButtonGroup>
+              </Box>
+            </Box>
 
             {/* Quick Filter */}
-            <Box sx={{ mb: 2 }}>
+            <Box sx={{ mb: 2, textAlign: 'right' }}>
               <TextField
                 size="small"
                 placeholder="Filtro rapido"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
+                  endAdornment: (
+                    <InputAdornment position="end">
                       <SearchIcon />
                     </InputAdornment>
                   ),

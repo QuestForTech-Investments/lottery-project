@@ -6,11 +6,11 @@ import LoginMUI from '@pages/LoginMUI'
 import DebugPanel from '@components/common/DebugPanel'
 import PrivateRoute from '@components/common/PrivateRoute'
 import ErrorBoundary from '@components/common/ErrorBoundary'
+import MainLayout from '@components/layout/MainLayout'
 
 // Lazy load: Everything else
 import LazyLoadingFallback from '@components/common/LazyLoadingFallback'
 
-const MainLayout = lazy(() => import('@components/layout/MainLayout'))
 const DashboardMUI = lazy(() => import('@pages/DashboardMUI'))
 
 // User feature components
@@ -40,9 +40,32 @@ const ManageZonesMUI = lazy(() => import('@components/features/zones/ManageZones
 
 // Tickets feature components
 const CreateTicketsMUI = lazy(() => import('@components/features/tickets/CreateTickets'))
+const TicketMonitoringMUI = lazy(() => import('@components/features/tickets/TicketMonitoring'))
+const ExternalAgentsMonitoringMUI = lazy(() => import('@components/features/tickets/ExternalAgentsMonitoring'))
+const PlayMonitoringMUI = lazy(() => import('@components/features/tickets/PlayMonitoring'))
+const WinningPlaysMUI = lazy(() => import('@components/features/tickets/WinningPlays'))
+const BlackboardMUI = lazy(() => import('@components/features/tickets/Blackboard'))
+const ImportedPoolMUI = lazy(() => import('@components/features/tickets/ImportedPool'))
+const ExportedPoolMUI = lazy(() => import('@components/features/tickets/ExportedPool'))
+const TicketAnomaliesMUI = lazy(() => import('@components/features/tickets/TicketAnomalies'))
 
 // Sales feature components
 const DailySalesMUI = lazy(() => import('@components/features/sales/DailySales'))
+const HistoricalSalesMUI = lazy(() => import('@components/features/sales/HistoricalSales'))
+const SalesByDateMUI = lazy(() => import('@components/features/sales/SalesByDate'))
+const PlayTypePrizesMUI = lazy(() => import('@components/features/sales/PlayTypePrizes'))
+const PlayTypePrizesPercentagesMUI = lazy(() => import('@components/features/sales/PlayTypePrizesPercentages'))
+const BettingPoolSalesMUI = lazy(() => import('@components/features/sales/BettingPoolSales'))
+const ZoneSalesMUI = lazy(() => import('@components/features/sales/ZoneSales'))
+
+// Results feature components
+const ResultsMUI = lazy(() => import('@components/features/results/Results'))
+
+// Balances feature components
+const BettingPoolBalancesMUI = lazy(() => import('@components/features/balances/BettingPoolBalances'))
+const BankBalancesMUI = lazy(() => import('@components/features/balances/BankBalances'))
+const ZoneBalancesMUI = lazy(() => import('@components/features/balances/ZoneBalances'))
+const GroupBalancesMUI = lazy(() => import('@components/features/balances/GroupBalances'))
 
 function App() {
   return (
@@ -61,11 +84,9 @@ function App() {
               element={
                 <PrivateRoute>
                   <ErrorBoundary>
-                    <Suspense fallback={<LazyLoadingFallback />}>
-                      <MainLayout>
-                        <DashboardMUI />
-                      </MainLayout>
-                    </Suspense>
+                    <MainLayout>
+                      <DashboardMUI />
+                    </MainLayout>
                   </ErrorBoundary>
                 </PrivateRoute>
               }
@@ -77,9 +98,8 @@ function App() {
               element={
                 <PrivateRoute>
                   <ErrorBoundary>
-                    <Suspense fallback={<LazyLoadingFallback />}>
-                      <MainLayout>
-                        <Routes>
+                    <MainLayout>
+                      <Routes>
                           <Route path="/" element={<DashboardMUI />} />
                           <Route path="/users/new" element={<CreateUserMUI />} />
                           <Route path="/users/edit/:userId" element={<EditUserMUI />} />
@@ -94,7 +114,21 @@ function App() {
                           <Route path="/betting-pools/no-sales" element={<BettingPoolsWithoutSalesMUI />} />
                           <Route path="/betting-pools/days-report" element={<DaysWithoutSalesReportMUI />} />
                           <Route path="/tickets/new" element={<CreateTicketsMUI />} />
+                          <Route path="/tickets/monitoring" element={<TicketMonitoringMUI />} />
+                          <Route path="/tickets/external-agents" element={<ExternalAgentsMonitoringMUI />} />
+                          <Route path="/tickets/plays" element={<PlayMonitoringMUI />} />
+                          <Route path="/tickets/winners" element={<WinningPlaysMUI />} />
+                          <Route path="/tickets/board" element={<BlackboardMUI />} />
+                          <Route path="/tickets/imported-pool" element={<ImportedPoolMUI />} />
+                          <Route path="/tickets/exported-pool" element={<ExportedPoolMUI />} />
+                          <Route path="/tickets/anomalies" element={<TicketAnomaliesMUI />} />
                           <Route path="/sales/day" element={<DailySalesMUI />} />
+                          <Route path="/sales/history" element={<HistoricalSalesMUI />} />
+                          <Route path="/sales/by-date" element={<SalesByDateMUI />} />
+                          <Route path="/sales/prizes" element={<PlayTypePrizesMUI />} />
+                          <Route path="/sales/percentages" element={<PlayTypePrizesPercentagesMUI />} />
+                          <Route path="/sales/betting-pools" element={<BettingPoolSalesMUI />} />
+                          <Route path="/sales/zones" element={<ZoneSalesMUI />} />
                           <Route path="/users/administrators" element={<UserAdministratorsMUI />} />
                           <Route path="/users/login-history" element={<UserSessionsMUI />} />
                           <Route path="/users/blocked-sessions" element={<UserBlockedSessionsMUI />} />
@@ -102,9 +136,13 @@ function App() {
                           <Route path="/zones/new" element={<CreateZoneMUI />} />
                           <Route path="/zones/edit/:id" element={<EditZoneMUI />} />
                           <Route path="/zones/manage" element={<ManageZonesMUI />} />
+                          <Route path="/results" element={<ResultsMUI />} />
+                          <Route path="/balances/betting-pools" element={<BettingPoolBalancesMUI />} />
+                          <Route path="/balances/banks" element={<BankBalancesMUI />} />
+                          <Route path="/balances/zones" element={<ZoneBalancesMUI />} />
+                          <Route path="/balances/groups" element={<GroupBalancesMUI />} />
                         </Routes>
                       </MainLayout>
-                    </Suspense>
                   </ErrorBoundary>
                 </PrivateRoute>
               }

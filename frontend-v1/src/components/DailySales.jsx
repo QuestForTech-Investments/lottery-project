@@ -769,6 +769,11 @@ const DailySales = () => {
       <div className="branch-form">
         {activeTab === 'general' ? (
           <div className="form-tab-container">
+            {/* Title */}
+            <h3 style={{ textAlign: 'center', color: '#333', marginBottom: '20px', fontWeight: 400 }}>
+              Venta del día
+            </h3>
+
             {/* Filters Section */}
             <div className="d-flex align-items-center gap-3 mb-3 flex-wrap">
               <div className="form-group" style={{ marginBottom: 0 }}>
@@ -778,187 +783,255 @@ const DailySales = () => {
                 <input
                   type="date"
                   className="form-control"
-                  style={{ width: '160px', height: '31px' }}
+                  style={{ width: '200px', height: '38px', fontSize: '14px' }}
                   value={selectedDate}
                   onChange={(e) => setSelectedDate(e.target.value)}
                 />
               </div>
 
-              <div className="dropdown">
-                <button
-                  className="btn btn-sm dropdown-toggle"
-                  style={{
-                    backgroundColor: '#51cbce',
-                    color: 'white',
-                    border: 'none',
-                    fontSize: '12px',
-                    height: '31px'
-                  }}
-                  type="button"
-                  data-bs-toggle="dropdown"
-                  aria-expanded="false"
-                >
-                  Zonas ({selectedZones.length})
-                </button>
-                <div className="dropdown-menu p-3" style={{ minWidth: '250px', maxHeight: '300px', overflowY: 'auto' }}>
-                  <div className="mb-2">
-                    <button
-                      className="btn btn-link btn-sm p-0 me-2"
-                      style={{ color: '#51cbce' }}
-                      onClick={handleSelectAllZones}
-                    >
-                      Todas
-                    </button>
-                    <button
-                      className="btn btn-link btn-sm p-0"
-                      style={{ color: '#51cbce' }}
-                      onClick={handleDeselectAllZones}
-                    >
-                      Ninguna
-                    </button>
-                  </div>
-                  {zones.map((zone) => (
-                    <div key={zone.zoneId || zone.id} className="form-check">
-                      <input
-                        className="form-check-input"
-                        type="checkbox"
-                        id={`zone-${zone.zoneId || zone.id}`}
-                        checked={selectedZones.includes(zone.zoneId || zone.id)}
-                        onChange={() => handleZoneToggle(zone.zoneId || zone.id)}
-                        style={{ accentColor: '#51cbce' }}
-                      />
-                      <label
-                        className="form-check-label"
-                        htmlFor={`zone-${zone.zoneId || zone.id}`}
-                        style={{ fontSize: '12px' }}
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label" style={{ width: 'auto', minWidth: 'auto', paddingRight: '10px' }}>
+                  Zonas
+                </label>
+                <div className="dropdown">
+                  <button
+                    className="btn dropdown-toggle"
+                    style={{
+                      backgroundColor: 'white',
+                      color: '#333',
+                      border: '1px solid #ddd',
+                      fontSize: '14px',
+                      height: '38px',
+                      minWidth: '180px',
+                      textAlign: 'left'
+                    }}
+                    type="button"
+                    data-bs-toggle="dropdown"
+                    aria-expanded="false"
+                  >
+                    {selectedZones.length} seleccionadas
+                  </button>
+                  <div className="dropdown-menu p-3" style={{ minWidth: '250px', maxHeight: '300px', overflowY: 'auto' }}>
+                    <div className="mb-2">
+                      <button
+                        className="btn btn-link btn-sm p-0 me-2"
+                        style={{ color: '#51cbce' }}
+                        onClick={handleSelectAllZones}
                       >
-                        {zone.zoneName || zone.name}
-                      </label>
+                        Todas
+                      </button>
+                      <button
+                        className="btn btn-link btn-sm p-0"
+                        style={{ color: '#51cbce' }}
+                        onClick={handleDeselectAllZones}
+                      >
+                        Ninguna
+                      </button>
                     </div>
-                  ))}
+                    {zones.map((zone) => (
+                      <div key={zone.zoneId || zone.id} className="form-check">
+                        <input
+                          className="form-check-input"
+                          type="checkbox"
+                          id={`zone-${zone.zoneId || zone.id}`}
+                          checked={selectedZones.includes(zone.zoneId || zone.id)}
+                          onChange={() => handleZoneToggle(zone.zoneId || zone.id)}
+                          style={{ accentColor: '#51cbce' }}
+                        />
+                        <label
+                          className="form-check-label"
+                          htmlFor={`zone-${zone.zoneId || zone.id}`}
+                          style={{ fontSize: '12px' }}
+                        >
+                          {zone.zoneName || zone.name}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
 
-              <select
-                className="form-control"
-                value={selectedGroup}
-                onChange={(e) => setSelectedGroup(e.target.value)}
-                style={{ width: '150px', height: '31px', fontSize: '12px' }}
-              >
-                <option value="all">Todos</option>
-                <option value="group1">Grupo 1</option>
-                <option value="group2">Grupo 2</option>
-              </select>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label" style={{ width: 'auto', minWidth: 'auto', paddingRight: '10px' }}>
+                  Grupo
+                </label>
+                <select
+                  className="form-control"
+                  value={selectedGroup}
+                  onChange={(e) => setSelectedGroup(e.target.value)}
+                  style={{ width: '180px', height: '38px', fontSize: '14px' }}
+                >
+                  <option value="all">Seleccione</option>
+                  <option value="group1">Grupo 1</option>
+                  <option value="group2">Grupo 2</option>
+                </select>
+              </div>
             </div>
 
-            {/* Action Buttons */}
-            <div className="d-flex gap-2 mb-3 flex-wrap">
+            {/* Action Buttons - Pill Style */}
+            <div className="d-flex gap-2 mb-4 flex-wrap">
               <button
-                className="btn btn-sm"
+                className="btn"
                 style={{
                   backgroundColor: '#51cbce',
                   color: 'white',
                   border: 'none',
-                  fontSize: '12px'
+                  fontSize: '14px',
+                  padding: '10px 30px',
+                  borderRadius: '30px',
+                  fontWeight: 500,
+                  textTransform: 'uppercase'
                 }}
                 onClick={handleViewSales}
               >
-                <i className="fas fa-eye me-1"></i>
                 Ver ventas
               </button>
               <button
-                className="btn btn-sm"
+                className="btn"
                 style={{
                   backgroundColor: '#51cbce',
                   color: 'white',
                   border: 'none',
-                  fontSize: '12px'
+                  fontSize: '14px',
+                  padding: '10px 30px',
+                  borderRadius: '30px',
+                  fontWeight: 500,
+                  textTransform: 'uppercase'
                 }}
               >
-                <i className="fas fa-file-pdf me-1"></i>
                 PDF
               </button>
               <button
-                className="btn btn-sm"
+                className="btn"
                 style={{
                   backgroundColor: '#51cbce',
                   color: 'white',
                   border: 'none',
-                  fontSize: '12px'
+                  fontSize: '14px',
+                  padding: '10px 30px',
+                  borderRadius: '30px',
+                  fontWeight: 500,
+                  textTransform: 'uppercase'
                 }}
               >
-                <i className="fas fa-file-csv me-1"></i>
                 CSV
               </button>
               <button
-                className="btn btn-sm"
+                className="btn"
                 style={{
                   backgroundColor: '#51cbce',
                   color: 'white',
                   border: 'none',
-                  fontSize: '12px'
+                  fontSize: '14px',
+                  padding: '10px 30px',
+                  borderRadius: '30px',
+                  fontWeight: 500,
+                  textTransform: 'uppercase'
                 }}
               >
-                <i className="fas fa-ticket-alt me-1"></i>
                 Procesar tickets de hoy
               </button>
               <button
-                className="btn btn-sm"
+                className="btn"
                 style={{
                   backgroundColor: '#51cbce',
                   color: 'white',
                   border: 'none',
-                  fontSize: '12px'
+                  fontSize: '14px',
+                  padding: '10px 30px',
+                  borderRadius: '30px',
+                  fontWeight: 500,
+                  textTransform: 'uppercase'
                 }}
               >
-                <i className="fas fa-dollar-sign me-1"></i>
                 Procesar ventas de ayer
               </button>
             </div>
 
-            {/* Filter Toggle Buttons */}
-            <div className="d-flex gap-2 mb-3 flex-wrap">
-              {FILTER_OPTIONS.map(option => (
-                <button
-                  key={option.value}
-                  className="btn btn-sm"
-                  style={{
-                    backgroundColor: filterOption === option.value ? '#51cbce' : 'white',
-                    color: filterOption === option.value ? 'white' : '#333',
-                    border: '1px solid #51cbce',
-                    fontSize: '11px',
-                    padding: '4px 10px',
-                    borderRadius: '4px',
-                    transition: 'all 0.2s ease',
-                    cursor: 'pointer'
-                  }}
-                  onMouseEnter={(e) => {
-                    if (filterOption !== option.value) {
-                      e.target.style.backgroundColor = 'rgba(81, 203, 206, 0.1)';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (filterOption !== option.value) {
-                      e.target.style.backgroundColor = 'white';
-                    }
-                  }}
-                  onClick={() => setFilterOption(option.value)}
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
+            {/* Net Summary */}
+            <h3 style={{ textAlign: 'center', marginBottom: '20px', fontWeight: 400 }}>
+              Neto (banca/grupos/agentes): {formatCurrency(totals.net)}
+            </h3>
 
-            {/* Quick Filter */}
-            <div className="mb-3">
-              <input
-                type="text"
-                className="form-control"
-                placeholder="Filtrado rápido"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                style={{ width: '300px', height: '31px', fontSize: '12px' }}
-              />
+            {/* Bancas Sub-Tab */}
+            <div style={{ marginBottom: '20px' }}>
+              <div style={{ borderBottom: '2px solid #ddd', marginBottom: '15px' }}>
+                <button
+                  style={{
+                    backgroundColor: 'white',
+                    border: 'none',
+                    borderBottom: '2px solid #51cbce',
+                    padding: '10px 20px',
+                    fontSize: '14px',
+                    fontWeight: 500,
+                    color: '#333',
+                    marginBottom: '-2px'
+                  }}
+                >
+                  Bancas
+                </button>
+              </div>
+
+              {/* Total with highlighted background */}
+              <h3 style={{ textAlign: 'center', marginBottom: '20px', fontWeight: 400 }}>
+                Total: <span style={{
+                  backgroundColor: '#e0f7fa',
+                  padding: '5px 15px',
+                  borderRadius: '4px',
+                  color: '#00838f'
+                }}>{formatCurrency(totals.sales)}</span>
+              </h3>
+
+              {/* Filter Toggle Buttons */}
+              <div style={{ marginBottom: '15px' }}>
+                <label style={{ fontSize: '12px', color: '#666', display: 'block', marginBottom: '8px' }}>
+                  Filtros
+                </label>
+                <div className="d-flex gap-2 flex-wrap">
+                  {FILTER_OPTIONS.map(option => (
+                    <button
+                      key={option.value}
+                      className="btn"
+                      style={{
+                        backgroundColor: filterOption === option.value ? '#51cbce' : 'white',
+                        color: filterOption === option.value ? 'white' : '#333',
+                        border: '1px solid #ddd',
+                        fontSize: '12px',
+                        padding: '6px 12px',
+                        borderRadius: '4px',
+                        transition: 'all 0.2s ease',
+                        cursor: 'pointer',
+                        textTransform: 'uppercase'
+                      }}
+                      onMouseEnter={(e) => {
+                        if (filterOption !== option.value) {
+                          e.target.style.backgroundColor = 'rgba(81, 203, 206, 0.1)';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (filterOption !== option.value) {
+                          e.target.style.backgroundColor = 'white';
+                        }
+                      }}
+                      onClick={() => setFilterOption(option.value)}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Quick Filter */}
+              <div className="mb-3 text-end">
+                <input
+                  type="text"
+                  className="form-control d-inline-block"
+                  placeholder="Filtro rapido"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  style={{ width: '300px', height: '31px', fontSize: '12px' }}
+                />
+              </div>
             </div>
 
             {/* Data Table */}

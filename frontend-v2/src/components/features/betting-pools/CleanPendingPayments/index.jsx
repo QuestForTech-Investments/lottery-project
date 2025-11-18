@@ -35,12 +35,14 @@ import {
 import api from '@services/api';
 
 const CleanPendingPayments = () => {
+  console.log('🧹 CleanPendingPayments component mounted');
   const [loading, setLoading] = useState(true);
   const [bettingPools, setBettingPools] = useState([]);
   const [activeTab, setActiveTab] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
   const [orderBy, setOrderBy] = useState('number');
   const [order, setOrder] = useState('asc');
+  const [error, setError] = useState(null);
 
   // Modal state
   const [modalOpen, setModalOpen] = useState(false);
@@ -65,14 +67,20 @@ const CleanPendingPayments = () => {
 
   const loadBettingPools = async () => {
     setLoading(true);
+    setError(null);
     try {
+      console.log('🧹 Loading betting pools...');
       const poolsData = await api.get('/betting-pools');
+      console.log('🧹 API Response:', poolsData);
       const poolsArray = poolsData?.items || poolsData || [];
+      console.log('🧹 Pools array:', poolsArray);
       setBettingPools(poolsArray);
-    } catch (error) {
-      console.error('Error loading betting pools:', error);
+    } catch (err) {
+      console.error('🧹 Error loading betting pools:', err);
+      setError(err.message || 'Error loading betting pools');
     } finally {
       setLoading(false);
+      console.log('🧹 Loading complete');
     }
   };
 
@@ -223,6 +231,25 @@ const CleanPendingPayments = () => {
       </Box>
     );
   }
+
+  if (error) {
+    return (
+      <Box sx={{ p: 3 }}>
+        <Card>
+          <CardContent>
+            <Typography color="error" variant="h6">
+              Error: {error}
+            </Typography>
+            <Button onClick={loadBettingPools} sx={{ mt: 2 }}>
+              Reintentar
+            </Button>
+          </CardContent>
+        </Card>
+      </Box>
+    );
+  }
+
+  console.log('🧹 Rendering CleanPendingPayments, pools:', bettingPools.length);
 
   return (
     <Box sx={{ p: 3 }}>

@@ -27,70 +27,96 @@ const PlayTable = ({ title, plays, type, onDeletePlay, onDeleteAll }) => {
     return plays.reduce((sum, play) => sum + play.amount, 0);
   }, [plays]);
 
-  if (plays.length === 0) {
-    return null;
-  }
-
   return (
-    <Paper variant="outlined" sx={{ mb: 2 }}>
+    <Paper variant="outlined" sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       {/* Header */}
-      <Box sx={{ bgcolor: 'primary.main', color: 'white', p: 1.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+      <Box sx={{
+        bgcolor: '#37b9f9',
+        color: 'white',
+        p: 1,
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        minHeight: '40px'
+      }}>
+        <Typography variant="body1" sx={{ fontWeight: 'bold', fontSize: '14px' }}>
           {title}
         </Typography>
         <IconButton
           size="small"
-          sx={{ color: 'white' }}
+          sx={{ color: 'white', p: 0.5 }}
           onClick={() => onDeleteAll(type)}
           title="Eliminar todas las jugadas"
         >
-          <DeleteSweepIcon />
+          <DeleteSweepIcon fontSize="small" />
         </IconButton>
       </Box>
 
-      {/* Table */}
-      <TableContainer>
-        <Table size="small">
-          <TableHead>
-            <TableRow>
-              <TableCell sx={{ fontWeight: 'bold' }}>LOT</TableCell>
-              <TableCell sx={{ fontWeight: 'bold' }}>NUM</TableCell>
-              <TableCell sx={{ fontWeight: 'bold' }} align="right">MONTO</TableCell>
-              <TableCell sx={{ fontWeight: 'bold' }} align="center" width="80px">ACCIÓN</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {plays.map((play) => (
-              <TableRow
-                key={play.id}
-                sx={{
-                  '&:nth-of-type(odd)': { bgcolor: 'action.hover' },
-                  '&:hover': { bgcolor: 'action.selected' },
-                }}
-              >
-                <TableCell>{play.lot}</TableCell>
-                <TableCell>{play.num}</TableCell>
-                <TableCell align="right">${play.amount.toFixed(2)}</TableCell>
-                <TableCell align="center">
-                  <IconButton
-                    size="small"
-                    color="error"
-                    onClick={() => onDeletePlay(play.id, type)}
-                  >
-                    <DeleteIcon fontSize="small" />
-                  </IconButton>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+      {/* Table Headers */}
+      <Box sx={{
+        display: 'flex',
+        bgcolor: '#f5f5f5',
+        p: 0.5,
+        borderBottom: '1px solid #ddd',
+        fontSize: '11px',
+        fontWeight: 'bold'
+      }}>
+        <Box sx={{ flex: 1, textAlign: 'center' }}>LOT</Box>
+        <Box sx={{ flex: 1.5, textAlign: 'center' }}>NUM</Box>
+        <Box sx={{ flex: 1, textAlign: 'center' }}>$</Box>
+        <Box sx={{ width: '30px', textAlign: 'center' }}>×</Box>
+      </Box>
+
+      {/* Table Body - Scrollable */}
+      <Box sx={{
+        flex: 1,
+        overflowY: 'auto',
+        minHeight: '150px',
+        maxHeight: '200px',
+        bgcolor: 'white'
+      }}>
+        {plays.length === 0 ? (
+          <Box sx={{ p: 2, textAlign: 'center', color: 'text.secondary', fontSize: '12px' }}>
+            Sin jugadas
+          </Box>
+        ) : (
+          plays.map((play) => (
+            <Box
+              key={play.id}
+              sx={{
+                display: 'flex',
+                p: 0.5,
+                borderBottom: '1px solid #eee',
+                fontSize: '11px',
+                '&:hover': { bgcolor: '#f0f0f0' }
+              }}
+            >
+              <Box sx={{ flex: 1, textAlign: 'center' }}>{play.lot}</Box>
+              <Box sx={{ flex: 1.5, textAlign: 'center' }}>{play.num}</Box>
+              <Box sx={{ flex: 1, textAlign: 'center' }}>${play.amount.toFixed(2)}</Box>
+              <Box sx={{ width: '30px', textAlign: 'center' }}>
+                <IconButton
+                  size="small"
+                  sx={{ p: 0, color: 'error.main' }}
+                  onClick={() => onDeletePlay(play.id, type)}
+                >
+                  <DeleteIcon sx={{ fontSize: '14px' }} />
+                </IconButton>
+              </Box>
+            </Box>
+          ))
+        )}
+      </Box>
 
       {/* Footer */}
-      <Box sx={{ bgcolor: 'grey.200', p: 1.5, textAlign: 'right' }}>
-        <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-          TOTAL: ${total.toFixed(2)}
-        </Typography>
+      <Box sx={{
+        bgcolor: '#e0e0e0',
+        p: 0.5,
+        textAlign: 'center',
+        fontSize: '12px',
+        fontWeight: 'bold'
+      }}>
+        TOTAL: ${total.toFixed(2)}
       </Box>
     </Paper>
   );

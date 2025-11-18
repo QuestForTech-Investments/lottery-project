@@ -2,28 +2,21 @@ import React from 'react';
 import {
   Box,
   Paper,
-  Grid,
   Autocomplete,
   TextField,
   Typography,
   Button,
-  Chip,
   Switch,
-  FormControlLabel,
-  Divider,
 } from '@mui/material';
 import {
-  Add as AddIcon,
-  Help as HelpIcon,
-  ContentCopy as CopyIcon,
-  Sms as SmsIcon,
+  Send as SendIcon,
 } from '@mui/icons-material';
 import useCreateTickets from './hooks/useCreateTickets';
 import PlayTable from './components/PlayTable';
 
 /**
  * CreateTicketsMUI Component
- * Modern Material-UI version of CreateTickets
+ * Matches V1 layout exactly - horizontal distribution
  */
 const CreateTicketsMUI = () => {
   const {
@@ -63,9 +56,6 @@ const CreateTicketsMUI = () => {
   const { totalPlays, totalAmount } = getTotals();
   const currentSortition = getCurrentSortition();
 
-  /**
-   * Handle key press in digits field (Enter to add play)
-   */
   const handleDigitsKeyPress = (e) => {
     if (e.key === 'Enter') {
       e.preventDefault();
@@ -73,9 +63,6 @@ const CreateTicketsMUI = () => {
     }
   };
 
-  /**
-   * Handle key press in amount field (Enter to add play)
-   */
   const handleAmountKeyPress = (e) => {
     if (e.key === 'Enter') {
       e.preventDefault();
@@ -85,197 +72,269 @@ const CreateTicketsMUI = () => {
 
   return (
     <Box sx={{ p: 2 }}>
-      <Paper elevation={3}>
+      <Paper
+        elevation={3}
+        sx={{
+          backgroundImage: 'linear-gradient(135deg, rgba(55, 185, 249, 0.1) 0%, rgba(55, 185, 249, 0.05) 100%)',
+          backgroundColor: 'rgba(55, 185, 249, 0.05)'
+        }}
+      >
         <Box sx={{ p: 3 }}>
-          {/* Header with Banca and Current Sortition */}
-          <Grid container spacing={2} alignItems="center" sx={{ mb: 3 }}>
-            <Grid item xs={12} md={4}>
-              <Autocomplete
-                freeSolo
-                options={bancasList}
-                value={selectedBanca}
-                onChange={(event, newValue) => setSelectedBanca(newValue || '')}
-                onInputChange={(event, newInputValue) => setSelectedBanca(newInputValue)}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    label="Banca"
-                    placeholder="Seleccionar banca"
-                    size="small"
-                  />
-                )}
-              />
-            </Grid>
-            <Grid item xs={12} md={4}>
-              <Box sx={{ textAlign: 'center', p: 2, bgcolor: 'primary.main', color: 'white', borderRadius: 1 }}>
-                <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                  {currentSortition.name}
-                </Typography>
-              </Box>
-            </Grid>
-          </Grid>
+          {/* Header: Banca selector */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2, minWidth: '250px' }}>
+            <Typography variant="body2" sx={{ fontWeight: 500, minWidth: 50 }}>Banca</Typography>
+            <Autocomplete
+              freeSolo
+              options={bancasList}
+              value={selectedBanca}
+              onChange={(event, newValue) => setSelectedBanca(newValue || '')}
+              onInputChange={(event, newInputValue) => setSelectedBanca(newInputValue)}
+              size="small"
+              sx={{ flex: 1, minWidth: '180px', maxWidth: '300px' }}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  placeholder="Seleccionar banca"
+                  size="small"
+                />
+              )}
+            />
+          </Box>
 
-          {/* Sortitions Grid */}
-          <Box sx={{ mb: 3 }}>
-            <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
-              Sorteos Disponibles
+          {/* Current Sortition Display - Centered */}
+          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 1, mb: 2 }}>
+            <Box sx={{
+              width: '24px',
+              height: '24px',
+              bgcolor: currentSortition.color || '#555555',
+              borderRadius: '3px',
+            }} />
+            <Typography
+              component="span"
+              sx={{
+                fontWeight: 600,
+                color: '#333',
+                fontSize: '12px',
+                textTransform: 'uppercase'
+              }}
+            >
+              {currentSortition.name}
             </Typography>
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+          </Box>
+
+          {/* Sortitions Grid - Colored Buttons */}
+          <Box sx={{ mb: 2 }}>
+            <Box sx={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: 0.5,
+              '& > *': {
+                fontSize: '11px',
+                padding: '5px 10px',
+                borderRadius: '3px',
+                cursor: 'pointer',
+                fontWeight: 600,
+                textTransform: 'uppercase',
+                border: '2px solid transparent',
+                transition: 'all 0.2s',
+                '&:hover': {
+                  transform: 'scale(1.05)',
+                  boxShadow: 2
+                }
+              }
+            }}>
               {sortitions.map((sortition) => (
-                <Chip
+                <Box
                   key={sortition.id}
-                  label={sortition.name}
                   onClick={() => setSelectedSortition(sortition.id)}
                   sx={{
-                    bgcolor: sortition.id === selectedSortition ? sortition.color : 'grey.300',
-                    color: sortition.id === selectedSortition ? 'white' : 'text.primary',
-                    fontWeight: sortition.id === selectedSortition ? 'bold' : 'normal',
-                    '&:hover': {
-                      bgcolor: sortition.color,
-                      color: 'white',
-                    },
+                    bgcolor: sortition.color,
+                    color: sortition.textColor || 'white',
+                    border: sortition.id === selectedSortition ? '2px solid #000' : '2px solid transparent',
+                    fontStyle: sortition.closed ? 'italic' : 'normal',
+                    opacity: sortition.closed ? 0.6 : 1,
                   }}
-                />
+                >
+                  {sortition.name}
+                </Box>
               ))}
             </Box>
           </Box>
 
-          <Divider sx={{ my: 2 }} />
-
-          {/* Statistics and Settings */}
-          <Grid container spacing={2} alignItems="center" sx={{ mb: 3 }}>
-            <Grid item xs={12} md={3}>
+          {/* Statistics and Settings - ALL INLINE */}
+          <Box sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 2,
+            mb: 2,
+            flexWrap: 'wrap',
+            '& > *': { flexShrink: 0 }
+          }}>
+            <Box sx={{ minWidth: '120px' }}>
+              <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary', mb: 0.5, fontSize: '11px' }}>
+                Jugadas del dia
+              </Typography>
               <TextField
-                label="Jugadas del día"
                 value={todayPlays}
                 disabled
-                fullWidth
                 size="small"
+                sx={{ width: '100%', '& .MuiInputBase-input': { textAlign: 'center', padding: '6px' } }}
               />
-            </Grid>
-            <Grid item xs={12} md={3}>
+            </Box>
+            <Box sx={{ minWidth: '120px' }}>
+              <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary', mb: 0.5, fontSize: '11px' }}>
+                Vendido en grupo
+              </Typography>
               <TextField
-                label="Vendido en grupo"
                 value={groupSold}
                 disabled
-                fullWidth
                 size="small"
+                sx={{ width: '100%', '& .MuiInputBase-input': { textAlign: 'center', padding: '6px' } }}
               />
-            </Grid>
-            <Grid item xs={12} md={3}>
+            </Box>
+            <Box sx={{ minWidth: '120px' }}>
+              <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary', mb: 0.5, fontSize: '11px' }}>
+                Vendido en banca
+              </Typography>
               <TextField
-                label="Vendido en banca"
                 value={bancaSold}
                 disabled
-                fullWidth
+                size="small"
+                sx={{ width: '100%', '& .MuiInputBase-input': { textAlign: 'center', padding: '6px' } }}
+              />
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <Typography variant="body2" sx={{ fontSize: '11px' }}>Desc.</Typography>
+              <Switch
+                checked={discountEnabled}
+                onChange={(e) => setDiscountEnabled(e.target.checked)}
                 size="small"
               />
-            </Grid>
-            <Grid item xs={12} md={3}>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={discountEnabled}
-                      onChange={(e) => setDiscountEnabled(e.target.checked)}
-                      size="small"
-                    />
-                  }
-                  label="Descuento"
-                />
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={multiLotteryEnabled}
-                      onChange={(e) => setMultiLotteryEnabled(e.target.checked)}
-                      size="small"
-                    />
-                  }
-                  label="Multi-lotería"
-                />
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={sendSmsEnabled}
-                      onChange={(e) => setSendSmsEnabled(e.target.checked)}
-                      size="small"
-                      icon={<SmsIcon fontSize="small" />}
-                      checkedIcon={<SmsIcon fontSize="small" />}
-                    />
-                  }
-                  label="Enviar SMS"
-                />
-              </Box>
-            </Grid>
-          </Grid>
-
-          <Divider sx={{ my: 2 }} />
-
-          {/* Play Input Area */}
-          <Grid container spacing={2} sx={{ mb: 2 }}>
-            <Grid item xs={12} md={4}>
-              <TextField
-                id="digits-input"
-                label="Jugada"
-                placeholder="Ingrese números"
-                value={digits}
-                onChange={(e) => setDigits(e.target.value)}
-                onKeyPress={handleDigitsKeyPress}
-                fullWidth
-                autoFocus
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <Typography variant="body2" sx={{ fontSize: '11px' }}>Mult. lot</Typography>
+              <Switch
+                checked={multiLotteryEnabled}
+                onChange={(e) => setMultiLotteryEnabled(e.target.checked)}
+                size="small"
               />
-            </Grid>
-            <Grid item xs={12} md={4}>
-              <TextField
-                label="Disponibilidad"
-                value="N/A"
-                disabled
-                fullWidth
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <SendIcon sx={{ fontSize: 14 }} />
+              <Switch
+                checked={sendSmsEnabled}
+                onChange={(e) => setSendSmsEnabled(e.target.checked)}
+                size="small"
               />
-            </Grid>
-            <Grid item xs={12} md={4}>
-              <Box sx={{ display: 'flex', gap: 1 }}>
-                <TextField
-                  id="amount-input"
-                  label="Monto"
-                  placeholder="$0.00"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  onKeyPress={handleAmountKeyPress}
-                  type="number"
-                  fullWidth
-                  inputProps={{ step: "0.01", min: "0" }}
-                />
-                <Button
-                  variant="contained"
-                  onClick={handleAddPlay}
-                  sx={{ minWidth: '100px' }}
-                  disabled={!digits || !amount}
-                >
-                  <AddIcon />
-                </Button>
-              </Box>
-            </Grid>
-          </Grid>
+            </Box>
+          </Box>
 
-          {/* Total Statistics */}
-          <Box sx={{ display: 'flex', gap: 3, mb: 3, justifyContent: 'center' }}>
-            <Chip
-              label={`Jugadas: ${totalPlays}`}
-              color="primary"
-              sx={{ fontSize: '1rem', py: 2.5, px: 2 }}
+          {/* Play Input Area - 3 Fields INLINE */}
+          <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+            <TextField
+              id="digits-input"
+              placeholder="Jugada"
+              value={digits}
+              onChange={(e) => setDigits(e.target.value)}
+              onKeyPress={handleDigitsKeyPress}
+              size="small"
+              autoFocus
+              sx={{
+                flex: 1,
+                '& .MuiInputBase-root': {
+                  backgroundColor: '#fff',
+                },
+                '& .MuiInputBase-input': {
+                  fontSize: '18px',
+                  textAlign: 'center',
+                  padding: '12px'
+                }
+              }}
             />
-            <Chip
-              label={`Total: $${totalAmount.toFixed(2)}`}
-              color="secondary"
-              sx={{ fontSize: '1rem', py: 2.5, px: 2 }}
+            <TextField
+              placeholder="N/A"
+              value="N/A"
+              disabled
+              size="small"
+              sx={{
+                flex: 1,
+                '& .MuiInputBase-input': {
+                  fontSize: '18px',
+                  textAlign: 'center',
+                  padding: '12px'
+                }
+              }}
+            />
+            <TextField
+              id="amount-input"
+              placeholder="Monto"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              onKeyPress={handleAmountKeyPress}
+              type="number"
+              size="small"
+              inputProps={{ step: "0.01", min: "0" }}
+              sx={{
+                flex: 1,
+                '& .MuiInputBase-root': {
+                  backgroundColor: '#fff',
+                },
+                '& .MuiInputBase-input': {
+                  fontSize: '18px',
+                  textAlign: 'center',
+                  padding: '12px'
+                }
+              }}
             />
           </Box>
 
-          <Divider sx={{ my: 2 }} />
+          {/* Quick Actions and Stats Row - INLINE */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+            <Box sx={{ display: 'flex', gap: 1, flex: 1 }}>
+              <TextField
+                select
+                disabled
+                fullWidth
+                size="small"
+                SelectProps={{ native: true }}
+              >
+                <option value="">Tickets recientes</option>
+              </TextField>
+              <Button variant="outlined" size="small" disabled sx={{ minWidth: 40 }}>
+                🗑️
+              </Button>
+            </Box>
+            <Box sx={{
+              flex: 1,
+              textAlign: 'center',
+              bgcolor: '#f5f5f5',
+              p: 1,
+              borderRadius: 1,
+              fontSize: '14px',
+              fontWeight: 500
+            }}>
+              Jugadas: <span style={{ color: '#1976d2' }}>{totalPlays}</span>
+            </Box>
+            <Box sx={{
+              flex: 1,
+              textAlign: 'center',
+              bgcolor: '#f5f5f5',
+              p: 1,
+              borderRadius: 1,
+              fontSize: '14px',
+              fontWeight: 500
+            }}>
+              Total: <span style={{ color: '#1976d2' }}>${totalAmount.toFixed(2)}</span>
+            </Box>
+          </Box>
 
-          {/* Play Tables */}
-          <Box sx={{ mb: 3 }}>
+          {/* Play Tables - 4 columns side by side */}
+          <Box sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: '1fr 1fr 1fr 1fr' },
+            gap: 2,
+            mb: 3
+          }}>
             <PlayTable
               title="Directo"
               plays={directoPlays}
@@ -309,27 +368,55 @@ const CreateTicketsMUI = () => {
           {/* Action Buttons */}
           <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
             <Button
-              variant="outlined"
-              startIcon={<CopyIcon />}
+              variant="contained"
               disabled
+              sx={{
+                bgcolor: '#37b9f9',
+                color: '#fff',
+                '&:hover': { bgcolor: '#2da8e8' },
+                '&.Mui-disabled': {
+                  bgcolor: 'rgba(55, 185, 249, 0.5)',
+                  color: 'rgba(255, 255, 255, 0.7)'
+                },
+                textTransform: 'uppercase',
+                borderRadius: '4px',
+                px: 4
+              }}
             >
-              Duplicar
+              DUPLICAR
             </Button>
             <Button
               variant="contained"
-              size="large"
               onClick={handleCreateTicket}
               disabled={totalPlays === 0}
-              sx={{ minWidth: 200 }}
+              sx={{
+                bgcolor: '#37b9f9',
+                color: '#fff',
+                '&:hover': { bgcolor: '#2da8e8' },
+                '&.Mui-disabled': {
+                  bgcolor: 'rgba(55, 185, 249, 0.5)',
+                  color: 'rgba(255, 255, 255, 0.7)'
+                },
+                textTransform: 'uppercase',
+                borderRadius: '4px',
+                px: 4
+              }}
             >
-              Crear Ticket
+              CREAR TICKET
             </Button>
             <Button
-              variant="outlined"
-              startIcon={<HelpIcon />}
+              variant="contained"
               onClick={() => setHelpModalOpen(true)}
+              sx={{
+                bgcolor: '#37b9f9',
+                color: '#fff',
+                '&:hover': { bgcolor: '#2da8e8' },
+                textTransform: 'uppercase',
+                borderRadius: '4px',
+                px: 4
+              }}
             >
-              Ayuda
+              AYUDA
             </Button>
           </Box>
         </Box>

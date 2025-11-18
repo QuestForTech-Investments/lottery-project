@@ -949,6 +949,154 @@ public class BettingPoolsController : ControllerBase
     }
 
     // ============================================
+    // MASS UPDATE ENDPOINT
+    // ============================================
+
+    /// <summary>
+    /// Mass update multiple betting pools at once
+    /// </summary>
+    /// <param name="request">Mass update request with betting pool IDs and fields to update</param>
+    /// <returns>Result of mass update operation</returns>
+    [HttpPatch("mass-update")]
+    public async Task<ActionResult<MassUpdateResponseDto>> MassUpdateBettingPools([FromBody] MassUpdateBettingPoolsDto request)
+    {
+        try
+        {
+            _logger.LogInformation("Mass updating {Count} betting pools", request.BettingPoolIds.Count);
+
+            // Validate that betting pools exist
+            var existingPools = await _context.BettingPools
+                .Where(bp => request.BettingPoolIds.Contains(bp.BettingPoolId))
+                .ToListAsync();
+
+            if (existingPools.Count == 0)
+            {
+                return BadRequest(new MassUpdateResponseDto
+                {
+                    Success = false,
+                    UpdatedCount = 0,
+                    Message = "No se encontraron las bancas especificadas"
+                });
+            }
+
+            var errors = new List<string>();
+            var updatedIds = new List<int>();
+
+            // Validate zone if provided
+            if (request.ZoneId.HasValue)
+            {
+                var zoneExists = await _context.Zones.AnyAsync(z => z.ZoneId == request.ZoneId.Value);
+                if (!zoneExists)
+                {
+                    return BadRequest(new MassUpdateResponseDto
+                    {
+                        Success = false,
+                        UpdatedCount = 0,
+                        Message = $"La zona con ID {request.ZoneId} no existe"
+                    });
+                }
+            }
+
+            // Update each betting pool
+            foreach (var pool in existingPools)
+            {
+                try
+                {
+                    // Update zone if specified
+                    if (request.ZoneId.HasValue)
+                    {
+                        pool.ZoneId = request.ZoneId.Value;
+                    }
+
+                    // Update active status if specified
+                    if (!string.IsNullOrEmpty(request.IsActive) && request.IsActive != "no_change")
+                    {
+                        pool.IsActive = request.IsActive == "on";
+                    }
+
+                    pool.UpdatedAt = DateTime.UtcNow;
+                    updatedIds.Add(pool.BettingPoolId);
+                }
+                catch (Exception ex)
+                {
+                    errors.Add($"Error actualizando banca {pool.BettingPoolId}: {ex.Message}");
+                }
+            }
+
+            // Handle draw assignments if specified
+            if (request.DrawIds != null && request.DrawIds.Count > 0)
+            {
+                // Validate draws exist
+                var validDrawIds = await _context.Draws
+                    .Where(d => request.DrawIds.Contains(d.DrawId))
+                    .Select(d => d.DrawId)
+                    .ToListAsync();
+
+                if (validDrawIds.Count > 0)
+                {
+                    foreach (var poolId in updatedIds)
+                    {
+                        foreach (var drawId in validDrawIds)
+                        {
+                            // Check if association already exists
+                            var exists = await _context.BettingPoolDraws
+                                .AnyAsync(bpd => bpd.BettingPoolId == poolId && bpd.DrawId == drawId);
+
+                            if (!exists)
+                            {
+                                _context.BettingPoolDraws.Add(new BettingPoolDraw
+                                {
+                                    BettingPoolId = poolId,
+                                    DrawId = drawId,
+                                    IsActive = true,
+                                    CreatedAt = DateTime.UtcNow,
+                                    UpdatedAt = DateTime.UtcNow
+                                });
+                            }
+                            else
+                            {
+                                // Enable if it exists but was disabled
+                                var existing = await _context.BettingPoolDraws
+                                    .FirstOrDefaultAsync(bpd => bpd.BettingPoolId == poolId && bpd.DrawId == drawId);
+                                if (existing != null && !existing.IsActive)
+                                {
+                                    existing.IsActive = true;
+                                    existing.UpdatedAt = DateTime.UtcNow;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            await _context.SaveChangesAsync();
+
+            var response = new MassUpdateResponseDto
+            {
+                Success = errors.Count == 0,
+                UpdatedCount = updatedIds.Count,
+                UpdatedPoolIds = updatedIds,
+                Message = $"{updatedIds.Count} bancas actualizadas exitosamente",
+                Errors = errors.Count > 0 ? errors : null
+            };
+
+            _logger.LogInformation("Mass update completed: {Count} pools updated", updatedIds.Count);
+            return Ok(response);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error in mass update operation");
+            return StatusCode(500, new MassUpdateResponseDto
+            {
+                Success = false,
+                UpdatedCount = 0,
+                Message = "Error al realizar la actualización masiva",
+                Errors = new List<string> { ex.Message }
+            });
+        }
+    }
+
+    // ============================================
     // HELPER METHODS FOR TIME CONVERSION
     // ============================================
 

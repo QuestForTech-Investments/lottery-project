@@ -483,3 +483,47 @@ public class UpdateBettingPoolFooterDto
     public string? FooterLine3 { get; set; }
     public string? FooterLine4 { get; set; }
 }
+
+// =============================================================================
+// Mass Update DTOs
+// =============================================================================
+
+/// <summary>
+/// DTO for mass updating multiple betting pools
+/// </summary>
+public class MassUpdateBettingPoolsDto
+{
+    /// <summary>
+    /// List of betting pool IDs to update
+    /// </summary>
+    [Required(ErrorMessage = "Debe seleccionar al menos una banca")]
+    [MinLength(1, ErrorMessage = "Debe seleccionar al menos una banca")]
+    public List<int> BettingPoolIds { get; set; } = new();
+
+    /// <summary>
+    /// New zone ID to assign (null = no change)
+    /// </summary>
+    public int? ZoneId { get; set; }
+
+    /// <summary>
+    /// Active status: "on" = activate, "off" = deactivate, "no_change" = keep current
+    /// </summary>
+    public string? IsActive { get; set; } = "no_change";
+
+    /// <summary>
+    /// List of draw/sortition IDs to enable for selected betting pools
+    /// </summary>
+    public List<int>? DrawIds { get; set; }
+}
+
+/// <summary>
+/// Response for mass update operation
+/// </summary>
+public class MassUpdateResponseDto
+{
+    public bool Success { get; set; }
+    public int UpdatedCount { get; set; }
+    public List<int> UpdatedPoolIds { get; set; } = new();
+    public string Message { get; set; } = string.Empty;
+    public List<string>? Errors { get; set; }
+}

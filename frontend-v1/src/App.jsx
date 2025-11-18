@@ -8,6 +8,14 @@ import UserBancas from '@components/UserBancas'
 import BancasList from '@components/BancasList'
 import CreateBanca from '@components/CreateBanca'
 import CreateTickets from '@components/CreateTickets'
+import TicketMonitoring from '@components/TicketMonitoring'
+import ExternalAgentsMonitoring from '@components/ExternalAgentsMonitoring'
+import PlayMonitoring from '@components/PlayMonitoring'
+import WinningPlays from '@components/WinningPlays'
+import Blackboard from '@components/Blackboard'
+import ImportedPool from '@components/ImportedPool'
+import ExportedPool from '@components/ExportedPool'
+import TicketAnomalies from '@components/TicketAnomalies'
 import EditBanca from '@components/EditBanca'
 import MassEditBancas from '@components/MassEditBancas'
 import BancaAccess from '@components/BancaAccess'
@@ -31,6 +39,17 @@ import ManageZones from '@components/ManageZones'
 import SorteosList from '@components/SorteosList'
 import CreateSorteo from '@components/CreateSorteo'
 import DailySales from '@components/DailySales'
+import HistoricalSales from '@components/HistoricalSales'
+import SalesByDate from '@components/SalesByDate'
+import PlayTypePrizes from '@components/PlayTypePrizes'
+import PlayTypePrizesPercentages from '@components/PlayTypePrizesPercentages'
+import BettingPoolSales from '@components/BettingPoolSales'
+import ZoneSales from '@components/ZoneSales'
+import Results from '@components/Results'
+import BettingPoolBalances from '@components/balances/BettingPoolBalances'
+import BankBalances from '@components/balances/BankBalances'
+import ZoneBalances from '@components/balances/ZoneBalances'
+import GroupBalances from '@components/balances/GroupBalances'
 
 function App() {
   return (
@@ -70,6 +89,14 @@ function App() {
                 <Route path="/bancas/sin-ventas" element={<BettingPoolsWithoutSales />} />
                 <Route path="/bancas/reporte-dias" element={<DaysWithoutSalesReport />} />
                 <Route path="/tickets/crear" element={<CreateTickets />} />
+                <Route path="/tickets/monitoreo" element={<TicketMonitoring />} />
+                <Route path="/tickets/agentes-externos" element={<ExternalAgentsMonitoring />} />
+                <Route path="/tickets/jugadas" element={<PlayMonitoring />} />
+                <Route path="/tickets/ganadoras" element={<WinningPlays />} />
+                <Route path="/tickets/pizarra" element={<Blackboard />} />
+                <Route path="/tickets/bote-importado" element={<ImportedPool />} />
+                <Route path="/tickets/bote-exportado" element={<ExportedPool />} />
+                <Route path="/tickets/anomalias" element={<TicketAnomalies />} />
                 <Route path="/usuarios/administradores" element={<UserAdministradores />} />
                 <Route path="/usuarios/inicios-sesion" element={<UserIniciosSesion />} />
                 <Route path="/usuarios/sesiones-bloqueadas" element={<UserSesionesBloqueadas />} />
@@ -80,6 +107,17 @@ function App() {
                 <Route path="/sorteos/lista" element={<SorteosList />} />
                 <Route path="/sorteos/crear" element={<CreateSorteo />} />
                 <Route path="/ventas/dia" element={<DailySales />} />
+                <Route path="/ventas/historico" element={<HistoricalSales />} />
+                <Route path="/ventas/por-fecha" element={<SalesByDate />} />
+                <Route path="/ventas/premios-jugada" element={<PlayTypePrizes />} />
+                <Route path="/ventas/porcentajes" element={<PlayTypePrizesPercentages />} />
+                <Route path="/ventas/banca" element={<BettingPoolSales />} />
+                <Route path="/ventas/zona" element={<ZoneSales />} />
+                <Route path="/resultados" element={<Results />} />
+                <Route path="/balances/bancas" element={<BettingPoolBalances />} />
+                <Route path="/balances/bancos" element={<BankBalances />} />
+                <Route path="/balances/zonas" element={<ZoneBalances />} />
+                <Route path="/balances/grupos" element={<GroupBalances />} />
                 <Route path="/test/permissions" element={<TestPermissions />} />
                 <Route path="/test/multi-zone" element={<TestMultiZone />} />
                 <Route path="/test/react-multiselect" element={<TestReactMultiselect />} />

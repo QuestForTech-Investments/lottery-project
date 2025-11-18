@@ -1,8 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import { Outlet } from 'react-router-dom';
-import { Box } from '@mui/material';
+import { Box, CircularProgress } from '@mui/material';
 import Sidebar from './Sidebar';
 import Header from './Header';
+
+// Minimal loading indicator for content area only
+const ContentLoadingFallback = () => (
+  <Box
+    sx={{
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      minHeight: '200px',
+      width: '100%'
+    }}
+  >
+    <CircularProgress size={40} sx={{ color: '#4dd4d4' }} />
+  </Box>
+);
 
 export default function MainLayout({ children }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -45,7 +60,9 @@ export default function MainLayout({ children }) {
           transition: 'margin-left 0.3s cubic-bezier(0.4, 0.0, 0.2, 1)'
         }}
       >
-        {children}
+        <Suspense fallback={<ContentLoadingFallback />}>
+          {children}
+        </Suspense>
       </Box>
     </Box>
   );

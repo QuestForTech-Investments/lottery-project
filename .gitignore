@@ -1,87 +1,74 @@
-# ========================================
-# Lottery Project Monorepo - .gitignore
-# ========================================
 
-# Dependencies
-**/node_modules/
-**/.pnp
-**/.pnp.js
-
-# Build outputs
-**/dist/
-**/build/
-**/out/
-**/.next/
-**/.nuxt/
-**/.output/
-
+# **/backlog/
 # .NET
-**/bin/
-**/obj/
-**/*.user
-**/*.suo
-**/.vs/
-**/TestResults/
-
-# IDE & Editors
-.idea/
-.vscode/
-*.swp
-*.swo
-*~
-.DS_Store
-Thumbs.db
-
+# ========================================
+# Backlog/internal work (optional - uncomment if needed)
+# Build outputs
+# Dependencies
 # Environment files
-**/.env
-**/.env.local
-**/.env.development.local
-**/.env.test.local
-**/.env.production.local
-**/appsettings.Development.json
-**/appsettings.Production.json
-
+# IDE & Editors
 # Logs
-**/logs/
-**/*.log
-**/npm-debug.log*
-**/yarn-debug.log*
-**/yarn-error.log*
-**/pnpm-debug.log*
-**/lerna-debug.log*
-
-# Testing
-**/coverage/
-**/.nyc_output/
-**/playwright-report/
-**/test-results/
-
+# Lottery Project Monorepo - .gitignore
 # Misc
-*.tgz
-.cache/
-.parcel-cache/
-.eslintcache
-.stylelintcache
-
-# Temporary files
-**/tmp/
-**/*.tmp
-**/*.temp
-
 # OS files
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-
 # Package manager lock files (keep one, ignore others)
+# Temporary files
+# Testing
 # Uncomment the ones you don't use:
 # package-lock.json
-# yarn.lock
 # pnpm-lock.yaml
-
-# Backlog/internal work (optional - uncomment if needed)
-# **/backlog/
+# yarn.lock
+**/*.log
+**/*.suo
+**/*.temp
+**/*.tmp
+**/*.user
+**/.env
+**/.env.development.local
+**/.env.local
+**/.env.production.local
+**/.env.test.local
+**/.next/
+**/.nuxt/
+**/.nyc_output/
+**/.output/
+**/.pnp
+**/.pnp.js
+**/.vs/
+**/TestResults/
+**/appsettings.Development.json
+**/appsettings.Production.json
+**/bin/
+**/build/
+**/coverage/
+**/dist/
+**/lerna-debug.log*
+**/logs/
+**/node_modules/
+**/npm-debug.log*
+**/obj/
+**/out/
+**/playwright-report/
+**/pnpm-debug.log*
+**/test-results/
+**/tmp/
+**/yarn-debug.log*
+**/yarn-error.log*
+*.swo
+*.swp
+*.tgz
+*~
+.DS_Store
+.DS_Store?
+.Spotlight-V100
+.Trashes
+._*
+.cache/
+.eslintcache
+.github-tokens
+.idea/
+.parcel-cache/
+.stylelintcache
+.vscode/
+Thumbs.db
+ehthumbs.db
