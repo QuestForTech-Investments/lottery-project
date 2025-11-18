@@ -33,6 +33,7 @@ Antes de realizar CUALQUIER modificación en el proyecto (código, CSS, componen
 - ❌ NO modificar formularios sin revisar otros formularios primero
 - ❌ NO usar español en nombres de variables/componentes/rutas
 - ❌ NO cambiar estilos sin verificar coherencia visual
+- ❌ **NO crear rutas sin conectarlas al menú de navegación**
 
 ### ✅ PROCESO CORRECTO
 
@@ -43,6 +44,52 @@ Antes de realizar CUALQUIER modificación en el proyecto (código, CSS, componen
    - Usa Playwright para revisar formularios similares (si aplica)
    - Aplica cambios siguiendo convenciones
    - Documenta cambios importantes en CLAUDE.md
+
+### 🔗 RUTAS Y NAVEGACIÓN - PROCESO OBLIGATORIO
+
+**CRÍTICO:** Cada vez que crees una nueva ruta/componente, SIEMPRE debes conectarla al menú de navegación.
+
+#### Proceso de 3 Pasos:
+
+**1. Crear el Componente**
+```javascript
+// Ejemplo: TransactionsByBettingPool.jsx
+```
+
+**2. Agregar la Ruta en App.jsx**
+```javascript
+// V1: frontend-v1/src/App.jsx
+<Route path="/accountable-transactions/betting-pool" element={<TransactionsByBettingPool />} />
+
+// V2: frontend-v2/src/App.jsx
+<Route path="/accountable-transactions/betting-pool" element={<TransactionsByBettingPoolMUI />} />
+```
+
+**3. Conectar al Menú en menuItems.js** ⚠️ **¡NO OLVIDAR ESTE PASO!**
+```javascript
+// V1: frontend-v1/src/constants/menuItems.js
+// V2: frontend-v2/src/constants/menuItems.js
+
+{
+  id: 'transacciones',
+  label: 'TRANSACCIONES',
+  icon: 'nc-credit-card',
+  submenu: [
+    { id: 'trans-bancas', label: 'Bancas', shortcut: 'B', path: '/accountable-transactions/betting-pool' }
+  ]
+}
+```
+
+#### Verificación:
+- ✅ La ruta en `App.jsx` coincide con el `path` en `menuItems.js`
+- ✅ El menú muestra el nuevo item
+- ✅ Al hacer clic en el item, navega al componente correcto
+
+#### Archivos a Modificar SIEMPRE:
+1. `frontend-v1/src/App.jsx` - Agregar Route
+2. `frontend-v1/src/constants/menuItems.js` - Agregar menu item
+3. `frontend-v2/src/App.jsx` - Agregar Route
+4. `frontend-v2/src/constants/menuItems.js` - Agregar menu item
 
 ### 📝 ACTUALIZAR ESTE ARCHIVO
 
@@ -728,6 +775,50 @@ export const getAllBetTypesWithFields = async () => {
 **Resultado:** Ahora el título "Lista de usuarios" es coherente con todos los demás formularios de la aplicación.
 
 **Metodología:** Se utilizó Playwright para navegar y capturar screenshots de diferentes formularios antes de hacer el cambio, asegurando coherencia visual en toda la aplicación.
+
+---
+
+### Fix: Rutas Creadas Sin Conexión al Menú de Navegación (2025-11-18)
+
+**Problema:** Al implementar el módulo de Transacciones (Issue #36 - Por banca), se crearon los componentes y rutas pero no se conectaron al menú de navegación. El usuario reportó que al hacer clic en el botón "Lista" del módulo TRANSACCIONES no pasaba nada en V1 ni V2.
+
+**Causa Raíz:**
+- ✅ Componentes creados correctamente en ambos frontends
+- ✅ Rutas agregadas en `App.jsx` de ambos frontends: `/accountable-transactions/betting-pool`
+- ❌ Menu items apuntaban a rutas diferentes:
+  - V1: `/transacciones/bancas`
+  - V2: `/transactions/betting-pools`
+- ❌ NO coincidían con las rutas creadas
+
+**Solución Aplicada:**
+
+**Archivos Modificados:**
+1. `frontend-v1/src/constants/menuItems.js` (líneas 101-112)
+2. `frontend-v2/src/constants/menuItems.js` (líneas 97-109)
+
+```javascript
+// ANTES (V1)
+{ id: 'trans-bancas', label: 'Bancas', shortcut: 'B', path: '/transacciones/bancas' }
+
+// DESPUÉS (V1)
+{ id: 'trans-bancas', label: 'Bancas', shortcut: 'B', path: '/accountable-transactions/betting-pool' }
+
+// ANTES (V2)
+{ id: 'transactions-betting-pools', label: 'Bancas', shortcut: 'B', path: '/transactions/betting-pools' }
+
+// DESPUÉS (V2)
+{ id: 'transactions-betting-pools', label: 'Bancas', shortcut: 'B', path: '/accountable-transactions/betting-pool' }
+```
+
+**Lección Aprendida:**
+Al crear una nueva funcionalidad, SIEMPRE seguir el proceso de 3 pasos:
+1. ✅ Crear el componente
+2. ✅ Agregar la ruta en `App.jsx`
+3. ⚠️ **NO OLVIDAR:** Conectar la ruta al menú en `menuItems.js`
+
+**Documentación Actualizada:**
+- Agregada sección "🔗 RUTAS Y NAVEGACIÓN - PROCESO OBLIGATORIO" en CLAUDE.md (líneas 48-92)
+- Agregada regla "NO crear rutas sin conectarlas al menú de navegación" en checklist crítico
 
 ---
 

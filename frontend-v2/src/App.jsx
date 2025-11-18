@@ -70,6 +70,16 @@ const GroupBalancesMUI = lazy(() => import('@components/features/balances/GroupB
 // Payments feature components
 const CollectionsPaymentsListMUI = lazy(() => import('@components/features/payments/CollectionsPaymentsList'))
 
+// Transactions feature components
+const TransactionsListMUI = lazy(() => import('@components/features/transactions/TransactionsList'))
+const TransactionsByBettingPoolMUI = lazy(() => import('@components/features/transactions/TransactionsByBettingPool'))
+const TransactionGroupsListMUI = lazy(() => import('@components/features/transactions/TransactionGroupsList'))
+const TransactionApprovalsMUI = lazy(() => import('@components/features/transactions/TransactionApprovals'))
+const TransactionsSummaryMUI = lazy(() => import('@components/features/transactions/TransactionsSummary'))
+
+// Expenses feature components
+const ExpenseCategoriesMUI = lazy(() => import('@components/features/expenses/ExpenseCategories'))
+
 function App() {
   return (
     <>
@@ -145,6 +155,12 @@ function App() {
                           <Route path="/balances/zones" element={<ZoneBalancesMUI />} />
                           <Route path="/balances/groups" element={<GroupBalancesMUI />} />
                           <Route path="/collections-payments/list" element={<CollectionsPaymentsListMUI />} />
+                          <Route path="/accountable-transactions" element={<Suspense fallback={<LazyLoadingFallback />}><TransactionsListMUI /></Suspense>} />
+                          <Route path="/accountable-transactions/betting-pool" element={<Suspense fallback={<LazyLoadingFallback />}><TransactionsByBettingPoolMUI /></Suspense>} />
+                          <Route path="/accountable-transactions/summary" element={<Suspense fallback={<LazyLoadingFallback />}><TransactionsSummaryMUI /></Suspense>} />
+                          <Route path="/accountable-transactions-groups" element={<Suspense fallback={<LazyLoadingFallback />}><TransactionGroupsListMUI /></Suspense>} />
+                          <Route path="/accountable-transaction-approvals" element={<Suspense fallback={<LazyLoadingFallback />}><TransactionApprovalsMUI /></Suspense>} />
+                          <Route path="/expenses/categories" element={<Suspense fallback={<LazyLoadingFallback />}><ExpenseCategoriesMUI /></Suspense>} />
                         </Routes>
                       </MainLayout>
                   </ErrorBoundary>

@@ -102,12 +102,12 @@ export const MENU_ITEMS = [
     label: 'TRANSACCIONES',
     icon: 'nc-credit-card',
     submenu: [
-      { id: 'lista-transacciones', label: 'Lista', shortcut: 'L', path: '/transacciones/lista' },
-      { id: 'lista-grupos', label: 'Lista por grupos', shortcut: 'L', path: '/transacciones/grupos' },
-      { id: 'aprobaciones', label: 'Aprobaciones', shortcut: 'A', path: '/transacciones/aprobaciones' },
-      { id: 'resumen', label: 'Resumen', shortcut: 'R', path: '/transacciones/resumen' },
-      { id: 'trans-bancas', label: 'Bancas', shortcut: 'B', path: '/transacciones/bancas' },
-      { id: 'categorias-gastos', label: 'Categorías de gastos', shortcut: 'C', path: '/transacciones/categorias' }
+      { id: 'lista-transacciones', label: 'Lista', shortcut: 'L', path: '/accountable-transactions' },
+      { id: 'lista-grupos', label: 'Lista por grupos', shortcut: 'L', path: '/accountable-transactions-groups' },
+      { id: 'aprobaciones', label: 'Aprobaciones', shortcut: 'A', path: '/accountable-transaction-approvals' },
+      { id: 'resumen', label: 'Resumen', shortcut: 'R', path: '/accountable-transactions/summary' },
+      { id: 'trans-bancas', label: 'Bancas', shortcut: 'B', path: '/accountable-transactions/betting-pool' },
+      { id: 'categorias-gastos', label: 'Categorías de gastos', shortcut: 'C', path: '/expenses/categories' }
     ]
   },
   {

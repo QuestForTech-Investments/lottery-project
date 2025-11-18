@@ -51,6 +51,12 @@ import BankBalances from '@components/balances/BankBalances'
 import ZoneBalances from '@components/balances/ZoneBalances'
 import GroupBalances from '@components/balances/GroupBalances'
 import CollectionsPaymentsList from '@components/CollectionsPaymentsList'
+import TransactionsList from '@components/transactions/TransactionsList'
+import TransactionsByBettingPool from '@components/transactions/TransactionsByBettingPool'
+import TransactionGroupsList from '@components/transactions/TransactionGroupsList'
+import TransactionApprovals from '@components/transactions/TransactionApprovals'
+import TransactionsSummary from '@components/transactions/TransactionsSummary'
+import ExpenseCategories from '@components/expenses/ExpenseCategories'
 
 function App() {
   return (
@@ -120,6 +126,12 @@ function App() {
                 <Route path="/balances/zonas" element={<ZoneBalances />} />
                 <Route path="/balances/grupos" element={<GroupBalances />} />
                 <Route path="/cobros-pagos/lista" element={<CollectionsPaymentsList />} />
+                <Route path="/accountable-transactions" element={<TransactionsList />} />
+                <Route path="/accountable-transactions/betting-pool" element={<TransactionsByBettingPool />} />
+                <Route path="/accountable-transactions/summary" element={<TransactionsSummary />} />
+                <Route path="/accountable-transactions-groups" element={<TransactionGroupsList />} />
+                <Route path="/accountable-transaction-approvals" element={<TransactionApprovals />} />
+                <Route path="/expenses/categories" element={<ExpenseCategories />} />
                 <Route path="/test/permissions" element={<TestPermissions />} />
                 <Route path="/test/multi-zone" element={<TestMultiZone />} />
                 <Route path="/test/react-multiselect" element={<TestReactMultiselect />} />

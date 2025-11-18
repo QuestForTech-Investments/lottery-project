@@ -99,12 +99,12 @@ export const MENU_ITEMS = [
     label: 'TRANSACCIONES',
     icon: CreditCard,
     submenu: [
-      { id: 'transactions-list', label: 'Lista', shortcut: 'L', path: '/transactions/list' },
-      { id: 'transactions-by-groups', label: 'Lista por grupos', shortcut: 'L', path: '/transactions/groups' },
-      { id: 'approvals', label: 'Aprobaciones', shortcut: 'A', path: '/transactions/approvals' },
-      { id: 'summary', label: 'Resumen', shortcut: 'R', path: '/transactions/summary' },
-      { id: 'transactions-betting-pools', label: 'Bancas', shortcut: 'B', path: '/transactions/betting-pools' },
-      { id: 'expense-categories', label: 'Categorías de gastos', shortcut: 'C', path: '/transactions/categories' }
+      { id: 'transactions-list', label: 'Lista', shortcut: 'L', path: '/accountable-transactions' },
+      { id: 'transactions-by-groups', label: 'Lista por grupos', shortcut: 'L', path: '/accountable-transactions-groups' },
+      { id: 'approvals', label: 'Aprobaciones', shortcut: 'A', path: '/accountable-transaction-approvals' },
+      { id: 'summary', label: 'Resumen', shortcut: 'R', path: '/accountable-transactions/summary' },
+      { id: 'transactions-betting-pools', label: 'Bancas', shortcut: 'B', path: '/accountable-transactions/betting-pool' },
+      { id: 'expense-categories', label: 'Categorías de gastos', shortcut: 'C', path: '/expenses/categories' }
     ]
   },
   {
