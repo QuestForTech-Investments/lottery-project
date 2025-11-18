@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
+import CollectionsPaymentsWidget from '../components/dashboard/CollectionsPaymentsWidget';
 
 function Dashboard() {
-  const [activeMode, setActiveMode] = useState('cobro');
   const [selectedDraw, setSelectedDraw] = useState('DIARIA 11AM');
   const [blockedNumbers, setBlockedNumbers] = useState([]);
 
-  const bancaCodes = ['LAN-0001', 'LAN-0010', 'LAN-0016', 'LAN-0063', 'LAN-0101'];
   const draws = ['DIARIA 11AM', 'LOTEDOM', 'LA PRIMERA', 'TEXAS DAY', 'King Lottery AM'];
   const playTypes = ['Cash3 Box', 'Bolita 2', 'Pick5 Straight', 'Directo', 'Play4 Straight'];
 
@@ -14,106 +13,10 @@ function Dashboard() {
       <div className="container mx-auto">
         {/* Grid de 4 columnas */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-          
+
           {/* Card 1: Cobros & Pagos */}
-          <div className="bg-white rounded-lg shadow p-4">
-            <div className="mb-4">
-              <label className="block text-center text-sm font-medium text-gray-700 mb-3">
-                Cobros & pagos
-              </label>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setActiveMode('cobro')}
-                  className={`flex-1 py-2 px-3 text-sm rounded border-2 transition-colors ${
-                    activeMode === 'cobro'
-                      ? 'bg-teal-400 text-white border-teal-400'
-                      : 'bg-white text-gray-700 border-gray-300 hover:border-teal-400'
-                  }`}
-                  style={{
-                    backgroundColor: activeMode === 'cobro' ? '#4dd4d4' : '#ffffff',
-                    color: activeMode === 'cobro' ? '#ffffff' : '#374151',
-                    borderColor: activeMode === 'cobro' ? '#4dd4d4' : '#d1d5db',
-                    fontWeight: '500',
-                    textTransform: 'none',
-                    boxShadow: 'none',
-                    outline: 'none'
-                  }}
-                >
-                  <i className="fas fa-hand-holding-usd" style={{ transform: 'rotate(0deg)' }}></i> Cobro
-                </button>
-                <button
-                  onClick={() => setActiveMode('pago')}
-                  className={`flex-1 py-2 px-3 text-sm rounded border-2 transition-colors ${
-                    activeMode === 'pago'
-                      ? 'bg-teal-400 text-white border-teal-400'
-                      : 'bg-white text-gray-700 border-gray-300 hover:border-teal-400'
-                  }`}
-                  style={{
-                    backgroundColor: activeMode === 'pago' ? '#4dd4d4' : '#ffffff',
-                    color: activeMode === 'pago' ? '#ffffff' : '#374151',
-                    borderColor: activeMode === 'pago' ? '#4dd4d4' : '#d1d5db',
-                    fontWeight: '500',
-                    textTransform: 'none',
-                    boxShadow: 'none',
-                    outline: 'none'
-                  }}
-                >
-                  <i className="fas fa-hand-holding-usd" style={{ transform: 'rotate(180deg)' }}></i> Pago
-                </button>
-              </div>
-            </div>
-
-            <hr className="my-4 border-gray-200" />
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-xs text-gray-600 mb-1">
-                  Código de banca
-                </label>
-                <select className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:border-teal-400">
-                  <option>Seleccione</option>
-                  {bancaCodes.map(code => (
-                    <option key={code}>{code}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs text-gray-600 mb-1">
-                  Banco
-                </label>
-                <select className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:border-teal-400">
-                  <option>Seleccione</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs text-gray-600 mb-1">
-                  Monto
-                </label>
-                <input
-                  type="number"
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:border-teal-400"
-                />
-              </div>
-
-              <div className="flex justify-center pt-2">
-                <button 
-                  className="px-8 py-2 bg-teal-400 text-white text-sm font-semibold rounded-full hover:bg-teal-500 transition-colors"
-                  style={{
-                    backgroundColor: '#4dd4d4',
-                    color: '#ffffff',
-                    fontWeight: '600',
-                    textTransform: 'none',
-                    boxShadow: 'none',
-                    outline: 'none',
-                    border: 'none'
-                  }}
-                >
-                  <i className="nc-icon nc-simple-add"></i> Crear
-                </button>
-              </div>
-            </div>
+          <div>
+            <CollectionsPaymentsWidget />
           </div>
 
           {/* Card 2: Jugadas por sorteo */}

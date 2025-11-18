@@ -34,6 +34,7 @@ import {
   Assessment as AssessmentIcon,
 } from '@mui/icons-material';
 import useDashboard from './hooks/useDashboard';
+import CollectionsPaymentsWidget from '../components/features/dashboard/CollectionsPaymentsWidget';
 
 /**
  * DashboardMUI Component
@@ -41,16 +42,10 @@ import useDashboard from './hooks/useDashboard';
  */
 const DashboardMUI = () => {
   const {
-    bancaCodes,
-    bancos,
     sortitions,
     playTypes,
     quickPublishSortitions,
     bancasVendiendo,
-    activeMode,
-    selectedBancaCode,
-    selectedBanco,
-    cobroPagoMonto,
     selectedSortition,
     jugadas,
     selectedQuickPublish,
@@ -58,15 +53,10 @@ const DashboardMUI = () => {
     selectedPlayType,
     jugadaInput,
     blockedNumbers,
-    setSelectedBancaCode,
-    setSelectedBanco,
-    setCobroPagoMonto,
     setSelectedQuickPublish,
     setSelectedBloqueoSortition,
     setSelectedPlayType,
     setJugadaInput,
-    handleModeChange,
-    handleCreateCobroPago,
     handleSortitionChange,
     handleQuickPublish,
     handleAddNumberToBlock,
@@ -84,115 +74,7 @@ const DashboardMUI = () => {
 
           {/* Card 1: Cobros & Pagos */}
           <Grid item xs={12} md={6} lg={3}>
-            <Paper elevation={3} sx={{ p: 3 }}>
-              <Typography variant="subtitle1" fontWeight="bold" align="center" sx={{ mb: 2 }}>
-                Cobros & pagos
-              </Typography>
-
-              <ToggleButtonGroup
-                value={activeMode}
-                exclusive
-                onChange={(e, value) => value && handleModeChange(value)}
-                fullWidth
-                sx={{ mb: 2 }}
-              >
-                <ToggleButton
-                  value="cobro"
-                  sx={{
-                    bgcolor: activeMode === 'cobro' ? '#4dd4d4' : 'white',
-                    color: activeMode === 'cobro' ? 'white' : 'text.primary',
-                    '&.Mui-selected': {
-                      bgcolor: '#4dd4d4',
-                      color: 'white',
-                      '&:hover': {
-                        bgcolor: '#3ec3c3',
-                      },
-                    },
-                  }}
-                >
-                  <TrendingUpIcon sx={{ mr: 0.5, fontSize: '1rem' }} />
-                  Cobro
-                </ToggleButton>
-                <ToggleButton
-                  value="pago"
-                  sx={{
-                    bgcolor: activeMode === 'pago' ? '#4dd4d4' : 'white',
-                    color: activeMode === 'pago' ? 'white' : 'text.primary',
-                    '&.Mui-selected': {
-                      bgcolor: '#4dd4d4',
-                      color: 'white',
-                      '&:hover': {
-                        bgcolor: '#3ec3c3',
-                      },
-                    },
-                  }}
-                >
-                  <TrendingDownIcon sx={{ mr: 0.5, fontSize: '1rem' }} />
-                  Pago
-                </ToggleButton>
-              </ToggleButtonGroup>
-
-              <Divider sx={{ my: 2 }} />
-
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <FormControl fullWidth size="small">
-                  <InputLabel>Código de banca</InputLabel>
-                  <Select
-                    value={selectedBancaCode}
-                    onChange={(e) => setSelectedBancaCode(e.target.value)}
-                    label="Código de banca"
-                  >
-                    <MenuItem value="">Seleccione</MenuItem>
-                    {bancaCodes.map((code) => (
-                      <MenuItem key={code} value={code}>{code}</MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-
-                <FormControl fullWidth size="small">
-                  <InputLabel>Banco</InputLabel>
-                  <Select
-                    value={selectedBanco}
-                    onChange={(e) => setSelectedBanco(e.target.value)}
-                    label="Banco"
-                  >
-                    <MenuItem value="">Seleccione</MenuItem>
-                    {bancos.map((banco) => (
-                      <MenuItem key={banco} value={banco}>{banco}</MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-
-                <TextField
-                  fullWidth
-                  size="small"
-                  type="number"
-                  label="Monto"
-                  value={cobroPagoMonto}
-                  onChange={(e) => setCobroPagoMonto(e.target.value)}
-                  inputProps={{ step: "0.01", min: "0" }}
-                />
-
-                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 1 }}>
-                  <Button
-                    variant="contained"
-                    startIcon={<AddIcon />}
-                    onClick={handleCreateCobroPago}
-                    sx={{
-                      bgcolor: '#4dd4d4',
-                      color: 'white',
-                      borderRadius: '25px',
-                      px: 4,
-                      '&:hover': {
-                        bgcolor: '#3ec3c3',
-                      },
-                    }}
-                  >
-                    Crear
-                  </Button>
-                </Box>
-              </Box>
-            </Paper>
+            <CollectionsPaymentsWidget />
           </Grid>
 
           {/* Card 2: Jugadas por sorteo */}
