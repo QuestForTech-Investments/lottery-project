@@ -57,6 +57,8 @@ import TransactionGroupsList from '@components/transactions/TransactionGroupsLis
 import TransactionApprovals from '@components/transactions/TransactionApprovals'
 import TransactionsSummary from '@components/transactions/TransactionsSummary'
 import ExpenseCategories from '@components/expenses/ExpenseCategories'
+import CreateLoan from '@components/loans/CreateLoan'
+import LoansList from '@components/loans/LoansList'
 
 function App() {
   return (
@@ -132,6 +134,8 @@ function App() {
                 <Route path="/accountable-transactions-groups" element={<TransactionGroupsList />} />
                 <Route path="/accountable-transaction-approvals" element={<TransactionApprovals />} />
                 <Route path="/expenses/categories" element={<ExpenseCategories />} />
+                <Route path="/prestamos/crear" element={<CreateLoan />} />
+                <Route path="/prestamos/lista" element={<LoansList />} />
                 <Route path="/test/permissions" element={<TestPermissions />} />
                 <Route path="/test/multi-zone" element={<TestMultiZone />} />
                 <Route path="/test/react-multiselect" element={<TestReactMultiselect />} />

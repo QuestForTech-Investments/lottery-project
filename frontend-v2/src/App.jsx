@@ -80,6 +80,10 @@ const TransactionsSummaryMUI = lazy(() => import('@components/features/transacti
 // Expenses feature components
 const ExpenseCategoriesMUI = lazy(() => import('@components/features/expenses/ExpenseCategories'))
 
+// Loans feature components
+const CreateLoanMUI = lazy(() => import('@components/features/loans/CreateLoan'))
+const LoansListMUI = lazy(() => import('@components/features/loans/LoansList'))
+
 function App() {
   return (
     <>
@@ -161,6 +165,8 @@ function App() {
                           <Route path="/accountable-transactions-groups" element={<Suspense fallback={<LazyLoadingFallback />}><TransactionGroupsListMUI /></Suspense>} />
                           <Route path="/accountable-transaction-approvals" element={<Suspense fallback={<LazyLoadingFallback />}><TransactionApprovalsMUI /></Suspense>} />
                           <Route path="/expenses/categories" element={<Suspense fallback={<LazyLoadingFallback />}><ExpenseCategoriesMUI /></Suspense>} />
+                          <Route path="/loans/new" element={<Suspense fallback={<LazyLoadingFallback />}><CreateLoanMUI /></Suspense>} />
+                          <Route path="/loans/list" element={<Suspense fallback={<LazyLoadingFallback />}><LoansListMUI /></Suspense>} />
                         </Routes>
                       </MainLayout>
                   </ErrorBoundary>

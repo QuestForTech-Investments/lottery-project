@@ -43,7 +43,14 @@ Antes de realizar CUALQUIER modificación en el proyecto (código, CSS, componen
    - Verifica reglas de nomenclatura
    - Usa Playwright para revisar formularios similares (si aplica)
    - Aplica cambios siguiendo convenciones
-   - Documenta cambios importantes en CLAUDE.md
+   - **DOCUMENTA el fix/cambio en CLAUDE.md (OBLIGATORIO)**
+
+**Flujo Completo:**
+```
+Leer CLAUDE.md → Hacer cambios → Verificar → Documentar en CLAUDE.md → Commit
+```
+
+**⚠️ NO OLVIDAR:** La documentación NO es opcional, es parte del fix.
 
 ### 🔗 RUTAS Y NAVEGACIÓN - PROCESO OBLIGATORIO
 
@@ -91,12 +98,62 @@ Antes de realizar CUALQUIER modificación en el proyecto (código, CSS, componen
 3. `frontend-v2/src/App.jsx` - Agregar Route
 4. `frontend-v2/src/constants/menuItems.js` - Agregar menu item
 
-### 📝 ACTUALIZAR ESTE ARCHIVO
+### 📝 DOCUMENTAR TODOS LOS FIXES EN ESTE ARCHIVO (OBLIGATORIO)
 
-Cuando hagas un fix o cambio importante:
-- Agregar en sección de "FIXES RECIENTES" con fecha
-- Documentar la solución aplicada
-- Incluir ejemplos de código si aplica
+**CRÍTICO:** CADA fix, cambio importante, o solución DEBE documentarse en este archivo INMEDIATAMENTE después de completarlo.
+
+#### ¿Cuándo Documentar?
+
+Documenta SIEMPRE que:
+- ✅ Corrijas un bug o error
+- ✅ Implementes una nueva funcionalidad
+- ✅ Cambies patrones o convenciones
+- ✅ Modifiques diseño o estilos
+- ✅ Agregues/modifiques rutas o navegación
+- ✅ Refactorices código importante
+- ✅ Descubras algo no obvio o tricky
+- ✅ El usuario reporte un problema y lo soluciones
+
+#### Formato de Documentación
+
+```markdown
+### Fix: [Título Descriptivo] (YYYY-MM-DD)
+
+**Problema:** [Descripción clara del problema]
+
+**Causa Raíz:** [Por qué ocurrió el problema]
+
+**Archivos Modificados:**
+- `ruta/archivo1.ext` (líneas X-Y)
+- `ruta/archivo2.ext` (líneas A-B)
+
+**Solución Aplicada:**
+[Explicación de la solución]
+
+```javascript
+// Código relevante si aplica
+```
+
+**Resultado:** [Qué se logró, cómo verificarlo]
+
+**Lección Aprendida:** [Qué aprendimos para prevenir en el futuro]
+```
+
+#### Ubicación de la Documentación
+
+Agregar en la sección **"🔧 FIXES RECIENTES"** ordenados por fecha (más reciente primero).
+
+#### ¿Por Qué Es Obligatorio?
+
+- ✅ **Continuidad entre sesiones**: Cuando Claude Code se reinicia, lee CLAUDE.md para recuperar contexto
+- ✅ **Prevención de errores repetidos**: Evita cometer los mismos errores
+- ✅ **Onboarding rápido**: Cualquiera puede entender el proyecto leyendo este archivo
+- ✅ **Debugging eficiente**: Si algo falla, se puede revisar qué se cambió y por qué
+- ✅ **Memoria del proyecto**: Este archivo ES la memoria persistente del proyecto
+
+#### Ejemplo de Buen Fix Documentado
+
+Ver sección "🔧 FIXES RECIENTES" líneas 584-776 para ejemplos completos.
 
 ---
 
@@ -736,6 +793,62 @@ export const getAllBetTypesWithFields = async () => {
 
 ## 🔧 FIXES RECIENTES (2025-11-18)
 
+### Fix: Documentación Obligatoria de Todos los Fixes en CLAUDE.md (2025-11-18)
+
+**Problema:** Las sesiones de Claude Code se cierran por timeout de inactividad, causando pérdida de contexto entre sesiones. Aunque existe continuación de sesiones, la documentación de fixes no era obligatoria ni estaba estandarizada.
+
+**Causa Raíz:**
+- No existía un proceso formal para documentar fixes
+- La documentación era opcional en lugar de obligatoria
+- No había un formato estándar para documentar cambios
+
+**Archivos Modificados:**
+- `/home/jorge/projects/lottery-project/CLAUDE.md` (líneas 94-149)
+  - Nueva sección: "📝 DOCUMENTAR TODOS LOS FIXES EN ESTE ARCHIVO (OBLIGATORIO)"
+  - Actualizada sección: "✅ PROCESO CORRECTO" (líneas 38-53)
+
+**Solución Aplicada:**
+
+1. **Agregada sección de documentación obligatoria** con:
+   - Lista clara de cuándo documentar
+   - Formato estándar de documentación
+   - Explicación de por qué es obligatorio
+   - Referencias a ejemplos existentes
+
+2. **Formato estandarizado de documentación:**
+```markdown
+### Fix: [Título] (YYYY-MM-DD)
+**Problema:** [descripción]
+**Causa Raíz:** [por qué ocurrió]
+**Archivos Modificados:** [lista con líneas]
+**Solución Aplicada:** [explicación + código]
+**Resultado:** [qué se logró]
+**Lección Aprendida:** [prevención futura]
+```
+
+3. **Actualizado flujo de trabajo:**
+```
+Leer CLAUDE.md → Hacer cambios → Verificar → Documentar en CLAUDE.md → Commit
+```
+
+**Resultado:**
+- ✅ Cada fix quedará documentado permanentemente
+- ✅ Continuidad entre sesiones garantizada
+- ✅ Nuevo Claude Code puede leer CLAUDE.md y conocer todo el historial
+- ✅ Prevención de errores repetidos
+- ✅ Onboarding más rápido para cualquier desarrollador
+
+**Lección Aprendida:**
+CLAUDE.md es la memoria persistente del proyecto. Documentar TODO en este archivo no es opcional - es crítico para la continuidad del proyecto cuando las sesiones de Claude Code se reinician.
+
+**Beneficios Adicionales:**
+- Sirve como documentación técnica completa
+- Facilita debugging (revisar qué cambió y cuándo)
+- Permite entender decisiones de diseño pasadas
+- Crea un knowledge base del proyecto
+
+---
+
 ### Fix: Inconsistencia de Color en Título de USUARIOS > Bancas
 
 **Problema:** El título del formulario "Lista de usuarios" (USUARIOS > Bancas) tenía fondo turquesa con texto blanco, mientras que todos los demás formularios tienen títulos en texto negro sin fondo de color.
@@ -819,6 +932,145 @@ Al crear una nueva funcionalidad, SIEMPRE seguir el proceso de 3 pasos:
 **Documentación Actualizada:**
 - Agregada sección "🔗 RUTAS Y NAVEGACIÓN - PROCESO OBLIGATORIO" en CLAUDE.md (líneas 48-92)
 - Agregada regla "NO crear rutas sin conectarlas al menú de navegación" en checklist crítico
+
+---
+
+### Loans Module Implementation (2025-11-18)
+
+**Problema:** Se necesitaba implementar el módulo de PRÉSTAMOS (Loans) con 2 secciones (Crear préstamo y Lista de préstamos) en ambos frontends (V1 Bootstrap y V2 Material-UI), replicando la funcionalidad de la aplicación Vue.js original.
+
+**Análisis Original:**
+- Aplicación Vue.js: https://la-numbers.apk.lol
+- Ambas secciones ("Crear" y "Lista") se encuentran en una sola página en el original
+- Decisión: Mantener rutas separadas en React para mejor mantenibilidad
+
+**Archivos Creados:**
+
+**V1 (Bootstrap):**
+1. `frontend-v1/src/components/loans/CreateLoan.jsx` (296 líneas)
+   - Formulario con 8 campos:
+     - Tipo de entidad (dropdown)
+     - Entidad (dropdown dependiente)
+     - Monto a prestar (currency input con $)
+     - Monto cuota (currency input con $)
+     - Frecuencia de pago (radio: diario/semanal/mensual/anual)
+     - Fecha de inicio del préstamo (date picker)
+     - Tasa de interés (number input con %)
+     - Notas (textarea)
+   - Botón "Crear" centrado con color turquesa (#51cbce)
+
+2. `frontend-v1/src/components/loans/LoansList.jsx` (500+ líneas)
+   - Tabla con 14 columnas: #, Total prestado, Tasa de interés, Total pagado, Total a pagar, Fecha de creación, Último pago, Cuota, Cuotas pendientes, Frecuencia, Día de pago, Estado, Pendientes de pago, Actions
+   - Filtros: 2 toggles (Sólo activos, Filtrar por zonas), 2 búsquedas (Número de banca, Filtrado rápido)
+   - Tab "Bancas" (seleccionado)
+   - Badges de estado: Activo (verde), Completo (azul), Inactivo (rojo)
+   - Botones de acción: info, edit, delete
+   - Fila de totales calculados dinámicamente
+   - Footer con contador de entradas
+   - 20 loans mockup
+
+**V2 (Material-UI):**
+1. `frontend-v2/src/components/features/loans/CreateLoan/index.jsx` (296 líneas)
+   - Mismos 8 campos que V1 pero usando componentes Material-UI
+   - Box, Card, CardContent, TextField, Select, MenuItem, RadioGroup, Button
+   - InputAdornment para símbolos $ y %
+   - Color turquesa (#51cbce) coherente con V1
+
+2. `frontend-v2/src/components/features/loans/LoansList/index.jsx` (17,401 bytes)
+   - Misma funcionalidad que V1 pero con componentes MUI
+   - Table, TableHead, TableBody, TableRow, TableCell
+   - Checkbox, FormControlLabel para toggles
+   - Tabs, Tab para "Bancas"
+   - TextField con InputAdornment para búsquedas
+   - Chip para badges de estado (color: success/info/error)
+   - IconButton para acciones (InfoIcon, EditIcon, DeleteIcon)
+   - TableContainer, Paper para wrapper
+
+**Archivos Modificados:**
+
+**V1:**
+- `frontend-v1/src/App.jsx` (líneas 60-61, 137-138)
+  - Agregados imports: `CreateLoan`, `LoansList`
+  - Agregadas rutas:
+    - `/prestamos/crear` → CreateLoan
+    - `/prestamos/lista` → LoansList
+
+**V2:**
+- `frontend-v2/src/App.jsx` (líneas 84-85, 168-169)
+  - Agregados lazy imports: `CreateLoanMUI`, `LoansListMUI`
+  - Agregadas rutas con Suspense:
+    - `/loans/new` → CreateLoanMUI
+    - `/loans/list` → LoansListMUI
+
+**Menú de Navegación (Ya Configurado):**
+- V1: `frontend-v1/src/constants/menuItems.js` - Módulo "PRÉSTAMOS" con submenu Crear/Lista
+- V2: `frontend-v2/src/constants/menuItems.js` - Módulo "PRÉSTAMOS" con submenu Crear/Lista
+- ✅ Rutas ya estaban correctamente conectadas al menú
+
+**Solución Aplicada:**
+
+**GitHub Issues Creados:**
+1. Issue #38: [Epic] Módulo Préstamos - 2 subsecciones
+2. Issue #39: Implementar "Crear préstamo" (V1 + V2)
+3. Issue #40: Implementar "Lista de préstamos" (V1 + V2)
+
+**Implementación:**
+1. Análisis de aplicación Vue.js original para identificar campos y funcionalidades
+2. Creación de componentes V1 con Bootstrap 5
+3. Creación de componentes V2 con Material-UI v5
+4. Agregado de rutas en ambos App.jsx
+5. Verificación de conexión con menú de navegación
+
+**Testing con Playwright:**
+- ✅ V1 Create Loan: Formulario con 8 campos funcionando
+- ✅ V1 Loans List: Tabla con 18 loans activos (de 20 total)
+- ✅ V2 Create Loan: Formulario Material-UI funcionando
+- ✅ V2 Loans List: Tabla Material-UI funcionando (después de fix)
+- Screenshots capturados: 4 total (v1-loans-create.png, v1-loans-list.png, v2-loans-create.png, v2-loans-list.png)
+
+**Problema Encontrado Durante Testing:**
+
+**Error:** Al navegar a `/loans/list` en V2, se obtuvo error: "EISDIR: illegal operation on a directory, read /home/jorge/projects/lottery-project/frontend-v2/src/components/features/loans/LoansList"
+
+**Diagnóstico:**
+- Estructura de archivos correcta (LoansList/index.jsx existía)
+- Error de cache HMR (Hot Module Replacement) de Vite
+- Vite trataba el directorio como un archivo
+
+**Solución:**
+1. Detenido el servidor de desarrollo V2 (shell ID 5a4f8b)
+2. Reiniciado el servidor con `npm run dev`
+3. Navegado nuevamente a `/loans/list`
+4. ✅ Página cargó correctamente con todos los loans
+
+**Resultado:**
+- ✅ Módulo Préstamos completamente implementado en V1 y V2
+- ✅ 2 componentes por frontend (Crear + Lista)
+- ✅ Rutas conectadas correctamente
+- ✅ Menú de navegación funcionando
+- ✅ Mockup data: 20 loans con diferentes estados
+- ✅ Funcionalidades: filtros, sorting, búsqueda, totales, badges de estado
+- ✅ Testing completo con Playwright
+- ✅ Screenshots capturados como evidencia
+- ✅ GitHub issues creados para tracking
+
+**Mockup Data:**
+- 20 préstamos con estados: Activo (18), Completo (1), Inactivo (1)
+- Totales: $168,500.00 prestado, $102,855.00 pagado, $76,297.50 por pagar
+- Filtros funcionando: "Sólo activos" muestra 18 de 20
+
+**Lección Aprendida:**
+1. Los errores de cache de Vite HMR se resuelven reiniciando el dev server
+2. Mantener coherencia entre V1 y V2: misma funcionalidad, diferentes componentes UI
+3. Siempre capturar screenshots con Playwright para documentar implementaciones
+4. Verificar que las rutas en App.jsx coincidan con las del menú en menuItems.js
+
+**Nota Importante:**
+En la aplicación Vue.js original, ambas secciones (Crear y Lista) están en una sola página. En nuestra implementación React, se decidió mantenerlas separadas en rutas distintas para:
+- Mejor organización del código
+- Lazy loading más eficiente (especialmente en V2)
+- Mantenibilidad a largo plazo
+- Separación de responsabilidades
 
 ---
 
