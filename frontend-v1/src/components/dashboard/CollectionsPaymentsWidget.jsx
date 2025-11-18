@@ -5,6 +5,7 @@ import api from '../../services/api';
  * CollectionsPaymentsWidget
  * Widget for creating collections (cobros) and payments (pagos) from dashboard
  * Based on Vue.js app analysis - Dashboard widget implementation
+ * Replicated to match exact styling from original app
  */
 const CollectionsPaymentsWidget = () => {
   // State
@@ -40,14 +41,11 @@ const CollectionsPaymentsWidget = () => {
 
   const loadBanks = async () => {
     try {
-      // TODO: Verify exact endpoint from original app
       const response = await api.get('/banks');
       const banksList = response.items || response || [];
       setBanks(banksList);
     } catch (err) {
       console.error('Error loading banks:', err);
-      // Don't show error if banks endpoint doesn't exist yet
-      // setError('Error al cargar los bancos');
     }
   };
 
@@ -70,7 +68,6 @@ const CollectionsPaymentsWidget = () => {
     setSuccess(null);
 
     try {
-      // TODO: Verify exact endpoint from original app
       const endpoint = type === 'collection' ? '/collections' : '/payments';
 
       await api.post(endpoint, {
@@ -105,43 +102,73 @@ const CollectionsPaymentsWidget = () => {
   return (
     <div className="card">
       <div className="card-body">
-        <h6 className="card-title mb-3 text-center">Cobros & pagos</h6>
-
-        {/* Type selector - Radio style buttons */}
-        <div className="btn-group w-100 mb-3" role="group">
-          <button
-            type="button"
-            className={`btn ${type === 'collection' ? 'btn-info' : 'btn-outline-secondary'}`}
-            onClick={() => handleTypeChange('collection')}
-            style={{
-              backgroundColor: type === 'collection' ? '#51cbce' : 'transparent',
-              borderColor: '#51cbce',
-              color: type === 'collection' ? 'white' : '#51cbce'
-            }}
-          >
-            💰 COBRO
-          </button>
-          <button
-            type="button"
-            className={`btn ${type === 'payment' ? 'btn-info' : 'btn-outline-secondary'}`}
-            onClick={() => handleTypeChange('payment')}
-            style={{
-              backgroundColor: type === 'payment' ? '#51cbce' : 'transparent',
-              borderColor: '#51cbce',
-              color: type === 'payment' ? 'white' : '#51cbce'
-            }}
-          >
-            💸 PAGO
-          </button>
+        {/* Title - matching original style */}
+        <div
+          className="text-center mb-3"
+          style={{
+            fontSize: '14px',
+            color: '#999',
+            fontWeight: '400'
+          }}
+        >
+          Cobros & pagos
         </div>
 
-        <hr />
+        {/* Type selector - matching original style */}
+        <div className="d-flex gap-0 mb-3">
+          <button
+            type="button"
+            className="btn flex-fill"
+            onClick={() => handleTypeChange('collection')}
+            style={{
+              backgroundColor: type === 'collection' ? '#51cbce' : '#fff',
+              borderColor: type === 'collection' ? '#51cbce' : '#ddd',
+              color: type === 'collection' ? '#fff' : '#999',
+              border: '1px solid',
+              borderRadius: '4px 0 0 4px',
+              padding: '12px 20px',
+              fontSize: '13px',
+              fontWeight: '600',
+              textTransform: 'uppercase',
+              transition: 'all 0.2s'
+            }}
+          >
+            <i className="fa fa-hand-holding-usd me-1"></i> COBRO
+          </button>
+          <button
+            type="button"
+            className="btn flex-fill"
+            onClick={() => handleTypeChange('payment')}
+            style={{
+              backgroundColor: type === 'payment' ? '#51cbce' : '#fff',
+              borderColor: type === 'payment' ? '#51cbce' : '#ddd',
+              color: type === 'payment' ? '#fff' : '#999',
+              border: '1px solid',
+              borderRadius: '0 4px 4px 0',
+              borderLeft: 'none',
+              padding: '12px 20px',
+              fontSize: '13px',
+              fontWeight: '600',
+              textTransform: 'uppercase',
+              transition: 'all 0.2s'
+            }}
+          >
+            <i className="fa fa-question-circle me-1"></i> PAGO
+          </button>
+        </div>
 
         {/* Form */}
         <form onSubmit={handleSubmit}>
           {/* Código de banca */}
           <div className="mb-3">
-            <label className="form-label" style={{ fontSize: '12px', color: '#888' }}>
+            <label
+              className="form-label"
+              style={{
+                fontSize: '12px',
+                color: '#888',
+                marginBottom: '4px'
+              }}
+            >
               Código de banca
             </label>
             <select
@@ -149,6 +176,11 @@ const CollectionsPaymentsWidget = () => {
               value={bettingPoolCode}
               onChange={(e) => setBettingPoolCode(e.target.value)}
               required
+              style={{
+                fontSize: '13px',
+                color: '#666',
+                borderColor: '#ddd'
+              }}
             >
               <option value="">Seleccione</option>
               {bettingPools.map((pool) => (
@@ -161,13 +193,25 @@ const CollectionsPaymentsWidget = () => {
 
           {/* Banco */}
           <div className="mb-3">
-            <label className="form-label" style={{ fontSize: '12px', color: '#888' }}>
+            <label
+              className="form-label"
+              style={{
+                fontSize: '12px',
+                color: '#888',
+                marginBottom: '4px'
+              }}
+            >
               Banco
             </label>
             <select
               className="form-select form-select-sm"
               value={bankId}
               onChange={(e) => setBankId(e.target.value)}
+              style={{
+                fontSize: '13px',
+                color: '#666',
+                borderColor: '#ddd'
+              }}
             >
               <option value="">Seleccione</option>
               {banks.map((bank) => (
@@ -183,7 +227,14 @@ const CollectionsPaymentsWidget = () => {
 
           {/* Monto */}
           <div className="mb-3">
-            <label className="form-label" style={{ fontSize: '12px', color: '#888' }}>
+            <label
+              className="form-label"
+              style={{
+                fontSize: '12px',
+                color: '#888',
+                marginBottom: '4px'
+              }}
+            >
               Monto
             </label>
             <input
@@ -195,36 +246,49 @@ const CollectionsPaymentsWidget = () => {
               step="0.01"
               min="0"
               required
+              style={{
+                fontSize: '13px',
+                color: '#666',
+                borderColor: '#ddd'
+              }}
             />
           </div>
 
           {/* Error message */}
           {error && (
-            <div className="alert alert-danger alert-sm py-2" role="alert">
+            <div className="alert alert-danger alert-sm py-2 mb-3" role="alert" style={{ fontSize: '12px' }}>
               {error}
             </div>
           )}
 
           {/* Success message */}
           {success && (
-            <div className="alert alert-success alert-sm py-2" role="alert">
+            <div className="alert alert-success alert-sm py-2 mb-3" role="alert" style={{ fontSize: '12px' }}>
               {success}
             </div>
           )}
 
-          {/* Submit button */}
-          <button
-            type="submit"
-            className="btn btn-sm w-100"
-            disabled={loading}
-            style={{
-              backgroundColor: '#51cbce',
-              borderColor: '#51cbce',
-              color: 'white'
-            }}
-          >
-            {loading ? 'Creando...' : 'Crear'}
-          </button>
+          {/* Submit button - matching original pill shape */}
+          <div className="text-center">
+            <button
+              type="submit"
+              className="btn"
+              disabled={loading}
+              style={{
+                backgroundColor: '#51cbce',
+                borderColor: '#51cbce',
+                color: 'white',
+                padding: '10px 40px',
+                borderRadius: '25px',
+                fontSize: '13px',
+                fontWeight: '600',
+                textTransform: 'uppercase',
+                minWidth: '150px'
+              }}
+            >
+              {loading ? 'Creando...' : 'Crear'}
+            </button>
+          </div>
         </form>
       </div>
     </div>

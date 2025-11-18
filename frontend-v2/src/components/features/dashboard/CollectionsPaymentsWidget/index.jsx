@@ -3,25 +3,24 @@ import {
   Card,
   CardContent,
   Typography,
-  ToggleButtonGroup,
-  ToggleButton,
+  Button,
+  ButtonGroup,
   FormControl,
   InputLabel,
   Select,
   MenuItem,
   TextField,
-  Button,
   Alert,
-  Box,
-  Divider
+  Box
 } from '@mui/material';
-import { AttachMoney, Payment } from '@mui/icons-material';
+import { AttachMoney, HelpOutline } from '@mui/icons-material';
 import api from '../../../../services/api';
 
 /**
  * CollectionsPaymentsWidget
  * Material-UI widget for creating collections (cobros) and payments (pagos)
  * Based on Vue.js app analysis - Dashboard widget implementation
+ * Replicated to match exact styling from original app
  */
 const CollectionsPaymentsWidget = () => {
   // State
@@ -57,13 +56,11 @@ const CollectionsPaymentsWidget = () => {
 
   const loadBanks = async () => {
     try {
-      // TODO: Verify exact endpoint from original app
       const response = await api.get('/banks');
       const banksList = response.items || response || [];
       setBanks(banksList);
     } catch (err) {
       console.error('Error loading banks:', err);
-      // Don't show error if banks endpoint doesn't exist yet
     }
   };
 
@@ -86,7 +83,6 @@ const CollectionsPaymentsWidget = () => {
     setSuccess(null);
 
     try {
-      // TODO: Verify exact endpoint from original app
       const endpoint = type === 'collection' ? '/collections' : '/payments';
 
       await api.post(endpoint, {
@@ -112,73 +108,104 @@ const CollectionsPaymentsWidget = () => {
     }
   };
 
-  const handleTypeChange = (event, newType) => {
-    if (newType !== null) {
-      setType(newType);
-      setError(null);
-      setSuccess(null);
-    }
+  const handleTypeChange = (newType) => {
+    setType(newType);
+    setError(null);
+    setSuccess(null);
   };
 
   return (
     <Card>
       <CardContent>
-        <Typography variant="h6" component="h2" gutterBottom sx={{ textAlign: 'center' }}>
+        {/* Title - matching original style */}
+        <Typography
+          variant="body2"
+          align="center"
+          sx={{
+            color: '#999',
+            fontSize: '14px',
+            fontWeight: 400,
+            mb: 2
+          }}
+        >
           Cobros & pagos
         </Typography>
 
-        {/* Type selector */}
-        <ToggleButtonGroup
-          value={type}
-          exclusive
-          onChange={handleTypeChange}
-          fullWidth
-          sx={{ mb: 2 }}
-        >
-          <ToggleButton
-            value="collection"
+        {/* Type selector - matching original style */}
+        <ButtonGroup fullWidth sx={{ mb: 2 }}>
+          <Button
+            onClick={() => handleTypeChange('collection')}
+            startIcon={<AttachMoney />}
             sx={{
-              '&.Mui-selected': {
-                backgroundColor: '#51cbce',
-                color: 'white',
-                '&:hover': {
-                  backgroundColor: '#45b0b3'
-                }
+              backgroundColor: type === 'collection' ? '#51cbce' : '#fff',
+              borderColor: type === 'collection' ? '#51cbce !important' : '#ddd !important',
+              color: type === 'collection' ? '#fff' : '#999',
+              border: '1px solid',
+              borderRadius: '4px 0 0 4px !important',
+              padding: '12px 20px',
+              fontSize: '13px',
+              fontWeight: 600,
+              textTransform: 'uppercase',
+              '&:hover': {
+                backgroundColor: type === 'collection' ? '#45b0b3' : '#f8f8f8',
+                borderColor: type === 'collection' ? '#51cbce !important' : '#ddd !important'
               }
             }}
           >
-            <AttachMoney sx={{ mr: 0.5 }} />
             COBRO
-          </ToggleButton>
-          <ToggleButton
-            value="payment"
+          </Button>
+          <Button
+            onClick={() => handleTypeChange('payment')}
+            startIcon={<HelpOutline />}
             sx={{
-              '&.Mui-selected': {
-                backgroundColor: '#51cbce',
-                color: 'white',
-                '&:hover': {
-                  backgroundColor: '#45b0b3'
-                }
+              backgroundColor: type === 'payment' ? '#51cbce' : '#fff',
+              borderColor: type === 'payment' ? '#51cbce !important' : '#ddd !important',
+              color: type === 'payment' ? '#fff' : '#999',
+              border: '1px solid',
+              borderLeft: 'none !important',
+              borderRadius: '0 4px 4px 0 !important',
+              padding: '12px 20px',
+              fontSize: '13px',
+              fontWeight: 600,
+              textTransform: 'uppercase',
+              '&:hover': {
+                backgroundColor: type === 'payment' ? '#45b0b3' : '#f8f8f8',
+                borderColor: type === 'payment' ? '#51cbce !important' : '#ddd !important',
+                borderLeft: 'none !important'
               }
             }}
           >
-            <Payment sx={{ mr: 0.5 }} />
             PAGO
-          </ToggleButton>
-        </ToggleButtonGroup>
-
-        <Divider sx={{ mb: 2 }} />
+          </Button>
+        </ButtonGroup>
 
         {/* Form */}
         <Box component="form" onSubmit={handleSubmit}>
           {/* Código de banca */}
           <FormControl fullWidth size="small" sx={{ mb: 2 }}>
-            <InputLabel>Código de banca *</InputLabel>
+            <InputLabel
+              sx={{
+                fontSize: '12px',
+                color: '#888',
+                '&.Mui-focused': {
+                  color: '#888'
+                }
+              }}
+            >
+              Código de banca
+            </InputLabel>
             <Select
               value={bettingPoolCode}
               onChange={(e) => setBettingPoolCode(e.target.value)}
-              label="Código de banca *"
+              label="Código de banca"
               required
+              sx={{
+                fontSize: '13px',
+                color: '#666',
+                '& .MuiOutlinedInput-notchedOutline': {
+                  borderColor: '#ddd'
+                }
+              }}
             >
               <MenuItem value="">
                 <em>Seleccione</em>
@@ -187,6 +214,7 @@ const CollectionsPaymentsWidget = () => {
                 <MenuItem
                   key={pool.bettingPoolId || pool.id}
                   value={pool.bettingPoolCode || pool.code}
+                  sx={{ fontSize: '13px' }}
                 >
                   {pool.bettingPoolCode || pool.code} - {pool.bettingPoolName || pool.name}
                 </MenuItem>
@@ -196,17 +224,38 @@ const CollectionsPaymentsWidget = () => {
 
           {/* Banco */}
           <FormControl fullWidth size="small" sx={{ mb: 2 }}>
-            <InputLabel>Banco</InputLabel>
+            <InputLabel
+              sx={{
+                fontSize: '12px',
+                color: '#888',
+                '&.Mui-focused': {
+                  color: '#888'
+                }
+              }}
+            >
+              Banco
+            </InputLabel>
             <Select
               value={bankId}
               onChange={(e) => setBankId(e.target.value)}
               label="Banco"
+              sx={{
+                fontSize: '13px',
+                color: '#666',
+                '& .MuiOutlinedInput-notchedOutline': {
+                  borderColor: '#ddd'
+                }
+              }}
             >
               <MenuItem value="">
                 <em>Seleccione</em>
               </MenuItem>
               {banks.map((bank) => (
-                <MenuItem key={bank.bankId || bank.id} value={bank.bankId || bank.id}>
+                <MenuItem
+                  key={bank.bankId || bank.id}
+                  value={bank.bankId || bank.id}
+                  sx={{ fontSize: '13px' }}
+                >
                   {bank.bankName || bank.name}
                 </MenuItem>
               ))}
@@ -222,7 +271,7 @@ const CollectionsPaymentsWidget = () => {
           <TextField
             fullWidth
             size="small"
-            label="Monto *"
+            label="Monto"
             type="number"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
@@ -232,38 +281,62 @@ const CollectionsPaymentsWidget = () => {
               min: '0'
             }}
             required
-            sx={{ mb: 2 }}
+            sx={{
+              mb: 2,
+              '& .MuiInputLabel-root': {
+                fontSize: '12px',
+                color: '#888'
+              },
+              '& .MuiOutlinedInput-root': {
+                fontSize: '13px',
+                color: '#666',
+                '& fieldset': {
+                  borderColor: '#ddd'
+                }
+              }
+            }}
           />
 
           {/* Error message */}
           {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
+            <Alert severity="error" sx={{ mb: 2, fontSize: '12px' }}>
               {error}
             </Alert>
           )}
 
           {/* Success message */}
           {success && (
-            <Alert severity="success" sx={{ mb: 2 }}>
+            <Alert severity="success" sx={{ mb: 2, fontSize: '12px' }}>
               {success}
             </Alert>
           )}
 
-          {/* Submit button */}
-          <Button
-            type="submit"
-            variant="contained"
-            fullWidth
-            disabled={loading}
-            sx={{
-              backgroundColor: '#51cbce',
-              '&:hover': {
-                backgroundColor: '#45b0b3'
-              }
-            }}
-          >
-            {loading ? 'Creando...' : 'Crear'}
-          </Button>
+          {/* Submit button - matching original pill shape */}
+          <Box sx={{ textAlign: 'center' }}>
+            <Button
+              type="submit"
+              variant="contained"
+              disabled={loading}
+              sx={{
+                backgroundColor: '#51cbce',
+                color: 'white',
+                padding: '10px 40px',
+                borderRadius: '25px',
+                fontSize: '13px',
+                fontWeight: 600,
+                textTransform: 'uppercase',
+                minWidth: '150px',
+                '&:hover': {
+                  backgroundColor: '#45b0b3'
+                },
+                '&:disabled': {
+                  backgroundColor: '#ddd'
+                }
+              }}
+            >
+              {loading ? 'Creando...' : 'Crear'}
+            </Button>
+          </Box>
         </Box>
       </CardContent>
     </Card>
