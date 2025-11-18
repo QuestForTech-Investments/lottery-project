@@ -1074,6 +1074,169 @@ En la aplicación Vue.js original, ambas secciones (Crear y Lista) están en una
 
 ---
 
+### Excesses Module Implementation (2025-11-18)
+
+**Problema:** Se necesitaba implementar el módulo de EXCEDENTES (Surpluses) con 2 subsecciones (Manejar excedentes y Reporte de excedentes) en ambos frontends (V1 Bootstrap y V2 Material-UI), replicando la funcionalidad de la aplicación Vue.js original.
+
+**Análisis Original:**
+- Aplicación Vue.js: https://la-numbers.apk.lol/#/excesses y https://la-numbers.apk.lol/#/excesses-report
+- Screenshots de referencia capturados con Playwright
+- Ambas secciones identificadas y analizadas
+
+**Archivos Creados:**
+
+**V1 (Bootstrap):**
+1. `frontend-v1/src/components/excedentes/ManageExcesses.jsx` (367 líneas)
+   - Título "Manejar excedentes" centrado
+   - Dropdown Sorteo (General, Anguila 10am, NY 12pm, FL 1pm, GA 7pm, REAL, GANA MAS, LA PRIMERA)
+   - Botón BORRAR TODO (turquesa #51cbce)
+   - Formulario con 25 campos numéricos en grid de 3 columnas:
+     * General, Directo, Pale
+     * Cash3 Straight, Cash3 Box, Play4 Straight
+     * Play4 Box, Super Pale, Bolita 1, Bolita 2
+     * Singulación 1, 2, 3
+     * Pick5 Straight, Pick5 Box, Pick Two
+     * Cash3 Front Straight/Box, Cash3 Back Straight/Box
+     * Pick Two Front/Back/Middle
+     * Panamá, Tripleta
+   - Botón CREAR (turquesa #51cbce)
+   - Tabla "Lista de excedentes" con columnas: #, Sorteo, Tipo de jugada, Excedente, Fecha, Usuario, Acciones
+   - Mockup data con funcionalidad de crear/eliminar
+
+2. `frontend-v1/src/components/excedentes/ExcessesReport.jsx` (297 líneas)
+   - Título "Reporte de excedentes" centrado
+   - Multi-select Sorteo con indicador "X seleccionadas" (11 sorteos disponibles)
+   - Multi-select Tipo de jugada con indicador "X seleccionadas" (13 tipos disponibles)
+   - Botón REFRESCAR (turquesa #51cbce)
+   - Input "Filtrado rápido" con icono de búsqueda
+   - Tabla con 6 columnas: Sorteo, Tipo de jugada, Excedente, Fecha de creación, Usuario, Acciones
+   - Botones de acciones: info (azul), edit (azul), delete (rojo)
+   - Footer "Mostrando X de Y entradas"
+   - 8 registros de mockup data
+   - Funcionalidad de filtrado por multi-select y quick filter
+
+**V2 (Material-UI):**
+1. `frontend-v2/src/components/features/excesses/ManageExcesses/index.jsx` (357 líneas)
+   - Misma funcionalidad que V1 pero con componentes Material-UI
+   - Box, Card, CardContent, Typography
+   - Select, MenuItem, FormControl, InputLabel
+   - TextField con InputProps para alineación derecha
+   - Grid container/item para layout responsive
+   - Button con sx prop para estilos
+   - Table, TableContainer, TableHead, TableBody, TableRow, TableCell
+   - IconButton con DeleteIcon
+
+2. `frontend-v2/src/components/features/excesses/ExcessesReport/index.jsx` (319 líneas)
+   - Misma funcionalidad que V1 pero con componentes MUI
+   - Multi-select con OutlinedInput y renderValue personalizado
+   - TextField con endAdornment para icono de búsqueda
+   - Chip components (no usado en mockup pero disponible)
+   - IconButton para acciones: InfoIcon, EditIcon, DeleteIcon
+   - Table responsiva con hover effects
+
+**Archivos Modificados:**
+
+**V1:**
+- `frontend-v1/src/App.jsx` (líneas 62-63, 141-142)
+  - Agregados imports: ManageExcesses, ExcessesReport
+  - Agregadas rutas:
+    * `/excedentes/manejar` → ManageExcesses
+    * `/excedentes/reporte` → ExcessesReport
+
+**V2:**
+- `frontend-v2/src/App.jsx` (líneas 88-89, 174-175)
+  - Agregados lazy imports: ManageExcessesMUI, ExcessesReportMUI
+  - Agregadas rutas con Suspense:
+    * `/surpluses/manage` → ManageExcessesMUI
+    * `/surpluses/report` → ExcessesReportMUI
+
+**Menú de Navegación (Ya Configurado):**
+- V1: `frontend-v1/src/constants/menuItems.js` - Módulo "EXCEDENTES" con submenu Manejar/Reporte
+- V2: `frontend-v2/src/constants/menuItems.js` - Módulo "EXCEDENTES" con submenu Manejar/Reporte
+- ✅ Rutas ya estaban correctamente conectadas al menú desde el inicio
+
+**Solución Aplicada:**
+
+1. Análisis de aplicación Vue.js original con Playwright
+2. Identificación de campos y funcionalidades específicas
+3. Creación de componentes V1 con Bootstrap 5 y estilos consistentes
+4. Creación de componentes V2 con Material-UI v5
+5. Agregado de rutas en ambos App.jsx
+6. Verificación de conexión con menú de navegación (ya configurado)
+
+**Testing con Playwright:**
+
+**V1 (Bootstrap):**
+- ✅ ManageExcesses: Formulario con 25 campos funcionando, dropdown sorteo, botones BORRAR TODO y CREAR
+- ✅ ExcessesReport: Multi-selects (11 sorteos, 13 tipos), botón REFRESCAR, tabla con 8 registros mockup
+- ✅ Quick filter funcional
+- ✅ Screenshots capturados: v1-excedentes-manejar.png, v1-excedentes-reporte.png, v1-excedentes-reporte-con-datos.png
+
+**V2 (Material-UI):**
+- ✅ ManageExcesses: Formulario Material-UI con 25 campos, dropdown sorteo, botones funcionando
+- ✅ ExcessesReport: Multi-selects con indicadores "X seleccionadas", tabla con 8 registros
+- ✅ Estilos coherentes con sistema de diseño (#51cbce)
+- ✅ Screenshots capturados: v2-excedentes-manejar.png, v2-excedentes-reporte.png, v2-excedentes-reporte-con-datos.png
+
+**GitHub Issues:**
+- Issue #44: [Epic] Módulo EXCEDENTES - 2 subsecciones
+- Issue #45: Implementar Manejar excedentes (V1 + V2)
+- Issue #46: Implementar Reporte de excedentes (V1 + V2)
+- ✅ Todos completados exitosamente
+
+**Resultado:**
+- ✅ Módulo Excedentes completamente implementado en V1 y V2
+- ✅ 2 componentes por frontend (Manejar + Reporte)
+- ✅ Rutas conectadas correctamente al menú
+- ✅ Mockup data: 25 campos numéricos, 8 registros de reporte, 11 sorteos, 13 tipos de jugada
+- ✅ Funcionalidades: filtros multi-select, quick filter, crear/eliminar excedentes, BORRAR TODO
+- ✅ Testing completo con Playwright
+- ✅ Screenshots capturados como evidencia
+- ✅ Coherencia de diseño mantenida (color turquesa #51cbce, tipografía Montserrat)
+
+**Características Técnicas:**
+
+**Validación de Inputs:**
+- Solo acepta números y decimales (regex: `/^\d*\.?\d*$/`)
+- Placeholder "0.00" en todos los campos
+- Alineación derecha para valores numéricos
+
+**Multi-Select Implementation:**
+- V1: HTML native `<select multiple>` con indicador de cantidad
+- V2: Material-UI Select con `renderValue` personalizado
+
+**Estado y Gestión:**
+- useState para formularios y tablas
+- useEffect para inicialización y filtrado en tiempo real
+- Transformación de datos (string → number al guardar)
+
+**Mockup Data Structure:**
+```javascript
+const mockExcess = {
+  id: 1,
+  draw: 'Anguila 10am',
+  betType: 'Directo',
+  excess: 1000.00,
+  date: '18/11/2025',
+  user: 'admin'
+};
+```
+
+**Lección Aprendida:**
+1. El menú ya tenía las rutas configuradas, solo faltaba crear los componentes
+2. Multi-select en HTML nativo requiere manejo manual de selectedOptions
+3. Material-UI simplifica multi-select con mejor UX
+4. Grid de 3 columnas se adapta bien tanto en Bootstrap como en MUI (Grid con xs/sm/md)
+5. Mockup data facilita el desarrollo y testing sin backend
+
+**Próximos Pasos (Futuro):**
+- Conectar a API real para CRUD de excedentes
+- Implementar paginación en tabla de reportes
+- Agregar validaciones de negocio (límites, rangos)
+- Exportar reportes a PDF/Excel
+
+---
+
 ## 🔑 CREDENCIALES DE PRUEBA
 
 ### Login

@@ -59,6 +59,8 @@ import TransactionsSummary from '@components/transactions/TransactionsSummary'
 import ExpenseCategories from '@components/expenses/ExpenseCategories'
 import CreateLoan from '@components/loans/CreateLoan'
 import LoansList from '@components/loans/LoansList'
+import ManageExcesses from '@components/excedentes/ManageExcesses'
+import ExcessesReport from '@components/excedentes/ExcessesReport'
 
 function App() {
   return (
@@ -136,6 +138,8 @@ function App() {
                 <Route path="/expenses/categories" element={<ExpenseCategories />} />
                 <Route path="/prestamos/crear" element={<CreateLoan />} />
                 <Route path="/prestamos/lista" element={<LoansList />} />
+                <Route path="/excedentes/manejar" element={<ManageExcesses />} />
+                <Route path="/excedentes/reporte" element={<ExcessesReport />} />
                 <Route path="/test/permissions" element={<TestPermissions />} />
                 <Route path="/test/multi-zone" element={<TestMultiZone />} />
                 <Route path="/test/react-multiselect" element={<TestReactMultiselect />} />

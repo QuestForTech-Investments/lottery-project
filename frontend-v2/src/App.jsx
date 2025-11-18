@@ -84,6 +84,10 @@ const ExpenseCategoriesMUI = lazy(() => import('@components/features/expenses/Ex
 const CreateLoanMUI = lazy(() => import('@components/features/loans/CreateLoan'))
 const LoansListMUI = lazy(() => import('@components/features/loans/LoansList'))
 
+// Excesses feature components
+const ManageExcessesMUI = lazy(() => import('@components/features/excesses/ManageExcesses'))
+const ExcessesReportMUI = lazy(() => import('@components/features/excesses/ExcessesReport'))
+
 function App() {
   return (
     <>
@@ -167,6 +171,8 @@ function App() {
                           <Route path="/expenses/categories" element={<Suspense fallback={<LazyLoadingFallback />}><ExpenseCategoriesMUI /></Suspense>} />
                           <Route path="/loans/new" element={<Suspense fallback={<LazyLoadingFallback />}><CreateLoanMUI /></Suspense>} />
                           <Route path="/loans/list" element={<Suspense fallback={<LazyLoadingFallback />}><LoansListMUI /></Suspense>} />
+                          <Route path="/surpluses/manage" element={<Suspense fallback={<LazyLoadingFallback />}><ManageExcessesMUI /></Suspense>} />
+                          <Route path="/surpluses/report" element={<Suspense fallback={<LazyLoadingFallback />}><ExcessesReportMUI /></Suspense>} />
                         </Routes>
                       </MainLayout>
                   </ErrorBoundary>
