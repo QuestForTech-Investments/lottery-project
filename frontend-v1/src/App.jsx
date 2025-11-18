@@ -50,6 +50,7 @@ import BettingPoolBalances from '@components/balances/BettingPoolBalances'
 import BankBalances from '@components/balances/BankBalances'
 import ZoneBalances from '@components/balances/ZoneBalances'
 import GroupBalances from '@components/balances/GroupBalances'
+import CollectionsPaymentsList from '@components/CollectionsPaymentsList'
 
 function App() {
   return (
@@ -118,6 +119,7 @@ function App() {
                 <Route path="/balances/bancos" element={<BankBalances />} />
                 <Route path="/balances/zonas" element={<ZoneBalances />} />
                 <Route path="/balances/grupos" element={<GroupBalances />} />
+                <Route path="/cobros-pagos/lista" element={<CollectionsPaymentsList />} />
                 <Route path="/test/permissions" element={<TestPermissions />} />
                 <Route path="/test/multi-zone" element={<TestMultiZone />} />
                 <Route path="/test/react-multiselect" element={<TestReactMultiselect />} />

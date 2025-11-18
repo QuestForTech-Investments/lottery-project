@@ -67,6 +67,9 @@ const BankBalancesMUI = lazy(() => import('@components/features/balances/BankBal
 const ZoneBalancesMUI = lazy(() => import('@components/features/balances/ZoneBalances'))
 const GroupBalancesMUI = lazy(() => import('@components/features/balances/GroupBalances'))
 
+// Payments feature components
+const CollectionsPaymentsListMUI = lazy(() => import('@components/features/payments/CollectionsPaymentsList'))
+
 function App() {
   return (
     <>
@@ -141,6 +144,7 @@ function App() {
                           <Route path="/balances/banks" element={<BankBalancesMUI />} />
                           <Route path="/balances/zones" element={<ZoneBalancesMUI />} />
                           <Route path="/balances/groups" element={<GroupBalancesMUI />} />
+                          <Route path="/collections-payments/list" element={<CollectionsPaymentsListMUI />} />
                         </Routes>
                       </MainLayout>
                   </ErrorBoundary>
