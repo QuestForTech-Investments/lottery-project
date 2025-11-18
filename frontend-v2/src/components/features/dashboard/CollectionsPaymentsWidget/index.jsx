@@ -181,121 +181,131 @@ const CollectionsPaymentsWidget = () => {
 
         {/* Form */}
         <Box component="form" onSubmit={handleSubmit}>
-          {/* Código de banca */}
-          <FormControl fullWidth size="small" sx={{ mb: 2 }}>
-            <InputLabel
+          {/* Código de banca - Horizontal layout */}
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+            <Typography
               sx={{
                 fontSize: '12px',
                 color: '#888',
-                '&.Mui-focused': {
-                  color: '#888'
-                }
+                minWidth: '110px',
+                mr: 2
               }}
             >
               Código de banca
-            </InputLabel>
-            <Select
-              value={bettingPoolCode}
-              onChange={(e) => setBettingPoolCode(e.target.value)}
-              label="Código de banca"
-              required
-              sx={{
-                fontSize: '13px',
-                color: '#666',
-                '& .MuiOutlinedInput-notchedOutline': {
-                  borderColor: '#ddd'
-                }
-              }}
-            >
-              <MenuItem value="">
-                <em>Seleccione</em>
-              </MenuItem>
-              {bettingPools.map((pool) => (
-                <MenuItem
-                  key={pool.bettingPoolId || pool.id}
-                  value={pool.bettingPoolCode || pool.code}
-                  sx={{ fontSize: '13px' }}
-                >
-                  {pool.bettingPoolCode || pool.code} - {pool.bettingPoolName || pool.name}
+            </Typography>
+            <FormControl fullWidth size="small">
+              <Select
+                value={bettingPoolCode}
+                onChange={(e) => setBettingPoolCode(e.target.value)}
+                required
+                displayEmpty
+                sx={{
+                  fontSize: '13px',
+                  color: '#666',
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    borderColor: '#ddd'
+                  }
+                }}
+              >
+                <MenuItem value="">
+                  <em>Seleccione</em>
                 </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+                {bettingPools.map((pool) => (
+                  <MenuItem
+                    key={pool.bettingPoolId || pool.id}
+                    value={pool.bettingPoolCode || pool.code}
+                    sx={{ fontSize: '13px' }}
+                  >
+                    {pool.bettingPoolCode || pool.code} - {pool.bettingPoolName || pool.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
 
-          {/* Banco */}
-          <FormControl fullWidth size="small" sx={{ mb: 2 }}>
-            <InputLabel
+          {/* Banco - Horizontal layout */}
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+            <Typography
               sx={{
                 fontSize: '12px',
                 color: '#888',
-                '&.Mui-focused': {
-                  color: '#888'
-                }
+                minWidth: '110px',
+                mr: 2
               }}
             >
               Banco
-            </InputLabel>
-            <Select
-              value={bankId}
-              onChange={(e) => setBankId(e.target.value)}
-              label="Banco"
+            </Typography>
+            <Box sx={{ width: '100%' }}>
+              <FormControl fullWidth size="small">
+                <Select
+                  value={bankId}
+                  onChange={(e) => setBankId(e.target.value)}
+                  displayEmpty
+                  sx={{
+                    fontSize: '13px',
+                    color: '#666',
+                    '& .MuiOutlinedInput-notchedOutline': {
+                      borderColor: '#ddd'
+                    }
+                  }}
+                >
+                  <MenuItem value="">
+                    <em>Seleccione</em>
+                  </MenuItem>
+                  {banks.map((bank) => (
+                    <MenuItem
+                      key={bank.bankId || bank.id}
+                      value={bank.bankId || bank.id}
+                      sx={{ fontSize: '13px' }}
+                    >
+                      {bank.bankName || bank.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              {banks.length === 0 && (
+                <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                  No hay bancos disponibles
+                </Typography>
+              )}
+            </Box>
+          </Box>
+
+          {/* Monto - Horizontal layout */}
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+            <Typography
               sx={{
-                fontSize: '13px',
-                color: '#666',
-                '& .MuiOutlinedInput-notchedOutline': {
-                  borderColor: '#ddd'
-                }
+                fontSize: '12px',
+                color: '#888',
+                minWidth: '110px',
+                mr: 2
               }}
             >
-              <MenuItem value="">
-                <em>Seleccione</em>
-              </MenuItem>
-              {banks.map((bank) => (
-                <MenuItem
-                  key={bank.bankId || bank.id}
-                  value={bank.bankId || bank.id}
-                  sx={{ fontSize: '13px' }}
-                >
-                  {bank.bankName || bank.name}
-                </MenuItem>
-              ))}
-            </Select>
-            {banks.length === 0 && (
-              <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
-                No hay bancos disponibles
-              </Typography>
-            )}
-          </FormControl>
-
-          {/* Monto */}
-          <TextField
-            fullWidth
-            size="small"
-            label="Monto"
-            type="number"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            placeholder="0.00"
-            inputProps={{
-              step: '0.01',
-              min: '0'
-            }}
-            required
-            sx={{
-              mb: 2,
-              '& .MuiInputLabel-root': {
-                fontSize: '12px',
-                color: '#888'
-              },
-              '& .MuiOutlinedInput-root': {
-                fontSize: '13px',
-                color: '#666',
-                '& fieldset': {
-                  borderColor: '#ddd'
+              Monto
+            </Typography>
+            <TextField
+              fullWidth
+              size="small"
+              type="number"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              placeholder="0.00"
+              inputProps={{
+                step: '0.01',
+                min: '0'
+              }}
+              required
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  fontSize: '13px',
+                  color: '#666',
+                  '& fieldset': {
+                    borderColor: '#ddd'
+                  }
                 }
-              }
-            }}
-          />
+              }}
+            />
+          </Box>
 
           {/* Error message */}
           {error && (
@@ -315,7 +325,6 @@ const CollectionsPaymentsWidget = () => {
           <Box sx={{ textAlign: 'center' }}>
             <Button
               type="submit"
-              variant="contained"
               disabled={loading}
               sx={{
                 backgroundColor: '#51cbce',
@@ -326,11 +335,15 @@ const CollectionsPaymentsWidget = () => {
                 fontWeight: 600,
                 textTransform: 'uppercase',
                 minWidth: '150px',
+                border: 'none',
+                boxShadow: 'none',
                 '&:hover': {
-                  backgroundColor: '#45b0b3'
+                  backgroundColor: '#45b0b3',
+                  boxShadow: 'none'
                 },
                 '&:disabled': {
-                  backgroundColor: '#ddd'
+                  backgroundColor: '#ddd',
+                  color: '#999'
                 }
               }}
             >

@@ -4,6 +4,105 @@ Este archivo proporciona contexto a Claude Code sobre el sistema completo de lot
 
 ---
 
+## ⚠️ INSTRUCCIONES CRÍTICAS PARA CLAUDE CODE
+
+### 📖 LEER ESTE ARCHIVO ES OBLIGATORIO
+
+**PARA EL USUARIO:**
+Al inicio de cada nueva sesión con Claude Code, SIEMPRE escribe:
+```
+Lee el archivo CLAUDE.md antes de hacer cualquier cambio
+```
+
+**PARA CLAUDE CODE:**
+Antes de realizar CUALQUIER modificación en el proyecto (código, CSS, componentes, etc.):
+
+1. ✅ **LEER** `/home/jorge/projects/lottery-project/CLAUDE.md` COMPLETO
+2. ✅ **VERIFICAR** secciones relevantes:
+   - Regla de Idioma para Código (línea 666)
+   - Coherencia de Diseño en Formularios (línea 809)
+   - Nomenclatura y Convenciones (línea 654)
+   - Fixes Recientes (línea 529 y 584)
+   - Patrones del proyecto
+3. ✅ **APLICAR** las reglas y convenciones documentadas
+4. ✅ **USAR PLAYWRIGHT** para verificar coherencia cuando se modifiquen formularios
+
+### 🚫 NO ASUMIR - SIEMPRE VERIFICAR
+
+- ❌ NO crear componentes sin verificar convenciones de nombres
+- ❌ NO modificar formularios sin revisar otros formularios primero
+- ❌ NO usar español en nombres de variables/componentes/rutas
+- ❌ NO cambiar estilos sin verificar coherencia visual
+
+### ✅ PROCESO CORRECTO
+
+1. Usuario: "Modifica el formulario X"
+2. Claude:
+   - Lee CLAUDE.md
+   - Verifica reglas de nomenclatura
+   - Usa Playwright para revisar formularios similares (si aplica)
+   - Aplica cambios siguiendo convenciones
+   - Documenta cambios importantes en CLAUDE.md
+
+### 📝 ACTUALIZAR ESTE ARCHIVO
+
+Cuando hagas un fix o cambio importante:
+- Agregar en sección de "FIXES RECIENTES" con fecha
+- Documentar la solución aplicada
+- Incluir ejemplos de código si aplica
+
+---
+
+## 🛠️ HERRAMIENTAS Y SCRIPTS (Creados 2025-11-18)
+
+### Scripts de Verificación
+
+**1. Verificar Nomenclatura en Inglés**
+```bash
+./scripts/verify-naming.sh
+```
+- Busca nombres de archivos y componentes en español
+- Verifica que se cumplan las reglas de nomenclatura
+- Ejecutar antes de commits importantes
+
+**2. Verificar Coherencia de Diseño**
+```bash
+./scripts/check-design-consistency.sh
+```
+- Detecta colores no autorizados (ej: morado #667eea)
+- Verifica uso de Montserrat font-family
+- Compara contra DESIGN_SYSTEM.md
+
+### Configuraciones de Calidad
+
+**1. ESLint Personalizado** (`.eslintrc.custom.cjs`)
+- Reglas que refuerzan nomenclatura en inglés
+- Límites de complejidad y tamaño de archivos
+- Mejores prácticas de React Hooks
+- Uso: `npx eslint . -c .eslintrc.custom.cjs`
+
+**2. Prettier** (`.prettierrc.json`)
+- Formateo consistente de código
+- Single quotes, semi-colons, 100 caracteres
+- Uso: `npx prettier --write "frontend-v1/src/**/*.{js,jsx}"`
+
+### Documentación
+
+**DESIGN_SYSTEM.md** - Sistema de diseño completo
+- Paleta de colores corporativos (#51cbce, #28a745, etc.)
+- Tipografía (Montserrat, tamaños, pesos)
+- Sistema de espaciado (múltiplos de 8px)
+- Componentes (botones, inputs, tablas, títulos)
+- Shadows, borders, responsive breakpoints
+- **Checklist de coherencia**
+
+**Uso:**
+- Consultar ANTES de crear/modificar componentes
+- Verificar que todos los colores estén autorizados
+- Aplicar tamaños de fuente y espaciado definidos
+
+---
+
 ## 🚨 MIGRACIÓN EN CURSO - INFORMACIÓN CRÍTICA
 
 ### Objetivo Principal
@@ -56,9 +155,16 @@ npx playwright codegen https://la-numbers.apk.lol
 
 ```
 lottery-system/
-├── CLAUDE.md                    # Este archivo
+├── CLAUDE.md                    # Este archivo - Contexto del proyecto
+├── DESIGN_SYSTEM.md             # ⭐ Sistema de diseño (colores, tipografía, componentes)
 ├── README.md                    # Documentación general
 ├── .gitignore
+├── .eslintrc.custom.cjs         # ⭐ ESLint con reglas personalizadas
+├── .prettierrc.json             # ⭐ Prettier configuration
+│
+├── scripts/                     # ⭐ Scripts de utilidad
+│   ├── verify-naming.sh         # Verifica nombres en inglés
+│   └── check-design-consistency.sh  # Verifica coherencia de diseño
 │
 ├── frontend-v1/                 # Frontend Bootstrap (Legacy)
 │   ├── src/
@@ -581,6 +687,50 @@ export const getAllBetTypesWithFields = async () => {
 
 ---
 
+## 🔧 FIXES RECIENTES (2025-11-18)
+
+### Fix: Inconsistencia de Color en Título de USUARIOS > Bancas
+
+**Problema:** El título del formulario "Lista de usuarios" (USUARIOS > Bancas) tenía fondo turquesa con texto blanco, mientras que todos los demás formularios tienen títulos en texto negro sin fondo de color.
+
+**Diagnóstico:**
+- Se usó Playwright para revisar múltiples formularios:
+  - BANCAS > Lista: "Lista de bancas" - Texto negro ✅
+  - BALANCES > Bancas: "Balances de bancas" - Texto negro con línea ✅
+  - USUARIOS > Bancas: "Lista de usuarios" - Fondo turquesa ❌
+
+**Solución Aplicada:**
+
+**Archivo:** `frontend-v1/src/assets/css/user-bancas.css`
+
+```css
+/* ANTES */
+.user-bancas-card-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); /* Morado */
+  /* Luego cambiado a #51cbce (turquesa) */
+}
+.user-bancas-header-text {
+  color: white;
+}
+
+/* DESPUÉS */
+.user-bancas-card-header {
+  background: transparent;  /* Sin fondo */
+  padding: 20px;
+  text-align: center;
+  border-bottom: none;
+}
+.user-bancas-header-text {
+  color: #2c2c2c;  /* Texto negro */
+}
+```
+
+**Resultado:** Ahora el título "Lista de usuarios" es coherente con todos los demás formularios de la aplicación.
+
+**Metodología:** Se utilizó Playwright para navegar y capturar screenshots de diferentes formularios antes de hacer el cambio, asegurando coherencia visual en toda la aplicación.
+
+---
+
 ## 🔑 CREDENCIALES DE PRUEBA
 
 ### Login
@@ -663,6 +813,57 @@ curl -H "Authorization: Bearer $TOKEN" \
 | JS constants | UPPER_SNAKE_CASE | `API_BASE_URL` |
 | CSS classes | kebab-case | `prize-field-input` |
 
+### 🌍 Regla de Idioma para Código
+
+**IMPORTANTE:** Todo el código interno DEBE estar en inglés:
+
+✅ **EN INGLÉS (Siempre):**
+- Nombres de variables, funciones, métodos
+- Nombres de componentes React
+- Nombres de archivos y carpetas
+- Rutas de la aplicación (URLs)
+- Nombres de clases CSS
+- Nombres de tablas y columnas en BD
+- Comentarios de código (preferiblemente)
+- Nombres de constantes y enums
+- Props de componentes
+- Tipos TypeScript/interfaces
+
+❌ **EN ESPAÑOL (Solo para UI visible al usuario):**
+- Textos mostrados en pantalla
+- Labels de formularios
+- Mensajes de error/éxito
+- Títulos de páginas
+- Contenido de botones
+- Tooltips y ayudas
+
+**Ejemplos:**
+
+```javascript
+// ✅ CORRECTO
+const UserBancas = () => {
+  const [selectedZones, setSelectedZones] = useState([]);
+  return <h3>Lista de usuarios</h3>;  // Texto UI en español OK
+};
+
+// ❌ INCORRECTO
+const ListaUsuarios = () => {
+  const [zonasSeleccionadas, setZonasSeleccionadas] = useState([]);
+  return <h3>Lista de usuarios</h3>;
+};
+```
+
+**Rutas:**
+```javascript
+// ✅ CORRECTO
+/usuarios/bancas
+/balances/betting-pools
+
+// ❌ INCORRECTO
+/usuarios/lista-bancas
+/balances/bancas-apuestas
+```
+
 ### Service Layer Pattern
 
 ```javascript
@@ -710,6 +911,65 @@ public async Task<IActionResult> Get(int id) {
   }
 }
 ```
+
+### 🎨 Coherencia de Diseño en Formularios
+
+**REGLA CRÍTICA:** Al agregar o modificar cualquier formulario, SIEMPRE verificar coherencia con formularios existentes.
+
+#### Proceso Obligatorio:
+
+1. **ANTES de crear/modificar un formulario:**
+   ```bash
+   # Usar Playwright para revisar formularios similares
+   # Capturar screenshots de 2-3 formularios existentes
+   # Identificar patrones comunes
+   ```
+
+2. **Elementos a mantener coherentes:**
+   - ✅ **Títulos de página**: Color de texto, tamaño de fuente, fondo
+   - ✅ **Botones**: Colores (#51cbce para principal), tamaños, estilos
+   - ✅ **Filtros**: Posición, estilo, comportamiento
+   - ✅ **Tablas**: Headers, estilos de filas, paginación
+   - ✅ **Forms**: Labels, inputs, validaciones
+   - ✅ **Espaciado**: Márgenes y padding consistentes
+   - ✅ **Tipografía**: Montserrat font-family, tamaños consistentes
+   - ✅ **Iconos**: Font Awesome o Lucide Icons (según versión)
+
+3. **Verificación con Playwright:**
+   ```javascript
+   // Navegar a formularios similares
+   await page.goto('http://localhost:4200/bancas/lista');
+   await page.screenshot({ path: 'bancas-lista-reference.png' });
+
+   await page.goto('http://localhost:4200/balances/bancas');
+   await page.screenshot({ path: 'balances-bancas-reference.png' });
+
+   // Comparar visualmente antes de implementar
+   ```
+
+4. **Colores corporativos a respetar:**
+   ```css
+   --primary-color: #51cbce;        /* Turquesa - Botones principales */
+   --success-color: #28a745;        /* Verde - Estados exitosos */
+   --text-color: #2c2c2c;          /* Negro - Texto general */
+   --background: #f5f5f5;          /* Gris claro - Fondo de página */
+   ```
+
+5. **Ejemplo de verificación:**
+   ```
+   ❌ INCORRECTO: Crear título con fondo morado
+   ✅ CORRECTO: Revisar 3 formularios existentes → todos tienen texto negro → usar texto negro
+   ```
+
+**Si encuentras inconsistencia en formularios existentes:**
+- Documentar en GitHub Issue
+- Corregir ANTES de crear nuevo formulario
+- Actualizar este CLAUDE.md con el fix
+
+**Referencia del último fix (2025-11-18):**
+- Se detectó título con fondo turquesa en USUARIOS > Bancas
+- Se revisaron múltiples formularios con Playwright
+- Se corrigió para mantener coherencia (texto negro, sin fondo)
 
 ---
 

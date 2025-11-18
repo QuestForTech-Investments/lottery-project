@@ -1,14 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import {
   Box,
-  Card,
-  CardContent,
+  Paper,
   Typography,
-  TextField,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
   Button,
   Table,
   TableBody,
@@ -16,293 +10,310 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  TableFooter,
-  Paper,
-  Chip,
-  CircularProgress,
   Alert,
-  Grid
+  IconButton
 } from '@mui/material';
-import { Refresh as RefreshIcon } from '@mui/icons-material';
-import api from '../../../../services/api';
+import { Settings, ArrowUpward, ArrowDownward } from '@mui/icons-material';
+import DateFilter from '../../balances/common/DateFilter';
+import QuickFilter from '../../balances/common/QuickFilter';
+import CreateTransactionModal from '../CreateTransactionModal';
+
+// Mock data for development
+const MOCK_TRANSACTIONS = [
+  {
+    id: 1,
+    numero: 'CP-001',
+    fecha: '18/11/2025',
+    hora: '09:30:00',
+    creadoPor: 'admin',
+    notas: 'Cobro banca LA CENTRAL 01'
+  },
+  {
+    id: 2,
+    numero: 'CP-002',
+    fecha: '18/11/2025',
+    hora: '10:15:00',
+    creadoPor: 'admin',
+    notas: 'Pago a LA CENTRAL 10'
+  },
+  {
+    id: 3,
+    numero: 'CP-003',
+    fecha: '18/11/2025',
+    hora: '11:00:00',
+    creadoPor: 'supervisor',
+    notas: 'Cobro banca LA CENTRAL 16'
+  },
+  {
+    id: 4,
+    numero: 'CP-004',
+    fecha: '18/11/2025',
+    hora: '12:30:00',
+    creadoPor: 'admin',
+    notas: 'Pago mensual CARIBBEAN 186'
+  },
+  {
+    id: 5,
+    numero: 'CP-005',
+    fecha: '18/11/2025',
+    hora: '14:00:00',
+    creadoPor: 'supervisor',
+    notas: 'Cobro semanal grupo Guyana'
+  },
+  {
+    id: 6,
+    numero: 'CP-006',
+    fecha: '17/11/2025',
+    hora: '16:45:00',
+    creadoPor: 'admin',
+    notas: 'Pago comisiones LA CENTRAL 63'
+  },
+  {
+    id: 7,
+    numero: 'CP-007',
+    fecha: '17/11/2025',
+    hora: '17:30:00',
+    creadoPor: 'supervisor',
+    notas: 'Cobro balance negativo LA CENTRAL 101'
+  },
+  {
+    id: 8,
+    numero: 'CP-008',
+    fecha: '17/11/2025',
+    hora: '18:00:00',
+    creadoPor: 'admin',
+    notas: 'Pago premios CARIBBEAN 198'
+  }
+];
 
 /**
  * CollectionsPaymentsList
- * Material-UI version of Collections/Payments list
- * Based on Vue.js app analysis
+ * EXACT replica of Vue.js app: https://la-numbers.apk.lol/#/simplified-accountable-transaction-groups
+ * Material-UI version with consistent styling
  */
 const CollectionsPaymentsList = () => {
-  const [transactions, setTransactions] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [filters, setFilters] = useState({
-    startDate: '',
-    endDate: '',
-    type: 'all', // 'all', 'collection', 'payment'
-    bettingPoolCode: ''
+  const [startDate, setStartDate] = useState(() => {
+    const today = new Date();
+    return today.toISOString().split('T')[0];
   });
+  const [endDate, setEndDate] = useState(() => {
+    const today = new Date();
+    return today.toISOString().split('T')[0];
+  });
+  const [quickFilter, setQuickFilter] = useState('');
+  const [transactions] = useState(MOCK_TRANSACTIONS);
+  const [sortColumn, setSortColumn] = useState(null);
+  const [sortDirection, setSortDirection] = useState('asc');
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
-  useEffect(() => {
-    loadTransactions();
+  const handleFilter = useCallback(() => {
+    console.log('Filtering...', { startDate, endDate });
+    // TODO: Call API endpoint when confirmed
+  }, [startDate, endDate]);
+
+  const handleSort = useCallback((column) => {
+    if (sortColumn === column) {
+      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortColumn(column);
+      setSortDirection('asc');
+    }
+  }, [sortColumn]);
+
+  const handleCreate = useCallback(() => {
+    setShowCreateModal(true);
   }, []);
 
-  const loadTransactions = async () => {
-    setLoading(true);
-    setError(null);
+  // Filtered data
+  const filteredData = useMemo(() => {
+    let result = [...transactions];
 
-    try {
-      // TODO: Verify exact endpoint from original app
-      // For now, using mock data until API endpoint is confirmed
-
-      // Mock data for demonstration
-      const mockData = [
-        {
-          id: 1,
-          type: 'collection',
-          bettingPoolCode: 'LAN-0001',
-          bettingPoolName: 'Banca Central',
-          bankName: 'Banco Popular',
-          amount: 5000.00,
-          createdAt: '2025-11-18T10:30:00',
-          createdBy: 'admin'
-        },
-        {
-          id: 2,
-          type: 'payment',
-          bettingPoolCode: 'LAN-0010',
-          bettingPoolName: 'Banca Norte',
-          bankName: 'Banco BHD',
-          amount: 3000.00,
-          createdAt: '2025-11-18T11:15:00',
-          createdBy: 'admin'
-        },
-        {
-          id: 3,
-          type: 'collection',
-          bettingPoolCode: 'LAN-0016',
-          bettingPoolName: 'Banca Sur',
-          bankName: 'Banco Popular',
-          amount: 7500.00,
-          createdAt: '2025-11-18T12:00:00',
-          createdBy: 'admin'
-        }
-      ];
-
-      setTransactions(mockData);
-    } catch (err) {
-      console.error('Error loading collections/payments:', err);
-      setError('Error al cargar los cobros y pagos');
-    } finally {
-      setLoading(false);
+    // Quick filter
+    if (quickFilter) {
+      const search = quickFilter.toLowerCase();
+      result = result.filter(item =>
+        Object.values(item).some(val =>
+          String(val).toLowerCase().includes(search)
+        )
+      );
     }
-  };
 
-  const handleFilterChange = (field, value) => {
-    setFilters(prev => ({ ...prev, [field]: value }));
-  };
+    // Sort
+    if (sortColumn) {
+      result.sort((a, b) => {
+        const aVal = a[sortColumn];
+        const bVal = b[sortColumn];
+        if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+        if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
 
-  const filteredTransactions = transactions.filter(t => {
-    if (filters.type !== 'all' && t.type !== filters.type) return false;
-    if (filters.bettingPoolCode && !t.bettingPoolCode.includes(filters.bettingPoolCode)) return false;
-    return true;
-  });
-
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('es-DO', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  const formatCurrency = (amount) => {
-    return `$${amount.toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  };
-
-  const getTotalAmount = () => {
-    return filteredTransactions.reduce((sum, t) => {
-      return sum + (t.type === 'collection' ? t.amount : -t.amount);
-    }, 0);
-  };
+    return result;
+  }, [transactions, quickFilter, sortColumn, sortDirection]);
 
   return (
     <Box sx={{ p: 3 }}>
-      <Card>
-        <CardContent>
-          <Typography variant="h5" component="h2" gutterBottom>
-            Cobros & Pagos - Lista
-          </Typography>
+      <Paper sx={{ p: 3 }}>
+        {/* Title */}
+        <Typography
+          variant="h5"
+          sx={{
+            textAlign: 'center',
+            fontWeight: 400,
+            mb: 3
+          }}
+        >
+          Cobros y pagos
+        </Typography>
 
-          {/* Filters */}
-          <Grid container spacing={2} sx={{ mb: 3 }}>
-            <Grid item xs={12} md={3}>
-              <TextField
-                fullWidth
-                size="small"
-                type="date"
-                label="Fecha inicio"
-                value={filters.startDate}
-                onChange={(e) => handleFilterChange('startDate', e.target.value)}
-                InputLabelProps={{ shrink: true }}
-              />
-            </Grid>
-            <Grid item xs={12} md={3}>
-              <TextField
-                fullWidth
-                size="small"
-                type="date"
-                label="Fecha fin"
-                value={filters.endDate}
-                onChange={(e) => handleFilterChange('endDate', e.target.value)}
-                InputLabelProps={{ shrink: true }}
-              />
-            </Grid>
-            <Grid item xs={12} md={3}>
-              <FormControl fullWidth size="small">
-                <InputLabel>Tipo</InputLabel>
-                <Select
-                  value={filters.type}
-                  onChange={(e) => handleFilterChange('type', e.target.value)}
-                  label="Tipo"
-                >
-                  <MenuItem value="all">Todos</MenuItem>
-                  <MenuItem value="collection">Cobros</MenuItem>
-                  <MenuItem value="payment">Pagos</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} md={3}>
-              <TextField
-                fullWidth
-                size="small"
-                label="Código de banca"
-                placeholder="Filtrar por código..."
-                value={filters.bettingPoolCode}
-                onChange={(e) => handleFilterChange('bettingPoolCode', e.target.value)}
-              />
-            </Grid>
-          </Grid>
+        {/* Filters Section */}
+        <Box sx={{ mb: 3 }}>
+          <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap', mb: 2 }}>
+            {/* Start Date Filter */}
+            <DateFilter
+              value={startDate}
+              onChange={setStartDate}
+              label="Fecha inicial"
+            />
 
-          <Box sx={{ mb: 3 }}>
-            <Button
-              variant="contained"
-              startIcon={<RefreshIcon />}
-              onClick={loadTransactions}
-              sx={{
-                bgcolor: '#51cbce',
-                '&:hover': {
-                  bgcolor: '#45b0b3'
-                }
-              }}
-            >
-              Refrescar
-            </Button>
+            {/* End Date Filter */}
+            <DateFilter
+              value={endDate}
+              onChange={setEndDate}
+              label="Fecha final"
+            />
           </Box>
+        </Box>
 
-          {/* Error message */}
-          {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {error}
-            </Alert>
-          )}
+        {/* Action Button */}
+        <Box sx={{ mb: 3 }}>
+          <Button
+            variant="contained"
+            onClick={handleFilter}
+            sx={{
+              backgroundColor: '#51cbce',
+              '&:hover': { backgroundColor: '#3fb5b8' },
+              textTransform: 'uppercase',
+              fontWeight: 600
+            }}
+          >
+            Filtrar
+          </Button>
+        </Box>
 
-          {/* Loading state */}
-          {loading && (
-            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-              <CircularProgress />
-            </Box>
-          )}
+        {/* Quick Filter */}
+        <Box sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end' }}>
+          <QuickFilter
+            value={quickFilter}
+            onChange={setQuickFilter}
+            placeholder="Filtrado rápido"
+          />
+        </Box>
 
-          {/* Table */}
-          {!loading && (
-            <TableContainer component={Paper} variant="outlined">
-              <Table size="small">
-                <TableHead>
-                  <TableRow sx={{ bgcolor: 'grey.100' }}>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Tipo</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Fecha</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Código Banca</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Nombre Banca</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Banco</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold', textAlign: 'right' }}>Monto</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Creado por</TableCell>
+        {/* Data Table */}
+        <TableContainer component={Paper} variant="outlined">
+          <Table size="small">
+            <TableHead sx={{ bgcolor: '#f5f5f5' }}>
+              <TableRow>
+                <TableCell
+                  onClick={() => handleSort('numero')}
+                  sx={{
+                    cursor: 'pointer',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    py: 1.5
+                  }}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    Número
+                    {sortColumn === 'numero' && (
+                      sortDirection === 'asc' ?
+                        <ArrowUpward sx={{ fontSize: '16px' }} /> :
+                        <ArrowDownward sx={{ fontSize: '16px' }} />
+                    )}
+                  </Box>
+                </TableCell>
+                <TableCell sx={{ fontSize: '13px', fontWeight: 600, py: 1.5 }}>Fecha</TableCell>
+                <TableCell sx={{ fontSize: '13px', fontWeight: 600, py: 1.5 }}>Hora</TableCell>
+                <TableCell sx={{ fontSize: '13px', fontWeight: 600, py: 1.5 }}>Creado por</TableCell>
+                <TableCell sx={{ fontSize: '13px', fontWeight: 600, py: 1.5 }}>Notas</TableCell>
+                <TableCell sx={{ fontSize: '13px', fontWeight: 600, py: 1.5, textAlign: 'center' }}>
+                  <Settings sx={{ fontSize: '18px' }} />
+                </TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {filteredData.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} sx={{ py: 4 }}>
+                    <Alert
+                      severity="info"
+                      sx={{
+                        bgcolor: '#d1ecf1',
+                        color: '#0c5460',
+                        border: '1px solid #bee5eb',
+                        '& .MuiAlert-icon': {
+                          color: '#0c5460'
+                        }
+                      }}
+                    >
+                      No hay entradas disponibles
+                    </Alert>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredData.map((transaction) => (
+                  <TableRow key={transaction.id} hover>
+                    <TableCell sx={{ fontSize: '13px' }}>{transaction.numero}</TableCell>
+                    <TableCell sx={{ fontSize: '13px' }}>{transaction.fecha}</TableCell>
+                    <TableCell sx={{ fontSize: '13px' }}>{transaction.hora}</TableCell>
+                    <TableCell sx={{ fontSize: '13px' }}>{transaction.creadoPor}</TableCell>
+                    <TableCell sx={{ fontSize: '13px' }}>{transaction.notas}</TableCell>
+                    <TableCell sx={{ textAlign: 'center' }}>
+                      <IconButton size="small">
+                        <Settings sx={{ fontSize: '16px' }} />
+                      </IconButton>
+                    </TableCell>
                   </TableRow>
-                </TableHead>
-                <TableBody>
-                  {filteredTransactions.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
-                        <Typography variant="body2" color="text.secondary">
-                          No se encontraron transacciones
-                        </Typography>
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    filteredTransactions.map((transaction) => (
-                      <TableRow key={transaction.id} hover>
-                        <TableCell>
-                          <Chip
-                            label={transaction.type === 'collection' ? 'COBRO' : 'PAGO'}
-                            size="small"
-                            sx={{
-                              bgcolor: transaction.type === 'collection' ? 'success.main' : 'error.main',
-                              color: 'white',
-                              fontSize: '0.75rem'
-                            }}
-                          />
-                        </TableCell>
-                        <TableCell>{formatDate(transaction.createdAt)}</TableCell>
-                        <TableCell>{transaction.bettingPoolCode}</TableCell>
-                        <TableCell>{transaction.bettingPoolName}</TableCell>
-                        <TableCell>{transaction.bankName || '-'}</TableCell>
-                        <TableCell
-                          sx={{
-                            textAlign: 'right',
-                            fontWeight: 'bold',
-                            color: transaction.type === 'collection' ? 'success.main' : 'error.main'
-                          }}
-                        >
-                          {transaction.type === 'collection' ? '+' : '-'}
-                          {formatCurrency(transaction.amount)}
-                        </TableCell>
-                        <TableCell>{transaction.createdBy}</TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-                {filteredTransactions.length > 0 && (
-                  <TableFooter>
-                    <TableRow sx={{ bgcolor: 'grey.100' }}>
-                      <TableCell colSpan={5} sx={{ fontWeight: 'bold', textAlign: 'right' }}>
-                        TOTAL:
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          textAlign: 'right',
-                          fontWeight: 'bold',
-                          fontSize: '1rem',
-                          color: getTotalAmount() >= 0 ? 'success.main' : 'error.main'
-                        }}
-                      >
-                        {formatCurrency(getTotalAmount())}
-                      </TableCell>
-                      <TableCell></TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell colSpan={7} sx={{ textAlign: 'right', fontSize: '0.875rem', color: 'text.secondary' }}>
-                        {filteredTransactions.length} transaccion(es)
-                      </TableCell>
-                    </TableRow>
-                  </TableFooter>
-                )}
-              </Table>
-            </TableContainer>
-          )}
-        </CardContent>
-      </Card>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+
+        {/* Footer */}
+        <Box sx={{ mt: 2 }}>
+          <Typography sx={{ fontSize: '13px', color: 'text.secondary' }}>
+            Mostrando {filteredData.length} de {transactions.length} entradas
+          </Typography>
+        </Box>
+
+        {/* Create Button - Centered */}
+        <Box sx={{ textAlign: 'center', mt: 4 }}>
+          <Button
+            variant="contained"
+            onClick={handleCreate}
+            sx={{
+              backgroundColor: '#51cbce',
+              '&:hover': { backgroundColor: '#3fb5b8' },
+              textTransform: 'uppercase',
+              fontWeight: 600,
+              px: 5,
+              py: 1.25,
+              minWidth: '120px'
+            }}
+          >
+            Crear
+          </Button>
+        </Box>
+      </Paper>
+
+      {/* Create Transaction Modal */}
+      <CreateTransactionModal
+        open={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+      />
     </Box>
   );
 };

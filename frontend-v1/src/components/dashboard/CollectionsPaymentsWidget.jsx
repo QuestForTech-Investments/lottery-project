@@ -159,99 +159,110 @@ const CollectionsPaymentsWidget = () => {
 
         {/* Form */}
         <form onSubmit={handleSubmit}>
-          {/* Código de banca */}
-          <div className="mb-3">
-            <label
-              className="form-label"
-              style={{
-                fontSize: '12px',
-                color: '#888',
-                marginBottom: '4px'
-              }}
-            >
-              Código de banca
-            </label>
-            <select
-              className="form-select form-select-sm"
-              value={bettingPoolCode}
-              onChange={(e) => setBettingPoolCode(e.target.value)}
-              required
-              style={{
-                fontSize: '13px',
-                color: '#666',
-                borderColor: '#ddd'
-              }}
-            >
-              <option value="">Seleccione</option>
-              {bettingPools.map((pool) => (
-                <option key={pool.bettingPoolId || pool.id} value={pool.bettingPoolCode || pool.code}>
-                  {pool.bettingPoolCode || pool.code} - {pool.bettingPoolName || pool.name}
-                </option>
-              ))}
-            </select>
+          {/* Código de banca - Horizontal layout */}
+          <div className="row mb-2 align-items-center">
+            <div className="col-auto" style={{ width: '110px' }}>
+              <label
+                className="form-label mb-0"
+                style={{
+                  fontSize: '12px',
+                  color: '#888'
+                }}
+              >
+                Código de banca
+              </label>
+            </div>
+            <div className="col">
+              <select
+                className="form-select form-select-sm"
+                value={bettingPoolCode}
+                onChange={(e) => setBettingPoolCode(e.target.value)}
+                required
+                style={{
+                  fontSize: '13px',
+                  color: '#666',
+                  borderColor: '#ddd'
+                }}
+              >
+                <option value="">Seleccione</option>
+                {bettingPools.map((pool) => (
+                  <option key={pool.bettingPoolId || pool.id} value={pool.bettingPoolCode || pool.code}>
+                    {pool.bettingPoolCode || pool.code} - {pool.bettingPoolName || pool.name}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
-          {/* Banco */}
-          <div className="mb-3">
-            <label
-              className="form-label"
-              style={{
-                fontSize: '12px',
-                color: '#888',
-                marginBottom: '4px'
-              }}
-            >
-              Banco
-            </label>
-            <select
-              className="form-select form-select-sm"
-              value={bankId}
-              onChange={(e) => setBankId(e.target.value)}
-              style={{
-                fontSize: '13px',
-                color: '#666',
-                borderColor: '#ddd'
-              }}
-            >
-              <option value="">Seleccione</option>
-              {banks.map((bank) => (
-                <option key={bank.bankId || bank.id} value={bank.bankId || bank.id}>
-                  {bank.bankName || bank.name}
-                </option>
-              ))}
-            </select>
-            {banks.length === 0 && (
-              <small className="text-muted">No hay bancos disponibles</small>
-            )}
+          {/* Banco - Horizontal layout */}
+          <div className="row mb-2 align-items-center">
+            <div className="col-auto" style={{ width: '110px' }}>
+              <label
+                className="form-label mb-0"
+                style={{
+                  fontSize: '12px',
+                  color: '#888'
+                }}
+              >
+                Banco
+              </label>
+            </div>
+            <div className="col">
+              <select
+                className="form-select form-select-sm"
+                value={bankId}
+                onChange={(e) => setBankId(e.target.value)}
+                style={{
+                  fontSize: '13px',
+                  color: '#666',
+                  borderColor: '#ddd'
+                }}
+              >
+                <option value="">Seleccione</option>
+                {banks.map((bank) => (
+                  <option key={bank.bankId || bank.id} value={bank.bankId || bank.id}>
+                    {bank.bankName || bank.name}
+                  </option>
+                ))}
+              </select>
+              {banks.length === 0 && (
+                <div>
+                  <small className="text-muted">No hay bancos disponibles</small>
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* Monto */}
-          <div className="mb-3">
-            <label
-              className="form-label"
-              style={{
-                fontSize: '12px',
-                color: '#888',
-                marginBottom: '4px'
-              }}
-            >
-              Monto
-            </label>
-            <input
-              type="number"
-              className="form-control form-control-sm"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              placeholder="0.00"
-              step="0.01"
-              min="0"
-              required
-              style={{
-                fontSize: '13px',
-                color: '#666',
-                borderColor: '#ddd'
-              }}
-            />
+          {/* Monto - Horizontal layout */}
+          <div className="row mb-3 align-items-center">
+            <div className="col-auto" style={{ width: '110px' }}>
+              <label
+                className="form-label mb-0"
+                style={{
+                  fontSize: '12px',
+                  color: '#888'
+                }}
+              >
+                Monto
+              </label>
+            </div>
+            <div className="col">
+              <input
+                type="number"
+                className="form-control form-control-sm"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                placeholder="0.00"
+                step="0.01"
+                min="0"
+                required
+                style={{
+                  fontSize: '13px',
+                  color: '#666',
+                  borderColor: '#ddd'
+                }}
+              />
+            </div>
           </div>
 
           {/* Error message */}
