@@ -68,6 +68,8 @@ import DeleteLimits from '@components/limites/DeleteLimits'
 import HotNumbers from '@components/limites/HotNumbers'
 import DebtCollectors from '@components/collectors/DebtCollectors'
 import ManageDebtCollectors from '@components/collectors/ManageDebtCollectors'
+import DrawsList from '@components/sorteos/DrawsList'
+import DrawSchedules from '@components/sorteos/DrawSchedules'
 
 function App() {
   return (
@@ -154,6 +156,8 @@ function App() {
                 <Route path="/limites/numeros-calientes" element={<HotNumbers />} />
                 <Route path="/cobradores" element={<DebtCollectors />} />
                 <Route path="/manejo-cobradores" element={<ManageDebtCollectors />} />
+                <Route path="/sorteos/lista" element={<DrawsList />} />
+                <Route path="/sorteos/horarios" element={<DrawSchedules />} />
                 <Route path="/test/permissions" element={<TestPermissions />} />
                 <Route path="/test/multi-zone" element={<TestMultiZone />} />
                 <Route path="/test/react-multiselect" element={<TestReactMultiselect />} />

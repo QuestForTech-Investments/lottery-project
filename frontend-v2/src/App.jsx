@@ -99,6 +99,10 @@ const HotNumbersMUI = lazy(() => import('@components/features/limits/HotNumbers'
 const DebtCollectorsMUI = lazy(() => import('@components/features/collectors/DebtCollectors'))
 const ManageDebtCollectorsMUI = lazy(() => import('@components/features/collectors/ManageDebtCollectors'))
 
+// Draws feature components
+const DrawsListMUI = lazy(() => import('@components/features/draws/DrawsList'))
+const DrawSchedulesMUI = lazy(() => import('@components/features/draws/DrawSchedules'))
+
 function App() {
   return (
     <>
@@ -191,6 +195,8 @@ function App() {
                           <Route path="/limits/hot-numbers" element={<Suspense fallback={<LazyLoadingFallback />}><HotNumbersMUI /></Suspense>} />
                           <Route path="/collectors" element={<Suspense fallback={<LazyLoadingFallback />}><DebtCollectorsMUI /></Suspense>} />
                           <Route path="/collector-management" element={<Suspense fallback={<LazyLoadingFallback />}><ManageDebtCollectorsMUI /></Suspense>} />
+                          <Route path="/draws/list" element={<Suspense fallback={<LazyLoadingFallback />}><DrawsListMUI /></Suspense>} />
+                          <Route path="/draws/schedules" element={<Suspense fallback={<LazyLoadingFallback />}><DrawSchedulesMUI /></Suspense>} />
                         </Routes>
                       </MainLayout>
                   </ErrorBoundary>
