@@ -147,7 +147,7 @@ const CreateLimit = () => {
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
             {/* Columna Izquierda - LÍMITES */}
             <Box>
-              <Typography variant="h6" sx={{ fontSize: '16px', fontWeight: 600, color: '#2c2c2c', mb: 2, borderBottom: '2px solid #51cbce', pb: 1 }}>
+              <Typography variant="h6" sx={{ fontSize: '16px', fontWeight: 600, color: '#2c2c2c', mb: 2, borderBottom: '2px solid #6366f1', pb: 1 }}>
                 LÍMITES
               </Typography>
 
@@ -185,7 +185,7 @@ const CreateLimit = () => {
                   <Button
                     size="small"
                     onClick={handleSelectAllDraws}
-                    sx={{ fontSize: '11px', bgcolor: '#51cbce', color: 'white', '&:hover': { bgcolor: '#45b8bb' }, textTransform: 'none' }}
+                    sx={{ fontSize: '11px', bgcolor: '#6366f1', color: 'white', '&:hover': { bgcolor: '#5568d3' }, textTransform: 'none' }}
                   >
                     {selectedDraws.length === draws.length ? 'Deseleccionar todos' : 'Seleccionar todos'}
                   </Button>
@@ -214,7 +214,7 @@ const CreateLimit = () => {
 
             {/* Columna Derecha - MONTO */}
             <Box>
-              <Typography variant="h6" sx={{ fontSize: '16px', fontWeight: 600, color: '#2c2c2c', mb: 2, borderBottom: '2px solid #51cbce', pb: 1 }}>
+              <Typography variant="h6" sx={{ fontSize: '16px', fontWeight: 600, color: '#2c2c2c', mb: 2, borderBottom: '2px solid #6366f1', pb: 1 }}>
                 MONTO
               </Typography>
 
@@ -248,7 +248,7 @@ const CreateLimit = () => {
               <Button
                 size="small"
                 onClick={handleSelectAllDays}
-                sx={{ fontSize: '11px', bgcolor: '#51cbce', color: 'white', '&:hover': { bgcolor: '#45b8bb' }, textTransform: 'none' }}
+                sx={{ fontSize: '11px', bgcolor: '#6366f1', color: 'white', '&:hover': { bgcolor: '#5568d3' }, textTransform: 'none' }}
               >
                 {selectedDays.length === days.length ? 'Deseleccionar todos' : 'Seleccionar todos'}
               </Button>
@@ -281,12 +281,12 @@ const CreateLimit = () => {
               variant="contained"
               onClick={handleCreate}
               sx={{
-                bgcolor: '#51cbce',
+                bgcolor: '#6366f1',
                 color: 'white',
                 fontSize: '14px',
                 px: 5,
                 py: 1.5,
-                '&:hover': { bgcolor: '#45b8bb' },
+                '&:hover': { bgcolor: '#5568d3' },
                 textTransform: 'none'
               }}
             >

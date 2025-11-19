@@ -29,7 +29,7 @@ const DeleteLimits = () => {
       </Typography>
       <Card>
         <CardContent sx={{ p: 4 }}>
-          <Typography variant="h6" sx={{ fontSize: '16px', fontWeight: 600, mb: 2, borderBottom: '2px solid #51cbce', pb: 1 }}>
+          <Typography variant="h6" sx={{ fontSize: '16px', fontWeight: 600, mb: 2, borderBottom: '2px solid #6366f1', pb: 1 }}>
             LÍMITES
           </Typography>
           <FormControl fullWidth sx={{ mb: 2 }}>

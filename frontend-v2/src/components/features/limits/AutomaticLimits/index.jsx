@@ -81,11 +81,11 @@ const AutomaticLimits = () => {
           onChange={(e, newValue) => setActiveTab(newValue)}
           sx={{
             borderBottom: 2,
-            borderColor: '#51cbce',
+            borderColor: '#6366f1',
             '& .MuiTab-root': { fontSize: '14px' },
-            '& .Mui-selected': { color: '#51cbce' }
+            '& .Mui-selected': { color: '#6366f1' }
           }}
-          TabIndicatorProps={{ style: { backgroundColor: '#51cbce' } }}
+          TabIndicatorProps={{ style: { backgroundColor: '#6366f1' } }}
         >
           <Tab label="General" />
           <Tab label="Bloqueo Aleatorio" />
@@ -238,9 +238,9 @@ const AutomaticLimits = () => {
                   variant="contained"
                   onClick={handleSaveGeneral}
                   sx={{
-                    bgcolor: '#51cbce',
+                    bgcolor: '#6366f1',
                     color: 'white',
-                    '&:hover': { bgcolor: '#45b8bb' },
+                    '&:hover': { bgcolor: '#5568d3' },
                     fontSize: '14px',
                     px: 5,
                     py: 1.5,
@@ -310,9 +310,9 @@ const AutomaticLimits = () => {
                   variant="contained"
                   onClick={handleUpdateBlocking}
                   sx={{
-                    bgcolor: '#51cbce',
+                    bgcolor: '#6366f1',
                     color: 'white',
-                    '&:hover': { bgcolor: '#45b8bb' },
+                    '&:hover': { bgcolor: '#5568d3' },
                     fontSize: '14px',
                     px: 5,
                     py: 1.5,

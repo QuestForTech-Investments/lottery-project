@@ -23,11 +23,11 @@ const HotNumbers = () => {
           onChange={(e, newValue) => setActiveTab(newValue)}
           sx={{
             borderBottom: 2,
-            borderColor: '#51cbce',
+            borderColor: '#6366f1',
             '& .MuiTab-root': { fontSize: '14px' },
-            '& .Mui-selected': { color: '#51cbce' }
+            '& .Mui-selected': { color: '#6366f1' }
           }}
-          TabIndicatorProps={{ style: { backgroundColor: '#51cbce' } }}
+          TabIndicatorProps={{ style: { backgroundColor: '#6366f1' } }}
         >
           <Tab label="Números calientes" />
           <Tab label="Límites" />
@@ -45,10 +45,10 @@ const HotNumbers = () => {
                     p: 1.5,
                     border: '1px solid #ddd',
                     borderRadius: '4px',
-                    bgcolor: selectedNumbers.includes(parseInt(num)) ? '#51cbce' : 'white',
+                    bgcolor: selectedNumbers.includes(parseInt(num)) ? '#6366f1' : 'white',
                     color: selectedNumbers.includes(parseInt(num)) ? 'white' : '#333',
                     cursor: 'pointer',
-                    '&:hover': { bgcolor: selectedNumbers.includes(parseInt(num)) ? '#45b8bb' : '#f5f5f5' }
+                    '&:hover': { bgcolor: selectedNumbers.includes(parseInt(num)) ? '#5568d3' : '#f5f5f5' }
                   }}
                 >
                   <Checkbox
@@ -91,9 +91,9 @@ const HotNumbers = () => {
                   variant="contained"
                   onClick={() => alert('Límites guardados')}
                   sx={{
-                    bgcolor: '#51cbce',
+                    bgcolor: '#6366f1',
                     color: 'white',
-                    '&:hover': { bgcolor: '#45b8bb' },
+                    '&:hover': { bgcolor: '#5568d3' },
                     fontSize: '14px',
                     px: 5,
                     py: 1.5,

@@ -222,9 +222,9 @@ const LimitsList = () => {
               variant="contained"
               onClick={handleRefresh}
               sx={{
-                bgcolor: '#51cbce',
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                 color: 'white',
-                '&:hover': { bgcolor: '#45b8bb' },
+                '&:hover': { background: 'linear-gradient(135deg, #5568d3 0%, #63408a 100%)' },
                 fontSize: '14px',
                 px: 4,
                 py: 1,
@@ -245,11 +245,11 @@ const LimitsList = () => {
           onChange={(e, newValue) => setActiveWeekDay(newValue)}
           sx={{
             borderBottom: 2,
-            borderColor: '#51cbce',
+            borderColor: '#6366f1',
             '& .MuiTab-root': { fontSize: '14px', minWidth: 'auto' },
-            '& .Mui-selected': { color: '#51cbce' }
+            '& .Mui-selected': { color: '#6366f1' }
           }}
-          TabIndicatorProps={{ style: { backgroundColor: '#51cbce' } }}
+          TabIndicatorProps={{ style: { backgroundColor: '#6366f1' } }}
         >
           {weekDays.map((day, index) => (
             <Tab key={day} label={day} />
@@ -266,10 +266,10 @@ const LimitsList = () => {
               variant={activeLimitType === index ? 'filled' : 'outlined'}
               sx={{
                 fontSize: '12px',
-                bgcolor: activeLimitType === index ? '#51cbce' : 'white',
+                background: activeLimitType === index ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'white',
                 color: activeLimitType === index ? 'white' : '#333',
-                borderColor: activeLimitType === index ? '#51cbce' : '#ddd',
-                '&:hover': { bgcolor: activeLimitType === index ? '#45b8bb' : '#f5f5f5' }
+                borderColor: activeLimitType === index ? '#6366f1' : '#ddd',
+                '&:hover': { background: activeLimitType === index ? 'linear-gradient(135deg, #5568d3 0%, #63408a 100%)' : '#f5f5f5' }
               }}
             />
           ))}
@@ -285,11 +285,11 @@ const LimitsList = () => {
               variant={activeDraw === index ? 'filled' : 'outlined'}
               sx={{
                 fontSize: '12px',
-                bgcolor: activeDraw === index ? '#51cbce' : 'white',
+                background: activeDraw === index ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'white',
                 color: activeDraw === index ? 'white' : '#333',
-                borderColor: activeDraw === index ? '#51cbce' : '#ddd',
+                borderColor: activeDraw === index ? '#6366f1' : '#ddd',
                 whiteSpace: 'nowrap',
-                '&:hover': { bgcolor: activeDraw === index ? '#45b8bb' : '#f5f5f5' }
+                '&:hover': { background: activeDraw === index ? 'linear-gradient(135deg, #5568d3 0%, #63408a 100%)' : '#f5f5f5' }
               }}
             />
           ))}
