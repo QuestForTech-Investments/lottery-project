@@ -103,6 +103,9 @@ const ManageDebtCollectorsMUI = lazy(() => import('@components/features/collecto
 const DrawsListMUI = lazy(() => import('@components/features/draws/DrawsList'))
 const DrawSchedulesMUI = lazy(() => import('@components/features/draws/DrawSchedules'))
 
+// Accountable Entities feature components
+const AccountableEntitiesMUI = lazy(() => import('@components/features/accountable-entities/AccountableEntities'))
+
 function App() {
   return (
     <>
@@ -197,6 +200,7 @@ function App() {
                           <Route path="/collector-management" element={<Suspense fallback={<LazyLoadingFallback />}><ManageDebtCollectorsMUI /></Suspense>} />
                           <Route path="/draws/list" element={<Suspense fallback={<LazyLoadingFallback />}><DrawsListMUI /></Suspense>} />
                           <Route path="/draws/schedules" element={<Suspense fallback={<LazyLoadingFallback />}><DrawSchedulesMUI /></Suspense>} />
+                          <Route path="/accountable-entities" element={<Suspense fallback={<LazyLoadingFallback />}><AccountableEntitiesMUI /></Suspense>} />
                         </Routes>
                       </MainLayout>
                   </ErrorBoundary>
