@@ -88,6 +88,9 @@ const LoansListMUI = lazy(() => import('@components/features/loans/LoansList'))
 const ManageExcessesMUI = lazy(() => import('@components/features/excesses/ManageExcesses'))
 const ExcessesReportMUI = lazy(() => import('@components/features/excesses/ExcessesReport'))
 
+// Limits feature components
+const LimitsListMUI = lazy(() => import('@components/features/limits/LimitsList'))
+
 function App() {
   return (
     <>
@@ -173,6 +176,7 @@ function App() {
                           <Route path="/loans/list" element={<Suspense fallback={<LazyLoadingFallback />}><LoansListMUI /></Suspense>} />
                           <Route path="/surpluses/manage" element={<Suspense fallback={<LazyLoadingFallback />}><ManageExcessesMUI /></Suspense>} />
                           <Route path="/surpluses/report" element={<Suspense fallback={<LazyLoadingFallback />}><ExcessesReportMUI /></Suspense>} />
+                          <Route path="/limits/list" element={<Suspense fallback={<LazyLoadingFallback />}><LimitsListMUI /></Suspense>} />
                         </Routes>
                       </MainLayout>
                   </ErrorBoundary>
