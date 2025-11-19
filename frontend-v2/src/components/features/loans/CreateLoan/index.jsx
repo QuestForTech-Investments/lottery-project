@@ -272,8 +272,8 @@ const CreateLoan = () => {
                 type="submit"
                 variant="contained"
                 sx={{
-                  backgroundColor: '#51cbce',
-                  '&:hover': { backgroundColor: '#45b5b8' },
+                  bgcolor: '#51cbce',
+                  '&:hover': { bgcolor: '#45b8bb' },
                   color: 'white',
                   px: 3,
                   py: 1,

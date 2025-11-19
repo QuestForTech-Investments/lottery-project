@@ -202,12 +202,13 @@ const ManageExcesses = () => {
               variant="contained"
               onClick={handleClearAll}
               sx={{
-                background: '#51cbce',
-                '&:hover': { background: '#40b5b8' },
+                bgcolor: '#51cbce',
+                '&:hover': { bgcolor: '#45b8bb' },
+                color: 'white',
                 fontSize: '14px',
                 fontFamily: 'Montserrat, sans-serif',
                 fontWeight: 600,
-                textTransform: 'uppercase',
+                textTransform: 'none',
                 px: 3
               }}
             >
@@ -249,12 +250,13 @@ const ManageExcesses = () => {
               variant="contained"
               onClick={handleCreate}
               sx={{
-                background: '#51cbce',
-                '&:hover': { background: '#40b5b8' },
+                bgcolor: '#51cbce',
+                '&:hover': { bgcolor: '#45b8bb' },
+                color: 'white',
                 fontSize: '14px',
                 fontFamily: 'Montserrat, sans-serif',
                 fontWeight: 600,
-                textTransform: 'uppercase',
+                textTransform: 'none',
                 px: 4,
                 py: 1.2
               }}

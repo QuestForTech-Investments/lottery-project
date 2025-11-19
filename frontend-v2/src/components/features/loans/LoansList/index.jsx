@@ -404,8 +404,10 @@ const LoansList = () => {
               type="submit"
               variant="contained"
               sx={{
-                backgroundColor: '#51cbce',
-                '&:hover': { backgroundColor: '#45b5b8' }
+                bgcolor: '#51cbce',
+                '&:hover': { bgcolor: '#45b8bb' },
+                color: 'white',
+                textTransform: 'none'
               }}
             >
               PAGAR
