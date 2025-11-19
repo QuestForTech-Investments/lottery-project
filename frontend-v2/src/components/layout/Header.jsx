@@ -145,15 +145,15 @@ function Header({ sidebarCollapsed, sidebarHovered, onToggleSidebar }) {
 
   const quickAccessButtons = [
     { Icon: Receipt, label: 'Tickets', path: '/tickets/new' },
-    { Icon: Coins, label: 'Ventas', path: '/ventas/dia' },
-    { Icon: Tag, label: 'Resultados', path: '/resultados' },
+    { Icon: Coins, label: 'Ventas', path: '/sales/day' },
+    { Icon: Tag, label: 'Resultados', path: '/results' },
     { Icon: Home, label: 'Inicio', path: '/' },
-    { Icon: List, label: 'Bancas', path: '/bettingPools/list' },
-    { Icon: Description, label: 'Balances', path: '/balances/bancas' },
-    { Icon: ShoppingCart, label: 'Pagos', path: '/cobros-pagos/lista' },
-    { Icon: AccountBalance, label: 'Sorteos', path: '/sorteos/lista' },
-    { Icon: CreditCard, label: 'Transacciones', path: '/transacciones/lista' },
-    { Icon: CalendarMonth, label: 'Horarios', path: '/sorteos/horarios' }
+    { Icon: List, label: 'Bancas', path: '/betting-pools/list' },
+    { Icon: Description, label: 'Balances', path: '/balances/betting-pools' },
+    { Icon: ShoppingCart, label: 'Pagos', path: '/collections-payments/list' },
+    { Icon: AccountBalance, label: 'Sorteos', path: '/draws/list' },
+    { Icon: CreditCard, label: 'Transacciones', path: '/accountable-transactions' },
+    { Icon: CalendarMonth, label: 'Horarios', path: '/draws/schedules' }
   ];
 
   // Calcular el ancho efectivo del sidebar (considerando hover)
