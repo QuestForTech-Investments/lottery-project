@@ -917,6 +917,116 @@ Corregido el path de la ruta para coincidir con menuItems.js:
 
 ---
 
+### Fix: Missing Create Accountable Entity Component (2025-11-19)
+
+**Problema:** Usuario reportó que al hacer clic en el botón "Crear" en el menú ENTIDADES CONTABLES > Crear, la página mostraba formulario en blanco.
+
+**Causa Raíz:**
+- El menú de navegación tenía una opción "Crear" apuntando a `/entities/new` (V2) y `/entidades-contables/crear` (V1)
+- Solo se había implementado el componente "Lista" (AccountableEntities)
+- No existía el componente "CreateAccountableEntity"
+- Las rutas no estaban definidas en App.jsx
+
+**Archivos Creados:**
+- `frontend-v1/src/components/entidades/CreateAccountableEntity.jsx` (226 líneas)
+- `frontend-v2/src/components/features/accountable-entities/CreateAccountableEntity/index.jsx` (178 líneas)
+
+**Archivos Modificados:**
+- `frontend-v1/src/App.jsx` (líneas 74, 164)
+- `frontend-v2/src/App.jsx` (líneas 108, 205)
+
+**Solución Aplicada:**
+
+**1. Análisis de la aplicación Vue.js original:**
+```
+URL: https://la-numbers.apk.lol/#/accountable-entities/new
+Formulario con 4 campos:
+- Nombre (textbox)
+- Código (textbox)
+- Tipo de entidad (dropdown: Seleccione)
+- Zona (dropdown: Seleccione)
+- Botón "CREAR" (turquesa)
+```
+
+**2. Implementación V1 (Bootstrap):**
+```javascript
+// 4 campos del formulario
+- nombre: input text con placeholder "Nombre"
+- codigo: input text con placeholder "Código"
+- tipoEntidad: select con opciones (Banca, Empleado, Banco, Zona, Otro)
+- zona: select con opciones (Zona Norte, Sur, Este, Oeste, Centro)
+
+// Submit handler
+const handleSubmit = (e) => {
+  e.preventDefault();
+  alert(`Entidad creada (mockup)...`);
+  // Reset form
+};
+```
+
+**3. Implementación V2 (Material-UI):**
+```javascript
+// Material-UI components
+<TextField label="Nombre" required />
+<TextField label="Código" required />
+<FormControl>
+  <Select label="Tipo de entidad">
+    <MenuItem value="Banca">Banca</MenuItem>
+    // ...
+  </Select>
+</FormControl>
+<FormControl>
+  <Select label="Zona">
+    <MenuItem value="Zona Norte">Zona Norte</MenuItem>
+    // ...
+  </Select>
+</FormControl>
+<Button sx={{ bgcolor: '#51cbce' }}>CREAR</Button>
+```
+
+**4. Rutas agregadas:**
+```javascript
+// V1
+<Route path="/entidades-contables/crear" element={<CreateAccountableEntity />} />
+
+// V2
+<Route path="/entities/new" element={<CreateAccountableEntityMUI />} />
+```
+
+**Resultado:**
+- ✅ Formulario carga correctamente en V1 y V2
+- ✅ 4 campos con validación required
+- ✅ Dropdowns con opciones mockup
+- ✅ Botón CREAR con color turquesa #51cbce consistente
+- ✅ Alert muestra datos ingresados (mockup)
+- ✅ Form reset después de submit
+
+**Testing Verificado:**
+- V2: http://localhost:4001/entities/new
+- Screenshot capturado: v2-crear-entidad-contable.png
+- Comparado con original: vue-crear-entidad-contable.png
+- Estructura idéntica a la aplicación Vue.js
+
+**Mockup Data:**
+```javascript
+tiposEntidad: ['Banca', 'Empleado', 'Banco', 'Zona', 'Otro']
+zonas: ['Zona Norte', 'Zona Sur', 'Zona Este', 'Zona Oeste', 'Centro']
+```
+
+**Lección Aprendida:**
+Al implementar un módulo con menú de navegación, SIEMPRE verificar TODAS las opciones del submenú:
+1. ✅ Revisar menuItems.js para ver todas las rutas
+2. ✅ Verificar que cada ruta tenga su componente correspondiente
+3. ✅ Probar haciendo clic en cada opción del menú
+4. ✅ Si falta algún componente, consultar la aplicación Vue.js original para replicarlo
+
+**Referencias:**
+- Aplicación Vue.js original: https://la-numbers.apk.lol/#/accountable-entities/new
+- Commit: cd46df0
+- Issue relacionado: #59 (Implementar módulo ENTIDADES CONTABLES)
+
+---
+
 ### Fix: Color Coherence in V2 Loans and Excesses Modules (2025-11-19)
 
 **Problema:** Botones en los módulos de Préstamos y Excedentes de V2 no mantenían coherencia de colores con el sistema de diseño. Usaban propiedades y valores inconsistentes.
