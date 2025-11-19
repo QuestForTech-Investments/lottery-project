@@ -849,6 +849,71 @@ CLAUDE.md es la memoria persistente del proyecto. Documentar TODO en este archiv
 
 ---
 
+### Fix: Color Coherence in V2 Loans and Excesses Modules (2025-11-19)
+
+**Problema:** Botones en los módulos de Préstamos y Excedentes de V2 no mantenían coherencia de colores con el sistema de diseño. Usaban propiedades y valores inconsistentes.
+
+**Causa Raíz:**
+- Usaban `backgroundColor` en lugar de `bgcolor` (convención Material-UI)
+- Hover color incorrecto: `#45b5b8` en lugar de `#45b8bb`
+- Faltaba `color: 'white'` explícito
+- Usaban `textTransform: 'uppercase'` en lugar de `'none'`
+
+**Archivos Modificados:**
+- `frontend-v2/src/components/features/loans/CreateLoan/index.jsx` (línea 275)
+- `frontend-v2/src/components/features/loans/LoansList/index.jsx` (línea 407)
+- `frontend-v2/src/components/features/excesses/ManageExcesses/index.jsx` (líneas 205, 253)
+- `frontend-v2/src/components/features/excesses/ExcessesReport/index.jsx` (línea 216)
+
+**Solución Aplicada:**
+
+Estandarización de todos los botones primarios para usar:
+
+```javascript
+sx={{
+  bgcolor: '#51cbce',              // Turquesa corporativo
+  '&:hover': { bgcolor: '#45b8bb' }, // Hover color correcto
+  color: 'white',                  // Texto blanco explícito
+  textTransform: 'none',           // Sin uppercase
+  // ... otros estilos
+}}
+```
+
+**Botones Corregidos:**
+1. **CreateLoan** - Botón "Crear"
+2. **LoansList** - Botón "PAGAR" (modal de pago)
+3. **ManageExcesses** - Botones "BORRAR TODO" y "CREAR"
+4. **ExcessesReport** - Botón "REFRESCAR"
+
+**Testing con Playwright:**
+```
+✅ Create Loan "Crear": rgb(81, 203, 206) / rgb(255, 255, 255) / none
+✅ Loans List "PAGAR": rgb(81, 203, 206) / rgb(255, 255, 255) / none
+✅ Manage Excesses "BORRAR TODO": rgb(81, 203, 206) / rgb(255, 255, 255) / none
+✅ Manage Excesses "CREAR": rgb(81, 203, 206) / rgb(255, 255, 255) / none
+✅ Excesses Report "REFRESCAR": rgb(81, 203, 206) / rgb(255, 255, 255) / none
+```
+
+**Resultado:**
+- ✅ Todos los botones primarios usan color turquoise #51cbce coherente
+- ✅ Hover color correcto #45b8bb en todos los botones
+- ✅ Texto blanco explícito en todos los botones
+- ✅ Sin transformación uppercase innecesaria
+- ✅ Screenshots capturados para verificación
+
+**Lección Aprendida:**
+- Material-UI usa `bgcolor` en `sx` prop, no `backgroundColor`
+- Siempre especificar `color: 'white'` explícitamente (no confiar en defaults)
+- Verificar sistema de diseño (DESIGN_SYSTEM.md) para colores correctos
+- Usar Playwright para verificar coherencia visual después de cambios
+- El hover color debe ser ligeramente más oscuro: #45b8bb (no #45b5b8)
+
+**Referencias:**
+- Sistema de diseño: `/home/jorge/projects/lottery-project/DESIGN_SYSTEM.md`
+- Commit: `8650d78`
+
+---
+
 ### Fix: Inconsistencia de Color en Título de USUARIOS > Bancas
 
 **Problema:** El título del formulario "Lista de usuarios" (USUARIOS > Bancas) tenía fondo turquesa con texto blanco, mientras que todos los demás formularios tienen títulos en texto negro sin fondo de color.
