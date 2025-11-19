@@ -63,6 +63,9 @@ import ManageExcesses from '@components/excedentes/ManageExcesses'
 import ExcessesReport from '@components/excedentes/ExcessesReport'
 import LimitsList from '@components/limites/LimitsList'
 import CreateLimit from '@components/limites/CreateLimit'
+import AutomaticLimits from '@components/limites/AutomaticLimits'
+import DeleteLimits from '@components/limites/DeleteLimits'
+import HotNumbers from '@components/limites/HotNumbers'
 
 function App() {
   return (
@@ -144,6 +147,9 @@ function App() {
                 <Route path="/excedentes/reporte" element={<ExcessesReport />} />
                 <Route path="/limites/lista" element={<LimitsList />} />
                 <Route path="/limites/crear" element={<CreateLimit />} />
+                <Route path="/limites/automaticos" element={<AutomaticLimits />} />
+                <Route path="/limites/eliminar" element={<DeleteLimits />} />
+                <Route path="/limites/numeros-calientes" element={<HotNumbers />} />
                 <Route path="/test/permissions" element={<TestPermissions />} />
                 <Route path="/test/multi-zone" element={<TestMultiZone />} />
                 <Route path="/test/react-multiselect" element={<TestReactMultiselect />} />

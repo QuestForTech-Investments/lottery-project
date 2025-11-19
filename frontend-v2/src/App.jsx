@@ -91,6 +91,9 @@ const ExcessesReportMUI = lazy(() => import('@components/features/excesses/Exces
 // Limits feature components
 const LimitsListMUI = lazy(() => import('@components/features/limits/LimitsList'))
 const CreateLimitMUI = lazy(() => import('@components/features/limits/CreateLimit'))
+const AutomaticLimitsMUI = lazy(() => import('@components/features/limits/AutomaticLimits'))
+const DeleteLimitsMUI = lazy(() => import('@components/features/limits/DeleteLimits'))
+const HotNumbersMUI = lazy(() => import('@components/features/limits/HotNumbers'))
 
 function App() {
   return (
@@ -179,6 +182,9 @@ function App() {
                           <Route path="/surpluses/report" element={<Suspense fallback={<LazyLoadingFallback />}><ExcessesReportMUI /></Suspense>} />
                           <Route path="/limits/list" element={<Suspense fallback={<LazyLoadingFallback />}><LimitsListMUI /></Suspense>} />
                           <Route path="/limits/new" element={<Suspense fallback={<LazyLoadingFallback />}><CreateLimitMUI /></Suspense>} />
+                          <Route path="/limits/automatic" element={<Suspense fallback={<LazyLoadingFallback />}><AutomaticLimitsMUI /></Suspense>} />
+                          <Route path="/limits/delete" element={<Suspense fallback={<LazyLoadingFallback />}><DeleteLimitsMUI /></Suspense>} />
+                          <Route path="/limits/hot-numbers" element={<Suspense fallback={<LazyLoadingFallback />}><HotNumbersMUI /></Suspense>} />
                         </Routes>
                       </MainLayout>
                   </ErrorBoundary>
