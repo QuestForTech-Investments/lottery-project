@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import {
   Box, Paper, Typography, TextField, Grid, Autocomplete, Button, Stack,
   Tabs, Tab, ToggleButtonGroup, ToggleButton, Table, TableHead, TableBody, TableRow, TableCell,
-  Checkbox, FormControlLabel, FormControl, InputLabel, Select, MenuItem
+  Checkbox, FormControlLabel, FormControl, InputLabel, Select, MenuItem, InputAdornment
 } from '@mui/material';
-import { FilterList, PictureAsPdf, Download } from '@mui/icons-material';
+import { FilterList, PictureAsPdf, Download, Search } from '@mui/icons-material';
 
 const HistoricalSales = () => {
   const [mainTab, setMainTab] = useState(0);
@@ -225,48 +225,154 @@ const HistoricalSales = () => {
         );
 
       case 1: // Por sorteo
+        const totalNeto = sorteoData.reduce((sum, d) => sum + d.neto, 0);
+        const totalVendido = sorteoData.reduce((sum, d) => sum + d.venta, 0);
+        const totalPremios = sorteoData.reduce((sum, d) => sum + d.premios, 0);
+        const totalComisiones = sorteoData.reduce((sum, d) => sum + d.comisiones, 0);
+
         return (
           <>
-            <Typography variant="h5" align="center" sx={{ mb: 3, color: '#1976d2' }}>
-              Ventas por Sorteo
+            <Typography variant="h4" align="center" gutterBottom sx={{ fontWeight: 400, mb: 4, fontSize: '1.75rem' }}>
+              Ventas por sorteo
             </Typography>
 
-            <Typography variant="h6" align="center" sx={{ mb: 3, color: '#666' }}>
-              Total Venta: {formatCurrency(sorteoData.reduce((sum, d) => sum + d.venta, 0))}
+            <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+              <Box>
+                <Typography variant="caption" sx={{ color: 'text.secondary', mb: 0.5, display: 'block' }}>
+                  Fecha inicial
+                </Typography>
+                <TextField
+                  type="date"
+                  size="small"
+                  value={fechaInicial}
+                  onChange={(e) => setFechaInicial(e.target.value)}
+                  sx={{ width: 200 }}
+                />
+              </Box>
+
+              <Box>
+                <Typography variant="caption" sx={{ color: 'text.secondary', mb: 0.5, display: 'block' }}>
+                  Fecha final
+                </Typography>
+                <TextField
+                  type="date"
+                  size="small"
+                  value={fechaFinal}
+                  onChange={(e) => setFechaFinal(e.target.value)}
+                  sx={{ width: 200 }}
+                />
+              </Box>
+
+              <Box>
+                <Typography variant="caption" sx={{ color: 'text.secondary', mb: 0.5, display: 'block' }}>
+                  Zonas
+                </Typography>
+                <FormControl sx={{ minWidth: 200 }} size="small">
+                  <Select
+                    multiple
+                    value={zonas.map(z => z.id)}
+                    onChange={(e) => {
+                      const selectedIds = e.target.value;
+                      setZonas(zonasList.filter(z => selectedIds.includes(z.id)));
+                    }}
+                    renderValue={(selected) => `${selected.length} seleccionadas`}
+                  >
+                    {zonasList.map((zone) => (
+                      <MenuItem key={zone.id} value={zone.id}>
+                        <Checkbox checked={zonas.map(z => z.id).indexOf(zone.id) > -1} />
+                        {zone.name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Box>
+            </Box>
+
+            <Box sx={{ mb: 3 }}>
+              <Button
+                variant="contained"
+                sx={{
+                  bgcolor: '#667eea',
+                  '&:hover': { bgcolor: '#5568d3' },
+                  borderRadius: '20px',
+                  px: 4,
+                  py: 1,
+                  textTransform: 'uppercase',
+                  fontWeight: 500,
+                  color: 'white',
+                  fontSize: '0.875rem'
+                }}
+              >
+                VER VENTAS
+              </Button>
+            </Box>
+
+            <Typography variant="h5" align="center" gutterBottom sx={{ fontWeight: 400, mb: 4, fontSize: '1.5rem' }}>
+              Total neto: {formatCurrency(totalNeto)}
             </Typography>
+
+            <Typography variant="h6" align="center" sx={{ color: 'text.secondary', mb: 4, fontSize: '1.25rem' }}>
+              {sorteoData.length === 0 ? 'No hay entradas para la fecha elegida' : ''}
+            </Typography>
+
+            <Box sx={{ mb: 2 }}>
+              <TextField
+                size="small"
+                placeholder="Filtrado rápido"
+                value={filtroRapido}
+                onChange={(e) => setFiltroRapido(e.target.value)}
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <Search />
+                    </InputAdornment>
+                  ),
+                }}
+                sx={{ width: 300 }}
+              />
+            </Box>
 
             <Table size="small">
-              <TableHead>
-                <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
-                  {['Sorteo', 'Tickets', 'Venta', 'Comisiones', 'Descuentos', 'Premios', 'Neto'].map(h => (
-                    <TableCell key={h} sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.75rem' }}>{h}</TableCell>
-                  ))}
+              <TableHead sx={{ backgroundColor: 'grey.100' }}>
+                <TableRow>
+                  <TableCell sx={{ cursor: 'pointer' }}>Sorteo</TableCell>
+                  <TableCell align="right" sx={{ cursor: 'pointer' }}>Total Vendido</TableCell>
+                  <TableCell align="right" sx={{ cursor: 'pointer' }}>Total premios</TableCell>
+                  <TableCell align="right" sx={{ cursor: 'pointer' }}>Total comisiones</TableCell>
+                  <TableCell align="right" sx={{ cursor: 'pointer' }}>Total neto</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                <TableRow sx={{ backgroundColor: '#e3f2fd' }}>
-                  <TableCell sx={{ fontWeight: 600 }}>Totales</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>{sorteoData.reduce((sum, d) => sum + d.tickets, 0)}</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>{formatCurrency(sorteoData.reduce((sum, d) => sum + d.venta, 0))}</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>{formatCurrency(sorteoData.reduce((sum, d) => sum + d.comisiones, 0))}</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>{formatCurrency(sorteoData.reduce((sum, d) => sum + d.descuentos, 0))}</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>{formatCurrency(sorteoData.reduce((sum, d) => sum + d.premios, 0))}</TableCell>
-                  <TableCell sx={{ fontWeight: 600, color: 'success.main' }}>{formatCurrency(sorteoData.reduce((sum, d) => sum + d.neto, 0))}</TableCell>
-                </TableRow>
-                {sorteoData.map((d, i) => (
-                  <TableRow key={i} sx={{ '&:hover': { backgroundColor: 'action.hover' } }}>
-                    <TableCell sx={{ fontWeight: 500 }}>{d.sorteo}</TableCell>
-                    <TableCell>{d.tickets}</TableCell>
-                    <TableCell>{formatCurrency(d.venta)}</TableCell>
-                    <TableCell>{formatCurrency(d.comisiones)}</TableCell>
-                    <TableCell>{formatCurrency(d.descuentos)}</TableCell>
-                    <TableCell>{formatCurrency(d.premios)}</TableCell>
-                    <TableCell sx={{ color: d.neto >= 0 ? 'success.main' : 'error.main' }}>{formatCurrency(d.neto)}</TableCell>
+                {sorteoData.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} align="center" sx={{ py: 3, color: 'text.secondary' }}>
+                      No hay entradas disponibles
+                    </TableCell>
                   </TableRow>
-                ))}
+                ) : (
+                  sorteoData.map((d, i) => (
+                    <TableRow key={i} sx={{ '&:hover': { backgroundColor: 'action.hover' } }}>
+                      <TableCell sx={{ fontWeight: 500 }}>{d.sorteo}</TableCell>
+                      <TableCell align="right">{formatCurrency(d.venta)}</TableCell>
+                      <TableCell align="right">{formatCurrency(d.premios)}</TableCell>
+                      <TableCell align="right">{formatCurrency(d.comisiones)}</TableCell>
+                      <TableCell align="right" sx={{ color: d.neto >= 0 ? 'success.main' : 'error.main' }}>{formatCurrency(d.neto)}</TableCell>
+                    </TableRow>
+                  ))
+                )}
+                <TableRow sx={{ backgroundColor: 'grey.200' }}>
+                  <TableCell><strong>Totales</strong></TableCell>
+                  <TableCell align="right"><strong>{formatCurrency(totalVendido)}</strong></TableCell>
+                  <TableCell align="right"><strong>{formatCurrency(totalPremios)}</strong></TableCell>
+                  <TableCell align="right"><strong>{formatCurrency(totalComisiones)}</strong></TableCell>
+                  <TableCell align="right"><strong>{formatCurrency(totalNeto)}</strong></TableCell>
+                </TableRow>
               </TableBody>
             </Table>
-            <Typography variant="caption" sx={{ color: 'text.secondary' }}>Mostrando {sorteoData.length} sorteos</Typography>
+
+            <Typography variant="body2" sx={{ mt: 2 }}>
+              Mostrando {sorteoData.length} de {sorteoData.length} entradas
+            </Typography>
           </>
         );
 
@@ -384,45 +490,49 @@ const HistoricalSales = () => {
         </Box>
 
         <Box sx={{ p: 3 }}>
-          <Typography variant="h5" align="center" sx={{ color: '#1976d2', mb: 4, fontWeight: 400 }}>
-            Reportes
-          </Typography>
+          {mainTab === 0 && (
+            <>
+              <Typography variant="h5" align="center" sx={{ color: '#1976d2', mb: 4, fontWeight: 400 }}>
+                Reportes
+              </Typography>
 
-          <Grid container spacing={2} sx={{ mb: 2 }}>
-            <Grid item xs={12} md={3}>
-              <TextField fullWidth type="date" label="Fecha inicial" value={fechaInicial}
-                onChange={(e) => setFechaInicial(e.target.value)} InputLabelProps={{ shrink: true }} size="small" />
-            </Grid>
-            <Grid item xs={12} md={3}>
-              <TextField fullWidth type="date" label="Fecha final" value={fechaFinal}
-                onChange={(e) => setFechaFinal(e.target.value)} InputLabelProps={{ shrink: true }} size="small" />
-            </Grid>
-            <Grid item xs={12} md={3}>
-              <Autocomplete multiple options={zonasList} getOptionLabel={(o) => o.name || ''} value={zonas}
-                onChange={(e, v) => setZonas(v)} renderInput={(params) => <TextField {...params} label="Zonas" size="small"
-                  helperText={zonas.length > 0 ? `${zonas.length} seleccionadas` : ''} />} />
-            </Grid>
-            <Grid item xs={12} md={3}>
-              <FormControl fullWidth size="small">
-                <InputLabel>Grupo</InputLabel>
-                <Select value={grupo} label="Grupo" onChange={(e) => setGrupo(e.target.value)}>
-                  <MenuItem value="">Seleccione</MenuItem>
-                  {gruposList.map(g => <MenuItem key={g.id} value={g.id}>{g.name}</MenuItem>)}
-                </Select>
-              </FormControl>
-            </Grid>
-          </Grid>
+              <Grid container spacing={2} sx={{ mb: 2 }}>
+                <Grid item xs={12} md={3}>
+                  <TextField fullWidth type="date" label="Fecha inicial" value={fechaInicial}
+                    onChange={(e) => setFechaInicial(e.target.value)} InputLabelProps={{ shrink: true }} size="small" />
+                </Grid>
+                <Grid item xs={12} md={3}>
+                  <TextField fullWidth type="date" label="Fecha final" value={fechaFinal}
+                    onChange={(e) => setFechaFinal(e.target.value)} InputLabelProps={{ shrink: true }} size="small" />
+                </Grid>
+                <Grid item xs={12} md={3}>
+                  <Autocomplete multiple options={zonasList} getOptionLabel={(o) => o.name || ''} value={zonas}
+                    onChange={(e, v) => setZonas(v)} renderInput={(params) => <TextField {...params} label="Zonas" size="small"
+                      helperText={zonas.length > 0 ? `${zonas.length} seleccionadas` : ''} />} />
+                </Grid>
+                <Grid item xs={12} md={3}>
+                  <FormControl fullWidth size="small">
+                    <InputLabel>Grupo</InputLabel>
+                    <Select value={grupo} label="Grupo" onChange={(e) => setGrupo(e.target.value)}>
+                      <MenuItem value="">Seleccione</MenuItem>
+                      {gruposList.map(g => <MenuItem key={g.id} value={g.id}>{g.name}</MenuItem>)}
+                    </Select>
+                  </FormControl>
+                </Grid>
+              </Grid>
 
-          <Box sx={{ mb: 3 }}>
-            <FormControlLabel control={<Checkbox checked={mostrarComision2} onChange={(e) => setMostrarComision2(e.target.checked)} />}
-              label="Mostrar comisión #2" />
-          </Box>
+              <Box sx={{ mb: 3 }}>
+                <FormControlLabel control={<Checkbox checked={mostrarComision2} onChange={(e) => setMostrarComision2(e.target.checked)} />}
+                  label="Mostrar comisión #2" />
+              </Box>
 
-          <Stack direction="row" spacing={2} sx={{ mb: 3 }}>
-            <Button variant="contained" startIcon={<FilterList />} sx={{ px: 4, borderRadius: '30px', textTransform: 'uppercase' }}>Ver ventas</Button>
-            <Button variant="contained" startIcon={<Download />} sx={{ borderRadius: '30px', textTransform: 'uppercase' }}>CSV</Button>
-            <Button variant="contained" startIcon={<PictureAsPdf />} sx={{ borderRadius: '30px', textTransform: 'uppercase' }}>PDF</Button>
-          </Stack>
+              <Stack direction="row" spacing={2} sx={{ mb: 3 }}>
+                <Button variant="contained" startIcon={<FilterList />} sx={{ px: 4, borderRadius: '30px', textTransform: 'uppercase' }}>Ver ventas</Button>
+                <Button variant="contained" startIcon={<Download />} sx={{ borderRadius: '30px', textTransform: 'uppercase' }}>CSV</Button>
+                <Button variant="contained" startIcon={<PictureAsPdf />} sx={{ borderRadius: '30px', textTransform: 'uppercase' }}>PDF</Button>
+              </Stack>
+            </>
+          )}
 
           {renderTabContent()}
         </Box>
