@@ -70,31 +70,8 @@ const HistoricalSales = () => {
     });
     setSorteoData(mockSorteos);
 
-    // Mock data for COMBINACIONES (Combinaciones tab)
-    const tiposJugada = [
-      { tipo: 'Directo', cantidad: Math.floor(Math.random() * 500) + 100 },
-      { tipo: 'Palé', cantidad: Math.floor(Math.random() * 300) + 50 },
-      { tipo: 'Tripleta', cantidad: Math.floor(Math.random() * 200) + 30 },
-      { tipo: 'Super Palé', cantidad: Math.floor(Math.random() * 150) + 20 },
-      { tipo: 'Pick 3', cantidad: Math.floor(Math.random() * 100) + 10 },
-      { tipo: 'Pick 4', cantidad: Math.floor(Math.random() * 80) + 5 },
-      { tipo: 'Quinela', cantidad: Math.floor(Math.random() * 60) + 10 },
-      { tipo: 'Pick Two', cantidad: Math.floor(Math.random() * 40) + 5 }
-    ];
-    const mockCombinaciones = tiposJugada.map(t => {
-      const montoTotal = t.cantidad * (Math.floor(Math.random() * 50) + 10);
-      const premiosPagados = Math.floor(Math.random() * montoTotal * 0.8);
-      const ganancia = montoTotal - premiosPagados;
-      return {
-        tipoJugada: t.tipo,
-        cantidadJugadas: t.cantidad,
-        montoTotal,
-        premiosPagados,
-        ganancia,
-        porcentaje: ((ganancia / montoTotal) * 100).toFixed(2)
-      };
-    });
-    setCombinacionesData(mockCombinaciones);
+    // Mock data for COMBINACIONES (Combinaciones tab) - empty for now
+    setCombinacionesData([]);
 
     // Mock data for ZONAS (Por zona tab)
     const zonasInfo = [
@@ -379,47 +356,175 @@ const HistoricalSales = () => {
       case 2: // Combinaciones
         return (
           <>
-            <Typography variant="h5" align="center" sx={{ mb: 3, color: '#1976d2' }}>
-              Resumen por Tipo de Jugada
+            <Typography variant="h4" align="center" gutterBottom sx={{ fontWeight: 400, mb: 4, fontSize: '1.75rem' }}>
+              Combinaciones
             </Typography>
 
-            <Typography variant="h6" align="center" sx={{ mb: 3, color: '#666' }}>
-              Total Jugadas: {combinacionesData.reduce((sum, d) => sum + d.cantidadJugadas, 0)} |
-              Total Monto: {formatCurrency(combinacionesData.reduce((sum, d) => sum + d.montoTotal, 0))}
-            </Typography>
+            <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+              <Box>
+                <Typography variant="caption" sx={{ color: 'text.secondary', mb: 0.5, display: 'block' }}>
+                  Fecha inicial
+                </Typography>
+                <TextField
+                  type="date"
+                  size="small"
+                  value={fechaInicial}
+                  onChange={(e) => setFechaInicial(e.target.value)}
+                  sx={{ width: 200 }}
+                />
+              </Box>
+
+              <Box>
+                <Typography variant="caption" sx={{ color: 'text.secondary', mb: 0.5, display: 'block' }}>
+                  Fecha final
+                </Typography>
+                <TextField
+                  type="date"
+                  size="small"
+                  value={fechaFinal}
+                  onChange={(e) => setFechaFinal(e.target.value)}
+                  sx={{ width: 200 }}
+                />
+              </Box>
+
+              <Box>
+                <Typography variant="caption" sx={{ color: 'text.secondary', mb: 0.5, display: 'block' }}>
+                  Sorteos
+                </Typography>
+                <FormControl sx={{ minWidth: 200 }} size="small">
+                  <Select
+                    multiple
+                    value={[]}
+                    renderValue={(selected) => selected.length === 0 ? 'Seleccione' : `${selected.length} seleccionadas`}
+                    displayEmpty
+                  >
+                    <MenuItem value={1}>Sorteo 1</MenuItem>
+                    <MenuItem value={2}>Sorteo 2</MenuItem>
+                  </Select>
+                </FormControl>
+              </Box>
+
+              <Box>
+                <Typography variant="caption" sx={{ color: 'text.secondary', mb: 0.5, display: 'block' }}>
+                  Zonas
+                </Typography>
+                <FormControl sx={{ minWidth: 200 }} size="small">
+                  <Select
+                    multiple
+                    value={zonas.map(z => z.id)}
+                    onChange={(e) => {
+                      const selectedIds = e.target.value;
+                      setZonas(zonasList.filter(z => selectedIds.includes(z.id)));
+                    }}
+                    renderValue={(selected) => `${selected.length} seleccionadas`}
+                  >
+                    {zonasList.map((zone) => (
+                      <MenuItem key={zone.id} value={zone.id}>
+                        <Checkbox checked={zonas.map(z => z.id).indexOf(zone.id) > -1} />
+                        {zone.name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Box>
+
+              <Box>
+                <Typography variant="caption" sx={{ color: 'text.secondary', mb: 0.5, display: 'block' }}>
+                  Bancas
+                </Typography>
+                <FormControl sx={{ minWidth: 200 }} size="small">
+                  <Select
+                    value=""
+                    displayEmpty
+                  >
+                    <MenuItem value="">Seleccione</MenuItem>
+                    <MenuItem value={1}>Banca 1</MenuItem>
+                    <MenuItem value={2}>Banca 2</MenuItem>
+                  </Select>
+                </FormControl>
+              </Box>
+            </Box>
+
+            <Box sx={{ mb: 3 }}>
+              <Button
+                variant="contained"
+                sx={{
+                  bgcolor: '#51cbce',
+                  '&:hover': { bgcolor: '#45b8bb' },
+                  borderRadius: '20px',
+                  px: 4,
+                  py: 1,
+                  textTransform: 'uppercase',
+                  fontWeight: 500,
+                  color: 'white',
+                  fontSize: '0.875rem'
+                }}
+              >
+                VER VENTAS
+              </Button>
+            </Box>
+
+            <Box sx={{ mb: 2 }}>
+              <TextField
+                size="small"
+                placeholder="Filtrado rápido"
+                value={filtroRapido}
+                onChange={(e) => setFiltroRapido(e.target.value)}
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <Search />
+                    </InputAdornment>
+                  ),
+                }}
+                sx={{ width: 300 }}
+              />
+            </Box>
 
             <Table size="small">
-              <TableHead>
-                <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
-                  {['Tipo de Jugada', 'Cantidad', 'Monto Total', 'Premios Pagados', 'Ganancia', '% Ganancia'].map(h => (
-                    <TableCell key={h} sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.75rem' }}>{h}</TableCell>
-                  ))}
+              <TableHead sx={{ backgroundColor: 'grey.100' }}>
+                <TableRow>
+                  <TableCell sx={{ cursor: 'pointer' }}>Combinación</TableCell>
+                  <TableCell align="right" sx={{ cursor: 'pointer' }}>Total Vendido</TableCell>
+                  <TableCell align="right" sx={{ cursor: 'pointer' }}>Total comisiones</TableCell>
+                  <TableCell align="right" sx={{ cursor: 'pointer' }}>Total comisiones 2</TableCell>
+                  <TableCell align="right" sx={{ cursor: 'pointer' }}>Total premios</TableCell>
+                  <TableCell align="right" sx={{ cursor: 'pointer' }}>Balances</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                <TableRow sx={{ backgroundColor: '#e3f2fd' }}>
-                  <TableCell sx={{ fontWeight: 600 }}>Totales</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>{combinacionesData.reduce((sum, d) => sum + d.cantidadJugadas, 0)}</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>{formatCurrency(combinacionesData.reduce((sum, d) => sum + d.montoTotal, 0))}</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>{formatCurrency(combinacionesData.reduce((sum, d) => sum + d.premiosPagados, 0))}</TableCell>
-                  <TableCell sx={{ fontWeight: 600, color: 'success.main' }}>{formatCurrency(combinacionesData.reduce((sum, d) => sum + d.ganancia, 0))}</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>
-                    {((combinacionesData.reduce((sum, d) => sum + d.ganancia, 0) / combinacionesData.reduce((sum, d) => sum + d.montoTotal, 0)) * 100).toFixed(2)}%
-                  </TableCell>
-                </TableRow>
-                {combinacionesData.map((d, i) => (
-                  <TableRow key={i} sx={{ '&:hover': { backgroundColor: 'action.hover' } }}>
-                    <TableCell sx={{ fontWeight: 500 }}>{d.tipoJugada}</TableCell>
-                    <TableCell>{d.cantidadJugadas}</TableCell>
-                    <TableCell>{formatCurrency(d.montoTotal)}</TableCell>
-                    <TableCell>{formatCurrency(d.premiosPagados)}</TableCell>
-                    <TableCell sx={{ color: d.ganancia >= 0 ? 'success.main' : 'error.main' }}>{formatCurrency(d.ganancia)}</TableCell>
-                    <TableCell sx={{ color: parseFloat(d.porcentaje) >= 0 ? 'success.main' : 'error.main' }}>{d.porcentaje}%</TableCell>
+                {combinacionesData.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} align="center" sx={{ py: 3, color: 'text.secondary' }}>
+                      No hay entradas disponibles
+                    </TableCell>
                   </TableRow>
-                ))}
+                ) : (
+                  combinacionesData.map((d, i) => (
+                    <TableRow key={i} sx={{ '&:hover': { backgroundColor: 'action.hover' } }}>
+                      <TableCell sx={{ fontWeight: 500 }}>{d.combinacion}</TableCell>
+                      <TableCell align="right">{formatCurrency(d.totalVendido)}</TableCell>
+                      <TableCell align="right">{formatCurrency(d.comisiones)}</TableCell>
+                      <TableCell align="right">{formatCurrency(d.comisiones2)}</TableCell>
+                      <TableCell align="right">{formatCurrency(d.premios)}</TableCell>
+                      <TableCell align="right">{formatCurrency(d.balances)}</TableCell>
+                    </TableRow>
+                  ))
+                )}
+                <TableRow sx={{ backgroundColor: 'grey.200' }}>
+                  <TableCell><strong>Totales</strong></TableCell>
+                  <TableCell align="right"><strong>$0.00</strong></TableCell>
+                  <TableCell align="right"><strong>$0.00</strong></TableCell>
+                  <TableCell align="right"><strong>$0.00</strong></TableCell>
+                  <TableCell align="right"><strong>$0.00</strong></TableCell>
+                  <TableCell align="right"><strong>$0.00</strong></TableCell>
+                </TableRow>
               </TableBody>
             </Table>
-            <Typography variant="caption" sx={{ color: 'text.secondary' }}>Mostrando {combinacionesData.length} tipos de jugada</Typography>
+
+            <Typography variant="body2" sx={{ mt: 2 }}>
+              Mostrando {combinacionesData.length} de {combinacionesData.length} entradas
+            </Typography>
           </>
         );
 
