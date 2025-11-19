@@ -849,6 +849,74 @@ CLAUDE.md es la memoria persistente del proyecto. Documentar TODO en este archiv
 
 ---
 
+### Fix: Route Mismatch for Entidades Contables in V2 (2025-11-19)
+
+**Problema:** Al hacer clic en el menú "ENTIDADES CONTABLES > Lista" en V2, el componente no cargaba y mostraba "Cargando..." indefinidamente.
+
+**Causa Raíz:**
+- Route mismatch entre menuItems.js y App.jsx
+- menuItems.js especificaba: `/entities/list`
+- App.jsx tenía la ruta: `/accountable-entities`
+- React Router no encontraba coincidencia, el componente nunca se montaba
+
+**Archivos Modificados:**
+- `frontend-v2/src/App.jsx` (línea 203)
+
+**Solución Aplicada:**
+
+Corregido el path de la ruta para coincidir con menuItems.js:
+
+```javascript
+// ANTES (incorrecto)
+<Route path="/accountable-entities" element={<Suspense fallback={<LazyLoadingFallback />}><AccountableEntitiesMUI /></Suspense>} />
+
+// DESPUÉS (correcto)
+<Route path="/entities/list" element={<Suspense fallback={<LazyLoadingFallback />}><AccountableEntitiesMUI /></Suspense>} />
+```
+
+**Diagnóstico con Playwright:**
+1. Iniciado V2 dev server en puerto 4001 (4000 estaba ocupado)
+2. Login exitoso con admin/Admin123456
+3. Navegado a menú ENTIDADES CONTABLES
+4. Clic en submenu "Lista"
+5. URL cambió a `/entities/list` pero componente mostraba "Cargando..."
+6. Inspeccionado `frontend-v2/src/constants/menuItems.js` línea 181-186:
+   - Confirmado que menuItems.js usaba `/entities/list`
+7. Inspeccionado App.jsx línea 203:
+   - Encontrado ruta `/accountable-entities` (INCORRECTO)
+
+**Resultado:**
+- ✅ Componente ahora carga correctamente en `/entities/list`
+- ✅ Todas las 5 tabs funcionan (Bancas, Empleados, Bancos, Zonas, Otros)
+- ✅ Tabla muestra 20 bancas con datos correctos
+- ✅ Currency formatting correcto ($X,XXX.XX)
+- ✅ Valores negativos en rojo (-$1,739.20)
+- ✅ Sorting, filtering, y acciones funcionando
+
+**Testing Verificado:**
+- http://localhost:4001/entities/list carga exitosamente
+- Tab "Bancas" seleccionado por defecto
+- 20 entradas mostradas en tabla
+- Quick filter funcional
+- Footer muestra "Mostrando 20 entradas"
+
+**Lección Aprendida:**
+⚠️ **CRÍTICO:** Al crear nuevos componentes con rutas, SIEMPRE verificar que el path en `App.jsx` coincida EXACTAMENTE con el path en `menuItems.js`. Esta es la causa #1 de componentes que no cargan.
+
+**Proceso de verificación recomendado:**
+1. ✅ Crear el componente
+2. ✅ Agregar la ruta en App.jsx
+3. ✅ Verificar el path en menuItems.js
+4. ✅ **COMPARAR** que ambos paths sean idénticos
+5. ✅ Navegar manualmente para verificar que funciona
+
+**Referencias:**
+- Issue #59: Implementar módulo ENTIDADES CONTABLES
+- Commit: 8ed9b46
+- Documentado en sección "🔗 RUTAS Y NAVEGACIÓN - PROCESO OBLIGATORIO" (líneas 48-92)
+
+---
+
 ### Fix: Color Coherence in V2 Loans and Excesses Modules (2025-11-19)
 
 **Problema:** Botones en los módulos de Préstamos y Excedentes de V2 no mantenían coherencia de colores con el sistema de diseño. Usaban propiedades y valores inconsistentes.
