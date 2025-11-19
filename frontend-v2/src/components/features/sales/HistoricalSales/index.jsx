@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Box, Paper, Typography, TextField, Grid, Autocomplete, Button, Stack,
   Tabs, Tab, ToggleButtonGroup, ToggleButton, Table, TableHead, TableBody, TableRow, TableCell,
-  Checkbox, FormControlLabel, FormControl, InputLabel, Select, MenuItem, InputAdornment
+  Checkbox, FormControlLabel, FormControl, InputLabel, Select, MenuItem, InputAdornment, OutlinedInput
 } from '@mui/material';
 import { FilterList, PictureAsPdf, Download, Search } from '@mui/icons-material';
 
@@ -531,49 +531,200 @@ const HistoricalSales = () => {
       case 3: // Por zona
         return (
           <>
-            <Typography variant="h5" align="center" sx={{ mb: 3, color: '#1976d2' }}>
-              Ventas por Zona Geográfica
+            <Typography variant="h5" align="center" gutterBottom sx={{ fontWeight: 400, mb: 3 }}>
+              Zonas
             </Typography>
 
-            <Typography variant="h6" align="center" sx={{ mb: 3, color: '#666' }}>
-              Total Bancas Activas: {zonasData.reduce((sum, d) => sum + d.bancasActivas, 0)} |
-              Total Venta: {formatCurrency(zonasData.reduce((sum, d) => sum + d.venta, 0))}
+            <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+              <Box>
+                <Typography variant="caption" sx={{ color: 'text.secondary', mb: 0.5, display: 'block' }}>
+                  Fecha
+                </Typography>
+                <TextField
+                  type="date"
+                  size="small"
+                  value={fechaInicial}
+                  onChange={(e) => setFechaInicial(e.target.value)}
+                  sx={{ width: 200 }}
+                />
+              </Box>
+
+              <Box>
+                <Typography variant="caption" sx={{ color: 'text.secondary', mb: 0.5, display: 'block' }}>
+                  Zonas
+                </Typography>
+                <FormControl sx={{ minWidth: 200 }} size="small">
+                  <Select
+                    multiple
+                    value={zonas.map(z => z.id)}
+                    onChange={(e) => {
+                      const selectedIds = e.target.value;
+                      setZonas(zonasList.filter(z => selectedIds.includes(z.id)));
+                    }}
+                    renderValue={(selected) => `${selected.length} seleccionadas`}
+                  >
+                    {zonasList.map((zone) => (
+                      <MenuItem key={zone.id} value={zone.id}>
+                        <Checkbox checked={zonas.map(z => z.id).indexOf(zone.id) > -1} />
+                        {zone.name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Box>
+            </Box>
+
+            <Box sx={{ display: 'flex', gap: 1.5, mb: 3 }}>
+              <Button
+                variant="contained"
+                sx={{
+                  bgcolor: '#51cbce',
+                  '&:hover': { bgcolor: '#45b8bb' },
+                  borderRadius: '30px',
+                  px: 4,
+                  py: 1.2,
+                  textTransform: 'uppercase',
+                  fontWeight: 500,
+                  color: 'white'
+                }}
+              >
+                Ver ventas
+              </Button>
+              <Button
+                variant="contained"
+                sx={{
+                  bgcolor: '#51cbce',
+                  '&:hover': { bgcolor: '#45b8bb' },
+                  borderRadius: '30px',
+                  px: 4,
+                  py: 1.2,
+                  textTransform: 'uppercase',
+                  fontWeight: 500,
+                  color: 'white'
+                }}
+              >
+                PDF
+              </Button>
+            </Box>
+
+            <Typography variant="h5" align="center" gutterBottom sx={{ fontWeight: 400, mb: 3 }}>
+              Total: $0.00
             </Typography>
+
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="caption" sx={{ color: 'text.secondary', mb: 1, display: 'block' }}>
+                Filtros
+              </Typography>
+              <ToggleButtonGroup
+                value={filterType}
+                exclusive
+                onChange={(e, newValue) => newValue && setFilterType(newValue)}
+                size="small"
+                sx={{ flexWrap: 'wrap' }}
+              >
+                <ToggleButton value="todos" sx={{ textTransform: 'uppercase', fontSize: '0.75rem', px: 2, py: 0.8 }}>
+                  Todos
+                </ToggleButton>
+                <ToggleButton value="con-ventas" sx={{ textTransform: 'uppercase', fontSize: '0.75rem', px: 2, py: 0.8 }}>
+                  Con ventas
+                </ToggleButton>
+                <ToggleButton value="con-premios" sx={{ textTransform: 'uppercase', fontSize: '0.75rem', px: 2, py: 0.8 }}>
+                  Con premios
+                </ToggleButton>
+                <ToggleButton value="tickets-pendientes" sx={{ textTransform: 'uppercase', fontSize: '0.75rem', px: 2, py: 0.8 }}>
+                  Con tickets pendientes
+                </ToggleButton>
+                <ToggleButton value="negativas" sx={{ textTransform: 'uppercase', fontSize: '0.75rem', px: 2, py: 0.8 }}>
+                  Con ventas netas negativas
+                </ToggleButton>
+                <ToggleButton value="positivas" sx={{ textTransform: 'uppercase', fontSize: '0.75rem', px: 2, py: 0.8 }}>
+                  Con ventas netas positivas
+                </ToggleButton>
+              </ToggleButtonGroup>
+            </Box>
+
+            <Box sx={{ mb: 2, textAlign: 'right' }}>
+              <TextField
+                size="small"
+                placeholder="Filtrado rápido"
+                value={filtroRapido}
+                onChange={(e) => setFiltroRapido(e.target.value)}
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <Search />
+                    </InputAdornment>
+                  ),
+                }}
+                sx={{ width: 300 }}
+              />
+            </Box>
 
             <Table size="small">
-              <TableHead>
-                <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
-                  {['Zona', 'Bancas Activas', 'Tickets', 'Venta', 'Comisiones', 'Descuentos', 'Premios', 'Neto'].map(h => (
-                    <TableCell key={h} sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.75rem' }}>{h}</TableCell>
-                  ))}
+              <TableHead sx={{ backgroundColor: 'grey.100' }}>
+                <TableRow>
+                  <TableCell>Nombre</TableCell>
+                  <TableCell align="center">P</TableCell>
+                  <TableCell align="center">L</TableCell>
+                  <TableCell align="center">W</TableCell>
+                  <TableCell align="right">Total</TableCell>
+                  <TableCell align="right">Venta</TableCell>
+                  <TableCell align="right">Comisiones</TableCell>
+                  <TableCell align="right">Descuentos</TableCell>
+                  <TableCell align="right">Premios</TableCell>
+                  <TableCell align="right">Neto</TableCell>
+                  <TableCell align="right">Caída</TableCell>
+                  <TableCell align="right">Final</TableCell>
+                  <TableCell align="right">Balance</TableCell>
+                </TableRow>
+                <TableRow sx={{ backgroundColor: 'grey.200' }}>
+                  <TableCell><strong>Totales</strong></TableCell>
+                  <TableCell align="center"><strong>0</strong></TableCell>
+                  <TableCell align="center"><strong>0</strong></TableCell>
+                  <TableCell align="center"><strong>0</strong></TableCell>
+                  <TableCell align="right"><strong>0</strong></TableCell>
+                  <TableCell align="right"><strong>$0.00</strong></TableCell>
+                  <TableCell align="right"><strong>$0.00</strong></TableCell>
+                  <TableCell align="right"><strong>$0.00</strong></TableCell>
+                  <TableCell align="right"><strong>$0.00</strong></TableCell>
+                  <TableCell align="right"><strong>$0.00</strong></TableCell>
+                  <TableCell align="right"><strong>$0.00</strong></TableCell>
+                  <TableCell align="right"><strong>$0.00</strong></TableCell>
+                  <TableCell align="right"><strong>$0.00</strong></TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                <TableRow sx={{ backgroundColor: '#e3f2fd' }}>
-                  <TableCell sx={{ fontWeight: 600 }}>Totales</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>{zonasData.reduce((sum, d) => sum + d.bancasActivas, 0)}</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>{zonasData.reduce((sum, d) => sum + d.tickets, 0)}</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>{formatCurrency(zonasData.reduce((sum, d) => sum + d.venta, 0))}</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>{formatCurrency(zonasData.reduce((sum, d) => sum + d.comisiones, 0))}</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>{formatCurrency(zonasData.reduce((sum, d) => sum + d.descuentos, 0))}</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>{formatCurrency(zonasData.reduce((sum, d) => sum + d.premios, 0))}</TableCell>
-                  <TableCell sx={{ fontWeight: 600, color: 'success.main' }}>{formatCurrency(zonasData.reduce((sum, d) => sum + d.neto, 0))}</TableCell>
-                </TableRow>
-                {zonasData.map((d, i) => (
-                  <TableRow key={i} sx={{ '&:hover': { backgroundColor: 'action.hover' } }}>
-                    <TableCell sx={{ fontWeight: 500 }}>{d.zona}</TableCell>
-                    <TableCell>{d.bancasActivas}</TableCell>
-                    <TableCell>{d.tickets}</TableCell>
-                    <TableCell>{formatCurrency(d.venta)}</TableCell>
-                    <TableCell>{formatCurrency(d.comisiones)}</TableCell>
-                    <TableCell>{formatCurrency(d.descuentos)}</TableCell>
-                    <TableCell>{formatCurrency(d.premios)}</TableCell>
-                    <TableCell sx={{ color: d.neto >= 0 ? 'success.main' : 'error.main' }}>{formatCurrency(d.neto)}</TableCell>
+                {zonasData.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={13} align="center" sx={{ py: 3, color: 'text.secondary' }}>
+                      No hay entradas disponibles
+                    </TableCell>
                   </TableRow>
-                ))}
+                ) : (
+                  zonasData.map((d, i) => (
+                    <TableRow key={i} sx={{ '&:hover': { backgroundColor: 'action.hover' } }}>
+                      <TableCell sx={{ fontWeight: 500 }}>{d.nombre}</TableCell>
+                      <TableCell align="center">{d.p}</TableCell>
+                      <TableCell align="center">{d.l}</TableCell>
+                      <TableCell align="center">{d.w}</TableCell>
+                      <TableCell align="right">{d.total}</TableCell>
+                      <TableCell align="right">{formatCurrency(d.venta)}</TableCell>
+                      <TableCell align="right">{formatCurrency(d.comisiones)}</TableCell>
+                      <TableCell align="right">{formatCurrency(d.descuentos)}</TableCell>
+                      <TableCell align="right">{formatCurrency(d.premios)}</TableCell>
+                      <TableCell align="right" sx={{ color: d.neto >= 0 ? 'success.main' : 'error.main' }}>{formatCurrency(d.neto)}</TableCell>
+                      <TableCell align="right">{formatCurrency(d.caida)}</TableCell>
+                      <TableCell align="right">{formatCurrency(d.final)}</TableCell>
+                      <TableCell align="right">{formatCurrency(d.balance)}</TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
-            <Typography variant="caption" sx={{ color: 'text.secondary' }}>Mostrando {zonasData.length} zonas</Typography>
+
+            <Typography variant="body2" sx={{ mt: 2 }}>
+              Mostrando {zonasData.length} de {zonasData.length} entradas
+            </Typography>
           </>
         );
 
