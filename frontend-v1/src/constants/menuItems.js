@@ -194,8 +194,8 @@ export const MENU_ITEMS = [
     label: 'RECEPTORES DE CORREO',
     icon: 'nc-email-85',
     submenu: [
-      { id: 'lista-receptores', label: 'Lista', shortcut: 'L', path: '/receptores/lista' },
-      { id: 'crear-receptor', label: 'Crear', shortcut: 'C', path: '/receptores/crear' }
+      { id: 'lista-receptores', label: 'Lista', shortcut: 'L', path: '/receptores-correo/lista' },
+      { id: 'crear-receptor', label: 'Crear', shortcut: 'C', path: '/receptores-correo/crear' }
     ]
   },
   { id: 'notificaciones', label: 'NOTIFICACIONES', icon: 'nc-chat-33', path: '/notificaciones' }

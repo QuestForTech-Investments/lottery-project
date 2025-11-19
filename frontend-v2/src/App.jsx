@@ -107,6 +107,20 @@ const DrawSchedulesMUI = lazy(() => import('@components/features/draws/DrawSched
 const AccountableEntitiesMUI = lazy(() => import('@components/features/accountable-entities/AccountableEntities'))
 const CreateAccountableEntityMUI = lazy(() => import('@components/features/accountable-entities/CreateAccountableEntity'))
 
+// My Group feature components
+const GroupConfigurationMUI = lazy(() => import('@components/features/my-group/GroupConfiguration'))
+
+// F8 Monitor feature component
+const F8MonitorMUI = lazy(() => import('@components/features/f8/F8Monitor'))
+
+// External Agents feature components
+const CreateExternalAgentMUI = lazy(() => import('@components/features/external-agents/CreateExternalAgent'))
+const ExternalAgentsListMUI = lazy(() => import('@components/features/external-agents/ExternalAgentsList'))
+
+// Email Receivers feature components
+const CreateEmailReceiverMUI = lazy(() => import('@components/features/email-receivers/CreateEmailReceiver'))
+const EmailReceiversListMUI = lazy(() => import('@components/features/email-receivers/EmailReceiversList'))
+
 function App() {
   return (
     <>
@@ -203,6 +217,12 @@ function App() {
                           <Route path="/draws/schedules" element={<Suspense fallback={<LazyLoadingFallback />}><DrawSchedulesMUI /></Suspense>} />
                           <Route path="/entities/list" element={<Suspense fallback={<LazyLoadingFallback />}><AccountableEntitiesMUI /></Suspense>} />
                           <Route path="/entities/new" element={<Suspense fallback={<LazyLoadingFallback />}><CreateAccountableEntityMUI /></Suspense>} />
+                          <Route path="/my-group/configuration" element={<Suspense fallback={<LazyLoadingFallback />}><GroupConfigurationMUI /></Suspense>} />
+                          <Route path="/f8" element={<Suspense fallback={<LazyLoadingFallback />}><F8MonitorMUI /></Suspense>} />
+                          <Route path="/external-agents/new" element={<Suspense fallback={<LazyLoadingFallback />}><CreateExternalAgentMUI /></Suspense>} />
+                          <Route path="/external-agents/list" element={<Suspense fallback={<LazyLoadingFallback />}><ExternalAgentsListMUI /></Suspense>} />
+                          <Route path="/receivers/new" element={<Suspense fallback={<LazyLoadingFallback />}><CreateEmailReceiverMUI /></Suspense>} />
+                          <Route path="/receivers/list" element={<Suspense fallback={<LazyLoadingFallback />}><EmailReceiversListMUI /></Suspense>} />
                         </Routes>
                       </MainLayout>
                   </ErrorBoundary>

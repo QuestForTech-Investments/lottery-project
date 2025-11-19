@@ -72,6 +72,12 @@ import DrawsList from '@components/sorteos/DrawsList'
 import DrawSchedules from '@components/sorteos/DrawSchedules'
 import AccountableEntities from '@components/entidades/AccountableEntities'
 import CreateAccountableEntity from '@components/entidades/CreateAccountableEntity'
+import GroupConfiguration from '@components/mi-grupo/GroupConfiguration'
+import F8Monitor from '@components/f8/F8Monitor'
+import CreateExternalAgent from '@components/agentes-externos/CreateExternalAgent'
+import ExternalAgentsList from '@components/agentes-externos/ExternalAgentsList'
+import CreateEmailReceiver from '@components/receptores/CreateEmailReceiver'
+import EmailReceiversList from '@components/receptores/EmailReceiversList'
 
 function App() {
   return (
@@ -162,6 +168,12 @@ function App() {
                 <Route path="/sorteos/horarios" element={<DrawSchedules />} />
                 <Route path="/entidades-contables" element={<AccountableEntities />} />
                 <Route path="/entidades-contables/crear" element={<CreateAccountableEntity />} />
+                <Route path="/mi-grupo/configuracion" element={<GroupConfiguration />} />
+                <Route path="/f8" element={<F8Monitor />} />
+                <Route path="/agentes-externos/crear" element={<CreateExternalAgent />} />
+                <Route path="/agentes-externos/lista" element={<ExternalAgentsList />} />
+                <Route path="/receptores-correo/crear" element={<CreateEmailReceiver />} />
+                <Route path="/receptores-correo/lista" element={<EmailReceiversList />} />
                 <Route path="/test/permissions" element={<TestPermissions />} />
                 <Route path="/test/multi-zone" element={<TestMultiZone />} />
                 <Route path="/test/react-multiselect" element={<TestReactMultiselect />} />

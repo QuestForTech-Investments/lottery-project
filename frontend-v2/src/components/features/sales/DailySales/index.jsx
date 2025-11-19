@@ -37,6 +37,14 @@ import {
 } from '@mui/icons-material';
 import api from '@services/api';
 
+// Import tab components
+import BancaPorSorteoTab from './tabs/BancaPorSorteoTab';
+import PorSorteoTab from './tabs/PorSorteoTab';
+import CombinacionesTab from './tabs/CombinacionesTab';
+import PorZonaTab from './tabs/PorZonaTab';
+import CategoriaPremiosTab from './tabs/CategoriaPremiosTab';
+import CategoriaPremiosPaleTab from './tabs/CategoriaPremiosPaleTab';
+
 const TABLE_COLUMNS = [
   { key: 'ref', label: 'Ref.', align: 'left' },
   { key: 'code', label: 'Código', align: 'left' },
@@ -573,15 +581,64 @@ const DailySales = () => {
         </Card>
       )}
 
-      {/* Placeholder for other tabs */}
-      {mainTab > 0 && (
-        <Card>
-          <CardContent>
-            <Typography variant="h6">
-              {MAIN_TABS[mainTab]} - Funcionalidad pendiente
-            </Typography>
-          </CardContent>
-        </Card>
+      {/* Tab 2: Banca por sorteo */}
+      {mainTab === 1 && (
+        <BancaPorSorteoTab
+          selectedDate={selectedDate}
+          setSelectedDate={setSelectedDate}
+          zones={zones}
+          selectedZones={selectedZones}
+          handleZoneChange={handleZoneChange}
+        />
+      )}
+
+      {/* Tab 3: Por sorteo */}
+      {mainTab === 2 && (
+        <PorSorteoTab
+          selectedDate={selectedDate}
+          setSelectedDate={setSelectedDate}
+          zones={zones}
+          selectedZones={selectedZones}
+          handleZoneChange={handleZoneChange}
+        />
+      )}
+
+      {/* Tab 4: Combinaciones */}
+      {mainTab === 3 && (
+        <CombinacionesTab
+          selectedDate={selectedDate}
+          setSelectedDate={setSelectedDate}
+          zones={zones}
+          selectedZones={selectedZones}
+          handleZoneChange={handleZoneChange}
+        />
+      )}
+
+      {/* Tab 5: Por zona */}
+      {mainTab === 4 && (
+        <PorZonaTab
+          selectedDate={selectedDate}
+          setSelectedDate={setSelectedDate}
+          zones={zones}
+          selectedZones={selectedZones}
+          handleZoneChange={handleZoneChange}
+        />
+      )}
+
+      {/* Tab 6: Categoría de Premios */}
+      {mainTab === 5 && (
+        <CategoriaPremiosTab
+          selectedDate={selectedDate}
+          setSelectedDate={setSelectedDate}
+        />
+      )}
+
+      {/* Tab 7: Categoría de Premios para Pale */}
+      {mainTab === 6 && (
+        <CategoriaPremiosPaleTab
+          selectedDate={selectedDate}
+          setSelectedDate={setSelectedDate}
+        />
       )}
     </Box>
   );
