@@ -200,7 +200,7 @@ function App() {
                           <Route path="/collector-management" element={<Suspense fallback={<LazyLoadingFallback />}><ManageDebtCollectorsMUI /></Suspense>} />
                           <Route path="/draws/list" element={<Suspense fallback={<LazyLoadingFallback />}><DrawsListMUI /></Suspense>} />
                           <Route path="/draws/schedules" element={<Suspense fallback={<LazyLoadingFallback />}><DrawSchedulesMUI /></Suspense>} />
-                          <Route path="/accountable-entities" element={<Suspense fallback={<LazyLoadingFallback />}><AccountableEntitiesMUI /></Suspense>} />
+                          <Route path="/entities/list" element={<Suspense fallback={<LazyLoadingFallback />}><AccountableEntitiesMUI /></Suspense>} />
                         </Routes>
                       </MainLayout>
                   </ErrorBoundary>
