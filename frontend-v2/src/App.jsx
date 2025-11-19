@@ -105,6 +105,7 @@ const DrawSchedulesMUI = lazy(() => import('@components/features/draws/DrawSched
 
 // Accountable Entities feature components
 const AccountableEntitiesMUI = lazy(() => import('@components/features/accountable-entities/AccountableEntities'))
+const CreateAccountableEntityMUI = lazy(() => import('@components/features/accountable-entities/CreateAccountableEntity'))
 
 function App() {
   return (
@@ -201,6 +202,7 @@ function App() {
                           <Route path="/draws/list" element={<Suspense fallback={<LazyLoadingFallback />}><DrawsListMUI /></Suspense>} />
                           <Route path="/draws/schedules" element={<Suspense fallback={<LazyLoadingFallback />}><DrawSchedulesMUI /></Suspense>} />
                           <Route path="/entities/list" element={<Suspense fallback={<LazyLoadingFallback />}><AccountableEntitiesMUI /></Suspense>} />
+                          <Route path="/entities/new" element={<Suspense fallback={<LazyLoadingFallback />}><CreateAccountableEntityMUI /></Suspense>} />
                         </Routes>
                       </MainLayout>
                   </ErrorBoundary>
