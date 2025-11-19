@@ -90,6 +90,7 @@ const ExcessesReportMUI = lazy(() => import('@components/features/excesses/Exces
 
 // Limits feature components
 const LimitsListMUI = lazy(() => import('@components/features/limits/LimitsList'))
+const CreateLimitMUI = lazy(() => import('@components/features/limits/CreateLimit'))
 
 function App() {
   return (
@@ -177,6 +178,7 @@ function App() {
                           <Route path="/surpluses/manage" element={<Suspense fallback={<LazyLoadingFallback />}><ManageExcessesMUI /></Suspense>} />
                           <Route path="/surpluses/report" element={<Suspense fallback={<LazyLoadingFallback />}><ExcessesReportMUI /></Suspense>} />
                           <Route path="/limits/list" element={<Suspense fallback={<LazyLoadingFallback />}><LimitsListMUI /></Suspense>} />
+                          <Route path="/limits/new" element={<Suspense fallback={<LazyLoadingFallback />}><CreateLimitMUI /></Suspense>} />
                         </Routes>
                       </MainLayout>
                   </ErrorBoundary>

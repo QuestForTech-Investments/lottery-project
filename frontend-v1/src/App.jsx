@@ -62,6 +62,7 @@ import LoansList from '@components/loans/LoansList'
 import ManageExcesses from '@components/excedentes/ManageExcesses'
 import ExcessesReport from '@components/excedentes/ExcessesReport'
 import LimitsList from '@components/limites/LimitsList'
+import CreateLimit from '@components/limites/CreateLimit'
 
 function App() {
   return (
@@ -142,6 +143,7 @@ function App() {
                 <Route path="/excedentes/manejar" element={<ManageExcesses />} />
                 <Route path="/excedentes/reporte" element={<ExcessesReport />} />
                 <Route path="/limites/lista" element={<LimitsList />} />
+                <Route path="/limites/crear" element={<CreateLimit />} />
                 <Route path="/test/permissions" element={<TestPermissions />} />
                 <Route path="/test/multi-zone" element={<TestMultiZone />} />
                 <Route path="/test/react-multiselect" element={<TestReactMultiselect />} />
