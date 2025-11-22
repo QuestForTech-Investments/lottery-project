@@ -12,7 +12,7 @@ import TicketPrintTemplate from './TicketPrintTemplate';
  * - Generación de código de barras
  * - Funcionalidad de impresión
  */
-const TicketPrinter = ({ ticketData, onAfterPrint }) => {
+const TicketPrinter = ({ ticketData, onAfterPrint, onClose }) => {
   const componentRef = useRef();
 
   // Generar código de barras cuando se monta el componente
@@ -103,7 +103,7 @@ const TicketPrinter = ({ ticketData, onAfterPrint }) => {
         <Button
           variant="outlined"
           startIcon={<CloseIcon size={20} />}
-          onClick={() => window.close()}
+          onClick={onClose || (() => window.close())}
           sx={{
             color: '#6c757d',
             borderColor: '#6c757d',

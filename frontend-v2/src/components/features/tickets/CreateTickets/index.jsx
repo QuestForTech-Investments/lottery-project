@@ -763,6 +763,10 @@ const CreateTickets = () => {
           {ticketData && (
             <TicketPrinter
               ticketData={ticketData}
+              onClose={() => {
+                setTicketModalOpen(false);
+                setTicketData(null);
+              }}
               onAfterPrint={() => {
                 setTicketModalOpen(false);
                 setTicketData(null);

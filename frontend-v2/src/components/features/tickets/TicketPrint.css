@@ -15,6 +15,10 @@
   padding: 8px;
   margin: 0 auto;
   text-align: center;
+  transform: scale(1.5); /* Hacer el ticket 1.5x más grande en la vista previa */
+  transform-origin: top center;
+  margin-top: 20px;
+  margin-bottom: 60px; /* Espacio extra por el escalado */
 }
 
 /* Solo aplicar estilos de impresión cuando se imprime */
@@ -43,6 +47,8 @@
     max-width: 76mm;
     font-size: 9pt;
     page-break-after: always;
+    transform: none; /* Resetear el escalado para la impresión */
+    margin: 0;
   }
 }
 
