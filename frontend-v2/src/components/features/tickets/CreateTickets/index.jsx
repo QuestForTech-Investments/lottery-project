@@ -241,8 +241,8 @@ const CreateTickets = () => {
         grandTotal: totalAmount,
         lines: todasLasJugadas.map((jugada, index) => ({
           lineId: index + 1,
-          lotteryName: jugada.sorteo?.name || 'Lottery',
-          drawName: jugada.sorteo?.name || 'Draw',
+          lotteryName: jugada.sorteo || 'Lottery',
+          drawName: jugada.sorteo || 'Draw',
           betNumber: jugada.numero,
           betTypeName: jugada.tipo?.name || 'Directo',
           betAmount: parseFloat(jugada.monto) || 0,
