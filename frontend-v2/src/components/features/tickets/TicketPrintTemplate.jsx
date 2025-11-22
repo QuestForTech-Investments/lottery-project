@@ -62,8 +62,9 @@ const TicketPrintTemplate = ({ ticketData }) => {
       {/* BODY - LÍNEAS AGRUPADAS POR SORTEO */}
       {drawGroups.map((group, index) => (
         <div key={index} className="draw-section">
+          {/* Header con fondo negro */}
           <div className="draw-header">
-            {group.drawName}: ${group.total.toFixed(2)}
+            {group.drawName.toUpperCase()}: ${group.total.toFixed(2)}
           </div>
 
           <table className="lines-table">
