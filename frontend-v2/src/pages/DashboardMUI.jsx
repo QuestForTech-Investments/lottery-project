@@ -165,12 +165,12 @@ const DashboardMUI = () => {
                     startIcon={<SendIcon />}
                     onClick={handleQuickPublish}
                     sx={{
-                      bgcolor: '#4dd4d4',
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                       color: 'white',
                       borderRadius: '25px',
                       py: 1.5,
                       '&:hover': {
-                        bgcolor: '#3ec3c3',
+                        background: 'linear-gradient(135deg, #5568d3 0%, #63418b 100%)',
                       },
                     }}
                   >
@@ -254,10 +254,10 @@ const DashboardMUI = () => {
                     startIcon={<AddIcon />}
                     onClick={handleAddNumberToBlock}
                     sx={{
-                      bgcolor: '#4dd4d4',
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                       color: 'white',
                       '&:hover': {
-                        bgcolor: '#3ec3c3',
+                        background: 'linear-gradient(135deg, #5568d3 0%, #63418b 100%)',
                       },
                     }}
                   >
@@ -299,13 +299,13 @@ const DashboardMUI = () => {
               startIcon={<DashboardIcon />}
               onClick={handleNavigateToDashboard}
               sx={{
-                bgcolor: '#4dd4d4',
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                 color: 'white',
                 py: 2,
                 fontSize: '1rem',
                 fontWeight: 600,
                 '&:hover': {
-                  bgcolor: '#3ec3c3',
+                  background: 'linear-gradient(135deg, #5568d3 0%, #63418b 100%)',
                 },
               }}
             >
@@ -320,13 +320,13 @@ const DashboardMUI = () => {
               startIcon={<AssessmentIcon />}
               onClick={handleNavigateToDashboardOperativo}
               sx={{
-                bgcolor: '#4b5563',
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                 color: 'white',
                 py: 2,
                 fontSize: '1rem',
                 fontWeight: 600,
                 '&:hover': {
-                  bgcolor: '#374151',
+                  background: 'linear-gradient(135deg, #5568d3 0%, #63418b 100%)',
                 },
               }}
             >

@@ -41,6 +41,10 @@ public class Lottery
     [Column("updated_by")]
     public int? UpdatedBy { get; set; }
 
+    [MaxLength(7)]
+    [Column("colour")]
+    public string? Colour { get; set; }
+
     // Navigation properties
     [ForeignKey("CountryId")]
     public virtual Country? Country { get; set; }

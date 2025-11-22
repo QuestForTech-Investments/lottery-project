@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Card,
@@ -14,88 +14,67 @@ import {
   Typography,
   InputAdornment,
   IconButton,
-  TableSortLabel
+  TableSortLabel,
+  CircularProgress,
+  Alert,
+  Snackbar,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button
 } from '@mui/material';
-import { Search as SearchIcon, Edit as EditIcon, DragIndicator as DragIndicatorIcon } from '@mui/icons-material';
+import { Search as SearchIcon, Edit as EditIcon, DragIndicator as DragIndicatorIcon, Close as CloseIcon } from '@mui/icons-material';
+import { getAllDraws, updateDraw } from '../../../../services/drawService';
 
 const DrawsList = () => {
   const [quickFilter, setQuickFilter] = useState('');
   const [sortBy, setSortBy] = useState(null);
   const [sortOrder, setSortOrder] = useState('asc');
+  const [draws, setDraws] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
-  // Mockup data - 70+ draws/lotteries
-  const [draws, setDraws] = useState([
-    { id: 1, index: 1, name: 'Anguila 10am', abbreviation: 'AG AM', color: '#FF5733' },
-    { id: 2, index: 2, name: 'REAL', abbreviation: 'RL', color: '#33FF57' },
-    { id: 3, index: 3, name: 'GANA MAS', abbreviation: 'GM', color: '#3357FF' },
-    { id: 4, index: 4, name: 'LA PRIMERA', abbreviation: 'LP', color: '#F333FF' },
-    { id: 5, index: 5, name: 'NEW YORK 10am', abbreviation: 'NY 10A', color: '#FF33A1' },
-    { id: 6, index: 6, name: 'NEW YORK 12pm', abbreviation: 'NY 12P', color: '#A1FF33' },
-    { id: 7, index: 7, name: 'NEW YORK 7pm', abbreviation: 'NY 7P', color: '#33A1FF' },
-    { id: 8, index: 8, name: 'FLORIDA 1pm', abbreviation: 'FL 1P', color: '#FFA133' },
-    { id: 9, index: 9, name: 'FLORIDA 7pm', abbreviation: 'FL 7P', color: '#A133FF' },
-    { id: 10, index: 10, name: 'GEORGIA 12pm', abbreviation: 'GA 12P', color: '#33FFA1' },
-    { id: 11, index: 11, name: 'GEORGIA 7pm', abbreviation: 'GA 7P', color: '#FF3333' },
-    { id: 12, index: 12, name: 'TEXAS 10am', abbreviation: 'TX 10A', color: '#3333FF' },
-    { id: 13, index: 13, name: 'TEXAS 12pm', abbreviation: 'TX 12P', color: '#FF33FF' },
-    { id: 14, index: 14, name: 'TEXAS 7pm', abbreviation: 'TX 7P', color: '#FFFF33' },
-    { id: 15, index: 15, name: 'CALIFORNIA AM', abbreviation: 'CA AM', color: '#33FFFF' },
-    { id: 16, index: 16, name: 'CALIFORNIA PM', abbreviation: 'CA PM', color: '#FF6633' },
-    { id: 17, index: 17, name: 'LOTEKA', abbreviation: 'LTK', color: '#66FF33' },
-    { id: 18, index: 18, name: 'LOTEDOM', abbreviation: 'LTD', color: '#3366FF' },
-    { id: 19, index: 19, name: 'LOTERIA NACIONAL', abbreviation: 'LN', color: '#FF3366' },
-    { id: 20, index: 20, name: 'LOTERIA REAL', abbreviation: 'LR', color: '#66FFFF' },
-    { id: 21, index: 21, name: 'LA SUERTE DOMINICANA', abbreviation: 'LSD', color: '#FF66FF' },
-    { id: 22, index: 22, name: 'QUINIELA PALE', abbreviation: 'QP', color: '#FFFF66' },
-    { id: 23, index: 23, name: 'SUPER PALE (RD)', abbreviation: 'SP RD', color: '#66FF66' },
-    { id: 24, index: 24, name: 'SUPER PALE (USA)', abbreviation: 'SP USA', color: '#6666FF' },
-    { id: 25, index: 25, name: 'KING LOTTERY', abbreviation: 'KL', color: '#FF6666' },
-    { id: 26, index: 26, name: 'PANAMA LNB', abbreviation: 'PA LNB', color: '#FFAA33' },
-    { id: 27, index: 27, name: 'DIARIA HONDURAS', abbreviation: 'DH', color: '#33AAFF' },
-    { id: 28, index: 28, name: 'LA CHICA', abbreviation: 'LC', color: '#AA33FF' },
-    { id: 29, index: 29, name: 'PENNSYLVANIA', abbreviation: 'PA', color: '#FFAA66' },
-    { id: 30, index: 30, name: 'MARYLAND', abbreviation: 'MD', color: '#66AAFF' },
-    { id: 31, index: 31, name: 'MASSACHUSETTS', abbreviation: 'MA', color: '#AA66FF' },
-    { id: 32, index: 32, name: 'VIRGINIA', abbreviation: 'VA', color: '#FFAAAA' },
-    { id: 33, index: 33, name: 'NORTH CAROLINA', abbreviation: 'NC', color: '#AAFFAA' },
-    { id: 34, index: 34, name: 'SOUTH CAROLINA', abbreviation: 'SC', color: '#AAAAFF' },
-    { id: 35, index: 35, name: 'CONNECTICUT', abbreviation: 'CT', color: '#FFDD33' },
-    { id: 36, index: 36, name: 'DELAWARE', abbreviation: 'DE', color: '#33DDFF' },
-    { id: 37, index: 37, name: 'NEW JERSEY', abbreviation: 'NJ', color: '#DD33FF' },
-    { id: 38, index: 38, name: 'INDIANA', abbreviation: 'IN', color: '#FFDDAA' },
-    { id: 39, index: 39, name: 'CHICAGO', abbreviation: 'CHI', color: '#AADDFF' },
-    { id: 40, index: 40, name: 'L.E. PUERTO RICO', abbreviation: 'LE PR', color: '#DDAAFF' },
-    { id: 41, index: 41, name: 'NEW YORK 6x1', abbreviation: 'NY 6x1', color: '#FF9933' },
-    { id: 42, index: 42, name: 'FLORIDA 6x1', abbreviation: 'FL 6x1', color: '#33FF99' },
-    { id: 43, index: 43, name: 'FLORIDA PICK2', abbreviation: 'FL P2', color: '#9933FF' },
-    { id: 44, index: 44, name: 'ANGUILA QUINIELA', abbreviation: 'AQ', color: '#FF9966' },
-    { id: 45, index: 45, name: 'Anguila 1pm', abbreviation: 'AG 1P', color: '#66FF99' },
-    { id: 46, index: 46, name: 'Anguila 7pm', abbreviation: 'AG 7P', color: '#9966FF' },
-    { id: 47, index: 47, name: 'Pega 3 NY', abbreviation: 'P3 NY', color: '#FFCC33' },
-    { id: 48, index: 48, name: 'Pega 3 FL', abbreviation: 'P3 FL', color: '#33CCFF' },
-    { id: 49, index: 49, name: 'Pega 3 GA', abbreviation: 'P3 GA', color: '#CC33FF' },
-    { id: 50, index: 50, name: 'Pega 4 NY', abbreviation: 'P4 NY', color: '#FFCCAA' },
-    { id: 51, index: 51, name: 'Pega 4 FL', abbreviation: 'P4 FL', color: '#AACCFF' },
-    { id: 52, index: 52, name: 'Pega 4 GA', abbreviation: 'P4 GA', color: '#CCAAFF' },
-    { id: 53, index: 53, name: 'Tripleta NY', abbreviation: 'TR NY', color: '#FF8833' },
-    { id: 54, index: 54, name: 'Tripleta FL', abbreviation: 'TR FL', color: '#33FF88' },
-    { id: 55, index: 55, name: 'Tripleta GA', abbreviation: 'TR GA', color: '#8833FF' },
-    { id: 56, index: 56, name: 'Pick Two NY', abbreviation: 'P2 NY', color: '#FF8866' },
-    { id: 57, index: 57, name: 'Pick Two FL', abbreviation: 'P2 FL', color: '#66FF88' },
-    { id: 58, index: 58, name: 'Pick Two GA', abbreviation: 'P2 GA', color: '#8866FF' },
-    { id: 59, index: 59, name: 'Quiniela NY', abbreviation: 'Q NY', color: '#FFBB33' },
-    { id: 60, index: 60, name: 'Quiniela FL', abbreviation: 'Q FL', color: '#33BBFF' },
-    { id: 61, index: 61, name: 'Quiniela GA', abbreviation: 'Q GA', color: '#BB33FF' },
-    { id: 62, index: 62, name: 'Pale NY', abbreviation: 'PL NY', color: '#FFBBAA' },
-    { id: 63, index: 63, name: 'Pale FL', abbreviation: 'PL FL', color: '#AABBFF' },
-    { id: 64, index: 64, name: 'Pale GA', abbreviation: 'PL GA', color: '#BBAAFF' },
-    { id: 65, index: 65, name: 'Directo NY', abbreviation: 'DR NY', color: '#FF7733' },
-    { id: 66, index: 66, name: 'Directo FL', abbreviation: 'DR FL', color: '#33FF77' },
-    { id: 67, index: 67, name: 'Directo GA', abbreviation: 'DR GA', color: '#7733FF' },
-    { id: 68, index: 68, name: 'Super Pale NY', abbreviation: 'SP NY', color: '#FF7766' },
-    { id: 69, index: 69, name: 'Super Pale FL', abbreviation: 'SP FL', color: '#66FF77' },
-    { id: 70, index: 70, name: 'Super Pale GA', abbreviation: 'SP GA', color: '#7766FF' }
-  ]);
+  // Estado para el modal de edición
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editingDraw, setEditingDraw] = useState(null);
+  const [editForm, setEditForm] = useState({ abbreviation: '', color: '#9e9e9e' });
+  const [saving, setSaving] = useState(false);
+
+  // Cargar draws desde la API
+  useEffect(() => {
+    const fetchDraws = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await getAllDraws({ loadAll: true });
+
+        if (response.success && response.data) {
+          // Transformar datos de API al formato del componente
+          const transformedDraws = response.data.map((draw, index) => ({
+            id: draw.drawId,
+            index: index + 1,
+            name: draw.drawName,
+            abbreviation: draw.abbreviation || '',
+            color: draw.displayColor || draw.lotteryColour || '#9e9e9e',
+            // Guardar datos originales para la actualización
+            originalData: draw
+          }));
+          setDraws(transformedDraws);
+        } else {
+          setError('No se pudieron cargar los sorteos');
+        }
+      } catch (err) {
+        console.error('Error loading draws:', err);
+        setError('Error al cargar los sorteos: ' + (err.message || 'Error desconocido'));
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDraws();
+  }, []);
 
   const filteredDraws = draws.filter(d =>
     d.name.toLowerCase().includes(quickFilter.toLowerCase()) ||
@@ -122,13 +101,98 @@ const DrawsList = () => {
     }
   };
 
-  const handleColorChange = (id, newColor) => {
+  const handleColorChange = async (id, newColor) => {
+    // Actualizar estado local inmediatamente para UX responsiva
     setDraws(draws.map(d => d.id === id ? { ...d, color: newColor } : d));
+
+    // Encontrar el draw para obtener los datos originales
+    const draw = draws.find(d => d.id === id);
+    if (!draw) return;
+
+    try {
+      // Guardar en la API
+      await updateDraw(id, {
+        drawName: draw.originalData.drawName,
+        drawTime: draw.originalData.drawTime,
+        description: draw.originalData.description,
+        abbreviation: draw.originalData.abbreviation,
+        displayColor: newColor,
+        isActive: draw.originalData.isActive
+      });
+
+      setSnackbar({
+        open: true,
+        message: `Color actualizado para "${draw.name}"`,
+        severity: 'success'
+      });
+    } catch (err) {
+      console.error('Error updating color:', err);
+      // Revertir el color si falla
+      setDraws(draws.map(d => d.id === id ? { ...d, color: draw.color } : d));
+      setSnackbar({
+        open: true,
+        message: 'Error al guardar el color: ' + (err.message || 'Error desconocido'),
+        severity: 'error'
+      });
+    }
   };
 
   const handleEdit = (id) => {
-    console.log('Edit draw:', id);
-    alert(`Editar sorteo ${id} (mockup)`);
+    const draw = draws.find(d => d.id === id);
+    if (draw) {
+      setEditingDraw(draw);
+      setEditForm({
+        abbreviation: draw.abbreviation || '',
+        color: draw.color || '#9e9e9e'
+      });
+      setEditModalOpen(true);
+    }
+  };
+
+  const handleCloseEditModal = () => {
+    setEditModalOpen(false);
+    setEditingDraw(null);
+    setEditForm({ abbreviation: '', color: '#9e9e9e' });
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingDraw) return;
+
+    setSaving(true);
+    try {
+      await updateDraw(editingDraw.id, {
+        drawName: editingDraw.originalData.drawName,
+        drawTime: editingDraw.originalData.drawTime,
+        description: editingDraw.originalData.description,
+        abbreviation: editForm.abbreviation,
+        displayColor: editForm.color,
+        isActive: editingDraw.originalData.isActive
+      });
+
+      // Actualizar estado local
+      setDraws(draws.map(d =>
+        d.id === editingDraw.id
+          ? { ...d, abbreviation: editForm.abbreviation, color: editForm.color }
+          : d
+      ));
+
+      setSnackbar({
+        open: true,
+        message: `Sorteo "${editingDraw.name}" actualizado correctamente`,
+        severity: 'success'
+      });
+
+      handleCloseEditModal();
+    } catch (err) {
+      console.error('Error updating draw:', err);
+      setSnackbar({
+        open: true,
+        message: 'Error al actualizar el sorteo: ' + (err.message || 'Error desconocido'),
+        severity: 'error'
+      });
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleDragStart = (e, index) => {
@@ -155,6 +219,19 @@ const DrawsList = () => {
     setDraws(reindexed);
   };
 
+  const handleCloseSnackbar = () => {
+    setSnackbar({ ...snackbar, open: false });
+  };
+
+  if (loading) {
+    return (
+      <Box sx={{ p: 3, bgcolor: '#f5f5f5', minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+        <CircularProgress sx={{ color: '#51cbce' }} />
+        <Typography sx={{ ml: 2, color: '#666' }}>Cargando sorteos...</Typography>
+      </Box>
+    );
+  }
+
   return (
     <Box sx={{ p: 3, bgcolor: '#f5f5f5', minHeight: '100vh' }}>
       <Card>
@@ -172,6 +249,13 @@ const DrawsList = () => {
           >
             Lista de sorteos
           </Typography>
+
+          {/* Error message */}
+          {error && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {error}
+            </Alert>
+          )}
 
           {/* Quick Filter */}
           <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
@@ -197,8 +281,8 @@ const DrawsList = () => {
             <Table>
               <TableHead>
                 <TableRow sx={{ bgcolor: '#f5f5f5' }}>
-                  <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878', width: '50px' }}>Index</TableCell>
-                  <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878' }}>
+                  <TableCell sx={{ fontSize: '14px', fontWeight: 600, color: '#787878', width: '70px', py: 2 }}>Index</TableCell>
+                  <TableCell sx={{ fontSize: '14px', fontWeight: 600, color: '#787878', py: 2 }}>
                     <TableSortLabel
                       active={sortBy === 'name'}
                       direction={sortBy === 'name' ? sortOrder : 'asc'}
@@ -207,7 +291,7 @@ const DrawsList = () => {
                       Nombre
                     </TableSortLabel>
                   </TableCell>
-                  <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878' }}>
+                  <TableCell sx={{ fontSize: '14px', fontWeight: 600, color: '#787878', py: 2 }}>
                     <TableSortLabel
                       active={sortBy === 'abbreviation'}
                       direction={sortBy === 'abbreviation' ? sortOrder : 'asc'}
@@ -216,8 +300,8 @@ const DrawsList = () => {
                       Abreviación
                     </TableSortLabel>
                   </TableCell>
-                  <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878', width: '100px' }}>Color</TableCell>
-                  <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878', textAlign: 'center', width: '100px' }}>Acciones</TableCell>
+                  <TableCell sx={{ fontSize: '14px', fontWeight: 600, color: '#787878', width: '120px', py: 2 }}>Color</TableCell>
+                  <TableCell sx={{ fontSize: '14px', fontWeight: 600, color: '#787878', textAlign: 'center', width: '120px', py: 2 }}>Acciones</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -230,37 +314,37 @@ const DrawsList = () => {
                       onDragOver={handleDragOver}
                       onDrop={(e) => handleDrop(e, idx)}
                       hover
-                      sx={{ cursor: 'move' }}
+                      sx={{ cursor: 'move', height: '56px' }}
                     >
-                      <TableCell sx={{ fontSize: '14px' }}>
+                      <TableCell sx={{ fontSize: '16px', py: 2 }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <DragIndicatorIcon sx={{ color: '#999', fontSize: '20px' }} />
+                          <DragIndicatorIcon sx={{ color: '#999', fontSize: '24px' }} />
                           {draw.index}
                         </Box>
                       </TableCell>
-                      <TableCell sx={{ fontSize: '14px' }}>{draw.name}</TableCell>
-                      <TableCell sx={{ fontSize: '14px' }}>{draw.abbreviation}</TableCell>
-                      <TableCell>
+                      <TableCell sx={{ fontSize: '16px', py: 2, fontWeight: 500 }}>{draw.name}</TableCell>
+                      <TableCell sx={{ fontSize: '16px', py: 2 }}>{draw.abbreviation}</TableCell>
+                      <TableCell sx={{ py: 2 }}>
                         <input
                           type="color"
                           value={draw.color}
                           onChange={(e) => handleColorChange(draw.id, e.target.value)}
                           style={{
-                            width: '50px',
-                            height: '30px',
+                            width: '60px',
+                            height: '40px',
                             border: '1px solid #ddd',
                             borderRadius: '4px',
                             cursor: 'pointer'
                           }}
                         />
                       </TableCell>
-                      <TableCell sx={{ textAlign: 'center' }}>
+                      <TableCell sx={{ textAlign: 'center', py: 2 }}>
                         <IconButton
-                          size="small"
+                          size="medium"
                           onClick={() => handleEdit(draw.id)}
                           sx={{ color: '#51cbce' }}
                         >
-                          <EditIcon fontSize="small" />
+                          <EditIcon />
                         </IconButton>
                       </TableCell>
                     </TableRow>
@@ -282,6 +366,118 @@ const DrawsList = () => {
           </Typography>
         </CardContent>
       </Card>
+
+      {/* Modal de edición */}
+      <Dialog
+        open={editModalOpen}
+        onClose={handleCloseEditModal}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1 }}>
+          <Typography variant="h6" sx={{ fontWeight: 500 }}>
+            Editar sorteo
+          </Typography>
+          <IconButton onClick={handleCloseEditModal} size="small">
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ pt: 2 }}>
+          {editingDraw && (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              {/* Nombre del sorteo (solo lectura) */}
+              <TextField
+                label="Nombre del sorteo"
+                value={editingDraw.name}
+                disabled
+                fullWidth
+                size="small"
+              />
+
+              {/* Abreviación */}
+              <TextField
+                label="Abreviación"
+                value={editForm.abbreviation}
+                onChange={(e) => setEditForm({ ...editForm, abbreviation: e.target.value })}
+                fullWidth
+                size="small"
+                placeholder="Ingrese la abreviación"
+              />
+
+              {/* Color */}
+              <Box>
+                <Typography variant="body2" sx={{ mb: 1, color: '#666' }}>
+                  Color
+                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <input
+                    type="color"
+                    value={editForm.color}
+                    onChange={(e) => setEditForm({ ...editForm, color: e.target.value })}
+                    style={{
+                      width: '80px',
+                      height: '45px',
+                      border: '1px solid #ddd',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      padding: '2px'
+                    }}
+                  />
+                  <TextField
+                    value={editForm.color}
+                    onChange={(e) => setEditForm({ ...editForm, color: e.target.value })}
+                    size="small"
+                    sx={{ width: '120px' }}
+                    placeholder="#000000"
+                  />
+                  <Box
+                    sx={{
+                      width: '45px',
+                      height: '45px',
+                      bgcolor: editForm.color,
+                      borderRadius: '4px',
+                      border: '1px solid #ddd'
+                    }}
+                  />
+                </Box>
+              </Box>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button
+            onClick={handleCloseEditModal}
+            variant="outlined"
+            sx={{ color: '#666', borderColor: '#ddd' }}
+          >
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleSaveEdit}
+            variant="contained"
+            disabled={saving}
+            sx={{
+              bgcolor: '#51cbce',
+              '&:hover': { bgcolor: '#45b8bb' },
+              '&:disabled': { bgcolor: '#ccc' }
+            }}
+          >
+            {saving ? 'Guardando...' : 'Actualizar'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Snackbar para notificaciones */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={3000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%' }}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

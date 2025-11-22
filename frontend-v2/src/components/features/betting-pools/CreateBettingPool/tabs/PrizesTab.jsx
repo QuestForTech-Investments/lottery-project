@@ -13,8 +13,10 @@ import {
   IconButton,
   Tabs,
   Tab,
+  Button,
+  Snackbar,
 } from '@mui/material';
-import { ExpandMore as ExpandMoreIcon, ChevronLeft, ChevronRight } from '@mui/icons-material';
+import { ExpandMore as ExpandMoreIcon, ChevronLeft, ChevronRight, Save as SaveIcon, CheckCircle as CheckCircleIcon } from '@mui/icons-material';
 import { getAllBetTypesWithFields } from '@services/prizeService';
 // ⚡ getAllDraws removed - draws now loaded in parent
 // ⚡ getBetTypesByDraw removed - now using getAllBetTypesWithFields for all draws
@@ -48,7 +50,7 @@ const DRAW_ORDER = [
  * - Level 2: Sub-tabs (Premios, Comisiones, Comisiones 2)
  * - Level 3: Draw tabs (General + ~70 draws)
  */
-const PrizesTab = ({ formData, handleChange, bettingPoolId = null, loadDrawSpecificValues = null, draws: propDraws = [], loadingDraws: propLoadingDraws = false }) => {
+const PrizesTab = ({ formData, handleChange, bettingPoolId = null, loadDrawSpecificValues = null, draws: propDraws = [], loadingDraws: propLoadingDraws = false, onSavePrizeConfig = null }) => {
   // ⚡ PERFORMANCE: Draws loaded in parent hook when provided, otherwise load locally (backward compatible)
   const [localDraws, setLocalDraws] = useState([]);
   const [localLoadingDraws, setLocalLoadingDraws] = useState(false);
@@ -58,6 +60,11 @@ const PrizesTab = ({ formData, handleChange, bettingPoolId = null, loadDrawSpeci
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const drawTabsRef = useRef(null);
+
+  // 🔥 NEW: Save state for ACTUALIZAR button
+  const [saving, setSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [saveError, setSaveError] = useState(null);
 
   // Use prop draws if provided, otherwise use local draws
   const draws = propDraws.length > 0 ? propDraws : localDraws;
@@ -329,6 +336,39 @@ const PrizesTab = ({ formData, handleChange, bettingPoolId = null, loadDrawSpeci
   };
 
   /**
+   * Handle save for current draw
+   * 🔥 NEW: Save only the active draw's prize configuration
+   */
+  const handleSave = async () => {
+    if (!onSavePrizeConfig || !bettingPoolId) {
+      console.warn('❌ Cannot save: onSavePrizeConfig or bettingPoolId is missing');
+      setSaveError('No se puede guardar: falta configuración');
+      return;
+    }
+
+    try {
+      setSaving(true);
+      setSaveError(null);
+      console.log(`💾 Saving prize config for draw: ${activeDraw}`);
+
+      await onSavePrizeConfig(activeDraw);
+
+      setSaveSuccess(true);
+      console.log(`✅ Prize config saved successfully for ${activeDraw}`);
+
+      // Auto-hide success message after 3 seconds
+      setTimeout(() => {
+        setSaveSuccess(false);
+      }, 3000);
+    } catch (error) {
+      console.error(`❌ Error saving prize config:`, error);
+      setSaveError(error.message || 'Error al guardar configuración de premios');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  /**
    * Render Premios content
    */
   const renderPremiosContent = () => {
@@ -423,43 +463,415 @@ const PrizesTab = ({ formData, handleChange, bettingPoolId = null, loadDrawSpeci
             </AccordionDetails>
           </Accordion>
         ))}
+
+        {/* 🔥 NEW: ACTUALIZAR button (like Vue.js original) */}
+        {bettingPoolId && onSavePrizeConfig && (
+          <Box sx={{ mt: 3, display: 'flex', justifyContent: 'center' }}>
+            <Button
+              variant="contained"
+              startIcon={saving ? <CircularProgress size={20} color="inherit" /> : <SaveIcon />}
+              onClick={handleSave}
+              disabled={saving}
+              sx={{
+                bgcolor: '#51cbce',
+                '&:hover': { bgcolor: '#45b8bb' },
+                color: 'white',
+                textTransform: 'none',
+                px: 4,
+                py: 1.5,
+                fontSize: '1rem',
+                fontWeight: 'bold'
+              }}
+            >
+              {saving ? 'Guardando...' : 'ACTUALIZAR'}
+            </Button>
+          </Box>
+        )}
       </>
     );
   };
 
   /**
-   * Render Comisiones content (placeholder)
+   * Commission field definitions for "Comisiones" tab
+   * Based on BettingPoolPrizesCommission model: commission_discount_1 through 4
+   */
+  const COMMISSION_FIELDS = [
+    { id: 'commissionDiscount1', name: 'Comisión Descuento 1', fieldCode: 'COMMISSION_DISCOUNT_1' },
+    { id: 'commissionDiscount2', name: 'Comisión Descuento 2', fieldCode: 'COMMISSION_DISCOUNT_2' },
+    { id: 'commissionDiscount3', name: 'Comisión Descuento 3', fieldCode: 'COMMISSION_DISCOUNT_3' },
+    { id: 'commissionDiscount4', name: 'Comisión Descuento 4', fieldCode: 'COMMISSION_DISCOUNT_4' },
+  ];
+
+  /**
+   * Generate commission field name for formData
+   * Format: {drawId}_COMMISSION_{betTypeCode}_{fieldCode}
+   */
+  const getCommissionFieldName = (betTypeCode, fieldCode) => {
+    return `${activeDraw}_COMMISSION_${betTypeCode}_${fieldCode}`;
+  };
+
+  /**
+   * Get commission field value from formData with fallback logic
+   */
+  const getCommissionFieldValue = (betTypeCode, fieldCode) => {
+    const fieldKey = getCommissionFieldName(betTypeCode, fieldCode);
+    const currentValue = formData[fieldKey];
+
+    // If "general", use the value directly
+    if (activeDraw === 'general') {
+      if (currentValue !== undefined && currentValue !== null) {
+        return currentValue;
+      }
+      return ''; // Default to empty
+    }
+
+    // For specific draw: use fallback
+    if (currentValue !== undefined && currentValue !== null) {
+      return currentValue;
+    }
+
+    // Fallback to "general" value
+    const generalKey = `general_COMMISSION_${betTypeCode}_${fieldCode}`;
+    const generalValue = formData[generalKey];
+
+    if (generalValue !== undefined && generalValue !== null && generalValue !== '') {
+      return generalValue;
+    }
+
+    return '';
+  };
+
+  /**
+   * Handle commission field change
+   */
+  const handleCommissionFieldChange = (betTypeCode, fieldCode) => (event) => {
+    const fieldKey = getCommissionFieldName(betTypeCode, fieldCode);
+    const value = event.target.value;
+
+    // Allow empty value
+    if (value === '') {
+      handleChange({
+        target: {
+          name: fieldKey,
+          value: ''
+        }
+      });
+      return;
+    }
+
+    // Only allow numbers and one decimal point (percentages 0-100)
+    const numberRegex = /^-?\d*\.?\d*$/;
+    if (numberRegex.test(value)) {
+      handleChange({
+        target: {
+          name: fieldKey,
+          value: value
+        }
+      });
+    }
+  };
+
+  /**
+   * Render Comisiones content
+   * Shows commission discount fields (1-4) per bet type
    */
   const renderComisionesContent = () => {
     return (
-      <Box sx={{ p: 3, textAlign: 'center' }}>
-        <Alert severity="info">
-          <Typography variant="body1">
-            Configuración de <strong>Comisiones</strong> para el sorteo: <strong>{draws.find(l => l.id === activeDraw)?.name || 'General'}</strong>
-          </Typography>
-          <Typography variant="body2" sx={{ mt: 1 }}>
-            Esta sección estará disponible en una futura actualización.
-          </Typography>
-        </Alert>
-      </Box>
+      <>
+        {/* Bet Types Accordions with Commission Fields */}
+        {betTypes.map((betType, index) => (
+          <Accordion key={`commission-${betType.betTypeId}`} defaultExpanded={index === 0}>
+            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%' }}>
+                <Typography variant="subtitle1" fontWeight="bold">
+                  {betType.betTypeName}
+                </Typography>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ fontStyle: 'italic', flex: 1 }}
+                >
+                  Comisiones de descuento
+                </Typography>
+              </Box>
+            </AccordionSummary>
+
+            <AccordionDetails>
+              <Grid container spacing={2}>
+                {COMMISSION_FIELDS.map((field) => {
+                  const fieldKey = getCommissionFieldName(betType.betTypeCode, field.fieldCode);
+                  const currentValue = formData[fieldKey];
+                  const generalKey = `general_COMMISSION_${betType.betTypeCode}_${field.fieldCode}`;
+                  const generalValue = formData[generalKey];
+
+                  // Determine if it's a custom value
+                  const isCustomValue = activeDraw !== 'general' &&
+                                       currentValue !== undefined &&
+                                       currentValue !== null &&
+                                       currentValue !== '';
+
+                  // Placeholder showing general value
+                  const placeholderText = activeDraw === 'general'
+                    ? '0'
+                    : `${generalValue || 0} (general)`;
+
+                  return (
+                    <Grid item xs={12} sm={6} md={3} key={field.id}>
+                      <TextField
+                        fullWidth
+                        type="text"
+                        label={field.name}
+                        name={fieldKey}
+                        value={getCommissionFieldValue(betType.betTypeCode, field.fieldCode)}
+                        onChange={handleCommissionFieldChange(betType.betTypeCode, field.fieldCode)}
+                        placeholder={placeholderText}
+                        InputProps={{
+                          endAdornment: <Typography variant="caption" sx={{ ml: 1 }}>%</Typography>
+                        }}
+                        inputProps={{
+                          step: "0.01",
+                          min: 0,
+                          max: 100,
+                          'data-field-code': field.fieldCode,
+                        }}
+                        helperText={
+                          activeDraw === 'general'
+                            ? 'Rango: 0 - 100%'
+                            : isCustomValue
+                              ? '✓ Valor personalizado'
+                              : `Usando valor de "General": ${generalValue || 0}%`
+                        }
+                        FormHelperTextProps={{
+                          sx: {
+                            fontSize: '0.7rem',
+                            color: isCustomValue ? 'primary.main' : 'text.secondary'
+                          }
+                        }}
+                      />
+                    </Grid>
+                  );
+                })}
+              </Grid>
+            </AccordionDetails>
+          </Accordion>
+        ))}
+
+        {/* ACTUALIZAR button for Comisiones */}
+        {bettingPoolId && onSavePrizeConfig && (
+          <Box sx={{ mt: 3, display: 'flex', justifyContent: 'center' }}>
+            <Button
+              variant="contained"
+              startIcon={saving ? <CircularProgress size={20} color="inherit" /> : <SaveIcon />}
+              onClick={handleSave}
+              disabled={saving}
+              sx={{
+                bgcolor: '#51cbce',
+                '&:hover': { bgcolor: '#45b8bb' },
+                color: 'white',
+                textTransform: 'none',
+                px: 4,
+                py: 1.5,
+                fontSize: '1rem',
+                fontWeight: 'bold'
+              }}
+            >
+              {saving ? 'Guardando...' : 'ACTUALIZAR'}
+            </Button>
+          </Box>
+        )}
+      </>
     );
   };
 
   /**
-   * Render Comisiones 2 content (placeholder)
+   * Commission 2 field definitions for "Comisiones 2" tab
+   * Based on BettingPoolPrizesCommission model: commission_2_discount_1 through 4
+   */
+  const COMMISSION_2_FIELDS = [
+    { id: 'commission2Discount1', name: 'Comisión 2 Descuento 1', fieldCode: 'COMMISSION_2_DISCOUNT_1' },
+    { id: 'commission2Discount2', name: 'Comisión 2 Descuento 2', fieldCode: 'COMMISSION_2_DISCOUNT_2' },
+    { id: 'commission2Discount3', name: 'Comisión 2 Descuento 3', fieldCode: 'COMMISSION_2_DISCOUNT_3' },
+    { id: 'commission2Discount4', name: 'Comisión 2 Descuento 4', fieldCode: 'COMMISSION_2_DISCOUNT_4' },
+  ];
+
+  /**
+   * Generate commission 2 field name for formData
+   * Format: {drawId}_COMMISSION2_{betTypeCode}_{fieldCode}
+   */
+  const getCommission2FieldName = (betTypeCode, fieldCode) => {
+    return `${activeDraw}_COMMISSION2_${betTypeCode}_${fieldCode}`;
+  };
+
+  /**
+   * Get commission 2 field value from formData with fallback logic
+   */
+  const getCommission2FieldValue = (betTypeCode, fieldCode) => {
+    const fieldKey = getCommission2FieldName(betTypeCode, fieldCode);
+    const currentValue = formData[fieldKey];
+
+    // If "general", use the value directly
+    if (activeDraw === 'general') {
+      if (currentValue !== undefined && currentValue !== null) {
+        return currentValue;
+      }
+      return ''; // Default to empty
+    }
+
+    // For specific draw: use fallback
+    if (currentValue !== undefined && currentValue !== null) {
+      return currentValue;
+    }
+
+    // Fallback to "general" value
+    const generalKey = `general_COMMISSION2_${betTypeCode}_${fieldCode}`;
+    const generalValue = formData[generalKey];
+
+    if (generalValue !== undefined && generalValue !== null && generalValue !== '') {
+      return generalValue;
+    }
+
+    return '';
+  };
+
+  /**
+   * Handle commission 2 field change
+   */
+  const handleCommission2FieldChange = (betTypeCode, fieldCode) => (event) => {
+    const fieldKey = getCommission2FieldName(betTypeCode, fieldCode);
+    const value = event.target.value;
+
+    // Allow empty value
+    if (value === '') {
+      handleChange({
+        target: {
+          name: fieldKey,
+          value: ''
+        }
+      });
+      return;
+    }
+
+    // Only allow numbers and one decimal point (percentages 0-100)
+    const numberRegex = /^-?\d*\.?\d*$/;
+    if (numberRegex.test(value)) {
+      handleChange({
+        target: {
+          name: fieldKey,
+          value: value
+        }
+      });
+    }
+  };
+
+  /**
+   * Render Comisiones 2 content
+   * Shows commission 2 discount fields (1-4) per bet type
    */
   const renderComisiones2Content = () => {
     return (
-      <Box sx={{ p: 3, textAlign: 'center' }}>
-        <Alert severity="info">
-          <Typography variant="body1">
-            Configuración de <strong>Comisiones 2</strong> para el sorteo: <strong>{draws.find(l => l.id === activeDraw)?.name || 'General'}</strong>
-          </Typography>
-          <Typography variant="body2" sx={{ mt: 1 }}>
-            Esta sección estará disponible en una futura actualización.
-          </Typography>
-        </Alert>
-      </Box>
+      <>
+        {/* Bet Types Accordions with Commission 2 Fields */}
+        {betTypes.map((betType, index) => (
+          <Accordion key={`commission2-${betType.betTypeId}`} defaultExpanded={index === 0}>
+            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%' }}>
+                <Typography variant="subtitle1" fontWeight="bold">
+                  {betType.betTypeName}
+                </Typography>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ fontStyle: 'italic', flex: 1 }}
+                >
+                  Comisiones 2 de descuento
+                </Typography>
+              </Box>
+            </AccordionSummary>
+
+            <AccordionDetails>
+              <Grid container spacing={2}>
+                {COMMISSION_2_FIELDS.map((field) => {
+                  const fieldKey = getCommission2FieldName(betType.betTypeCode, field.fieldCode);
+                  const currentValue = formData[fieldKey];
+                  const generalKey = `general_COMMISSION2_${betType.betTypeCode}_${field.fieldCode}`;
+                  const generalValue = formData[generalKey];
+
+                  // Determine if it's a custom value
+                  const isCustomValue = activeDraw !== 'general' &&
+                                       currentValue !== undefined &&
+                                       currentValue !== null &&
+                                       currentValue !== '';
+
+                  // Placeholder showing general value
+                  const placeholderText = activeDraw === 'general'
+                    ? '0'
+                    : `${generalValue || 0} (general)`;
+
+                  return (
+                    <Grid item xs={12} sm={6} md={3} key={field.id}>
+                      <TextField
+                        fullWidth
+                        type="text"
+                        label={field.name}
+                        name={fieldKey}
+                        value={getCommission2FieldValue(betType.betTypeCode, field.fieldCode)}
+                        onChange={handleCommission2FieldChange(betType.betTypeCode, field.fieldCode)}
+                        placeholder={placeholderText}
+                        InputProps={{
+                          endAdornment: <Typography variant="caption" sx={{ ml: 1 }}>%</Typography>
+                        }}
+                        inputProps={{
+                          step: "0.01",
+                          min: 0,
+                          max: 100,
+                          'data-field-code': field.fieldCode,
+                        }}
+                        helperText={
+                          activeDraw === 'general'
+                            ? 'Rango: 0 - 100%'
+                            : isCustomValue
+                              ? '✓ Valor personalizado'
+                              : `Usando valor de "General": ${generalValue || 0}%`
+                        }
+                        FormHelperTextProps={{
+                          sx: {
+                            fontSize: '0.7rem',
+                            color: isCustomValue ? 'primary.main' : 'text.secondary'
+                          }
+                        }}
+                      />
+                    </Grid>
+                  );
+                })}
+              </Grid>
+            </AccordionDetails>
+          </Accordion>
+        ))}
+
+        {/* ACTUALIZAR button for Comisiones 2 */}
+        {bettingPoolId && onSavePrizeConfig && (
+          <Box sx={{ mt: 3, display: 'flex', justifyContent: 'center' }}>
+            <Button
+              variant="contained"
+              startIcon={saving ? <CircularProgress size={20} color="inherit" /> : <SaveIcon />}
+              onClick={handleSave}
+              disabled={saving}
+              sx={{
+                bgcolor: '#51cbce',
+                '&:hover': { bgcolor: '#45b8bb' },
+                color: 'white',
+                textTransform: 'none',
+                px: 4,
+                py: 1.5,
+                fontSize: '1rem',
+                fontWeight: 'bold'
+              }}
+            >
+              {saving ? 'Guardando...' : 'ACTUALIZAR'}
+            </Button>
+          </Box>
+        )}
+      </>
     );
   };
 
@@ -670,6 +1082,39 @@ const PrizesTab = ({ formData, handleChange, bettingPoolId = null, loadDrawSpeci
           </Typography>
         </Alert>
       </Box>
+
+      {/* 🔥 NEW: Success Snackbar */}
+      <Snackbar
+        open={saveSuccess}
+        autoHideDuration={3000}
+        onClose={() => setSaveSuccess(false)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={() => setSaveSuccess(false)}
+          severity="success"
+          sx={{ width: '100%' }}
+          icon={<CheckCircleIcon />}
+        >
+          Configuración guardada exitosamente para {draws.find(l => l.id === activeDraw)?.name || activeDraw}
+        </Alert>
+      </Snackbar>
+
+      {/* 🔥 NEW: Error Snackbar */}
+      <Snackbar
+        open={!!saveError}
+        autoHideDuration={6000}
+        onClose={() => setSaveError(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={() => setSaveError(null)}
+          severity="error"
+          sx={{ width: '100%' }}
+        >
+          {saveError || 'Error al guardar configuración'}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

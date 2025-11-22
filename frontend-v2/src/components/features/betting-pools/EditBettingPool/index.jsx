@@ -54,6 +54,7 @@ const EditBettingPoolMUI = () => {
     handleSubmit,
     copyScheduleToAll,
     loadDrawSpecificValues, // 🔥 NEW: Load draw-specific prize values
+    savePrizeConfigForSingleDraw, // 🔥 NEW: Save prize config for single draw
     clearSuccessMessage, // 🔔 SNACKBAR: Clear success message
     clearErrors, // 🔔 SNACKBAR: Clear error message
   } = useEditBettingPoolForm();
@@ -179,6 +180,7 @@ const EditBettingPoolMUI = () => {
                   draws={prizesDraws}
                   loadingDraws={loadingDraws}
                   loadDrawSpecificValues={loadDrawSpecificValues}
+                  onSavePrizeConfig={savePrizeConfigForSingleDraw}
                 />
               </>
             )}

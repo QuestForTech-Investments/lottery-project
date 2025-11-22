@@ -11,6 +11,7 @@ public class DrawDto
     public string? DisplayColor { get; set; }
     public bool IsActive { get; set; }
     public string? LotteryName { get; set; }
+    public string? LotteryColour { get; set; }
     public string? CountryName { get; set; }
 }
 

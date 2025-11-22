@@ -90,6 +90,7 @@ public class DrawRepository : GenericRepository<Draw>, IDrawRepository
                 DisplayColor = d.DisplayColor,
                 IsActive = d.IsActive,
                 LotteryName = d.Lottery!.LotteryName,
+                LotteryColour = d.Lottery!.Colour,
                 CountryName = d.Lottery!.Country!.CountryName
             })
             .ToListAsync();
@@ -113,6 +114,7 @@ public class DrawRepository : GenericRepository<Draw>, IDrawRepository
                 DisplayColor = d.DisplayColor,
                 IsActive = d.IsActive,
                 LotteryName = d.Lottery!.LotteryName,
+                LotteryColour = d.Lottery!.Colour,
                 CountryName = d.Lottery!.Country!.CountryName
             })
             .FirstOrDefaultAsync();
@@ -135,6 +137,7 @@ public class DrawRepository : GenericRepository<Draw>, IDrawRepository
                 DisplayColor = d.DisplayColor,
                 IsActive = d.IsActive,
                 LotteryName = d.Lottery!.LotteryName,
+                LotteryColour = d.Lottery!.Colour,
                 CountryName = d.Lottery!.Country!.CountryName
             })
             .ToListAsync();

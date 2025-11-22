@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using LotteryApi.Data;
 using LotteryApi.DTOs;
 using LotteryApi.Models;
 using LotteryApi.Repositories;
@@ -13,12 +14,14 @@ namespace LotteryApi.Controllers;
 public class DrawsController : ControllerBase
 {
     private readonly IDrawRepository _drawRepository;
+    private readonly LotteryDbContext _context;
     private readonly ICacheService _cache;
     private readonly ILogger<DrawsController> _logger;
 
-    public DrawsController(IDrawRepository drawRepository, ICacheService cache, ILogger<DrawsController> logger)
+    public DrawsController(IDrawRepository drawRepository, LotteryDbContext context, ICacheService cache, ILogger<DrawsController> logger)
     {
         _drawRepository = drawRepository;
+        _context = context;
         _cache = cache;
         _logger = logger;
     }
@@ -187,7 +190,8 @@ public class DrawsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Update(int id, [FromBody] UpdateDrawDto dto)
     {
-        var draw = await _drawRepository.GetByIdAsync(id);
+        // Use direct context access to ensure entity tracking works correctly
+        var draw = await _context.Draws.FindAsync(id);
 
         if (draw == null)
         {
@@ -202,7 +206,15 @@ public class DrawsController : ControllerBase
         draw.IsActive = dto.IsActive;
         draw.UpdatedAt = DateTime.Now;
 
-        await _drawRepository.UpdateAsync(draw);
+        // Entity is tracked by this context, save will persist changes
+        await _context.SaveChangesAsync();
+
+        // Invalidate cache
+        await _cache.RemoveAsync(string.Format(CacheKeys.DrawById, id));
+        // Also invalidate the paginated lists cache (clear all draw pages)
+        await _cache.RemoveByPrefixAsync("draws:");
+
+        _logger.LogInformation("Draw {DrawId} updated and cache invalidated", id);
 
         return NoContent();
     }

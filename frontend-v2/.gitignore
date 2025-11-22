@@ -95,3 +95,10 @@ jspm_packages/
 
 # TernJS port file
 .tern-port
+
+# Playwright
+e2e/results/
+e2e/screenshots/
+playwright-report/
+test-results/
+.playwright/

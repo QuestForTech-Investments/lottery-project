@@ -1327,6 +1327,41 @@ const useEditBettingPoolForm = () => {
     }
   };
 
+  /**
+   * 🔥 NEW: Save prize config for a single draw only (for ACTUALIZAR button)
+   * @param {string} drawId - The draw ID (e.g., "general" or "draw_43")
+   */
+  const savePrizeConfigForSingleDraw = async (drawId) => {
+    console.log(`💾 [SINGLE DRAW SAVE] Saving prize config for draw: ${drawId}`);
+
+    try {
+      // Filter formData to only include fields for this specific draw
+      const filteredFormData = {};
+      const prefix = drawId === 'general' ? 'general_' : `${drawId}_`;
+
+      Object.keys(formData).forEach(key => {
+        if (key.startsWith(prefix)) {
+          filteredFormData[key] = formData[key];
+        }
+      });
+
+      console.log(`💾 [SINGLE DRAW SAVE] Found ${Object.keys(filteredFormData).length} fields for ${drawId}`);
+
+      // Call the existing savePrizeConfigurations function
+      // but with filtered data containing only this draw's fields
+      const result = await savePrizeConfigurations(id, filteredFormData, initialFormData);
+
+      if (result.success) {
+        console.log(`✅ [SINGLE DRAW SAVE] Successfully saved config for ${drawId}`);
+      }
+
+      return result;
+    } catch (error) {
+      console.error(`❌ [SINGLE DRAW SAVE] Error saving config for ${drawId}:`, error);
+      throw error;
+    }
+  };
+
   // Clear messages functions for Snackbar
   const clearSuccessMessage = () => {
     setSuccessMessage('');
@@ -1355,6 +1390,7 @@ const useEditBettingPoolForm = () => {
     handleSubmit,
     copyScheduleToAll,
     loadDrawSpecificValues, // 🔥 NEW: Load draw-specific prize values (with caching)
+    savePrizeConfigForSingleDraw, // 🔥 NEW: Save prize config for single draw (for ACTUALIZAR button)
     clearSuccessMessage, // 🔔 SNACKBAR: Clear success message
     clearErrors, // 🔔 SNACKBAR: Clear error message
   };

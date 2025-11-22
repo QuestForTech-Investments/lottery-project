@@ -17,8 +17,7 @@ public class TicketLine
     [Column("line_number")]
     public int LineNumber { get; set; }
 
-    [Column("lottery_id")]
-    public int LotteryId { get; set; }
+    // LotteryId se obtiene a través de Draw.LotteryId (no duplicar datos)
 
     [Column("draw_id")]
     public int DrawId { get; set; }
@@ -139,8 +138,7 @@ public class TicketLine
     [ForeignKey("TicketId")]
     public virtual Ticket? Ticket { get; set; }
 
-    [ForeignKey("LotteryId")]
-    public virtual Lottery? Lottery { get; set; }
+    // Lottery se accede a través de Draw.Lottery (no duplicar navegación)
 
     [ForeignKey("DrawId")]
     public virtual Draw? Draw { get; set; }

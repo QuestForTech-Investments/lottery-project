@@ -124,11 +124,12 @@ public class LotteryDbContext : DbContext
         modelBuilder.Entity<TicketLine>()
             .HasIndex(tl => new { tl.TicketId, tl.LineNumber });
 
+        // Índices sin LotteryId (se obtiene de Draw)
         modelBuilder.Entity<TicketLine>()
-            .HasIndex(tl => new { tl.LotteryId, tl.DrawId, tl.CreatedAt });
+            .HasIndex(tl => new { tl.DrawId, tl.CreatedAt });
 
         modelBuilder.Entity<TicketLine>()
-            .HasIndex(tl => new { tl.BetNumber, tl.LotteryId, tl.DrawDate });
+            .HasIndex(tl => new { tl.BetNumber, tl.DrawId, tl.DrawDate });
 
         modelBuilder.Entity<TicketLine>()
             .HasIndex(tl => new { tl.LineStatus, tl.CreatedAt });
