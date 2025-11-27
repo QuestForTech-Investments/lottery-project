@@ -297,18 +297,14 @@ public class TicketsController : ControllerBase
             var drawIds = dto.Lines.Select(l => l.DrawId).Distinct().ToList();
             var betTypeIds = dto.Lines.Select(l => l.BetTypeId).Distinct().ToList();
 
-            // Pre-fetch all required data in parallel to avoid N+1 queries
-            var drawsTask = _context.Draws
+            // Pre-fetch all required data to avoid N+1 queries
+            var draws = await _context.Draws
                 .Include(d => d.Lottery)
                 .Where(d => drawIds.Contains(d.DrawId))
                 .ToListAsync();
-            var betTypesTask = _context.GameTypes
+            var betTypesDict = await _context.GameTypes
                 .Where(gt => betTypeIds.Contains(gt.GameTypeId))
                 .ToDictionaryAsync(gt => gt.GameTypeId);
-
-            await Task.WhenAll(drawsTask, betTypesTask);
-            var draws = await drawsTask;
-            var betTypesDict = await betTypesTask;
 
             foreach (var line in dto.Lines)
             {
