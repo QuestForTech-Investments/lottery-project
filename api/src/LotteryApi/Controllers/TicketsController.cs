@@ -318,8 +318,8 @@ public class TicketsController : ControllerBase
                 // }
             }
 
-            // 4. Generate ticket code (format: YYYYMMDD-NNNN)
-            var ticketCode = await GenerateTicketCode();
+            // 4. Generate ticket code (format: EA-{BANCACODE}-{SEQUENCE})
+            var ticketCode = await GenerateTicketCode(bettingPool.BettingPoolCode);
 
             // 5. Generate barcode
             var barcode = GenerateBarcode(ticketCode);
@@ -853,26 +853,26 @@ public class TicketsController : ControllerBase
     }
 
     /// <summary>
-    /// Generate unique ticket code (format: YYMMDDNNNNNN, 12 characters)
+    /// Generate unique ticket code (format: EA-{BANCACODE}-{SEQUENCE:D9}, ~22 characters)
+    /// Example: EA-LAN-517-000000001
     /// </summary>
-    private async Task<string> GenerateTicketCode()
+    private async Task<string> GenerateTicketCode(string bancaCode)
     {
-        var today = DateTime.Today;
-        var datePrefix = today.ToString("yyMMdd");
+        // Get the next sequence number for this banca
+        var prefix = $"EA-{bancaCode}-";
 
         var sequence = await _context.Tickets
-            .Where(t => t.TicketCode.StartsWith(datePrefix))
+            .Where(t => t.TicketCode.StartsWith(prefix))
             .CountAsync() + 1;
 
-        return $"{datePrefix}{sequence:D6}";
+        return $"{prefix}{sequence:D9}";
     }
 
     /// <summary>
-    /// Generate barcode from ticket code (12 characters, same as ticket code)
+    /// Generate barcode from ticket code (same as ticket code)
     /// </summary>
     private string GenerateBarcode(string ticketCode)
     {
-        // Use ticket code directly as barcode (12 characters)
         return ticketCode;
     }
 
