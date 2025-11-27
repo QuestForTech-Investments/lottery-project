@@ -874,24 +874,19 @@ public class TicketsController : ControllerBase
     }
 
     /// <summary>
-    /// Generate unique barcode (numeric only, 18 digits)
-    /// Format: YYMMDD + 12 random digits
-    /// Example: 251127123456789012
+    /// Generate unique barcode (numeric only, 12 digits)
+    /// Format: 12 random digits
+    /// Example: 738199870546
     /// </summary>
     private string GenerateBarcode(string ticketCode)
     {
-        var now = DateTime.Now;
-        var datePart = now.ToString("yyMMdd"); // 6 digits
-
-        // Generate 12 random digits
         var random = new Random();
-        var randomPart = "";
+        var barcode = "";
         for (int i = 0; i < 12; i++)
         {
-            randomPart += random.Next(0, 10).ToString();
+            barcode += random.Next(0, 10).ToString();
         }
-
-        return datePart + randomPart; // 18 digits total
+        return barcode;
     }
 
     /// <summary>
