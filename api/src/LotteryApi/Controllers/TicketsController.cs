@@ -853,19 +853,24 @@ public class TicketsController : ControllerBase
     }
 
     /// <summary>
-    /// Generate unique ticket code (format: EA-{BANCACODE}-{SEQUENCE:D9}, ~22 characters)
-    /// Example: EA-LAN-517-000000001
+    /// Generate unique ticket code (format: XX-{BANCACODE}-{SEQUENCE:D9}, ~22 characters)
+    /// XX = Random 2-letter prefix, Example: EA-LAN-517-000000001
     /// </summary>
     private async Task<string> GenerateTicketCode(string bancaCode)
     {
-        // Get the next sequence number for this banca
-        var prefix = $"EA-{bancaCode}-";
+        // Generate random 2-letter prefix
+        var random = new Random();
+        var letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        var randomPrefix = $"{letters[random.Next(letters.Length)]}{letters[random.Next(letters.Length)]}";
+
+        // Get the next sequence number for this banca (regardless of prefix)
+        var bancaPrefix = $"-{bancaCode}-";
 
         var sequence = await _context.Tickets
-            .Where(t => t.TicketCode.StartsWith(prefix))
+            .Where(t => t.TicketCode.Contains(bancaPrefix))
             .CountAsync() + 1;
 
-        return $"{prefix}{sequence:D9}";
+        return $"{randomPrefix}-{bancaCode}-{sequence:D9}";
     }
 
     /// <summary>
