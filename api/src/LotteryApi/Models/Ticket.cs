@@ -12,7 +12,7 @@ public class Ticket
     public long TicketId { get; set; }
 
     [Required]
-    [MaxLength(20)]
+    [MaxLength(30)]
     [Column("ticket_code")]
     public string TicketCode { get; set; } = string.Empty;
 
