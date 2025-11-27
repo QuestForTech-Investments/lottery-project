@@ -295,9 +295,20 @@ public class TicketsController : ControllerBase
             var now = DateTime.Now;
             var today = DateTime.Today;
             var drawIds = dto.Lines.Select(l => l.DrawId).Distinct().ToList();
-            var draws = await _context.Draws
+            var betTypeIds = dto.Lines.Select(l => l.BetTypeId).Distinct().ToList();
+
+            // Pre-fetch all required data in parallel to avoid N+1 queries
+            var drawsTask = _context.Draws
+                .Include(d => d.Lottery)
                 .Where(d => drawIds.Contains(d.DrawId))
                 .ToListAsync();
+            var betTypesTask = _context.GameTypes
+                .Where(gt => betTypeIds.Contains(gt.GameTypeId))
+                .ToDictionaryAsync(gt => gt.GameTypeId);
+
+            await Task.WhenAll(drawsTask, betTypesTask);
+            var draws = await drawsTask;
+            var betTypesDict = await betTypesTask;
 
             foreach (var line in dto.Lines)
             {
@@ -375,9 +386,8 @@ public class TicketsController : ControllerBase
 
                 lotteryIds.Add(draw.LotteryId);
 
-                // Get bet type
-                var betType = await _context.GameTypes
-                    .FirstOrDefaultAsync(gt => gt.GameTypeId == lineDto.BetTypeId);
+                // Get bet type from pre-fetched dictionary (no DB call)
+                betTypesDict.TryGetValue(lineDto.BetTypeId, out var betType);
 
                 var line = new TicketLine
                 {
@@ -438,8 +448,104 @@ public class TicketsController : ControllerBase
                 ticket.TotalLines,
                 ticket.GrandTotal);
 
-            // 11. Load full ticket for response
-            var createdTicket = await GetTicketById(ticket.TicketId);
+            // 11. Build response DTO directly (no additional DB query)
+            var createdTicket = new TicketDetailDto
+            {
+                TicketId = ticket.TicketId,
+                TicketCode = ticket.TicketCode,
+                Barcode = ticket.Barcode,
+                BettingPoolId = ticket.BettingPoolId,
+                BettingPoolName = bettingPool.BettingPoolName,
+                BettingPoolCode = bettingPool.BettingPoolCode,
+                UserId = ticket.UserId,
+                UserName = user.FullName,
+                TerminalId = ticket.TerminalId,
+                IpAddress = ticket.IpAddress,
+                CreatedAt = ticket.CreatedAt,
+                GlobalMultiplier = ticket.GlobalMultiplier,
+                GlobalDiscount = ticket.GlobalDiscount,
+                CurrencyCode = ticket.CurrencyCode,
+                TotalLines = ticket.TotalLines,
+                TotalBetAmount = ticket.TotalBetAmount,
+                TotalDiscount = ticket.TotalDiscount,
+                TotalSubtotal = ticket.TotalSubtotal,
+                TotalWithMultiplier = ticket.TotalWithMultiplier,
+                TotalCommission = ticket.TotalCommission,
+                TotalNet = ticket.TotalNet,
+                GrandTotal = ticket.GrandTotal,
+                TotalPrize = ticket.TotalPrize,
+                WinningLines = ticket.WinningLines,
+                Status = ticket.Status,
+                IsCancelled = ticket.IsCancelled,
+                CancelledAt = ticket.CancelledAt,
+                CancelledBy = ticket.CancelledBy,
+                CancelledByName = null,
+                CancellationReason = ticket.CancellationReason,
+                IsPaid = ticket.IsPaid,
+                PaidAt = ticket.PaidAt,
+                PaidBy = ticket.PaidBy,
+                PaidByName = null,
+                PaymentMethod = ticket.PaymentMethod,
+                PaymentReference = ticket.PaymentReference,
+                CustomerId = ticket.CustomerId,
+                CustomerName = ticket.CustomerName,
+                CustomerPhone = ticket.CustomerPhone,
+                CustomerEmail = ticket.CustomerEmail,
+                CustomerIdNumber = ticket.CustomerIdNumber,
+                LotteryIds = ticket.LotteryIds,
+                TotalLotteries = ticket.TotalLotteries,
+                EarliestDrawTime = ticket.EarliestDrawTime,
+                LatestDrawTime = ticket.LatestDrawTime,
+                UpdatedAt = ticket.UpdatedAt,
+                UpdatedBy = ticket.UpdatedBy,
+                UpdatedByName = null,
+                PrintCount = ticket.PrintCount,
+                LastPrintedAt = ticket.LastPrintedAt,
+                Notes = ticket.Notes,
+                SpecialFlags = ticket.SpecialFlags,
+                Lines = ticket.TicketLines.Select(l =>
+                {
+                    var lineDraw = draws.First(d => d.DrawId == l.DrawId);
+                    betTypesDict.TryGetValue(l.BetTypeId, out var lineBetType);
+                    return new TicketLineDto
+                    {
+                        LineId = l.LineId,
+                        TicketId = l.TicketId,
+                        LineNumber = l.LineNumber,
+                        LotteryId = lineDraw.LotteryId,
+                        LotteryName = lineDraw.Lottery?.LotteryName,
+                        DrawId = l.DrawId,
+                        DrawName = lineDraw.DrawName,
+                        DrawDate = l.DrawDate,
+                        DrawTime = l.DrawTime,
+                        BetNumber = l.BetNumber,
+                        BetTypeId = l.BetTypeId,
+                        BetTypeCode = lineBetType?.GameTypeCode,
+                        BetTypeName = lineBetType?.GameName,
+                        Position = l.Position,
+                        BetAmount = l.BetAmount,
+                        Multiplier = l.Multiplier,
+                        DiscountPercentage = l.DiscountPercentage,
+                        DiscountAmount = l.DiscountAmount,
+                        Subtotal = l.Subtotal,
+                        TotalWithMultiplier = l.TotalWithMultiplier,
+                        CommissionPercentage = l.CommissionPercentage,
+                        CommissionAmount = l.CommissionAmount,
+                        NetAmount = l.NetAmount,
+                        PrizeMultiplier = l.PrizeMultiplier,
+                        PrizeAmount = l.PrizeAmount,
+                        IsWinner = l.IsWinner,
+                        WinningPosition = l.WinningPosition,
+                        ResultNumber = l.ResultNumber,
+                        ResultCheckedAt = l.ResultCheckedAt,
+                        LineStatus = l.LineStatus,
+                        ExceedsLimit = l.ExceedsLimit,
+                        IsLuckyPick = l.IsLuckyPick,
+                        IsHotNumber = l.IsHotNumber,
+                        Notes = l.Notes
+                    };
+                }).ToList()
+            };
             return CreatedAtAction(nameof(GetTicket), new { id = ticket.TicketId }, createdTicket);
         }
         catch (Exception ex)
