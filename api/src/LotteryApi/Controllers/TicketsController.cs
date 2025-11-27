@@ -346,8 +346,9 @@ public class TicketsController : ControllerBase
             };
 
             // 7. Get commission and discount percentages
-            // TODO: Get from betting pool config - using defaults for now
-            var commissionPercentage = 10.00m;
+            // Commission comes from user's commission rate (configured per user)
+            // Discount comes from request or defaults to 0
+            var commissionPercentage = user.CommissionRate; // User's configured commission rate
             var discountPercentage = dto.GlobalDiscount > 0 ? dto.GlobalDiscount : 0.00m;
 
             // 8. Create ticket lines and calculate totals
@@ -852,29 +853,27 @@ public class TicketsController : ControllerBase
     }
 
     /// <summary>
-    /// Generate unique ticket code (format: YYYYMMDD-NNNN)
+    /// Generate unique ticket code (format: YYMMDDNNNNNN, 12 characters)
     /// </summary>
     private async Task<string> GenerateTicketCode()
     {
         var today = DateTime.Today;
-        var datePrefix = today.ToString("yyyyMMdd");
+        var datePrefix = today.ToString("yyMMdd");
 
         var sequence = await _context.Tickets
             .Where(t => t.TicketCode.StartsWith(datePrefix))
             .CountAsync() + 1;
 
-        return $"{datePrefix}-{sequence:D4}";
+        return $"{datePrefix}{sequence:D6}";
     }
 
     /// <summary>
-    /// Generate barcode from ticket code
+    /// Generate barcode from ticket code (12 characters, same as ticket code)
     /// </summary>
     private string GenerateBarcode(string ticketCode)
     {
-        // Simple barcode: encode ticket code as base64 or use as-is
-        // In production, use proper barcode library (Code128, EAN-13, etc.)
-        var bytes = Encoding.UTF8.GetBytes(ticketCode);
-        return Convert.ToBase64String(bytes);
+        // Use ticket code directly as barcode (12 characters)
+        return ticketCode;
     }
 
     /// <summary>
