@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  frontend-v2:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: lottery-frontend-v2
+    ports:
+      - "4000:80"
+    restart: unless-stopped
+    networks:
+      - lottery-network
+
+networks:
+  lottery-network:
+    external: true
+    name: api_lottery-network

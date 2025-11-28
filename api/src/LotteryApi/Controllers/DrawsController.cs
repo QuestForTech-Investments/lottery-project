@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using LotteryApi.Data;
 using LotteryApi.DTOs;
 using LotteryApi.Models;
@@ -61,6 +62,122 @@ public class DrawsController : ControllerBase
         _logger.LogDebug("Cached {CacheKey} for {Minutes} minutes", cacheKey, CacheKeys.DrawExpiration.TotalMinutes);
 
         return Ok(response);
+    }
+
+    /// <summary>
+    /// Get draw schedules (weekly schedules for all draws)
+    /// </summary>
+    [HttpGet("schedules")]
+    [ProducesResponseType(typeof(List<DrawScheduleDto>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetDrawSchedules([FromQuery] int? lotteryId = null)
+    {
+        try
+        {
+            var query = _context.Draws
+                .Where(d => d.IsActive)
+                .OrderBy(d => d.LotteryId)
+                .ThenBy(d => d.DrawName)
+                .AsQueryable();
+
+            if (lotteryId.HasValue)
+            {
+                query = query.Where(d => d.LotteryId == lotteryId.Value);
+            }
+
+            var draws = await query
+                .Select(d => new
+                {
+                    d.DrawId,
+                    d.DrawName,
+                    d.Abbreviation,
+                    d.LotteryId,
+                    LotteryName = d.Lottery!.LotteryName,
+                    Timezone = (string?)null, // TODO: Add timezone field to Lottery table
+                    d.DisplayColor,
+                    LogoUrl = (string?)null, // TODO: Add logo_url field to Lottery table
+                    d.DrawTime,
+                    d.UseWeeklySchedule,
+                    WeeklySchedules = d.WeeklySchedules
+                        .Where(ws => ws.IsActive && ws.DeletedAt == null)
+                        .OrderBy(ws => ws.DayOfWeek)
+                        .ToList()
+                })
+                .ToListAsync();
+
+            var result = draws.Select(d => new DrawScheduleDto
+            {
+                DrawId = d.DrawId,
+                DrawName = d.DrawName,
+                Abbreviation = d.Abbreviation,
+                LotteryId = d.LotteryId,
+                LotteryName = d.LotteryName,
+                Timezone = d.Timezone,
+                DisplayColor = d.DisplayColor,
+                LogoUrl = d.LogoUrl,
+                DefaultDrawTime = d.DrawTime,
+                UseWeeklySchedule = d.UseWeeklySchedule,
+                WeeklySchedule = d.UseWeeklySchedule ? ConvertToWeeklyScheduleDto(d.WeeklySchedules) : null
+            }).ToList();
+
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting draw schedules");
+            return StatusCode(500, new { message = "Error al obtener horarios", error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Update draw schedules (weekly schedules)
+    /// </summary>
+    [HttpPatch("schedules")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> UpdateDrawSchedules([FromBody] UpdateDrawSchedulesDto dto)
+    {
+        try
+        {
+            foreach (var schedule in dto.Schedules)
+            {
+                var draw = await _context.Draws.FindAsync(schedule.DrawId);
+                if (draw == null)
+                {
+                    return BadRequest(new { message = $"Draw {schedule.DrawId} not found" });
+                }
+
+                // Update flag
+                draw.UseWeeklySchedule = schedule.UseWeeklySchedule;
+                draw.UpdatedAt = DateTime.UtcNow;
+
+                if (schedule.UseWeeklySchedule && schedule.WeeklySchedule != null)
+                {
+                    // Delete existing schedules
+                    var existing = await _context.DrawWeeklySchedules
+                        .Where(ws => ws.DrawId == schedule.DrawId)
+                        .ToListAsync();
+                    _context.DrawWeeklySchedules.RemoveRange(existing);
+
+                    // Add new schedules
+                    var newSchedules = ConvertToDrawWeeklySchedules(schedule.DrawId, schedule.WeeklySchedule);
+                    await _context.DrawWeeklySchedules.AddRangeAsync(newSchedules);
+                }
+            }
+
+            await _context.SaveChangesAsync();
+
+            // Invalidate cache
+            await _cache.RemoveByPrefixAsync("draws:");
+
+            _logger.LogInformation("Updated {Count} draw schedules", dto.Schedules.Count);
+
+            return Ok(new { message = "Horarios actualizados correctamente", count = dto.Schedules.Count });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating draw schedules");
+            return StatusCode(500, new { message = "Error al actualizar horarios", error = ex.Message });
+        }
     }
 
     /// <summary>
@@ -238,4 +355,70 @@ public class DrawsController : ControllerBase
 
         return NoContent();
     }
+
+    #region Helper Methods
+
+    private static WeeklyScheduleDto? ConvertToWeeklyScheduleDto(List<DrawWeeklySchedule> schedules)
+    {
+        if (schedules == null || schedules.Count == 0)
+            return null;
+
+        var dto = new WeeklyScheduleDto();
+
+        foreach (var schedule in schedules)
+        {
+            var daySchedule = new DayScheduleDto
+            {
+                StartTime = schedule.StartTime,
+                EndTime = schedule.EndTime,
+                Enabled = schedule.IsActive
+            };
+
+            switch (schedule.DayOfWeek)
+            {
+                case 1: dto.Monday = daySchedule; break;
+                case 2: dto.Tuesday = daySchedule; break;
+                case 3: dto.Wednesday = daySchedule; break;
+                case 4: dto.Thursday = daySchedule; break;
+                case 5: dto.Friday = daySchedule; break;
+                case 6: dto.Saturday = daySchedule; break;
+                case 0: dto.Sunday = daySchedule; break;
+            }
+        }
+
+        return dto;
+    }
+
+    private static List<DrawWeeklySchedule> ConvertToDrawWeeklySchedules(int drawId, WeeklyScheduleDto dto)
+    {
+        var schedules = new List<DrawWeeklySchedule>();
+
+        void AddSchedule(byte dayOfWeek, DayScheduleDto? daySchedule)
+        {
+            if (daySchedule != null && daySchedule.Enabled)
+            {
+                schedules.Add(new DrawWeeklySchedule
+                {
+                    DrawId = drawId,
+                    DayOfWeek = dayOfWeek,
+                    StartTime = daySchedule.StartTime,
+                    EndTime = daySchedule.EndTime,
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow
+                });
+            }
+        }
+
+        AddSchedule(0, dto.Sunday);
+        AddSchedule(1, dto.Monday);
+        AddSchedule(2, dto.Tuesday);
+        AddSchedule(3, dto.Wednesday);
+        AddSchedule(4, dto.Thursday);
+        AddSchedule(5, dto.Friday);
+        AddSchedule(6, dto.Saturday);
+
+        return schedules;
+    }
+
+    #endregion
 }

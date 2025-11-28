@@ -15,6 +15,7 @@ public class LotteryDbContext : DbContext
     public DbSet<Bank> Banks { get; set; }
     public DbSet<Lottery> Lotteries { get; set; }
     public DbSet<Draw> Draws { get; set; }
+    public DbSet<DrawWeeklySchedule> DrawWeeklySchedules { get; set; }
 
     // Game System
     public DbSet<GameCategory> GameCategories { get; set; }

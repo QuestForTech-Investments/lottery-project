@@ -24,6 +24,11 @@ const UserSessionsMUI = lazy(() => import('@/components/features/users/UserSessi
 const UserBlockedSessionsMUI = lazy(() => import('@/components/features/users/UserBlockedSessions'));
 const UserBettingPoolsMUI = lazy(() => import('@/components/features/betting-pools/UserBettingPools'));
 
+// Lazy load: Betting Pools feature components
+const BettingPoolsListMUI = lazy(() => import('@/components/features/betting-pools/BettingPoolsList'));
+const CreateBettingPoolMUI = lazy(() => import('@/components/features/betting-pools/CreateBettingPool'));
+const EditBettingPoolMUI = lazy(() => import('@/components/features/betting-pools/EditBettingPool'));
+
 // Loading fallback component
 const LoadingFallback = () => (
   <Box
@@ -141,6 +146,44 @@ const App: React.FC = () => {
                 <MainLayout>
                   <Suspense fallback={<LoadingFallback />}>
                     <UserBettingPoolsMUI />
+                  </Suspense>
+                </MainLayout>
+              </PrivateRoute>
+            }
+          />
+
+          {/* Betting Pools Management Routes */}
+          <Route
+            path="/betting-pools/list"
+            element={
+              <PrivateRoute>
+                <MainLayout>
+                  <Suspense fallback={<LoadingFallback />}>
+                    <BettingPoolsListMUI />
+                  </Suspense>
+                </MainLayout>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/betting-pools/new"
+            element={
+              <PrivateRoute>
+                <MainLayout>
+                  <Suspense fallback={<LoadingFallback />}>
+                    <CreateBettingPoolMUI />
+                  </Suspense>
+                </MainLayout>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/betting-pools/edit/:id"
+            element={
+              <PrivateRoute>
+                <MainLayout>
+                  <Suspense fallback={<LoadingFallback />}>
+                    <EditBettingPoolMUI />
                   </Suspense>
                 </MainLayout>
               </PrivateRoute>

@@ -34,6 +34,9 @@ public class Draw
     [Column("display_color")]
     public string? DisplayColor { get; set; }
 
+    [Column("use_weekly_schedule")]
+    public bool UseWeeklySchedule { get; set; } = false;
+
     [Column("is_active")]
     public bool IsActive { get; set; } = true;
 
@@ -56,4 +59,5 @@ public class Draw
     public virtual ICollection<Result> Results { get; set; } = new List<Result>();
     public virtual ICollection<BettingPoolDraw> BettingPoolDraws { get; set; } = new List<BettingPoolDraw>();
     public virtual ICollection<TicketLine> TicketLines { get; set; } = new List<TicketLine>();
+    public virtual ICollection<DrawWeeklySchedule> WeeklySchedules { get; set; } = new List<DrawWeeklySchedule>();
 }

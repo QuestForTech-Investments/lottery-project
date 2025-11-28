@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Box, TextField, Select, MenuItem, FormControl, InputLabel,
   Typography, Paper, Switch, FormControlLabel, IconButton, Autocomplete,
@@ -6,6 +6,8 @@ import {
 } from '@mui/material';
 import { Trash2, HelpCircle } from 'lucide-react';
 import api from '@services/api';
+import ticketService from '@services/ticketService';
+import authService from '@services/authService';
 import HelpModal from './HelpModal';
 import TicketPrinter from '../TicketPrinter';
 
@@ -58,6 +60,9 @@ const CreateTickets = () => {
   // State para modal de ticket
   const [ticketModalOpen, setTicketModalOpen] = useState(false);
   const [ticketData, setTicketData] = useState(null);
+
+  // Ref para el campo de jugada (para navegación por teclado)
+  const jugadaInputRef = useRef(null);
 
   // Tipos de jugada para el dropdown
   const tiposJugada = [
@@ -167,6 +172,13 @@ const CreateTickets = () => {
     // Limpiar campos
     setJugada('');
     setMonto('');
+
+    // Reenfocar el campo de jugada para continuar (flujo optimizado de teclado)
+    setTimeout(() => {
+      if (jugadaInputRef.current) {
+        jugadaInputRef.current.focus();
+      }
+    }, 0);
   };
 
   // Eliminar jugada
@@ -220,48 +232,50 @@ const CreateTickets = () => {
     }
 
     try {
-      // Crear objeto de ticket mock para vista previa
-      const now = new Date();
-      const ticketCode = `${now.getDate()}-${selectedBanca?.bettingPoolName?.toUpperCase()}-${selectedBanca?.bettingPoolId}-${Math.random().toString(36).substring(2, 15)}`;
+      // Get current user
+      const currentUser = authService.getCurrentUser();
+      if (!currentUser) {
+        alert('Debe iniciar sesión para crear tickets');
+        return;
+      }
 
-      // Calcular total como número
-      const totalAmount = parseFloat(calcularTotalGeneral());
-
-      const mockTicket = {
-        ticketId: Math.floor(Math.random() * 10000),
-        ticketCode: ticketCode,
-        barcode: btoa(ticketCode),
-        status: 'pending',
+      // Prepare ticket data for API
+      const ticketData = {
         bettingPoolId: selectedBanca?.bettingPoolId || 9,
-        bettingPoolName: selectedBanca?.bettingPoolName || 'admin',
-        userName: 'Admin User',
-        createdAt: now.toISOString(),
-        totalBetAmount: totalAmount,
-        totalCommission: totalAmount * 0.1,
-        grandTotal: totalAmount,
-        lines: todasLasJugadas.map((jugada, index) => ({
-          lineId: index + 1,
-          lotteryName: jugada.sorteo || 'Lottery',
-          drawName: jugada.sorteo || 'Draw',
+        userId: parseInt(currentUser.id),
+        lines: todasLasJugadas.map(jugada => ({
+          drawId: jugada.drawId || jugada.sorteoId,
           betNumber: jugada.numero,
-          betTypeName: jugada.tipo?.name || 'Directo',
+          betTypeId: jugada.tipo?.betTypeId || jugada.tipo?.id || 1,
           betAmount: parseFloat(jugada.monto) || 0,
-          netAmount: parseFloat(jugada.monto) || 0
-        }))
+          multiplier: 1.0
+        })),
+        globalMultiplier: 1.0,
+        globalDiscount: 0.0
       };
 
-      // Mostrar el ticket en modal
-      setTicketData(mockTicket);
+      console.log('Creating ticket:', ticketData);
+
+      // Call API to create ticket
+      const createdTicket = await ticketService.createTicket(ticketData);
+
+      console.log('Ticket created successfully:', createdTicket);
+
+      // Show ticket in modal
+      setTicketData(createdTicket);
       setTicketModalOpen(true);
 
-      // Limpiar el formulario
+      // Clear form
       setJugadasDirecto([]);
       setJugadasPale([]);
       setJugadasCash3([]);
       setJugadasPlay4([]);
+
+      alert(`Ticket ${createdTicket.ticketCode} creado exitosamente!`);
     } catch (error) {
       console.error('Error creando ticket:', error);
-      alert('Error al crear el ticket');
+      const errorMsg = error.response?.data?.message || error.message || 'Error al crear el ticket';
+      alert(`Error: ${errorMsg}`);
     }
   };
 
@@ -283,9 +297,10 @@ const CreateTickets = () => {
   // Total de jugadas
   const totalJugadas = jugadasDirecto.length + jugadasPale.length + jugadasCash3.length + jugadasPlay4.length;
 
-  // Manejar Enter en campo de jugada
-  const handleKeyPress = (e) => {
+  // Manejar Enter en campos (navegación por teclado mejorada)
+  const handleKeyDown = (e) => {
     if (e.key === 'Enter') {
+      e.preventDefault();
       handleAgregarJugada();
     }
   };
@@ -466,8 +481,11 @@ const CreateTickets = () => {
           placeholder="JUGADA"
           value={jugada}
           onChange={(e) => setJugada(e.target.value)}
-          onKeyPress={handleKeyPress}
+          onKeyDown={handleKeyDown}
           disabled={!selectedSorteo}
+          autoFocus={!!selectedSorteo}
+          inputRef={jugadaInputRef}
+          inputProps={{ tabIndex: 1 }}
           sx={{
             flex: 1,
             bgcolor: 'white',
@@ -503,9 +521,10 @@ const CreateTickets = () => {
           placeholder="MONTO"
           value={monto}
           onChange={(e) => setMonto(e.target.value)}
-          onKeyPress={handleKeyPress}
+          onKeyDown={handleKeyDown}
           disabled={!selectedSorteo}
           type="number"
+          inputProps={{ tabIndex: 2 }}
           sx={{
             flex: 1,
             bgcolor: 'white',
@@ -525,7 +544,7 @@ const CreateTickets = () => {
       </Box>
 
       {/* DROPDOWN + CONTADOR */}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2, flexWrap: 'wrap' }}>
         <FormControl size="small" sx={{ minWidth: 150, bgcolor: 'white' }}>
           <Select
             value={tipoJugadaSeleccionado}
@@ -543,6 +562,7 @@ const CreateTickets = () => {
           onClick={handleAgregarJugada}
           disabled={!jugada || !monto || !selectedSorteo}
           sx={{ bgcolor: '#51cbce', color: 'white', '&:hover': { bgcolor: '#45b8bb' } }}
+          title="Agregar jugada (o presione Enter)"
         >
           ➕
         </IconButton>
@@ -551,6 +571,9 @@ const CreateTickets = () => {
         </Typography>
         <Typography sx={{ fontSize: '14px', color: '#666' }}>
           <strong>Total:</strong> ${calcularTotalGeneral()}
+        </Typography>
+        <Typography sx={{ fontSize: '12px', color: '#888', fontStyle: 'italic', ml: 'auto' }}>
+          💡 Use Tab para navegar, Enter para agregar
         </Typography>
       </Box>
 
@@ -707,7 +730,7 @@ const CreateTickets = () => {
           sx={{
             px: 4,
             py: 1.5,
-            bgcolor: totalJugadas === 0 ? '#ccc' : '#9e9e9e',
+            bgcolor: totalJugadas === 0 ? '#ccc' : '#51cbce',
             color: 'white',
             border: 'none',
             borderRadius: '4px',
@@ -715,7 +738,7 @@ const CreateTickets = () => {
             fontWeight: 'bold',
             cursor: totalJugadas === 0 ? 'not-allowed' : 'pointer',
             '&:hover': {
-              bgcolor: totalJugadas === 0 ? '#ccc' : '#757575',
+              bgcolor: totalJugadas === 0 ? '#ccc' : '#45b8bb',
             },
           }}
         >

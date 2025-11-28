@@ -1,0 +1,243 @@
+// Script para extraer y descargar HTML, CSS y JSON de la Lista de Usuarios
+(function() {
+    // Función para descargar archivos
+    function downloadFile(content, filename, contentType) {
+        const blob = new Blob([content], { type: contentType });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    }
+    
+    // Función para obtener estilos computados de un elemento
+    function getComputedStyles(element) {
+        const styles = window.getComputedStyle(element);
+        const styleObj = {};
+        
+        const relevantProps = [
+            'display', 'position', 'width', 'height', 'margin', 'padding',
+            'background', 'backgroundColor', 'color', 'font-family', 'font-size',
+            'font-weight', 'border', 'border-radius', 'box-shadow', 'flex-direction',
+            'align-items', 'justify-content', 'gap', 'overflow', 'text-align',
+            'line-height', 'letter-spacing', 'text-transform', 'cursor', 'opacity',
+            'z-index', 'transform', 'transition'
+        ];
+        
+        relevantProps.forEach(prop => {
+            const value = styles.getPropertyValue(prop);
+            if (value && value !== 'none' && value !== 'normal') {
+                styleObj[prop] = value;
+            }
+        });
+        
+        return styleObj;
+    }
+    
+    // Buscar el contenedor principal de la lista de usuarios
+    const mainContainer = document.querySelector('main') || 
+                         document.querySelector('[class*="content"]') ||
+                         document.querySelector('.container');
+    
+    if (!mainContainer) {
+        console.error('❌ No se encontró el contenedor principal');
+        return;
+    }
+    
+    console.log('🔍 Extrayendo datos...');
+    
+    // Extraer HTML
+    const htmlContent = mainContainer.innerHTML;
+    
+    // Extraer estructura JSON
+    const jsonStructure = {
+        title: "Lista de usuarios",
+        tabs: [],
+        filters: [],
+        table: {
+            headers: [],
+            rows: [],
+            pagination: null
+        }
+    };
+    
+    // Extraer tabs
+    const tabs = mainContainer.querySelectorAll('[role="tab"], .tab, button[class*="tab"]');
+    tabs.forEach(tab => {
+        jsonStructure.tabs.push({
+            text: tab.textContent.trim(),
+            active: tab.classList.contains('active') || tab.getAttribute('aria-selected') === 'true',
+            styles: getComputedStyles(tab)
+        });
+    });
+    
+    // Extraer filtros
+    const filters = mainContainer.querySelectorAll('input[type="text"], input[placeholder*="Filtro"], input[placeholder*="filtro"]');
+    filters.forEach(filter => {
+        jsonStructure.filters.push({
+            placeholder: filter.placeholder,
+            type: filter.type,
+            value: filter.value,
+            styles: getComputedStyles(filter)
+        });
+    });
+    
+    // Extraer tabla
+    const table = mainContainer.querySelector('table');
+    if (table) {
+        // Headers
+        const headers = table.querySelectorAll('thead th, thead td, [role="columnheader"]');
+        headers.forEach(header => {
+            jsonStructure.table.headers.push({
+                text: header.textContent.trim(),
+                styles: getComputedStyles(header)
+            });
+        });
+        
+        // Rows (limitamos a los primeros 10 para el JSON)
+        const rows = table.querySelectorAll('tbody tr, [role="row"]');
+        const maxRows = Math.min(rows.length, 10);
+        
+        for (let i = 0; i < maxRows; i++) {
+            const row = rows[i];
+            const cells = row.querySelectorAll('td, [role="cell"]');
+            const rowData = {
+                index: i,
+                cells: [],
+                actions: []
+            };
+            
+            cells.forEach(cell => {
+                const buttons = cell.querySelectorAll('button, a[class*="btn"]');
+                if (buttons.length > 0) {
+                    buttons.forEach(btn => {
+                        rowData.actions.push({
+                            type: btn.tagName.toLowerCase(),
+                            title: btn.title || btn.getAttribute('aria-label') || '',
+                            icon: btn.querySelector('i, svg') ? 'icon' : 'none',
+                            styles: getComputedStyles(btn)
+                        });
+                    });
+                } else {
+                    rowData.cells.push({
+                        text: cell.textContent.trim(),
+                        styles: getComputedStyles(cell)
+                    });
+                }
+            });
+            
+            jsonStructure.table.rows.push(rowData);
+        }
+        
+        jsonStructure.table.totalRows = rows.length;
+        
+        // Paginación
+        const pagination = mainContainer.querySelector('[class*="paginat"], .pagination, [class*="entradas"]');
+        if (pagination) {
+            jsonStructure.table.pagination = {
+                text: pagination.textContent.trim(),
+                styles: getComputedStyles(pagination)
+            };
+        }
+    }
+    
+    // Extraer CSS del contenedor principal
+    const containerStyles = getComputedStyles(mainContainer);
+    
+    // Generar CSS como archivo de estilos
+    let cssContent = `/* Estilos extraídos de Lista de Usuarios */\n\n`;
+    cssContent += `/* Contenedor Principal */\n`;
+    cssContent += `.lista-usuarios-container {\n`;
+    for (const [prop, value] of Object.entries(containerStyles)) {
+        cssContent += `  ${prop}: ${value};\n`;
+    }
+    cssContent += `}\n\n`;
+    
+    // Añadir estilos de tabs
+    if (jsonStructure.tabs.length > 0) {
+        cssContent += `/* Tabs */\n.tab-button {\n`;
+        const tabStyle = jsonStructure.tabs[0].styles;
+        for (const [prop, value] of Object.entries(tabStyle)) {
+            cssContent += `  ${prop}: ${value};\n`;
+        }
+        cssContent += `}\n\n`;
+    }
+    
+    // Añadir estilos de tabla
+    if (jsonStructure.table.headers.length > 0) {
+        cssContent += `/* Tabla - Headers */\n.table-header {\n`;
+        const headerStyle = jsonStructure.table.headers[0].styles;
+        for (const [prop, value] of Object.entries(headerStyle)) {
+            cssContent += `  ${prop}: ${value};\n`;
+        }
+        cssContent += `}\n\n`;
+    }
+    
+    // HTML completo con estructura
+    const htmlFullContent = `<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lista de Usuarios</title>
+    <link rel="stylesheet" href="lista-usuarios.css">
+</head>
+<body>
+    <!-- Contenido extraído -->
+    ${htmlContent}
+</body>
+</html>`;
+    
+    // Preparar JSON formateado
+    const jsonContent = JSON.stringify(jsonStructure, null, 2);
+    
+    // Descargar archivos
+    console.log('📥 Descargando archivos...');
+    
+    downloadFile(htmlFullContent, 'lista-usuarios.html', 'text/html');
+    downloadFile(cssContent, 'lista-usuarios.css', 'text/css');
+    downloadFile(jsonContent, 'lista-usuarios.json', 'application/json');
+    
+    // También crear un archivo combinado
+    const combinedContent = `
+===========================================
+LISTA DE USUARIOS - DATOS EXTRAÍDOS
+===========================================
+
+========== HTML ==========
+${htmlContent}
+
+========== CSS ==========
+${cssContent}
+
+========== JSON ==========
+${jsonContent}
+`;
+    
+    downloadFile(combinedContent, 'lista-usuarios-completo.txt', 'text/plain');
+    
+    console.log('✅ Archivos descargados correctamente:');
+    console.log('  📄 lista-usuarios.html');
+    console.log('  🎨 lista-usuarios.css');
+    console.log('  📊 lista-usuarios.json');
+    console.log('  📋 lista-usuarios-completo.txt');
+    console.log('\n📊 Estadísticas:');
+    console.log(`  - Tabs encontrados: ${jsonStructure.tabs.length}`);
+    console.log(`  - Filtros encontrados: ${jsonStructure.filters.length}`);
+    console.log(`  - Headers de tabla: ${jsonStructure.table.headers.length}`);
+    console.log(`  - Filas totales: ${jsonStructure.table.totalRows || 0}`);
+    
+    return {
+        success: true,
+        files: ['lista-usuarios.html', 'lista-usuarios.css', 'lista-usuarios.json', 'lista-usuarios-completo.txt'],
+        stats: {
+            tabs: jsonStructure.tabs.length,
+            filters: jsonStructure.filters.length,
+            headers: jsonStructure.table.headers.length,
+            rows: jsonStructure.table.totalRows || 0
+        }
+    };
+})();

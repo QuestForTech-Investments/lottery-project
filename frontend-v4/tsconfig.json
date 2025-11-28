@@ -1,0 +1,48 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "useDefineForClassFields": true,
+    "lib": ["DOM", "DOM.Iterable", "ESNext"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "allowJs": true,
+    "strict": true,
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "forceConsistentCasingInFileNames": true,
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+    "baseUrl": "./",
+    "paths": {
+      "@/*": ["src/*"],
+      "@components/*": ["src/components/*"],
+      "@pages/*": ["src/pages/*"],
+      "@hooks/*": ["src/hooks/*"],
+      "@utils/*": ["src/utils/*"],
+      "@constants/*": ["src/constants/*"],
+      "@services/*": ["src/services/*"],
+      "@styles/*": ["src/styles/*"],
+      "@config/*": ["src/config/*"],
+      "@theme/*": ["src/theme/*"],
+      "@features/*": ["src/features/*"],
+      "@assets/*": ["src/assets/*"]
+    },
+    "types": ["vite/client", "vitest/globals", "node"]
+  },
+  "include": [
+    "src",
+    "tests",
+    "vite.config.*",
+    "vitest.config.*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "frontend-v2"
+  ]
+}
