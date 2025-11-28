@@ -45,6 +45,10 @@ public class Lottery
     [Column("colour")]
     public string? Colour { get; set; }
 
+    [MaxLength(50)]
+    [Column("timezone")]
+    public string Timezone { get; set; } = "America/Santo_Domingo";
+
     // Navigation properties
     [ForeignKey("CountryId")]
     public virtual Country? Country { get; set; }

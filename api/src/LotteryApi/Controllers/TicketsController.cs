@@ -578,10 +578,35 @@ public class TicketsController : ControllerBase
                 .AsQueryable();
 
             // Apply filters
+            // Get timezone from lottery if specified, otherwise use default (Dominican Republic)
             if (filter.Date.HasValue)
             {
-                var date = filter.Date.Value.Date;
-                query = query.Where(t => t.CreatedAt.Date == date);
+                // Determine timezone based on lottery filter or use default
+                string timezoneId = "America/Santo_Domingo";  // Default
+
+                if (filter.LotteryId.HasValue)
+                {
+                    var lottery = await _context.Lotteries
+                        .Where(l => l.LotteryId == filter.LotteryId.Value)
+                        .Select(l => new { l.Timezone })
+                        .FirstOrDefaultAsync();
+
+                    if (lottery != null && !string.IsNullOrEmpty(lottery.Timezone))
+                    {
+                        timezoneId = lottery.Timezone;
+                    }
+                }
+
+                // Convert filter date to UTC range for the full day in the lottery's timezone
+                var lotteryTimeZone = TimeZoneInfo.FindSystemTimeZoneById(timezoneId);
+                var localStartOfDay = new DateTime(filter.Date.Value.Year, filter.Date.Value.Month, filter.Date.Value.Day, 0, 0, 0, DateTimeKind.Unspecified);
+                var localEndOfDay = localStartOfDay.AddDays(1);
+
+                // Convert to UTC for database comparison
+                var utcStart = TimeZoneInfo.ConvertTimeToUtc(localStartOfDay, lotteryTimeZone);
+                var utcEnd = TimeZoneInfo.ConvertTimeToUtc(localEndOfDay, lotteryTimeZone);
+
+                query = query.Where(t => t.CreatedAt >= utcStart && t.CreatedAt < utcEnd);
             }
 
             if (filter.BettingPoolId.HasValue)

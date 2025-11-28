@@ -1,13 +1,17 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   Box, Paper, Typography, TextField, Grid, Autocomplete, Switch, FormControlLabel,
-  Button, ToggleButtonGroup, ToggleButton, Table, TableHead, TableBody, TableRow, TableCell, IconButton
+  Button, ToggleButtonGroup, ToggleButton, Table, TableHead, TableBody, TableRow, TableCell, IconButton,
+  CircularProgress, Alert
 } from '@mui/material';
 import { Visibility } from '@mui/icons-material';
+import ticketService from '../../../../services/ticketService';
+import api from '../../../../services/api';
 
 const TicketMonitoring = () => {
   const [fecha, setFecha] = useState(new Date().toISOString().split('T')[0]);
-  const [banca, setBanca] = useState('');
+  const [banca, setBanca] = useState(null);
+  const [bancas, setBancas] = useState([]);
   const [loteria, setLoteria] = useState(null);
   const [tipoJugada, setTipoJugada] = useState(null);
   const [numero, setNumero] = useState('');
@@ -22,48 +26,117 @@ const TicketMonitoring = () => {
   const [zonas, setZonas] = useState([]);
   const [totals, setTotals] = useState({ montoTotal: 0, totalPremios: 0, totalPendiente: 0 });
   const [counts, setCounts] = useState({ todos: 0, ganadores: 0, pendientes: 0, perdedores: 0, cancelados: 0 });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [initialLoad, setInitialLoad] = useState(true);
 
-  // Generate mock tickets
-  const generateMockTickets = () => {
-    const estados = ['Ganador', 'Pendiente', 'Perdedor', 'Cancelado'];
-    const usuarios = ['admin', 'vendedor1', 'vendedor2', 'cajero1', 'supervisor'];
-    const mockTickets = [];
-
-    for (let i = 1; i <= 25; i++) {
-      const estado = estados[Math.floor(Math.random() * estados.length)];
-      const monto = Math.floor(Math.random() * 500) + 10;
-      const premio = estado === 'Ganador' ? Math.floor(Math.random() * 5000) + 100 : 0;
-
-      mockTickets.push({
-        numero: `T-${String(10000 + i).padStart(6, '0')}`,
-        fecha: new Date(Date.now() - Math.random() * 86400000 * 7).toLocaleDateString(),
-        usuario: usuarios[Math.floor(Math.random() * usuarios.length)],
-        monto,
-        premio,
-        fechaCancelacion: estado === 'Cancelado' ? new Date(Date.now() - Math.random() * 86400000).toLocaleDateString() : null,
-        estado
-      });
+  // Load betting pools
+  const loadBancas = async () => {
+    try {
+      const response = await api.get('/betting-pools');
+      const pools = response.items || response || [];
+      const mappedPools = pools.map(p => ({
+        id: p.bettingPoolId,
+        name: p.bettingPoolName,
+        code: p.bettingPoolCode
+      }));
+      setBancas(mappedPools);
+      return mappedPools;
+    } catch (err) {
+      console.error('Error loading betting pools:', err);
+      return [];
     }
-    return mockTickets;
   };
 
+  // Load tickets from API
+  const loadTickets = async (selectedBancaId = null) => {
+    setLoading(true);
+    setError(null);
+
+    // Use the selected banca ID or fall back to the banca state
+    const bettingPoolId = selectedBancaId || (banca ? banca.id : null);
+
+    // API requires at least one filter (banca, loteria, zona, estado, or search)
+    if (!bettingPoolId && !loteria && !zona && !numero) {
+      setError('Seleccione al menos una banca, lotería, zona o número para filtrar.');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const filters = {
+        date: fecha,  // API expects 'date' not 'startDate/endDate'
+        bettingPoolId: bettingPoolId,
+        pageNumber: 1,
+        pageSize: 100
+      };
+
+      const response = await ticketService.filterTickets(filters);
+
+      // Map API response to component format
+      const mappedTickets = (response.tickets || []).map(ticket => ({
+        id: ticket.ticketId,
+        numero: ticket.ticketCode,
+        fecha: new Date(ticket.createdAt).toLocaleDateString(),
+        usuario: ticket.userName || 'N/A',
+        monto: ticket.grandTotal,
+        premio: ticket.totalPrize || 0,
+        fechaCancelacion: ticket.cancelledAt ? new Date(ticket.cancelledAt).toLocaleDateString() : null,
+        estado: ticket.isCancelled ? 'Cancelado' :
+                (ticket.totalPrize > 0 ? 'Ganador' :
+                (ticket.isPaid ? 'Pagado' : 'Pendiente'))
+      }));
+
+      setTickets(mappedTickets);
+
+      // Calculate counts
+      const ganadores = mappedTickets.filter(t => t.estado === 'Ganador').length;
+      const pendientes = mappedTickets.filter(t => t.estado === 'Pendiente').length;
+      const perdedores = mappedTickets.filter(t => t.estado === 'Perdedor' || t.estado === 'Pagado').length;
+      const cancelados = mappedTickets.filter(t => t.estado === 'Cancelado').length;
+
+      setCounts({
+        todos: mappedTickets.length,
+        ganadores,
+        pendientes,
+        perdedores,
+        cancelados
+      });
+
+      // Calculate totals
+      setTotals({
+        montoTotal: mappedTickets.reduce((sum, t) => sum + t.monto, 0),
+        totalPremios: mappedTickets.reduce((sum, t) => sum + t.premio, 0),
+        totalPendiente: mappedTickets.filter(t => t.estado === 'Pendiente').reduce((sum, t) => sum + t.monto, 0)
+      });
+
+    } catch (err) {
+      console.error('Error loading tickets:', err);
+      setError('Error al cargar los tickets. Por favor, intente nuevamente.');
+      setTickets([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load bancas and tickets on component mount
   useEffect(() => {
-    const mockData = generateMockTickets();
-    setTickets(mockData);
+    const initializeData = async () => {
+      // Load betting pools first
+      const mappedPools = await loadBancas();
 
-    const ganadores = mockData.filter(t => t.estado === 'Ganador').length;
-    const pendientes = mockData.filter(t => t.estado === 'Pendiente').length;
-    const perdedores = mockData.filter(t => t.estado === 'Perdedor').length;
-    const cancelados = mockData.filter(t => t.estado === 'Cancelado').length;
+      // Auto-select the first banca and load tickets
+      if (mappedPools.length > 0) {
+        const firstPool = mappedPools[0];
+        setBanca(firstPool);
+        await loadTickets(firstPool.id);
+      }
+      setInitialLoad(false);
+    };
 
-    setCounts({ todos: mockData.length, ganadores, pendientes, perdedores, cancelados });
+    initializeData();
 
-    setTotals({
-      montoTotal: mockData.reduce((sum, t) => sum + t.monto, 0),
-      totalPremios: mockData.reduce((sum, t) => sum + t.premio, 0),
-      totalPendiente: mockData.filter(t => t.estado === 'Pendiente').reduce((sum, t) => sum + t.monto, 0)
-    });
-
+    // TODO: Load these from API when endpoints are available
     setLoterias([
       { id: 1, name: 'Nacional 12PM' },
       { id: 2, name: 'Nacional 3PM' },
@@ -109,13 +182,26 @@ const TicketMonitoring = () => {
             Monitor de tickets
           </Typography>
 
+          {error && (
+            <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
+              {error}
+            </Alert>
+          )}
+
           <Grid container spacing={2} sx={{ mb: 2 }}>
             <Grid item xs={12} md={4}>
               <TextField fullWidth type="date" label="Fecha" value={fecha} onChange={(e) => setFecha(e.target.value)}
                 InputLabelProps={{ shrink: true }} size="small" />
             </Grid>
             <Grid item xs={12} md={4}>
-              <TextField fullWidth label="Banca" value={banca} onChange={(e) => setBanca(e.target.value)} size="small" />
+              <Autocomplete
+                options={bancas}
+                getOptionLabel={(o) => o.name ? `${o.name} (${o.code || ''})` : ''}
+                value={banca}
+                onChange={(e, v) => setBanca(v)}
+                isOptionEqualToValue={(option, value) => option.id === value?.id}
+                renderInput={(params) => <TextField {...params} label="Banca" size="small" />}
+              />
             </Grid>
             <Grid item xs={12} md={4}>
               <Autocomplete options={loterias} getOptionLabel={(o) => o.name || ''} value={loteria}
@@ -149,7 +235,21 @@ const TicketMonitoring = () => {
           </Grid>
 
           <Box sx={{ textAlign: 'center', mb: 3 }}>
-            <Button variant="contained" sx={{ px: 6, py: 1, borderRadius: '30px', textTransform: 'uppercase' }}>Filtrar</Button>
+            <Button
+              variant="contained"
+              onClick={() => loadTickets()}
+              disabled={loading || initialLoad}
+              sx={{
+                px: 6,
+                py: 1,
+                borderRadius: '30px',
+                textTransform: 'uppercase',
+                bgcolor: '#51cbce',
+                '&:hover': { bgcolor: '#45b8bb' }
+              }}
+            >
+              {loading ? 'Cargando...' : 'Filtrar'}
+            </Button>
           </Box>
 
           <Box sx={{ mb: 2 }}>
@@ -181,7 +281,16 @@ const TicketMonitoring = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {filteredTickets.length === 0 ? (
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={8} align="center" sx={{ py: 5 }}>
+                    <CircularProgress size={40} />
+                    <Typography variant="body2" sx={{ mt: 2, color: 'text.secondary' }}>
+                      Cargando tickets...
+                    </Typography>
+                  </TableCell>
+                </TableRow>
+              ) : filteredTickets.length === 0 ? (
                 <TableRow><TableCell colSpan={8} align="center" sx={{ py: 3, color: 'text.secondary' }}>Mostrando 0 entradas</TableCell></TableRow>
               ) : filteredTickets.map((t, i) => (
                 <TableRow key={i} sx={{ '&:hover': { backgroundColor: 'action.hover' } }}>
