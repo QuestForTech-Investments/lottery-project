@@ -313,11 +313,12 @@ const TicketMonitoring: FC = () => {
 
   // Load tickets from API
   const loadTickets = useCallback(
-    async (selectedBancaId: number | null = null, signal?: AbortSignal): Promise<void> => {
+    async (selectedBancaId: number | null = null, signal?: AbortSignal, selectedFecha?: string): Promise<void> => {
       setIsLoading(true);
       setError(null);
 
       const bettingPoolId = selectedBancaId ?? banca?.id ?? null;
+      const fechaToUse = selectedFecha ?? fecha;
 
       // Validate at least one filter is selected
       if (!bettingPoolId && !loteria && !zona && !numero) {
@@ -328,8 +329,8 @@ const TicketMonitoring: FC = () => {
 
       try {
         const response = await ticketService.filterTickets({
-          startDate: fecha,
-          endDate: fecha,
+          startDate: fechaToUse,
+          endDate: fechaToUse,
           bettingPoolId: bettingPoolId ?? undefined,
           lotteryId: loteria?.id,  // Pass lotteryId for timezone-aware filtering
           page: 1,
@@ -416,8 +417,8 @@ const TicketMonitoring: FC = () => {
 
   // Event handlers
   const handleFilterClick = useCallback(() => {
-    loadTickets();
-  }, [loadTickets]);
+    loadTickets(null, undefined, fecha);
+  }, [loadTickets, fecha]);
 
   const handleFiltroEstadoChange = useCallback(
     (_: React.MouseEvent<HTMLElement>, value: FilterEstado | null) => {
