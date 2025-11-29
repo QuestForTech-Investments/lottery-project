@@ -319,7 +319,7 @@ const getInitialFormData = (branchCode = ''): FormData => ({
  * This is the FULL version matching the original CreateBettingPool
  */
 const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
-  const navigate = useNavigate();
+  const _navigate = useNavigate();
   const location = useLocation();
 
   // Form state - ALL 168 fields from original CreateBanca

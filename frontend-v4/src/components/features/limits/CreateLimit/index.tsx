@@ -1,4 +1,4 @@
-import React, { useState, useCallback, type ChangeEvent } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   Box,
   Card,
@@ -14,13 +14,12 @@ import {
   FormControlLabel,
   Divider
 } from '@mui/material';
-import type { SelectChangeEvent } from '@mui/material/Select';
 
 interface Amounts {
   [key: string]: string;
 }
 
-interface BetType {
+interface _BetType {
   key: string;
   label: string;
 }
@@ -119,10 +118,12 @@ const CreateLimit = (): React.ReactElement => {
     );
   }, []);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- draws array is stable
   const handleSelectAllDraws = useCallback((): void => {
     setSelectedDraws(prev => prev.length === draws.length ? [] : draws);
   }, []);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- days array is stable
   const handleSelectAllDays = useCallback((): void => {
     setSelectedDays(prev => prev.length === days.length ? [] : days);
   }, []);

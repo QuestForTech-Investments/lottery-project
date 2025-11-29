@@ -159,9 +159,9 @@ export const generateBetLines = (
   } else {
     // Sin generador - solo el número tal cual
     // Remover modificadores
-    let cleanNumber = input
+    const cleanNumber = input
       .replace(/[+\-FBq.]$/, '')
-      .replace(/[+\-]\d$/, '');
+      .replace(/[+-]\d$/, '');
     numbers = [cleanNumber];
   }
 

@@ -96,6 +96,7 @@ const TransactionApprovals = (): React.ReactElement => {
     console.log('Filtering with:', { startDate, endDate, selectedZone, selectedBank, selectedCollector, selectedType });
   }, [startDate, endDate, selectedZone, selectedBank, selectedCollector, selectedType]);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- mockupData is stable
   const filteredAndSortedData = useMemo(() => {
     let filtered = mockupData;
 

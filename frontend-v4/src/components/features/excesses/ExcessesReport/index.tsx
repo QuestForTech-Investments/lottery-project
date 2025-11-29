@@ -18,8 +18,7 @@ import {
   TableRow,
   Paper,
   IconButton,
-  OutlinedInput,
-  Chip
+  OutlinedInput
 } from '@mui/material';
 import type { SelectChangeEvent } from '@mui/material/Select';
 import {
@@ -67,6 +66,7 @@ const ExcessesReport = (): React.ReactElement => {
   const [filteredData, setFilteredData] = useState<ReportItem[]>([]);
 
   // Mockup data - Lista de sorteos
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- Stable mock data
   const availableDraws: Draw[] = [
     { id: 1, name: 'Anguila 10am' },
     { id: 2, name: 'NY 12pm' },
@@ -82,6 +82,7 @@ const ExcessesReport = (): React.ReactElement => {
   ];
 
   // Mockup data - Lista de tipos de jugada
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- Stable mock data
   const availableBetTypes: BetType[] = [
     { id: 1, name: 'Directo' },
     { id: 2, name: 'Pale' },
@@ -99,6 +100,7 @@ const ExcessesReport = (): React.ReactElement => {
   ];
 
   // Mockup data - Datos del reporte
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- Stable mock data
   const mockReportData: ReportItem[] = [
     { id: 1, draw: 'Anguila 10am', betType: 'Directo', excess: 1000.00, date: '18/11/2025', user: 'admin' },
     { id: 2, draw: 'Anguila 10am', betType: 'Pale', excess: 500.00, date: '18/11/2025', user: 'admin' },
@@ -110,6 +112,7 @@ const ExcessesReport = (): React.ReactElement => {
     { id: 8, draw: 'Anguila 10am', betType: 'Super Pale', excess: 250.00, date: '15/11/2025', user: 'admin' }
   ];
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- Initialize once with stable mock data
   useEffect(() => {
     // Initialize con todos seleccionados
     setSelectedDraws(availableDraws.map(d => d.id));

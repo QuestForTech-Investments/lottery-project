@@ -79,6 +79,7 @@ const useUserBettingPools = (): UseUserBettingPoolsReturn => {
   const [selectedUsername, setSelectedUsername] = useState<string>('');
 
   // Filtered users based on zones and search
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- users mock data is stable
   const filteredUsers = useMemo((): User[] => {
     return users.filter(user => {
       const matchesZone = selectedZones.length === 0 || selectedZones.includes(user.zone);

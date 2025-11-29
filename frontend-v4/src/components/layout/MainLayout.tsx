@@ -33,7 +33,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
 
   // Calcular el ancho efectivo del sidebar
   // Si está colapsado pero con hover, se expande temporalmente
-  const effectiveSidebarWidth = sidebarCollapsed
+  const _effectiveSidebarWidth = sidebarCollapsed
     ? (sidebarHovered ? 280 : 60)
     : 280
 

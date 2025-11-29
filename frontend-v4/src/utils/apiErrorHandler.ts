@@ -168,7 +168,7 @@ export const validatePassword = (password: string) => {
  */
 export const isValidPhone = (phone: string): boolean => {
   // Remove spaces, dashes, parentheses
-  const cleanPhone = phone.replace(/[\s\-\(\)]/g, '')
+  const cleanPhone = phone.replace(/[\s\-()]/g, '')
   // Check if it's 10-15 digits
   return /^\d{10,15}$/.test(cleanPhone)
 }

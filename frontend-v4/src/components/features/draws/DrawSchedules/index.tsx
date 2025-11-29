@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo, type ChangeEvent } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Box,
   Card,
@@ -86,6 +86,7 @@ const DrawSchedules = (): React.ReactElement => {
   const [saving, setSaving] = useState<boolean>(false);
   const [snackbar, setSnackbar] = useState<SnackbarState>({ open: false, message: '', severity: 'success' });
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- Only run once on mount
   useEffect(() => {
     loadDrawSchedules();
   }, []);

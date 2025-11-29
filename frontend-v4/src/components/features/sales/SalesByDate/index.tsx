@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, type ChangeEvent } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Box, Paper, Typography, TextField, Grid, Autocomplete, Button, Stack, Table, TableHead, TableBody, TableRow, TableCell, Checkbox, FormControlLabel, InputAdornment } from '@mui/material';
 import { PictureAsPdf, Search } from '@mui/icons-material';
 

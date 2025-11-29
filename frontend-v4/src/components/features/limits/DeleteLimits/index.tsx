@@ -1,6 +1,5 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import { Box, Card, CardContent, Typography, FormControl, InputLabel, Select, MenuItem, Button, Checkbox, FormControlLabel } from '@mui/material';
-import type { SelectChangeEvent } from '@mui/material/Select';
 
 const DeleteLimits = (): React.ReactElement => {
   const [limitType, setLimitType] = useState<string>('General para grupo');

@@ -1,4 +1,4 @@
-import React, { useState, memo, type ChangeEvent, type MouseEvent } from 'react';
+import React, { useState, memo } from 'react';
 import {
   Box,
   Paper,
@@ -26,7 +26,6 @@ import {
   DialogContent,
   DialogActions,
   Button,
-  type SelectChangeEvent,
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -36,7 +35,7 @@ import {
 } from '@mui/icons-material';
 import useUserBettingPools from './hooks/useUserBettingPools';
 
-interface User {
+interface _User {
   id: string;
   bettingPool: string;
   reference: string;
@@ -199,7 +198,7 @@ const UserBancasMUI: React.FC = () => {
                   </TableCell>
                 </TableRow>
               ) : (
-                users.map((user, index) => (
+                users.map((user, _index) => (
                   <TableRow
                     key={user.id}
                     sx={{

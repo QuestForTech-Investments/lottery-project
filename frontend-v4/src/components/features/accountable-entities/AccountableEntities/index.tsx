@@ -72,6 +72,7 @@ const AccountableEntities = (): React.ReactElement => {
 
   const tabs = ['bancas', 'empleados', 'bancos', 'zonas', 'otros'];
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- Mock data arrays are stable
   const getCurrentData = useCallback((): Entity[] => {
     switch (tabs[activeTab]) {
       case 'bancas': return bancas;
@@ -123,6 +124,7 @@ const AccountableEntities = (): React.ReactElement => {
     return amount < 0 ? `-$${formatted}` : `$${formatted}`;
   }, []);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- tabs array is stable
   const getColumns = useCallback((): ColumnKey[] => {
     switch (tabs[activeTab]) {
       case 'bancas':

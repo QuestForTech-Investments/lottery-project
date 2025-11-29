@@ -1,4 +1,4 @@
-import React, { useCallback, type ChangeEvent } from 'react';
+import React, { useCallback } from 'react';
 import {
   Box,
   Typography,

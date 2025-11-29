@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, memo, type ChangeEvent } from 'react';
+import React, { useState, useEffect, useMemo, memo } from 'react';
 import {
   Box,
   Card,
@@ -15,7 +15,6 @@ import {
   TableSortLabel,
   Paper,
   IconButton,
-  Chip,
   CircularProgress,
   FormControl,
   InputLabel,

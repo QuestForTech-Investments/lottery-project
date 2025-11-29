@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, memo, type ChangeEvent } from 'react';
+import React, { useState, useEffect, useMemo, memo } from 'react';
 import {
   Box,
   Card,
@@ -23,7 +23,6 @@ import {
   Checkbox,
   ListItemText,
   OutlinedInput,
-  Chip,
   type SelectChangeEvent
 } from '@mui/material';
 import {

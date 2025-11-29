@@ -7,7 +7,6 @@ import {
   Tabs,
   Tab,
   FormControl,
-  InputLabel,
   Select,
   MenuItem,
   TextField,
@@ -20,7 +19,6 @@ import {
   CircularProgress,
   Divider,
   Paper,
-  FormGroup,
   FormLabel,
   Radio,
   RadioGroup,
@@ -193,7 +191,7 @@ const MassEditBettingPools: React.FC = () => {
     );
   };
 
-  const handleSelectAllDraws = (): void => {
+  const _handleSelectAllDraws = (): void => {
     if (selectAllDraws) {
       setSelectedDraws([]);
     } else {

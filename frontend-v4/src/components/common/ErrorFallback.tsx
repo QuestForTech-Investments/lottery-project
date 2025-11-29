@@ -24,7 +24,7 @@ interface ErrorFallbackProps {
 const ErrorFallback = ({ error, errorInfo, errorCount, onReset, onReload }: ErrorFallbackProps) => {
   const [showDetails, setShowDetails] = useState(false)
   const navigate = useNavigate()
-  const { t } = useTranslation()
+  const { t: _t } = useTranslation()
 
   const handleGoHome = () => {
     onReset()

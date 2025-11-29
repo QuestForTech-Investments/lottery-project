@@ -45,7 +45,7 @@ interface Draw {
   drawId?: number;
 }
 
-interface CommissionField {
+interface _CommissionField {
   id: string;
   name: string;
   fieldCode: string;

@@ -95,7 +95,7 @@ interface PaginatedResponse {
   hasNextPage?: boolean;
 }
 
-interface ApiDataResponse<T> {
+interface _ApiDataResponse<T> {
   data?: T;
 }
 

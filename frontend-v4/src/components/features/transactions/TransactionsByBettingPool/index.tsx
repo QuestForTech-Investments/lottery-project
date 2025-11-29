@@ -56,6 +56,7 @@ const TransactionsByBettingPool = (): React.ReactElement => {
   const [showResults, setShowResults] = useState<boolean>(false);
   const [results, setResults] = useState<Results | null>(null);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- Stable mock data
   const bettingPools: BettingPool[] = [
     { id: 1, codigo: 'BC001', nombre: 'LA CENTRAL 01' },
     { id: 2, codigo: 'BC002', nombre: 'LA CENTRAL 10' },

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, type SyntheticEvent, type ChangeEvent } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Box,
   Card,
@@ -21,7 +21,7 @@ import {
 } from '@mui/material';
 import { Search as SearchIcon, Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
 
-interface ParentCategory {
+interface _ParentCategory {
   id: number;
   nombre: string;
 }

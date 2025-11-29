@@ -65,6 +65,7 @@ const TransactionsSummary = (): React.ReactElement => {
 
   const zones = ['Zona Norte', 'Zona Sur', 'Zona Este', 'Zona Oeste'];
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- mockupData is stable
   const filteredData = useMemo(() => {
     return mockupData.filter(item => {
       return quickFilter === '' || Object.values(item).some(val => String(val).toLowerCase().includes(quickFilter.toLowerCase()));

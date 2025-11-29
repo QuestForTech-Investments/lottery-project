@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, memo, type SyntheticEvent } from 'react';
+import React, { useState, useEffect, useMemo, memo } from 'react';
 import {
   Box,
   Card,
@@ -26,8 +26,7 @@ import {
   FormControl,
   InputLabel,
   Select,
-  MenuItem,
-  type SelectChangeEvent
+  MenuItem
 } from '@mui/material';
 import {
   Search as SearchIcon,

@@ -52,7 +52,7 @@ interface UseBettingPoolsListReturn {
 const useBettingPoolsList = (): UseBettingPoolsListReturn => {
   // Data state
   const [bettingPools, setBettingPools] = useState<TransformedBettingPool[]>([]);
-  const [zonesMap, setZonesMap] = useState<ZonesMap>({});
+  const [_zonesMap, setZonesMap] = useState<ZonesMap>({});
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 

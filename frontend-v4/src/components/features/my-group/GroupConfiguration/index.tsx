@@ -13,7 +13,7 @@ import {
 } from '@mui/material';
 
 // Types for prizes and commissions data
-type GameType = 'directo' | 'pale' | 'tripleta' | 'cash3Straight' | 'cash3Box' | 'play4Straight' | 'play4Box' | 'superPale' | 'bolita1' | 'bolita2' | 'singulacion1' | 'singulacion2' | 'singulacion3' | 'pickTwo' | 'pick5Straight';
+type _GameType = 'directo' | 'pale' | 'tripleta' | 'cash3Straight' | 'cash3Box' | 'play4Straight' | 'play4Box' | 'superPale' | 'bolita1' | 'bolita2' | 'singulacion1' | 'singulacion2' | 'singulacion3' | 'pickTwo' | 'pick5Straight';
 
 interface DirectoPrizes {
   primerPago: string;

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, type ChangeEvent } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   Box,
   Card,
@@ -16,7 +16,6 @@ import {
   Select,
   MenuItem
 } from '@mui/material';
-import type { SelectChangeEvent } from '@mui/material/Select';
 
 interface NumberControls {
   enableDirecto: boolean;

@@ -101,6 +101,7 @@ const TicketPrinter: React.FC<TicketPrinterProps> = ({ ticketData, onAfterPrint,
   });
 
   // Imprimir automaticmente si se recibe la prop autoPrint
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- handlePrint is stable, only run when ticketData changes
   useEffect(() => {
     if (ticketData && ticketData.autoPrint) {
       // Esperar a que se genere el barcode

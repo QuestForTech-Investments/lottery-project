@@ -41,9 +41,9 @@ const useCreateTickets = () => {
   const [amount, setAmount] = useState<string>('');
 
   // Statistics
-  const [todayPlays, setTodayPlays] = useState<number>(0);
-  const [groupSold, setGroupSold] = useState<number>(0);
-  const [bancaSold, setBancaSold] = useState<number>(0);
+  const [todayPlays, _setTodayPlays] = useState<number>(0);
+  const [groupSold, _setGroupSold] = useState<number>(0);
+  const [bancaSold, _setBancaSold] = useState<number>(0);
 
   // Plays by type
   const [directoPlays, setDirectoPlays] = useState<Play[]>([]);

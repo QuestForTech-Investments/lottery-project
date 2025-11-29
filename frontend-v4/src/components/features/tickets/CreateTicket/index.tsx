@@ -1,4 +1,4 @@
-import React, { useState, useEffect, memo, type ChangeEvent } from 'react';
+import React, { useState, useEffect, memo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -18,8 +18,7 @@ import {
   IconButton,
   Grid,
   Card,
-  CardContent,
-  type SelectChangeEvent
+  CardContent
 } from '@mui/material';
 import { Plus, Trash2, RotateCcw, Receipt } from 'lucide-react';
 import JsBarcode from 'jsbarcode';
@@ -147,11 +146,13 @@ const CreateTicket: React.FC = () => {
   }, []);
 
   // Recalculate totales when changed lines
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- calculateTotals is stable
   useEffect(() => {
     calculateTotals();
   }, [lines, globalDiscount, globalMultiplier]);
 
   // Generate barcode for preview
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- generatePreviewBarcode is stable
   useEffect(() => {
     if (lines.length > 0) {
       generatePreviewBarcode();

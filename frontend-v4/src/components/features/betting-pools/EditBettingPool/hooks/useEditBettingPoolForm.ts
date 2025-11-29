@@ -7,482 +7,45 @@ import { saveBettingPoolSchedules, transformSchedulesToApiFormat, getBettingPool
 import { getBettingPoolDraws, saveBettingPoolDraws } from '@/services/sortitionService';
 import { getAllDraws } from '@/services/drawService';
 
-// ============== INTERFACES ==============
-
-interface AutoExpense {
-  description: string;
-  amount: string;
-  frequency: string;
-  active: boolean;
-}
-
-// Note: FormData uses index signature to allow dynamic prize fields
-// All known fields are defined but the interface allows additional string keys
-interface FormData {
-  // General
-  bettingPoolName: string;
-  branchCode: string;
-  username: string;
-  location: string;
-  password: string;
-  reference: string;
-  confirmPassword: string;
-  comment: string;
-  // Configuration
-  selectedZone: string;
-  zoneId: string;
-  fallType: string;
-  deactivationBalance: string;
-  dailySaleLimit: string;
-  dailyBalanceLimit: string;
-  todayBalanceLimit: string;
-  enableTemporaryBalance: boolean;
-  temporaryAdditionalBalance: string;
-  isActive: boolean;
-  winningTicketsControl: boolean;
-  controlWinningTickets: boolean;
-  allowPassPot: boolean;
-  allowJackpot: boolean;
-  printTickets: boolean;
-  printEnabled: boolean;
-  printTicketCopy: boolean;
-  smsOnly: boolean;
-  minutesToCancelTicket: string;
-  ticketsToCancelPerDay: string;
-  enableRecharges: boolean;
-  printRechargeReceipt: boolean;
-  allowPasswordChange: boolean;
-  printerType: string;
-  discountProvider: string;
-  discountMode: string;
-  maximumCancelTicketAmount: string;
-  maxTicketAmount: string;
-  dailyPhoneRechargeLimit: string;
-  limitPreference: string | null;
-  creditLimit: string;
-  // Footers
-  autoFooter: boolean;
-  footerText1: string;
-  footerText2: string;
-  footerText3: string;
-  footerText4: string;
-  showBranchInfo: boolean;
-  showDateTime: boolean;
-  // Schedules
-  domingoInicio: string;
-  domingoFin: string;
-  lunesInicio: string;
-  lunesFin: string;
-  martesInicio: string;
-  martesFin: string;
-  miercolesInicio: string;
-  miercolesFin: string;
-  juevesInicio: string;
-  juevesFin: string;
-  viernesInicio: string;
-  viernesFin: string;
-  sabadoInicio: string;
-  sabadoFin: string;
-  // Draws
-  selectedDraws: number[];
-  anticipatedClosing: string;
-  anticipatedClosingDraws: number[];
-  // Styles
-  sellScreenStyles: string;
-  ticketPrintStyles: string;
-  // Auto expenses
-  autoExpenses: AutoExpense[];
-  // Dynamic prize fields - index signature
-  [key: string]: string | number | boolean | number[] | AutoExpense[] | null;
-}
-
-interface FormErrors {
-  submit?: string | null;
-  bettingPoolName?: string | null;
-  branchCode?: string | null;
-  zoneId?: string | null;
-  [key: string]: string | null | undefined;
-}
-
-interface Zone {
-  zoneId: number;
-  zoneName: string;
-}
-
-interface Draw {
-  drawId: number;
-  drawName: string;
-  lotteryId?: number;
-}
-
-interface PrizesDraw {
-  id: string;
-  name: string;
-  drawId?: number;
-}
-
-interface DrawValuesCache {
-  [drawId: string]: Record<string, string | number>;
-}
-
-interface SyntheticEventLike {
-  target: {
-    name: string;
-    value: string | number | boolean | number[] | AutoExpense[];
-    type?: string;
-    checked?: boolean;
-  };
-}
-
-interface UseEditBettingPoolFormReturn {
-  formData: FormData;
-  loading: boolean;
-  loadingBasicData: boolean;
-  loadingPrizes: boolean;
-  loadingZones: boolean;
-  loadingDraws: boolean;
-  errors: FormErrors;
-  successMessage: string;
-  zones: Zone[];
-  draws: Draw[];
-  prizesDraws: PrizesDraw[];
-  drawValuesCache: DrawValuesCache;
-  activeTab: number;
-  handleChange: (e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement> | SyntheticEventLike) => void;
-  handleTabChange: (event: SyntheticEvent, newValue: number) => void;
-  handleSubmit: (e: React.FormEvent) => Promise<void>;
-  copyScheduleToAll: (day: string) => void;
-  loadDrawSpecificValues: (drawId: number, bettingPoolId: number | string) => Promise<Record<string, string | number>>;
-  savePrizeConfigForSingleDraw: (drawId: string) => Promise<{ success: boolean; message?: string }>;
-  clearSuccessMessage: () => void;
-  clearErrors: () => void;
-}
-
-// API Response interfaces
-interface ApiResponse<T> {
-  success: boolean;
-  data?: T;
-  message?: string;
-}
-
-interface BettingPoolData {
-  bettingPoolName?: string;
-  bettingPoolCode?: string;
-  branchCode?: string;
-  username?: string;
-  location?: string;
-  reference?: string;
-  comment?: string;
-  zoneId?: number;
-  isActive?: boolean;
-}
-
-interface ConfigResponse {
-  config?: {
-    fallType?: string;
-    deactivationBalance?: number;
-    dailySaleLimit?: number;
-    dailyBalanceLimit?: number;
-    temporaryAdditionalBalance?: number;
-    enableTemporaryBalance?: boolean;
-    creditLimit?: number;
-    controlWinningTickets?: boolean;
-    allowJackpot?: boolean;
-    enableRecharges?: boolean;
-    allowPasswordChange?: boolean;
-    cancelMinutes?: number;
-    dailyCancelTickets?: number;
-    maxCancelAmount?: number;
-    maxTicketAmount?: number;
-    maxDailyRecharge?: number;
-  };
-  discountConfig?: {
-    discountProvider?: string;
-    discountMode?: string;
-  };
-  printConfig?: {
-    printMode?: string;
-    printEnabled?: boolean;
-    printTicketCopy?: boolean;
-    printRechargeReceipt?: boolean;
-    smsOnly?: boolean;
-  };
-  footer?: {
-    autoFooter?: boolean;
-    footerLine1?: string;
-    footerLine2?: string;
-    footerLine3?: string;
-    footerLine4?: string;
-    showBranchInfo?: boolean;
-    showDateTime?: boolean;
-  };
-}
-
-interface DrawApiData {
-  bettingPoolDrawId?: number;
-  drawId: number;
-  drawName?: string;
-  lotteryId?: number;
-  isActive?: boolean;
-  anticipatedClosingMinutes?: number;
-}
-
-interface BetType {
-  betTypeCode: string;
-  prizeFields?: PrizeField[];
-}
-
-interface PrizeField {
-  fieldCode: string;
-  prizeTypeId: number;
-  defaultMultiplier?: number;
-}
-
-interface PrizeConfig {
-  prizeTypeId: number;
-  fieldCode: string;
-  value: number;
-}
-
-interface SavePrizeResult {
-  success: boolean;
-  total?: number;
-  successful?: number;
-  failed?: number;
-  results?: Array<{ success: boolean; lottery: string; count?: number; error?: string }>;
-  message?: string;
-  skipped?: boolean;
-  error?: string;
-}
-
-interface PrizeData {
-  betTypes?: BetType[];
-  customMap?: Record<string, number>;
-}
-
-console.log('[ERROR] [FILE] useEditBettingPoolForm.js loaded - DRAWS API INTEGRATED (v2025-11-14)');
-
-/**
- * Draw order for consistent sorting across tabs
- */
-const DRAW_ORDER = [
-  'LA PRIMERA', 'NEW YORK DAY', 'NEW YORK NIGHT', 'FLORIDA AM', 'FLORIDA PM',
-  'GANA MAS', 'NACIONAL', 'QUINIELA PALE', 'REAL', 'LOTEKA',
-  'FL PICK2 AM', 'FL PICK2 PM', 'GEORGIA-MID AM', 'GEORGIA EVENING', 'GEORGIA NIGHT',
-  'NEW JERSEY AM', 'NEW JERSEY PM', 'CONNECTICUT AM', 'CONNECTICUT PM',
-  'CALIFORNIA AM', 'CALIFORNIA PM', 'CHICAGO AM', 'CHICAGO PM',
-  'PENN MIDDAY', 'PENN EVENING', 'INDIANA MIDDAY', 'INDIANA EVENING',
-  'DIARIA 11AM', 'DIARIA 3PM', 'DIARIA 9PM',
-  'SUPER PALE TARDE', 'SUPER PALE NOCHE', 'SUPER PALE NY-FL AM', 'SUPER PALE NY-FL PM',
-  'TEXAS MORNING', 'TEXAS DAY', 'TEXAS EVENING', 'TEXAS NIGHT',
-  'VIRGINIA AM', 'VIRGINIA PM', 'SOUTH CAROLINA AM', 'SOUTH CAROLINA PM',
-  'MARYLAND MIDDAY', 'MARYLAND EVENING', 'MASS AM', 'MASS PM', 'LA SUERTE',
-  'NORTH CAROLINA AM', 'NORTH CAROLINA PM', 'LOTEDOM',
-  'NY AM 6x1', 'NY PM 6x1', 'FL AM 6X1', 'FL PM 6X1',
-  'King Lottery AM', 'King Lottery PM', 'L.E. PUERTO RICO 2PM', 'L.E. PUERTO RICO 10PM',
-  'DELAWARE AM', 'DELAWARE PM', 'Anguila 1pm', 'Anguila 6PM', 'Anguila 9pm', 'Anguila 10am',
-  'LA CHICA', 'LA PRIMERA 8PM', 'PANAMA MIERCOLES', 'PANAMA DOMINGO', 'LA SUERTE 6:00pm'
-];
+// Types and constants extracted for maintainability
+import type {
+  AutoExpense,
+  FormData,
+  FormErrors,
+  Zone,
+  Draw,
+  PrizesDraw,
+  DrawValuesCache,
+  SyntheticEventLike,
+  UseEditBettingPoolFormReturn,
+  ApiResponse,
+  BettingPoolData,
+  ConfigResponse,
+  DrawApiData,
+  BetType,
+  PrizeConfig,
+  SavePrizeResult,
+  PrizeData,
+} from './types';
+import { DRAW_ORDER } from './constants';
+import { INITIAL_FORM_DATA } from './initialState';
+import {
+  mapConfigToFormData,
+  validateFormData,
+  hasScheduleChanged,
+  hasDrawsChanged,
+  generateCopiedSchedules
+} from './utils';
 
 /**
  * Custom hook for managing edit betting pool form with ALL 168 fields
  */
 const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
-  const navigate = useNavigate();
+  const _navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
 
-  // Form state - ALL 168 fields
-  const [formData, setFormData] = useState<FormData>({
-    // General
-    bettingPoolName: '',
-    branchCode: '',
-    username: '',
-    location: '',
-    password: '',
-    reference: '',
-    confirmPassword: '',
-    comment: '',
-
-    // Configuration
-    selectedZone: '',
-    zoneId: '',
-    fallType: '1',
-    deactivationBalance: '',
-    dailySaleLimit: '',
-    dailyBalanceLimit: '',
-    todayBalanceLimit: '',
-    enableTemporaryBalance: false,
-    temporaryAdditionalBalance: '',
-    isActive: true,
-    winningTicketsControl: false,
-    controlWinningTickets: false,
-    allowPassPot: true,
-    allowJackpot: true,
-    printTickets: true,
-    printEnabled: true,
-    printTicketCopy: true,
-    smsOnly: false,
-    minutesToCancelTicket: '30',
-    ticketsToCancelPerDay: '',
-    enableRecharges: true,
-    printRechargeReceipt: true,
-    allowPasswordChange: true,
-    printerType: '1',
-    discountProvider: '2',
-    discountMode: '1',
-    maximumCancelTicketAmount: '',
-    maxTicketAmount: '',
-    dailyPhoneRechargeLimit: '',
-    limitPreference: null,
-    creditLimit: '',
-
-    // Pies de página
-    autoFooter: false,
-    footerText1: '',
-    footerText2: '',
-    footerText3: '',
-    footerText4: '',
-    showBranchInfo: true,
-    showDateTime: true,
-
-    // Premios & Comisiones - Pick 3
-    pick3FirstPayment: '',
-    pick3SecondPayment: '',
-    pick3ThirdPayment: '',
-    pick3Doubles: '',
-
-    // Pick 3 Super
-    pick3SuperAllSequence: '',
-    pick3SuperFirstPayment: '',
-    pick3SuperSecondPayment: '',
-    pick3SuperThirdPayment: '',
-
-    // Pick 4
-    pick4FirstPayment: '',
-    pick4SecondPayment: '',
-
-    // Pick 4 Super
-    pick4SuperAllSequence: '',
-    pick4SuperDoubles: '',
-
-    // Pick 3 NY
-    pick3NY_3Way2Identical: '',
-    pick3NY_6Way3Unique: '',
-
-    // Pick 4 NY
-    pick4NY_AllSequence: '',
-    pick4NY_Doubles: '',
-
-    // Pick 4 Extra
-    pick4_24Way4Unique: '',
-    pick4_12Way2Identical: '',
-    pick4_6Way2Identical: '',
-    pick4_4Way3Identical: '',
-
-    // Pick 5 Mega
-    pick5MegaFirstPayment: '',
-
-    // Pick 5 NY
-    pick5NYFirstPayment: '',
-
-    // Pick 5 Bronx
-    pick5BronxFirstPayment: '',
-
-    // Pick 5 Brooklyn
-    pick5BrooklynFirstPayment: '',
-
-    // Pick 5 Queens
-    pick5QueensFirstPayment: '',
-
-    // Pick 5 Extra
-    pick5FirstPayment: '',
-
-    // Pick 5 Super
-    pick5SuperAllSequence: '',
-    pick5SuperDoubles: '',
-
-    // Pick 5 Super Extra
-    pick5Super_5Way4Identical: '',
-    pick5Super_10Way3Identical: '',
-    pick5Super_20Way3Identical: '',
-    pick5Super_30Way2Identical: '',
-    pick5Super_60Way2Identical: '',
-    pick5Super_120Way5Unique: '',
-
-    // Pick 6 Miami
-    pick6MiamiFirstPayment: '',
-    pick6MiamiDoubles: '',
-
-    // Pick 6 California
-    pick6CaliforniaAllSequence: '',
-    pick6CaliforniaTriples: '',
-
-    // Pick 6 New York
-    pick6NY_3Way2Identical: '',
-    pick6NY_6Way3Unique: '',
-
-    // Pick 6 Extra
-    pick6AllSequence: '',
-    pick6Triples: '',
-
-    // Pick 6 California Extra
-    pick6Cali_3Way2Identical: '',
-    pick6Cali_6Way3Unique: '',
-
-    // Lotto Classic
-    lottoClassicFirstPayment: '',
-    lottoClassicDoubles: '',
-
-    // Lotto Plus
-    lottoPlusFirstPayment: '',
-    lottoPlusDoubles: '',
-
-    // Mega Millions
-    megaMillionsFirstPayment: '',
-    megaMillionsDoubles: '',
-
-    // Powerball
-    powerball4NumbersFirstRound: '',
-    powerball3NumbersFirstRound: '',
-    powerball2NumbersFirstRound: '',
-    powerballLastNumberFirstRound: '',
-    powerball4NumbersSecondRound: '',
-    powerball3NumbersSecondRound: '',
-    powerballLast2NumbersSecondRound: '',
-    powerballLastNumberSecondRound: '',
-    powerball4NumbersThirdRound: '',
-    powerball3NumbersThirdRound: '',
-    powerballLast2NumbersThirdRound: '',
-    powerballLastNumberThirdRound: '',
-
-    // Horarios de sorteos
-    domingoInicio: '12:00 AM',
-    domingoFin: '11:59 PM',
-    lunesInicio: '12:00 AM',
-    lunesFin: '11:59 PM',
-    martesInicio: '12:00 AM',
-    martesFin: '11:59 PM',
-    miercolesInicio: '12:00 AM',
-    miercolesFin: '11:59 PM',
-    juevesInicio: '12:00 AM',
-    juevesFin: '11:59 PM',
-    viernesInicio: '12:00 AM',
-    viernesFin: '11:59 PM',
-    sabadoInicio: '12:00 AM',
-    sabadoFin: '11:59 PM',
-
-    // Sorteos
-    selectedDraws: [],
-    anticipatedClosing: '',
-    anticipatedClosingDraws: [],
-
-    // Estilos
-    sellScreenStyles: 'estilo1',
-    ticketPrintStyles: 'original',
-
-    // Gastos automáticos
-    autoExpenses: []
-  });
+  // Form state - uses INITIAL_FORM_DATA from initialState.ts
+  const [formData, setFormData] = useState<FormData>({ ...INITIAL_FORM_DATA });
 
   // UI state
   const [loading, setLoading] = useState<boolean>(false);
@@ -504,71 +67,11 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
   /**
    * Load initial data (zones and bettingPool data)
    */
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- loadInitialData should only run when id changes
   useEffect(() => {
     console.log('[INFO] [HOOK] useEffect running, id:', id);
     loadInitialData();
   }, [id]);
-
-  /**
-   * Helper function to map backend config data to frontend form fields
-   * Maps the data from GET /api/betting-pools/{id}/config to form structure
-   */
-  const mapConfigToFormData = (configResponse: ConfigResponse): Partial<FormData> => {
-    if (!configResponse || (!configResponse.config && !configResponse.discountConfig && !configResponse.printConfig)) {
-      return {};
-    }
-
-    const config = configResponse.config || {};
-    const discountConfig = configResponse.discountConfig || {};
-    const printConfig = configResponse.printConfig || {};
-    const footer = configResponse.footer || {};
-
-    // Reverse mapping for enums (backend -> frontend select values)
-    const fallTypeReverseMap: Record<string, string> = { 'OFF': '1', 'COLLECTION': '2', 'DAILY': '3', 'MONTHLY': '4', 'WEEKLY': '5' };
-    const printModeReverseMap: Record<string, string> = { 'DRIVER': '1', 'GENERIC': '2' };
-    const discountProviderReverseMap: Record<string, string> = { 'GROUP': '1', 'SELLER': '2' };
-    const discountModeReverseMap: Record<string, string> = { 'OFF': '1', 'CASH': '2', 'FREE_TICKET': '3' };
-
-    return {
-      // Config fields
-      fallType: (config.fallType ? fallTypeReverseMap[config.fallType] : null) || '1',
-      deactivationBalance: String(config.deactivationBalance ?? ''),
-      dailySaleLimit: String(config.dailySaleLimit ?? ''),
-      dailyBalanceLimit: String(config.dailyBalanceLimit ?? ''),
-      temporaryAdditionalBalance: String(config.temporaryAdditionalBalance ?? ''),
-      enableTemporaryBalance: config.enableTemporaryBalance || false,
-      creditLimit: String(config.creditLimit ?? ''),
-      controlWinningTickets: config.controlWinningTickets || false,
-      allowJackpot: config.allowJackpot !== undefined ? config.allowJackpot : true,
-      enableRecharges: config.enableRecharges !== undefined ? config.enableRecharges : true,
-      allowPasswordChange: config.allowPasswordChange !== undefined ? config.allowPasswordChange : true,
-      minutesToCancelTicket: String(config.cancelMinutes ?? 30),
-      ticketsToCancelPerDay: String(config.dailyCancelTickets ?? ''),
-      maximumCancelTicketAmount: String(config.maxCancelAmount ?? ''),
-      maxTicketAmount: String(config.maxTicketAmount ?? ''),
-      dailyPhoneRechargeLimit: String(config.maxDailyRecharge ?? ''),
-
-      // Discount config fields
-      discountProvider: (discountConfig.discountProvider ? discountProviderReverseMap[discountConfig.discountProvider] : null) || '1',
-      discountMode: (discountConfig.discountMode ? discountModeReverseMap[discountConfig.discountMode] : null) || '1',
-
-      // Print config fields
-      printerType: (printConfig.printMode ? printModeReverseMap[printConfig.printMode] : null) || '1',
-      printEnabled: printConfig.printEnabled !== undefined ? printConfig.printEnabled : true,
-      printTicketCopy: printConfig.printTicketCopy !== undefined ? printConfig.printTicketCopy : true,
-      printRechargeReceipt: printConfig.printRechargeReceipt !== undefined ? printConfig.printRechargeReceipt : true,
-      smsOnly: printConfig.smsOnly || false,
-
-      // Footer fields - Map API footerLine* to form footerText*
-      autoFooter: footer.autoFooter || false,
-      footerText1: footer.footerLine1 || '',
-      footerText2: footer.footerLine2 || '',
-      footerText3: footer.footerLine3 || '',
-      footerText4: footer.footerLine4 || '',
-      showBranchInfo: footer.showBranchInfo !== undefined ? footer.showBranchInfo : true,
-      showDateTime: footer.showDateTime !== undefined ? footer.showDateTime : true
-    };
-  };
 
   /**
    * Load zones and bettingPool data
@@ -840,31 +343,11 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
   };
 
   /**
-   * Copy schedule to all days
+   * Copy schedule to all days - uses generateCopiedSchedules from utils.ts
    */
   const copyScheduleToAll = (day: string): void => {
-    const inicioKey = `${day}Inicio` as keyof FormData;
-    const finKey = `${day}Fin` as keyof FormData;
-    const inicio = formData[inicioKey] as string;
-    const fin = formData[finKey] as string;
-
-    setFormData(prev => ({
-      ...prev,
-      domingoInicio: inicio,
-      domingoFin: fin,
-      lunesInicio: inicio,
-      lunesFin: fin,
-      martesInicio: inicio,
-      martesFin: fin,
-      miercolesInicio: inicio,
-      miercolesFin: fin,
-      juevesInicio: inicio,
-      juevesFin: fin,
-      viernesInicio: inicio,
-      viernesFin: fin,
-      sabadoInicio: inicio,
-      sabadoFin: fin,
-    }));
+    const updates = generateCopiedSchedules(formData, day);
+    setFormData(prev => ({ ...prev, ...updates }));
   };
 
   /**
@@ -1262,108 +745,29 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
   };
 
   /**
-   * Validate form
+   * Validate form and set errors state
+   * Uses pure validateFormData from utils.ts
    */
   const validateForm = (): boolean => {
-    const newErrors: FormErrors = {};
-
-    if (!formData.bettingPoolName.trim()) {
-      newErrors.bettingPoolName = 'El nombre del betting pool es requerido';
-    }
-
-    if (!formData.branchCode.trim()) {
-      newErrors.branchCode = 'El código del betting pool es requerido';
-    }
-
-    if (!formData.selectedZone) {
-      newErrors.selectedZone = 'Debe seleccionar una zona';
-    }
-
-    if (formData.password && formData.password.length < 6) {
-      newErrors.password = 'La contraseña debe tener al menos 6 caracteres';
-    }
-
-    if (formData.password && formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Las contraseñas no coinciden';
-    }
-
-    if (formData.password && !formData.username) {
-      newErrors.username = 'El usuario es requerido si se proporciona una contraseña';
-    }
-
+    const newErrors = validateFormData(formData);
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   /**
    * Check if schedule data has changed
+   * Uses pure hasScheduleChanged from utils.ts
    */
   const hasScheduleDataChanged = (): boolean => {
-    if (!initialFormData) return true;
-
-    const scheduleFields: (keyof FormData)[] = [
-      'domingoInicio', 'domingoFin',
-      'lunesInicio', 'lunesFin',
-      'martesInicio', 'martesFin',
-      'miercolesInicio', 'miercolesFin',
-      'juevesInicio', 'juevesFin',
-      'viernesInicio', 'viernesFin',
-      'sabadoInicio', 'sabadoFin'
-    ];
-
-    const changedFields = scheduleFields.filter(field =>
-      formData[field] !== initialFormData[field]
-    );
-
-    if (changedFields.length > 0) {
-      console.log(`[SCHEDULE] Schedule changes detected in ${changedFields.length} field(s):`, changedFields);
-    }
-
-    return changedFields.length > 0;
+    return hasScheduleChanged(formData, initialFormData);
   };
 
+  /**
+   * Check if draws data has changed
+   * Uses pure hasDrawsChanged from utils.ts
+   */
   const hasDrawsDataChanged = (): boolean => {
-    if (!initialFormData) return true;
-
-    // Compare selected draws
-    const prevLotteries = initialFormData.selectedDraws || [];
-    const currLotteries = formData.selectedDraws || [];
-
-    if (prevLotteries.length !== currLotteries.length) {
-      console.log(`[TARGET] Draws changes detected: draw count changed from ${prevLotteries.length} to ${currLotteries.length}`);
-      return true;
-    }
-
-    const prevSet = new Set(prevLotteries);
-    const currSet = new Set(currLotteries);
-    if (!Array.from(prevSet).every(id => currSet.has(id))) {
-      console.log('[TARGET] Draws changes detected: selected draws changed');
-      return true;
-    }
-
-    // Compare anticipated closing
-    if (formData.anticipatedClosing !== initialFormData.anticipatedClosing) {
-      console.log(`[TARGET] Draws changes detected: anticipated closing changed from ${initialFormData.anticipatedClosing} to ${formData.anticipatedClosing}`);
-      return true;
-    }
-
-    // Compare anticipated closing lotteries
-    const prevClosingLotteries = initialFormData.anticipatedClosingDraws || [];
-    const currClosingLotteries = formData.anticipatedClosingDraws || [];
-
-    if (prevClosingLotteries.length !== currClosingLotteries.length) {
-      console.log(`[TARGET] Draws changes detected: anticipated closing draws count changed from ${prevClosingLotteries.length} to ${currClosingLotteries.length}`);
-      return true;
-    }
-
-    const prevClosingSet = new Set(prevClosingLotteries);
-    const currClosingSet = new Set(currClosingLotteries);
-    if (!Array.from(prevClosingSet).every(id => currClosingSet.has(id))) {
-      console.log('[TARGET] Draws changes detected: anticipated closing draws changed');
-      return true;
-    }
-
-    return false;
+    return hasDrawsChanged(formData, initialFormData);
   };
 
   /**

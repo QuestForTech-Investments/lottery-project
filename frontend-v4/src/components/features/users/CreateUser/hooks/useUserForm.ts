@@ -276,6 +276,7 @@ const useUserForm = () => {
     } finally {
       setLoading(false)
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- errors is set inside, not a dependency
   }, [formData, validateForm, navigate]) // Dependencies: formData, validateForm, navigate
 
   /**

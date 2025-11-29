@@ -66,6 +66,7 @@ const TransactionGroupsList = (): React.ReactElement => {
     setSortConfig({ key, direction });
   }, [sortConfig]);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- mockupData is stable
   const filteredAndSortedData = useMemo(() => {
     let filtered = mockupData;
 

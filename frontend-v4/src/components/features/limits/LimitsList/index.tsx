@@ -1,4 +1,4 @@
-import React, { useState, useCallback, type SyntheticEvent, type ChangeEvent } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   Box,
   Card,
@@ -23,7 +23,6 @@ import {
   IconButton,
   Chip
 } from '@mui/material';
-import type { SelectChangeEvent } from '@mui/material/Select';
 import DeleteIcon from '@mui/icons-material/Delete';
 
 interface Limit {
@@ -259,7 +258,7 @@ const LimitsList = (): React.ReactElement => {
           }}
           TabIndicatorProps={{ style: { backgroundColor: '#6366f1' } }}
         >
-          {weekDays.map((day, index) => (
+          {weekDays.map((day, _index) => (
             <Tab key={day} label={day} />
           ))}
         </Tabs>

@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, type ChangeEvent } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -23,7 +23,6 @@ import {
   IconButton,
   Alert
 } from '@mui/material';
-import type { SelectChangeEvent } from '@mui/material/Select';
 import { Close as CloseIcon, Settings as SettingsIcon } from '@mui/icons-material';
 
 interface Transaction {

@@ -1,4 +1,4 @@
-import { useState, useCallback, type ChangeEvent } from 'react';
+import { useState, useCallback } from 'react';
 import type { SelectChangeEvent } from '@mui/material';
 
 // Types

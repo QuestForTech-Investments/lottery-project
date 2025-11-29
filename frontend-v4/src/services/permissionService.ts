@@ -21,7 +21,7 @@ interface PermissionsResponse {
   data: Permission[];
 }
 
-interface PermissionResponse {
+interface _PermissionResponse {
   success: boolean;
   data: Permission;
 }

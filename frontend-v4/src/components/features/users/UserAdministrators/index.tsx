@@ -1,4 +1,4 @@
-import React, { useState, memo, type ChangeEvent } from 'react';
+import { useState, memo } from 'react';
 import {
   Box,
   Paper,
@@ -143,7 +143,7 @@ const UserAdministratorsMUI = () => {
                   </TableCell>
                 </TableRow>
               ) : (
-                administradores.map((admin, index) => (
+                administradores.map((admin, _index) => (
                   <TableRow
                     key={admin.username}
                     sx={{

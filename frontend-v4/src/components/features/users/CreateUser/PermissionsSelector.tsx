@@ -3,7 +3,7 @@
  * Material-UI component for selecting permissions grouped by category
  */
 
-import React, { memo, type ChangeEvent } from 'react'
+import { memo } from 'react'
 import {
   Box,
   Typography,
@@ -23,7 +23,7 @@ import {
   CheckBox as CheckBoxIcon,
   CheckBoxOutlineBlank as CheckBoxOutlineBlankIcon
 } from '@mui/icons-material'
-import type { PermissionCategory, Permission } from '@/types/user'
+import type { PermissionCategory } from '@/types/user'
 
 interface PermissionsSelectorProps {
   permissionCategories: PermissionCategory[];

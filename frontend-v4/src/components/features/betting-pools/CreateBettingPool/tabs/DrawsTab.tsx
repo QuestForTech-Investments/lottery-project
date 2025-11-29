@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, type MouseEvent } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Grid,
   TextField,
@@ -156,7 +156,7 @@ const DrawsTab: React.FC<DrawsTabProps> = ({ formData, handleChange, draws: prop
   };
 
   const selectedCount = formData.selectedDraws?.length || 0;
-  const allSelected = draws.length > 0 && selectedCount === draws.length;
+  const _allSelected = draws.length > 0 && selectedCount === draws.length;
 
   // Loading state
   if (loading) {

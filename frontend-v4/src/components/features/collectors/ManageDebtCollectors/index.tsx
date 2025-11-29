@@ -20,7 +20,6 @@ import {
   InputAdornment,
   IconButton
 } from '@mui/material';
-import type { SelectChangeEvent } from '@mui/material/Select';
 import { Search as SearchIcon, Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
 
 interface Collector {

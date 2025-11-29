@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, type ChangeEvent, type SyntheticEvent } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Box,
   Card,
@@ -16,7 +16,6 @@ import {
   CircularProgress,
   InputAdornment,
   FormControl,
-  InputLabel,
   Select,
   MenuItem,
   Checkbox,
@@ -25,16 +24,11 @@ import {
   Tabs,
   Tab,
   ToggleButton,
-  ToggleButtonGroup,
-  Divider
+  ToggleButtonGroup
 } from '@mui/material';
 import type { SelectChangeEvent } from '@mui/material/Select';
 import {
-  Search as SearchIcon,
-  PictureAsPdf as PdfIcon,
-  TableChart as CsvIcon,
-  Visibility as VisibilityIcon,
-  Refresh as RefreshIcon
+  Search as SearchIcon
 } from '@mui/icons-material';
 import api from '@services/api';
 
@@ -59,7 +53,7 @@ interface BettingPool {
   reference?: string;
 }
 
-interface SalesRow {
+interface _SalesRow {
   id: number;
   ref: string;
   code: string;
@@ -78,7 +72,7 @@ interface SalesRow {
   accumulatedFall: number;
 }
 
-interface SalesTotals {
+interface _SalesTotals {
   p: number;
   l: number;
   w: number;
@@ -100,7 +94,7 @@ interface TableColumn {
   align: 'left' | 'center' | 'right';
 }
 
-interface FilterOption {
+interface _FilterOption {
   value: string;
   label: string;
 }
@@ -163,8 +157,8 @@ const DailySales = (): React.ReactElement => {
   const [searchTerm, setSearchTerm] = useState<string>('');
 
   // Summary data
-  const [netTotal, setNetTotal] = useState<number>(0);
-  const [grandTotal, setGrandTotal] = useState<number>(0);
+  const [_netTotal, _setNetTotal] = useState<number>(0);
+  const [_grandTotal, _setGrandTotal] = useState<number>(0);
 
   useEffect(() => {
     loadInitialData();

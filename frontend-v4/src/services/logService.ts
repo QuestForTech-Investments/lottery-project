@@ -13,7 +13,7 @@ interface LogEntry {
   priority?: string;
 }
 
-interface LogBatchPayload {
+interface _LogBatchPayload {
   logs: LogEntry[];
 }
 

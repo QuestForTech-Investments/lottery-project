@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback, type ChangeEvent, type MouseEvent } from 'react';
 import type { SelectChangeEvent } from '@mui/material';
 
-interface Zone {
+interface _Zone {
   id: number;
   name: string;
 }
@@ -202,6 +202,7 @@ const useUserSessions = () => {
     });
     setHasFiltered(true);
     setPage(0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mock data arrays are stable
   }, [selectedDate]);
 
   /**

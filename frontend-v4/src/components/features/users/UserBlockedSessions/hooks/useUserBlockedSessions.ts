@@ -75,6 +75,7 @@ const useUserBlockedSessions = () => {
       default:
         return [];
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mock data arrays are stable
   }, [activeTab]);
 
   /**

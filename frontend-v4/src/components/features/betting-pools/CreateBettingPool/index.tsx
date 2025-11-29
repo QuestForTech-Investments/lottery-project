@@ -1,4 +1,4 @@
-import React, { type FormEvent } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -42,7 +42,7 @@ const CreateBettingPoolMUI: React.FC = () => {
     handleChange,
     handleTabChange,
     handleSubmit,
-    copyScheduleToAll,
+    copyScheduleToAll: _copyScheduleToAll,
   } = useCompleteBettingPoolForm();
 
 

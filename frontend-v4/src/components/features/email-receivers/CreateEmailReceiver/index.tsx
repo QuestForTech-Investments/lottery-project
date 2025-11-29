@@ -1,4 +1,4 @@
-import React, { useState, useCallback, type ChangeEvent, type FormEvent } from 'react';
+import React, { useState, useCallback, type ChangeEvent } from 'react';
 import {
   Box,
   Card,

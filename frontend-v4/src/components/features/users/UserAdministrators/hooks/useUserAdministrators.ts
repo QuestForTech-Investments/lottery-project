@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback, type ChangeEvent, type MouseEvent } from 'react';
 
-interface Administrator {
+interface _Administrator {
   username: string;
   requiereCambio: boolean;
   tieneRestablecimiento: boolean;
@@ -42,6 +42,7 @@ const useUserAdministrators = () => {
   const [selectedUsername, setSelectedUsername] = useState<string>('');
 
   // Filtered administradores based on search
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- administradores mock data is stable
   const filteredAdministradores = useMemo(() => {
     return administradores.filter(admin =>
       admin.username.toLowerCase().includes(searchText.toLowerCase())

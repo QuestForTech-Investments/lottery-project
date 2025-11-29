@@ -1,4 +1,4 @@
-import React, { useState, memo, type ChangeEvent } from 'react';
+import React, { useState, memo } from 'react';
 import { Box, Paper, Typography, TextField, Autocomplete, Button, Stack, FormControlLabel, Switch } from '@mui/material';
 import { Refresh, PictureAsPdf, Print } from '@mui/icons-material';
 

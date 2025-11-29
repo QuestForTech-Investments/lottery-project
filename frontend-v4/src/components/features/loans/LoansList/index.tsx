@@ -30,7 +30,6 @@ import {
   FormControl,
   InputLabel
 } from '@mui/material';
-import type { SelectChangeEvent } from '@mui/material/Select';
 import SearchIcon from '@mui/icons-material/Search';
 import InfoIcon from '@mui/icons-material/Info';
 import EditIcon from '@mui/icons-material/Edit';

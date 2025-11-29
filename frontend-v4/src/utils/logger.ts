@@ -8,7 +8,7 @@
 
 const LOG_STORAGE_KEY = 'app_debug_logs'
 const MAX_LOGS = 500 // Maximum number of logs to keep
-const SEND_TO_API = false // Enable/disable sending logs to API (DISABLED - API not running)
+const _SEND_TO_API = false // Enable/disable sending logs to API (DISABLED - API not running)
 
 export type LogLevelValue = 'INFO' | 'SUCCESS' | 'WARNING' | 'ERROR' | 'DEBUG'
 

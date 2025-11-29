@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 
 const BloqueoRapidoCard = (): React.ReactElement => {
-  const [blockedNumbers, setBlockedNumbers] = useState<string[]>([]);
+  const [_blockedNumbers, _setBlockedNumbers] = useState<string[]>([]);
 
   const sortitions: string[] = ['DIARIA 11AM', 'LOTEDOM', 'LA PRIMERA', 'TEXAS DAY', 'King Lottery AM'];
   const playTypes: string[] = ['Cash3 Box', 'Bolita 2', 'Pick5 Straight', 'Directo', 'Play4 Straight'];

@@ -1,4 +1,4 @@
-import React, { memo, useCallback } from 'react';
+import { memo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -22,7 +22,6 @@ import useEditUserForm from './hooks/useEditUserForm';
 import PermissionsSelector from '@components/features/users/CreateUser/PermissionsSelector';
 import ReactMultiselect from '@components/common/ReactMultiselect';
 import BettingPoolSelector from '@components/common/BettingPoolSelector';
-import * as logger from '@/utils/logger';
 
 /**
  * EditUserMUI Component
@@ -41,12 +40,12 @@ const EditUserMUI = () => {
     loadingUser,
     errors,
     success,
-    handleChange,
+    handleChange: _handleChange,
     handleZoneChange,
     handleBranchChange,
     handleAssignBancaChange,
     handlePermissionChange,
-    handlePermissionsChange,
+    handlePermissionsChange: _handlePermissionsChange,
     handleSubmit,
     handleRetry,
   } = useEditUserForm(userId);

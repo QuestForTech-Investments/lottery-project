@@ -13,16 +13,20 @@ module.exports = {
     'plugin:react/recommended',
     'plugin:react/jsx-runtime',
     'plugin:react-hooks/recommended',
+    'prettier',
   ],
   ignorePatterns: ['dist', '.eslintrc.cjs', 'frontend-v2'],
   settings: { react: { version: '18.2' } },
-  plugins: ['@typescript-eslint', 'react-refresh'],
+  plugins: ['@typescript-eslint', 'react-refresh', 'unused-imports'],
   rules: {
-    // TypeScript rules
-    '@typescript-eslint/no-unused-vars': [
+    // Unused imports - auto-fixable
+    'unused-imports/no-unused-imports': 'error',
+    'unused-imports/no-unused-vars': [
       'warn',
-      { argsIgnorePattern: '^_', varsIgnorePattern: '^(React|_)' },
+      { vars: 'all', varsIgnorePattern: '^_', args: 'after-used', argsIgnorePattern: '^_' }
     ],
+    // TypeScript rules - disable in favor of unused-imports plugin
+    '@typescript-eslint/no-unused-vars': 'off',
     '@typescript-eslint/no-require-imports': 'off',
     '@typescript-eslint/no-var-requires': 'off',
     '@typescript-eslint/no-explicit-any': 'warn',
@@ -34,9 +38,12 @@ module.exports = {
     ],
     'react/prop-types': 'off',
     'react-hooks/exhaustive-deps': 'warn',
+    // Allow unescaped quotes in JSX - they render correctly
+    'react/no-unescaped-entities': ['error', { forbid: ['>', '}'] }],
 
     // Best practices
-    'no-console': ['warn', { allow: ['warn', 'error'] }],
+    // NOTE: console.* statements are stripped in production by esbuild (see vite.config.ts)
+    'no-console': 'off',
     'prefer-const': 'error',
     'no-var': 'error',
     'eqeqeq': ['error', 'always', { null: 'ignore' }],

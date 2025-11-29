@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useCallback, useRef, memo, type KeyboardEvent, type ChangeEvent } from 'react';
+import React, { useState, useEffect, useRef, memo, type KeyboardEvent } from 'react';
 import {
   Box, TextField, Select, MenuItem, FormControl,
   Typography, Paper, Switch, IconButton, Autocomplete,
-  CircularProgress, Dialog, DialogContent, type SelectChangeEvent
+  CircularProgress, Dialog, DialogContent
 } from '@mui/material';
 import { Trash2 } from 'lucide-react';
 import api from '@services/api';

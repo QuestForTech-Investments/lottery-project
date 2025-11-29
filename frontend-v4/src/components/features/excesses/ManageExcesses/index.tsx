@@ -20,7 +20,6 @@ import {
   Paper,
   IconButton
 } from '@mui/material';
-import type { SelectChangeEvent } from '@mui/material/Select';
 import { Delete as DeleteIcon } from '@mui/icons-material';
 
 interface ExcessValues {
@@ -116,6 +115,7 @@ const ManageExcesses = (): React.ReactElement => {
   ];
 
   // Mapeo de campos para mostrar en UI
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- Stable field labels object
   const fieldLabels: Record<FieldKey, string> = {
     general: 'General',
     directo: 'Directo',
@@ -165,7 +165,7 @@ const ManageExcesses = (): React.ReactElement => {
   const handleCreate = useCallback((): void => {
     // Recopilar solo campos con valores
     const filledFields = Object.entries(excessValues)
-      .filter(([key, value]) => value !== '')
+      .filter(([_key, value]) => value !== '')
       .map(([key, value]) => ({
         draw: selectedDraw,
         betType: fieldLabels[key as FieldKey],

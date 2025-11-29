@@ -38,7 +38,7 @@ interface BetLine {
   amount: number;
 }
 
-interface BetInfo {
+interface _BetInfo {
   isValid: boolean;
   displayName: string;
   section: string | null;

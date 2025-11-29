@@ -58,7 +58,7 @@ const EditBettingPoolMUI: React.FC = () => {
     handleChange,
     handleTabChange,
     handleSubmit,
-    copyScheduleToAll,
+    copyScheduleToAll: _copyScheduleToAll,
     loadDrawSpecificValues, // 🔥 NEW: Load draw-specific prize values
     savePrizeConfigForSingleDraw, // 🔥 NEW: Save prize config for single draw
     clearSuccessMessage, // 🔔 SNACKBAR: Clear success message

@@ -4,7 +4,7 @@
  * Uses Strangler Fig Pattern - new implementation alongside original
  */
 
-import React, { memo, useCallback } from 'react'
+import { useCallback } from 'react'
 import {
   Box,
   Paper,

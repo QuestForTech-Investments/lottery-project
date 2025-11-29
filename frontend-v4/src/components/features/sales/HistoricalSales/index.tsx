@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useCallback, type SyntheticEvent, type ChangeEvent } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box, Paper, Typography, TextField, Grid, Autocomplete, Button, Stack,
   Tabs, Tab, ToggleButtonGroup, ToggleButton, Table, TableHead, TableBody, TableRow, TableCell,
-  Checkbox, FormControlLabel, FormControl, InputLabel, Select, MenuItem, InputAdornment, OutlinedInput
+  Checkbox, FormControlLabel, FormControl, InputLabel, Select, MenuItem, InputAdornment
 } from '@mui/material';
 import type { SelectChangeEvent } from '@mui/material/Select';
 import { FilterList, PictureAsPdf, Download, Search } from '@mui/icons-material';
@@ -274,7 +274,8 @@ const HistoricalSales = (): React.ReactElement => {
           </>
         );
 
-      case 1: // Por sorteo
+      case 1: {
+        // Por sorteo
         const totalNeto = sorteoData.reduce((sum, d) => sum + d.neto, 0);
         const totalVendido = sorteoData.reduce((sum, d) => sum + d.venta, 0);
         const totalPremios = sorteoData.reduce((sum, d) => sum + d.premios, 0);
@@ -425,6 +426,7 @@ const HistoricalSales = (): React.ReactElement => {
             </Typography>
           </>
         );
+      }
 
       case 2: // Combinaciones
         return (

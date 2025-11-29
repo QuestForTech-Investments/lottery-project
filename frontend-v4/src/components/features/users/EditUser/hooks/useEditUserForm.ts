@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback, type ChangeEvent, type FormEvent } from 'react';
+import { useState, useEffect, type ChangeEvent, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { userService, permissionService } from '@/services';
 import * as logger from '@/utils/logger';
 import { handleApiError } from '@/utils';
-import type { User, UserFormData, FormErrors, PermissionCategory, ApiResponse } from '@/types/user';
+import type { FormErrors, PermissionCategory, ApiResponse } from '@/types/user';
 
 interface ApiError {
   message: string;
@@ -87,6 +87,7 @@ const useEditUserForm = (userId: string | undefined) => {
     }
 
     loadUserData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- loadUserData should only run when userId changes
   }, [userId]);
 
   /**

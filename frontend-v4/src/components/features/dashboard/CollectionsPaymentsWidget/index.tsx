@@ -6,14 +6,12 @@ import {
   Button,
   ButtonGroup,
   FormControl,
-  InputLabel,
   Select,
   MenuItem,
   TextField,
   Alert,
   Box
 } from '@mui/material';
-import type { SelectChangeEvent } from '@mui/material/Select';
 import { AttachMoney, HelpOutline } from '@mui/icons-material';
 import api from '../../../../services/api';
 
