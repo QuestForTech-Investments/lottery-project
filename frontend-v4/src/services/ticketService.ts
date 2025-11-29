@@ -40,8 +40,7 @@ export interface TicketResponse {
 }
 
 export interface TicketFilterParams {
-  startDate: string;
-  endDate: string;
+  date: string;  // Single date field (API expects 'date', not 'startDate/endDate')
   bettingPoolId?: number;
   lotteryId?: number;  // Used for timezone-aware date filtering
   drawId?: number;
@@ -49,7 +48,7 @@ export interface TicketFilterParams {
   ticketCode?: string;
   isCancelled?: boolean;
   isPaid?: boolean;
-  page?: number;
+  pageNumber?: number;  // API expects 'pageNumber', not 'page'
   pageSize?: number;
 }
 

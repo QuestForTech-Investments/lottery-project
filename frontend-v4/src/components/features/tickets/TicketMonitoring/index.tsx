@@ -329,11 +329,10 @@ const TicketMonitoring: FC = () => {
 
       try {
         const response = await ticketService.filterTickets({
-          startDate: fechaToUse,
-          endDate: fechaToUse,
+          date: fechaToUse,  // API expects 'date', not 'startDate/endDate'
           bettingPoolId: bettingPoolId ?? undefined,
           lotteryId: loteria?.id,  // Pass lotteryId for timezone-aware filtering
-          page: 1,
+          pageNumber: 1,  // API expects 'pageNumber', not 'page'
           pageSize: 100,
         });
 
