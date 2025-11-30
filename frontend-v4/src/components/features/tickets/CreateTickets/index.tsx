@@ -29,12 +29,12 @@ interface Draw {
 
 interface Bet {
   id: number;
-  sorteo: string;
-  sorteoAbbr?: string;
-  sorteoId: number;
-  numero: string;
-  monto: number;
-  tipo?: { name: string };
+  drawName: string;
+  drawAbbr?: string;
+  drawId: number;
+  betNumber: string;
+  betAmount: number;
+  betType?: { name: string };
 }
 
 interface BetType {
@@ -125,10 +125,10 @@ const BetCardColumn: React.FC<BetCardColumnProps> = memo(({
           fontSize: '12px'
         }}>
           <Box sx={{ textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {bet.sorteoAbbr || bet.sorteo}
+            {bet.drawAbbr || bet.drawName}
           </Box>
-          <Box sx={{ fontWeight: 'bold', textAlign: 'center' }}>{bet.numero}</Box>
-          <Box sx={{ textAlign: 'center' }}>${bet.monto.toFixed(2)}</Box>
+          <Box sx={{ fontWeight: 'bold', textAlign: 'center' }}>{bet.betNumber}</Box>
+          <Box sx={{ textAlign: 'center' }}>${bet.betAmount.toFixed(2)}</Box>
           <Box sx={{ textAlign: 'center' }}>
             <IconButton size="small" onClick={() => onDeleteBet(columnType, bet.id)}>
               <Trash2 size={12} color="#f44336" />
@@ -277,7 +277,7 @@ const CreateTickets: React.FC = () => {
 
   // Calculate total for a column (memoized helper)
   const calculateColumnTotal = (bets: Bet[]): string => {
-    return bets.reduce((sum, bet) => sum + (bet.monto || 0), 0).toFixed(2);
+    return bets.reduce((sum, bet) => sum + (bet.betAmount || 0), 0).toFixed(2);
   };
 
   // Memoized totals per column
@@ -338,11 +338,11 @@ const CreateTickets: React.FC = () => {
 
     const newBets = drawsToPlay.map((draw, index) => ({
       id: Date.now() + index,
-      sorteo: draw.name,
-      sorteoAbbr: draw.abbreviation || draw.name,
-      sorteoId: draw.id,
-      numero: betNumber,
-      monto: numericAmount,
+      drawName: draw.name,
+      drawAbbr: draw.abbreviation || draw.name,
+      drawId: draw.id,
+      betNumber: betNumber,
+      betAmount: numericAmount,
     }));
 
     if (selectedBetType === 'directo' || numLength === 2) {
@@ -436,12 +436,12 @@ const CreateTickets: React.FC = () => {
         grandTotal: totalAmount,
         lines: allBets.map((bet, index) => ({
           lineId: index + 1,
-          lotteryName: bet.sorteo || 'Lottery',
-          drawName: bet.sorteo || 'Draw',
-          betNumber: bet.numero,
-          betTypeName: bet.tipo?.name || 'Directo',
-          betAmount: bet.monto || 0,
-          netAmount: bet.monto || 0
+          lotteryName: bet.drawName || 'Lottery',
+          drawName: bet.drawName || 'Draw',
+          betNumber: bet.betNumber,
+          betTypeName: bet.betType?.name || 'Directo',
+          betAmount: bet.betAmount || 0,
+          netAmount: bet.betAmount || 0
         }))
       };
 
