@@ -49,6 +49,10 @@ public class Lottery
     [Column("timezone")]
     public string Timezone { get; set; } = "America/Santo_Domingo";
 
+    [MaxLength(500)]
+    [Column("image_url")]
+    public string? ImageUrl { get; set; }
+
     // Navigation properties
     [ForeignKey("CountryId")]
     public virtual Country? Country { get; set; }

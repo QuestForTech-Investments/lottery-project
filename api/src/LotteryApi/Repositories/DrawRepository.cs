@@ -88,6 +88,8 @@ public class DrawRepository : GenericRepository<Draw>, IDrawRepository
                 Description = d.Description,
                 Abbreviation = d.Abbreviation,
                 DisplayColor = d.DisplayColor,
+                ImageUrl = d.Lottery!.ImageUrl,  // Map from lottery for backward compatibility
+                LotteryImageUrl = d.Lottery!.ImageUrl,  // New field with correct name
                 IsActive = d.IsActive,
                 LotteryName = d.Lottery!.LotteryName,
                 LotteryColour = d.Lottery!.Colour,
@@ -112,6 +114,8 @@ public class DrawRepository : GenericRepository<Draw>, IDrawRepository
                 Description = d.Description,
                 Abbreviation = d.Abbreviation,
                 DisplayColor = d.DisplayColor,
+                ImageUrl = d.Lottery!.ImageUrl,  // Map from lottery for backward compatibility
+                LotteryImageUrl = d.Lottery!.ImageUrl,  // New field with correct name
                 IsActive = d.IsActive,
                 LotteryName = d.Lottery!.LotteryName,
                 LotteryColour = d.Lottery!.Colour,
@@ -135,6 +139,8 @@ public class DrawRepository : GenericRepository<Draw>, IDrawRepository
                 Description = d.Description,
                 Abbreviation = d.Abbreviation,
                 DisplayColor = d.DisplayColor,
+                ImageUrl = d.Lottery!.ImageUrl,  // Map from lottery for backward compatibility
+                LotteryImageUrl = d.Lottery!.ImageUrl,  // New field with correct name
                 IsActive = d.IsActive,
                 LotteryName = d.Lottery!.LotteryName,
                 LotteryColour = d.Lottery!.Colour,

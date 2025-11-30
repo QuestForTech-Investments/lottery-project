@@ -9,6 +9,7 @@ public class LotteryDto
     public string? Description { get; set; }
     public bool IsActive { get; set; }
     public string? CountryName { get; set; }
+    public string? ImageUrl { get; set; }
 }
 
 public class CreateLotteryDto

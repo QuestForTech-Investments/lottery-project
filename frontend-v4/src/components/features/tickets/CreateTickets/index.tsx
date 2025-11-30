@@ -4,7 +4,7 @@ import {
   Typography, Paper, Switch, IconButton, Autocomplete,
   CircularProgress, Dialog, DialogContent
 } from '@mui/material';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Dices } from 'lucide-react';
 import api from '@services/api';
 import HelpModal from './HelpModal';
 import TicketPrinter from '../TicketPrinter';
@@ -20,6 +20,7 @@ interface Sorteo {
   color: string;
   disabled: boolean;
   lotteryId?: number;
+  imageUrl?: string;
 }
 
 interface Jugada {
@@ -158,6 +159,7 @@ const CreateTickets: React.FC = () => {
       lotteryColour?: string;
       isActive?: boolean;
       lotteryId?: number;
+      imageUrl?: string;
     }
 
     const loadSorteos = async () => {
@@ -167,7 +169,7 @@ const CreateTickets: React.FC = () => {
         const response = await api.get('/draws?pageSize=1000') as { items?: DrawApiResponse[] } | DrawApiResponse[];
         const items = (response && 'items' in response ? response.items : response) || [];
 
-        // Mapear sorteos con colores de la base de datos
+        // Mapear sorteos con colores e iconos de la base de datos
         // Prioridad: displayColor (draw) > lotteryColour (lottery) > gris by default
         const sorteosFormatted = (items as DrawApiResponse[]).map((draw) => ({
           id: draw.drawId,
@@ -175,6 +177,7 @@ const CreateTickets: React.FC = () => {
           color: draw.displayColor || draw.lotteryColour || '#9e9e9e',
           disabled: !draw.isActive,
           lotteryId: draw.lotteryId,
+          imageUrl: draw.imageUrl,
         }));
 
         setSorteos(sorteosFormatted);
@@ -365,8 +368,13 @@ const CreateTickets: React.FC = () => {
     }
   };
 
+  // Color de fondo dinámico basado en el sorteo seleccionado (como en la app original)
+  const bgColor = selectedSorteo?.color
+    ? `${selectedSorteo.color}30` // Color del sorteo con 19% de opacidad
+    : '#c8e6c9'; // Verde claro por defecto
+
   return (
-    <Box sx={{ bgcolor: '#c8e6c9', minHeight: '100vh', p: 2 }}>
+    <Box sx={{ bgcolor: bgColor, minHeight: '100vh', p: 2, transition: 'background-color 0.3s ease' }}>
       {/* HEADER: Selector de Banca + Imagen sorteo */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, mb: 2 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -381,21 +389,48 @@ const CreateTickets: React.FC = () => {
             renderInput={(params) => <TextField {...params} variant="outlined" />}
           />
         </Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        {/* Preview del sorteo seleccionado - más prominente como en la original */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
           <Box
             sx={{
-              width: 40,
-              height: 40,
-              bgcolor: '#ddd',
+              width: 50,
+              height: 50,
+              bgcolor: selectedSorteo?.color || '#ddd',
               borderRadius: 1,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
+              overflow: 'hidden',
+              border: '2px solid rgba(0,0,0,0.1)',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
             }}
           >
-            🎰
+            {selectedSorteo?.imageUrl ? (
+              <Box
+                component="img"
+                src={selectedSorteo.imageUrl}
+                alt={selectedSorteo.name}
+                sx={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                }}
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.style.display = 'none';
+                  const parent = target.parentElement;
+                  if (parent) {
+                    const icon = document.createElement('div');
+                    icon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="12" height="12" x="2" y="10" rx="2" ry="2"/><path d="m17.92 14 3.5-3.5a2.24 2.24 0 0 0 0-3l-5-4.92a2.24 2.24 0 0 0-3 0L10 6"/><path d="M6 18h.01"/><path d="M10 14h.01"/><path d="M15 6h.01"/><path d="M18 9h.01"/></svg>';
+                    parent.appendChild(icon);
+                  }
+                }}
+              />
+            ) : (
+              <Dices size={28} color="white" />
+            )}
           </Box>
-          <Typography sx={{ fontWeight: 'bold', color: '#333' }}>
+          <Typography sx={{ fontWeight: 'bold', color: '#333', fontSize: '16px' }}>
             {selectedSorteo?.name || 'Seleccione un sorteo'}
           </Typography>
         </Box>
@@ -424,34 +459,76 @@ const CreateTickets: React.FC = () => {
         ) : sorteos.length === 0 ? (
           <Typography sx={{ fontSize: '12px', color: '#666' }}>No hay sorteos disponibles</Typography>
         ) : (
-          sorteos.map((sorteo) => (
-            <Box
-              key={sorteo.id}
-              onClick={() => handleSorteoClick(sorteo)}
-              sx={{
-                px: 2,
-                py: 1,
-                bgcolor: selectedSorteo?.id === sorteo.id ? '#51cbce' : sorteo.color,
-                color: 'white',
-                fontSize: '13px',
-                fontWeight: 'bold',
-                borderRadius: '4px',
-                cursor: sorteo.disabled ? 'not-allowed' : 'pointer',
-                opacity: sorteo.disabled ? 0.5 : 1,
-                textTransform: 'uppercase',
-                whiteSpace: 'nowrap',
-                minHeight: '32px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                '&:hover': {
-                  opacity: sorteo.disabled ? 0.5 : 0.8,
-                },
-              }}
-            >
-              {sorteo.name}
-            </Box>
-          ))
+          sorteos.map((sorteo) => {
+            const isSelected = selectedSorteo?.id === sorteo.id;
+            return (
+              <Box
+                key={sorteo.id}
+                onClick={() => handleSorteoClick(sorteo)}
+                sx={{
+                  px: 1.5,
+                  py: 0.75,
+                  // Sorteo seleccionado: fondo blanco con borde como en la app original
+                  bgcolor: isSelected ? '#fff' : sorteo.disabled ? '#bdbdbd' : sorteo.color,
+                  color: isSelected ? '#333' : 'white',
+                  fontSize: '12px',
+                  fontWeight: 'bold',
+                  borderRadius: '4px',
+                  cursor: sorteo.disabled ? 'not-allowed' : 'pointer',
+                  opacity: sorteo.disabled ? 0.6 : 1,
+                  textTransform: 'uppercase',
+                  whiteSpace: 'nowrap',
+                  minHeight: '36px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'flex-start',
+                  gap: 0.75,
+                  // Borde destacado para el seleccionado
+                  border: isSelected ? '2px solid #333' : '1px solid transparent',
+                  boxShadow: isSelected ? '0 2px 4px rgba(0,0,0,0.2)' : 'none',
+                  transition: 'all 0.15s ease',
+                  '&:hover': {
+                    opacity: sorteo.disabled ? 0.6 : 0.85,
+                    transform: sorteo.disabled ? 'none' : 'translateY(-1px)',
+                  },
+                }}
+              >
+                {/* Icono del sorteo */}
+                <Box
+                  sx={{
+                    width: 24,
+                    height: 24,
+                    borderRadius: '3px',
+                    overflow: 'hidden',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    bgcolor: sorteo.imageUrl ? 'transparent' : 'rgba(255,255,255,0.2)',
+                    flexShrink: 0,
+                  }}
+                >
+                  {sorteo.imageUrl ? (
+                    <Box
+                      component="img"
+                      src={sorteo.imageUrl}
+                      alt=""
+                      sx={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                      }}
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
+                    />
+                  ) : (
+                    <Dices size={16} color={isSelected ? '#666' : 'white'} style={{ opacity: 0.8 }} />
+                  )}
+                </Box>
+                {sorteo.name}
+              </Box>
+            );
+          })
         )}
       </Box>
 
