@@ -20,6 +20,51 @@ Sistema de lotería con 2 frontends (React) y API (.NET). Migración de Vue.js e
 - ❌ NO modificar formularios sin revisar otros primero
 - ✅ Código en inglés, UI visible al usuario en español
 
+### 🚨 REGLA DE IDIOMA (MUY IMPORTANTE)
+
+**TODO el código debe estar en inglés**, excepto textos visibles al usuario (UI).
+
+```typescript
+// ❌ INCORRECTO - Propiedades en español
+interface Bet {
+  sorteo: string;      // ❌
+  numero: string;      // ❌
+  monto: number;       // ❌
+}
+
+// ✅ CORRECTO - Propiedades en inglés
+interface Bet {
+  drawName: string;    // ✅
+  betNumber: string;   // ✅
+  betAmount: number;   // ✅
+}
+
+// ❌ INCORRECTO - Variables en español
+const selectedBanca = useState();
+const jugadasDirecto = [];
+function calcularTotal() {}
+
+// ✅ CORRECTO - Variables en inglés
+const selectedPool = useState();
+const directBets = [];
+function calculateTotal() {}
+
+// ✅ UI EN ESPAÑOL (esto SÍ está bien)
+<Button>Crear Ticket</Button>
+<Typography>Seleccione un sorteo</Typography>
+placeholder="Buscar banca..."
+```
+
+**Resumen:**
+| Elemento | Idioma |
+|----------|--------|
+| Variables, funciones, interfaces | Inglés |
+| Propiedades de objetos/interfaces | Inglés |
+| Nombres de componentes | Inglés |
+| Textos en botones, labels, placeholders | Español |
+| Mensajes de error al usuario | Español |
+| Comentarios de código | Inglés preferido |
+
 ### Proceso de Rutas (3 Pasos)
 
 ```javascript
