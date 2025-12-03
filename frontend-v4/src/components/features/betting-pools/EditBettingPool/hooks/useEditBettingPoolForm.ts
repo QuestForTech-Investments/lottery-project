@@ -175,6 +175,7 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
             reference: branch.reference || '',
             comment: branch.comment || '',
             selectedZone: String(branch.zoneId ?? ''),
+            zoneId: String(branch.zoneId ?? ''), // ✅ FIX: Also set zoneId for GeneralTab
             isActive: branch.isActive !== undefined ? branch.isActive : true
           };
 
@@ -424,7 +425,12 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
           lotteryId = 'general';
           cleanKey = parts.slice(1).join('_'); // Remove "general_"
         }
-        // Check for "lottery_XX_" prefix
+        // Check for "draw_XX_" prefix (new format from PrizesTab)
+        else if (parts[0] === 'draw' && parts.length >= 5) {
+          lotteryId = `${parts[0]}_${parts[1]}`; // "draw_43"
+          cleanKey = parts.slice(2).join('_'); // Remove "draw_XX_"
+        }
+        // Check for "lottery_XX_" prefix (legacy format)
         else if (parts[0] === 'lottery' && parts.length >= 5) {
           lotteryId = `${parts[0]}_${parts[1]}`; // "lottery_43"
           cleanKey = parts.slice(2).join('_'); // Remove "lottery_XX_"
@@ -510,8 +516,41 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
                 return { success: false, lottery: 'general', error: error.message };
               })
           );
+        } else if (lotteryIdKey.startsWith('draw_')) {
+          // New format: "draw_XX" where XX is the drawId directly
+          const drawId = parseInt(lotteryIdKey.split('_')[1]);
+
+          console.log(`[SAVE] Saving ${prizeConfigs.length} prize config(s) for draw ${drawId}...`);
+
+          // Directly save to draw-specific endpoint (no need to lookup)
+          savePromises.push(
+            fetch(`/api/betting-pools/${bettingPoolId}/draws/${drawId}/prize-config`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ prizeConfigs })
+            })
+              .then(response => {
+                if (!response.ok) {
+                  throw new Error(`HTTP ${response.status}`);
+                }
+                return response.json();
+              })
+              .then(() => {
+                console.log(`[SUCCESS] Draw ${drawId} configs saved successfully`);
+                totalSaved += prizeConfigs.length;
+                return { success: true, lottery: lotteryIdKey, count: prizeConfigs.length };
+              })
+              .catch((error: Error) => {
+                console.error(`[ERROR] Error saving draw ${drawId} configs:`, error);
+                totalFailed += prizeConfigs.length;
+                return { success: false, lottery: lotteryIdKey, error: error.message };
+              })
+          );
         } else {
-          // Extract lotteryId number from "lottery_43"
+          // Legacy format: "lottery_XX" where XX is the lotteryId (need to lookup drawId)
           const lotteryIdNum = parseInt(lotteryIdKey.split('_')[1]);
 
           console.log(`[SAVE] Saving ${prizeConfigs.length} prize config(s) for lottery ${lotteryIdNum}...`);
@@ -659,41 +698,18 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
    * @param {number} lotteryId - The lottery ID (e.g., 43 for "LA PRIMERA")
    * @param {number} bettingPoolId - The betting pool ID
    */
-  const loadDrawSpecificValues = async (lotteryId: number, bettingPoolId: number | string): Promise<Record<string, string | number>> => {
+  const loadDrawSpecificValues = async (drawId: number, bettingPoolId: number | string): Promise<Record<string, string | number>> => {
     try {
       // ⚡ PERFORMANCE: Check cache first
-      if (drawValuesCache[lotteryId]) {
-        console.log(`[PERF] Using cached values for lottery ${lotteryId} (skipping API calls)`);
-        return drawValuesCache[lotteryId];
+      if (drawValuesCache[drawId]) {
+        console.log(`[PERF] Using cached values for draw ${drawId} (skipping API calls)`);
+        return drawValuesCache[drawId];
       }
 
-      console.log(`[DRAW] Loading draw-specific values for draw ${lotteryId}...`);
+      console.log(`[DRAW] Loading draw-specific values for draw ${drawId}...`);
 
-      // Step 1: Get all draws for this lottery
-      const response = await fetch(`/api/draws/lottery/${lotteryId}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        console.warn(`[WARN] No draws found for lottery ${lotteryId} (${response.status})`);
-        return {};
-      }
-
-      const draws = await response.json();
-      if (!draws || draws.length === 0) {
-        console.log(`[INFO] No draws available for lottery ${lotteryId}`);
-        return {};
-      }
-
-      // Step 2: Use first draw to get prize config
-      const firstDraw = draws[0];
-      const drawId = firstDraw.drawId;
-      console.log(`  -> Using draw ${drawId} (${firstDraw.drawName || 'N/A'})`);
-
-      // Step 3: Get prize config for this draw
+      // 🔥 FIX: Directly call the prize-config endpoint with the drawId
+      // The old code was calling /api/draws/lottery/${lotteryId} which doesn't exist
       const configResponse = await fetch(`/api/betting-pools/${bettingPoolId}/draws/${drawId}/prize-config`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
@@ -702,7 +718,7 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
       });
 
       if (!configResponse.ok) {
-        console.log(`[INFO] No custom prize config found for draw ${drawId}`);
+        console.log(`[INFO] No custom prize config found for draw ${drawId} (status: ${configResponse.status})`);
         return {};
       }
 
@@ -710,21 +726,21 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
       console.log(`  -> Raw API response:`, configs);
 
       if (!configs || configs.length === 0) {
-        console.log(`[INFO] No custom values for lottery ${lotteryId}`);
+        console.log(`[INFO] No custom values for draw ${drawId}`);
         return {};
       }
 
-      // Step 4: Build formData with lottery_XX_ prefix
-      const lotteryFormData: Record<string, string | number> = {};
+      // Build formData with draw_XX_ prefix (matches the save format)
+      const drawFormData: Record<string, string | number> = {};
       (configs as Array<{ fieldCode: string; customValue: string | number }>).forEach(config => {
-        // Extract betTypeCode from fieldCode (first part)
+        // Extract betTypeCode from fieldCode (first part before underscore)
         const parts = config.fieldCode.split('_');
-        const betTypeCode = parts[0];
+        const betTypeCode = parts[0]; // e.g., "DIRECTO" from "DIRECTO_PRIMER_PAGO"
 
-        // Build key: lottery_43_DIRECTO_DIRECTO_PRIMER_PAGO
-        const fieldKey = `lottery_${lotteryId}_${betTypeCode}_${config.fieldCode}`;
+        // Build key: draw_181_DIRECTO_DIRECTO_PRIMER_PAGO (matches save format)
+        const fieldKey = `draw_${drawId}_${betTypeCode}_${config.fieldCode}`;
         // ✅ FIX: API returns 'customValue', not 'value'
-        lotteryFormData[fieldKey] = config.customValue;
+        drawFormData[fieldKey] = config.customValue;
 
         console.log(`  [OK] Loaded: ${fieldKey} = ${config.customValue}`);
       });
@@ -732,14 +748,14 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
       // ⚡ PERFORMANCE: Store in cache for future use
       setDrawValuesCache(prev => ({
         ...prev,
-        [lotteryId]: lotteryFormData
+        [drawId]: drawFormData
       }));
 
-      console.log(`[SUCCESS] Loaded ${Object.keys(lotteryFormData).length} lottery-specific values (cached for future use)`);
-      return lotteryFormData;
+      console.log(`[SUCCESS] Loaded ${Object.keys(drawFormData).length} draw-specific values (cached for future use)`);
+      return drawFormData;
 
     } catch (error) {
-      console.error(`[ERROR] Error loading lottery-specific values for lottery ${lotteryId}:`, error);
+      console.error(`[ERROR] Error loading draw-specific values for draw ${drawId}:`, error);
       return {};
     }
   };
@@ -790,10 +806,19 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
 
     try {
       // Map form values to API format
-      const fallTypeMap: Record<string, string> = { '1': 'OFF', '2': 'COLLECTION', '3': 'DAILY', '4': 'MONTHLY', '5': 'WEEKLY' };
+      const fallTypeMap: Record<string, string> = {
+        '1': 'OFF',
+        '2': 'COLLECTION',
+        '3': 'DAILY',
+        '4': 'MONTHLY',
+        '5': 'WEEKLY_ACCUMULATED',     // Semanal con acumulado
+        '6': 'WEEKLY_NO_ACCUMULATED'   // Semanal sin acumulado
+      };
       const printModeMap: Record<string, string> = { '1': 'DRIVER', '2': 'GENERIC' };
       const discountProviderMap: Record<string, string> = { '1': 'GROUP', '2': 'SELLER' };
       const discountModeMap: Record<string, string> = { '1': 'OFF', '2': 'CASH', '3': 'FREE_TICKET' };
+      // ✅ NEW: Payment mode map (frontend limitPreference → API paymentMode)
+      const paymentModeMap: Record<string, string> = { '1': 'BANCA', '2': 'ZONA', '3': 'GRUPO' };
 
       // ========================================
       // 1️⃣ BASIC DATA - PUT /api/betting-pools/{id}
@@ -831,7 +856,8 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
           maxCancelAmount: formData.maximumCancelTicketAmount ? parseFloat(formData.maximumCancelTicketAmount) : null,
           maxTicketAmount: formData.maxTicketAmount ? parseFloat(formData.maxTicketAmount) : null,
           maxDailyRecharge: formData.dailyPhoneRechargeLimit ? parseFloat(formData.dailyPhoneRechargeLimit) : null,
-          paymentMode: 'BANCA'
+          // ✅ FIX: Use dynamic paymentMode from limitPreference field
+          paymentMode: formData.limitPreference ? paymentModeMap[formData.limitPreference] : undefined
         },
         discountConfig: {
           discountProvider: discountProviderMap[formData.discountProvider] || 'GRUPO',

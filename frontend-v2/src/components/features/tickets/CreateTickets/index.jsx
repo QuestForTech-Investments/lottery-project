@@ -22,6 +22,34 @@ import TicketPrinter from '../TicketPrinter';
  * - 4 columnas: Directo, Pale & Tripleta, Cash 3, Play 4 & Pick 5
  * - Botones: Duplicar, Crear ticket, Ayuda
  */
+
+/**
+ * Formatea un número de apuesta con guiones separando cada 2 dígitos
+ * Ejemplos:
+ * - "23" -> "23" (directo)
+ * - "2321" -> "23-21" (palé)
+ * - "224466" -> "22-44-66" (tripleta)
+ * - "123" -> "123" (cash3 - 3 dígitos no se separan)
+ */
+const formatBetNumber = (number) => {
+  if (!number) return '';
+
+  // Limpiar el número (solo dígitos)
+  const cleanNumber = String(number).replace(/[^0-9]/g, '');
+
+  // Si es 3 dígitos (cash3) o menos de 2, no separar
+  if (cleanNumber.length <= 3) {
+    return cleanNumber;
+  }
+
+  // Separar cada 2 dígitos con guiones
+  const pairs = [];
+  for (let i = 0; i < cleanNumber.length; i += 2) {
+    pairs.push(cleanNumber.slice(i, i + 2));
+  }
+
+  return pairs.join('-');
+};
 const CreateTickets = () => {
   // State para banca seleccionada
   const [selectedBanca, setSelectedBanca] = useState(null);
@@ -506,7 +534,7 @@ const CreateTickets = () => {
           value="N/A"
           disabled
           sx={{
-            width: 150,
+            flex: 1,
             bgcolor: 'white',
             '& input': {
               fontSize: '24px',
@@ -596,7 +624,7 @@ const CreateTickets = () => {
             {jugadasDirecto.map((j) => (
               <Box key={j.id} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', px: 1, py: 0.5, borderBottom: '1px solid #eee', fontSize: '12px' }}>
                 <span style={{ width: '40%', overflow: 'hidden', textOverflow: 'ellipsis' }}>{j.sorteo}</span>
-                <span style={{ fontWeight: 'bold' }}>{j.numero}</span>
+                <span style={{ fontWeight: 'bold' }}>{formatBetNumber(j.numero)}</span>
                 <span>${j.monto.toFixed(2)}</span>
                 <IconButton size="small" onClick={() => handleEliminarJugada('directo', j.id)}>
                   <Trash2 size={12} color="#f44336" />
@@ -626,7 +654,7 @@ const CreateTickets = () => {
             {jugadasPale.map((j) => (
               <Box key={j.id} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', px: 1, py: 0.5, borderBottom: '1px solid #eee', fontSize: '12px' }}>
                 <span style={{ width: '40%', overflow: 'hidden', textOverflow: 'ellipsis' }}>{j.sorteo}</span>
-                <span style={{ fontWeight: 'bold' }}>{j.numero}</span>
+                <span style={{ fontWeight: 'bold' }}>{formatBetNumber(j.numero)}</span>
                 <span>${j.monto.toFixed(2)}</span>
                 <IconButton size="small" onClick={() => handleEliminarJugada('pale', j.id)}>
                   <Trash2 size={12} color="#f44336" />
@@ -656,7 +684,7 @@ const CreateTickets = () => {
             {jugadasCash3.map((j) => (
               <Box key={j.id} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', px: 1, py: 0.5, borderBottom: '1px solid #eee', fontSize: '12px' }}>
                 <span style={{ width: '40%', overflow: 'hidden', textOverflow: 'ellipsis' }}>{j.sorteo}</span>
-                <span style={{ fontWeight: 'bold' }}>{j.numero}</span>
+                <span style={{ fontWeight: 'bold' }}>{formatBetNumber(j.numero)}</span>
                 <span>${j.monto.toFixed(2)}</span>
                 <IconButton size="small" onClick={() => handleEliminarJugada('cash3', j.id)}>
                   <Trash2 size={12} color="#f44336" />
@@ -686,7 +714,7 @@ const CreateTickets = () => {
             {jugadasPlay4.map((j) => (
               <Box key={j.id} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', px: 1, py: 0.5, borderBottom: '1px solid #eee', fontSize: '12px' }}>
                 <span style={{ width: '40%', overflow: 'hidden', textOverflow: 'ellipsis' }}>{j.sorteo}</span>
-                <span style={{ fontWeight: 'bold' }}>{j.numero}</span>
+                <span style={{ fontWeight: 'bold' }}>{formatBetNumber(j.numero)}</span>
                 <span>${j.monto.toFixed(2)}</span>
                 <IconButton size="small" onClick={() => handleEliminarJugada('play4', j.id)}>
                   <Trash2 size={12} color="#f44336" />

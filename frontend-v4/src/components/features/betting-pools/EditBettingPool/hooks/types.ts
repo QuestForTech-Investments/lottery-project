@@ -188,6 +188,7 @@ export interface ConfigResponse {
     maxCancelAmount?: number;
     maxTicketAmount?: number;
     maxDailyRecharge?: number;
+    paymentMode?: string;  // ✅ NEW: Payment mode (BANCA, ZONA, GRUPO)
   };
   discountConfig?: {
     discountProvider?: string;

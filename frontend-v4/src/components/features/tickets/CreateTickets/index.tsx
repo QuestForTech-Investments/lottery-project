@@ -25,6 +25,7 @@ interface Draw {
   disabled: boolean;
   lotteryId?: number;
   imageUrl?: string;
+  availableGameTypes?: number[]; // Game types allowed for this draw
 }
 
 interface Bet {
@@ -68,6 +69,36 @@ interface TicketData {
 }
 
 type ColumnType = 'directo' | 'pale' | 'cash3' | 'play4';
+
+// ============= UTILITY FUNCTIONS =============
+
+/**
+ * Formatea un número de apuesta con guiones separando cada 2 dígitos
+ * Ejemplos:
+ * - "23" -> "23" (directo)
+ * - "2321" -> "23-21" (palé)
+ * - "224466" -> "22-44-66" (tripleta)
+ * - "123" -> "123" (cash3 - 3 dígitos no se separan)
+ */
+const formatBetNumber = (number: string): string => {
+  if (!number) return '';
+
+  // Limpiar el número (solo dígitos)
+  const cleanNumber = String(number).replace(/[^0-9]/g, '');
+
+  // Si es 3 dígitos (cash3) o menos de 2, no separar
+  if (cleanNumber.length <= 3) {
+    return cleanNumber;
+  }
+
+  // Separar cada 2 dígitos con guiones
+  const pairs: string[] = [];
+  for (let i = 0; i < cleanNumber.length; i += 2) {
+    pairs.push(cleanNumber.slice(i, i + 2));
+  }
+
+  return pairs.join('-');
+};
 
 // ============= BET CARD COLUMN COMPONENT =============
 
@@ -127,7 +158,7 @@ const BetCardColumn: React.FC<BetCardColumnProps> = memo(({
           <Box sx={{ textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {bet.drawAbbr || bet.drawName}
           </Box>
-          <Box sx={{ fontWeight: 'bold', textAlign: 'center' }}>{bet.betNumber}</Box>
+          <Box sx={{ fontWeight: 'bold', textAlign: 'center' }}>{formatBetNumber(bet.betNumber)}</Box>
           <Box sx={{ textAlign: 'center' }}>${bet.betAmount.toFixed(2)}</Box>
           <Box sx={{ textAlign: 'center' }}>
             <IconButton size="small" onClick={() => onDeleteBet(columnType, bet.id)}>
@@ -173,6 +204,13 @@ const CreateTickets: React.FC = () => {
   const [draws, setDraws] = useState<Draw[]>([]);
   const [loadingDraws, setLoadingDraws] = useState<boolean>(true);
 
+  // State for allowed draws per betting pool
+  const [allowedDrawIds, setAllowedDrawIds] = useState<Set<number>>(new Set());
+  const [loadingAllowedDraws, setLoadingAllowedDraws] = useState<boolean>(false);
+
+  // State for game types per draw (from draw_game_compatibility)
+  const [drawGameTypes, setDrawGameTypes] = useState<Map<number, number[]>>(new Map());
+
   // Stats
   const [dailyBets] = useState<number>(0);
   const [soldInGroup] = useState<string>('');
@@ -186,6 +224,9 @@ const CreateTickets: React.FC = () => {
   const [betNumber, setBetNumber] = useState<string>('');
   const [amount, setAmount] = useState<string>('');
   const [selectedBetType, setSelectedBetType] = useState<string>('');
+
+  // Error state for bet validation
+  const [betError, setBetError] = useState<string>('');
 
   // Bets by column
   const [directBets, setDirectBets] = useState<Bet[]>([]);
@@ -229,6 +270,67 @@ const CreateTickets: React.FC = () => {
     };
     loadPools();
   }, []);
+
+  // Load allowed draws when betting pool changes
+  useEffect(() => {
+    // API returns availableGameTypes as an array of objects with gameTypeId
+    interface AvailableGameType {
+      gameTypeId: number;
+      gameTypeCode?: string;
+      gameName?: string;
+      prizeMultiplier?: number;
+      numberLength?: number;
+      requiresAdditionalNumber?: boolean;
+      displayOrder?: number;
+    }
+
+    interface BettingPoolDrawResponse {
+      drawId: number;
+      isActive: boolean;
+      availableGameTypes?: AvailableGameType[];
+    }
+
+    const loadAllowedDraws = async () => {
+      if (!selectedPool) {
+        setAllowedDrawIds(new Set());
+        setDrawGameTypes(new Map());
+        return;
+      }
+
+      setLoadingAllowedDraws(true);
+      try {
+        const response = await api.get(`/betting-pools/${selectedPool.bettingPoolId}/draws`) as BettingPoolDrawResponse[];
+        const activeDraws = (response || []).filter((d: BettingPoolDrawResponse) => d.isActive);
+        const drawIds = activeDraws.map((d: BettingPoolDrawResponse) => d.drawId);
+        setAllowedDrawIds(new Set(drawIds));
+
+        // Capture game types per draw - extract gameTypeId from objects
+        const gameTypesMap = new Map<number, number[]>();
+        activeDraws.forEach((d: BettingPoolDrawResponse) => {
+          if (d.availableGameTypes && d.availableGameTypes.length > 0) {
+            // Extract gameTypeId values from the objects
+            const gameTypeIds = d.availableGameTypes.map(gt => gt.gameTypeId);
+            gameTypesMap.set(d.drawId, gameTypeIds);
+          }
+        });
+        setDrawGameTypes(gameTypesMap);
+
+        console.log('[DEBUG] gameTypesMap:', Object.fromEntries(gameTypesMap));
+
+        // Clear selected draws when changing betting pool
+        setSelectedDraw(null);
+        setSelectedDraws([]);
+      } catch (error) {
+        console.error('Error loading allowed draws:', error);
+        // If error, allow all draws (fallback)
+        setAllowedDrawIds(new Set());
+        setDrawGameTypes(new Map());
+      } finally {
+        setLoadingAllowedDraws(false);
+      }
+    };
+    loadAllowedDraws();
+  }, [selectedPool?.bettingPoolId]);
 
   // Load draws from API (colors come from database)
   useEffect(() => {
@@ -297,6 +399,49 @@ const CreateTickets: React.FC = () => {
     return directBets.length + paleBets.length + cash3Bets.length + play4Bets.length;
   }, [directBets.length, paleBets.length, cash3Bets.length, play4Bets.length]);
 
+  // Memoized visible columns based on selected draw's game types
+  // Game type mapping:
+  // 1 = DIRECTO → "directo" column
+  // 2 = PALE, 3 = TRIPLETA, 14 = SUPER_PALE → "pale" column
+  // 4-9 = CASH3 variants → "cash3" column
+  // 10-13, 15-20 = PLAY4, PICK5, PICK2 variants → "play4" column
+  // 21 = PANAMA → "directo" column (2-digit like DIRECTO)
+  const visibleColumns = useMemo(() => {
+    // Get game types for selected draw(s)
+    const getGameTypesForDraw = (drawId: number): number[] => {
+      return drawGameTypes.get(drawId) || [];
+    };
+
+    // If no draw selected, show all columns
+    if (!selectedDraw) {
+      return { directo: true, pale: true, cash3: true, play4: true };
+    }
+
+    // In multi-lottery mode, use union of all selected draws' game types
+    const allGameTypes = new Set<number>();
+    if (multiLotteryMode && selectedDraws.length > 0) {
+      selectedDraws.forEach(draw => {
+        getGameTypesForDraw(draw.id).forEach(gt => allGameTypes.add(gt));
+      });
+    } else {
+      getGameTypesForDraw(selectedDraw.id).forEach(gt => allGameTypes.add(gt));
+    }
+
+    // If no game types configured (fallback), show all columns
+    if (allGameTypes.size === 0) {
+      return { directo: true, pale: true, cash3: true, play4: true };
+    }
+
+    // Determine which columns to show
+    const gameTypesArray = Array.from(allGameTypes);
+    return {
+      directo: gameTypesArray.some(gt => gt === 1 || gt === 21), // DIRECTO or PANAMA
+      pale: gameTypesArray.some(gt => gt === 2 || gt === 3 || gt === 14), // PALE, TRIPLETA, SUPER_PALE
+      cash3: gameTypesArray.some(gt => gt >= 4 && gt <= 9), // CASH3 variants
+      play4: gameTypesArray.some(gt => (gt >= 10 && gt <= 13) || (gt >= 15 && gt <= 20)), // PLAY4, PICK5, PICK2 variants
+    };
+  }, [selectedDraw?.id, selectedDraws, multiLotteryMode, drawGameTypes]);
+
   // Memoized background color
   const bgColor = useMemo(() => {
     return selectedDraw?.color
@@ -335,6 +480,84 @@ const CreateTickets: React.FC = () => {
 
     const numLength = betNumber.replace(/[^0-9]/g, '').length;
     const numericAmount = parseFloat(amount) || 0;
+
+    // Determine bet type based on number length
+    // Game type mapping:
+    // 1 = DIRECTO (2 digits), 21 = PANAMA (2 digits)
+    // 2 = PALE (4 digits), 3 = TRIPLETA (6 digits), 14 = SUPER_PALE
+    // 4-9 = CASH3 variants (3 digits)
+    // 10-13, 15-20 = PLAY4, PICK5, PICK2 variants (4+ digits)
+    let betTypeName = '';
+    let isAllowed = true;
+
+    // Check if bet type is allowed for selected draw(s)
+    for (const draw of drawsToPlay) {
+      const allowedGameTypes = drawGameTypes.get(draw.id) || [];
+
+      // If no game types configured, allow all (fallback)
+      if (allowedGameTypes.length === 0) continue;
+
+      if (selectedBetType === 'directo' || numLength === 2) {
+        // DIRECTO needs game type 1 or 21 (PANAMA)
+        if (!allowedGameTypes.includes(1) && !allowedGameTypes.includes(21)) {
+          betTypeName = 'Directo';
+          isAllowed = false;
+          break;
+        }
+      } else if (selectedBetType === 'pale' || numLength === 4) {
+        // PALE needs game type 2
+        if (!allowedGameTypes.includes(2)) {
+          betTypeName = 'Palé';
+          isAllowed = false;
+          break;
+        }
+      } else if (selectedBetType === 'tripleta' || numLength === 6) {
+        // TRIPLETA needs game type 3
+        if (!allowedGameTypes.includes(3)) {
+          betTypeName = 'Tripleta';
+          isAllowed = false;
+          break;
+        }
+      } else if (selectedBetType?.includes('cash3') || numLength === 3) {
+        // CASH3 needs game types 4-9
+        const hasCash3 = allowedGameTypes.some(gt => gt >= 4 && gt <= 9);
+        if (!hasCash3) {
+          betTypeName = 'Cash 3';
+          isAllowed = false;
+          break;
+        }
+      } else if (selectedBetType?.includes('play4') || selectedBetType === 'pick5' || numLength >= 5) {
+        // PLAY4/PICK5 needs game types 10-13 or 15-20
+        const hasPlay4 = allowedGameTypes.some(gt => (gt >= 10 && gt <= 13) || (gt >= 15 && gt <= 20));
+        if (!hasPlay4) {
+          betTypeName = 'Play 4 / Pick 5';
+          isAllowed = false;
+          break;
+        }
+      }
+    }
+
+    // If bet type not allowed, show error, clear inputs and refocus
+    if (!isAllowed) {
+      const drawName = drawsToPlay.find(d => {
+        const gt = drawGameTypes.get(d.id) || [];
+        return gt.length > 0;
+      })?.name || 'esta lotería';
+      setBetError(`${betTypeName} no permitido en ${drawName}`);
+      // Clear inputs
+      setBetNumber('');
+      setAmount('');
+      // Refocus on JUGADA input
+      setTimeout(() => {
+        if (betNumberInputRef.current) {
+          betNumberInputRef.current.focus();
+        }
+      }, 100);
+      return;
+    }
+
+    // Clear any previous error
+    setBetError('');
 
     const newBets = drawsToPlay.map((draw, index) => ({
       id: Date.now() + index,
@@ -621,11 +844,18 @@ const CreateTickets: React.FC = () => {
         ) : draws.length === 0 ? (
           <Typography sx={{ fontSize: '12px', color: '#666' }}>No hay sorteos disponibles</Typography>
         ) : (
-          draws.map((draw) => {
+          draws
+            // Filter to only show allowed draws when a betting pool is selected and has configured draws
+            .filter((draw) => {
+              if (!selectedPool) return true; // Show all if no pool selected
+              if (allowedDrawIds.size === 0) return true; // Show all if no restrictions (fallback)
+              return allowedDrawIds.has(draw.id); // Only show allowed draws
+            })
+            .map((draw) => {
             const isSelected = multiLotteryMode
               ? selectedDraws.some(s => s.id === draw.id)
               : selectedDraw?.id === draw.id;
-            const isDisabled = !selectedPool || draw.disabled;
+            const isDisabled = !selectedPool || draw.disabled || loadingAllowedDraws;
             return (
               <Box
                 key={draw.id}
@@ -794,26 +1024,41 @@ const CreateTickets: React.FC = () => {
               fontWeight: 'bold',
               textAlign: 'center',
               py: 2,
-              color: selectedDraw ? '#333' : '#ccc',
+              color: '#333',
             },
             '& input::placeholder': {
-              color: '#ccc',
+              color: '#999',
               opacity: 1,
             },
           }}
         />
         <TextField
-          value="N/A"
+          placeholder="N/A"
+          value={betError}
           disabled
           sx={{
-            width: 150,
-            bgcolor: 'white',
+            flex: 1,
+            '& .MuiOutlinedInput-root': {
+              bgcolor: betError ? '#c62828' : 'white',
+              height: '100%',
+            },
+            '& .MuiOutlinedInput-notchedOutline': {
+              borderColor: betError ? '#c62828' : 'rgba(0, 0, 0, 0.23)',
+            },
             '& input': {
-              fontSize: '24px',
+              fontSize: betError ? '14px' : '24px',
               fontWeight: 'bold',
               textAlign: 'center',
               py: 2,
-              color: '#333',
+              color: betError ? '#fff' : '#333',
+              WebkitTextFillColor: betError ? '#fff' : '#999',
+              '&.Mui-disabled': {
+                WebkitTextFillColor: betError ? '#fff' : '#999',
+              },
+            },
+            '& input::placeholder': {
+              color: '#999',
+              opacity: 1,
             },
           }}
         />
@@ -833,10 +1078,10 @@ const CreateTickets: React.FC = () => {
               fontWeight: 'bold',
               textAlign: 'center',
               py: 2,
-              color: selectedDraw ? '#333' : '#ccc',
+              color: '#333',
             },
             '& input::placeholder': {
-              color: '#ccc',
+              color: '#999',
               opacity: 1,
             },
           }}
@@ -877,48 +1122,56 @@ const CreateTickets: React.FC = () => {
         </Typography>
       </Box>
 
-      {/* 4 BET COLUMNS */}
+      {/* BET COLUMNS - Conditionally rendered based on selected draw's game types */}
       <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
-        <BetCardColumn
-          title="DIRECTO"
-          headerColor="#51cbce"
-          headerBgColor="#e0f2f1"
-          bets={directBets}
-          columnType="directo"
-          onDeleteBet={handleDeleteBet}
-          onDeleteAll={handleDeleteAll}
-          total={directTotal}
-        />
-        <BetCardColumn
-          title="PALE & TRIPLETA"
-          headerColor="#3d9970"
-          headerBgColor="#e8f5e9"
-          bets={paleBets}
-          columnType="pale"
-          onDeleteBet={handleDeleteBet}
-          onDeleteAll={handleDeleteAll}
-          total={paleTotal}
-        />
-        <BetCardColumn
-          title="CASH 3"
-          headerColor="#51cbce"
-          headerBgColor="#e0f2f1"
-          bets={cash3Bets}
-          columnType="cash3"
-          onDeleteBet={handleDeleteBet}
-          onDeleteAll={handleDeleteAll}
-          total={cash3Total}
-        />
-        <BetCardColumn
-          title="PLAY 4 & PICK 5"
-          headerColor="#3d9970"
-          headerBgColor="#e8f5e9"
-          bets={play4Bets}
-          columnType="play4"
-          onDeleteBet={handleDeleteBet}
-          onDeleteAll={handleDeleteAll}
-          total={play4Total}
-        />
+        {visibleColumns.directo && (
+          <BetCardColumn
+            title="DIRECTO"
+            headerColor="#51cbce"
+            headerBgColor="#e0f2f1"
+            bets={directBets}
+            columnType="directo"
+            onDeleteBet={handleDeleteBet}
+            onDeleteAll={handleDeleteAll}
+            total={directTotal}
+          />
+        )}
+        {visibleColumns.pale && (
+          <BetCardColumn
+            title="PALE & TRIPLETA"
+            headerColor="#3d9970"
+            headerBgColor="#e8f5e9"
+            bets={paleBets}
+            columnType="pale"
+            onDeleteBet={handleDeleteBet}
+            onDeleteAll={handleDeleteAll}
+            total={paleTotal}
+          />
+        )}
+        {visibleColumns.cash3 && (
+          <BetCardColumn
+            title="CASH 3"
+            headerColor="#51cbce"
+            headerBgColor="#e0f2f1"
+            bets={cash3Bets}
+            columnType="cash3"
+            onDeleteBet={handleDeleteBet}
+            onDeleteAll={handleDeleteAll}
+            total={cash3Total}
+          />
+        )}
+        {visibleColumns.play4 && (
+          <BetCardColumn
+            title="PLAY 4 & PICK 5"
+            headerColor="#3d9970"
+            headerBgColor="#e8f5e9"
+            bets={play4Bets}
+            columnType="play4"
+            onDeleteBet={handleDeleteBet}
+            onDeleteAll={handleDeleteAll}
+            total={play4Total}
+          />
+        )}
       </Box>
 
       {/* ACTION BUTTONS */}

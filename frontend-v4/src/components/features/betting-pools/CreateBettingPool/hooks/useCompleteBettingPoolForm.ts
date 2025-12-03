@@ -487,14 +487,14 @@ const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
   };
 
   /**
-   * Extract prize values from formData and group by lottery and bet type
-   * Returns an object with lottery IDs as top-level keys, containing bet types
+   * Extract prize values from formData and group by draw and bet type
+   * Returns an object with draw IDs as top-level keys, containing bet types
    *
-   * Example formData:
+   * Example formData (from PrizesTab):
    * {
    *   "general_DIRECTO_DIRECTO_PRIMER_PAGO": 60,
    *   "general_DIRECTO_DIRECTO_SEGUNDO_PAGO": 15,
-   *   "lottery_43_PALÉ_PALÉ_PRIMER_PAGO": 1100
+   *   "draw_43_DIRECTO_DIRECTO_PRIMER_PAGO": 1100
    * }
    *
    * Returns:
@@ -505,38 +505,50 @@ const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
    *       "DIRECTO_SEGUNDO_PAGO": 15
    *     }
    *   },
-   *   "lottery_43": {
-   *     "PALÉ": {
-   *       "PALÉ_PRIMER_PAGO": 1100
+   *   "draw_43": {
+   *     "DIRECTO": {
+   *       "DIRECTO_PRIMER_PAGO": 1100
    *     }
    *   }
    * }
    */
   const extractPrizeValuesFromFormData = (formData: FormData): Record<string, Record<string, Record<string, string | number>>> => {
-    const prizesByLotteryAndBetType: Record<string, Record<string, Record<string, string | number>>> = {};
+    const prizesByDrawAndBetType: Record<string, Record<string, Record<string, string | number>>> = {};
 
     // Iterate through all formData keys
     Object.keys(formData).forEach(key => {
       // Check if this is a prize type field (contains underscore and has a value)
-      if (key.includes('_') && formData[key] !== '' && formData[key] !== null && formData[key] !== undefined) {
-        // Format: {lotteryId}_{betTypeCode}_{fieldCode}
-        // Examples:
-        //   - "general_DIRECTO_DIRECTO_PRIMER_PAGO"
-        //   - "lottery_43_DIRECTO_DIRECTO_PRIMER_PAGO"
+      // Skip commission fields (COMMISSION, COMMISSION2) and non-prize fields
+      if (key.includes('_') &&
+          !key.includes('_COMMISSION_') &&
+          !key.includes('_COMMISSION2_') &&
+          formData[key] !== '' &&
+          formData[key] !== null &&
+          formData[key] !== undefined) {
 
         const parts = key.split('_');
 
-        // Extract lottery ID (first part)
-        let lotteryId, betTypeCode, fieldCode;
+        // Extract draw ID (first part)
+        let drawId: string | null = null;
+        let betTypeCode: string | null = null;
+        let fieldCode: string | null = null;
 
         if (parts[0] === 'general') {
           // Format: general_BETTYPE_FIELDCODE
-          lotteryId = 'general';
+          // Example: general_DIRECTO_DIRECTO_PRIMER_PAGO
+          drawId = 'general';
           betTypeCode = parts[1];
           fieldCode = parts.slice(2).join('_');
+        } else if (parts[0] === 'draw' && parts.length >= 4) {
+          // Format: draw_XX_BETTYPE_FIELDCODE (NEW format from PrizesTab)
+          // Example: draw_43_DIRECTO_DIRECTO_PRIMER_PAGO
+          drawId = `${parts[0]}_${parts[1]}`; // "draw_43"
+          betTypeCode = parts[2];
+          fieldCode = parts.slice(3).join('_');
         } else if (parts[0] === 'lottery' && parts.length >= 4) {
-          // Format: lottery_XX_BETTYPE_FIELDCODE
-          lotteryId = `${parts[0]}_${parts[1]}`; // "lottery_43"
+          // Format: lottery_XX_BETTYPE_FIELDCODE (legacy format)
+          // Example: lottery_43_DIRECTO_DIRECTO_PRIMER_PAGO
+          drawId = `draw_${parts[1]}`; // Convert to "draw_43"
           betTypeCode = parts[2];
           fieldCode = parts.slice(3).join('_');
         } else {
@@ -544,43 +556,43 @@ const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
           return;
         }
 
-        if (betTypeCode && fieldCode) {
+        if (drawId && betTypeCode && fieldCode) {
           // Initialize nested structure if needed
-          if (!prizesByLotteryAndBetType[lotteryId]) {
-            prizesByLotteryAndBetType[lotteryId] = {};
+          if (!prizesByDrawAndBetType[drawId]) {
+            prizesByDrawAndBetType[drawId] = {};
           }
-          if (!prizesByLotteryAndBetType[lotteryId][betTypeCode]) {
-            prizesByLotteryAndBetType[lotteryId][betTypeCode] = {};
+          if (!prizesByDrawAndBetType[drawId][betTypeCode]) {
+            prizesByDrawAndBetType[drawId][betTypeCode] = {};
           }
 
           // Store the value
-          prizesByLotteryAndBetType[lotteryId][betTypeCode][fieldCode] = formData[key] as string | number;
+          prizesByDrawAndBetType[drawId][betTypeCode][fieldCode] = formData[key] as string | number;
         }
       }
     });
 
-    return prizesByLotteryAndBetType;
+    return prizesByDrawAndBetType;
   };
 
   /**
    * Save prize configurations for a betting pool
    * IMPORTANT: Currently only saves GENERAL configurations (general_*)
-   * Lottery-specific configurations (lottery_XX_*) are not yet supported by the backend
+   * Draw-specific configurations (draw_XX_*) are not yet supported by the backend
    *
    * @param bettingPoolId - ID of the created betting pool
    * @param formData - Form data with prize values
    */
   const savePrizeConfigurations = async (bettingPoolId: number, formData: FormData): Promise<PrizeSaveResult> => {
     try {
-      // Extract prize values grouped by lottery and bet type
-      const prizesByLotteryAndBetType = extractPrizeValuesFromFormData(formData);
+      // Extract prize values grouped by draw and bet type
+      const prizesByDrawAndBetType = extractPrizeValuesFromFormData(formData);
 
-      if (Object.keys(prizesByLotteryAndBetType).length === 0) {
+      if (Object.keys(prizesByDrawAndBetType).length === 0) {
         console.log('No custom prize values to save');
         return { success: true, message: 'No custom prizes' };
       }
 
-      console.log('[DATA] Prize configurations to save:', prizesByLotteryAndBetType);
+      console.log('[DATA] Prize configurations to save:', prizesByDrawAndBetType);
 
       // Get all bet types to map field codes to prize type IDs
       const betTypes = await getAllBetTypesWithFields() as BetType[];
@@ -602,16 +614,16 @@ const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
       let totalFailed = 0;
       const warnings: string[] = [];
 
-      // Process each lottery
-      for (const [lotteryId, betTypes] of Object.entries(prizesByLotteryAndBetType)) {
-        if (lotteryId === 'general') {
+      // Process each draw
+      for (const [drawId, betTypesForDraw] of Object.entries(prizesByDrawAndBetType)) {
+        if (drawId === 'general') {
           // Save GENERAL configurations (supported)
           console.log(`[SAVE] Saving GENERAL configurations...`);
 
           // Build the API request format
           const prizeConfigs: Array<{ prizeTypeId: number; fieldCode: string; value: number }> = [];
 
-          for (const [betTypeCode, fields] of Object.entries(betTypes)) {
+          for (const [betTypeCode, fields] of Object.entries(betTypesForDraw)) {
             for (const [fieldCode, value] of Object.entries(fields)) {
               const fullKey = `${betTypeCode}_${fieldCode}`;
               const prizeTypeId = prizeTypeMap[fullKey];
@@ -642,10 +654,11 @@ const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
             }
           }
         } else {
-          // Lottery-specific configurations (NOT YET SUPPORTED)
-          const fieldCount = Object.values(betTypes).reduce((sum, fields) => sum + Object.keys(fields).length, 0);
-          console.warn(`[WARN] Lottery-specific configurations are not yet supported: ${lotteryId} (${fieldCount} fields)`);
-          warnings.push(`${fieldCount} configuraciones para ${lotteryId} no fueron guardadas (función no implementada)`);
+          // Draw-specific configurations (NOT YET SUPPORTED by backend)
+          // The frontend allows configuration, but backend API doesn't support draw-specific prizes yet
+          const fieldCount = Object.values(betTypesForDraw).reduce((sum, fields) => sum + Object.keys(fields).length, 0);
+          console.warn(`[WARN] Draw-specific configurations are not yet supported by backend: ${drawId} (${fieldCount} fields)`);
+          warnings.push(`${fieldCount} configuraciones para ${drawId} no fueron guardadas (backend no soporta premios por sorteo aún)`);
         }
       }
 

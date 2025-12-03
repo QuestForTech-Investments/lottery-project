@@ -18,6 +18,7 @@ import {
 } from '@mui/material';
 import { ExpandMore as ExpandMoreIcon, ChevronLeft, ChevronRight, Save as SaveIcon, CheckCircle as CheckCircleIcon } from '@mui/icons-material';
 import { getAllBetTypesWithFields } from '@services/prizeService';
+import { filterBetTypesForDraw } from '@services/betTypeCompatibilityService';
 // ⚡ getAllDraws removed - draws now loaded in parent
 // ⚡ getBetTypesByDraw removed - now using getAllBetTypesWithFields for all draws
 
@@ -372,10 +373,22 @@ const PrizesTab = ({ formData, handleChange, bettingPoolId = null, loadDrawSpeci
    * Render Premios content
    */
   const renderPremiosContent = () => {
+    // Get the active draw name for filtering bet types
+    const activeDrawName = activeDraw === 'general'
+      ? 'General'
+      : draws.find(d => d.id === activeDraw)?.name || 'General';
+
+    // 🔥 Filter bet types based on active draw (like Vue.js original)
+    // Dominican draws: only Directo, Pale, Tripleta
+    // USA draws: + Cash3, Play4, Pick5, Bolita, Singulación, Pick Two
+    // Panama draws: Directo, Pale, Tripleta, Panamá
+    // Super Pale draws: only Super Pale
+    const filteredBetTypes = filterBetTypesForDraw(betTypes, activeDrawName);
+
     return (
       <>
         {/* Bet Types Accordions */}
-        {betTypes.map((betType, index) => (
+        {filteredBetTypes.map((betType, index) => (
           <Accordion key={betType.betTypeId} defaultExpanded={index === 0}>
             <AccordionSummary expandIcon={<ExpandMoreIcon />}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%' }}>
@@ -576,10 +589,18 @@ const PrizesTab = ({ formData, handleChange, bettingPoolId = null, loadDrawSpeci
    * Shows commission discount fields (1-4) per bet type
    */
   const renderComisionesContent = () => {
+    // Get the active draw name for filtering bet types
+    const activeDrawName = activeDraw === 'general'
+      ? 'General'
+      : draws.find(d => d.id === activeDraw)?.name || 'General';
+
+    // 🔥 Filter bet types based on active draw (like Vue.js original)
+    const filteredBetTypes = filterBetTypesForDraw(betTypes, activeDrawName);
+
     return (
       <>
         {/* Bet Types Accordions with Commission Fields */}
-        {betTypes.map((betType, index) => (
+        {filteredBetTypes.map((betType, index) => (
           <Accordion key={`commission-${betType.betTypeId}`} defaultExpanded={index === 0}>
             <AccordionSummary expandIcon={<ExpandMoreIcon />}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%' }}>
@@ -768,10 +789,18 @@ const PrizesTab = ({ formData, handleChange, bettingPoolId = null, loadDrawSpeci
    * Shows commission 2 discount fields (1-4) per bet type
    */
   const renderComisiones2Content = () => {
+    // Get the active draw name for filtering bet types
+    const activeDrawName = activeDraw === 'general'
+      ? 'General'
+      : draws.find(d => d.id === activeDraw)?.name || 'General';
+
+    // 🔥 Filter bet types based on active draw (like Vue.js original)
+    const filteredBetTypes = filterBetTypesForDraw(betTypes, activeDrawName);
+
     return (
       <>
         {/* Bet Types Accordions with Commission 2 Fields */}
-        {betTypes.map((betType, index) => (
+        {filteredBetTypes.map((betType, index) => (
           <Accordion key={`commission2-${betType.betTypeId}`} defaultExpanded={index === 0}>
             <AccordionSummary expandIcon={<ExpandMoreIcon />}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%' }}>
@@ -1051,7 +1080,7 @@ const PrizesTab = ({ formData, handleChange, bettingPoolId = null, loadDrawSpeci
       {/* Info Chips */}
       <Box sx={{ mb: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
         <Chip
-          label={`${betTypes.length} tipos de juegos`}
+          label={`${filterBetTypesForDraw(betTypes, activeDraw === 'general' ? 'General' : draws.find(d => d.id === activeDraw)?.name || 'General').length} tipos de juegos`}
           color="success"
           size="small"
         />

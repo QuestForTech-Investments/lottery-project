@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, type ChangeEvent, type SyntheticEvent } from 'react';
+import React, { useState, useEffect, useRef, useMemo, type ChangeEvent, type SyntheticEvent } from 'react';
 import {
   Grid,
   TextField,
@@ -18,6 +18,7 @@ import {
 } from '@mui/material';
 import { ExpandMore as ExpandMoreIcon, ChevronLeft, ChevronRight, Save as SaveIcon, CheckCircle as CheckCircleIcon } from '@mui/icons-material';
 import { getAllBetTypesWithFields } from '@services/prizeService';
+import { filterBetTypesForDraw } from '@services/betTypeCompatibilityService';
 // ⚡ getAllDraws removed - draws now loaded in parent
 // ⚡ getBetTypesByDraw removed - now using getAllBetTypesWithFields for all draws
 
@@ -110,6 +111,96 @@ const DRAW_ORDER = [
 ];
 
 /**
+ * Bet type codes that apply to each draw category
+ * Based on analysis of the original Vue.js application (la-numbers.apk.lol)
+ */
+
+// Basic bet types (Dominicans, Nicaragua, Anguila, King Lottery)
+// Note: PALÉ has accent in database
+const BASIC_BET_TYPES = ['DIRECTO', 'PALÉ', 'TRIPLETA'];
+
+// USA bet types (all USA draws) - includes basic + all Cash3, Play4, Pick5, Bolita, Singulación, Pick Two variants
+// Note: Some codes use spaces, some use underscores - must match database exactly
+const USA_BET_TYPES = [
+  'DIRECTO', 'PALÉ', 'TRIPLETA',
+  'CASH3_STRAIGHT', 'CASH3_BOX', 'CASH3_FRONT_BOX', 'CASH3_BACK_STRAIGHT',
+  'CASH3 FRONT STRAIGHT', 'CASH3 BACK BOX',
+  'PLAY4 STRAIGHT', 'PLAY4 BOX',
+  'BOLITA 1', 'BOLITA 2',
+  'SINGULACION', 'SINGULACIÓN 1', 'SINGULACIÓN 2', 'SINGULACIÓN 3',
+  'PICK5 STRAIGHT', 'PICK5 BOX',
+  'PICK2', 'PICK TWO', 'PICK TWO FRONT', 'PICK TWO BACK', 'PICK TWO MIDDLE'
+];
+
+// Super Pale bet types (only Super Pale)
+const SUPER_PALE_BET_TYPES = ['SUPER_PALE'];
+
+// Panama bet types (basic + Panama)
+const PANAMA_BET_TYPES = ['DIRECTO', 'PALÉ', 'TRIPLETA', 'PANAMA'];
+
+// Draw categories
+const DOMINICAN_DRAWS = [
+  'NACIONAL', 'LA PRIMERA', 'LA PRIMERA 8PM', 'GANA MAS',
+  'LA SUERTE', 'LA SUERTE 6:00pm', 'LOTEKA', 'LOTEDOM',
+  'LA CHICA', 'REAL', 'QUINIELA PALE',
+  'L.E. PUERTO RICO 2PM', 'L.E. PUERTO RICO 10PM'
+];
+
+const NICARAGUA_DRAWS = ['DIARIA 11AM', 'DIARIA 3PM', 'DIARIA 9PM'];
+
+const ANGUILA_DRAWS = ['Anguila 10am', 'Anguila 1pm', 'Anguila 6PM', 'Anguila 9pm'];
+
+const KING_LOTTERY_DRAWS = ['King Lottery AM', 'King Lottery PM'];
+
+const USA_DRAWS = [
+  'NEW YORK DAY', 'NEW YORK NIGHT',
+  'FLORIDA AM', 'FLORIDA PM', 'FL PICK2 AM', 'FL PICK2 PM',
+  'GEORGIA-MID AM', 'GEORGIA EVENING', 'GEORGIA NIGHT',
+  'NEW JERSEY AM', 'NEW JERSEY PM',
+  'CONNECTICUT AM', 'CONNECTICUT PM',
+  'CALIFORNIA AM', 'CALIFORNIA PM',
+  'CHICAGO AM', 'CHICAGO PM',
+  'PENN MIDDAY', 'PENN EVENING',
+  'INDIANA MIDDAY', 'INDIANA EVENING',
+  'TEXAS MORNING', 'TEXAS DAY', 'TEXAS EVENING', 'TEXAS NIGHT',
+  'VIRGINIA AM', 'VIRGINIA PM',
+  'SOUTH CAROLINA AM', 'SOUTH CAROLINA PM',
+  'MARYLAND MIDDAY', 'MARYLAND EVENING',
+  'MASS AM', 'MASS PM',
+  'NORTH CAROLINA AM', 'NORTH CAROLINA PM',
+  'DELAWARE AM', 'DELAWARE PM',
+  'NY AM 6x1', 'NY PM 6x1', 'FL AM 6X1', 'FL PM 6X1'
+];
+
+const SUPER_PALE_DRAWS = [
+  'SUPER PALE TARDE', 'SUPER PALE NOCHE',
+  'SUPER PALE NY-FL AM', 'SUPER PALE NY-FL PM'
+];
+
+const PANAMA_DRAWS = ['PANAMA MIERCOLES', 'PANAMA DOMINGO'];
+
+/**
+ * Get allowed bet type codes for a specific draw
+ */
+const getAllowedBetTypesForDraw = (drawName: string): string[] | null => {
+  // If "General" or "general", return null (show all)
+  if (!drawName || drawName.toLowerCase() === 'general') {
+    return null;
+  }
+
+  if (DOMINICAN_DRAWS.includes(drawName)) return BASIC_BET_TYPES;
+  if (NICARAGUA_DRAWS.includes(drawName)) return BASIC_BET_TYPES;
+  if (ANGUILA_DRAWS.includes(drawName)) return BASIC_BET_TYPES;
+  if (KING_LOTTERY_DRAWS.includes(drawName)) return BASIC_BET_TYPES;
+  if (USA_DRAWS.includes(drawName)) return USA_BET_TYPES;
+  if (SUPER_PALE_DRAWS.includes(drawName)) return SUPER_PALE_BET_TYPES;
+  if (PANAMA_DRAWS.includes(drawName)) return PANAMA_BET_TYPES;
+
+  // Default: return null (show all) for unknown draws
+  return null;
+};
+
+/**
  * PrizesTab Component with Sub-tabs and Draw Tabs (like V1)
  * 3-Level Structure:
  * - Level 1: Main tab "Premios & Comisiones"
@@ -138,6 +229,16 @@ const PrizesTab: React.FC<PrizesTabProps> = ({ formData, handleChange, bettingPo
 
   // 🔍 DEBUG: Log draws to diagnose issue
   console.log(`[DEBUG] [PrizesTab DEBUG] propDraws.length=${propDraws.length}, localDraws.length=${localDraws.length}, final draws.length=${draws.length}`);
+
+  // 🔥 Filter bet types based on active draw (using betTypeCompatibilityService)
+  const activeDrawName = useMemo(() => {
+    if (activeDraw === 'general') return 'General';
+    return draws.find(d => d.id === activeDraw)?.name || 'General';
+  }, [activeDraw, draws]);
+
+  const filteredBetTypes = useMemo(() => {
+    return filterBetTypesForDraw(betTypes, activeDrawName);
+  }, [betTypes, activeDrawName]);
 
   // State for valores "general" (usados como fallback)
   const [generalValues, setGeneralValues] = useState<GeneralValues>({});
@@ -183,11 +284,15 @@ const PrizesTab: React.FC<PrizesTabProps> = ({ formData, handleChange, bettingPo
 
   /**
    * Load bet types when draw changes
+   * 🎯 Also depends on draws array to filter correctly
    */
   useEffect(() => {
-    loadBetTypes();
+    // Only load when draws are available (for correct filtering)
+    if (draws.length > 0) {
+      loadBetTypes();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeDraw]);
+  }, [activeDraw, draws.length]);
 
   /**
    * 🔥 NEW: Load draw-specific values when switching to a draw tab
@@ -267,21 +372,24 @@ const PrizesTab: React.FC<PrizesTabProps> = ({ formData, handleChange, bettingPo
 
   /**
    * Load bet types based on active draw
+   * 🎯 Filters bet types based on draw category (Dominican, USA, Super Pale, Panama)
    */
   const loadBetTypes = async (): Promise<void> => {
     try {
       setLoading(true);
       setError(null);
 
-      // ✅ FIX: Always use getAllBetTypesWithFields() for ALL draws
-      // Bet types and their fields (prizeFields) are the same across all draws
-      // Only the VALUES differ per draw (loaded separately in useEffect line 121-152)
-      console.log(`[LIST] Loading all bet types for ${activeDraw}`);
+      // Get the draw name for filtering
+      const currentDraw = draws.find(d => d.id === activeDraw);
+      const drawName = currentDraw?.name || 'General';
+
+      console.log(`[LIST] Loading bet types for ${activeDraw} (${drawName})`);
       const betTypesData = await getAllBetTypesWithFields();
 
-      console.log(`[SUCCESS] Loaded ${betTypesData.length} bet types for ${activeDraw}`);
+      console.log(`[SUCCESS] Loaded ${betTypesData.length} total bet types from API`);
+
       // Map service BetType to local BetType (ensure required fields have defaults)
-      const mappedBetTypes: BetType[] = betTypesData.map(bt => ({
+      let mappedBetTypes: BetType[] = betTypesData.map(bt => ({
         betTypeId: bt.betTypeId,
         betTypeName: bt.betTypeName,
         betTypeCode: bt.betTypeCode || '',
@@ -295,6 +403,17 @@ const PrizesTab: React.FC<PrizesTabProps> = ({ formData, handleChange, bettingPo
           maxMultiplier: undefined
         }))
       }));
+
+      // 🎯 Filter bet types based on draw category
+      const allowedCodes = getAllowedBetTypesForDraw(drawName);
+      if (allowedCodes) {
+        mappedBetTypes = mappedBetTypes.filter(bt => allowedCodes.includes(bt.betTypeCode));
+        console.log(`[FILTER] ${drawName} allows ${allowedCodes.length} bet types: ${allowedCodes.join(', ')}`);
+        console.log(`[FILTER] Filtered to ${mappedBetTypes.length} bet types`);
+      } else {
+        console.log(`[FILTER] ${drawName} shows ALL bet types (${mappedBetTypes.length})`);
+      }
+
       setBetTypes(mappedBetTypes);
     } catch (err) {
       console.error('[ERROR] Error loading bet types:', err);
@@ -373,8 +492,12 @@ const PrizesTab: React.FC<PrizesTabProps> = ({ formData, handleChange, bettingPo
     }
 
     // 2. Si no, usar valor de "general"
+    // 🔥 FIX: Priorizar formData (cambios del usuario) sobre generalValues (valores de la API)
     const generalKey = `general_${betTypeCode}_${prizeField.fieldCode}`;
-    const generalValue = generalValues[generalKey] ?? formData[generalKey];
+    const formDataGeneralValue = formData[generalKey];
+    const generalValue = (formDataGeneralValue !== undefined && formDataGeneralValue !== null && formDataGeneralValue !== '' && typeof formDataGeneralValue !== 'boolean')
+      ? formDataGeneralValue
+      : generalValues[generalKey];
 
     if (generalValue !== undefined && generalValue !== null && generalValue !== '' && typeof generalValue !== 'boolean') {
       return generalValue;
@@ -457,8 +580,8 @@ const PrizesTab: React.FC<PrizesTabProps> = ({ formData, handleChange, bettingPo
   const renderPremiosContent = () => {
     return (
       <>
-        {/* Bet Types Accordions */}
-        {betTypes.map((betType, index) => (
+        {/* Bet Types Accordions - Filtered by active draw */}
+        {filteredBetTypes.map((betType, index) => (
           <Accordion key={betType.betTypeId} defaultExpanded={index === 0}>
             <AccordionSummary expandIcon={<ExpandMoreIcon />}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%' }}>
@@ -485,7 +608,11 @@ const PrizesTab: React.FC<PrizesTabProps> = ({ formData, handleChange, bettingPo
                     const fieldKey = getFieldName(betType.betTypeCode, field);
                     const currentValue = formData[fieldKey];
                     const generalKey = `general_${betType.betTypeCode}_${field.fieldCode}`;
-                    const generalValue = generalValues[generalKey] || formData[generalKey];
+                    // 🔥 FIX: Priorizar formData (cambios del usuario) sobre generalValues (valores de la API)
+                    const formDataGenVal = formData[generalKey];
+                    const generalValue = (formDataGenVal !== undefined && formDataGenVal !== null && formDataGenVal !== '' && typeof formDataGenVal !== 'boolean')
+                      ? formDataGenVal
+                      : generalValues[generalKey];
 
                     // Determinar si es un valor personalizado
                     const isCustomValue = activeDraw !== 'general' &&
@@ -661,8 +788,8 @@ const PrizesTab: React.FC<PrizesTabProps> = ({ formData, handleChange, bettingPo
   const renderComisionesContent = () => {
     return (
       <>
-        {/* Bet Types Accordions with Commission Fields */}
-        {betTypes.map((betType, index) => (
+        {/* Bet Types Accordions with Commission Fields - Filtered by active draw */}
+        {filteredBetTypes.map((betType, index) => (
           <Accordion key={`commission-${betType.betTypeId}`} defaultExpanded={index === 0}>
             <AccordionSummary expandIcon={<ExpandMoreIcon />}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%' }}>
@@ -853,8 +980,8 @@ const PrizesTab: React.FC<PrizesTabProps> = ({ formData, handleChange, bettingPo
   const renderComisiones2Content = () => {
     return (
       <>
-        {/* Bet Types Accordions with Commission 2 Fields */}
-        {betTypes.map((betType, index) => (
+        {/* Bet Types Accordions with Commission 2 Fields - Filtered by active draw */}
+        {filteredBetTypes.map((betType, index) => (
           <Accordion key={`commission2-${betType.betTypeId}`} defaultExpanded={index === 0}>
             <AccordionSummary expandIcon={<ExpandMoreIcon />}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%' }}>
@@ -1134,7 +1261,7 @@ const PrizesTab: React.FC<PrizesTabProps> = ({ formData, handleChange, bettingPo
       {/* Info Chips */}
       <Box sx={{ mb: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
         <Chip
-          label={`${betTypes.length} tipos de juegos`}
+          label={`${filteredBetTypes.length} tipos de juegos`}
           color="success"
           size="small"
         />

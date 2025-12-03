@@ -194,15 +194,23 @@ export const getBettingPoolPrizeConfigs = async (bettingPoolId: number | string)
 
 /**
  * Create or update prize configuration for a betting pool
+ * API expects: { prizeConfigs: [...] }
  */
 export const savePrizeConfig = async (bettingPoolId: number | string, prizeConfig: PrizeConfig | PrizeConfig[]): Promise<unknown> => {
   try {
+    // ✅ FIX: Wrap array in { prizeConfigs: [...] } as expected by API
+    const body = Array.isArray(prizeConfig)
+      ? { prizeConfigs: prizeConfig }
+      : { prizeConfigs: [prizeConfig] };
+
+    console.log(`[SAVE] Sending ${Array.isArray(prizeConfig) ? prizeConfig.length : 1} prize configs to /api/betting-pools/${bettingPoolId}/prize-config`);
+
     const response = await fetch(`/api/betting-pools/${bettingPoolId}/prize-config`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(prizeConfig)
+      body: JSON.stringify(body)
     });
 
     if (!response.ok) {

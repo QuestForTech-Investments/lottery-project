@@ -8,6 +8,7 @@ Este archivo contiene el historial detallado de fixes, implementaciones y cambio
 
 ## Índice
 
+- [2025-12-01](#2025-12-01)
 - [2025-11-26](#2025-11-26)
 - [2025-11-25](#2025-11-25)
 - [2025-11-20](#2025-11-20)
@@ -15,6 +16,70 @@ Este archivo contiene el historial detallado de fixes, implementaciones y cambio
 - [2025-11-18](#2025-11-18)
 - [2025-11-16](#2025-11-16)
 - [2025-11-14](#2025-11-14)
+
+---
+
+## 2025-12-01
+
+### Feature: Game Type Filtering per Draw in frontend-v4 CreateTickets
+
+**Fecha:** 2025-12-01
+**Tipo:** Feature Implementation + Bug Fix
+**Estado:** COMPLETADO Y VERIFICADO
+
+**Problema:**
+En frontend-v4, al seleccionar un sorteo en CreateTickets, se mostraban todas las columnas de game types (DIRECTO, PALE & TRIPLETA, CASH 3, PLAY 4 & PICK 5) sin importar si el sorteo soportaba esos tipos de juego. Por ejemplo, NACIONAL (lotería dominicana) debería mostrar solo DIRECTO y PALE & TRIPLETA, no CASH 3 ni PLAY 4 & PICK 5.
+
+**Solución Implementada:**
+
+1. **Backend - Tabla `draw_game_compatibility`** (ya existente)
+   - 857 registros configurados correctamente
+   - Mapea cada sorteo a sus game types permitidos:
+     - Dominican/Nicaragua/Anguila/King: Game types 1, 2, 3 (DIRECTO, PALE, TRIPLETA)
+     - USA (New York, Florida, etc.): Game types 1-13, 15-20 (todos excepto SUPER_PALE y PANAMA)
+     - Super Pale: Game type 14 solamente
+     - Panama: Game types 1, 2, 3, 21
+
+2. **Backend - API Response** (ya existente)
+   - `/api/betting-pools/{id}/draws` retorna `availableGameTypes` por cada sorteo
+   - Estructura: `availableGameTypes: [{gameTypeId, gameTypeCode, ...}, ...]`
+
+3. **Frontend-v4 - Fix Implementado**
+   - **Archivo:** `frontend-v4/src/components/features/tickets/CreateTickets/index.tsx`
+   - **Bug encontrado:** El interface declaraba `availableGameTypes?: number[]` pero la API retorna un array de objetos
+   - **Corrección:** Se actualizó el interface y la extracción de datos:
+
+```typescript
+// Interface corregido
+interface AvailableGameType {
+  gameTypeId: number;
+  gameTypeCode?: string;
+  gameName?: string;
+  prizeMultiplier?: number;
+  numberLength?: number;
+  requiresAdditionalNumber?: boolean;
+  displayOrder?: number;
+}
+
+interface BettingPoolDrawResponse {
+  drawId: number;
+  isActive: boolean;
+  availableGameTypes?: AvailableGameType[];
+}
+
+// Extracción corregida
+const gameTypeIds = d.availableGameTypes.map(gt => gt.gameTypeId);
+gameTypesMap.set(d.drawId, gameTypeIds);
+```
+
+**Verificación:**
+- Probado en http://localhost:4008/tickets/new
+- Banca: admin (LAN-0009) (9)
+- Sorteo NACIONAL seleccionado
+- **Resultado:** Solo muestra 2 columnas (DIRECTO, PALE & TRIPLETA) - CORRECTO
+- Screenshot guardado: `.playwright-mcp/game-type-filtering-nacional-2cols.png`
+
+**Nota:** La banca de prueba (9) solo tiene sorteos dominicanos/Nicaragua configurados. Para verificar con sorteos USA (4 columnas), se necesitaría configurar esos sorteos en la banca.
 
 ---
 

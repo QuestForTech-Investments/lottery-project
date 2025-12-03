@@ -2,6 +2,34 @@ import React from 'react';
 import './TicketPrint.css';
 
 /**
+ * Formatea un número de apuesta con guiones separando cada 2 dígitos
+ * Ejemplos:
+ * - "23" -> "23" (directo)
+ * - "2321" -> "23-21" (palé)
+ * - "224466" -> "22-44-66" (tripleta)
+ * - "123" -> "123" (cash3 - 3 dígitos no se separan)
+ */
+const formatBetNumber = (number) => {
+  if (!number) return '';
+
+  // Limpiar el número (solo dígitos)
+  const cleanNumber = String(number).replace(/[^0-9]/g, '');
+
+  // Si es 3 dígitos (cash3) o menos de 2, no separar
+  if (cleanNumber.length <= 3) {
+    return cleanNumber;
+  }
+
+  // Separar cada 2 dígitos con guiones
+  const pairs = [];
+  for (let i = 0; i < cleanNumber.length; i += 2) {
+    pairs.push(cleanNumber.slice(i, i + 2));
+  }
+
+  return pairs.join('-');
+};
+
+/**
  * Componente de Template de Ticket para Impresión Térmica 80mm
  * Replica el formato de LA CENTRAL (Material-UI Version)
  */
@@ -85,9 +113,9 @@ const TicketPrintTemplate = ({ ticketData }) => {
 
                   return (
                     <tr key={idx}>
-                      <td>{line1.betNumber}</td>
+                      <td>{formatBetNumber(line1.betNumber)}</td>
                       <td>{line1.betAmount.toFixed(2)}</td>
-                      <td>{line2 ? line2.betNumber : ''}</td>
+                      <td>{line2 ? formatBetNumber(line2.betNumber) : ''}</td>
                       <td>{line2 ? line2.betAmount.toFixed(2) : ''}</td>
                     </tr>
                   );

@@ -105,7 +105,7 @@ const GeneralTab: React.FC<GeneralTabProps> = ({ formData, errors, zones, loadin
                 <em>Seleccione una zona</em>
               </MenuItem>
               {zones.map((zone) => (
-                <MenuItem key={zone.zoneId} value={zone.zoneId}>
+                <MenuItem key={zone.zoneId} value={String(zone.zoneId)}>
                   {zone.zoneName}
                 </MenuItem>
               ))}

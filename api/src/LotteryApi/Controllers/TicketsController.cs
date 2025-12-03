@@ -306,12 +306,36 @@ public class TicketsController : ControllerBase
                 .Where(gt => betTypeIds.Contains(gt.GameTypeId))
                 .ToDictionaryAsync(gt => gt.GameTypeId);
 
+            // Pre-fetch game compatibility for validation
+            // This tells us which bet types (game types) are allowed for each draw
+            var drawGameCompatibilities = await _context.DrawGameCompatibilities
+                .Where(dgc => drawIds.Contains(dgc.DrawId) && dgc.IsActive)
+                .Select(dgc => new { dgc.DrawId, dgc.GameTypeId })
+                .ToListAsync();
+
+            // Build a set of valid (drawId, gameTypeId) combinations for O(1) lookup
+            var validCombinations = new HashSet<(int DrawId, int GameTypeId)>(
+                drawGameCompatibilities.Select(dgc => (dgc.DrawId, dgc.GameTypeId)));
+
             foreach (var line in dto.Lines)
             {
                 var draw = draws.FirstOrDefault(d => d.DrawId == line.DrawId);
                 if (draw == null)
                 {
                     return UnprocessableEntity(new { message = $"El sorteo {line.DrawId} no existe" });
+                }
+
+                // 3.1 Validate bet type is compatible with this draw
+                if (!validCombinations.Contains((line.DrawId, line.BetTypeId)))
+                {
+                    // Get bet type name for error message
+                    betTypesDict.TryGetValue(line.BetTypeId, out var betType);
+                    var betTypeName = betType?.GameName ?? $"ID {line.BetTypeId}";
+
+                    return UnprocessableEntity(new
+                    {
+                        message = $"Error de ticket: la jugada '{betTypeName}' es inválida para la lotería '{draw.Lottery?.LotteryName ?? draw.DrawName}'"
+                    });
                 }
 
                 // TEMPORARY: Commented for testing purposes
@@ -1149,5 +1173,109 @@ public class TicketsController : ControllerBase
                 Notes = l.Notes
             }).ToList()
         };
+    }
+
+    /// <summary>
+    /// GET /api/tickets/plays/summary
+    /// Get play summary (sales by bet number) for a specific draw and date
+    /// </summary>
+    /// <param name="drawId">Draw ID to filter by</param>
+    /// <param name="date">Date to filter by (YYYY-MM-DD)</param>
+    /// <param name="zoneIds">Optional comma-separated list of zone IDs</param>
+    /// <param name="bettingPoolId">Optional betting pool ID</param>
+    /// <returns>Play summary grouped by bet number</returns>
+    [HttpGet("plays/summary")]
+    public async Task<ActionResult<PlaySummaryResponseDto>> GetPlaysSummary(
+        [FromQuery] int drawId,
+        [FromQuery] DateTime date,
+        [FromQuery] string? zoneIds,
+        [FromQuery] int? bettingPoolId)
+    {
+        try
+        {
+            _logger.LogInformation(
+                "Getting plays summary for drawId={DrawId}, date={Date}, zoneIds={ZoneIds}, bettingPoolId={BettingPoolId}",
+                drawId, date, zoneIds, bettingPoolId);
+
+            // Parse zone IDs if provided
+            var zoneIdList = string.IsNullOrEmpty(zoneIds)
+                ? new List<int>()
+                : zoneIds.Split(',').Select(int.Parse).ToList();
+
+            // Get the draw name for reference
+            var draw = await _context.Draws.FindAsync(drawId);
+            if (draw == null)
+            {
+                return NotFound(new { message = "Sorteo no encontrado" });
+            }
+
+            // Build query for ticket lines
+            var query = _context.Set<TicketLine>()
+                .Include(tl => tl.Ticket)
+                    .ThenInclude(t => t!.BettingPool)
+                .Where(tl => tl.DrawId == drawId)
+                .Where(tl => tl.DrawDate.Date == date.Date)
+                .Where(tl => tl.Ticket != null && tl.Ticket.Status != "cancelled");
+
+            // Filter by zones if provided (zone is on BettingPool, not Ticket)
+            if (zoneIdList.Any())
+            {
+                query = query.Where(tl => tl.Ticket != null &&
+                    tl.Ticket.BettingPool != null &&
+                    zoneIdList.Contains(tl.Ticket.BettingPool.ZoneId));
+            }
+
+            // Filter by betting pool if provided
+            if (bettingPoolId.HasValue)
+            {
+                query = query.Where(tl => tl.Ticket != null && tl.Ticket.BettingPoolId == bettingPoolId.Value);
+            }
+
+            // Group by bet number and aggregate sales
+            var playData = await query
+                .GroupBy(tl => tl.BetNumber)
+                .Select(g => new
+                {
+                    BetNumber = g.Key,
+                    SalesAmount = g.Sum(tl => tl.BetAmount)
+                })
+                .ToListAsync();
+
+            // Default limit amount (TODO: integrate with limits system when available)
+            const decimal defaultLimit = 1000m;
+
+            // Transform to DTOs
+            var items = playData
+                .Select(p => new PlaySummaryDto
+                {
+                    BetNumber = p.BetNumber,
+                    SalesAmount = p.SalesAmount,
+                    LimitAmount = defaultLimit,
+                    AvailableAmount = Math.Max(0, defaultLimit - p.SalesAmount),
+                    Percentage = Math.Round((p.SalesAmount / defaultLimit) * 100, 1)
+                })
+                .OrderBy(p => p.BetNumber)
+                .ToList();
+
+            var response = new PlaySummaryResponseDto
+            {
+                Items = items,
+                TotalNumbers = items.Count,
+                TotalSales = items.Sum(i => i.SalesAmount),
+                DrawName = draw.DrawName,
+                Date = date
+            };
+
+            _logger.LogInformation(
+                "Returning {Count} play summaries with total sales {TotalSales}",
+                items.Count, response.TotalSales);
+
+            return Ok(response);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting plays summary");
+            return StatusCode(500, new { message = "Error al obtener el resumen de jugadas" });
+        }
     }
 }

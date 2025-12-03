@@ -52,8 +52,9 @@ export const MENU_ITEMS: MenuItem[] = [
       { id: 'plays', label: 'Jugadas', shortcut: 'J', path: '/tickets/plays' },
       { id: 'winning-plays', label: 'Jugadas ganadoras', shortcut: 'J', path: '/tickets/winners' },
       { id: 'board', label: 'Pizarra', shortcut: 'P', path: '/tickets/board' },
-      { id: 'imported-pool', label: 'Bote importado', shortcut: 'B', path: '/tickets/imported-pool' },
-      { id: 'exported-pool', label: 'Bote Exportado', shortcut: 'B', path: '/tickets/exported-pool' },
+      // TODO: Habilitar cuando se implementen los endpoints de bote
+      // { id: 'imported-pool', label: 'Bote importado', shortcut: 'B', path: '/tickets/imported-pool' },
+      // { id: 'exported-pool', label: 'Bote Exportado', shortcut: 'B', path: '/tickets/exported-pool' },
       { id: 'anomalies', label: 'Anomalías', shortcut: 'A', path: '/tickets/anomalies' }
     ]
   },

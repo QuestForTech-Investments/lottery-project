@@ -8,7 +8,9 @@ const FALL_TYPE_REVERSE_MAP: Record<string, string> = {
   'COLLECTION': '2',
   'DAILY': '3',
   'MONTHLY': '4',
-  'WEEKLY': '5'
+  'WEEKLY': '5',
+  'WEEKLY_ACCUMULATED': '5',    // ✅ Alias para SEMANAL CON ACUMULADO
+  'WEEKLY_NO_ACCUMULATED': '6'  // ✅ Alias para SEMANAL SIN ACUMULADO
 };
 
 const PRINT_MODE_REVERSE_MAP: Record<string, string> = {
@@ -25,6 +27,15 @@ const DISCOUNT_MODE_REVERSE_MAP: Record<string, string> = {
   'OFF': '1',
   'CASH': '2',
   'FREE_TICKET': '3'
+};
+
+// ✅ NEW: Payment Mode mapping (API -> Frontend)
+const PAYMENT_MODE_REVERSE_MAP: Record<string, string> = {
+  'BANCA': '1',
+  'ZONA': '2',
+  'ZONE': '2',      // Alias
+  'GRUPO': '3',
+  'GROUP': '3'      // Alias
 };
 
 /**
@@ -78,7 +89,10 @@ export const mapConfigToFormData = (configResponse: ConfigResponse): Partial<For
     footerText3: footer.footerLine3 || '',
     footerText4: footer.footerLine4 || '',
     showBranchInfo: footer.showBranchInfo !== undefined ? footer.showBranchInfo : true,
-    showDateTime: footer.showDateTime !== undefined ? footer.showDateTime : true
+    showDateTime: footer.showDateTime !== undefined ? footer.showDateTime : true,
+
+    // ✅ NEW: Payment mode / limit preference
+    limitPreference: config.paymentMode ? PAYMENT_MODE_REVERSE_MAP[config.paymentMode] || null : null
   };
 };
 
