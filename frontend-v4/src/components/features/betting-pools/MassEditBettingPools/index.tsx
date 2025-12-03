@@ -608,7 +608,9 @@ const MassEditBettingPools: React.FC = () => {
                     {/* Premios Sub-tab */}
                     {prizesSubTab === 0 && (
                       <Grid container spacing={3}>
-                        {betTypes.map(betType => (
+                        {betTypes
+                          .filter(bt => bt.prizeFields && bt.prizeFields.length > 0)
+                          .map(betType => (
                           <Grid item xs={12} sm={6} md={4} lg={3} key={betType.betTypeId}>
                             <Paper variant="outlined" sx={{ p: 2 }}>
                               <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 'bold', color: 'primary.main' }}>
@@ -676,7 +678,9 @@ const MassEditBettingPools: React.FC = () => {
                             <CircularProgress size={24} />
                           </Box>
                         ) : (
-                          betTypes.map(betType => (
+                          betTypes
+                            .filter(bt => bt.prizeFields && bt.prizeFields.length > 0)
+                            .map(betType => (
                             <Box key={betType.betTypeId} sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                               <Typography variant="body2" sx={{ minWidth: 200, fontWeight: 500 }}>
                                 {betType.betTypeName}
