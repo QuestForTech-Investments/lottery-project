@@ -8,6 +8,7 @@ public class Result
 {
     [Key]
     [Column("result_id")]
+    [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     public int ResultId { get; set; }
 
     [Column("draw_id")]

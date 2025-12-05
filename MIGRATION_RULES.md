@@ -149,10 +149,9 @@ Para cada nuevo módulo/componente:
    - Listar todos los handlers de eventos
 
 3. **IMPLEMENTACIÓN**
-   - V1 (Bootstrap) primero
-   - V2 (Material-UI) segundo
-   - Agregar rutas en ambos App.jsx
-   - Agregar menu items en menuItems.js
+   - Implementar en frontend-v4 (React + TypeScript + MUI)
+   - Agregar rutas en App.tsx
+   - Agregar menu items en menuItems.ts
 
 4. **TESTING**
    - Comparar lado a lado con Playwright

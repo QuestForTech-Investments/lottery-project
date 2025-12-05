@@ -1,8 +1,8 @@
-import { useState, useEffect, type ChangeEvent, type SyntheticEvent } from 'react';
+import { useState, useEffect, useCallback, type ChangeEvent, type SyntheticEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { getBettingPoolById, getBettingPoolConfig, updateBettingPool, updateBettingPoolConfig, handleBettingPoolError } from '@/services/bettingPoolService';
+import { getBettingPoolById, getBettingPoolConfig, updateBettingPool, updateBettingPoolConfig, handleBettingPoolError, getBettingPools } from '@/services/bettingPoolService';
 import { getAllZones } from '@/services/zoneService';
-import { savePrizeConfig, getAllBetTypesWithFields, getMergedPrizeData } from '@/services/prizeService';
+import { savePrizeConfig, getAllBetTypesWithFields, getMergedPrizeData, getBettingPoolPrizeConfigs } from '@/services/prizeService';
 import { saveBettingPoolSchedules, transformSchedulesToApiFormat, getBettingPoolSchedules, transformSchedulesToFormFormat } from '@/services/scheduleService';
 import { getBettingPoolDraws, saveBettingPoolDraws } from '@/services/sortitionService';
 import { getAllDraws } from '@/services/drawService';
@@ -26,6 +26,8 @@ import type {
   PrizeConfig,
   SavePrizeResult,
   PrizeData,
+  TemplateFields,
+  TemplateBettingPool,
 } from './types';
 import { DRAW_ORDER } from './constants';
 import { INITIAL_FORM_DATA } from './initialState';
@@ -63,6 +65,23 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
 
   // ⚡ DIRTY TRACKING: Store initial values to detect changes
   const [initialFormData, setInitialFormData] = useState<FormData | null>(null);
+
+  // ========================================
+  // 🆕 TEMPLATE COPY STATE
+  // ========================================
+  const [templateBettingPools, setTemplateBettingPools] = useState<TemplateBettingPool[]>([]);
+  const [loadingTemplates, setLoadingTemplates] = useState<boolean>(false);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
+  const [loadingTemplateData, setLoadingTemplateData] = useState<boolean>(false);
+  const [templateFields, setTemplateFields] = useState<TemplateFields>({
+    configuration: true,
+    footers: true,
+    prizesAndCommissions: true,
+    drawSchedules: true,
+    draws: true,
+    styles: true,
+    rules: true,
+  });
 
   /**
    * Load initial data (zones and bettingPool data)
@@ -1081,6 +1100,209 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
     setErrors({});
   };
 
+  // ========================================
+  // 🆕 TEMPLATE COPY FUNCTIONS
+  // ========================================
+
+  /**
+   * Load all betting pools for template selection
+   */
+  const loadTemplateBettingPools = useCallback(async (): Promise<void> => {
+    setLoadingTemplates(true);
+    try {
+      // Use large pageSize to get all betting pools
+      const response = await getBettingPools({ pageSize: 500 });
+      if (response && response.items) {
+        // Exclude current betting pool from template list
+        const filteredPools = response.items
+          .filter(pool => String(pool.bettingPoolId) !== id)
+          .map(pool => ({
+            bettingPoolId: pool.bettingPoolId,
+            bettingPoolName: pool.bettingPoolName,
+            bettingPoolCode: pool.bettingPoolCode,
+          }));
+        setTemplateBettingPools(filteredPools);
+        console.log(`[TEMPLATE] Loaded ${filteredPools.length} betting pools for template selection`);
+      }
+    } catch (error) {
+      console.error('[TEMPLATE] Error loading betting pools:', error);
+    } finally {
+      setLoadingTemplates(false);
+    }
+  }, [id]);
+
+  /**
+   * Load template betting pools on mount
+   */
+  useEffect(() => {
+    loadTemplateBettingPools();
+  }, [loadTemplateBettingPools]);
+
+  /**
+   * Handle template selection
+   */
+  const handleTemplateSelect = (templateId: number | null): void => {
+    setSelectedTemplateId(templateId);
+  };
+
+  /**
+   * Handle template field checkbox change
+   */
+  const handleTemplateFieldChange = (field: keyof TemplateFields, checked: boolean): void => {
+    setTemplateFields(prev => ({
+      ...prev,
+      [field]: checked,
+    }));
+  };
+
+  /**
+   * Apply template data to form
+   * Fetches data from selected template and copies to current form
+   */
+  const applyTemplate = async (): Promise<void> => {
+    if (!selectedTemplateId) {
+      console.warn('[TEMPLATE] No template selected');
+      return;
+    }
+
+    setLoadingTemplateData(true);
+    console.log(`[TEMPLATE] Applying template from betting pool ${selectedTemplateId}...`);
+
+    try {
+      // Fetch all data in parallel
+      const promises: Promise<unknown>[] = [];
+      const dataTypes: string[] = [];
+
+      // Always fetch config (needed for configuration, footers, styles)
+      promises.push(getBettingPoolConfig(String(selectedTemplateId)));
+      dataTypes.push('config');
+
+      // Fetch prizes if selected
+      if (templateFields.prizesAndCommissions) {
+        promises.push(getBettingPoolPrizeConfigs(String(selectedTemplateId)));
+        dataTypes.push('prizes');
+      }
+
+      // Fetch schedules if selected
+      if (templateFields.drawSchedules) {
+        promises.push(getBettingPoolSchedules(String(selectedTemplateId)));
+        dataTypes.push('schedules');
+      }
+
+      // Fetch draws if selected
+      if (templateFields.draws) {
+        promises.push(getBettingPoolDraws(String(selectedTemplateId)));
+        dataTypes.push('draws');
+      }
+
+      const results = await Promise.allSettled(promises);
+
+      // Process results
+      const updates: Partial<FormData> = {};
+
+      results.forEach((result, index) => {
+        const dataType = dataTypes[index];
+        if (result.status === 'fulfilled' && result.value) {
+          const response = result.value as ApiResponse<unknown>;
+
+          if (dataType === 'config' && response.success && response.data) {
+            const configData = response.data as ConfigResponse;
+
+            // Configuration fields
+            if (templateFields.configuration) {
+              const configUpdates = mapConfigToFormData(configData);
+              Object.assign(updates, configUpdates);
+              console.log('[TEMPLATE] Applied configuration fields');
+            }
+
+            // Footers fields
+            if (templateFields.footers && configData.footer) {
+              updates.autoFooter = configData.footer.autoFooter ?? false;
+              updates.footerText1 = configData.footer.footerLine1 ?? '';
+              updates.footerText2 = configData.footer.footerLine2 ?? '';
+              updates.footerText3 = configData.footer.footerLine3 ?? '';
+              updates.footerText4 = configData.footer.footerLine4 ?? '';
+              updates.showBranchInfo = configData.footer.showBranchInfo ?? true;
+              updates.showDateTime = configData.footer.showDateTime ?? true;
+              console.log('[TEMPLATE] Applied footer fields');
+            }
+
+            // Styles fields (from print config)
+            if (templateFields.styles && configData.printConfig) {
+              updates.printerType = configData.printConfig.printMode === 'GENERIC' ? '2' : '1';
+              updates.printEnabled = configData.printConfig.printEnabled ?? true;
+              updates.printTicketCopy = configData.printConfig.printTicketCopy ?? true;
+              updates.printRechargeReceipt = configData.printConfig.printRechargeReceipt ?? true;
+              updates.smsOnly = configData.printConfig.smsOnly ?? false;
+              console.log('[TEMPLATE] Applied styles fields');
+            }
+          }
+
+          // Process prizes
+          if (dataType === 'prizes' && response.success && response.data) {
+            const prizeConfigs = response.data as Array<{ betTypeCode: string; fieldCode: string; value: number }>;
+            prizeConfigs.forEach(config => {
+              const key = `general_${config.betTypeCode}_${config.fieldCode}`;
+              (updates as Record<string, unknown>)[key] = config.value;
+            });
+            console.log(`[TEMPLATE] Applied ${prizeConfigs.length} prize configurations`);
+          }
+
+          // Process schedules
+          if (dataType === 'schedules' && response.success && response.data) {
+            const schedulesData = response.data as Array<{ dayOfWeek: number; openingTime: string | null; closingTime: string | null }>;
+            if (schedulesData.length > 0) {
+              const scheduleUpdates = transformSchedulesToFormFormat(schedulesData) as Partial<FormData>;
+              Object.assign(updates, scheduleUpdates);
+              console.log('[TEMPLATE] Applied schedule fields');
+            }
+          }
+
+          // Process draws
+          if (dataType === 'draws' && response.success && response.data) {
+            const drawsData = response.data as DrawApiData[];
+            const enabledDraws = drawsData.filter(d => d.isActive);
+            const enabledDrawIds = enabledDraws.map(d => d.drawId);
+
+            const drawsWithClosing = drawsData
+              .filter(d => d.anticipatedClosingMinutes != null && d.anticipatedClosingMinutes > 0);
+            const drawIdsWithClosing = drawsWithClosing.map(d => d.drawId);
+            const anticipatedClosing = drawsWithClosing.length > 0
+              ? String(drawsWithClosing[0].anticipatedClosingMinutes)
+              : '';
+
+            updates.selectedDraws = enabledDrawIds;
+            updates.anticipatedClosing = anticipatedClosing;
+            updates.anticipatedClosingDraws = drawIdsWithClosing;
+            console.log(`[TEMPLATE] Applied ${enabledDrawIds.length} draws, ${drawIdsWithClosing.length} with anticipated closing`);
+          }
+        } else if (result.status === 'rejected') {
+          console.error(`[TEMPLATE] Error loading ${dataType}:`, result.reason);
+        }
+      });
+
+      // Apply all updates to form
+      setFormData(prev => ({
+        ...prev,
+        ...updates,
+      }) as FormData);
+
+      console.log('[TEMPLATE] Template applied successfully');
+      setSuccessMessage('✅ Plantilla aplicada correctamente');
+
+      // Auto-clear success message after 3 seconds
+      setTimeout(() => {
+        setSuccessMessage('');
+      }, 3000);
+
+    } catch (error) {
+      console.error('[TEMPLATE] Error applying template:', error);
+      setErrors({ submit: 'Error al aplicar la plantilla' });
+    } finally {
+      setLoadingTemplateData(false);
+    }
+  };
+
   return {
     formData,
     loading,
@@ -1103,6 +1325,15 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
     savePrizeConfigForSingleDraw, // 🔥 NEW: Save prize config for single draw (for ACTUALIZAR button)
     clearSuccessMessage, // 🔔 SNACKBAR: Clear success message
     clearErrors, // 🔔 SNACKBAR: Clear error message
+    // 🆕 TEMPLATE COPY
+    templateBettingPools,
+    loadingTemplates,
+    selectedTemplateId,
+    templateFields,
+    loadingTemplateData,
+    handleTemplateSelect,
+    handleTemplateFieldChange,
+    applyTemplate,
   };
 };
 

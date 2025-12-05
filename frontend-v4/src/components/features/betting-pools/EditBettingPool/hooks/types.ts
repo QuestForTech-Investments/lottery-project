@@ -118,6 +118,23 @@ export interface DrawValuesCache {
   [drawId: string]: Record<string, string | number>;
 }
 
+// Template copy types
+export interface TemplateFields {
+  configuration: boolean;
+  footers: boolean;
+  prizesAndCommissions: boolean;
+  drawSchedules: boolean;
+  draws: boolean;
+  styles: boolean;
+  rules: boolean;
+}
+
+export interface TemplateBettingPool {
+  bettingPoolId: number;
+  bettingPoolName: string;
+  bettingPoolCode?: string;
+}
+
 export interface SyntheticEventLike {
   target: {
     name: string;
@@ -149,6 +166,15 @@ export interface UseEditBettingPoolFormReturn {
   savePrizeConfigForSingleDraw: (drawId: string) => Promise<SavePrizeResult>;
   clearSuccessMessage: () => void;
   clearErrors: () => void;
+  // Template copy
+  templateBettingPools: TemplateBettingPool[];
+  loadingTemplates: boolean;
+  selectedTemplateId: number | null;
+  templateFields: TemplateFields;
+  loadingTemplateData: boolean;
+  handleTemplateSelect: (templateId: number | null) => void;
+  handleTemplateFieldChange: (field: keyof TemplateFields, checked: boolean) => void;
+  applyTemplate: () => Promise<void>;
 }
 
 // API Response interfaces

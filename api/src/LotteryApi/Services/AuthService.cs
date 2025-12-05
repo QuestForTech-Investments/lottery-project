@@ -2,6 +2,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using Microsoft.IdentityModel.Tokens;
+using LotteryApi.Data;
 using LotteryApi.DTOs;
 using LotteryApi.Models;
 using LotteryApi.Repositories;
@@ -12,14 +13,22 @@ public class AuthService : IAuthService
 {
     private readonly IUserRepository _userRepository;
     private readonly IConfiguration _configuration;
+    private readonly LotteryDbContext _context;
+    private readonly ILogger<AuthService> _logger;
 
-    public AuthService(IUserRepository userRepository, IConfiguration configuration)
+    public AuthService(
+        IUserRepository userRepository,
+        IConfiguration configuration,
+        LotteryDbContext context,
+        ILogger<AuthService> logger)
     {
         _userRepository = userRepository;
         _configuration = configuration;
+        _context = context;
+        _logger = logger;
     }
 
-    public async Task<LoginResponseDto?> LoginAsync(LoginDto loginDto)
+    public async Task<LoginResponseDto?> LoginAsync(LoginDto loginDto, LoginSessionContext? sessionContext = null)
     {
         var user = await _userRepository.GetByUsernameAsync(loginDto.Username);
 
@@ -32,6 +41,12 @@ public class AuthService : IAuthService
         user.LastLoginAt = DateTime.Now;
         await _userRepository.UpdateAsync(user);
 
+        // Log the session if context is provided
+        if (sessionContext != null)
+        {
+            await LogLoginSessionAsync(user, sessionContext);
+        }
+
         var token = GenerateJwtToken(user.UserId, user.Username, user.Role?.RoleName);
 
         return new LoginResponseDto
@@ -43,6 +58,52 @@ public class AuthService : IAuthService
             Role = user.Role?.RoleName,
             ExpiresAt = DateTime.Now.AddHours(12)
         };
+    }
+
+    private async Task LogLoginSessionAsync(User user, LoginSessionContext context)
+    {
+        try
+        {
+            // Get the user's betting pool and zone if available
+            int? bettingPoolId = null;
+            int? zoneId = null;
+
+            var userBettingPool = user.UserBettingPools?.FirstOrDefault();
+            if (userBettingPool != null)
+            {
+                bettingPoolId = userBettingPool.BettingPoolId;
+            }
+
+            var userZone = user.UserZones?.FirstOrDefault();
+            if (userZone != null)
+            {
+                zoneId = userZone.ZoneId;
+            }
+
+            var loginSession = new LoginSession
+            {
+                UserId = user.UserId,
+                BettingPoolId = bettingPoolId,
+                ZoneId = zoneId,
+                DeviceType = context.DeviceType,
+                IpAddress = context.IpAddress,
+                UserAgent = context.UserAgent?.Length > 500 ? context.UserAgent.Substring(0, 500) : context.UserAgent,
+                LoginAt = DateTime.UtcNow,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            _context.LoginSessions.Add(loginSession);
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Login session logged for user {UserId} ({Username}), device: {DeviceType}, IP: {IpAddress}",
+                user.UserId, user.Username, DeviceTypes.GetName(context.DeviceType), context.IpAddress);
+        }
+        catch (Exception ex)
+        {
+            // Don't fail login if session logging fails
+            _logger.LogError(ex, "Failed to log login session for user {UserId}", user.UserId);
+        }
     }
 
     public async Task<LoginResponseDto?> RegisterAsync(RegisterDto registerDto)

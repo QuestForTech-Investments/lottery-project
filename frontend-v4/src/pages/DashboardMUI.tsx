@@ -175,56 +175,52 @@ const DashboardMUI = () => {
 
           {/* Card 4: Bloqueo rápido */}
           <Grid item xs={12} md={6} lg={3}>
-            <Paper elevation={3} sx={{ overflow: 'hidden' }}>
-              <Box sx={{ bgcolor: 'grey.100', p: 2, borderBottom: 1, borderColor: 'divider' }}>
-                <Typography variant="subtitle1" fontWeight="bold">
-                  Bloqueo rápido de números
-                </Typography>
-              </Box>
+            <Paper elevation={3} sx={{ p: 3 }}>
+              <Typography variant="subtitle1" fontWeight="bold" align="center" sx={{ mb: 2 }}>
+                Bloqueo rápido de números
+              </Typography>
 
-              <Box sx={{ p: 2 }}>
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  <FormControl fullWidth size="small">
-                    <InputLabel>Sorteo</InputLabel>
-                    <Select
-                      value={selectedBloqueoSortition}
-                      onChange={(e) => setSelectedBloqueoSortition(e.target.value)}
-                      label="Sorteo"
-                    >
-                      <MenuItem value="">Seleccione</MenuItem>
-                      <MenuItem value="Todos">Todos</MenuItem>
-                      {sortitions.map((sortition) => (
-                        <MenuItem key={sortition} value={sortition}>{sortition}</MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>Sorteo</InputLabel>
+                  <Select
+                    value={selectedBloqueoSortition}
+                    onChange={(e) => setSelectedBloqueoSortition(e.target.value)}
+                    label="Sorteo"
+                  >
+                    <MenuItem value="">Seleccione</MenuItem>
+                    <MenuItem value="Todos">Todos</MenuItem>
+                    {sortitions.map((sortition) => (
+                      <MenuItem key={sortition} value={sortition}>{sortition}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
 
-                  <FormControl fullWidth size="small">
-                    <InputLabel>Tipo de jugada</InputLabel>
-                    <Select
-                      value={selectedPlayType}
-                      onChange={(e) => setSelectedPlayType(e.target.value)}
-                      label="Tipo de jugada"
-                    >
-                      <MenuItem value="">Seleccione uno...</MenuItem>
-                      {playTypes.map((type) => (
-                        <MenuItem key={type} value={type}>{type}</MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
+                <FormControl fullWidth size="small">
+                  <InputLabel>Tipo de jugada</InputLabel>
+                  <Select
+                    value={selectedPlayType}
+                    onChange={(e) => setSelectedPlayType(e.target.value)}
+                    label="Tipo de jugada"
+                  >
+                    <MenuItem value="">Seleccione uno...</MenuItem>
+                    {playTypes.map((type) => (
+                      <MenuItem key={type} value={type}>{type}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
 
-                  <TextField
-                    fullWidth
-                    size="small"
-                    label="Jugada"
-                    value={jugadaInput}
-                    onChange={(e) => setJugadaInput(e.target.value)}
-                  />
-                </Box>
+                <TextField
+                  fullWidth
+                  size="small"
+                  label="Jugada"
+                  value={jugadaInput}
+                  onChange={(e) => setJugadaInput(e.target.value)}
+                />
 
                 {/* Blocked numbers list */}
                 {blockedNumbers.length > 0 && (
-                  <Box sx={{ mt: 2, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
                     {blockedNumbers.map((num) => (
                       <Chip
                         key={num.id}
@@ -236,10 +232,8 @@ const DashboardMUI = () => {
                     ))}
                   </Box>
                 )}
-              </Box>
 
-              <Box sx={{ p: 2, bgcolor: 'grey.100', borderTop: 1, borderColor: 'divider' }}>
-                <Box sx={{ display: 'flex', gap: 1, justifyContent: 'space-around' }}>
+                <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
                   <Button
                     variant="contained"
                     size="small"

@@ -1,9 +1,12 @@
-import { useState, useMemo, useCallback, type ChangeEvent, type MouseEvent } from 'react';
+import { useState, useMemo, useCallback, useEffect, type ChangeEvent, type MouseEvent } from 'react';
 import type { SelectChangeEvent } from '@mui/material';
+import api from '../../../../../services/api';
 
-interface _Zone {
+interface Zone {
   id: number;
+  zoneId: number;
   name: string;
+  zoneName: string;
 }
 
 interface SessionLog {
@@ -18,6 +21,20 @@ interface SessionLog {
   ultimaApp: string;
 }
 
+interface IpCollision {
+  ipAddress: string;
+  sessions: SessionLog[];
+  sessionCount: number;
+}
+
+interface LoginSessionsResponse {
+  bancas: SessionLog[];
+  colisiones: IpCollision[];
+  totalRecords: number;
+  page: number;
+  pageSize: number;
+}
+
 interface FilteredData {
   bancas: SessionLog[];
   colisiones: SessionLog[];
@@ -29,79 +46,27 @@ type TabValue = 'bancas' | 'colision';
  * Custom hook for managing UserSessions state and logic
  */
 const useUserSessions = () => {
-  // Mock zones data - In a real app, this would come from an API
-  const zones = [
-    { id: 1, name: 'Zona 1' },
-    { id: 2, name: 'Zona 2' },
-    { id: 3, name: 'Zona 3' },
-    { id: 4, name: 'Zona 4' },
-  ];
+  /**
+   * Get today's date in YYYY-MM-DD format
+   */
+  const getTodayDate = useCallback(() => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }, []);
 
-  // Mock logs data for Bancas tab
-  const logsBancas = [
-    {
-      id: 1,
-      banca: 'Banca Central',
-      usuario: 'juan.perez',
-      primeraWeb: '2025-01-15 08:30:00',
-      ultimaWeb: '2025-01-15 18:45:00',
-      primeraCelular: '2025-01-15 09:00:00',
-      ultimaCelular: '2025-01-15 17:30:00',
-      primeraApp: '2025-01-15 08:45:00',
-      ultimaApp: '2025-01-15 18:00:00',
-    },
-    {
-      id: 2,
-      banca: 'Banca Norte',
-      usuario: 'maria.garcia',
-      primeraWeb: '2025-01-15 07:00:00',
-      ultimaWeb: '2025-01-15 19:00:00',
-      primeraCelular: '',
-      ultimaCelular: '',
-      primeraApp: '2025-01-15 07:15:00',
-      ultimaApp: '2025-01-15 18:30:00',
-    },
-    {
-      id: 3,
-      banca: 'Banca Sur',
-      usuario: 'carlos.lopez',
-      primeraWeb: '2025-01-15 10:00:00',
-      ultimaWeb: '2025-01-15 16:00:00',
-      primeraCelular: '2025-01-15 10:30:00',
-      ultimaCelular: '2025-01-15 15:45:00',
-      primeraApp: '',
-      ultimaApp: '',
-    },
-  ];
+  // State for zones (loaded from API)
+  const [zones, setZones] = useState<Zone[]>([]);
+  const [zonesLoading, setZonesLoading] = useState(true);
 
-  // Mock logs data for IP Collision tab
-  const logsColisiones = [
-    {
-      id: 1,
-      banca: 'Banca Central',
-      usuario: 'juan.perez',
-      primeraWeb: '2025-01-15 08:30:00',
-      ultimaWeb: '2025-01-15 18:45:00',
-      primeraCelular: '2025-01-15 09:00:00',
-      ultimaCelular: '2025-01-15 17:30:00',
-      primeraApp: '2025-01-15 08:45:00',
-      ultimaApp: '2025-01-15 18:00:00',
-    },
-    {
-      id: 2,
-      banca: 'Banca Este',
-      usuario: 'pedro.rodriguez',
-      primeraWeb: '2025-01-15 08:35:00',
-      ultimaWeb: '2025-01-15 18:40:00',
-      primeraCelular: '2025-01-15 09:05:00',
-      ultimaCelular: '2025-01-15 17:25:00',
-      primeraApp: '2025-01-15 08:50:00',
-      ultimaApp: '2025-01-15 17:55:00',
-    },
-  ];
+  // State for sessions data
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // State
-  const [selectedDate, setSelectedDate] = useState<string>('');
+  // State - Default to today's date
+  const [selectedDate, setSelectedDate] = useState<string>(getTodayDate());
   const [dateError, setDateError] = useState<string>('');
   const [selectedZones, setSelectedZones] = useState<number[]>([]);
   const [activeTab, setActiveTab] = useState<TabValue>('bancas');
@@ -110,17 +75,38 @@ const useUserSessions = () => {
   const [rowsPerPage, setRowsPerPage] = useState<number>(20);
   const [filteredData, setFilteredData] = useState<FilteredData>({ bancas: [], colisiones: [] });
   const [hasFiltered, setHasFiltered] = useState<boolean>(false);
+  const [totalRecords, setTotalRecords] = useState<number>(0);
+  const [initialLoadDone, setInitialLoadDone] = useState<boolean>(false);
 
   /**
-   * Get today's date in YYYY-MM-DD format
+   * Load zones on mount
    */
-  const getTodayDate = () => {
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
+  useEffect(() => {
+    const loadZones = async () => {
+      try {
+        setZonesLoading(true);
+        const response = await api.get<{ items?: Zone[] } | Zone[]>('/zones');
+        // Handle both paginated and array responses
+        const zonesList = Array.isArray(response) ? response : (response?.items || []);
+        // Normalize the zones data
+        const normalizedZones = zonesList.map((z: Zone) => ({
+          id: z.zoneId || z.id,
+          zoneId: z.zoneId || z.id,
+          name: z.zoneName || z.name,
+          zoneName: z.zoneName || z.name,
+        }));
+        setZones(normalizedZones);
+      } catch (err) {
+        console.error('Error loading zones:', err);
+        // Set empty array on error but don't block the UI
+        setZones([]);
+      } finally {
+        setZonesLoading(false);
+      }
+    };
+
+    loadZones();
+  }, []);
 
   /**
    * Handle date change with validation
@@ -130,7 +116,7 @@ const useUserSessions = () => {
     const today = getTodayDate();
 
     if (newDate > today) {
-      setDateError('La fecha no could be futura');
+      setDateError('La fecha no puede ser futura');
       setSelectedDate('');
     } else {
       setDateError('');
@@ -186,24 +172,74 @@ const useUserSessions = () => {
   }, []);
 
   /**
-   * Handle filter button click
+   * Fetch login sessions from API
    */
-  const handleFilter = useCallback(() => {
+  const fetchLoginSessions = useCallback(async () => {
     if (!selectedDate) {
       setDateError('Debe seleccionar una fecha');
       return;
     }
 
-    // In a real app, this would call an API with the filters
-    // For now, we'll just use the mock data
-    setFilteredData({
-      bancas: logsBancas,
-      colisiones: logsColisiones,
-    });
-    setHasFiltered(true);
-    setPage(0);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- mock data arrays are stable
-  }, [selectedDate]);
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Build query params
+      const params = new URLSearchParams();
+      params.append('date', selectedDate);
+      if (selectedZones.length > 0) {
+        params.append('zoneIds', selectedZones.join(','));
+      }
+      if (searchText) {
+        params.append('searchText', searchText);
+      }
+      params.append('page', String(page + 1)); // API uses 1-based pagination
+      params.append('pageSize', String(rowsPerPage));
+
+      const response = await api.get<LoginSessionsResponse>(`/login-sessions?${params.toString()}`);
+
+      if (response) {
+        // Flatten collision sessions for display
+        const collisionSessions: SessionLog[] = response.colisiones?.flatMap(c => c.sessions) || [];
+
+        setFilteredData({
+          bancas: response.bancas || [],
+          colisiones: collisionSessions,
+        });
+        setTotalRecords(response.totalRecords || 0);
+      } else {
+        setFilteredData({ bancas: [], colisiones: [] });
+        setTotalRecords(0);
+      }
+
+      setHasFiltered(true);
+    } catch (err) {
+      console.error('Error fetching login sessions:', err);
+      setError('Error al cargar las sesiones de inicio');
+      setFilteredData({ bancas: [], colisiones: [] });
+      setTotalRecords(0);
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedDate, selectedZones, searchText, page, rowsPerPage]);
+
+  /**
+   * Auto-load today's sessions on mount
+   */
+  useEffect(() => {
+    if (!initialLoadDone && selectedDate) {
+      setInitialLoadDone(true);
+      fetchLoginSessions();
+    }
+  }, [initialLoadDone, selectedDate, fetchLoginSessions]);
+
+  /**
+   * Handle filter button click
+   */
+  const handleFilter = useCallback(() => {
+    setPage(0); // Reset to first page
+    fetchLoginSessions();
+  }, [fetchLoginSessions]);
 
   /**
    * Get current tab data with search filter applied
@@ -223,17 +259,22 @@ const useUserSessions = () => {
 
   /**
    * Get paginated data for current tab
+   * Note: Since we're doing server-side pagination, this just returns the current data
    */
   const paginatedData = useMemo(() => {
-    const startIndex = page * rowsPerPage;
-    return currentTabData.slice(startIndex, startIndex + rowsPerPage);
-  }, [currentTabData, page, rowsPerPage]);
+    return currentTabData;
+  }, [currentTabData]);
 
   return {
     // Data
     zones,
     currentTabData: paginatedData,
-    totalRecords: currentTabData.length,
+    totalRecords,
+
+    // Loading states
+    loading,
+    zonesLoading,
+    error,
 
     // State
     selectedDate,

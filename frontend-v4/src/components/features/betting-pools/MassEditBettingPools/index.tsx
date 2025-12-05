@@ -150,7 +150,7 @@ const MassEditBettingPools: React.FC = () => {
     try {
       const [zonesData, drawsData, poolsData] = await Promise.all([
         api.get('/zones') as Promise<{ items?: Zone[] } | Zone[]>,
-        api.get('/draws') as Promise<{ items?: Draw[] } | Draw[]>,
+        api.get('/draws?pageSize=200') as Promise<{ items?: Draw[] } | Draw[]>,
         api.get('/betting-pools') as Promise<{ items?: BettingPool[] } | BettingPool[]>
       ]);
       setZones(Array.isArray(zonesData) ? zonesData : (zonesData?.items || []));
@@ -608,41 +608,45 @@ const MassEditBettingPools: React.FC = () => {
                     {/* Premios Sub-tab */}
                     {prizesSubTab === 0 && (
                       <Grid container spacing={3}>
-                        {betTypes
-                          .filter(bt => bt.prizeFields && bt.prizeFields.length > 0)
-                          .map(betType => (
+                        {betTypes.map(betType => (
                           <Grid item xs={12} sm={6} md={4} lg={3} key={betType.betTypeId}>
                             <Paper variant="outlined" sx={{ p: 2 }}>
                               <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 'bold', color: 'primary.main' }}>
                                 {betType.betTypeName}
                               </Typography>
-                              {(betType.prizeFields || []).map(field => {
-                                const fieldKey = `prize_${betType.betTypeCode}_${field.fieldCode}`;
-                                return (
-                                  <Box key={field.prizeTypeId} sx={{ mb: 1.5 }}>
-                                    <Typography variant="caption" color="text.secondary">
-                                      {field.fieldName}
-                                    </Typography>
-                                    <TextField
-                                      fullWidth
-                                      size="small"
-                                      type="text"
-                                      value={formData[fieldKey] || ''}
-                                      onChange={(e) => {
-                                        const val = e.target.value;
-                                        // Only allow numbers and decimal point
-                                        if (val === '' || /^[\d.]*$/.test(val)) {
-                                          handlePrizeFieldChange(betType.betTypeCode, field.fieldCode, val);
-                                        }
-                                      }}
-                                      placeholder={field.defaultMultiplier?.toString() || ''}
-                                      inputProps={{
-                                        style: { fontSize: '0.875rem' }
-                                      }}
-                                    />
-                                  </Box>
-                                );
-                              })}
+                              {betType.prizeFields && betType.prizeFields.length > 0 ? (
+                                betType.prizeFields.map(field => {
+                                  const fieldKey = `prize_${betType.betTypeCode}_${field.fieldCode}`;
+                                  return (
+                                    <Box key={field.prizeTypeId} sx={{ mb: 1.5 }}>
+                                      <Typography variant="caption" color="text.secondary">
+                                        {field.fieldName}
+                                      </Typography>
+                                      <TextField
+                                        fullWidth
+                                        size="small"
+                                        type="text"
+                                        value={formData[fieldKey] || ''}
+                                        onChange={(e) => {
+                                          const val = e.target.value;
+                                          // Only allow numbers and decimal point
+                                          if (val === '' || /^[\d.]*$/.test(val)) {
+                                            handlePrizeFieldChange(betType.betTypeCode, field.fieldCode, val);
+                                          }
+                                        }}
+                                        placeholder={field.defaultMultiplier?.toString() || ''}
+                                        inputProps={{
+                                          style: { fontSize: '0.875rem' }
+                                        }}
+                                      />
+                                    </Box>
+                                  );
+                                })
+                              ) : (
+                                <Typography variant="body2" color="text.secondary" align="center" sx={{ py: 1 }}>
+                                  Sin campos de premios configurados
+                                </Typography>
+                              )}
                             </Paper>
                           </Grid>
                         ))}
@@ -678,9 +682,7 @@ const MassEditBettingPools: React.FC = () => {
                             <CircularProgress size={24} />
                           </Box>
                         ) : (
-                          betTypes
-                            .filter(bt => bt.prizeFields && bt.prizeFields.length > 0)
-                            .map(betType => (
+                          betTypes.map(betType => (
                             <Box key={betType.betTypeId} sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                               <Typography variant="body2" sx={{ minWidth: 200, fontWeight: 500 }}>
                                 {betType.betTypeName}

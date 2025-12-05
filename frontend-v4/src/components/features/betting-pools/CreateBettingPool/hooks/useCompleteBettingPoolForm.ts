@@ -1,10 +1,10 @@
-import { useState, useEffect, type ChangeEvent, type SyntheticEvent } from 'react';
+import { useState, useEffect, useCallback, type ChangeEvent, type SyntheticEvent } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { createBettingPool, getNextBettingPoolCode, handleBettingPoolError } from '@/services/bettingPoolService';
+import { createBettingPool, getNextBettingPoolCode, handleBettingPoolError, getBettingPools, getBettingPoolById, getBettingPoolConfig, type BettingPool, type BettingPoolConfigData } from '@/services/bettingPoolService';
 import { getActiveZones } from '@/services/zoneService';
-import { savePrizeConfig, getAllBetTypesWithFields } from '@/services/prizeService';
-import { saveBettingPoolSchedules, transformSchedulesToApiFormat } from '@/services/scheduleService';
-import { saveBettingPoolDraws } from '@/services/sortitionService';
+import { savePrizeConfig, getAllBetTypesWithFields, getBettingPoolPrizeConfigs } from '@/services/prizeService';
+import { saveBettingPoolSchedules, transformSchedulesToApiFormat, getBettingPoolSchedules } from '@/services/scheduleService';
+import { saveBettingPoolDraws, getBettingPoolDraws } from '@/services/sortitionService';
 
 interface Zone {
   zoneId: number;
@@ -110,6 +110,26 @@ interface PrizeSaveResult {
   error?: string;
 }
 
+/**
+ * Template fields that can be copied from an existing betting pool
+ * Based on original Vue.js app "Copiar de banca plantilla" feature
+ */
+interface TemplateFields {
+  configuration: boolean;  // Configuración
+  footers: boolean;        // Pies de página
+  prizesAndCommissions: boolean;  // Premios & Comisiones
+  drawSchedules: boolean;  // Horarios de sorteos
+  draws: boolean;          // Sorteos
+  styles: boolean;         // Estilos
+  rules: boolean;          // Reglas (additional)
+}
+
+interface TemplateBettingPool {
+  bettingPoolId: number;
+  bettingPoolName: string;
+  bettingPoolCode?: string;
+}
+
 interface UseCompleteBettingPoolFormReturn {
   formData: FormData;
   loading: boolean;
@@ -122,6 +142,15 @@ interface UseCompleteBettingPoolFormReturn {
   handleTabChange: (event: SyntheticEvent, newValue: number) => void;
   handleSubmit: (e: React.FormEvent) => Promise<void>;
   copyScheduleToAll: (day: string) => void;
+  // Template copy functionality
+  templateBettingPools: TemplateBettingPool[];
+  loadingTemplates: boolean;
+  selectedTemplateId: number | null;
+  templateFields: TemplateFields;
+  loadingTemplateData: boolean;
+  handleTemplateSelect: (templateId: number | null) => void;
+  handleTemplateFieldChange: (field: keyof TemplateFields, checked: boolean) => void;
+  applyTemplate: () => Promise<void>;
 }
 
 /**
@@ -333,6 +362,21 @@ const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
   const [zones, setZones] = useState<Zone[]>([]);
   const [activeTab, setActiveTab] = useState<number>(0);
 
+  // Template copy state
+  const [templateBettingPools, setTemplateBettingPools] = useState<TemplateBettingPool[]>([]);
+  const [loadingTemplates, setLoadingTemplates] = useState<boolean>(false);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
+  const [loadingTemplateData, setLoadingTemplateData] = useState<boolean>(false);
+  const [templateFields, setTemplateFields] = useState<TemplateFields>({
+    configuration: true,
+    footers: true,
+    prizesAndCommissions: true,
+    drawSchedules: true,
+    draws: true,
+    styles: true,
+    rules: true,
+  });
+
   /**
    * Load initial data
    */
@@ -450,6 +494,220 @@ const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
       sabadoInicio: inicio,
       sabadoFin: fin,
     }));
+  };
+
+  /**
+   * Load all betting pools for template selection
+   */
+  const loadTemplateBettingPools = useCallback(async (): Promise<void> => {
+    try {
+      setLoadingTemplates(true);
+      const response = await getBettingPools({ pageSize: 1000 });
+      if (response && response.items) {
+        const pools: TemplateBettingPool[] = response.items.map((pool: BettingPool) => ({
+          bettingPoolId: pool.bettingPoolId,
+          bettingPoolName: pool.bettingPoolName,
+          bettingPoolCode: pool.bettingPoolCode || pool.branchCode,
+        }));
+        setTemplateBettingPools(pools);
+      }
+    } catch (error) {
+      console.error('Error loading template betting pools:', error);
+    } finally {
+      setLoadingTemplates(false);
+    }
+  }, []);
+
+  // Load template betting pools on mount
+  useEffect(() => {
+    loadTemplateBettingPools();
+  }, [loadTemplateBettingPools]);
+
+  /**
+   * Handle template betting pool selection
+   */
+  const handleTemplateSelect = (templateId: number | null): void => {
+    setSelectedTemplateId(templateId);
+  };
+
+  /**
+   * Handle template field checkbox change
+   */
+  const handleTemplateFieldChange = (field: keyof TemplateFields, checked: boolean): void => {
+    setTemplateFields(prev => ({
+      ...prev,
+      [field]: checked,
+    }));
+  };
+
+  /**
+   * Apply template: Copy selected fields from template betting pool to form
+   */
+  const applyTemplate = async (): Promise<void> => {
+    if (!selectedTemplateId) return;
+
+    try {
+      setLoadingTemplateData(true);
+
+      // Fetch all necessary data from the template betting pool
+      const [basicDataResult, configResult, schedulesResult, drawsResult, prizesResult] = await Promise.allSettled([
+        getBettingPoolById(selectedTemplateId),
+        getBettingPoolConfig(selectedTemplateId),
+        getBettingPoolSchedules(selectedTemplateId),
+        getBettingPoolDraws(selectedTemplateId),
+        getBettingPoolPrizeConfigs(selectedTemplateId),
+      ]);
+
+      // Build updates object based on selected fields
+      const updates: Partial<FormData> = {};
+
+      // Process Configuration fields
+      if (templateFields.configuration && configResult.status === 'fulfilled') {
+        const configData = (configResult.value as { success: boolean; data?: BettingPoolConfigData })?.data;
+        if (configData) {
+          // Map config values
+          if (configData.config) {
+            const fallTypeMap: Record<string, string> = { 'OFF': '1', 'COBRO': '2', 'DIARIA': '3', 'MENSUAL': '4', 'SEMANAL': '5' };
+            const printModeMap: Record<string, string> = { 'DRIVER': '1', 'GENERICO': '2' };
+            const discountProviderMap: Record<string, string> = { 'GRUPO': '1', 'RIFERO': '2' };
+            const discountModeMap: Record<string, string> = { 'OFF': '1', 'EFECTIVO': '2', 'TICKET_GRATIS': '3' };
+
+            updates.fallType = fallTypeMap[configData.config.fallType || 'OFF'] || '1';
+            updates.printerType = printModeMap[configData.printConfig?.printMode || 'DRIVER'] || '1';
+            updates.discountProvider = discountProviderMap[configData.discountConfig?.discountProvider || 'RIFERO'] || '2';
+            updates.discountMode = discountModeMap[configData.discountConfig?.discountMode || 'OFF'] || '1';
+
+            updates.deactivationBalance = configData.config.deactivationBalance?.toString() || '';
+            updates.dailySaleLimit = configData.config.dailySaleLimit?.toString() || '';
+            updates.todayBalanceLimit = configData.config.dailyBalanceLimit?.toString() || '';
+            updates.temporaryAdditionalBalance = configData.config.temporaryAdditionalBalance?.toString() || '';
+            updates.enableTemporaryBalance = configData.config.enableTemporaryBalance || false;
+            updates.winningTicketsControl = configData.config.controlWinningTickets || false;
+            updates.allowPassPot = configData.config.allowJackpot !== false;
+            updates.minutesToCancelTicket = configData.config.cancelMinutes?.toString() || '30';
+            updates.ticketsToCancelPerDay = configData.config.dailyCancelTickets?.toString() || '';
+            updates.maximumCancelTicketAmount = configData.config.maxCancelAmount?.toString() || '';
+            updates.maxTicketAmount = configData.config.maxTicketAmount?.toString() || '';
+            updates.dailyPhoneRechargeLimit = configData.config.maxDailyRecharge?.toString() || '';
+            updates.enableRecharges = configData.config.enableRecharges !== false;
+            updates.allowPasswordChange = configData.config.allowPasswordChange !== false;
+          }
+
+          // Print config
+          if (configData.printConfig) {
+            updates.printTickets = configData.printConfig.printEnabled !== false;
+            updates.printTicketCopy = configData.printConfig.printTicketCopy !== false;
+            updates.printRechargeReceipt = configData.printConfig.printRechargeReceipt !== false;
+            updates.smsOnly = configData.printConfig.smsOnly || false;
+          }
+        }
+      }
+
+      // Process Footers fields
+      if (templateFields.footers && configResult.status === 'fulfilled') {
+        const configData = (configResult.value as { success: boolean; data?: BettingPoolConfigData })?.data;
+        if (configData?.footer) {
+          updates.autoFooter = configData.footer.autoFooter || false;
+          updates.footerText1 = configData.footer.footerLine1 || '';
+          updates.footerText2 = configData.footer.footerLine2 || '';
+          updates.footerText3 = configData.footer.footerLine3 || '';
+          updates.footerText4 = configData.footer.footerLine4 || '';
+          updates.showBranchInfo = configData.footer.showBranchInfo !== false;
+          updates.showDateTime = configData.footer.showDateTime !== false;
+        }
+      }
+
+      // Process Draw Schedules
+      if (templateFields.drawSchedules && schedulesResult.status === 'fulfilled') {
+        const schedulesData = schedulesResult.value as { success: boolean; data?: Array<{ dayOfWeek: number; openTime: string; closeTime: string }> };
+        if (schedulesData.success && schedulesData.data) {
+          const dayMap: Record<number, string> = {
+            0: 'domingo',
+            1: 'lunes',
+            2: 'martes',
+            3: 'miercoles',
+            4: 'jueves',
+            5: 'viernes',
+            6: 'sabado',
+          };
+
+          schedulesData.data.forEach(schedule => {
+            const dayName = dayMap[schedule.dayOfWeek];
+            if (dayName) {
+              (updates as Record<string, string | boolean | number | number[] | AutoExpense[] | null>)[`${dayName}Inicio`] = schedule.openTime || '12:00 AM';
+              (updates as Record<string, string | boolean | number | number[] | AutoExpense[] | null>)[`${dayName}Fin`] = schedule.closeTime || '11:59 PM';
+            }
+          });
+        }
+      }
+
+      // Process Draws (sorteos)
+      if (templateFields.draws && drawsResult.status === 'fulfilled') {
+        const drawsData = drawsResult.value as { success: boolean; data?: Array<{ drawId: number; isActive: boolean; anticipatedClosingMinutes?: number | null }> };
+        if (drawsData.success && drawsData.data) {
+          const selectedDrawIds = drawsData.data
+            .filter(d => d.isActive)
+            .map(d => d.drawId);
+          updates.selectedDraws = selectedDrawIds;
+
+          // Get anticipated closing draws
+          const anticipatedDraws = drawsData.data
+            .filter(d => d.isActive && d.anticipatedClosingMinutes)
+            .map(d => d.drawId);
+          updates.anticipatedClosingDraws = anticipatedDraws;
+
+          // Get anticipated closing value (use the first one found)
+          const firstWithAnticipated = drawsData.data.find(d => d.anticipatedClosingMinutes);
+          if (firstWithAnticipated?.anticipatedClosingMinutes) {
+            updates.anticipatedClosing = firstWithAnticipated.anticipatedClosingMinutes.toString();
+          }
+        }
+      }
+
+      // Process Prizes & Commissions
+      if (templateFields.prizesAndCommissions && prizesResult.status === 'fulfilled') {
+        const prizesData = prizesResult.value as Array<{ prizeTypeId: number; fieldCode: string; value: number; betTypeCode?: string }>;
+        if (prizesData && Array.isArray(prizesData)) {
+          // Map prize configs to form fields
+          prizesData.forEach(prize => {
+            if (prize.betTypeCode && prize.fieldCode) {
+              const fieldKey = `general_${prize.betTypeCode}_${prize.fieldCode}`;
+              (updates as Record<string, string | boolean | number | number[] | AutoExpense[] | null>)[fieldKey] = prize.value;
+            }
+          });
+        }
+      }
+
+      // Process Styles
+      if (templateFields.styles && basicDataResult.status === 'fulfilled') {
+        // Styles might come from basic data or a separate endpoint
+        // For now, we'll check if there are style fields in the basic data
+        const basicData = (basicDataResult.value as { success: boolean; data?: Record<string, unknown> })?.data;
+        if (basicData) {
+          if (basicData.sellScreenStyles) {
+            updates.sellScreenStyles = basicData.sellScreenStyles as string;
+          }
+          if (basicData.ticketPrintStyles) {
+            updates.ticketPrintStyles = basicData.ticketPrintStyles as string;
+          }
+        }
+      }
+
+      // Apply all updates to form data
+      setFormData(prev => ({
+        ...prev,
+        ...updates,
+      }));
+
+      console.log('[TEMPLATE] Applied template data from betting pool:', selectedTemplateId);
+      console.log('[TEMPLATE] Fields updated:', Object.keys(updates));
+
+    } catch (error) {
+      console.error('Error applying template:', error);
+      setErrors({ submit: 'Error al copiar datos de la plantilla' });
+    } finally {
+      setLoadingTemplateData(false);
+    }
   };
 
   /**
@@ -902,6 +1160,15 @@ const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
     handleTabChange,
     handleSubmit,
     copyScheduleToAll,
+    // Template copy functionality
+    templateBettingPools,
+    loadingTemplates,
+    selectedTemplateId,
+    templateFields,
+    loadingTemplateData,
+    handleTemplateSelect,
+    handleTemplateFieldChange,
+    applyTemplate,
   };
 };
 

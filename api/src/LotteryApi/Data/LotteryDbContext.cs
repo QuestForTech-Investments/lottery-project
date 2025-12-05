@@ -67,6 +67,9 @@ public class LotteryDbContext : DbContext
     public DbSet<BancaPrizeConfig> BancaPrizeConfigs { get; set; }
     public DbSet<DrawPrizeConfig> DrawPrizeConfigs { get; set; }
 
+    // Login Sessions (Audit)
+    public DbSet<LoginSession> LoginSessions { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -102,6 +105,10 @@ public class LotteryDbContext : DbContext
 
         modelBuilder.Entity<TicketLine>()
             .ToTable(tb => tb.HasTrigger("trg_update_ticket_lines"))
+            .ToTable(tb => tb.UseSqlOutputClause(false));
+
+        modelBuilder.Entity<LoginSession>()
+            .ToTable(tb => tb.HasTrigger("trg_update_login_sessions"))
             .ToTable(tb => tb.UseSqlOutputClause(false));
     }
 

@@ -24,6 +24,9 @@ import {
   TablePagination,
   Chip,
   OutlinedInput,
+  CircularProgress,
+  Alert,
+  Skeleton,
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -41,6 +44,9 @@ const UserSessionsMUI = () => {
     zones,
     currentTabData,
     totalRecords,
+    loading,
+    zonesLoading,
+    error,
     selectedDate,
     dateError,
     selectedZones,
@@ -103,6 +109,7 @@ const UserSessionsMUI = () => {
                   multiple
                   value={selectedZones}
                   onChange={handleZoneChange}
+                  disabled={zonesLoading}
                   input={<OutlinedInput label="Zonas" />}
                   renderValue={(selected) => (
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
@@ -119,11 +126,20 @@ const UserSessionsMUI = () => {
                     </Box>
                   )}
                 >
-                  {zones.map((zone) => (
-                    <MenuItem key={zone.id} value={zone.id}>
-                      {zone.name}
+                  {zonesLoading ? (
+                    <MenuItem disabled>
+                      <CircularProgress size={20} sx={{ mr: 1 }} />
+                      Cargando zonas...
                     </MenuItem>
-                  ))}
+                  ) : zones.length === 0 ? (
+                    <MenuItem disabled>No hay zonas disponibles</MenuItem>
+                  ) : (
+                    zones.map((zone) => (
+                      <MenuItem key={zone.id} value={zone.id}>
+                        {zone.name}
+                      </MenuItem>
+                    ))
+                  )}
                 </Select>
               </FormControl>
             </Grid>
@@ -132,15 +148,25 @@ const UserSessionsMUI = () => {
               <Button
                 fullWidth
                 variant="contained"
-                startIcon={<FilterListIcon />}
+                startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <FilterListIcon />}
                 onClick={handleFilter}
+                disabled={loading}
                 sx={{ height: '56px' }}
               >
-                Filtrar
+                {loading ? 'Cargando...' : 'Filtrar'}
               </Button>
             </Grid>
           </Grid>
         </Box>
+
+        {/* Error Alert */}
+        {error && (
+          <Box sx={{ p: 2 }}>
+            <Alert severity="error" onClose={() => {}}>
+              {error}
+            </Alert>
+          </Box>
+        )}
 
         {/* Show content only if filter has been applied */}
         {hasFiltered && (
@@ -179,37 +205,48 @@ const UserSessionsMUI = () => {
 
             {/* Table */}
             <TableContainer>
-              <Table>
+              <Table size="small">
                 <TableHead>
-                  <TableRow>
-                    <TableCell>
-                      <strong>Banca</strong>
+                  <TableRow sx={{ bgcolor: 'grey.100' }}>
+                    <TableCell sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>
+                      Banca
                     </TableCell>
-                    <TableCell>
-                      <strong>Usuario</strong>
+                    <TableCell sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>
+                      Usuario
                     </TableCell>
-                    <TableCell align="center">
-                      <strong>Primera sesión (Web)</strong>
+                    <TableCell align="center" sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>
+                      Primera sesión (Web)
                     </TableCell>
-                    <TableCell align="center">
-                      <strong>Última sesión (Web)</strong>
+                    <TableCell align="center" sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>
+                      Última sesión (Web)
                     </TableCell>
-                    <TableCell align="center">
-                      <strong>Primera sesión (Celular)</strong>
+                    <TableCell align="center" sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>
+                      Primera sesión (Celular)
                     </TableCell>
-                    <TableCell align="center">
-                      <strong>Última sesión (Celular)</strong>
+                    <TableCell align="center" sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>
+                      Última sesión (Celular)
                     </TableCell>
-                    <TableCell align="center">
-                      <strong>Primera sesión (App)</strong>
+                    <TableCell align="center" sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>
+                      Primera sesión (App)
                     </TableCell>
-                    <TableCell align="center">
-                      <strong>Última sesión (App)</strong>
+                    <TableCell align="center" sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>
+                      Última sesión (App)
                     </TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {currentTabData.length === 0 ? (
+                  {loading ? (
+                    // Loading skeleton rows
+                    [...Array(5)].map((_, index) => (
+                      <TableRow key={`skeleton-${index}`}>
+                        {[...Array(8)].map((_, cellIndex) => (
+                          <TableCell key={`skeleton-cell-${cellIndex}`}>
+                            <Skeleton variant="text" />
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    ))
+                  ) : currentTabData.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={8} align="center">
                         <Typography variant="body2" color="text.secondary" sx={{ py: 3 }}>
@@ -253,30 +290,37 @@ const UserSessionsMUI = () => {
               </Table>
             </TableContainer>
 
-            {/* Pagination */}
-            {currentTabData.length > 0 && (
-              <TablePagination
-                rowsPerPageOptions={[5, 10, 20, 50, 100]}
-                component="div"
-                count={totalRecords}
-                rowsPerPage={rowsPerPage}
-                page={page}
-                onPageChange={handleChangePage}
-                onRowsPerPageChange={handleChangeRowsPerPage}
-                labelRowsPerPage="Filas por página:"
-                labelDisplayedRows={({ from, to, count }) =>
-                  `${from}-${to} de ${count !== -1 ? count : `más de ${to}`}`
-                }
-              />
-            )}
+            {/* Entry count and Pagination */}
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', px: 2, py: 1, borderTop: 1, borderColor: 'divider' }}>
+              <Typography variant="body2" color="text.secondary">
+                Mostrando {currentTabData.length} de {totalRecords} entradas
+              </Typography>
+              {totalRecords > rowsPerPage && (
+                <TablePagination
+                  rowsPerPageOptions={[20, 50, 100]}
+                  component="div"
+                  count={totalRecords}
+                  rowsPerPage={rowsPerPage}
+                  page={page}
+                  onPageChange={handleChangePage}
+                  onRowsPerPageChange={handleChangeRowsPerPage}
+                  labelRowsPerPage="Por página:"
+                  labelDisplayedRows={({ from, to, count }) =>
+                    `${from}-${to} de ${count !== -1 ? count : `más de ${to}`}`
+                  }
+                  sx={{ '& .MuiTablePagination-toolbar': { minHeight: 40 } }}
+                />
+              )}
+            </Box>
           </>
         )}
 
         {/* Initial state - before filter is applied */}
-        {!hasFiltered && (
+        {!hasFiltered && !loading && (
           <Box sx={{ p: 4, textAlign: 'center' }}>
-            <Typography variant="body1" color="text.secondary">
-              Seleccione una fecha y aplique los filtros para ver los inicios de sesión
+            <CircularProgress size={40} />
+            <Typography variant="body1" color="text.secondary" sx={{ mt: 2 }}>
+              Cargando sesiones del día...
             </Typography>
           </Box>
         )}

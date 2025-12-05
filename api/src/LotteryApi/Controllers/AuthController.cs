@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using LotteryApi.DTOs;
+using LotteryApi.Models;
 using LotteryApi.Services;
 
 namespace LotteryApi.Controllers;
@@ -25,7 +26,15 @@ public class AuthController : ControllerBase
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> Login([FromBody] LoginDto loginDto)
     {
-        var result = await _authService.LoginAsync(loginDto);
+        // Capture session context for logging
+        var sessionContext = new LoginSessionContext
+        {
+            IpAddress = GetClientIpAddress(),
+            UserAgent = Request.Headers["User-Agent"].ToString(),
+            DeviceType = DetermineDeviceType(Request.Headers["User-Agent"].ToString())
+        };
+
+        var result = await _authService.LoginAsync(loginDto, sessionContext);
 
         if (result == null)
         {
@@ -33,6 +42,59 @@ public class AuthController : ControllerBase
         }
 
         return Ok(result);
+    }
+
+    /// <summary>
+    /// Get the client's IP address from the request
+    /// </summary>
+    private string? GetClientIpAddress()
+    {
+        // Check X-Forwarded-For header first (for proxied requests)
+        var forwardedFor = Request.Headers["X-Forwarded-For"].FirstOrDefault();
+        if (!string.IsNullOrEmpty(forwardedFor))
+        {
+            // Take the first IP in the list (original client)
+            return forwardedFor.Split(',').First().Trim();
+        }
+
+        // Check X-Real-IP header
+        var realIp = Request.Headers["X-Real-IP"].FirstOrDefault();
+        if (!string.IsNullOrEmpty(realIp))
+        {
+            return realIp;
+        }
+
+        // Fall back to RemoteIpAddress
+        return HttpContext.Connection.RemoteIpAddress?.ToString();
+    }
+
+    /// <summary>
+    /// Determine device type from User-Agent header
+    /// </summary>
+    private byte DetermineDeviceType(string? userAgent)
+    {
+        if (string.IsNullOrEmpty(userAgent))
+        {
+            return DeviceTypes.Web;
+        }
+
+        var ua = userAgent.ToLower();
+
+        // Check for mobile app (usually has custom app identifier)
+        if (ua.Contains("lotteryapp") || ua.Contains("lottery-app") || ua.Contains("okhttp"))
+        {
+            return DeviceTypes.App;
+        }
+
+        // Check for mobile browser
+        if (ua.Contains("mobile") || ua.Contains("android") || ua.Contains("iphone") ||
+            ua.Contains("ipad") || ua.Contains("ipod") || ua.Contains("windows phone"))
+        {
+            return DeviceTypes.MobileBrowser;
+        }
+
+        // Default to web
+        return DeviceTypes.Web;
     }
 
     /// <summary>

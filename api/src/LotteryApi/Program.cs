@@ -14,6 +14,7 @@ using LotteryApi.Data;
 using LotteryApi.Middleware;
 using LotteryApi.Repositories;
 using LotteryApi.Services;
+using LotteryApi.Services.ExternalResults;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -84,7 +85,11 @@ builder.Services.AddScoped<IPermissionRepository, PermissionRepository>();
 
 // Register Services
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<ILoginSessionService, LoginSessionService>();
 builder.Services.AddSingleton<ICacheService, MemoryCacheService>();
+
+// Register External Results Services (lottery results fetching and ticket processing)
+builder.Services.AddExternalResultsServices(builder.Configuration);
 
 // Register Memory Cache for performance
 builder.Services.AddMemoryCache();

@@ -1,6 +1,16 @@
 # CLAUDE.md - Lottery System Monorepo
 
-Sistema de lotería con 2 frontends (React) y API (.NET). Migración de Vue.js en curso.
+Sistema de lotería con frontend React (TypeScript) y API (.NET).
+
+---
+
+## 🚨 FRONTEND: frontend-v4
+
+**IMPORTANTE:** Todo el desarrollo de frontend se realiza en `frontend-v4`.
+
+```bash
+cd frontend-v4 && npm run dev  # Puerto 5173
+```
 
 ---
 
@@ -16,7 +26,7 @@ Sistema de lotería con 2 frontends (React) y API (.NET). Migración de Vue.js e
 ### Reglas Clave
 
 - ❌ NO usar español en nombres de variables/componentes/rutas
-- ❌ NO crear rutas sin conectarlas al menú (`menuItems.js`)
+- ❌ NO crear rutas sin conectarlas al menú (`menuItems.ts`)
 - ❌ NO modificar formularios sin revisar otros primero
 - ✅ Código en inglés, UI visible al usuario en español
 
@@ -67,11 +77,11 @@ placeholder="Buscar banca..."
 
 ### Proceso de Rutas (3 Pasos)
 
-```javascript
+```typescript
 // 1. Crear componente
-// 2. Agregar ruta en App.jsx
+// 2. Agregar ruta en App.tsx
 <Route path="/entities/list" element={<Component />} />
-// 3. Conectar en menuItems.js ⚠️ NO OLVIDAR
+// 3. Conectar en menuItems.ts ⚠️ NO OLVIDAR
 { path: '/entities/list', label: 'Lista' }
 ```
 
@@ -88,8 +98,7 @@ lottery-project/
 │   ├── MAINTAINABILITY_ANALYSIS.md # Análisis de código
 │   ├── API_ENDPOINTS_MAPPING.md   # Endpoints Vue.js original
 │   └── migration/                  # Documentación migración
-├── frontend-v1/           # React + Bootstrap (puerto 4200)
-├── frontend-v2/           # React + Material-UI (puerto 4000)
+├── frontend-v4/           # React + TypeScript + Material-UI (puerto 5173)
 ├── api/                   # .NET 8.0 API (puerto 5000)
 └── database/              # Scripts SQL
 ```
@@ -100,8 +109,7 @@ lottery-project/
 
 | Componente | Tecnología | Puerto |
 |------------|------------|--------|
-| Frontend V1 | React 18 + Vite + Bootstrap 5 | 4200 |
-| Frontend V2 | React 18 + Vite + Material-UI | 4000 |
+| Frontend | React 18 + Vite + TypeScript + Material-UI | 5173 |
 | API Backend | .NET 8.0 + EF Core 8.0 | 5000 |
 | Database | SQL Server | 1433 |
 
@@ -116,15 +124,11 @@ export DOTNET_ROOT=$HOME/.dotnet
 export PATH=$PATH:$HOME/.dotnet:$HOME/.dotnet/tools
 dotnet run --urls "http://0.0.0.0:5000"
 
-# Frontend V1
-cd frontend-v1 && npm install && npm run dev
-
-# Frontend V2
-cd frontend-v2 && npm install && npm run dev
+# Frontend
+cd frontend-v4 && npm install && npm run dev
 
 # Verificar puertos
-lsof -ti:4200  # V1
-lsof -ti:4000  # V2
+lsof -ti:5173  # Frontend
 lsof -ti:5000  # API
 ```
 
@@ -141,31 +145,18 @@ lsof -ti:5000  # API
 
 ---
 
-## 📂 ESTRUCTURA DE FRONTENDS
+## 📂 ESTRUCTURA DEL FRONTEND
 
-### V1 (Bootstrap)
 ```
-frontend-v1/src/
-├── components/
-│   ├── EditBanca.jsx      # ⚠️ 2,724 líneas - necesita refactor
-│   └── tabs/              # Tabs de edición
-├── services/
-│   ├── api.js             # Cliente HTTP (retorna data directamente)
-│   └── prizeFieldService.js
-└── constants/menuItems.js
-```
-
-### V2 (Material-UI)
-```
-frontend-v2/src/
+frontend-v4/src/
 ├── components/features/
 │   └── betting-pools/
 │       ├── EditBettingPool/
 │       │   └── hooks/     # Custom hooks para estado
 │       └── tabs/
 ├── services/
-│   └── prizeService.js    # Con transformación prizeTypes → prizeFields
-└── constants/menuItems.js
+│   └── prizeService.ts    # Con transformación prizeTypes → prizeFields
+└── constants/menuItems.ts
 ```
 
 ---
@@ -208,12 +199,12 @@ api/src/LotteryApi/
 |----------|------------|---------|
 | DB tables | snake_case | `betting_pool_prize_config` |
 | C# | PascalCase | `BettingPoolId` |
-| JS/React | camelCase/PascalCase | `getPrizeFields`, `PrizesTab.jsx` |
+| TypeScript/React | camelCase/PascalCase | `getPrizeFields`, `PrizesTab.tsx` |
 | CSS | kebab-case | `prize-field-input` |
 
 ### Transformación Prize Fields (IMPORTANTE)
 
-```javascript
+```typescript
 // API devuelve prizeTypes, frontend espera prizeFields
 // Transformar SIEMPRE en service layer:
 data.forEach(betType => {
@@ -225,14 +216,14 @@ data.forEach(betType => {
 
 ### API Response Pattern
 
-```javascript
+```typescript
 // api.get() retorna DATA directamente (no response.data)
 const data = await api.get('/endpoint');  // ← Ya es data
 ```
 
 ### useEffect Dependencies
 
-```javascript
+```typescript
 // ❌ Objeto como dependencia - re-render cada vez
 useEffect(() => {}, [selectedSorteo]);
 
@@ -255,7 +246,7 @@ useEffect(() => {}, [selectedSorteo?.sorteo_id]);
 
 ### Botones MUI Estándar
 
-```javascript
+```typescript
 sx={{
   bgcolor: '#51cbce',
   '&:hover': { bgcolor: '#45b8bb' },
@@ -268,9 +259,8 @@ sx={{
 
 ## 🚨 GOTCHAS
 
-1. **Puertos:** V2 usa 4002 si 4000 está ocupado (Vite auto-increment)
-2. **CORS:** API tiene CORS habilitado para todos los orígenes
-3. **Respuestas paginadas:** `response.items || response` para arrays
+1. **CORS:** API tiene CORS habilitado para todos los orígenes
+2. **Respuestas paginadas:** `response.items || response` para arrays
 
 ---
 
@@ -319,20 +309,8 @@ npx eslint . -c .eslintrc.custom.cjs
 ### Playwright (E2E)
 
 ```bash
-cd frontend-v2
+cd frontend-v4
 npx playwright install
-```
-
-### Selectores V1 (Bootstrap)
-```javascript
-'input[placeholder*="Usuario" i]'
-'button:has-text("INICIAR SESIÓN")'
-```
-
-### Selectores V2 (MUI)
-```javascript
-'input#username'
-'button[type="submit"]'
 ```
 
 ### API Testing
@@ -343,16 +321,5 @@ curl -H "Authorization: Bearer $TOKEN" http://localhost:5000/api/draws
 
 ---
 
-## ⚡ PROBLEMAS CONOCIDOS (Ver MAINTAINABILITY_ANALYSIS.md)
-
-| Problema | Severidad | Acción |
-|----------|-----------|--------|
-| EditBanca.jsx 2,724 líneas | 🔴 CRÍTICO | Dividir en sub-componentes |
-| 700+ console.log | 🔴 CRÍTICO | Remover o usar logger |
-| Token en localStorage | 🔴 CRÍTICO | Migrar a solución segura |
-| Sin tests | 🟠 ALTO | Agregar tests E2E |
-
----
-
-**Última actualización:** 2025-11-21
-**Versión:** 2.0 (reorganizado)
+**Última actualización:** 2025-12-04
+**Versión:** 3.0 (simplificado - solo frontend-v4)

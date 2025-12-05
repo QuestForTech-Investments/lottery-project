@@ -10,12 +10,24 @@ import {
   CircularProgress,
   Alert,
   Snackbar,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  FormGroup,
+  FormControlLabel,
+  Checkbox,
+  Divider,
+  Collapse,
 } from '@mui/material';
 import {
   Save as SaveIcon,
   ArrowBack as ArrowBackIcon,
   CheckCircle as CheckCircleIcon,
   Error as ErrorIcon,
+  ContentCopy as ContentCopyIcon,
+  ExpandMore as ExpandMoreIcon,
+  ExpandLess as ExpandLessIcon,
 } from '@mui/icons-material';
 import useEditBettingPoolForm from './hooks/useEditBettingPoolForm';
 
@@ -31,6 +43,7 @@ import FootersTab from '@components/features/betting-pools/CreateBettingPool/tab
 import PrizesTab from '@components/features/betting-pools/CreateBettingPool/tabs/PrizesTab';
 import SchedulesTab from '@components/features/betting-pools/CreateBettingPool/tabs/SchedulesTab';
 import DrawsTab from '@components/features/betting-pools/CreateBettingPool/tabs/DrawsTab';
+import UsersTab from '@components/features/betting-pools/CreateBettingPool/tabs/UsersTab';
 import StylesTab from '@components/features/betting-pools/CreateBettingPool/tabs/StylesTab';
 import AutoExpensesTab from '@components/features/betting-pools/CreateBettingPool/tabs/AutoExpensesTab';
 
@@ -41,6 +54,7 @@ import AutoExpensesTab from '@components/features/betting-pools/CreateBettingPoo
 const EditBettingPoolMUI: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams(); // Get bettingPoolId from URL
+  const [templateSectionOpen, setTemplateSectionOpen] = React.useState(false);
 
   const {
     formData,
@@ -63,6 +77,15 @@ const EditBettingPoolMUI: React.FC = () => {
     savePrizeConfigForSingleDraw, // 🔥 NEW: Save prize config for single draw
     clearSuccessMessage, // 🔔 SNACKBAR: Clear success message
     clearErrors, // 🔔 SNACKBAR: Clear error message
+    // 🆕 TEMPLATE COPY
+    templateBettingPools,
+    loadingTemplates,
+    selectedTemplateId,
+    templateFields,
+    loadingTemplateData,
+    handleTemplateSelect,
+    handleTemplateFieldChange,
+    applyTemplate,
   } = useEditBettingPoolForm();
 
   // Handlers for Snackbar close
@@ -136,6 +159,7 @@ const EditBettingPoolMUI: React.FC = () => {
               />
               <Tab label="Horarios" />
               <Tab label="Sorteos" />
+              <Tab label="Usuarios" />
               <Tab label="Estilos" />
               <Tab label="Gastos Automáticos" />
             </Tabs>
@@ -208,18 +232,191 @@ const EditBettingPoolMUI: React.FC = () => {
             )}
 
             {activeTab === 6 && (
+              <UsersTab
+                formData={formData as unknown as Parameters<typeof UsersTab>[0]['formData']}
+                handleChange={handleChange as unknown as Parameters<typeof UsersTab>[0]['handleChange']}
+                bettingPoolId={id ? parseInt(id) : undefined}
+              />
+            )}
+
+            {activeTab === 7 && (
               <StylesTab
                 formData={formData as unknown as Parameters<typeof StylesTab>[0]['formData']}
                 handleChange={handleChange as unknown as Parameters<typeof StylesTab>[0]['handleChange']}
               />
             )}
 
-            {activeTab === 7 && (
+            {activeTab === 8 && (
               <AutoExpensesTab
                 formData={formData as unknown as Parameters<typeof AutoExpensesTab>[0]['formData']}
                 handleChange={handleChange as unknown as Parameters<typeof AutoExpensesTab>[0]['handleChange']}
               />
             )}
+          </Box>
+
+          {/* Copy From Template Section - Bottom of form */}
+          <Box sx={{ p: 2, bgcolor: '#f8f9fa', borderTop: 1, borderColor: 'divider' }}>
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                cursor: 'pointer',
+                mb: templateSectionOpen ? 2 : 0,
+              }}
+              onClick={() => setTemplateSectionOpen(!templateSectionOpen)}
+            >
+              <ContentCopyIcon sx={{ mr: 1, color: '#667eea' }} />
+              <Typography variant="subtitle1" fontWeight="bold" sx={{ flexGrow: 1 }}>
+                Copiar de banca plantilla
+              </Typography>
+              {templateSectionOpen ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+            </Box>
+
+            <Collapse in={templateSectionOpen}>
+              <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 3 }}>
+                {/* Template Selection Dropdown */}
+                <Box sx={{ flex: 1, minWidth: 250 }}>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                    Banca
+                  </Typography>
+                  <FormControl fullWidth size="small">
+                    <InputLabel id="template-select-label">Seleccione</InputLabel>
+                    <Select
+                      labelId="template-select-label"
+                      value={selectedTemplateId || ''}
+                      onChange={(e) => handleTemplateSelect(e.target.value ? Number(e.target.value) : null)}
+                      label="Seleccione"
+                      disabled={loadingTemplates}
+                    >
+                      <MenuItem value="">
+                        <em>Seleccione</em>
+                      </MenuItem>
+                      {templateBettingPools.map((pool) => (
+                        <MenuItem key={pool.bettingPoolId} value={pool.bettingPoolId}>
+                          {pool.bettingPoolName} ({pool.bettingPoolCode})
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                  {loadingTemplates && (
+                    <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                      Cargando bancas...
+                    </Typography>
+                  )}
+                </Box>
+
+                {/* Template Fields Checkboxes */}
+                <Box sx={{ flex: 2 }}>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                    Campos de plantilla
+                  </Typography>
+                  <FormGroup row sx={{ flexWrap: 'wrap', gap: 0 }}>
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={templateFields.configuration}
+                          onChange={(e) => handleTemplateFieldChange('configuration', e.target.checked)}
+                          size="small"
+                          sx={{ color: '#667eea', '&.Mui-checked': { color: '#667eea' } }}
+                        />
+                      }
+                      label={<Typography variant="body2">CONFIGURACIÓN</Typography>}
+                      sx={{ minWidth: 150 }}
+                    />
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={templateFields.footers}
+                          onChange={(e) => handleTemplateFieldChange('footers', e.target.checked)}
+                          size="small"
+                          sx={{ color: '#667eea', '&.Mui-checked': { color: '#667eea' } }}
+                        />
+                      }
+                      label={<Typography variant="body2">PIES DE PÁGINA</Typography>}
+                      sx={{ minWidth: 150 }}
+                    />
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={templateFields.prizesAndCommissions}
+                          onChange={(e) => handleTemplateFieldChange('prizesAndCommissions', e.target.checked)}
+                          size="small"
+                          sx={{ color: '#667eea', '&.Mui-checked': { color: '#667eea' } }}
+                        />
+                      }
+                      label={<Typography variant="body2">PREMIOS & COMISIONES</Typography>}
+                      sx={{ minWidth: 180 }}
+                    />
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={templateFields.drawSchedules}
+                          onChange={(e) => handleTemplateFieldChange('drawSchedules', e.target.checked)}
+                          size="small"
+                          sx={{ color: '#667eea', '&.Mui-checked': { color: '#667eea' } }}
+                        />
+                      }
+                      label={<Typography variant="body2">HORARIOS DE SORTEOS</Typography>}
+                      sx={{ minWidth: 180 }}
+                    />
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={templateFields.draws}
+                          onChange={(e) => handleTemplateFieldChange('draws', e.target.checked)}
+                          size="small"
+                          sx={{ color: '#667eea', '&.Mui-checked': { color: '#667eea' } }}
+                        />
+                      }
+                      label={<Typography variant="body2">SORTEOS</Typography>}
+                      sx={{ minWidth: 120 }}
+                    />
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={templateFields.styles}
+                          onChange={(e) => handleTemplateFieldChange('styles', e.target.checked)}
+                          size="small"
+                          sx={{ color: '#667eea', '&.Mui-checked': { color: '#667eea' } }}
+                        />
+                      }
+                      label={<Typography variant="body2">ESTILOS</Typography>}
+                      sx={{ minWidth: 120 }}
+                    />
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={templateFields.rules}
+                          onChange={(e) => handleTemplateFieldChange('rules', e.target.checked)}
+                          size="small"
+                          sx={{ color: '#667eea', '&.Mui-checked': { color: '#667eea' } }}
+                        />
+                      }
+                      label={<Typography variant="body2">REGLAS</Typography>}
+                      sx={{ minWidth: 120 }}
+                    />
+                  </FormGroup>
+                </Box>
+
+                {/* Apply Template Button */}
+                <Box sx={{ display: 'flex', alignItems: 'flex-end' }}>
+                  <Button
+                    variant="contained"
+                    onClick={applyTemplate}
+                    disabled={!selectedTemplateId || loadingTemplateData}
+                    startIcon={loadingTemplateData ? <CircularProgress size={16} /> : <ContentCopyIcon />}
+                    sx={{
+                      bgcolor: '#667eea',
+                      '&:hover': { bgcolor: '#5a67d8' },
+                      textTransform: 'none',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {loadingTemplateData ? 'Copiando...' : 'Aplicar plantilla'}
+                  </Button>
+                </Box>
+              </Box>
+            </Collapse>
           </Box>
 
           {/* Action Buttons */}

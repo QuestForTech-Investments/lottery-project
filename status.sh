@@ -19,26 +19,14 @@ fi
 
 echo ""
 
-# V1
-V1_PID=$(lsof -ti:4200)
-if [ ! -z "$V1_PID" ]; then
-    echo "✅ Frontend V1        -> http://localhost:4200"
-    echo "   PID: $V1_PID"
-    echo "   Log: tail -f /tmp/lottery-v1.log"
+# Frontend
+FRONTEND_PID=$(lsof -ti:5173)
+if [ ! -z "$FRONTEND_PID" ]; then
+    echo "✅ Frontend           -> http://localhost:5173"
+    echo "   PID: $FRONTEND_PID"
+    echo "   Log: tail -f /tmp/lottery-frontend.log"
 else
-    echo "❌ Frontend V1        -> Detenido"
-fi
-
-echo ""
-
-# V2
-V2_PID=$(lsof -ti:4000)
-if [ ! -z "$V2_PID" ]; then
-    echo "✅ Frontend V2        -> http://localhost:4000"
-    echo "   PID: $V2_PID"
-    echo "   Log: tail -f /tmp/lottery-v2.log"
-else
-    echo "❌ Frontend V2        -> Detenido"
+    echo "❌ Frontend           -> Detenido"
 fi
 
 echo ""
@@ -48,16 +36,15 @@ echo ""
 # Verificar si hay algún servicio corriendo
 RUNNING=0
 [ ! -z "$API_PID" ] && RUNNING=$((RUNNING+1))
-[ ! -z "$V1_PID" ] && RUNNING=$((RUNNING+1))
-[ ! -z "$V2_PID" ] && RUNNING=$((RUNNING+1))
+[ ! -z "$FRONTEND_PID" ] && RUNNING=$((RUNNING+1))
 
 if [ $RUNNING -eq 0 ]; then
     echo "💡 Ningún servicio está corriendo"
     echo "   Ejecuta: ./start-all.sh para iniciar todos"
-elif [ $RUNNING -eq 3 ]; then
+elif [ $RUNNING -eq 2 ]; then
     echo "✨ Todos los servicios están corriendo correctamente"
 else
-    echo "⚠️  Solo $RUNNING de 3 servicios están corriendo"
+    echo "⚠️  Solo $RUNNING de 2 servicios están corriendo"
     echo "   Ejecuta: ./start-all.sh para iniciar todos"
 fi
 
