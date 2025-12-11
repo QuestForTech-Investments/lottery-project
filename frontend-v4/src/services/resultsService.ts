@@ -48,6 +48,8 @@ export interface DrawForResults {
   drawId: number
   drawName: string
   abbreviation: string
+  drawTime: string // Format: "HH:mm:ss" e.g., "10:00:00"
+  color?: string   // Draw display color (optional)
 }
 
 export interface ExternalResultDto {
@@ -165,10 +167,16 @@ export const getResultLogs = async (date?: string): Promise<ResultLogDto[]> => {
 }
 
 /**
- * Get available draws for results
+ * Get available draws for results, filtered by date's day of week
  */
-export const getDrawsForResults = async (): Promise<DrawForResults[]> => {
-  const draws = await api.get<DrawForResults[]>('/results/draws')
+export const getDrawsForResults = async (date?: string): Promise<DrawForResults[]> => {
+  const params = new URLSearchParams()
+  if (date) params.append('date', date)
+
+  const queryString = params.toString()
+  const endpoint = `/results/draws${queryString ? `?${queryString}` : ''}`
+
+  const draws = await api.get<DrawForResults[]>(endpoint)
   return draws || []
 }
 

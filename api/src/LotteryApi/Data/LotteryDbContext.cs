@@ -27,6 +27,7 @@ public class LotteryDbContext : DbContext
 
     // Results
     public DbSet<Result> Results { get; set; }
+    public DbSet<ResultLog> ResultLogs { get; set; }
 
     // User and Permissions
     public DbSet<Role> Roles { get; set; }

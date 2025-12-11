@@ -40,6 +40,7 @@ public class ResultsController : ControllerBase
         var query = _context.Results
             .Include(r => r.Draw)
             .Where(r => r.ResultDate.Date == targetDate.Date)
+            .Where(r => r.Draw != null && r.Draw.IsActive) // Only show results for active draws
             .AsQueryable();
 
         if (drawId.HasValue)
@@ -116,6 +117,14 @@ public class ResultsController : ControllerBase
     {
         var userId = GetCurrentUserId();
 
+        // Validate winning number format (prevent date-like patterns)
+        var validation = ValidateWinningNumber(dto.WinningNumber);
+        if (!validation.IsValid)
+        {
+            _logger.LogWarning("Invalid winning number rejected: {WinningNumber} - {Error}", dto.WinningNumber, validation.ErrorMessage);
+            return BadRequest(new { message = validation.ErrorMessage });
+        }
+
         // Check if draw exists
         var draw = await _context.Draws.FindAsync(dto.DrawId);
         if (draw == null)
@@ -176,6 +185,14 @@ public class ResultsController : ControllerBase
     public async Task<IActionResult> UpdateResult(int id, [FromBody] CreateResultDto dto)
     {
         var userId = GetCurrentUserId();
+
+        // Validate winning number format (prevent date-like patterns)
+        var validation = ValidateWinningNumber(dto.WinningNumber);
+        if (!validation.IsValid)
+        {
+            _logger.LogWarning("Invalid winning number rejected on update: {WinningNumber} - {Error}", dto.WinningNumber, validation.ErrorMessage);
+            return BadRequest(new { message = validation.ErrorMessage });
+        }
 
         var result = await _context.Results
             .Include(r => r.Draw)
@@ -269,41 +286,98 @@ public class ResultsController : ControllerBase
             query = query.Where(r => r.ResultDate.Date == date.Value.Date);
         }
 
-        var logs = await query
+        // Get results first
+        var results = await query
             .OrderByDescending(r => r.CreatedAt)
             .Take(100)
-            .Select(r => new ResultLogDto
-            {
-                DrawName = r.Draw != null ? r.Draw.DrawName : "Unknown",
-                Username = "System", // TODO: Join with users table
-                ResultDate = r.ResultDate,
-                CreatedAt = r.CreatedAt,
-                WinningNumbers = r.WinningNumber
-            })
             .ToListAsync();
+
+        // Get unique user IDs from results
+        var userIds = results
+            .Where(r => r.CreatedBy.HasValue)
+            .Select(r => r.CreatedBy!.Value)
+            .Distinct()
+            .ToList();
+
+        // Fetch usernames in one query
+        var usernames = await _context.Users
+            .Where(u => userIds.Contains(u.UserId))
+            .ToDictionaryAsync(u => u.UserId, u => u.Username ?? "System");
+
+        // Map to DTOs with real usernames
+        var logs = results.Select(r => new ResultLogDto
+        {
+            DrawName = r.Draw?.DrawName ?? "Unknown",
+            Username = r.CreatedBy.HasValue && usernames.TryGetValue(r.CreatedBy.Value, out var name) ? name : "System",
+            ResultDate = r.ResultDate,
+            CreatedAt = r.CreatedAt ?? DateTime.UtcNow,
+            WinningNumbers = r.WinningNumber
+        }).ToList();
 
         return Ok(logs);
     }
 
     /// <summary>
-    /// Get available draws for results
+    /// Get available draws for results, filtered by date
+    /// Shows draws whose scheduled time has passed for the specified date (for entering results)
+    /// For draws with UseWeeklySchedule=true, checks weekly schedule; otherwise uses DrawTime for all days
+    /// Uses America/Santo_Domingo timezone for time comparison (lottery business timezone)
     /// </summary>
     [HttpGet("draws")]
     [ProducesResponseType(typeof(List<object>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetDrawsForResults()
+    public async Task<IActionResult> GetDrawsForResults([FromQuery] DateTime? date)
     {
-        var draws = await _context.Draws
+        // Use lottery business timezone (America/Santo_Domingo) for time comparisons
+        var lotteryTimeZone = TimeZoneInfo.FindSystemTimeZoneById("America/Santo_Domingo");
+        var nowInLotteryTz = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, lotteryTimeZone);
+        var todayInLotteryTz = nowInLotteryTz.Date;
+
+        var targetDate = date ?? todayInLotteryTz;
+        var currentTime = nowInLotteryTz.TimeOfDay;
+        var isToday = targetDate.Date == todayInLotteryTz;
+        var dayOfWeekByte = (byte)targetDate.DayOfWeek; // 0=Sunday, 1=Monday, ..., 6=Saturday
+
+        _logger.LogInformation("Getting draws for date {Date}, dayOfWeek={DayOfWeek}, current time {Time} (America/Santo_Domingo), isToday={IsToday}",
+            targetDate.ToString("yyyy-MM-dd"), dayOfWeekByte, currentTime.ToString(@"hh\:mm\:ss"), isToday);
+
+        // Get all active draws, include weekly schedules for those that use them
+        var allDraws = await _context.Draws
+            .Include(d => d.WeeklySchedules)
             .Where(d => d.IsActive == true)
-            .OrderBy(d => d.DrawName)
+            .OrderBy(d => d.DrawTime)
+            .ThenBy(d => d.DrawName)
+            .ToListAsync();
+
+        _logger.LogInformation("Found {AllCount} total active draws", allDraws.Count);
+
+        // Filter by schedule:
+        // - If UseWeeklySchedule is true, check if draw has schedule for this day of week
+        // - If UseWeeklySchedule is false/null, draw runs every day (use DrawTime)
+        var scheduledDraws = allDraws
+            .Where(d =>
+                d.UseWeeklySchedule != true || // If not using weekly schedule, show every day
+                d.WeeklySchedules.Any(s => s.DayOfWeek == dayOfWeekByte && s.IsActive)) // Or if has active schedule for today
+            .ToList();
+
+        _logger.LogInformation("After day-of-week filter: {Count} draws", scheduledDraws.Count);
+
+        // Filter by time: for today, only show draws whose time has passed; for past dates, show all
+        var filteredDraws = scheduledDraws
+            .Where(d => !isToday || d.DrawTime <= currentTime)
             .Select(d => new
             {
                 d.DrawId,
                 d.DrawName,
-                d.Abbreviation
+                d.Abbreviation,
+                DrawTime = d.DrawTime.ToString(@"hh\:mm\:ss"),
+                Color = d.DisplayColor ?? "#37b9f9"
             })
-            .ToListAsync();
+            .ToList();
 
-        return Ok(draws);
+        _logger.LogInformation("After time filter: {Count} draws (isToday={IsToday}, currentTime={Time})",
+            filteredDraws.Count, isToday, currentTime.ToString(@"hh\:mm\:ss"));
+
+        return Ok(filteredDraws);
     }
 
     /// <summary>
@@ -399,10 +473,250 @@ public class ResultsController : ControllerBase
         return Ok(mappings);
     }
 
+    /// <summary>
+    /// Sync results from external source (scraped data from original app)
+    /// </summary>
+    [HttpPost("sync")]
+    [ProducesResponseType(typeof(SyncResultsResponseDto), StatusCodes.Status200OK)]
+    public async Task<IActionResult> SyncResults([FromBody] SyncResultsRequestDto request)
+    {
+        var userId = GetCurrentUserId();
+        var response = new SyncResultsResponseDto
+        {
+            TotalReceived = request.Results.Count,
+            Details = new List<SyncResultDetailDto>()
+        };
+
+        _logger.LogInformation("Sync request received with {Count} results for date {Date}",
+            request.Results.Count, request.Date.ToString("yyyy-MM-dd"));
+
+        // Get all active draws for matching
+        var draws = await _context.Draws
+            .Where(d => d.IsActive == true)
+            .ToListAsync();
+
+        // Create a dictionary for case-insensitive matching
+        var drawsByName = draws.ToDictionary(
+            d => d.DrawName.ToUpperInvariant(),
+            d => d,
+            StringComparer.OrdinalIgnoreCase);
+
+        foreach (var item in request.Results)
+        {
+            var detail = new SyncResultDetailDto { DrawName = item.Name };
+
+            try
+            {
+                // Find matching draw by name (case-insensitive)
+                var matchingDraw = FindMatchingDraw(draws, item.Name);
+
+                if (matchingDraw == null)
+                {
+                    detail.Status = "skipped";
+                    detail.Error = $"No matching draw found for '{item.Name}'";
+                    response.Skipped++;
+                    response.Details.Add(detail);
+                    continue;
+                }
+
+                response.Matched++;
+
+                // Build winning number from num1, num2, num3
+                var winningNumber = $"{item.Num1}{item.Num2}{item.Num3}".TrimEnd();
+                detail.NewValue = winningNumber;
+
+                // Check if result exists for this draw and date
+                var existingResult = await _context.Results
+                    .FirstOrDefaultAsync(r => r.DrawId == matchingDraw.DrawId &&
+                                              r.ResultDate.Date == request.Date.Date);
+
+                if (existingResult != null)
+                {
+                    detail.OldValue = existingResult.WinningNumber;
+
+                    // Only update if different
+                    if (existingResult.WinningNumber != winningNumber)
+                    {
+                        existingResult.WinningNumber = winningNumber;
+                        existingResult.UpdatedAt = DateTime.UtcNow;
+                        existingResult.UpdatedBy = userId;
+
+                        // Build additional number if provided
+                        if (!string.IsNullOrEmpty(item.Cash3) || !string.IsNullOrEmpty(item.Play4) || !string.IsNullOrEmpty(item.Pick5))
+                        {
+                            existingResult.AdditionalNumber = $"{item.Cash3 ?? ""}{item.Play4 ?? ""}{item.Pick5 ?? ""}";
+                        }
+
+                        detail.Status = "updated";
+                        response.Updated++;
+                        _logger.LogInformation("Updated result for {Draw}: {Old} -> {New}",
+                            matchingDraw.DrawName, detail.OldValue, winningNumber);
+                    }
+                    else
+                    {
+                        detail.Status = "unchanged";
+                        response.Skipped++;
+                    }
+                }
+                else
+                {
+                    // Create new result
+                    var newResult = new Result
+                    {
+                        DrawId = matchingDraw.DrawId,
+                        WinningNumber = winningNumber,
+                        ResultDate = request.Date,
+                        CreatedAt = DateTime.UtcNow,
+                        CreatedBy = userId
+                    };
+
+                    // Build additional number if provided
+                    if (!string.IsNullOrEmpty(item.Cash3) || !string.IsNullOrEmpty(item.Play4) || !string.IsNullOrEmpty(item.Pick5))
+                    {
+                        newResult.AdditionalNumber = $"{item.Cash3 ?? ""}{item.Play4 ?? ""}{item.Pick5 ?? ""}";
+                    }
+
+                    _context.Results.Add(newResult);
+                    detail.Status = "created";
+                    response.Created++;
+                    _logger.LogInformation("Created result for {Draw}: {Number}",
+                        matchingDraw.DrawName, winningNumber);
+                }
+
+                response.Details.Add(detail);
+            }
+            catch (Exception ex)
+            {
+                detail.Status = "error";
+                detail.Error = ex.Message;
+                response.Errors.Add($"{item.Name}: {ex.Message}");
+                response.Details.Add(detail);
+                _logger.LogError(ex, "Error syncing result for {Draw}", item.Name);
+            }
+        }
+
+        await _context.SaveChangesAsync();
+
+        response.Success = response.Errors.Count == 0;
+        response.Message = $"Sync completed: {response.Updated} updated, {response.Created} created, {response.Skipped} skipped";
+
+        _logger.LogInformation("Sync completed: {Message}", response.Message);
+
+        return Ok(response);
+    }
+
+    /// <summary>
+    /// Find a matching draw by name with fuzzy matching
+    /// </summary>
+    private Models.Draw? FindMatchingDraw(List<Models.Draw> draws, string name)
+    {
+        var upperName = name.ToUpperInvariant();
+
+        // Exact match first
+        var exact = draws.FirstOrDefault(d =>
+            d.DrawName.Equals(name, StringComparison.OrdinalIgnoreCase));
+        if (exact != null) return exact;
+
+        // Try contains match
+        var contains = draws.FirstOrDefault(d =>
+            d.DrawName.ToUpperInvariant().Contains(upperName) ||
+            upperName.Contains(d.DrawName.ToUpperInvariant()));
+        if (contains != null) return contains;
+
+        // Special mappings for common name variations
+        var mappings = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
+        {
+            { "King Lottery AM", new[] { "KING LOTTERY", "KING AM" } },
+            { "King Lottery PM", new[] { "KING PM" } },
+            { "LA PRIMERA", new[] { "PRIMERA" } },
+            { "LA PRIMERA 7PM", new[] { "PRIMERA 7PM", "PRIMERA PM" } },
+            { "LA SUERTE", new[] { "SUERTE" } },
+            { "LA SUERTE 6:00pm", new[] { "SUERTE 6PM", "SUERTE PM" } },
+            { "GANA MAS", new[] { "GANAMAS" } },
+            { "Anguila 10am", new[] { "ANGUILA AM", "ANGUILA 10" } },
+            { "Anguila 1pm", new[] { "ANGUILA 1PM", "ANGUILA PM" } },
+            { "Anguila 6PM", new[] { "ANGUILA NOCHE", "ANGUILA 6" } },
+            { "SUPER PALE TARDE", new[] { "SUPER PALE", "PALE TARDE" } },
+            { "SUPER PALE NY-FL AM", new[] { "PALE NY FL", "NY FL AM" } },
+            { "FL PICK2 AM", new[] { "FLORIDA PICK2", "FL PICK 2" } },
+            { "NEW YORK DAY", new[] { "NY DAY", "NEW YORK AM" } },
+            { "FLORIDA AM", new[] { "FL AM" } },
+            { "TEXAS DAY", new[] { "TX DAY" } },
+            { "TEXAS MORNING", new[] { "TX MORNING", "TX AM" } },
+            { "GEORGIA-MID AM", new[] { "GEORGIA AM", "GA AM" } },
+            { "NEW JERSEY AM", new[] { "NJ AM" } },
+            { "CONNECTICUT AM", new[] { "CT AM" } },
+            { "PENN MIDDAY", new[] { "PA MIDDAY", "PENN AM" } },
+            { "MARYLAND MIDDAY", new[] { "MD MIDDAY", "MARYLAND AM" } },
+            { "VIRGINIA AM", new[] { "VA AM" } },
+            { "DELAWARE AM", new[] { "DE AM" } },
+            { "SOUTH CAROLINA AM", new[] { "SC AM" } },
+            { "NORTH CAROLINA AM", new[] { "NC AM" } },
+            { "CHICAGO AM", new[] { "IL AM", "ILLINOIS AM" } },
+            { "CALIFORNIA AM", new[] { "CA AM" } },
+            { "MASS AM", new[] { "MA AM", "MASSACHUSETTS AM" } },
+            { "INDIANA MIDDAY", new[] { "IN MIDDAY", "INDIANA AM" } },
+            { "DIARIA 11AM", new[] { "DIARIA AM", "DIARIA 11" } },
+            { "DIARIA 3PM", new[] { "DIARIA PM", "DIARIA 3" } },
+        };
+
+        // Check if input matches any alias
+        foreach (var mapping in mappings)
+        {
+            if (upperName.Contains(mapping.Key.ToUpperInvariant()) ||
+                mapping.Value.Any(alias => upperName.Contains(alias.ToUpperInvariant())))
+            {
+                var match = draws.FirstOrDefault(d =>
+                    d.DrawName.Equals(mapping.Key, StringComparison.OrdinalIgnoreCase) ||
+                    d.DrawName.ToUpperInvariant().Contains(mapping.Key.ToUpperInvariant()));
+                if (match != null) return match;
+            }
+        }
+
+        return null;
+    }
+
     private int? GetCurrentUserId()
     {
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         return int.TryParse(userIdClaim, out var userId) ? userId : null;
+    }
+
+    /// <summary>
+    /// Validate winning number format to prevent date-like patterns (e.g., "202512" which looks like YYYYMM)
+    /// </summary>
+    private (bool IsValid, string? ErrorMessage) ValidateWinningNumber(string? winningNumber)
+    {
+        if (string.IsNullOrEmpty(winningNumber))
+        {
+            return (true, null); // Empty is valid (no result yet)
+        }
+
+        // Only allow digits
+        if (!System.Text.RegularExpressions.Regex.IsMatch(winningNumber, @"^\d+$"))
+        {
+            return (false, "Winning number must contain only digits");
+        }
+
+        // Check for YYYYMM patterns like "202512" (2025-12) - likely a date mistakenly entered
+        if (System.Text.RegularExpressions.Regex.IsMatch(winningNumber, @"^202[45]\d{2}$"))
+        {
+            return (false, $"Winning number '{winningNumber}' looks like a date (YYYYMM format). Please enter valid lottery numbers.");
+        }
+
+        // Check for MMYYYY patterns
+        if (System.Text.RegularExpressions.Regex.IsMatch(winningNumber, @"^\d{2}202[45]$"))
+        {
+            return (false, $"Winning number '{winningNumber}' looks like a date (MMYYYY format). Please enter valid lottery numbers.");
+        }
+
+        // Check for YYYYMMDD patterns
+        if (System.Text.RegularExpressions.Regex.IsMatch(winningNumber, @"^202[45](0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])$"))
+        {
+            return (false, $"Winning number '{winningNumber}' looks like a date (YYYYMMDD format). Please enter valid lottery numbers.");
+        }
+
+        return (true, null);
     }
 
     private static ResultDto MapToDto(Result result)

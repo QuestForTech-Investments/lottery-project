@@ -55,5 +55,8 @@ public class Result
     [ForeignKey("DrawId")]
     public virtual Draw? Draw { get; set; }
 
+    [ForeignKey("CreatedBy")]
+    public virtual User? CreatedByUser { get; set; }
+
     public virtual ICollection<Prize> Prizes { get; set; } = new List<Prize>();
 }

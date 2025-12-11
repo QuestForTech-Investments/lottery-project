@@ -15,38 +15,64 @@ public static class ExternalResultsServiceExtensions
         // Register settings
         services.Configure<ExternalResultsSettings>(
             configuration.GetSection(ExternalResultsSettings.SectionName));
-        services.Configure<UsaLotterySettings>(
-            configuration.GetSection(UsaLotterySettings.SectionName));
-        services.Configure<DominicanLotterySettings>(
-            configuration.GetSection(DominicanLotterySettings.SectionName));
-        services.Configure<UsaLotteryScraperSettings>(
-            configuration.GetSection(UsaLotteryScraperSettings.SectionName));
 
-        // Register HTTP clients for providers
-        services.AddHttpClient<UsaLotteryProvider>();
-        services.AddHttpClient<DominicanLotteryProvider>();
-        services.AddHttpClient<UsaLotteryScraperProvider>();
+        // Get scraper settings with environment variable overrides
+        var scraperSettings = ExternalScraperSettings.FromConfiguration(configuration);
 
-        // Register providers
-        services.AddScoped<ILotteryResultProvider, UsaLotteryProvider>();
-        services.AddScoped<ILotteryResultProvider, DominicanLotteryProvider>();
-        services.AddScoped<ILotteryResultProvider, UsaLotteryScraperProvider>();
+        // Register settings as singleton for injection
+        services.AddSingleton(Microsoft.Extensions.Options.Options.Create(scraperSettings));
+
+        // Register External Scraper Provider with typed HttpClient
+        services.AddHttpClient<ExternalScraperProvider>(client =>
+        {
+            client.BaseAddress = new Uri(scraperSettings.BaseUrl);
+            client.Timeout = TimeSpan.FromSeconds(scraperSettings.TimeoutSeconds);
+            client.DefaultRequestHeaders.Add("Accept", "application/json");
+        });
+
+        // Register as ILotteryResultProvider
+        services.AddSingleton<ILotteryResultProvider>(sp =>
+            sp.GetRequiredService<ExternalScraperProvider>());
 
         // Register main service
         services.AddScoped<IExternalResultsService, ExternalResultsService>();
 
         // Register background worker based on configuration
-        var settings = configuration.GetSection(ExternalResultsSettings.SectionName).Get<ExternalResultsSettings>();
+        var settings = configuration
+            .GetSection(ExternalResultsSettings.SectionName)
+            .Get<ExternalResultsSettings>();
 
         if (settings?.UseScheduledFetch == true)
         {
-            // Use draw-time-based scheduled fetching (more efficient for paid APIs)
+            // Use draw-time-based scheduled fetching
             services.AddHostedService<ScheduledResultsFetchService>();
         }
         else if (settings?.PollingIntervalMinutes > 0)
         {
-            // Use periodic polling (works for free scraping)
+            // Use periodic polling
             services.AddHostedService<ResultsPollingWorker>();
+        }
+
+        // Register Lotocompany sync worker (syncs from original app every 5 minutes)
+        services.Configure<LotocompanySettings>(
+            configuration.GetSection(LotocompanySettings.SectionName));
+
+        var lotocompanySettings = configuration
+            .GetSection(LotocompanySettings.SectionName)
+            .Get<LotocompanySettings>();
+
+        if (lotocompanySettings?.IsEnabled == true)
+        {
+            // Register HttpClient for Lotocompany
+            services.AddHttpClient("Lotocompany", client =>
+            {
+                client.BaseAddress = new Uri(lotocompanySettings.BaseUrl);
+                client.Timeout = TimeSpan.FromSeconds(lotocompanySettings.TimeoutSeconds);
+                client.DefaultRequestHeaders.Add("Accept", "application/json");
+            });
+
+            // Register sync worker
+            services.AddHostedService<LotocompanySyncWorker>();
         }
 
         return services;
