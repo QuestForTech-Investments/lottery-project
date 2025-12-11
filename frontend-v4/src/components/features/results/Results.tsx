@@ -1,4 +1,14 @@
-import React, { useState, useCallback, useEffect, useRef, type SyntheticEvent, type ChangeEvent } from 'react';
+/**
+ * Results Module
+ *
+ * Refactored component using modular architecture for better maintainability.
+ * - State management via useResultsState hook (useReducer)
+ * - Types centralized in ./types
+ * - Constants centralized in ./constants
+ * - Utility functions in ./utils
+ */
+
+import React, { useCallback, useEffect, useRef, type SyntheticEvent, type ChangeEvent } from 'react';
 import {
   Box,
   Paper,
@@ -26,23 +36,16 @@ import {
   MenuItem,
   Select,
   FormControl,
-  InputLabel,
   type SelectChangeEvent,
 } from '@mui/material';
 import {
-  Upload as UploadIcon,
-  LockOpen as LockOpenIcon,
   Lock as LockIcon,
-  Save as SaveIcon,
   Refresh as RefreshIcon,
   CloudDownload as CloudDownloadIcon,
   CompareArrows as CompareIcon,
   Check as CheckIcon,
   Warning as WarningIcon,
-  Delete as DeleteIcon,
   Edit as EditIcon,
-  Visibility as VisibilityIcon,
-  Settings as SettingsIcon,
 } from '@mui/icons-material';
 import {
   getResults,
@@ -53,239 +56,105 @@ import {
   deleteResult,
   fetchExternalResults,
   type ResultDto,
-  type ResultLogDto,
-  type DrawForResults,
-  type ExternalResultDto,
 } from '@services/resultsService';
-import { getDrawCategory } from '@services/betTypeCompatibilityService';
 
-// Interface for merged draw + result data
-interface DrawResultRow {
-  drawId: number;
-  drawName: string;
-  abbreviation: string;
-  color?: string; // Draw color for table display
-  resultId: number | null;
-  num1: string;
-  num2: string;
-  num3: string;
-  cash3: string;
-  play4: string;
-  pick5: string;
-  bolita1: string;
-  bolita2: string;
-  singulaccion1: string;
-  singulaccion2: string;
-  singulaccion3: string;
-  hasResult: boolean;
-  isDirty: boolean;
-  isSaving: boolean;
-  // For comparison with external results
-  externalNum1?: string;
-  externalNum2?: string;
-  externalNum3?: string;
-  externalCash3?: string;
-  externalPlay4?: string;
-  externalPick5?: string;
-  hasExternalResult?: boolean;
-  matchesExternal?: boolean;
-}
+// Internal module imports
+import { useResultsState } from './hooks';
+import type { DrawResultRow, IndividualResultForm, EnabledFields } from './types';
+import {
+  EMPTY_INDIVIDUAL_FORM,
+  AUTO_REFRESH_INTERVAL,
+  COLORS,
+  FIELD_ORDER,
+  INDIVIDUAL_FIELD_ORDER,
+} from './constants';
+import {
+  getMaxLength,
+  getIndividualMaxLength,
+  getFieldWidth,
+  getEnabledFields,
+  isValidLotteryNumber,
+  hasDateLikePattern,
+  sanitizeNumberInput,
+} from './utils';
 
-// Interface for individual result form
-interface IndividualResultForm {
-  selectedDrawId: number | null;
-  num1: string;
-  num2: string;
-  num3: string;
-  cash3: string;
-  pickFour: string;
-  pickFive: string;
-  bolita1: string;
-  bolita2: string;
-  singulaccion1: string;
-  singulaccion2: string;
-  singulaccion3: string;
-}
+// =============================================================================
+// Validation Helpers
+// =============================================================================
 
-// No longer filtering by hardcoded list - API already filters draws by:
-// 1. Active draws only
-// 2. Draws scheduled for the selected day of week
-// 3. For today: only draws whose time has already passed (so results can be entered)
-
-// Validate that a lottery number is valid (2 digits, 00-99)
-const isValidLotteryNumber = (value: string): boolean => {
-  if (!value) return true; // Empty is valid (means not filled yet)
-  return /^\d{2}$/.test(value);
-};
-
-// Validate that winningNumber doesn't look like a date pattern
-const hasDateLikePattern = (winningNumber: string): boolean => {
-  // Check for YYYYMM patterns like "202512" (2025-12)
-  if (/^202[45]\d{2}$/.test(winningNumber)) return true;
-  // Check for MMYYYY patterns
-  if (/^\d{2}202[45]$/.test(winningNumber)) return true;
-  // Check for YYYYMMDD patterns
-  if (/^202[45](0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])$/.test(winningNumber)) return true;
-  return false;
-};
-
-// Validate a result row before saving
+/**
+ * Validate a result row before saving
+ */
 const validateResultRow = (row: DrawResultRow): { valid: boolean; error: string | null } => {
-  // Check individual numbers are valid 2-digit format
   if (row.num1 && !isValidLotteryNumber(row.num1)) {
-    return { valid: false, error: `"${row.num1}" no es un número válido (debe ser 2 dígitos, ej: 07)` };
+    return { valid: false, error: `"${row.num1}" no es un número válido (debe ser 2 dígitos)` };
   }
   if (row.num2 && !isValidLotteryNumber(row.num2)) {
-    return { valid: false, error: `"${row.num2}" no es un número válido (debe ser 2 dígitos, ej: 47)` };
+    return { valid: false, error: `"${row.num2}" no es un número válido (debe ser 2 dígitos)` };
   }
   if (row.num3 && !isValidLotteryNumber(row.num3)) {
-    return { valid: false, error: `"${row.num3}" no es un número válido (debe ser 2 dígitos, ej: 25)` };
+    return { valid: false, error: `"${row.num3}" no es un número válido (debe ser 2 dígitos)` };
   }
 
-  // Build combined number and check for date patterns
   const combined = row.num1 + row.num2 + row.num3;
   if (combined && hasDateLikePattern(combined)) {
     return {
       valid: false,
-      error: `El resultado "${combined}" parece una fecha (YYYYMM). Verifique los números.`,
+      error: `El resultado "${combined}" parece una fecha. Verifique los números.`,
     };
   }
 
   return { valid: true, error: null };
 };
 
-// Field configuration type for draw categories
-interface EnabledFields {
-  num1: boolean;
-  num2: boolean;
-  num3: boolean;
-  cash3: boolean;
-  play4: boolean;
-  pick5: boolean;
-  bolita1: boolean;
-  bolita2: boolean;
-  singulaccion1: boolean;
-  singulaccion2: boolean;
-  singulaccion3: boolean;
-}
-
-// Determine which fields are enabled based on draw category
-// Uses betTypeCompatibilityService for consistent categorization across the app
-const getEnabledFields = (drawName: string): EnabledFields => {
-  const category = getDrawCategory(drawName);
-
-  // Default all fields disabled
-  const allDisabled: EnabledFields = {
-    num1: false, num2: false, num3: false,
-    cash3: false, play4: false, pick5: false,
-    bolita1: false, bolita2: false,
-    singulaccion1: false, singulaccion2: false, singulaccion3: false
-  };
-
-  switch (category) {
-    case 'DOMINICAN':
-    case 'ANGUILA':
-    case 'PANAMA':
-      // Dominican, Anguila and Panama lotteries - only num1, num2, num3 (used for Directo, Palé, Tripleta)
-      return { ...allDisabled, num1: true, num2: true, num3: true };
-
-    case 'USA':
-      // USA lotteries (TEXAS, etc.) - Full set: 1ra, 2da, 3ra, Cash 3, Pick Four, bolita 1, bolita 2, Singulaccion 1-3
-      // Note: Pick five is NOT used for Texas
-      return {
-        ...allDisabled,
-        num1: true, num2: true, num3: true,
-        cash3: true, play4: true, pick5: false,
-        bolita1: true, bolita2: true,
-        singulaccion1: true, singulaccion2: true, singulaccion3: true
-      };
-
-    case 'SUPER_PALE':
-      // Super Pale - uses num1/num2 for the paired numbers
-      return { ...allDisabled, num1: true, num2: true };
-
-    case 'GENERAL':
-    default:
-      // Unknown category - show all fields and let user decide
-      return {
-        num1: true, num2: true, num3: true,
-        cash3: true, play4: true, pick5: true,
-        bolita1: true, bolita2: true,
-        singulaccion1: true, singulaccion2: true, singulaccion3: true
-      };
-  }
-};
-
-// Initial empty form state
-const emptyIndividualForm: IndividualResultForm = {
-  selectedDrawId: null,
-  num1: '',
-  num2: '',
-  num3: '',
-  cash3: '',
-  pickFour: '',
-  pickFive: '',
-  bolita1: '',
-  bolita2: '',
-  singulaccion1: '',
-  singulaccion2: '',
-  singulaccion3: '',
-};
+// =============================================================================
+// Main Component
+// =============================================================================
 
 const Results = (): React.ReactElement => {
-  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
-  const [activeTab, setActiveTab] = useState<number>(0);
-  const [logsFilterDate, setLogsFilterDate] = useState<string>('');
+  // ---------------------------------------------------------------------------
+  // State Management (via useReducer hook)
+  // ---------------------------------------------------------------------------
+  const { state, actions, computed } = useResultsState();
+  const {
+    selectedDate,
+    activeTab,
+    logsFilterDate,
+    drawResults,
+    logsData,
+    individualForm,
+    loading,
+    fetchingExternal,
+    comparing,
+    savingIndividual,
+    error,
+    successMessage,
+    autoRefreshEnabled,
+    lastRefresh,
+    showCompareDialog,
+  } = state;
 
-  // Data states
-  const [drawResults, setDrawResults] = useState<DrawResultRow[]>([]);
-  const [logsData, setLogsData] = useState<ResultLogDto[]>([]);
-  const [externalResults, setExternalResults] = useState<ExternalResultDto[]>([]);
+  // Refs for individual form inputs (for auto-advance)
+  const individualFormRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
 
-  // Individual result form state
-  const [individualForm, setIndividualForm] = useState<IndividualResultForm>(emptyIndividualForm);
-  const [savingIndividual, setSavingIndividual] = useState<boolean>(false);
+  // ---------------------------------------------------------------------------
+  // Data Loading
+  // ---------------------------------------------------------------------------
 
-  // Loading and error states
-  const [loading, setLoading] = useState<boolean>(false);
-  const [fetchingExternal, setFetchingExternal] = useState<boolean>(false);
-  const [comparing, setComparing] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
-
-  // Comparison dialog
-  const [showCompareDialog, setShowCompareDialog] = useState<boolean>(false);
-
-  // Auto-refresh state (refresh every 60 seconds by default)
-  const [autoRefreshEnabled, setAutoRefreshEnabled] = useState<boolean>(true);
-  const [autoRefreshInterval] = useState<number>(60000); // 60 seconds
-  const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
-
-  // Load all draws and results
   const loadData = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+    actions.setLoading(true);
+    actions.setError(null);
     try {
-      // Load draws (filtered by day of week) and results in parallel
       const [drawsList, resultsList] = await Promise.all([
         getDrawsForResults(selectedDate),
         getResults(selectedDate),
       ]);
 
-      // Create a map of results by drawId
       const resultsMap = new Map<number, ResultDto>();
-      resultsList.forEach((r) => {
-        resultsMap.set(r.drawId, r);
-      });
+      resultsList.forEach((r) => resultsMap.set(r.drawId, r));
 
-      // Merge draws with results
-      // API already filters:
-      // - Active draws only
-      // - Draws scheduled for selected day of week
-      // - For today: draws whose time has already passed
       const mergedData: DrawResultRow[] = drawsList.map((draw) => {
         const result = resultsMap.get(draw.drawId);
-        // Use API color property, fallback to default turquoise
         const drawColor = (draw as { color?: string }).color || '#37b9f9';
         return {
           drawId: draw.drawId,
@@ -310,35 +179,33 @@ const Results = (): React.ReactElement => {
         };
       });
 
-      // Sort by draw name for consistent display
-      // API already returns draws sorted by DrawTime
-      setDrawResults(mergedData);
+      actions.setDrawResults(mergedData);
     } catch (err) {
       console.error('Error loading data:', err);
-      setError('Error al cargar los datos');
+      actions.setError('Error al cargar los datos');
     } finally {
-      setLoading(false);
+      actions.setLoading(false);
     }
-  }, [selectedDate]);
+  }, [selectedDate, actions]);
 
   // Load data on mount and when date changes
   useEffect(() => {
     loadData();
-    setLastRefresh(new Date());
-  }, [loadData]);
+    actions.setLastRefresh(new Date());
+  }, [loadData, actions]);
 
-  // Auto-refresh every X seconds when enabled
+  // Auto-refresh
   useEffect(() => {
     if (!autoRefreshEnabled) return;
 
     const interval = setInterval(async () => {
       console.log('[Auto-refresh] Refreshing results data...');
       await loadData();
-      setLastRefresh(new Date());
-    }, autoRefreshInterval);
+      actions.setLastRefresh(new Date());
+    }, AUTO_REFRESH_INTERVAL);
 
     return () => clearInterval(interval);
-  }, [autoRefreshEnabled, autoRefreshInterval, loadData]);
+  }, [autoRefreshEnabled, loadData, actions]);
 
   // Load logs when tab changes
   useEffect(() => {
@@ -346,63 +213,61 @@ const Results = (): React.ReactElement => {
       if (activeTab !== 1) return;
       try {
         const logs = await getResultLogs(logsFilterDate || undefined);
-        setLogsData(logs);
+        actions.setLogs(logs);
       } catch (err) {
         console.error('Error loading logs:', err);
       }
     };
     loadLogs();
-  }, [activeTab, logsFilterDate]);
+  }, [activeTab, logsFilterDate, actions]);
 
-  // Field order for auto-advance navigation
-  const fieldOrder = ['num1', 'num2', 'num3', 'cash3', 'play4', 'pick5'];
+  // ---------------------------------------------------------------------------
+  // Field Change Handlers
+  // ---------------------------------------------------------------------------
 
-  // Get max length for each field
-  const getMaxLength = (field: string): number => {
-    switch (field) {
-      case 'num1':
-      case 'num2':
-      case 'num3':
-        return 2;
-      case 'cash3':
-        return 3;
-      case 'play4':
-        return 4;
-      case 'pick5':
-        return 5;
-      default:
-        return 2;
-    }
-  };
+  const handleFieldChange = useCallback(
+    (drawId: number, field: string, value: string, inputElement?: HTMLInputElement) => {
+      const sanitizedValue = sanitizeNumberInput(value);
+      const maxLength = getMaxLength(field);
 
-  // Handle field change with input sanitization and auto-advance
-  const handleFieldChange = useCallback((drawId: number, field: string, value: string, inputElement?: HTMLInputElement) => {
-    // Only allow digits
-    const sanitizedValue = value.replace(/\D/g, '');
-    const maxLength = getMaxLength(field);
+      actions.updateField(drawId, field, sanitizedValue);
 
-    setDrawResults((prev) =>
-      prev.map((row) => {
-        if (row.drawId !== drawId) return row;
-        return {
-          ...row,
-          [field]: sanitizedValue,
-          isDirty: true,
-        };
-      })
-    );
+      // Auto-advance to next input when field is complete
+      if (sanitizedValue.length >= maxLength && inputElement) {
+        const currentFieldIndex = FIELD_ORDER.indexOf(field);
+        if (currentFieldIndex !== -1 && currentFieldIndex < FIELD_ORDER.length - 1) {
+          const row = inputElement.closest('tr');
+          if (row) {
+            const inputs = row.querySelectorAll('input[type="text"]');
+            const currentIndex = Array.from(inputs).indexOf(inputElement);
+            const nextInput = inputs[currentIndex + 1] as HTMLInputElement;
+            if (nextInput && !nextInput.disabled) {
+              setTimeout(() => {
+                nextInput.focus();
+                nextInput.select();
+              }, 10);
+            }
+          }
+        }
+      }
+    },
+    [actions]
+  );
 
-    // Auto-advance to next input when field is complete
-    if (sanitizedValue.length >= maxLength && inputElement) {
-      const currentFieldIndex = fieldOrder.indexOf(field);
-      if (currentFieldIndex !== -1 && currentFieldIndex < fieldOrder.length - 1) {
-        // Find the next input in the same row
-        const row = inputElement.closest('tr');
-        if (row) {
-          const inputs = row.querySelectorAll('input[type="text"]');
-          const currentIndex = Array.from(inputs).indexOf(inputElement);
-          const nextInput = inputs[currentIndex + 1] as HTMLInputElement;
-          if (nextInput && !nextInput.disabled) {
+  const handleIndividualFormChange = useCallback(
+    (field: keyof IndividualResultForm, value: string, enabledFieldsList?: string[]) => {
+      const sanitizedValue = sanitizeNumberInput(value);
+      const maxLength = getIndividualMaxLength(field);
+
+      actions.setIndividualForm({ [field]: sanitizedValue });
+
+      // Auto-advance
+      if (sanitizedValue.length >= maxLength && enabledFieldsList) {
+        const currentIndex = enabledFieldsList.indexOf(field);
+        if (currentIndex !== -1 && currentIndex < enabledFieldsList.length - 1) {
+          const nextField = enabledFieldsList[currentIndex + 1];
+          const nextInput = individualFormRefs.current[nextField];
+          if (nextInput) {
             setTimeout(() => {
               nextInput.focus();
               nextInput.select();
@@ -410,182 +275,145 @@ const Results = (): React.ReactElement => {
           }
         }
       }
-    }
-  }, []);
+    },
+    [actions]
+  );
 
-  // Save a single result
-  const handleSaveResult = useCallback(async (drawId: number) => {
-    const row = drawResults.find((r) => r.drawId === drawId);
-    if (!row) return;
+  // ---------------------------------------------------------------------------
+  // Save/Delete Handlers
+  // ---------------------------------------------------------------------------
 
-    // Validate before saving
-    const validation = validateResultRow(row);
-    if (!validation.valid) {
-      setError(`Error en ${row.drawName}: ${validation.error}`);
-      return;
-    }
+  const handleSaveResult = useCallback(
+    async (drawId: number) => {
+      const row = drawResults.find((r) => r.drawId === drawId);
+      if (!row) return;
 
-    // Mark as saving
-    setDrawResults((prev) =>
-      prev.map((r) => (r.drawId === drawId ? { ...r, isSaving: true } : r))
-    );
-
-    try {
-      // Build winning number from fields
-      const winningNumber = row.num1 + row.num2 + row.num3;
-
-      const data = {
-        drawId: row.drawId,
-        winningNumber,
-        resultDate: selectedDate,
-      };
-
-      let savedResult: ResultDto | null;
-      if (row.resultId) {
-        savedResult = await updateResult(row.resultId, data);
-      } else {
-        savedResult = await createResult(data);
+      const validation = validateResultRow(row);
+      if (!validation.valid) {
+        actions.setError(`Error en ${row.drawName}: ${validation.error}`);
+        return;
       }
 
-      // Update local state
-      setDrawResults((prev) =>
-        prev.map((r) => {
-          if (r.drawId !== drawId) return r;
-          return {
-            ...r,
-            resultId: savedResult?.resultId || r.resultId,
-            hasResult: true,
-            isDirty: false,
-            isSaving: false,
-          };
-        })
-      );
+      actions.setSaving(drawId, true);
 
-      setSuccessMessage(`Resultado guardado para ${row.drawName}`);
-    } catch (err) {
-      console.error('Error saving result:', err);
-      setError(`Error al guardar resultado para ${row.drawName}`);
-      setDrawResults((prev) =>
-        prev.map((r) => (r.drawId === drawId ? { ...r, isSaving: false } : r))
-      );
-    }
-  }, [drawResults, selectedDate]);
+      try {
+        const winningNumber = row.num1 + row.num2 + row.num3;
+        const data = { drawId: row.drawId, winningNumber, resultDate: selectedDate };
 
-  // Delete a result
-  const handleDeleteResult = useCallback(async (drawId: number) => {
-    const row = drawResults.find((r) => r.drawId === drawId);
-    if (!row || !row.resultId) return;
+        let savedResult: ResultDto | null;
+        if (row.resultId) {
+          savedResult = await updateResult(row.resultId, data);
+        } else {
+          savedResult = await createResult(data);
+        }
 
-    if (!window.confirm(`¿Eliminar resultado de ${row.drawName}?`)) return;
+        actions.markSaved(drawId, savedResult?.resultId || row.resultId || 0);
+        actions.setSuccess(`Resultado guardado para ${row.drawName}`);
+      } catch (err) {
+        console.error('Error saving result:', err);
+        actions.setError(`Error al guardar resultado para ${row.drawName}`);
+        actions.setSaving(drawId, false);
+      }
+    },
+    [drawResults, selectedDate, actions]
+  );
 
-    try {
-      await deleteResult(row.resultId);
-      setDrawResults((prev) =>
-        prev.map((r) => {
-          if (r.drawId !== drawId) return r;
-          return {
-            ...r,
-            resultId: null,
-            num1: '',
-            num2: '',
-            num3: '',
-            cash3: '',
-            play4: '',
-            pick5: '',
-            bolita1: '',
-            bolita2: '',
-            singulaccion1: '',
-            singulaccion2: '',
-            singulaccion3: '',
-            hasResult: false,
-            isDirty: false,
-          };
-        })
-      );
-      setSuccessMessage(`Resultado eliminado para ${row.drawName}`);
-    } catch (err) {
-      console.error('Error deleting result:', err);
-      setError('Error al eliminar resultado');
-    }
-  }, [drawResults]);
+  const handleDeleteResult = useCallback(
+    async (drawId: number) => {
+      const row = drawResults.find((r) => r.drawId === drawId);
+      if (!row || !row.resultId) return;
 
-  // Fetch external results
+      if (!window.confirm(`¿Eliminar resultado de ${row.drawName}?`)) return;
+
+      try {
+        await deleteResult(row.resultId);
+        actions.markDeleted(drawId);
+        actions.setSuccess(`Resultado eliminado para ${row.drawName}`);
+      } catch (err) {
+        console.error('Error deleting result:', err);
+        actions.setError('Error al eliminar resultado');
+      }
+    },
+    [drawResults, actions]
+  );
+
+  // ---------------------------------------------------------------------------
+  // External Results Handlers
+  // ---------------------------------------------------------------------------
+
   const handleFetchExternal = useCallback(async () => {
-    setFetchingExternal(true);
-    setError(null);
+    actions.setFetchingExternal(true);
+    actions.setError(null);
     try {
       const response = await fetchExternalResults(selectedDate);
       if (response) {
-        setSuccessMessage(
+        actions.setSuccess(
           `Obtenidos ${response.resultsFetched} resultados, guardados ${response.resultsSaved}`
         );
-        // Reload data to show new results
         await loadData();
       }
     } catch (err) {
       console.error('Error fetching external results:', err);
-      setError('Error al obtener resultados externos');
+      actions.setError('Error al obtener resultados externos');
     } finally {
-      setFetchingExternal(false);
+      actions.setFetchingExternal(false);
     }
-  }, [selectedDate, loadData]);
+  }, [selectedDate, loadData, actions]);
 
-  // Compare with external results
   const handleCompareResults = useCallback(async () => {
-    setComparing(true);
-    setError(null);
+    actions.setComparing(true);
+    actions.setError(null);
     try {
       const response = await fetchExternalResults(selectedDate);
       if (response && response.results) {
-        setExternalResults(response.results);
+        actions.setExternalResults(response.results);
 
-        // Match external results with local draws
-        setDrawResults((prev) =>
-          prev.map((row) => {
-            // Find matching external result
-            const external = response.results.find(
-              (ext) => ext.lotteryName.toUpperCase().includes(row.drawName.toUpperCase()) ||
-                       row.drawName.toUpperCase().includes(ext.lotteryName.toUpperCase())
-            );
+        const comparedResults = drawResults.map((row) => {
+          const external = response.results.find(
+            (ext) =>
+              ext.lotteryName.toUpperCase().includes(row.drawName.toUpperCase()) ||
+              row.drawName.toUpperCase().includes(ext.lotteryName.toUpperCase())
+          );
 
-            if (!external) return { ...row, hasExternalResult: false };
+          if (!external) return { ...row, hasExternalResult: false };
 
-            const extNum1 = external.numbers[0] || '';
-            const extNum2 = external.numbers[1] || '';
-            const extNum3 = external.numbers[2] || '';
+          const extNum1 = external.numbers[0] || '';
+          const extNum2 = external.numbers[1] || '';
+          const extNum3 = external.numbers[2] || '';
+          const matches = row.num1 === extNum1 && row.num2 === extNum2 && row.num3 === extNum3;
 
-            const matches = row.num1 === extNum1 && row.num2 === extNum2 && row.num3 === extNum3;
+          return {
+            ...row,
+            externalNum1: extNum1,
+            externalNum2: extNum2,
+            externalNum3: extNum3,
+            hasExternalResult: true,
+            matchesExternal: matches,
+          };
+        });
 
-            return {
-              ...row,
-              externalNum1: extNum1,
-              externalNum2: extNum2,
-              externalNum3: extNum3,
-              hasExternalResult: true,
-              matchesExternal: matches,
-            };
-          })
-        );
-
-        setShowCompareDialog(true);
+        actions.setExternalComparison(comparedResults);
+        actions.setShowCompareDialog(true);
       }
     } catch (err) {
       console.error('Error comparing results:', err);
-      setError('Error al comparar resultados');
+      actions.setError('Error al comparar resultados');
     } finally {
-      setComparing(false);
+      actions.setComparing(false);
     }
-  }, [selectedDate]);
+  }, [selectedDate, drawResults, actions]);
 
-  // Publish all pending results
+  // ---------------------------------------------------------------------------
+  // Publish Handlers
+  // ---------------------------------------------------------------------------
+
   const handlePublishAll = useCallback(async () => {
-    const dirtyRows = drawResults.filter((r) => r.isDirty && (r.num1 || r.cash3));
+    const dirtyRows = computed.dirtyRows;
     if (dirtyRows.length === 0) {
-      setError('No hay resultados pendientes de guardar');
+      actions.setError('No hay resultados pendientes de guardar');
       return;
     }
 
-    // Validate all rows before publishing
     const invalidRows = dirtyRows
       .map((row) => ({ row, validation: validateResultRow(row) }))
       .filter((item) => !item.validation.valid);
@@ -594,125 +422,29 @@ const Results = (): React.ReactElement => {
       const errorMessages = invalidRows
         .map((item) => `${item.row.drawName}: ${item.validation.error}`)
         .join('\n');
-      setError(`No se puede publicar. Errores encontrados:\n${errorMessages}`);
+      actions.setError(`No se puede publicar. Errores:\n${errorMessages}`);
       return;
     }
 
     for (const row of dirtyRows) {
       await handleSaveResult(row.drawId);
     }
-    setSuccessMessage(`${dirtyRows.length} resultados publicados`);
-  }, [drawResults, handleSaveResult]);
+    actions.setSuccess(`${dirtyRows.length} resultados publicados`);
+  }, [computed.dirtyRows, handleSaveResult, actions]);
 
-  const handleTabChange = useCallback((_event: SyntheticEvent, newValue: number) => {
-    setActiveTab(newValue);
-  }, []);
-
-  const handleDateChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
-    setSelectedDate(e.target.value);
-  }, []);
-
-  const handleLogsFilterDateChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
-    setLogsFilterDate(e.target.value);
-  }, []);
-
-  const handleCloseSnackbar = useCallback(() => {
-    setError(null);
-    setSuccessMessage(null);
-  }, []);
-
-  // Handle individual form draw selection
-  const handleDrawSelect = useCallback((event: SelectChangeEvent<number>) => {
-    const drawId = event.target.value as number;
-    const selectedDraw = drawResults.find(d => d.drawId === drawId);
-    if (selectedDraw) {
-      setIndividualForm({
-        selectedDrawId: drawId,
-        num1: selectedDraw.num1,
-        num2: selectedDraw.num2,
-        num3: selectedDraw.num3,
-        cash3: selectedDraw.cash3,
-        pickFour: selectedDraw.play4,
-        pickFive: selectedDraw.pick5,
-        bolita1: selectedDraw.bolita1,
-        bolita2: selectedDraw.bolita2,
-        singulaccion1: selectedDraw.singulaccion1,
-        singulaccion2: selectedDraw.singulaccion2,
-        singulaccion3: selectedDraw.singulaccion3,
-      });
-    }
-  }, [drawResults]);
-
-  // Refs for individual form inputs (for auto-advance)
-  const individualFormRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
-
-  // Individual form field order for auto-advance
-  const individualFieldOrder = ['num1', 'num2', 'num3', 'cash3', 'pickFour', 'bolita1', 'bolita2', 'singulaccion1', 'singulaccion2', 'singulaccion3'];
-
-  // Get max length for individual form fields
-  const getIndividualMaxLength = (field: string): number => {
-    switch (field) {
-      case 'num1':
-      case 'num2':
-      case 'num3':
-      case 'bolita1':
-      case 'bolita2':
-      case 'singulaccion1':
-      case 'singulaccion2':
-      case 'singulaccion3':
-        return 2;
-      case 'cash3':
-        return 3;
-      case 'pickFour':
-        return 4;
-      case 'pickFive':
-        return 5;
-      default:
-        return 2;
-    }
-  };
-
-  // Handle individual form field change with auto-advance
-  const handleIndividualFormChange = useCallback((field: keyof IndividualResultForm, value: string, enabledFieldsList?: string[]) => {
-    const sanitizedValue = value.replace(/\D/g, '');
-    const maxLength = getIndividualMaxLength(field);
-
-    setIndividualForm(prev => ({ ...prev, [field]: sanitizedValue }));
-
-    // Auto-advance to next enabled field when current field is complete
-    if (sanitizedValue.length >= maxLength && enabledFieldsList) {
-      const currentIndex = enabledFieldsList.indexOf(field);
-      if (currentIndex !== -1 && currentIndex < enabledFieldsList.length - 1) {
-        const nextField = enabledFieldsList[currentIndex + 1];
-        const nextInput = individualFormRefs.current[nextField];
-        if (nextInput) {
-          setTimeout(() => {
-            nextInput.focus();
-            nextInput.select();
-          }, 10);
-        }
-      }
-    }
-  }, []);
-
-  // Publish individual result
   const handlePublishIndividual = useCallback(async () => {
     if (!individualForm.selectedDrawId) {
-      setError('Seleccione un sorteo');
+      actions.setError('Seleccione un sorteo');
       return;
     }
 
-    setSavingIndividual(true);
+    actions.setSavingIndividual(true);
     try {
-      const row = drawResults.find(d => d.drawId === individualForm.selectedDrawId);
+      const row = drawResults.find((d) => d.drawId === individualForm.selectedDrawId);
       if (!row) return;
 
       const winningNumber = individualForm.num1 + individualForm.num2 + individualForm.num3;
-      const data = {
-        drawId: individualForm.selectedDrawId,
-        winningNumber,
-        resultDate: selectedDate,
-      };
+      const data = { drawId: individualForm.selectedDrawId, winningNumber, resultDate: selectedDate };
 
       let savedResult;
       if (row.resultId) {
@@ -721,94 +453,191 @@ const Results = (): React.ReactElement => {
         savedResult = await createResult(data);
       }
 
-      // Update local state
-      setDrawResults(prev =>
-        prev.map(r => {
-          if (r.drawId !== individualForm.selectedDrawId) return r;
-          return {
-            ...r,
-            resultId: savedResult?.resultId || r.resultId,
-            num1: individualForm.num1,
-            num2: individualForm.num2,
-            num3: individualForm.num3,
-            hasResult: true,
-            isDirty: false,
-          };
-        })
-      );
-
-      setSuccessMessage(`Resultado publicado para ${row.drawName}`);
-      setIndividualForm(emptyIndividualForm);
+      // Update the row in drawResults
+      const updatedResults = drawResults.map((r) => {
+        if (r.drawId !== individualForm.selectedDrawId) return r;
+        return {
+          ...r,
+          resultId: savedResult?.resultId || r.resultId,
+          num1: individualForm.num1,
+          num2: individualForm.num2,
+          num3: individualForm.num3,
+          hasResult: true,
+          isDirty: false,
+        };
+      });
+      actions.setDrawResults(updatedResults);
+      actions.setSuccess(`Resultado publicado para ${row.drawName}`);
+      actions.resetIndividualForm();
     } catch (err) {
       console.error('Error publishing individual result:', err);
-      setError('Error al publicar resultado');
+      actions.setError('Error al publicar resultado');
     } finally {
-      setSavingIndividual(false);
+      actions.setSavingIndividual(false);
     }
-  }, [individualForm, drawResults, selectedDate]);
+  }, [individualForm, drawResults, selectedDate, actions]);
 
-  // Render a cell with input field
-  const renderInputCell = (row: DrawResultRow, field: keyof DrawResultRow, enabled: boolean) => {
-    const value = row[field] as string;
-    const hasExternal = row.hasExternalResult && row[`external${field.charAt(0).toUpperCase() + field.slice(1)}` as keyof DrawResultRow];
-    const externalValue = row[`external${field.charAt(0).toUpperCase() + field.slice(1)}` as keyof DrawResultRow] as string;
-    const matches = value === externalValue;
+  // ---------------------------------------------------------------------------
+  // UI Event Handlers
+  // ---------------------------------------------------------------------------
+
+  const handleTabChange = useCallback(
+    (_event: SyntheticEvent, newValue: number) => {
+      actions.setTab(newValue);
+    },
+    [actions]
+  );
+
+  const handleDateChange = useCallback(
+    (e: ChangeEvent<HTMLInputElement>) => {
+      actions.setDate(e.target.value);
+    },
+    [actions]
+  );
+
+  const handleLogsFilterDateChange = useCallback(
+    (e: ChangeEvent<HTMLInputElement>) => {
+      actions.setLogsFilterDate(e.target.value);
+    },
+    [actions]
+  );
+
+  const handleCloseSnackbar = useCallback(() => {
+    actions.clearMessages();
+  }, [actions]);
+
+  const handleDrawSelect = useCallback(
+    (event: SelectChangeEvent<number>) => {
+      const drawId = event.target.value as number;
+      const selectedDraw = drawResults.find((d) => d.drawId === drawId);
+      if (selectedDraw) {
+        actions.setIndividualForm({
+          selectedDrawId: drawId,
+          num1: selectedDraw.num1,
+          num2: selectedDraw.num2,
+          num3: selectedDraw.num3,
+          cash3: selectedDraw.cash3,
+          pickFour: selectedDraw.play4,
+          pickFive: selectedDraw.pick5,
+          bolita1: selectedDraw.bolita1,
+          bolita2: selectedDraw.bolita2,
+          singulaccion1: selectedDraw.singulaccion1,
+          singulaccion2: selectedDraw.singulaccion2,
+          singulaccion3: selectedDraw.singulaccion3,
+        });
+      }
+    },
+    [drawResults, actions]
+  );
+
+  const handleEditRow = useCallback(
+    (row: DrawResultRow) => {
+      actions.setIndividualForm({
+        selectedDrawId: row.drawId,
+        num1: row.num1,
+        num2: row.num2,
+        num3: row.num3,
+        cash3: row.cash3,
+        pickFour: row.play4,
+        pickFive: row.pick5,
+        bolita1: row.bolita1,
+        bolita2: row.bolita2,
+        singulaccion1: row.singulaccion1,
+        singulaccion2: row.singulaccion2,
+        singulaccion3: row.singulaccion3,
+      });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    },
+    [actions]
+  );
+
+  // ---------------------------------------------------------------------------
+  // Render Helpers
+  // ---------------------------------------------------------------------------
+
+  const renderNumberInputCell = (
+    row: DrawResultRow,
+    field: 'num1' | 'num2' | 'num3' | 'cash3' | 'play4' | 'pick5',
+    enabledFields: EnabledFields
+  ) => {
+    const value = row[field];
+    const enabled = enabledFields[field];
+    const hasValue = Boolean(value);
+    const maxLength = getMaxLength(field);
+    const width = getFieldWidth(field);
 
     return (
       <TableCell
         align="center"
         sx={{
           p: 0.5,
-          bgcolor: !enabled ? '#e0e0e0' : '#fff',
-          position: 'relative',
+          bgcolor: hasValue ? COLORS.cellWithValue : COLORS.cellEmpty,
+          borderRight: `1px solid ${COLORS.border}`,
         }}
       >
-        <TextField
-          value={value}
-          onChange={(e) => handleFieldChange(row.drawId, field, e.target.value)}
-          disabled={!enabled || row.isSaving}
-          size="small"
-          inputProps={{
-            maxLength: field === 'pick5' ? 5 : field === 'play4' ? 4 : field === 'cash3' ? 3 : 2,
-            style: {
-              textAlign: 'center',
-              padding: '4px 8px',
-              fontWeight: 600,
-              fontSize: '14px',
-            },
-          }}
-          sx={{
-            width: field === 'pick5' ? 70 : field === 'play4' ? 60 : 50,
-            '& .MuiOutlinedInput-root': {
-              '& fieldset': { borderColor: value ? '#4caf50' : '#ccc' },
-            },
-          }}
-        />
-        {hasExternal && !matches && (
-          <Tooltip title={`Externo: ${externalValue}`}>
-            <WarningIcon
-              sx={{
-                position: 'absolute',
-                top: 2,
-                right: 2,
-                fontSize: 14,
-                color: '#ff9800',
-              }}
-            />
-          </Tooltip>
+        {enabled ? (
+          <TextField
+            value={value}
+            onChange={(e) =>
+              handleFieldChange(row.drawId, field, e.target.value, e.target as HTMLInputElement)
+            }
+            disabled={row.isSaving}
+            size="small"
+            inputProps={{
+              maxLength,
+              style: {
+                textAlign: 'center',
+                padding: '4px 6px',
+                fontWeight: 700,
+                fontSize: '13px',
+                color: '#333',
+              },
+            }}
+            sx={{
+              width,
+              '& .MuiOutlinedInput-root': {
+                bgcolor: 'transparent',
+                '& fieldset': { border: '1px solid #ddd' },
+                '&:hover fieldset': { border: '1px solid #bbb' },
+                '&.Mui-focused fieldset': { border: `1px solid ${COLORS.primary}` },
+              },
+            }}
+          />
+        ) : (
+          <Typography variant="body2" sx={{ color: COLORS.textDisabled, fontSize: '12px' }}>
+            -
+          </Typography>
         )}
       </TableCell>
     );
   };
 
+  // ---------------------------------------------------------------------------
+  // Render
+  // ---------------------------------------------------------------------------
+
   return (
     <Box sx={{ p: 3 }}>
       {/* Snackbars */}
-      <Snackbar open={!!error} autoHideDuration={6000} onClose={handleCloseSnackbar} anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
-        <Alert onClose={handleCloseSnackbar} severity="error">{error}</Alert>
+      <Snackbar
+        open={!!error}
+        autoHideDuration={6000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert onClose={handleCloseSnackbar} severity="error">
+          {error}
+        </Alert>
       </Snackbar>
-      <Snackbar open={!!successMessage} autoHideDuration={4000} onClose={handleCloseSnackbar} anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
-        <Alert onClose={handleCloseSnackbar} severity="success">{successMessage}</Alert>
+      <Snackbar
+        open={!!successMessage}
+        autoHideDuration={4000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert onClose={handleCloseSnackbar} severity="success">
+          {successMessage}
+        </Alert>
       </Snackbar>
 
       <Paper elevation={3}>
@@ -818,9 +647,9 @@ const Results = (): React.ReactElement => {
           sx={{
             borderBottom: 1,
             borderColor: 'divider',
-            '& .MuiTab-root': { color: '#37b9f9', textTransform: 'none', fontWeight: 500 },
-            '& .Mui-selected': { color: '#37b9f9' },
-            '& .MuiTabs-indicator': { backgroundColor: '#37b9f9' },
+            '& .MuiTab-root': { color: COLORS.primary, textTransform: 'none', fontWeight: 500 },
+            '& .Mui-selected': { color: COLORS.primary },
+            '& .MuiTabs-indicator': { backgroundColor: COLORS.primary },
           }}
         >
           <Tab label="Manejar resultados" />
@@ -830,16 +659,24 @@ const Results = (): React.ReactElement => {
         <Box sx={{ p: 3 }}>
           {activeTab === 0 && (
             <>
-              <Typography variant="h5" align="center" sx={{ mb: 3, fontWeight: 600, color: '#333' }}>
+              <Typography
+                variant="h5"
+                align="center"
+                sx={{ mb: 3, fontWeight: 600, color: '#333' }}
+              >
                 Manejar resultados
               </Typography>
 
-              {/* Individual Result Entry Form - Like Original App */}
+              {/* Individual Result Entry Form */}
               <Paper variant="outlined" sx={{ p: 2, mb: 3, border: '1px solid #ddd' }}>
-                {/* Row 1: Fecha + Sorteo Dropdown */}
-                <Box sx={{ display: 'flex', gap: 2, mb: 2, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+                {/* Row 1: Date + Draw Dropdown */}
+                <Box
+                  sx={{ display: 'flex', gap: 2, mb: 2, flexWrap: 'wrap', alignItems: 'flex-start' }}
+                >
                   <Box>
-                    <Typography variant="body2" sx={{ mb: 0.5, color: '#666', fontSize: '12px' }}>Fecha</Typography>
+                    <Typography variant="body2" sx={{ mb: 0.5, color: '#666', fontSize: '12px' }}>
+                      Fecha
+                    </Typography>
                     <TextField
                       type="date"
                       value={selectedDate}
@@ -849,7 +686,9 @@ const Results = (): React.ReactElement => {
                     />
                   </Box>
                   <Box sx={{ flex: 1 }}>
-                    <Typography variant="body2" sx={{ mb: 0.5, color: '#666', fontSize: '12px' }}>Sorteo</Typography>
+                    <Typography variant="body2" sx={{ mb: 0.5, color: '#666', fontSize: '12px' }}>
+                      Sorteo
+                    </Typography>
                     <FormControl fullWidth size="small">
                       <Select
                         value={individualForm.selectedDrawId || ''}
@@ -857,7 +696,9 @@ const Results = (): React.ReactElement => {
                         displayEmpty
                         sx={{ bgcolor: '#fff' }}
                       >
-                        <MenuItem value="" disabled>Seleccione</MenuItem>
+                        <MenuItem value="" disabled>
+                          Seleccione
+                        </MenuItem>
                         {drawResults
                           .filter((draw) => !draw.hasResult)
                           .map((draw) => (
@@ -870,67 +711,98 @@ const Results = (): React.ReactElement => {
                   </Box>
                 </Box>
 
-                {/* Row 2: Selected Draw Name + Input Fields - Dynamic based on draw category */}
-                {individualForm.selectedDrawId && (() => {
-                  const selectedDraw = drawResults.find(d => d.drawId === individualForm.selectedDrawId);
-                  const defaultEnabled: EnabledFields = {
-                    num1: true, num2: true, num3: true,
-                    cash3: true, play4: true, pick5: true,
-                    bolita1: true, bolita2: true,
-                    singulaccion1: true, singulaccion2: true, singulaccion3: true
-                  };
-                  const enabledFields = selectedDraw ? getEnabledFields(selectedDraw.drawName) : defaultEnabled;
+                {/* Row 2: Dynamic Input Fields based on draw category */}
+                {individualForm.selectedDrawId &&
+                  (() => {
+                    const selectedDraw = drawResults.find(
+                      (d) => d.drawId === individualForm.selectedDrawId
+                    );
+                    const enabledFields = selectedDraw
+                      ? getEnabledFields(selectedDraw.drawName)
+                      : getEnabledFields('');
 
-                  // Build dynamic field list based on enabled fields
-                  const primaryFields = [
-                    { field: 'num1' as const, label: '1ra', maxLen: 2, enabled: enabledFields.num1 },
-                    { field: 'num2' as const, label: '2da', maxLen: 2, enabled: enabledFields.num2 },
-                    { field: 'num3' as const, label: '3ra', maxLen: 2, enabled: enabledFields.num3 },
-                    { field: 'cash3' as const, label: 'Cash 3', maxLen: 3, enabled: enabledFields.cash3 },
-                    { field: 'pickFour' as const, label: 'Pick Four', maxLen: 4, enabled: enabledFields.play4 },
-                    { field: 'bolita1' as const, label: 'Bolita 1', maxLen: 2, enabled: enabledFields.bolita1 },
-                    { field: 'bolita2' as const, label: 'Bolita 2', maxLen: 2, enabled: enabledFields.bolita2 },
-                    { field: 'singulaccion1' as const, label: 'Singulaccion 1', maxLen: 2, enabled: enabledFields.singulaccion1 },
-                    { field: 'singulaccion2' as const, label: 'Singulaccion 2', maxLen: 2, enabled: enabledFields.singulaccion2 },
-                    { field: 'singulaccion3' as const, label: 'Singulaccion 3', maxLen: 2, enabled: enabledFields.singulaccion3 },
-                  ].filter(f => f.enabled);
+                    const primaryFields = [
+                      { field: 'num1' as const, label: '1ra', maxLen: 2, enabled: enabledFields.num1 },
+                      { field: 'num2' as const, label: '2da', maxLen: 2, enabled: enabledFields.num2 },
+                      { field: 'num3' as const, label: '3ra', maxLen: 2, enabled: enabledFields.num3 },
+                      { field: 'cash3' as const, label: 'Cash 3', maxLen: 3, enabled: enabledFields.cash3 },
+                      { field: 'pickFour' as const, label: 'Pick Four', maxLen: 4, enabled: enabledFields.play4 },
+                      { field: 'bolita1' as const, label: 'Bolita 1', maxLen: 2, enabled: enabledFields.bolita1 },
+                      { field: 'bolita2' as const, label: 'Bolita 2', maxLen: 2, enabled: enabledFields.bolita2 },
+                      { field: 'singulaccion1' as const, label: 'Sing. 1', maxLen: 2, enabled: enabledFields.singulaccion1 },
+                      { field: 'singulaccion2' as const, label: 'Sing. 2', maxLen: 2, enabled: enabledFields.singulaccion2 },
+                      { field: 'singulaccion3' as const, label: 'Sing. 3', maxLen: 2, enabled: enabledFields.singulaccion3 },
+                    ].filter((f) => f.enabled);
 
-                  // Build list of enabled field names for auto-advance
-                  const enabledFieldsList = primaryFields.map(f => f.field);
+                    const enabledFieldsList = primaryFields.map((f) => f.field);
 
-                  return (
-                    <Box sx={{ border: '1px solid #ddd', borderRadius: 1, overflow: 'hidden' }}>
-                      {/* Header row with field names - only enabled fields */}
-                      <Box sx={{ display: 'flex', bgcolor: '#f5f5f5', borderBottom: '1px solid #ddd' }}>
-                        <Box sx={{ width: 140, p: 1, borderRight: '1px solid #ddd' }}></Box>
-                        {primaryFields.map((f, idx) => (
-                          <Box key={f.field} sx={{ flex: 1, p: 1, textAlign: 'center', borderRight: idx < primaryFields.length - 1 ? '1px solid #ddd' : 'none', fontSize: '12px', color: '#666' }}>
-                            {f.label}
-                          </Box>
-                        ))}
-                      </Box>
-                      {/* Input row - only enabled fields with auto-advance */}
-                      <Box sx={{ display: 'flex', bgcolor: '#fff' }}>
-                        <Box sx={{ width: 140, p: 1, borderRight: '1px solid #ddd', fontWeight: 600, fontSize: '14px', display: 'flex', alignItems: 'center' }}>
-                          {selectedDraw?.drawName}
+                    return (
+                      <Box sx={{ border: '1px solid #ddd', borderRadius: 1, overflow: 'hidden' }}>
+                        {/* Header row */}
+                        <Box sx={{ display: 'flex', bgcolor: '#f5f5f5', borderBottom: '1px solid #ddd' }}>
+                          <Box sx={{ width: 140, p: 1, borderRight: '1px solid #ddd' }}></Box>
+                          {primaryFields.map((f, idx) => (
+                            <Box
+                              key={f.field}
+                              sx={{
+                                flex: 1,
+                                p: 1,
+                                textAlign: 'center',
+                                borderRight: idx < primaryFields.length - 1 ? '1px solid #ddd' : 'none',
+                                fontSize: '12px',
+                                color: '#666',
+                              }}
+                            >
+                              {f.label}
+                            </Box>
+                          ))}
                         </Box>
-                        {primaryFields.map((f, idx) => (
-                          <Box key={f.field} sx={{ flex: 1, p: 0.5, borderRight: idx < primaryFields.length - 1 ? '1px solid #ddd' : 'none' }}>
-                            <TextField
-                              value={individualForm[f.field]}
-                              onChange={(e) => handleIndividualFormChange(f.field, e.target.value, enabledFieldsList)}
-                              inputRef={(el) => { individualFormRefs.current[f.field] = el; }}
-                              size="small"
-                              inputProps={{ maxLength: f.maxLen, style: { textAlign: 'center', padding: '8px' } }}
-                              sx={{ '& .MuiOutlinedInput-root': { bgcolor: '#fff' } }}
-                              fullWidth
-                            />
+                        {/* Input row */}
+                        <Box sx={{ display: 'flex', bgcolor: '#fff' }}>
+                          <Box
+                            sx={{
+                              width: 140,
+                              p: 1,
+                              borderRight: '1px solid #ddd',
+                              fontWeight: 600,
+                              fontSize: '14px',
+                              display: 'flex',
+                              alignItems: 'center',
+                            }}
+                          >
+                            {selectedDraw?.drawName}
                           </Box>
-                        ))}
+                          {primaryFields.map((f, idx) => (
+                            <Box
+                              key={f.field}
+                              sx={{
+                                flex: 1,
+                                p: 0.5,
+                                borderRight: idx < primaryFields.length - 1 ? '1px solid #ddd' : 'none',
+                              }}
+                            >
+                              <TextField
+                                value={individualForm[f.field]}
+                                onChange={(e) =>
+                                  handleIndividualFormChange(f.field, e.target.value, enabledFieldsList)
+                                }
+                                inputRef={(el) => {
+                                  individualFormRefs.current[f.field] = el;
+                                }}
+                                size="small"
+                                inputProps={{
+                                  maxLength: f.maxLen,
+                                  style: { textAlign: 'center', padding: '8px' },
+                                }}
+                                sx={{ '& .MuiOutlinedInput-root': { bgcolor: '#fff' } }}
+                                fullWidth
+                              />
+                            </Box>
+                          ))}
+                        </Box>
                       </Box>
-                    </Box>
-                  );
-                })()}
+                    );
+                  })()}
 
                 {/* Publish Individual Button */}
                 <Box sx={{ mt: 2 }}>
@@ -938,30 +810,59 @@ const Results = (): React.ReactElement => {
                     variant="contained"
                     onClick={handlePublishIndividual}
                     disabled={!individualForm.selectedDrawId || savingIndividual}
-                    sx={{ bgcolor: '#37b9f9', '&:hover': { bgcolor: '#2da8e8' }, textTransform: 'uppercase', fontWeight: 600, px: 3, color: '#fff' }}
+                    sx={{
+                      bgcolor: COLORS.primary,
+                      '&:hover': { bgcolor: COLORS.primaryHover },
+                      textTransform: 'uppercase',
+                      fontWeight: 600,
+                      px: 3,
+                      color: '#fff',
+                    }}
                   >
-                    {savingIndividual ? <CircularProgress size={20} color="inherit" /> : 'PUBLICAR RESULTADO'}
+                    {savingIndividual ? (
+                      <CircularProgress size={20} color="inherit" />
+                    ) : (
+                      'PUBLICAR RESULTADO'
+                    )}
                   </Button>
                 </Box>
               </Paper>
 
-              {/* Action Bar: External buttons */}
+              {/* Action Bar */}
               <Box sx={{ display: 'flex', gap: 2, mb: 2, flexWrap: 'wrap', alignItems: 'center' }}>
                 <Button
                   variant="contained"
-                  startIcon={fetchingExternal ? <CircularProgress size={16} color="inherit" /> : <CloudDownloadIcon />}
+                  startIcon={
+                    fetchingExternal ? (
+                      <CircularProgress size={16} color="inherit" />
+                    ) : (
+                      <CloudDownloadIcon />
+                    )
+                  }
                   onClick={handleFetchExternal}
                   disabled={fetchingExternal}
-                  sx={{ bgcolor: '#4caf50', '&:hover': { bgcolor: '#45a049' }, textTransform: 'none', fontWeight: 600 }}
+                  sx={{
+                    bgcolor: COLORS.success,
+                    '&:hover': { bgcolor: '#45a049' },
+                    textTransform: 'none',
+                    fontWeight: 600,
+                  }}
                 >
                   {fetchingExternal ? 'Obteniendo...' : 'Obtener resultados externos'}
                 </Button>
                 <Button
                   variant="contained"
-                  startIcon={comparing ? <CircularProgress size={16} color="inherit" /> : <CompareIcon />}
+                  startIcon={
+                    comparing ? <CircularProgress size={16} color="inherit" /> : <CompareIcon />
+                  }
                   onClick={handleCompareResults}
                   disabled={comparing}
-                  sx={{ bgcolor: '#2196f3', '&:hover': { bgcolor: '#1976d2' }, textTransform: 'none', fontWeight: 600 }}
+                  sx={{
+                    bgcolor: '#2196f3',
+                    '&:hover': { bgcolor: '#1976d2' },
+                    textTransform: 'none',
+                    fontWeight: 600,
+                  }}
                 >
                   {comparing ? 'Comparando...' : 'Comparar con externos'}
                 </Button>
@@ -972,18 +873,20 @@ const Results = (): React.ReactElement => {
 
               {/* Results Table Section */}
               <Box sx={{ mt: 2 }}>
-                <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: '#37b9f9' }}>
+                <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: COLORS.primary }}>
                   Resultados {selectedDate}
                 </Typography>
 
-                {/* Action buttons - PUBLICAR RESULTADOS is violet gradient, DESBLOQUEAR is yellow */}
+                {/* Action buttons */}
                 <Box sx={{ display: 'flex', gap: 1, mb: 2, alignItems: 'center', flexWrap: 'wrap' }}>
                   <Button
                     variant="contained"
                     onClick={handlePublishAll}
                     sx={{
                       background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                      '&:hover': { background: 'linear-gradient(135deg, #5568d3 0%, #63408a 100%)' },
+                      '&:hover': {
+                        background: 'linear-gradient(135deg, #5568d3 0%, #63408a 100%)',
+                      },
                       textTransform: 'uppercase',
                       fontWeight: 700,
                       fontSize: '13px',
@@ -994,7 +897,9 @@ const Results = (): React.ReactElement => {
                       color: '#fff',
                     }}
                   >
-                    PUBLICAR<br />RESULTADOS
+                    PUBLICAR
+                    <br />
+                    RESULTADOS
                   </Button>
                   <Button
                     variant="contained"
@@ -1024,15 +929,31 @@ const Results = (): React.ReactElement => {
                     <Table size="small" stickyHeader>
                       <TableHead>
                         <TableRow>
-                          <TableCell sx={{ fontWeight: 600, bgcolor: '#f5f5f5', minWidth: 140, fontSize: '13px', color: '#555' }}>Sorteos</TableCell>
-                          <TableCell align="center" sx={{ fontWeight: 600, bgcolor: '#f5f5f5', minWidth: 55, fontSize: '13px', color: '#555' }}>1ra</TableCell>
-                          <TableCell align="center" sx={{ fontWeight: 600, bgcolor: '#f5f5f5', minWidth: 55, fontSize: '13px', color: '#555' }}>2da</TableCell>
-                          <TableCell align="center" sx={{ fontWeight: 600, bgcolor: '#f5f5f5', minWidth: 55, fontSize: '13px', color: '#555' }}>3ra</TableCell>
-                          <TableCell align="center" sx={{ fontWeight: 600, bgcolor: '#f5f5f5', minWidth: 65, fontSize: '13px', color: '#555' }}>Cash 3</TableCell>
-                          <TableCell align="center" sx={{ fontWeight: 600, bgcolor: '#f5f5f5', minWidth: 65, fontSize: '13px', color: '#555' }}>Play 4</TableCell>
-                          <TableCell align="center" sx={{ fontWeight: 600, bgcolor: '#f5f5f5', minWidth: 75, fontSize: '13px', color: '#555' }}>Pick five</TableCell>
-                          <TableCell align="center" sx={{ fontWeight: 600, bgcolor: '#f5f5f5', minWidth: 70, fontSize: '13px', color: '#555' }}>Detalles</TableCell>
-                          <TableCell align="center" sx={{ fontWeight: 600, bgcolor: '#f5f5f5', minWidth: 60 }}></TableCell>
+                          <TableCell sx={{ fontWeight: 600, bgcolor: COLORS.headerBg, minWidth: 140, fontSize: '13px', color: '#555' }}>
+                            Sorteos
+                          </TableCell>
+                          <TableCell align="center" sx={{ fontWeight: 600, bgcolor: COLORS.headerBg, minWidth: 55, fontSize: '13px', color: '#555' }}>
+                            1ra
+                          </TableCell>
+                          <TableCell align="center" sx={{ fontWeight: 600, bgcolor: COLORS.headerBg, minWidth: 55, fontSize: '13px', color: '#555' }}>
+                            2da
+                          </TableCell>
+                          <TableCell align="center" sx={{ fontWeight: 600, bgcolor: COLORS.headerBg, minWidth: 55, fontSize: '13px', color: '#555' }}>
+                            3ra
+                          </TableCell>
+                          <TableCell align="center" sx={{ fontWeight: 600, bgcolor: COLORS.headerBg, minWidth: 65, fontSize: '13px', color: '#555' }}>
+                            Cash 3
+                          </TableCell>
+                          <TableCell align="center" sx={{ fontWeight: 600, bgcolor: COLORS.headerBg, minWidth: 65, fontSize: '13px', color: '#555' }}>
+                            Play 4
+                          </TableCell>
+                          <TableCell align="center" sx={{ fontWeight: 600, bgcolor: COLORS.headerBg, minWidth: 75, fontSize: '13px', color: '#555' }}>
+                            Pick five
+                          </TableCell>
+                          <TableCell align="center" sx={{ fontWeight: 600, bgcolor: COLORS.headerBg, minWidth: 70, fontSize: '13px', color: '#555' }}>
+                            Detalles
+                          </TableCell>
+                          <TableCell align="center" sx={{ fontWeight: 600, bgcolor: COLORS.headerBg, minWidth: 60 }}></TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>
@@ -1046,164 +967,37 @@ const Results = (): React.ReactElement => {
                           drawResults.map((row) => {
                             const enabledFields = getEnabledFields(row.drawName);
                             return (
-                              <TableRow key={row.drawId} hover sx={{ '&:hover': { bgcolor: '#fafafa' } }}>
-                                {/* Draw name - simple styling like original app */}
+                              <TableRow key={row.drawId} hover sx={{ '&:hover': { bgcolor: COLORS.rowHover } }}>
+                                {/* Draw name */}
                                 <TableCell
                                   sx={{
                                     fontWeight: 600,
                                     whiteSpace: 'nowrap',
                                     fontSize: '12px',
-                                    bgcolor: '#f5f5f5',
+                                    bgcolor: COLORS.headerBg,
                                     color: '#333',
-                                    borderRight: '1px solid #e0e0e0',
+                                    borderRight: `1px solid ${COLORS.border}`,
                                   }}
                                 >
                                   {row.drawName}
                                   {row.matchesExternal === false && (
                                     <Tooltip title="No coincide con externo">
-                                      <WarningIcon sx={{ ml: 1, fontSize: 14, color: '#ff9800', verticalAlign: 'middle' }} />
+                                      <WarningIcon
+                                        sx={{ ml: 1, fontSize: 14, color: COLORS.warning, verticalAlign: 'middle' }}
+                                      />
                                     </Tooltip>
                                   )}
                                 </TableCell>
-                                {/* 1ra - show input when enabled, show "-" when disabled */}
-                                <TableCell align="center" sx={{ p: 0.5, bgcolor: row.num1 ? '#c5f0f0' : '#fff', borderRight: '1px solid #e0e0e0' }}>
-                                  {enabledFields.num1 ? (
-                                    <TextField
-                                      value={row.num1}
-                                      onChange={(e) => handleFieldChange(row.drawId, 'num1', e.target.value, e.target as HTMLInputElement)}
-                                      disabled={row.isSaving}
-                                      size="small"
-                                      inputProps={{ maxLength: 2, style: { textAlign: 'center', padding: '4px 6px', fontWeight: 700, fontSize: '13px', color: '#333' } }}
-                                      sx={{
-                                        width: 40,
-                                        '& .MuiOutlinedInput-root': {
-                                          bgcolor: 'transparent',
-                                          '& fieldset': { border: '1px solid #ddd' },
-                                          '&:hover fieldset': { border: '1px solid #bbb' },
-                                          '&.Mui-focused fieldset': { border: '1px solid #37b9f9' },
-                                        },
-                                      }}
-                                    />
-                                  ) : (
-                                    <Typography variant="body2" sx={{ color: '#ccc', fontSize: '12px' }}>-</Typography>
-                                  )}
-                                </TableCell>
-                                {/* 2da - show input when enabled, show "-" when disabled */}
-                                <TableCell align="center" sx={{ p: 0.5, bgcolor: row.num2 ? '#c5f0f0' : '#fff', borderRight: '1px solid #e0e0e0' }}>
-                                  {enabledFields.num2 ? (
-                                    <TextField
-                                      value={row.num2}
-                                      onChange={(e) => handleFieldChange(row.drawId, 'num2', e.target.value, e.target as HTMLInputElement)}
-                                      disabled={row.isSaving}
-                                      size="small"
-                                      inputProps={{ maxLength: 2, style: { textAlign: 'center', padding: '4px 6px', fontWeight: 700, fontSize: '13px', color: '#333' } }}
-                                      sx={{
-                                        width: 40,
-                                        '& .MuiOutlinedInput-root': {
-                                          bgcolor: 'transparent',
-                                          '& fieldset': { border: '1px solid #ddd' },
-                                          '&:hover fieldset': { border: '1px solid #bbb' },
-                                          '&.Mui-focused fieldset': { border: '1px solid #37b9f9' },
-                                        },
-                                      }}
-                                    />
-                                  ) : (
-                                    <Typography variant="body2" sx={{ color: '#ccc', fontSize: '12px' }}>-</Typography>
-                                  )}
-                                </TableCell>
-                                {/* 3ra - show input when enabled, show "-" when disabled */}
-                                <TableCell align="center" sx={{ p: 0.5, bgcolor: row.num3 ? '#c5f0f0' : '#fff', borderRight: '1px solid #e0e0e0' }}>
-                                  {enabledFields.num3 ? (
-                                    <TextField
-                                      value={row.num3}
-                                      onChange={(e) => handleFieldChange(row.drawId, 'num3', e.target.value, e.target as HTMLInputElement)}
-                                      disabled={row.isSaving}
-                                      size="small"
-                                      inputProps={{ maxLength: 2, style: { textAlign: 'center', padding: '4px 6px', fontWeight: 700, fontSize: '13px', color: '#333' } }}
-                                      sx={{
-                                        width: 40,
-                                        '& .MuiOutlinedInput-root': {
-                                          bgcolor: 'transparent',
-                                          '& fieldset': { border: '1px solid #ddd' },
-                                          '&:hover fieldset': { border: '1px solid #bbb' },
-                                          '&.Mui-focused fieldset': { border: '1px solid #37b9f9' },
-                                        },
-                                      }}
-                                    />
-                                  ) : (
-                                    <Typography variant="body2" sx={{ color: '#ccc', fontSize: '12px' }}>-</Typography>
-                                  )}
-                                </TableCell>
-                                {/* Cash 3 - green background when has value */}
-                                <TableCell align="center" sx={{ p: 0.5, bgcolor: row.cash3 ? '#c5f0f0' : '#fff', borderRight: '1px solid #e0e0e0' }}>
-                                  {enabledFields.cash3 ? (
-                                    <TextField
-                                      value={row.cash3}
-                                      onChange={(e) => handleFieldChange(row.drawId, 'cash3', e.target.value, e.target as HTMLInputElement)}
-                                      disabled={row.isSaving}
-                                      size="small"
-                                      inputProps={{ maxLength: 3, style: { textAlign: 'center', padding: '4px 6px', fontWeight: 700, fontSize: '13px', color: '#333' } }}
-                                      sx={{
-                                        width: 50,
-                                        '& .MuiOutlinedInput-root': {
-                                          bgcolor: 'transparent',
-                                          '& fieldset': { border: '1px solid #ddd' },
-                                          '&:hover fieldset': { border: '1px solid #bbb' },
-                                          '&.Mui-focused fieldset': { border: '1px solid #37b9f9' },
-                                        },
-                                      }}
-                                    />
-                                  ) : (
-                                    <Typography variant="body2" sx={{ color: '#ccc', fontSize: '12px' }}>-</Typography>
-                                  )}
-                                </TableCell>
-                                {/* Play 4 - green background when has value */}
-                                <TableCell align="center" sx={{ p: 0.5, bgcolor: row.play4 ? '#c5f0f0' : '#fff', borderRight: '1px solid #e0e0e0' }}>
-                                  {enabledFields.play4 ? (
-                                    <TextField
-                                      value={row.play4}
-                                      onChange={(e) => handleFieldChange(row.drawId, 'play4', e.target.value, e.target as HTMLInputElement)}
-                                      disabled={row.isSaving}
-                                      size="small"
-                                      inputProps={{ maxLength: 4, style: { textAlign: 'center', padding: '4px 6px', fontWeight: 700, fontSize: '13px', color: '#333' } }}
-                                      sx={{
-                                        width: 55,
-                                        '& .MuiOutlinedInput-root': {
-                                          bgcolor: 'transparent',
-                                          '& fieldset': { border: '1px solid #ddd' },
-                                          '&:hover fieldset': { border: '1px solid #bbb' },
-                                          '&.Mui-focused fieldset': { border: '1px solid #37b9f9' },
-                                        },
-                                      }}
-                                    />
-                                  ) : (
-                                    <Typography variant="body2" sx={{ color: '#ccc', fontSize: '12px' }}>-</Typography>
-                                  )}
-                                </TableCell>
-                                {/* Pick five - green background when has value */}
-                                <TableCell align="center" sx={{ p: 0.5, bgcolor: row.pick5 ? '#c5f0f0' : '#fff', borderRight: '1px solid #e0e0e0' }}>
-                                  {enabledFields.pick5 ? (
-                                    <TextField
-                                      value={row.pick5}
-                                      onChange={(e) => handleFieldChange(row.drawId, 'pick5', e.target.value, e.target as HTMLInputElement)}
-                                      disabled={row.isSaving}
-                                      size="small"
-                                      inputProps={{ maxLength: 5, style: { textAlign: 'center', padding: '4px 6px', fontWeight: 700, fontSize: '13px', color: '#333' } }}
-                                      sx={{
-                                        width: 60,
-                                        '& .MuiOutlinedInput-root': {
-                                          bgcolor: 'transparent',
-                                          '& fieldset': { border: '1px solid #ddd' },
-                                          '&:hover fieldset': { border: '1px solid #bbb' },
-                                          '&.Mui-focused fieldset': { border: '1px solid #37b9f9' },
-                                        },
-                                      }}
-                                    />
-                                  ) : (
-                                    <Typography variant="body2" sx={{ color: '#ccc', fontSize: '12px' }}>-</Typography>
-                                  )}
-                                </TableCell>
-                                {/* Detalles column with turquoise Ver button like original */}
+
+                                {/* Number input cells */}
+                                {renderNumberInputCell(row, 'num1', enabledFields)}
+                                {renderNumberInputCell(row, 'num2', enabledFields)}
+                                {renderNumberInputCell(row, 'num3', enabledFields)}
+                                {renderNumberInputCell(row, 'cash3', enabledFields)}
+                                {renderNumberInputCell(row, 'play4', enabledFields)}
+                                {renderNumberInputCell(row, 'pick5', enabledFields)}
+
+                                {/* Save button */}
                                 <TableCell align="center" sx={{ p: 0.5 }}>
                                   <Button
                                     size="small"
@@ -1211,8 +1005,8 @@ const Results = (): React.ReactElement => {
                                     onClick={() => handleSaveResult(row.drawId)}
                                     disabled={!row.isDirty || row.isSaving}
                                     sx={{
-                                      bgcolor: '#37b9f9',
-                                      '&:hover': { bgcolor: '#2da8e8' },
+                                      bgcolor: COLORS.primary,
+                                      '&:hover': { bgcolor: COLORS.primaryHover },
                                       '&.Mui-disabled': { bgcolor: '#b0e0e6', color: '#fff' },
                                       textTransform: 'none',
                                       minWidth: 40,
@@ -1225,29 +1019,14 @@ const Results = (): React.ReactElement => {
                                     {row.isSaving ? <CircularProgress size={12} color="inherit" /> : 'ver'}
                                   </Button>
                                 </TableCell>
-                                {/* Edit icon like original app (turquoise open-in-new style) */}
+
+                                {/* Edit button */}
                                 <TableCell align="center" sx={{ p: 0.5 }}>
                                   <Tooltip title="Editar">
                                     <IconButton
                                       size="small"
-                                      onClick={() => {
-                                        setIndividualForm({
-                                          selectedDrawId: row.drawId,
-                                          num1: row.num1,
-                                          num2: row.num2,
-                                          num3: row.num3,
-                                          cash3: row.cash3,
-                                          pickFour: row.play4,
-                                          pickFive: row.pick5,
-                                          bolita1: row.bolita1,
-                                          bolita2: row.bolita2,
-                                          singulaccion1: row.singulaccion1,
-                                          singulaccion2: row.singulaccion2,
-                                          singulaccion3: row.singulaccion3,
-                                        });
-                                        window.scrollTo({ top: 0, behavior: 'smooth' });
-                                      }}
-                                      sx={{ color: '#37b9f9' }}
+                                      onClick={() => handleEditRow(row)}
+                                      sx={{ color: COLORS.primary }}
                                     >
                                       <EditIcon fontSize="small" />
                                     </IconButton>
@@ -1263,18 +1042,38 @@ const Results = (): React.ReactElement => {
                 )}
 
                 {/* Summary */}
-                <Box sx={{ mt: 2, display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'space-between' }}>
+                <Box
+                  sx={{
+                    mt: 2,
+                    display: 'flex',
+                    gap: 2,
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    justifyContent: 'space-between',
+                  }}
+                >
                   <Typography variant="body2" color="text.secondary">
-                    Total: {drawResults.length} sorteos |{' '}
-                    Con resultado: {drawResults.filter(r => r.hasResult).length} |{' '}
-                    Pendientes: {drawResults.filter(r => r.isDirty).length}
+                    Total: {computed.totalCount} sorteos | Con resultado: {computed.withResultsCount} |
+                    Pendientes: {computed.pendingCount}
                   </Typography>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Chip
                       size="small"
-                      icon={autoRefreshEnabled ? <RefreshIcon sx={{ animation: 'spin 2s linear infinite', '@keyframes spin': { '0%': { transform: 'rotate(0deg)' }, '100%': { transform: 'rotate(360deg)' } } }} /> : undefined}
+                      icon={
+                        autoRefreshEnabled ? (
+                          <RefreshIcon
+                            sx={{
+                              animation: 'spin 2s linear infinite',
+                              '@keyframes spin': {
+                                '0%': { transform: 'rotate(0deg)' },
+                                '100%': { transform: 'rotate(360deg)' },
+                              },
+                            }}
+                          />
+                        ) : undefined
+                      }
                       label={`Auto-refresh: ${autoRefreshEnabled ? 'ON (60s)' : 'OFF'}`}
-                      onClick={() => setAutoRefreshEnabled(!autoRefreshEnabled)}
+                      onClick={actions.toggleAutoRefresh}
                       color={autoRefreshEnabled ? 'success' : 'default'}
                       sx={{ cursor: 'pointer' }}
                     />
@@ -1328,7 +1127,9 @@ const Results = (): React.ReactElement => {
                           <TableCell>{log.drawName}</TableCell>
                           <TableCell>{log.username}</TableCell>
                           <TableCell>{new Date(log.resultDate).toLocaleDateString()}</TableCell>
-                          <TableCell>{log.createdAt ? new Date(log.createdAt).toLocaleString() : '-'}</TableCell>
+                          <TableCell>
+                            {log.createdAt ? new Date(log.createdAt).toLocaleString() : '-'}
+                          </TableCell>
                           <TableCell>{log.winningNumbers}</TableCell>
                         </TableRow>
                       ))
@@ -1346,7 +1147,7 @@ const Results = (): React.ReactElement => {
       </Paper>
 
       {/* Comparison Dialog */}
-      <Dialog open={showCompareDialog} onClose={() => setShowCompareDialog(false)} maxWidth="md" fullWidth>
+      <Dialog open={showCompareDialog} onClose={() => actions.setShowCompareDialog(false)} maxWidth="md" fullWidth>
         <DialogTitle>Comparación con Resultados Externos</DialogTitle>
         <DialogContent>
           <TableContainer>
@@ -1360,30 +1161,32 @@ const Results = (): React.ReactElement => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {drawResults.filter(r => r.hasExternalResult).map((row) => (
-                  <TableRow key={row.drawId}>
-                    <TableCell>{row.drawName}</TableCell>
-                    <TableCell align="center" sx={{ fontWeight: 600 }}>
-                      {row.num1}-{row.num2}-{row.num3}
-                    </TableCell>
-                    <TableCell align="center" sx={{ fontWeight: 600 }}>
-                      {row.externalNum1}-{row.externalNum2}-{row.externalNum3}
-                    </TableCell>
-                    <TableCell align="center">
-                      {row.matchesExternal ? (
-                        <Chip label="Coincide" size="small" color="success" icon={<CheckIcon />} />
-                      ) : (
-                        <Chip label="No coincide" size="small" color="error" icon={<WarningIcon />} />
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {drawResults
+                  .filter((r) => r.hasExternalResult)
+                  .map((row) => (
+                    <TableRow key={row.drawId}>
+                      <TableCell>{row.drawName}</TableCell>
+                      <TableCell align="center" sx={{ fontWeight: 600 }}>
+                        {row.num1}-{row.num2}-{row.num3}
+                      </TableCell>
+                      <TableCell align="center" sx={{ fontWeight: 600 }}>
+                        {row.externalNum1}-{row.externalNum2}-{row.externalNum3}
+                      </TableCell>
+                      <TableCell align="center">
+                        {row.matchesExternal ? (
+                          <Chip label="Coincide" size="small" color="success" icon={<CheckIcon />} />
+                        ) : (
+                          <Chip label="No coincide" size="small" color="error" icon={<WarningIcon />} />
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
               </TableBody>
             </Table>
           </TableContainer>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setShowCompareDialog(false)}>Cerrar</Button>
+          <Button onClick={() => actions.setShowCompareDialog(false)}>Cerrar</Button>
         </DialogActions>
       </Dialog>
     </Box>
