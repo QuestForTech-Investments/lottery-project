@@ -410,13 +410,14 @@ export function useResultsState(): UseResultsStateReturn {
   );
 
   // ===========================================================================
-  // Return
+  // Memoized Actions Object
   // ===========================================================================
+  // CRITICAL: This must be memoized to prevent infinite re-render loops.
+  // Without useMemo, a new actions object is created on every render,
+  // which causes useEffect hooks depending on 'actions' to re-trigger infinitely.
 
-  return {
-    state,
-    dispatch,
-    actions: {
+  const actions = useMemo(
+    () => ({
       setDate,
       setTab,
       setLogsFilterDate,
@@ -440,7 +441,42 @@ export function useResultsState(): UseResultsStateReturn {
       toggleAutoRefresh,
       setLastRefresh,
       setShowCompareDialog,
-    },
+    }),
+    [
+      setDate,
+      setTab,
+      setLogsFilterDate,
+      setLoading,
+      setFetchingExternal,
+      setComparing,
+      setSavingIndividual,
+      setError,
+      setSuccess,
+      clearMessages,
+      setDrawResults,
+      updateField,
+      setSaving,
+      markSaved,
+      markDeleted,
+      setIndividualForm,
+      resetIndividualForm,
+      setExternalResults,
+      setExternalComparison,
+      setLogs,
+      toggleAutoRefresh,
+      setLastRefresh,
+      setShowCompareDialog,
+    ]
+  );
+
+  // ===========================================================================
+  // Return
+  // ===========================================================================
+
+  return {
+    state,
+    dispatch,
+    actions,
     computed,
   };
 }
