@@ -36,33 +36,10 @@ const BettingPoolSales = (): React.ReactElement => {
   const formatCurrency = useCallback((amount: number): string => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount), []);
 
   useEffect(() => {
-    const mockData = [];
-    for (let i = 1; i <= 10; i++) {
-      const ventas = Math.floor(Math.random() * 8000) + 500;
-      const comisiones = ventas * 0.1;
-      const premios = Math.floor(Math.random() * 4000);
-      const neto = ventas - comisiones - premios;
-
-      mockData.push({
-        codigo: `RB00${i}`,
-        nombre: `Banca ${i}`,
-        ventas, comisiones, premios, neto
-      });
-    }
-    setData(mockData);
-
-    setTotals({
-      ventas: mockData.reduce((sum, d) => sum + d.ventas, 0),
-      comisiones: mockData.reduce((sum, d) => sum + d.comisiones, 0),
-      premios: mockData.reduce((sum, d) => sum + d.premios, 0),
-      neto: mockData.reduce((sum, d) => sum + d.neto, 0)
-    });
-
-    setBancasList([
-      { id: 1, name: 'Banca Principal' },
-      { id: 2, name: 'Banca Norte' },
-      { id: 3, name: 'Banca Sur' }
-    ]);
+    // Initialize with empty data - will be loaded from API when implemented
+    setData([]);
+    setTotals({ ventas: 0, comisiones: 0, premios: 0, neto: 0 });
+    setBancasList([]);
   }, []);
 
   const FILTER_OPTIONS = [

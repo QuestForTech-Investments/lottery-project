@@ -115,6 +115,8 @@ export const COLORS = {
   cellEmpty: '#fff',
   headerBg: '#f5f5f5',
   rowHover: '#fafafa',
+  rowPublished: '#e3f2fd', // Light blue for published results
+  rowPublishedHover: '#bbdefb', // Darker blue on hover for published results
   // Text
   textPrimary: '#333',
   textSecondary: '#666',

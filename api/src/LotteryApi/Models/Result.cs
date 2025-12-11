@@ -19,7 +19,7 @@ public class Result
     [Column("winning_number")]
     public string WinningNumber { get; set; } = string.Empty;
 
-    [MaxLength(10)]
+    [MaxLength(20)]
     [Column("additional_number")]
     public string? AdditionalNumber { get; set; }
 

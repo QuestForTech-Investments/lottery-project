@@ -31,29 +31,10 @@ const PlayTypePrizes = (): React.ReactElement => {
   const formatCurrency = useCallback((amount: number): string => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount), []);
 
   useEffect(() => {
-    const mockData = [
-      { tipoJugada: 'Directo', ventas: 15000, premios: 8500, neto: 6500, porcentaje: '43.3%' },
-      { tipoJugada: 'Palé', ventas: 8000, premios: 12000, neto: -4000, porcentaje: '-50.0%' },
-      { tipoJugada: 'Tripleta', ventas: 3500, premios: 21000, neto: -17500, porcentaje: '-500.0%' },
-      { tipoJugada: 'Pick Two', ventas: 5200, premios: 2800, neto: 2400, porcentaje: '46.2%' },
-      { tipoJugada: 'Pick Three', ventas: 2100, premios: 4500, neto: -2400, porcentaje: '-114.3%' },
-      { tipoJugada: 'Pick Four', ventas: 1800, premios: 0, neto: 1800, porcentaje: '100.0%' }
-    ];
-    setData(mockData);
-
-    setSorteosList([
-      { id: 1, name: 'Nacional 12PM' },
-      { id: 2, name: 'Nacional 3PM' },
-      { id: 3, name: 'NY 10:30AM' },
-      { id: 4, name: 'Florida 1:30PM' }
-    ]);
-
-    setZonasList([
-      { id: 1, name: 'Zona Norte' },
-      { id: 2, name: 'Zona Sur' },
-      { id: 3, name: 'Zona Este' },
-      { id: 4, name: 'Zona Oeste' }
-    ]);
+    // Initialize with empty data - will be loaded from API when implemented
+    setData([]);
+    setSorteosList([]);
+    setZonasList([]);
   }, []);
 
   const totalVentas = data.reduce((sum, d) => sum + d.ventas, 0);
@@ -102,7 +83,7 @@ const PlayTypePrizes = (): React.ReactElement => {
                 <TableCell sx={{ fontWeight: 600 }}>{formatCurrency(totalVentas)}</TableCell>
                 <TableCell sx={{ fontWeight: 600 }}>{formatCurrency(totalPremios)}</TableCell>
                 <TableCell sx={{ fontWeight: 600, color: totalNeto >= 0 ? 'success.main' : 'error.main' }}>{formatCurrency(totalNeto)}</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>{((totalNeto / totalVentas) * 100).toFixed(1)}%</TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>{totalVentas > 0 ? ((totalNeto / totalVentas) * 100).toFixed(1) : '0.0'}%</TableCell>
               </TableRow>
               {data.map((d, i) => (
                 <TableRow key={i} sx={{ '&:hover': { backgroundColor: 'action.hover' } }}>

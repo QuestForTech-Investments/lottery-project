@@ -13,4 +13,6 @@ export {
   isValidLotteryNumber,
   hasDateLikePattern,
   sanitizeNumberInput,
+  calculateUsaFields,
+  isUsaTriggerField,
 } from './fieldConfig';

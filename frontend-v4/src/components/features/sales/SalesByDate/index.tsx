@@ -47,54 +47,11 @@ const SalesByDate = (): React.ReactElement => {
   const formatCurrency = useCallback((amount: number): string => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount), []);
 
   useEffect(() => {
-    const mockData = [];
-    const today = new Date();
-    for (let i = 0; i < 7; i++) {
-      const date = new Date(today);
-      date.setDate(date.getDate() - i);
-      const venta = Math.floor(Math.random() * 10000) + 1000;
-      const premios = Math.floor(Math.random() * 3000);
-      const comisiones = venta * 0.1;
-      const descuentos = venta * 0.02;
-      const caida = Math.floor(Math.random() * 500);
-      const neto = venta - comisiones - descuentos - premios;
-
-      mockData.push({
-        fecha: date.toLocaleDateString(),
-        venta, premios, comisiones, descuentos, caida, neto
-      });
-    }
-    setData(mockData);
-
-    setTotals({
-      venta: mockData.reduce((sum, d) => sum + d.venta, 0),
-      premios: mockData.reduce((sum, d) => sum + d.premios, 0),
-      comisiones: mockData.reduce((sum, d) => sum + d.comisiones, 0),
-      descuentos: mockData.reduce((sum, d) => sum + d.descuentos, 0),
-      caida: mockData.reduce((sum, d) => sum + d.caida, 0),
-      neto: mockData.reduce((sum, d) => sum + d.neto, 0)
-    });
-
-    setBancasList([
-      { id: 1, codigo: 'RB001', nombre: 'Banca Central' },
-      { id: 2, codigo: 'RB002', nombre: 'Banca Norte' },
-      { id: 3, codigo: 'RB003', nombre: 'Banca Sur' },
-      { id: 4, codigo: 'RB004', nombre: 'Banca Este' },
-      { id: 5, codigo: 'RB005', nombre: 'Banca Oeste' }
-    ]);
-
-    setZonasList([
-      { id: 1, name: 'Zona Norte' },
-      { id: 2, name: 'Zona Sur' },
-      { id: 3, name: 'Zona Este' },
-      { id: 4, name: 'Zona Oeste' },
-      { id: 5, name: 'Centro' },
-      { id: 6, name: 'Metropolitana' },
-      { id: 7, name: 'Rural' },
-      { id: 8, name: 'Industrial' },
-      { id: 9, name: 'Comercial' },
-      { id: 10, name: 'Residencial' }
-    ]);
+    // Initialize with empty data - will be loaded from API when implemented
+    setData([]);
+    setTotals({ venta: 0, premios: 0, comisiones: 0, descuentos: 0, caida: 0, neto: 0 });
+    setBancasList([]);
+    setZonasList([]);
   }, []);
 
   return (

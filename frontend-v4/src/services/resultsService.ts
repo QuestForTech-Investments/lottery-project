@@ -31,7 +31,7 @@ export interface ResultDto {
 export interface CreateResultDto {
   drawId: number
   winningNumber: string
-  additionalNumber?: string | null
+  additionalNumber?: string | null  // Contains cash3 + play4 + pick5 for USA lotteries
   position?: number | null
   resultDate: string
 }

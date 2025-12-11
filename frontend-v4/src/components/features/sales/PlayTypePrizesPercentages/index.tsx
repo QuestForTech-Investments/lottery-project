@@ -22,22 +22,9 @@ const PlayTypePrizesPercentages = (): React.ReactElement => {
   const [zonasList, setZonasList] = useState<Zona[]>([]);
 
   useEffect(() => {
-    const mockData = [
-      { tipoJugada: 'Directo', porcentajeVentas: '42.1%', porcentajePremios: '17.4%', porcentajeNeto: '48.9%' },
-      { tipoJugada: 'Palé', porcentajeVentas: '22.5%', porcentajePremios: '24.5%', porcentajeNeto: '-30.1%' },
-      { tipoJugada: 'Tripleta', porcentajeVentas: '9.8%', porcentajePremios: '42.9%', porcentajeNeto: '-131.6%' },
-      { tipoJugada: 'Pick Two', porcentajeVentas: '14.6%', porcentajePremios: '5.7%', porcentajeNeto: '18.0%' },
-      { tipoJugada: 'Pick Three', porcentajeVentas: '5.9%', porcentajePremios: '9.2%', porcentajeNeto: '-18.0%' },
-      { tipoJugada: 'Pick Four', porcentajeVentas: '5.1%', porcentajePremios: '0.0%', porcentajeNeto: '13.5%' }
-    ];
-    setData(mockData);
-
-    setZonasList([
-      { id: 1, name: 'Zona Norte' },
-      { id: 2, name: 'Zona Sur' },
-      { id: 3, name: 'Zona Este' },
-      { id: 4, name: 'Zona Oeste' }
-    ]);
+    // Initialize with empty data - will be loaded from API when implemented
+    setData([]);
+    setZonasList([]);
   }, []);
 
   return (

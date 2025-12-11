@@ -4,6 +4,23 @@ Sistema de lotería con frontend React (TypeScript) y API (.NET).
 
 ---
 
+## 🎰 SINCRONIZACIÓN DE RESULTADOS
+
+**IMPORTANTE:** NO usar acceso directo a la API de lotocompany (`api.lotocompany.com`).
+
+Los datos de resultados de lotería se obtienen mediante **web scraping de la aplicación original**:
+- **URL:** https://la-numbers.apk.lol
+- **Credenciales:** `oliver` / `oliver0597@`
+- **Método:** Playwright para extraer datos visualmente de la interfaz
+
+**Razón:** La API de lotocompany bloquea acceso directo (returns "Forbidden").
+
+**Configuración:**
+- `appsettings.json` → `Lotocompany.IsEnabled: false`
+- El sync worker `LotocompanySyncWorker.cs` está deshabilitado
+
+---
+
 ## 🚨 FRONTEND: frontend-v4
 
 **IMPORTANTE:** Todo el desarrollo de frontend se realiza en `frontend-v4`.

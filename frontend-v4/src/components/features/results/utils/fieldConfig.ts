@@ -95,21 +95,28 @@ export const getEnabledFields = (drawName: string): EnabledFields => {
 
     case 'USA':
       // USA lotteries (TEXAS, FLORIDA, etc.)
-      // Full set: 1ra, 2da, 3ra, Cash 3, Pick Four, bolita 1, bolita 2, Singulaccion 1-3
-      // Note: Pick five is NOT used for Texas
+      // Only Cash3 and Play4 are editable - all other fields are auto-calculated
+      // Algorithm: Given Cash3="ABC" and Play4="DEFG":
+      //   - num1 (1ra) = BC (bolita2)
+      //   - num2 (2da) = DE
+      //   - num3 (3ra) = FG
+      //   - bolita1 = AB
+      //   - bolita2 = BC
+      //   - singulaccion1/2/3 = A, B, C
+      //   - pick5 = ABC + DE = Cash3 + 2da
       result = {
         ...ALL_DISABLED,
-        num1: true,
-        num2: true,
-        num3: true,
-        cash3: true,
-        play4: true,
-        pick5: false,
-        bolita1: true,
-        bolita2: true,
-        singulaccion1: true,
-        singulaccion2: true,
-        singulaccion3: true,
+        num1: false,       // Auto-calculated from bolita2
+        num2: false,       // Auto-calculated from play4[0:2]
+        num3: false,       // Auto-calculated from play4[2:4]
+        cash3: true,       // EDITABLE - primary input
+        play4: true,       // EDITABLE - primary input
+        pick5: false,      // Auto-calculated
+        bolita1: false,    // Auto-calculated from cash3[0:2]
+        bolita2: false,    // Auto-calculated from cash3[1:3]
+        singulaccion1: false,  // Auto-calculated from cash3[0]
+        singulaccion2: false,  // Auto-calculated from cash3[1]
+        singulaccion3: false,  // Auto-calculated from cash3[2]
       };
       break;
 
@@ -189,4 +196,98 @@ export const hasDateLikePattern = (winningNumber: string): boolean => {
  */
 export const sanitizeNumberInput = (value: string): string => {
   return value.replace(/\D/g, '');
+};
+
+// =============================================================================
+// USA Lottery Auto-Calculation
+// =============================================================================
+
+/**
+ * Auto-calculated fields for USA lotteries
+ */
+export interface UsaAutoCalculatedFields {
+  num1: string;       // 1ra = bolita2 (BC)
+  num2: string;       // 2da = DE
+  num3: string;       // 3ra = FG
+  bolita1: string;    // AB
+  bolita2: string;    // BC
+  singulaccion1: string;  // A
+  singulaccion2: string;  // B
+  singulaccion3: string;  // C
+  pick5: string;      // Cash3 + 2da = ABC + DE
+}
+
+/**
+ * Auto-calculate all derived fields for USA lotteries from Cash3 and Play4
+ *
+ * Algorithm:
+ * Given Cash3 = "ABC" (3 digits) and Play4 = "DEFG" (4 digits):
+ *   - singulaccion1 = A
+ *   - singulaccion2 = B
+ *   - singulaccion3 = C
+ *   - bolita1 = AB
+ *   - bolita2 = BC
+ *   - num1 (1ra) = BC (same as bolita2)
+ *   - num2 (2da) = DE
+ *   - num3 (3ra) = FG
+ *   - pick5 = ABC + DE (Cash3 + 2da)
+ *
+ * @param cash3 - 3-digit Cash3 number (e.g., "583")
+ * @param play4 - 4-digit Play4/Pick Four number (e.g., "4173")
+ * @returns Object with all auto-calculated fields
+ *
+ * @example
+ * calculateUsaFields("583", "4173")
+ * // Returns:
+ * // {
+ * //   num1: "83",
+ * //   num2: "41",
+ * //   num3: "73",
+ * //   bolita1: "58",
+ * //   bolita2: "83",
+ * //   singulaccion1: "5",
+ * //   singulaccion2: "8",
+ * //   singulaccion3: "3",
+ * //   pick5: "58341"
+ * // }
+ */
+export const calculateUsaFields = (cash3: string, play4: string): UsaAutoCalculatedFields => {
+  // Ensure proper format with leading zeros
+  const c3 = (cash3 || '').padStart(3, '0').slice(0, 3);
+  const p4 = (play4 || '').padStart(4, '0').slice(0, 4);
+
+  // Extract individual digits
+  const A = c3[0] || '0';
+  const B = c3[1] || '0';
+  const C = c3[2] || '0';
+
+  const D = p4[0] || '0';
+  const E = p4[1] || '0';
+  const F = p4[2] || '0';
+  const G = p4[3] || '0';
+
+  // Calculate derived values
+  const bolita1 = A + B;
+  const bolita2 = B + C;
+  const segunda = D + E;
+  const tercera = F + G;
+
+  return {
+    num1: bolita2,      // 1ra = bolita2
+    num2: segunda,      // 2da = first 2 digits of play4
+    num3: tercera,      // 3ra = last 2 digits of play4
+    bolita1,
+    bolita2,
+    singulaccion1: A,
+    singulaccion2: B,
+    singulaccion3: C,
+    pick5: c3 + segunda,  // Cash3 + 2da
+  };
+};
+
+/**
+ * Check if a field should trigger USA auto-calculation
+ */
+export const isUsaTriggerField = (field: string): boolean => {
+  return field === 'cash3' || field === 'play4';
 };

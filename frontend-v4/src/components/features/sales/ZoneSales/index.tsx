@@ -37,30 +37,10 @@ const ZoneSales = (): React.ReactElement => {
   const formatCurrency = useCallback((amount: number): string => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount), []);
 
   useEffect(() => {
-    const mockData = [
-      { zona: 'Zona Norte', bancas: 12, ventas: 45000, comisiones: 4500, premios: 15000, neto: 25500 },
-      { zona: 'Zona Sur', bancas: 8, ventas: 32000, comisiones: 3200, premios: 18000, neto: 10800 },
-      { zona: 'Zona Este', bancas: 15, ventas: 58000, comisiones: 5800, premios: 22000, neto: 30200 },
-      { zona: 'Zona Oeste', bancas: 10, ventas: 41000, comisiones: 4100, premios: 12000, neto: 24900 },
-      { zona: 'Zona Centro', bancas: 6, ventas: 28000, comisiones: 2800, premios: 35000, neto: -9800 }
-    ];
-    setData(mockData);
-
-    setTotals({
-      bancas: mockData.reduce((sum, d) => sum + d.bancas, 0),
-      ventas: mockData.reduce((sum, d) => sum + d.ventas, 0),
-      comisiones: mockData.reduce((sum, d) => sum + d.comisiones, 0),
-      premios: mockData.reduce((sum, d) => sum + d.premios, 0),
-      neto: mockData.reduce((sum, d) => sum + d.neto, 0)
-    });
-
-    setZonasList([
-      { id: 1, name: 'Zona Norte' },
-      { id: 2, name: 'Zona Sur' },
-      { id: 3, name: 'Zona Este' },
-      { id: 4, name: 'Zona Oeste' },
-      { id: 5, name: 'Zona Centro' }
-    ]);
+    // Initialize with empty data - will be loaded from API when implemented
+    setData([]);
+    setTotals({ bancas: 0, ventas: 0, comisiones: 0, premios: 0, neto: 0 });
+    setZonasList([]);
   }, []);
 
   const FILTER_OPTIONS = [

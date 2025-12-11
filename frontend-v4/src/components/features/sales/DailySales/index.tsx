@@ -53,7 +53,7 @@ interface BettingPool {
   reference?: string;
 }
 
-interface _SalesRow {
+interface SalesRow {
   id: number;
   ref: string;
   code: string;
@@ -70,6 +70,19 @@ interface _SalesRow {
   final: number;
   balance: number;
   accumulatedFall: number;
+}
+
+// API response type
+interface BettingPoolSalesDto {
+  bettingPoolId: number;
+  bettingPoolName: string;
+  bettingPoolCode: string;
+  zoneId: number;
+  zoneName: string;
+  totalSold: number;
+  totalPrizes: number;
+  totalCommissions: number;
+  totalNet: number;
 }
 
 interface _SalesTotals {
@@ -153,16 +166,47 @@ const DailySales = (): React.ReactElement => {
   });
   const [selectedZones, setSelectedZones] = useState<number[]>([]);
   const [selectedGroup, setSelectedGroup] = useState<string>('');
-  const [filterType, setFilterType] = useState<string>('with-sales');
+  const [filterType, setFilterType] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState<string>('');
 
-  // Summary data
-  const [_netTotal, _setNetTotal] = useState<number>(0);
-  const [_grandTotal, _setGrandTotal] = useState<number>(0);
+  // Sales data from API
+  const [salesData, setSalesData] = useState<SalesRow[]>([]);
 
-  useEffect(() => {
-    loadInitialData();
-  }, []);
+  // Function to load sales data from API
+  const loadSalesData = async (date: string) => {
+    try {
+      console.log('[DATA] Loading sales for date:', date);
+      const response = await api.get<BettingPoolSalesDto[]>(
+        `/reports/sales/by-betting-pool?startDate=${date}&endDate=${date}`
+      );
+
+      // Map API response to table row format
+      const mappedData: SalesRow[] = (response || []).map((item: BettingPoolSalesDto) => ({
+        id: item.bettingPoolId,
+        ref: item.bettingPoolName,
+        code: item.bettingPoolCode,
+        p: 0, // Not available from this endpoint
+        l: 0, // Not available from this endpoint
+        w: 0, // Not available from this endpoint
+        total: 0, // Not available from this endpoint
+        sales: item.totalSold,
+        commissions: item.totalCommissions,
+        discounts: 0, // Not available from this endpoint
+        prizes: item.totalPrizes,
+        net: item.totalNet,
+        fall: 0, // Not available from this endpoint
+        final: item.totalNet, // Same as net for now
+        balance: 0, // Not available from this endpoint
+        accumulatedFall: 0, // Not available from this endpoint
+      }));
+
+      console.log('[DATA] Sales data loaded:', mappedData.length, 'records');
+      setSalesData(mappedData);
+    } catch (err) {
+      console.error('[DATA] Error loading sales:', err);
+      // Don't set error here, just log it - sales loading failure shouldn't block the UI
+    }
+  };
 
   const loadInitialData = async () => {
     setLoading(true);
@@ -188,6 +232,9 @@ const DailySales = (): React.ReactElement => {
 
       const allZoneIds = zonesArray.map((z: Zone) => z.zoneId || z.id).filter((id): id is number => id !== undefined);
       setSelectedZones(allZoneIds);
+
+      // Load sales data for today
+      await loadSalesData(new Date().toISOString().split('T')[0]);
     } catch (err) {
       console.error('[DATA] Error loading data:', err);
       setError(err instanceof Error ? err.message : 'Error loading data');
@@ -196,15 +243,16 @@ const DailySales = (): React.ReactElement => {
     }
   };
 
+  useEffect(() => {
+    loadInitialData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleSearch = async () => {
     setLoading(true);
     try {
-      console.log('[DATA] Searching sales for date:', selectedDate);
-      // TODO: Call actual API endpoint
-      setLoading(false);
-    } catch (err) {
-      console.error('[DATA] Error searching:', err);
-      setError(err instanceof Error ? err.message : 'Error searching');
+      await loadSalesData(selectedDate);
+    } finally {
       setLoading(false);
     }
   };
@@ -230,39 +278,8 @@ const DailySales = (): React.ReactElement => {
     setSelectedZones(typeof value === 'string' ? value.split(',').map(Number) : value);
   }, []);
 
-  // Generate mock sales data
-  const salesData = useMemo(() => {
-    return bettingPools.map(pool => {
-      const sales = Math.random() > 0.3 ? Math.floor(Math.random() * 5000) : 0;
-      const commissions = sales * 0.1;
-      const discounts = sales * 0.02;
-      const prizes = Math.random() > 0.7 ? Math.floor(Math.random() * 1000) : 0;
-      const net = sales - commissions - discounts - prizes;
-      const fall = Math.random() > 0.5 ? Math.floor(Math.random() * 500) : 0;
-      const final = net - fall;
-      const balance = Math.floor(Math.random() * 2000) - 1000;
-      const accumulatedFall = Math.floor(Math.random() * 3000);
-
-      return {
-        id: pool.bettingPoolId || pool.id || 0,
-        ref: pool.reference || `REF-${pool.bettingPoolId || pool.id || 0}`,
-        code: `LAN-${(pool.bettingPoolId || pool.id || 0).toString().padStart(4, '0')}`,
-        p: Math.floor(Math.random() * 10),
-        l: Math.floor(Math.random() * 10),
-        w: Math.floor(Math.random() * 10),
-        total: Math.floor(Math.random() * 20),
-        sales,
-        commissions,
-        discounts,
-        prizes,
-        net,
-        fall,
-        final,
-        balance,
-        accumulatedFall
-      };
-    });
-  }, [bettingPools]);
+  // Note: salesData is now loaded from API via loadSalesData()
+  // Removed mock data generation
 
   // Filter data
   const filteredData = useMemo(() => {

@@ -102,98 +102,14 @@ const HistoricalSales = (): React.ReactElement => {
   const formatCurrency = useCallback((amount: number): string => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount), []);
 
   useEffect(() => {
-    // Mock data for BANCAS (General tab)
-    const mockBancas = [];
-    for (let i = 1; i <= 15; i++) {
-      const venta = Math.floor(Math.random() * 5000) + 100;
-      const comisiones = venta * 0.1;
-      const descuentos = venta * 0.02;
-      const premios = Math.floor(Math.random() * 2000);
-      const neto = venta - comisiones - descuentos - premios;
-      const caida = Math.floor(Math.random() * 100);
-      const final = neto - caida;
-
-      mockBancas.push({
-        ref: `B-${String(1000 + i).padStart(4, '0')}`,
-        codigo: `RB00${i}`,
-        tickets: Math.floor(Math.random() * 50) + 10,
-        venta, comisiones, descuentos, premios, neto, caida, final
-      });
-    }
-    setBancasData(mockBancas);
-
-    // Mock data for SORTEOS (Por sorteo tab)
-    const sorteos = [
-      'DIARIA 11AM', 'DIARIA 12PM', 'DIARIA 3PM', 'DIARIA 6PM', 'DIARIA 9PM',
-      'NEW YORK 10:30', 'NEW YORK 12:30', 'NEW YORK 7:30',
-      'FLORIDA 1:30', 'FLORIDA 9:45',
-      'SANTO DOMINGO', 'NACIONAL'
-    ];
-    const mockSorteos = sorteos.map(sorteo => {
-      const venta = Math.floor(Math.random() * 10000) + 500;
-      const comisiones = venta * 0.1;
-      const descuentos = venta * 0.02;
-      const premios = Math.floor(Math.random() * 4000);
-      const neto = venta - comisiones - descuentos - premios;
-      return {
-        sorteo,
-        tickets: Math.floor(Math.random() * 100) + 20,
-        venta, comisiones, descuentos, premios, neto
-      };
-    });
-    setSorteoData(mockSorteos);
-
-    // Mock data for COMBINACIONES (Combinaciones tab) - empty for now
+    // Initialize with empty data - will be loaded from API when implemented
+    setBancasData([]);
+    setSorteoData([]);
     setCombinacionesData([]);
-
-    // Mock data for ZONAS (Por zona tab)
-    const zonasInfo = [
-      { zona: 'Zona Norte', bancas: 12 },
-      { zona: 'Zona Sur', bancas: 8 },
-      { zona: 'Zona Este', bancas: 15 },
-      { zona: 'Zona Oeste', bancas: 10 },
-      { zona: 'Centro', bancas: 20 },
-      { zona: 'Metropolitana', bancas: 25 }
-    ];
-    const mockZonas = zonasInfo.map(z => {
-      const venta = z.bancas * (Math.floor(Math.random() * 3000) + 1000);
-      const comisiones = venta * 0.1;
-      const descuentos = venta * 0.02;
-      const premios = Math.floor(Math.random() * venta * 0.3);
-      const neto = venta - comisiones - descuentos - premios;
-      return {
-        zona: z.zona,
-        bancasActivas: z.bancas,
-        tickets: z.bancas * Math.floor(Math.random() * 30) + 50,
-        venta, comisiones, descuentos, premios, neto
-      };
-    });
-    setZonasData(mockZonas);
-
-    // Calculate totals from bancas data
-    setTotals({
-      tickets: mockBancas.reduce((sum, d) => sum + d.tickets, 0),
-      venta: mockBancas.reduce((sum, d) => sum + d.venta, 0),
-      comisiones: mockBancas.reduce((sum, d) => sum + d.comisiones, 0),
-      descuentos: mockBancas.reduce((sum, d) => sum + d.descuentos, 0),
-      premios: mockBancas.reduce((sum, d) => sum + d.premios, 0),
-      neto: mockBancas.reduce((sum, d) => sum + d.neto, 0),
-      caida: mockBancas.reduce((sum, d) => sum + d.caida, 0),
-      final: mockBancas.reduce((sum, d) => sum + d.final, 0)
-    });
-
-    setZonasList([
-      { id: 1, name: 'Zona Norte' },
-      { id: 2, name: 'Zona Sur' },
-      { id: 3, name: 'Zona Este' },
-      { id: 4, name: 'Zona Oeste' }
-    ]);
-
-    setGruposList([
-      { id: 1, name: 'Grupo A' },
-      { id: 2, name: 'Grupo B' },
-      { id: 3, name: 'Grupo C' }
-    ]);
+    setZonasData([]);
+    setTotals({ tickets: 0, venta: 0, comisiones: 0, descuentos: 0, premios: 0, neto: 0, caida: 0, final: 0 });
+    setZonasList([]);
+    setGruposList([]);
   }, []);
 
   const FILTER_OPTIONS = [
