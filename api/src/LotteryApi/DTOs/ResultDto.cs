@@ -25,6 +25,13 @@ public class ResultDto
     public string Cash3 { get; set; } = string.Empty;
     public string Play4 { get; set; } = string.Empty;
     public string Pick5 { get; set; } = string.Empty;
+
+    // Derived bet types (calculated from Cash3 for USA lotteries)
+    public string Bolita1 { get; set; } = string.Empty;
+    public string Bolita2 { get; set; } = string.Empty;
+    public string Singulaccion1 { get; set; } = string.Empty;
+    public string Singulaccion2 { get; set; } = string.Empty;
+    public string Singulaccion3 { get; set; } = string.Empty;
 }
 
 /// <summary>

@@ -798,6 +798,16 @@ public class ResultsController : ControllerBase
             pick5 = additionalNumber.Substring(7, 5);
         }
 
+        // Calculate derived bet types from Cash3 for USA lotteries
+        // Bolita1 = first 2 digits (e.g., "084" -> "08")
+        // Bolita2 = last 2 digits (e.g., "084" -> "84")
+        // Singulaccion1/2/3 = individual digits (e.g., "084" -> "0", "8", "4")
+        var bolita1 = cash3.Length >= 2 ? cash3.Substring(0, 2) : "";
+        var bolita2 = cash3.Length >= 3 ? cash3.Substring(1, 2) : "";
+        var singulaccion1 = cash3.Length >= 1 ? cash3.Substring(0, 1) : "";
+        var singulaccion2 = cash3.Length >= 2 ? cash3.Substring(1, 1) : "";
+        var singulaccion3 = cash3.Length >= 3 ? cash3.Substring(2, 1) : "";
+
         return new ResultDto
         {
             ResultId = result.ResultId,
@@ -817,7 +827,12 @@ public class ResultsController : ControllerBase
             Num3 = num3,
             Cash3 = cash3,
             Play4 = play4,
-            Pick5 = pick5
+            Pick5 = pick5,
+            Bolita1 = bolita1,
+            Bolita2 = bolita2,
+            Singulaccion1 = singulaccion1,
+            Singulaccion2 = singulaccion2,
+            Singulaccion3 = singulaccion3
         };
     }
 }

@@ -56,6 +56,7 @@ import {
   deleteResult,
   fetchExternalResults,
   type ResultDto,
+  type ResultLogDto,
 } from '@services/resultsService';
 
 // Internal module imports
@@ -143,6 +144,9 @@ const Results = (): React.ReactElement => {
 
   // Filter state for logs tab
   const [logsFilter, setLogsFilter] = useState<string>('');
+
+  // State for view details modal
+  const [viewDetailsRow, setViewDetailsRow] = useState<DrawResultRow | null>(null);
 
   // Filtered draw results
   const filteredDrawResults = useMemo(() => {
@@ -362,11 +366,11 @@ const Results = (): React.ReactElement => {
           cash3: result?.cash3 || '',
           play4: result?.play4 || '',
           pick5: result?.pick5 || '',
-          bolita1: '',
-          bolita2: '',
-          singulaccion1: '',
-          singulaccion2: '',
-          singulaccion3: '',
+          bolita1: result?.bolita1 ?? '',
+          bolita2: result?.bolita2 ?? '',
+          singulaccion1: result?.singulaccion1 ?? '',
+          singulaccion2: result?.singulaccion2 ?? '',
+          singulaccion3: result?.singulaccion3 ?? '',
           hasResult: !!result,
           isDirty: false,
           isSaving: false,
@@ -831,6 +835,14 @@ const Results = (): React.ReactElement => {
     },
     [actions]
   );
+
+  const handleViewDetails = useCallback((row: DrawResultRow) => {
+    setViewDetailsRow(row);
+  }, []);
+
+  const handleCloseViewDetails = useCallback(() => {
+    setViewDetailsRow(null);
+  }, []);
 
   // ---------------------------------------------------------------------------
   // Render Helpers
@@ -1329,17 +1341,17 @@ const Results = (): React.ReactElement => {
                                 {renderNumberInputCell(row, 'play4', enabledFields)}
                                 {renderNumberInputCell(row, 'pick5', enabledFields)}
 
-                                {/* Save button */}
+                                {/* View details button */}
                                 <TableCell align="center" sx={{ p: 0.5 }}>
                                   <Button
                                     size="small"
                                     variant="contained"
-                                    onClick={() => handleSaveResult(row.drawId)}
-                                    disabled={!row.isDirty || row.isSaving}
+                                    onClick={() => handleViewDetails(row)}
+                                    disabled={!row.hasResult}
                                     sx={{
                                       bgcolor: COLORS.primary,
                                       '&:hover': { bgcolor: COLORS.primaryHover },
-                                      '&.Mui-disabled': { bgcolor: '#b0e0e6', color: '#fff' },
+                                      '&.Mui-disabled': { bgcolor: '#e0e0e0', color: '#999' },
                                       textTransform: 'none',
                                       minWidth: 40,
                                       fontWeight: 500,
@@ -1348,7 +1360,7 @@ const Results = (): React.ReactElement => {
                                       px: 1,
                                     }}
                                   >
-                                    {row.isSaving ? <CircularProgress size={12} color="inherit" /> : 'ver'}
+                                    ver
                                   </Button>
                                 </TableCell>
 
@@ -1490,6 +1502,107 @@ const Results = (): React.ReactElement => {
           )}
         </Box>
       </Paper>
+
+      {/* View Details Dialog */}
+      <Dialog
+        open={!!viewDetailsRow}
+        onClose={handleCloseViewDetails}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: { borderRadius: 2 }
+        }}
+      >
+        <DialogTitle sx={{
+          bgcolor: COLORS.primary,
+          color: '#fff',
+          fontWeight: 600,
+          py: 1.5,
+        }}>
+          {viewDetailsRow?.drawName}
+        </DialogTitle>
+        <DialogContent sx={{ pt: 3 }}>
+          {viewDetailsRow && (() => {
+            const category = getDrawCategory(viewDetailsRow.drawName);
+            const isUsaDraw = category === 'USA';
+
+            // Build fields array based on lottery type
+            const fields: { label: string; value: string }[] = [];
+
+            // Base fields (always shown if have value)
+            if (viewDetailsRow.num1) fields.push({ label: '1RA', value: viewDetailsRow.num1 });
+            if (viewDetailsRow.num2) fields.push({ label: '2DA', value: viewDetailsRow.num2 });
+            if (viewDetailsRow.num3) fields.push({ label: '3RA', value: viewDetailsRow.num3 });
+
+            // USA-specific fields (use != null to handle "0" values which are falsy)
+            if (isUsaDraw) {
+              if (viewDetailsRow.cash3 != null && viewDetailsRow.cash3 !== '') fields.push({ label: 'CASH 3', value: viewDetailsRow.cash3 });
+              if (viewDetailsRow.play4 != null && viewDetailsRow.play4 !== '') fields.push({ label: 'PICK FOUR', value: viewDetailsRow.play4 });
+              if (viewDetailsRow.pick5 != null && viewDetailsRow.pick5 !== '') fields.push({ label: 'PICK FIVE', value: viewDetailsRow.pick5 });
+              if (viewDetailsRow.bolita1 != null && viewDetailsRow.bolita1 !== '') fields.push({ label: 'BOLITA 1', value: viewDetailsRow.bolita1 });
+              if (viewDetailsRow.bolita2 != null && viewDetailsRow.bolita2 !== '') fields.push({ label: 'BOLITA 2', value: viewDetailsRow.bolita2 });
+              if (viewDetailsRow.singulaccion1 != null && viewDetailsRow.singulaccion1 !== '') fields.push({ label: 'SINGULACCION 1', value: viewDetailsRow.singulaccion1 });
+              if (viewDetailsRow.singulaccion2 != null && viewDetailsRow.singulaccion2 !== '') fields.push({ label: 'SINGULACCION 2', value: viewDetailsRow.singulaccion2 });
+              if (viewDetailsRow.singulaccion3 != null && viewDetailsRow.singulaccion3 !== '') fields.push({ label: 'SINGULACCION 3', value: viewDetailsRow.singulaccion3 });
+            }
+
+            return (
+              <Box sx={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))',
+                gap: 2,
+                py: 1,
+              }}>
+                {fields.map((field, idx) => (
+                  <Box
+                    key={idx}
+                    sx={{
+                      textAlign: 'center',
+                      p: 1,
+                    }}
+                  >
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        color: '#666',
+                        fontWeight: 600,
+                        display: 'block',
+                        mb: 0.5,
+                        fontSize: '11px',
+                      }}
+                    >
+                      {field.label}
+                    </Typography>
+                    <Typography
+                      variant="h6"
+                      sx={{
+                        fontWeight: 700,
+                        color: '#333',
+                        fontSize: '20px',
+                      }}
+                    >
+                      {field.value}
+                    </Typography>
+                  </Box>
+                ))}
+              </Box>
+            );
+          })()}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button
+            onClick={handleCloseViewDetails}
+            variant="contained"
+            sx={{
+              bgcolor: COLORS.primary,
+              '&:hover': { bgcolor: COLORS.primaryHover },
+              textTransform: 'none',
+            }}
+          >
+            Cerrar
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Comparison Dialog */}
       <Dialog open={showCompareDialog} onClose={() => actions.setShowCompareDialog(false)} maxWidth="md" fullWidth>

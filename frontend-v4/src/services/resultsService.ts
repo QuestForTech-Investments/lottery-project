@@ -26,6 +26,12 @@ export interface ResultDto {
   cash3: string
   play4: string
   pick5: string
+  // USA lottery derived bet types (calculated from Cash3)
+  bolita1: string
+  bolita2: string
+  singulaccion1: string
+  singulaccion2: string
+  singulaccion3: string
 }
 
 export interface CreateResultDto {
