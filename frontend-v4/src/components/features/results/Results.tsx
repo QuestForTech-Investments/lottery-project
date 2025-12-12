@@ -291,6 +291,13 @@ const Results = (): React.ReactElement => {
     if (log.play4) labels.push({ label: 'Pick four', value: log.play4 });
     if (log.pick5) labels.push({ label: 'Pick five', value: log.pick5 });
 
+    // Add derived bet types (Bolita and Singulaccion) if present
+    if (log.bolita1) labels.push({ label: 'Bolita 1', value: log.bolita1 });
+    if (log.bolita2) labels.push({ label: 'Bolita 2', value: log.bolita2 });
+    if (log.singulaccion1) labels.push({ label: 'Singulaccion 1', value: log.singulaccion1 });
+    if (log.singulaccion2) labels.push({ label: 'Singulaccion 2', value: log.singulaccion2 });
+    if (log.singulaccion3) labels.push({ label: 'Singulaccion 3', value: log.singulaccion3 });
+
     // If no labels, show fallback
     if (labels.length === 0) {
       return log.winningNumbers || '-';
