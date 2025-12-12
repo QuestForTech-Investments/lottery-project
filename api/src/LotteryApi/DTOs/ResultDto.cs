@@ -61,6 +61,16 @@ public class ResultLogDto
     public string? DrawName { get; set; }
     // For backward compatibility
     public string WinningNumbers { get; set; } = string.Empty;
+
+    // Parsed individual numbers for display
+    public string Num1 { get; set; } = string.Empty;
+    public string Num2 { get; set; } = string.Empty;
+    public string Num3 { get; set; } = string.Empty;
+
+    // USA lottery additional bet types
+    public string Cash3 { get; set; } = string.Empty;
+    public string Play4 { get; set; } = string.Empty;
+    public string Pick5 { get; set; } = string.Empty;
 }
 
 /// <summary>

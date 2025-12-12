@@ -274,6 +274,56 @@ const Results = (): React.ReactElement => {
     return winningNumbers;
   }, []);
 
+  /**
+   * Render log winning numbers using pre-parsed fields from API
+   * Uses the individual fields (num1, num2, num3, cash3, play4, pick5) from ResultLogDto
+   */
+  const renderLogWinningNumbers = useCallback((log: ResultLogDto) => {
+    const labels: { label: string; value: string }[] = [];
+
+    // Add main numbers (1ra, 2da, 3ra) if present
+    if (log.num1) labels.push({ label: '1ra', value: log.num1 });
+    if (log.num2) labels.push({ label: '2da', value: log.num2 });
+    if (log.num3) labels.push({ label: '3ra', value: log.num3 });
+
+    // Add USA lottery bet types if present
+    if (log.cash3) labels.push({ label: 'Cash 3', value: log.cash3 });
+    if (log.play4) labels.push({ label: 'Pick four', value: log.play4 });
+    if (log.pick5) labels.push({ label: 'Pick five', value: log.pick5 });
+
+    // If no labels, show fallback
+    if (labels.length === 0) {
+      return log.winningNumbers || '-';
+    }
+
+    return (
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, alignItems: 'center' }}>
+        {labels.map((item, idx) => (
+          <Box key={idx} sx={{ display: 'flex', alignItems: 'center', gap: 0.3 }}>
+            <Typography variant="caption" sx={{ color: '#666', fontSize: '11px' }}>
+              {item.label}
+            </Typography>
+            <Box
+              sx={{
+                bgcolor: '#f0f0f0',
+                border: '1px solid #ddd',
+                borderRadius: '4px',
+                px: 0.8,
+                py: 0.2,
+                minWidth: '28px',
+                textAlign: 'center',
+              }}
+            >
+              <Typography variant="caption" sx={{ fontWeight: 600, fontSize: '12px', color: '#333' }}>
+                {item.value}
+              </Typography>
+            </Box>
+          </Box>
+        ))}
+      </Box>
+    );
+  }, []);
+
   // ---------------------------------------------------------------------------
   // Data Loading
   // ---------------------------------------------------------------------------
@@ -1418,7 +1468,7 @@ const Results = (): React.ReactElement => {
                                 })
                               : '-'}
                           </TableCell>
-                          <TableCell>{renderWinningNumbers(log.winningNumbers)}</TableCell>
+                          <TableCell>{renderLogWinningNumbers(log)}</TableCell>
                         </TableRow>
                       ))
                     )}

@@ -304,14 +304,37 @@ public class ResultsController : ControllerBase
             .Where(u => userIds.Contains(u.UserId))
             .ToDictionaryAsync(u => u.UserId, u => u.Username ?? "System");
 
-        // Map to DTOs with real usernames
-        var logs = results.Select(r => new ResultLogDto
-        {
-            DrawName = r.Draw?.DrawName ?? "Unknown",
-            Username = r.CreatedBy.HasValue && usernames.TryGetValue(r.CreatedBy.Value, out var name) ? name : "System",
-            ResultDate = r.ResultDate,
-            CreatedAt = r.CreatedAt ?? DateTime.UtcNow,
-            WinningNumbers = r.WinningNumber
+        // Map to DTOs with real usernames and parsed numbers
+        var logs = results.Select(r => {
+            var winningNumber = r.WinningNumber ?? "";
+            var additionalNumber = r.AdditionalNumber ?? "";
+
+            // Parse winning number into individual components
+            // Format: "889475" -> num1=88, num2=94, num3=75
+            var num1 = winningNumber.Length >= 2 ? winningNumber.Substring(0, 2) : "";
+            var num2 = winningNumber.Length >= 4 ? winningNumber.Substring(2, 2) : "";
+            var num3 = winningNumber.Length >= 6 ? winningNumber.Substring(4, 2) : "";
+
+            // Parse additional number for USA lotteries
+            // Format: "084017908401" -> cash3=084, play4=0179, pick5=08401
+            var cash3 = additionalNumber.Length >= 3 ? additionalNumber.Substring(0, 3) : "";
+            var play4 = additionalNumber.Length >= 7 ? additionalNumber.Substring(3, 4) : "";
+            var pick5 = additionalNumber.Length >= 12 ? additionalNumber.Substring(7, 5) : "";
+
+            return new ResultLogDto
+            {
+                DrawName = r.Draw?.DrawName ?? "Unknown",
+                Username = r.CreatedBy.HasValue && usernames.TryGetValue(r.CreatedBy.Value, out var name) ? name : "System",
+                ResultDate = r.ResultDate,
+                CreatedAt = r.CreatedAt ?? DateTime.UtcNow,
+                WinningNumbers = r.WinningNumber ?? "",
+                Num1 = num1,
+                Num2 = num2,
+                Num3 = num3,
+                Cash3 = cash3,
+                Play4 = play4,
+                Pick5 = pick5
+            };
         }).ToList();
 
         return Ok(logs);

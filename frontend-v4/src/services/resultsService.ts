@@ -42,6 +42,14 @@ export interface ResultLogDto {
   resultDate: string
   createdAt: string | null
   winningNumbers: string
+  // Parsed individual numbers for display
+  num1: string
+  num2: string
+  num3: string
+  // USA lottery additional bet types
+  cash3: string
+  play4: string
+  pick5: string
 }
 
 export interface DrawForResults {
