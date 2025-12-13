@@ -20,7 +20,12 @@ import {
   Button,
   CircularProgress,
 } from '@mui/material';
-import { Edit as EditIcon, Delete as DeleteIcon, Warning as WarningIcon } from '@mui/icons-material';
+import {
+  Visibility as ViewIcon,
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  Warning as WarningIcon
+} from '@mui/icons-material';
 import type { DrawResultRow, ResultsTableRowProps, EnabledFields } from '../../types';
 import {
   TABLE_CELL_STYLES,
@@ -200,21 +205,35 @@ export const ResultsTableRow = memo<ResultsTableRowProps>(
 
     return (
       <TableRow hover sx={{ '&:hover': { bgcolor: COLORS.rowHover } }}>
-        {/* Draw Name Cell */}
+        {/* Draw Name Cell with Status Indicator */}
         <TableCell sx={TABLE_CELL_STYLES.drawName}>
-          {row.drawName}
-          {row.matchesExternal === false && (
-            <Tooltip title="No coincide con externo">
-              <WarningIcon
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            {/* Status indicator dot */}
+            <Tooltip title={row.hasResult ? 'Con resultado' : 'Pendiente'}>
+              <Box
                 sx={{
-                  ml: 1,
-                  fontSize: 14,
-                  color: COLORS.warning,
-                  verticalAlign: 'middle',
+                  width: 10,
+                  height: 10,
+                  borderRadius: '50%',
+                  bgcolor: row.hasResult ? '#4caf50' : '#f5a623',
+                  flexShrink: 0,
+                  boxShadow: row.hasResult ? '0 0 4px rgba(76, 175, 80, 0.5)' : '0 0 4px rgba(245, 166, 35, 0.5)',
                 }}
               />
             </Tooltip>
-          )}
+            <span>{row.drawName}</span>
+            {row.matchesExternal === false && (
+              <Tooltip title="No coincide con externo">
+                <WarningIcon
+                  sx={{
+                    fontSize: 14,
+                    color: COLORS.warning,
+                    verticalAlign: 'middle',
+                  }}
+                />
+              </Tooltip>
+            )}
+          </Box>
         </TableCell>
 
         {/* Number Input Cells */}
@@ -267,36 +286,63 @@ export const ResultsTableRow = memo<ResultsTableRowProps>(
           onChange={handleChange('pick5')}
         />
 
-        {/* View Details Button Cell */}
+        {/* Actions Cell - Horizontal inline icons (modern UX pattern) */}
         <TableCell align="center" sx={{ p: 0.5 }}>
-          <Button
-            size="small"
-            variant="contained"
-            onClick={handleSave}
-            disabled={row.isSaving}
-            sx={TABLE_CELL_STYLES.saveButton}
-          >
-            {row.isSaving ? <CircularProgress size={12} color="inherit" /> : 'ver'}
-          </Button>
-        </TableCell>
-
-        {/* Edit & Delete Icons Cell - stacked vertically like original app */}
-        <TableCell align="center" sx={{ p: 0.25 }}>
-          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0 }}>
-            <Tooltip title="Editar">
-              <IconButton size="small" onClick={handleEdit} sx={{ color: COLORS.primary, p: 0.25 }}>
-                <EditIcon sx={{ fontSize: 18 }} />
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
+            {/* View Details */}
+            <Tooltip title="Ver detalles">
+              <IconButton
+                size="small"
+                onClick={handleSave}
+                disabled={row.isSaving}
+                sx={{
+                  color: '#6366f1',
+                  p: 0.75,
+                  '&:hover': {
+                    bgcolor: 'rgba(99, 102, 241, 0.1)',
+                  },
+                }}
+              >
+                {row.isSaving ? <CircularProgress size={18} color="inherit" /> : <ViewIcon sx={{ fontSize: 20 }} />}
               </IconButton>
             </Tooltip>
-            <Tooltip title="Borrar resultado">
+
+            {/* Edit */}
+            <Tooltip title="Editar">
+              <IconButton
+                size="small"
+                onClick={handleEdit}
+                sx={{
+                  color: COLORS.primary,
+                  p: 0.75,
+                  '&:hover': {
+                    bgcolor: 'rgba(81, 203, 206, 0.1)',
+                  },
+                }}
+              >
+                <EditIcon sx={{ fontSize: 20 }} />
+              </IconButton>
+            </Tooltip>
+
+            {/* Delete */}
+            <Tooltip title="Eliminar resultado">
               <span>
                 <IconButton
                   size="small"
                   onClick={handleDelete}
                   disabled={!row.hasResult || row.isSaving}
-                  sx={{ color: row.hasResult ? '#d32f2f' : '#ccc', p: 0.25 }}
+                  sx={{
+                    color: row.hasResult ? '#ef4444' : '#ccc',
+                    p: 0.75,
+                    '&:hover': {
+                      bgcolor: row.hasResult ? 'rgba(239, 68, 68, 0.1)' : 'transparent',
+                    },
+                    '&.Mui-disabled': {
+                      color: '#d1d5db',
+                    },
+                  }}
                 >
-                  <DeleteIcon sx={{ fontSize: 18 }} />
+                  <DeleteIcon sx={{ fontSize: 20 }} />
                 </IconButton>
               </span>
             </Tooltip>

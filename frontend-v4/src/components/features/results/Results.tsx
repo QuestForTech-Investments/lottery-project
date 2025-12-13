@@ -1459,16 +1459,15 @@ const Results = (): React.ReactElement => {
                           <TableCell align="center" sx={{ fontWeight: 600, bgcolor: COLORS.headerBg, minWidth: 75, fontSize: '13px', color: '#555' }}>
                             Pick 5
                           </TableCell>
-                          <TableCell align="center" sx={{ fontWeight: 600, bgcolor: COLORS.headerBg, minWidth: 70, fontSize: '13px', color: '#555' }}>
-                            Detalles
+                          <TableCell align="center" sx={{ fontWeight: 600, bgcolor: COLORS.headerBg, minWidth: 110, fontSize: '13px', color: '#555' }}>
+                            Acciones
                           </TableCell>
-                          <TableCell align="center" sx={{ fontWeight: 600, bgcolor: COLORS.headerBg, minWidth: 40 }}></TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>
                         {filteredDrawResults.length === 0 ? (
                           <TableRow>
-                            <TableCell colSpan={9} align="center" sx={{ py: 4, color: 'text.secondary' }}>
+                            <TableCell colSpan={8} align="center" sx={{ py: 4, color: 'text.secondary' }}>
                               {drawFilter ? 'No se encontraron sorteos' : 'No hay sorteos configurados'}
                             </TableCell>
                           </TableRow>
@@ -1478,7 +1477,7 @@ const Results = (): React.ReactElement => {
                               {/* Category Header Row */}
                               <TableRow>
                                 <TableCell
-                                  colSpan={9}
+                                  colSpan={8}
                                   sx={{
                                     bgcolor: group.category === 'USA' ? '#e3f2fd' :
                                             group.category === 'DOMINICAN' ? '#fff3e0' :
