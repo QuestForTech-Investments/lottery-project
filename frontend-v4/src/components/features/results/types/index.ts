@@ -187,8 +187,9 @@ export type ResultsAction =
  */
 export interface ResultsTableRowProps {
   row: DrawResultRow;
+  enabledFields: EnabledFields;
   onFieldChange: (drawId: number, field: string, value: string, inputEl?: HTMLInputElement) => void;
-  onSave: (drawId: number) => void;
+  onSave: (row: DrawResultRow) => void;
   onEdit: (row: DrawResultRow) => void;
 }
 

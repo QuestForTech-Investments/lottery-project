@@ -20,8 +20,7 @@ import {
   CircularProgress,
 } from '@mui/material';
 import { Edit as EditIcon, Warning as WarningIcon } from '@mui/icons-material';
-import type { DrawResultRow, ResultsTableRowProps } from '../../types';
-import { getEnabledFields } from '../../utils/fieldConfig';
+import type { DrawResultRow, ResultsTableRowProps, EnabledFields } from '../../types';
 import {
   TABLE_CELL_STYLES,
   INPUT_STYLES,
@@ -59,6 +58,13 @@ const arePropsEqual = (
     p.isSaving === n.isSaving &&
     p.hasResult === n.hasResult &&
     p.matchesExternal === n.matchesExternal &&
+    // enabledFields comparison (deep comparison of relevant fields)
+    prev.enabledFields?.num1 === next.enabledFields?.num1 &&
+    prev.enabledFields?.num2 === next.enabledFields?.num2 &&
+    prev.enabledFields?.num3 === next.enabledFields?.num3 &&
+    prev.enabledFields?.cash3 === next.enabledFields?.cash3 &&
+    prev.enabledFields?.play4 === next.enabledFields?.play4 &&
+    prev.enabledFields?.pick5 === next.enabledFields?.pick5 &&
     // Callbacks should be stable (wrapped in useCallback)
     prev.onFieldChange === next.onFieldChange &&
     prev.onSave === next.onSave &&
@@ -86,18 +92,27 @@ const InputCell = memo<InputCellProps>(
   ({ value, enabled, isSaving, maxLength, width, onChange }) => {
     const hasValue = Boolean(value);
 
+    // If field is disabled but HAS a value, show it as read-only text
+    // This is important for USA draws where num1/num2/num3/pick5 are auto-calculated
     if (!enabled) {
       return (
         <TableCell
           align="center"
           sx={{
             p: 0.5,
-            bgcolor: COLORS.cellEmpty,
+            bgcolor: hasValue ? COLORS.cellWithValue : COLORS.cellEmpty,
             borderRight: `1px solid ${COLORS.border}`,
           }}
         >
-          <Typography variant="body2" sx={{ color: COLORS.textDisabled, fontSize: '12px' }}>
-            -
+          <Typography
+            variant="body2"
+            sx={{
+              color: hasValue ? '#333' : COLORS.textDisabled,
+              fontSize: '13px',
+              fontWeight: hasValue ? 600 : 400,
+            }}
+          >
+            {hasValue ? value : '-'}
           </Typography>
         </TableCell>
       );
@@ -143,14 +158,16 @@ InputCell.displayName = 'InputCell';
  * @example
  * <ResultsTableRow
  *   row={drawResultRow}
+ *   enabledFields={enabledFieldsMap.get(drawId)}
  *   onFieldChange={handleFieldChange}
  *   onSave={handleSave}
  *   onEdit={handleEdit}
  * />
  */
 export const ResultsTableRow = memo<ResultsTableRowProps>(
-  ({ row, onFieldChange, onSave, onEdit }) => {
-    const enabledFields = getEnabledFields(row.drawName);
+  ({ row, enabledFields, onFieldChange, onSave, onEdit }) => {
+    // enabledFields is now passed as prop for better performance
+    // Prevents calling getEnabledFields() on every render
 
     // -------------------------------------------------------------------------
     // Handlers (stable references)
@@ -164,8 +181,8 @@ export const ResultsTableRow = memo<ResultsTableRowProps>(
     );
 
     const handleSave = useCallback(() => {
-      onSave(row.drawId);
-    }, [row.drawId, onSave]);
+      onSave(row);
+    }, [row, onSave]);
 
     const handleEdit = useCallback(() => {
       onEdit(row);
@@ -244,13 +261,13 @@ export const ResultsTableRow = memo<ResultsTableRowProps>(
           onChange={handleChange('pick5')}
         />
 
-        {/* Save Button Cell */}
+        {/* View Details Button Cell */}
         <TableCell align="center" sx={{ p: 0.5 }}>
           <Button
             size="small"
             variant="contained"
             onClick={handleSave}
-            disabled={!row.isDirty || row.isSaving}
+            disabled={row.isSaving}
             sx={TABLE_CELL_STYLES.saveButton}
           >
             {row.isSaving ? <CircularProgress size={12} color="inherit" /> : 'ver'}

@@ -67,8 +67,7 @@ const ALL_DISABLED: EnabledFields = {
  */
 const SINGLE_NUMBER_DRAWS = [
   'LA CHICA',
-  'LA DIARIA 3PM',
-  'LA DIARIA 9PM',
+  'DIARIA 11AM',
   'DIARIA 3PM',
   'DIARIA 9PM',
   'FL PICK2 AM',

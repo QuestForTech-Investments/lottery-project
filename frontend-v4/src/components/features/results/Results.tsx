@@ -722,7 +722,31 @@ const Results = (): React.ReactElement => {
       });
       actions.setDrawResults(updatedResults);
       actions.setSuccess(`Resultado publicado para ${row.drawName}`);
-      actions.resetIndividualForm();
+
+      // Find the next pending draw (without result) to auto-select
+      const currentIndex = drawResults.findIndex((d) => d.drawId === individualForm.selectedDrawId);
+      const nextPendingDraw = drawResults.find((d, index) => index > currentIndex && !d.hasResult);
+
+      if (nextPendingDraw) {
+        // Select the next pending draw
+        actions.setIndividualForm({
+          selectedDrawId: nextPendingDraw.drawId,
+          num1: nextPendingDraw.num1,
+          num2: nextPendingDraw.num2,
+          num3: nextPendingDraw.num3,
+          cash3: nextPendingDraw.cash3,
+          pickFour: nextPendingDraw.play4,
+          pickFive: nextPendingDraw.pick5,
+          bolita1: nextPendingDraw.bolita1,
+          bolita2: nextPendingDraw.bolita2,
+          singulaccion1: nextPendingDraw.singulaccion1,
+          singulaccion2: nextPendingDraw.singulaccion2,
+          singulaccion3: nextPendingDraw.singulaccion3,
+        });
+      } else {
+        // No more pending draws, reset form
+        actions.resetIndividualForm();
+      }
     } catch (err) {
       console.error('Error publishing individual result:', err);
       actions.setError('Error al publicar resultado');

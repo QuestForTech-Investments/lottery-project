@@ -1,0 +1,19 @@
+{
+  "name": "lottery-sync-scripts",
+  "version": "1.0.0",
+  "description": "Scripts for syncing lottery results and database management",
+  "main": "sync-results-scraper.js",
+  "scripts": {
+    "sync": "node sync-results-scraper.js",
+    "sync:watch": "watch 'node sync-results-scraper.js' --interval=300",
+    "db:reset": "node db-reset.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "mssql": "^10.0.4",
+    "playwright": "^1.40.0"
+  },
+  "devDependencies": {
+    "watch": "^1.0.2"
+  }
+}
