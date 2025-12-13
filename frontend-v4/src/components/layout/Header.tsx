@@ -254,7 +254,7 @@ const Header = ({ sidebarCollapsed, sidebarHovered, onToggleSidebar }: HeaderPro
                 fontSize: '14px',
               }}
             >
-              oliver
+              {authService.getCurrentUser()?.username || 'Usuario'}
             </Typography>
           </Box>
 
