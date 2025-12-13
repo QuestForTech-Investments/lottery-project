@@ -137,13 +137,16 @@ const Results = (): React.ReactElement => {
   // Status filter: 'all' | 'pending' | 'completed'
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'completed'>('all');
 
+  // Category filter: 'all' | 'USA' | 'DOMINICAN' | 'OTHER'
+  const [categoryFilter, setCategoryFilter] = useState<'all' | 'USA' | 'DOMINICAN' | 'OTHER'>('all');
+
   // Filter state for logs tab
   const [logsFilter, setLogsFilter] = useState<string>('');
 
   // State for view details modal
   const [viewDetailsRow, setViewDetailsRow] = useState<DrawResultRow | null>(null);
 
-  // Filtered draw results (by status and text filter)
+  // Filtered draw results (by status, category, and text filter)
   const filteredDrawResults = useMemo(() => {
     let results = drawResults;
 
@@ -154,6 +157,17 @@ const Results = (): React.ReactElement => {
       results = results.filter((row) => row.hasResult);
     }
 
+    // Apply category filter
+    if (categoryFilter !== 'all') {
+      results = results.filter((row) => {
+        const cat = getDrawCategory(row.drawName);
+        if (categoryFilter === 'USA') return cat === 'USA';
+        if (categoryFilter === 'DOMINICAN') return cat === 'DOMINICAN';
+        if (categoryFilter === 'OTHER') return !['USA', 'DOMINICAN'].includes(cat);
+        return true;
+      });
+    }
+
     // Apply text filter
     if (drawFilter) {
       results = results.filter((row) =>
@@ -162,7 +176,7 @@ const Results = (): React.ReactElement => {
     }
 
     return results;
-  }, [drawResults, drawFilter, statusFilter]);
+  }, [drawResults, drawFilter, statusFilter, categoryFilter]);
 
   // Counts for filter tabs
   const filterCounts = useMemo(() => ({
@@ -170,6 +184,14 @@ const Results = (): React.ReactElement => {
     pending: drawResults.filter((row) => !row.hasResult).length,
     completed: drawResults.filter((row) => row.hasResult).length,
   }), [drawResults]);
+
+  // Counts for category filters
+  const categoryCounts = useMemo(() => {
+    const usa = drawResults.filter((row) => getDrawCategory(row.drawName) === 'USA').length;
+    const dominican = drawResults.filter((row) => getDrawCategory(row.drawName) === 'DOMINICAN').length;
+    const other = drawResults.length - usa - dominican;
+    return { all: drawResults.length, usa, dominican, other };
+  }, [drawResults]);
 
   // Category labels for display (in Spanish)
   const categoryLabels: Record<string, string> = {
@@ -1256,6 +1278,98 @@ const Results = (): React.ReactElement => {
                     }}
                   >
                     Con resultado ({filterCounts.completed})
+                  </Button>
+                </Box>
+
+                {/* Category Filter Tabs */}
+                <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+                  <Button
+                    variant={categoryFilter === 'all' ? 'contained' : 'outlined'}
+                    size="small"
+                    onClick={() => setCategoryFilter('all')}
+                    sx={{
+                      borderRadius: 20,
+                      textTransform: 'none',
+                      fontWeight: 600,
+                      px: 2,
+                      py: 0.5,
+                      fontSize: '12px',
+                      bgcolor: categoryFilter === 'all' ? '#666' : 'transparent',
+                      borderColor: categoryFilter === 'all' ? '#666' : '#ccc',
+                      color: categoryFilter === 'all' ? '#fff' : '#666',
+                      '&:hover': {
+                        bgcolor: categoryFilter === 'all' ? '#555' : '#f5f5f5',
+                        borderColor: '#666',
+                      },
+                    }}
+                  >
+                    Todas ({categoryCounts.all})
+                  </Button>
+                  <Button
+                    variant={categoryFilter === 'USA' ? 'contained' : 'outlined'}
+                    size="small"
+                    onClick={() => setCategoryFilter('USA')}
+                    sx={{
+                      borderRadius: 20,
+                      textTransform: 'none',
+                      fontWeight: 600,
+                      px: 2,
+                      py: 0.5,
+                      fontSize: '12px',
+                      bgcolor: categoryFilter === 'USA' ? '#2196f3' : 'transparent',
+                      borderColor: categoryFilter === 'USA' ? '#2196f3' : '#ccc',
+                      color: categoryFilter === 'USA' ? '#fff' : '#666',
+                      '&:hover': {
+                        bgcolor: categoryFilter === 'USA' ? '#1976d2' : '#e3f2fd',
+                        borderColor: '#2196f3',
+                      },
+                    }}
+                  >
+                    USA ({categoryCounts.usa})
+                  </Button>
+                  <Button
+                    variant={categoryFilter === 'DOMINICAN' ? 'contained' : 'outlined'}
+                    size="small"
+                    onClick={() => setCategoryFilter('DOMINICAN')}
+                    sx={{
+                      borderRadius: 20,
+                      textTransform: 'none',
+                      fontWeight: 600,
+                      px: 2,
+                      py: 0.5,
+                      fontSize: '12px',
+                      bgcolor: categoryFilter === 'DOMINICAN' ? '#ff9800' : 'transparent',
+                      borderColor: categoryFilter === 'DOMINICAN' ? '#ff9800' : '#ccc',
+                      color: categoryFilter === 'DOMINICAN' ? '#fff' : '#666',
+                      '&:hover': {
+                        bgcolor: categoryFilter === 'DOMINICAN' ? '#f57c00' : '#fff3e0',
+                        borderColor: '#ff9800',
+                      },
+                    }}
+                  >
+                    Dominicanas ({categoryCounts.dominican})
+                  </Button>
+                  <Button
+                    variant={categoryFilter === 'OTHER' ? 'contained' : 'outlined'}
+                    size="small"
+                    onClick={() => setCategoryFilter('OTHER')}
+                    sx={{
+                      borderRadius: 20,
+                      textTransform: 'none',
+                      fontWeight: 600,
+                      px: 2,
+                      py: 0.5,
+                      fontSize: '12px',
+                      bgcolor: categoryFilter === 'OTHER' ? '#9c27b0' : 'transparent',
+                      borderColor: categoryFilter === 'OTHER' ? '#9c27b0' : '#ccc',
+                      color: categoryFilter === 'OTHER' ? '#fff' : '#666',
+                      '&:hover': {
+                        bgcolor: categoryFilter === 'OTHER' ? '#7b1fa2' : '#f3e5f5',
+                        borderColor: '#9c27b0',
+                      },
+                    }}
+                  >
+                    Otras ({categoryCounts.other})
                   </Button>
                 </Box>
 
