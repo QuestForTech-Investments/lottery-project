@@ -173,12 +173,12 @@ const Results = (): React.ReactElement => {
 
   // Category labels for display (in Spanish)
   const categoryLabels: Record<string, string> = {
-    USA: '🇺🇸 Loterías USA',
-    DOMINICAN: '🇩🇴 Loterías Dominicanas',
-    ANGUILA: '🇦🇮 Anguila',
-    PANAMA: '🇵🇦 Panamá',
-    SUPER_PALE: '🎯 Super Palé',
-    GENERAL: '📋 Otros',
+    USA: 'Loterías USA',
+    DOMINICAN: 'Loterías Dominicanas',
+    ANGUILA: 'Anguila',
+    PANAMA: 'Panamá',
+    SUPER_PALE: 'Super Palé',
+    GENERAL: 'Otros',
   };
 
   // Category order for display
@@ -1211,7 +1211,7 @@ const Results = (): React.ReactElement => {
                       },
                     }}
                   >
-                    📋 Todos ({filterCounts.all})
+                    Todos ({filterCounts.all})
                   </Button>
                   <Button
                     variant={statusFilter === 'pending' ? 'contained' : 'outlined'}
@@ -1233,7 +1233,7 @@ const Results = (): React.ReactElement => {
                       },
                     }}
                   >
-                    ⏳ Pendientes ({filterCounts.pending})
+                    Pendientes ({filterCounts.pending})
                   </Button>
                   <Button
                     variant={statusFilter === 'completed' ? 'contained' : 'outlined'}
@@ -1255,7 +1255,7 @@ const Results = (): React.ReactElement => {
                       },
                     }}
                   >
-                    ✅ Con resultado ({filterCounts.completed})
+                    Con resultado ({filterCounts.completed})
                   </Button>
                 </Box>
 
