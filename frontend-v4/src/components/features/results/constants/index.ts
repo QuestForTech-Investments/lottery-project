@@ -311,9 +311,9 @@ export const TABLE_COLUMNS = [
   { key: 'num1', label: '1ra', minWidth: 55, align: 'center' as const },
   { key: 'num2', label: '2da', minWidth: 55, align: 'center' as const },
   { key: 'num3', label: '3ra', minWidth: 55, align: 'center' as const },
-  { key: 'cash3', label: 'Cash 3', minWidth: 65, align: 'center' as const },
-  { key: 'play4', label: 'Play 4', minWidth: 65, align: 'center' as const },
-  { key: 'pick5', label: 'Pick five', minWidth: 75, align: 'center' as const },
+  { key: 'cash3', label: 'Pick 3', minWidth: 65, align: 'center' as const },
+  { key: 'play4', label: 'Pick 4', minWidth: 65, align: 'center' as const },
+  { key: 'pick5', label: 'Pick 5', minWidth: 75, align: 'center' as const },
   { key: 'detalles', label: 'Detalles', minWidth: 70, align: 'center' as const },
   { key: 'actions', label: '', minWidth: 60, align: 'center' as const },
 ];

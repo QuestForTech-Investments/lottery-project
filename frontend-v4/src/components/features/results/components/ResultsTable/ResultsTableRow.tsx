@@ -10,6 +10,7 @@
 
 import React, { memo, useCallback } from 'react';
 import {
+  Box,
   TableRow,
   TableCell,
   TextField,
@@ -19,7 +20,7 @@ import {
   Button,
   CircularProgress,
 } from '@mui/material';
-import { Edit as EditIcon, Warning as WarningIcon } from '@mui/icons-material';
+import { Edit as EditIcon, Delete as DeleteIcon, Warning as WarningIcon } from '@mui/icons-material';
 import type { DrawResultRow, ResultsTableRowProps, EnabledFields } from '../../types';
 import {
   TABLE_CELL_STYLES,
@@ -68,6 +69,7 @@ const arePropsEqual = (
     // Callbacks should be stable (wrapped in useCallback)
     prev.onFieldChange === next.onFieldChange &&
     prev.onSave === next.onSave &&
+    prev.onDelete === next.onDelete &&
     prev.onEdit === next.onEdit
   );
 };
@@ -165,7 +167,7 @@ InputCell.displayName = 'InputCell';
  * />
  */
 export const ResultsTableRow = memo<ResultsTableRowProps>(
-  ({ row, enabledFields, onFieldChange, onSave, onEdit }) => {
+  ({ row, enabledFields, onFieldChange, onSave, onDelete, onEdit }) => {
     // enabledFields is now passed as prop for better performance
     // Prevents calling getEnabledFields() on every render
 
@@ -183,6 +185,10 @@ export const ResultsTableRow = memo<ResultsTableRowProps>(
     const handleSave = useCallback(() => {
       onSave(row);
     }, [row, onSave]);
+
+    const handleDelete = useCallback(() => {
+      onDelete(row);
+    }, [row, onDelete]);
 
     const handleEdit = useCallback(() => {
       onEdit(row);
@@ -274,13 +280,27 @@ export const ResultsTableRow = memo<ResultsTableRowProps>(
           </Button>
         </TableCell>
 
-        {/* Edit Button Cell */}
-        <TableCell align="center" sx={{ p: 0.5 }}>
-          <Tooltip title="Editar">
-            <IconButton size="small" onClick={handleEdit} sx={{ color: COLORS.primary }}>
-              <EditIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
+        {/* Edit & Delete Icons Cell - stacked vertically like original app */}
+        <TableCell align="center" sx={{ p: 0.25 }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0 }}>
+            <Tooltip title="Editar">
+              <IconButton size="small" onClick={handleEdit} sx={{ color: COLORS.primary, p: 0.25 }}>
+                <EditIcon sx={{ fontSize: 18 }} />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Borrar resultado">
+              <span>
+                <IconButton
+                  size="small"
+                  onClick={handleDelete}
+                  disabled={!row.hasResult || row.isSaving}
+                  sx={{ color: row.hasResult ? '#d32f2f' : '#ccc', p: 0.25 }}
+                >
+                  <DeleteIcon sx={{ fontSize: 18 }} />
+                </IconButton>
+              </span>
+            </Tooltip>
+          </Box>
         </TableCell>
       </TableRow>
     );

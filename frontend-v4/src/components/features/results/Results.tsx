@@ -837,6 +837,51 @@ const Results = (): React.ReactElement => {
     setViewDetailsRow(null);
   }, []);
 
+  const handleDeleteRow = useCallback(
+    async (row: DrawResultRow) => {
+      if (!row.resultId) {
+        actions.setError('Este sorteo no tiene resultado para borrar');
+        return;
+      }
+
+      if (!window.confirm(`¿Está seguro de borrar el resultado de ${row.drawName}?`)) {
+        return;
+      }
+
+      try {
+        await deleteResult(row.resultId);
+
+        // Update the row in drawResults to clear the result
+        const updatedResults = drawResults.map((r) => {
+          if (r.drawId !== row.drawId) return r;
+          return {
+            ...r,
+            resultId: undefined,
+            num1: '',
+            num2: '',
+            num3: '',
+            cash3: '',
+            play4: '',
+            pick5: '',
+            bolita1: '',
+            bolita2: '',
+            singulaccion1: '',
+            singulaccion2: '',
+            singulaccion3: '',
+            hasResult: false,
+            isDirty: false,
+          };
+        });
+        actions.setDrawResults(updatedResults);
+        actions.setSuccess(`Resultado borrado para ${row.drawName}`);
+      } catch (err) {
+        console.error('Error deleting result:', err);
+        actions.setError('Error al borrar resultado');
+      }
+    },
+    [drawResults, actions]
+  );
+
 
   // ---------------------------------------------------------------------------
   // Render
@@ -1175,7 +1220,7 @@ const Results = (): React.ReactElement => {
                           <TableCell align="center" sx={{ fontWeight: 600, bgcolor: COLORS.headerBg, minWidth: 70, fontSize: '13px', color: '#555' }}>
                             Detalles
                           </TableCell>
-                          <TableCell align="center" sx={{ fontWeight: 600, bgcolor: COLORS.headerBg, minWidth: 60 }}></TableCell>
+                          <TableCell align="center" sx={{ fontWeight: 600, bgcolor: COLORS.headerBg, minWidth: 40 }}></TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>
@@ -1193,6 +1238,7 @@ const Results = (): React.ReactElement => {
                               enabledFields={enabledFieldsMap.get(row.drawId)!}
                               onFieldChange={handleFieldChange}
                               onSave={handleViewDetails}
+                              onDelete={handleDeleteRow}
                               onEdit={handleEditRow}
                             />
                           ))
@@ -1289,7 +1335,11 @@ const Results = (): React.ReactElement => {
                       </TableRow>
                     ) : (
                       filteredLogs.map((log, index) => (
-                        <TableRow key={index} hover>
+                        <TableRow
+                          key={index}
+                          hover
+                          sx={{ bgcolor: index % 2 === 0 ? '#fff' : '#f0f0f0' }}
+                        >
                           <TableCell sx={{ fontWeight: 500 }}>{log.drawName}</TableCell>
                           <TableCell>{log.username}</TableCell>
                           <TableCell>{new Date(log.resultDate).toLocaleDateString()}</TableCell>

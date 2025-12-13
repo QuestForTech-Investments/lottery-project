@@ -190,6 +190,7 @@ export interface ResultsTableRowProps {
   enabledFields: EnabledFields;
   onFieldChange: (drawId: number, field: string, value: string, inputEl?: HTMLInputElement) => void;
   onSave: (row: DrawResultRow) => void;
+  onDelete: (row: DrawResultRow) => void;
   onEdit: (row: DrawResultRow) => void;
 }
 
