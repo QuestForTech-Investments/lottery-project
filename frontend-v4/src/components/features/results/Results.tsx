@@ -23,12 +23,9 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  IconButton,
   CircularProgress,
   Alert,
   Snackbar,
-  Tooltip,
-  Chip,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -40,12 +37,6 @@ import {
 } from '@mui/material';
 import {
   Lock as LockIcon,
-  Refresh as RefreshIcon,
-  CloudDownload as CloudDownloadIcon,
-  CompareArrows as CompareIcon,
-  Check as CheckIcon,
-  Warning as WarningIcon,
-  Edit as EditIcon,
 } from '@mui/icons-material';
 import {
   getResults,
@@ -54,7 +45,6 @@ import {
   createResult,
   updateResult,
   deleteResult,
-  fetchExternalResults,
   type ResultDto,
   type ResultLogDto,
 } from '@services/resultsService';
@@ -80,6 +70,7 @@ import {
   isUsaTriggerField,
 } from './utils';
 import { getDrawCategory } from '@services/betTypeCompatibilityService';
+import { ResultsTableRow } from './components/ResultsTable';
 
 // =============================================================================
 // Validation Helpers
@@ -127,17 +118,18 @@ const Results = (): React.ReactElement => {
     logsData,
     individualForm,
     loading,
-    fetchingExternal,
-    comparing,
     savingIndividual,
     error,
     successMessage,
     lastRefresh,
-    showCompareDialog,
   } = state;
 
   // Refs for individual form inputs (for auto-advance)
   const individualFormRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
+
+  // Ref to prevent duplicate API calls from StrictMode double-mounting
+  const isLoadingRef = useRef(false);
+  const lastLoadedDateRef = useRef<string | null>(null);
 
   // Filter state for table
   const [drawFilter, setDrawFilter] = useState<string>('');
@@ -166,6 +158,16 @@ const Results = (): React.ReactElement => {
       log.winningNumbers.includes(logsFilter)
     );
   }, [logsData, logsFilter]);
+
+  // Memoized enabled fields map - calculate once for all draws
+  // This prevents calling getEnabledFields() 68+ times per render
+  const enabledFieldsMap = useMemo(() => {
+    const map = new Map<number, EnabledFields>();
+    drawResults.forEach((row) => {
+      map.set(row.drawId, getEnabledFields(row.drawName));
+    });
+    return map;
+  }, [drawResults]);
 
   /**
    * Parse winning numbers string and return formatted display with labels and badges
@@ -233,15 +235,15 @@ const Results = (): React.ReactElement => {
         { label: '3ra', value: num3 },
       ];
 
-      // Parse additional numbers if present (Cash 3: 3 digits, Play 4: 4 digits, Pick 5: 5 digits)
+      // Parse additional numbers if present (Pick 3: 3 digits, Pick 4: 4 digits, Pick 5: 5 digits)
       if (remaining.length >= 3) {
-        labels.push({ label: 'Cash 3', value: remaining.substring(0, 3) });
+        labels.push({ label: 'Pick 3', value: remaining.substring(0, 3) });
         const afterCash3 = remaining.substring(3);
         if (afterCash3.length >= 4) {
-          labels.push({ label: 'Pick four', value: afterCash3.substring(0, 4) });
+          labels.push({ label: 'Pick 4', value: afterCash3.substring(0, 4) });
           const afterPlay4 = afterCash3.substring(4);
           if (afterPlay4.length >= 5) {
-            labels.push({ label: 'Pick five', value: afterPlay4.substring(0, 5) });
+            labels.push({ label: 'Pick 5', value: afterPlay4.substring(0, 5) });
           }
         }
       }
@@ -291,9 +293,9 @@ const Results = (): React.ReactElement => {
     if (log.num3) labels.push({ label: '3ra', value: log.num3 });
 
     // Add USA lottery bet types if present
-    if (log.cash3) labels.push({ label: 'Cash 3', value: log.cash3 });
-    if (log.play4) labels.push({ label: 'Pick four', value: log.play4 });
-    if (log.pick5) labels.push({ label: 'Pick five', value: log.pick5 });
+    if (log.cash3) labels.push({ label: 'Pick 3', value: log.cash3 });
+    if (log.play4) labels.push({ label: 'Pick 4', value: log.play4 });
+    if (log.pick5) labels.push({ label: 'Pick 5', value: log.pick5 });
 
     // Add derived bet types (Bolita and Singulaccion) if present
     if (log.bolita1) labels.push({ label: 'Bolita 1', value: log.bolita1 });
@@ -386,39 +388,62 @@ const Results = (): React.ReactElement => {
     }
   }, [selectedDate, actions]);
 
-  // Load data on mount and when date changes
+  // Consolidated data loading effect
+  // Load results data on mount and when date changes
+  // Also auto-select first available draw when data loads
   useEffect(() => {
-    loadData();
-    actions.setLastRefresh(new Date());
-  }, [loadData, actions]);
-
-  // Auto-select first available draw (without result) when data loads
-  useEffect(() => {
-    if (drawResults.length > 0 && !individualForm.selectedDrawId) {
-      const firstAvailableDraw = drawResults.find((draw) => !draw.hasResult);
-      if (firstAvailableDraw) {
-        actions.setIndividualForm({
-          selectedDrawId: firstAvailableDraw.drawId,
-          num1: firstAvailableDraw.num1,
-          num2: firstAvailableDraw.num2,
-          num3: firstAvailableDraw.num3,
-          cash3: firstAvailableDraw.cash3,
-          pickFour: firstAvailableDraw.play4,
-          pickFive: firstAvailableDraw.pick5,
-          bolita1: firstAvailableDraw.bolita1,
-          bolita2: firstAvailableDraw.bolita2,
-          singulaccion1: firstAvailableDraw.singulaccion1,
-          singulaccion2: firstAvailableDraw.singulaccion2,
-          singulaccion3: firstAvailableDraw.singulaccion3,
-        });
-      }
+    // Prevent duplicate API calls from React StrictMode double-mounting
+    // Skip if already loading or if we just loaded this same date
+    if (isLoadingRef.current || lastLoadedDateRef.current === selectedDate) {
+      return;
     }
-  }, [drawResults, individualForm.selectedDrawId, actions]);
 
-  // Load logs when tab changes
+    const loadDataAndSetup = async () => {
+      isLoadingRef.current = true;
+
+      await loadData();
+
+      isLoadingRef.current = false;
+      lastLoadedDateRef.current = selectedDate;
+
+      actions.setLastRefresh(new Date());
+
+      // Auto-select first available draw if none selected
+      // Use setTimeout to ensure state is updated after loadData completes
+      setTimeout(() => {
+        // Access latest state via ref to avoid stale closure
+        const currentDrawResults = drawResultsRef.current;
+        if (currentDrawResults.length > 0 && !individualForm.selectedDrawId) {
+          const firstAvailableDraw = currentDrawResults.find((draw) => !draw.hasResult);
+          if (firstAvailableDraw) {
+            actions.setIndividualForm({
+              selectedDrawId: firstAvailableDraw.drawId,
+              num1: firstAvailableDraw.num1,
+              num2: firstAvailableDraw.num2,
+              num3: firstAvailableDraw.num3,
+              cash3: firstAvailableDraw.cash3,
+              pickFour: firstAvailableDraw.play4,
+              pickFive: firstAvailableDraw.pick5,
+              bolita1: firstAvailableDraw.bolita1,
+              bolita2: firstAvailableDraw.bolita2,
+              singulaccion1: firstAvailableDraw.singulaccion1,
+              singulaccion2: firstAvailableDraw.singulaccion2,
+              singulaccion3: firstAvailableDraw.singulaccion3,
+            });
+          }
+        }
+      }, 0);
+    };
+
+    loadDataAndSetup();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDate]); // loadData and actions are stable, excluded to prevent cascading
+
+  // Load logs when tab changes to Logs tab
   useEffect(() => {
+    if (activeTab !== 1) return;
+
     const loadLogs = async () => {
-      if (activeTab !== 1) return;
       try {
         const logs = await getResultLogs(logsFilterDate || undefined);
         actions.setLogs(logs);
@@ -426,12 +451,21 @@ const Results = (): React.ReactElement => {
         console.error('Error loading logs:', err);
       }
     };
+
     loadLogs();
-  }, [activeTab, logsFilterDate, actions]);
+  }, [activeTab, logsFilterDate]);
 
   // ---------------------------------------------------------------------------
   // Field Change Handlers
   // ---------------------------------------------------------------------------
+
+  // Use ref to access current drawResults without triggering re-renders
+  const drawResultsRef = useRef<DrawResultRow[]>(drawResults);
+
+  // Update ref whenever drawResults changes
+  useEffect(() => {
+    drawResultsRef.current = drawResults;
+  }, [drawResults]);
 
   const handleFieldChange = useCallback(
     (drawId: number, field: string, value: string, inputElement?: HTMLInputElement) => {
@@ -443,7 +477,8 @@ const Results = (): React.ReactElement => {
       // USA Lottery Auto-calculation
       // When cash3 or play4 changes, auto-calculate all derived fields
       if (isUsaTriggerField(field)) {
-        const row = drawResults.find((r) => r.drawId === drawId);
+        // Use ref to avoid dependency on drawResults array
+        const row = drawResultsRef.current.find((r) => r.drawId === drawId);
         if (row) {
           const category = getDrawCategory(row.drawName);
           if (category === 'USA') {
@@ -487,7 +522,7 @@ const Results = (): React.ReactElement => {
         }
       }
     },
-    [actions, drawResults]
+    [actions]
   );
 
   const handleIndividualFormChange = useCallback(
@@ -612,72 +647,6 @@ const Results = (): React.ReactElement => {
     },
     [drawResults, actions]
   );
-
-  // ---------------------------------------------------------------------------
-  // External Results Handlers
-  // ---------------------------------------------------------------------------
-
-  const handleFetchExternal = useCallback(async () => {
-    actions.setFetchingExternal(true);
-    actions.setError(null);
-    try {
-      const response = await fetchExternalResults(selectedDate);
-      if (response) {
-        actions.setSuccess(
-          `Obtenidos ${response.resultsFetched} resultados, guardados ${response.resultsSaved}`
-        );
-        await loadData();
-      }
-    } catch (err) {
-      console.error('Error fetching external results:', err);
-      actions.setError('Error al obtener resultados externos');
-    } finally {
-      actions.setFetchingExternal(false);
-    }
-  }, [selectedDate, loadData, actions]);
-
-  const handleCompareResults = useCallback(async () => {
-    actions.setComparing(true);
-    actions.setError(null);
-    try {
-      const response = await fetchExternalResults(selectedDate);
-      if (response && response.results) {
-        actions.setExternalResults(response.results);
-
-        const comparedResults = drawResults.map((row) => {
-          const external = response.results.find(
-            (ext) =>
-              ext.lotteryName.toUpperCase().includes(row.drawName.toUpperCase()) ||
-              row.drawName.toUpperCase().includes(ext.lotteryName.toUpperCase())
-          );
-
-          if (!external) return { ...row, hasExternalResult: false };
-
-          const extNum1 = external.numbers[0] || '';
-          const extNum2 = external.numbers[1] || '';
-          const extNum3 = external.numbers[2] || '';
-          const matches = row.num1 === extNum1 && row.num2 === extNum2 && row.num3 === extNum3;
-
-          return {
-            ...row,
-            externalNum1: extNum1,
-            externalNum2: extNum2,
-            externalNum3: extNum3,
-            hasExternalResult: true,
-            matchesExternal: matches,
-          };
-        });
-
-        actions.setExternalComparison(comparedResults);
-        actions.setShowCompareDialog(true);
-      }
-    } catch (err) {
-      console.error('Error comparing results:', err);
-      actions.setError('Error al comparar resultados');
-    } finally {
-      actions.setComparing(false);
-    }
-  }, [selectedDate, drawResults, actions]);
 
   // ---------------------------------------------------------------------------
   // Publish Handlers
@@ -844,66 +813,6 @@ const Results = (): React.ReactElement => {
     setViewDetailsRow(null);
   }, []);
 
-  // ---------------------------------------------------------------------------
-  // Render Helpers
-  // ---------------------------------------------------------------------------
-
-  const renderNumberInputCell = (
-    row: DrawResultRow,
-    field: 'num1' | 'num2' | 'num3' | 'cash3' | 'play4' | 'pick5',
-    enabledFields: EnabledFields
-  ) => {
-    const value = row[field];
-    const isEditable = enabledFields[field];
-    const hasValue = Boolean(value);
-    const maxLength = getMaxLength(field);
-    const width = getFieldWidth(field);
-    const isDisabled = !isEditable || row.isSaving;
-    const isPublished = row.hasResult && hasValue;
-
-    return (
-      <TableCell
-        align="center"
-        sx={{
-          p: 0.5,
-          bgcolor: row.hasResult ? COLORS.rowPublished : hasValue ? COLORS.cellWithValue : COLORS.cellEmpty,
-          borderRight: `1px solid ${COLORS.border}`,
-        }}
-      >
-        <TextField
-          value={value}
-          onChange={(e) =>
-            handleFieldChange(row.drawId, field, e.target.value, e.target as HTMLInputElement)
-          }
-          disabled={isDisabled}
-          size="small"
-          inputProps={{
-            maxLength,
-            style: {
-              textAlign: 'center',
-              padding: '4px 6px',
-              fontWeight: isPublished ? 900 : 700,
-              fontSize: isPublished ? '14px' : '13px',
-              color: isPublished ? '#1565c0' : isDisabled ? '#666' : '#333',
-            },
-          }}
-          sx={{
-            width,
-            '& .MuiOutlinedInput-root': {
-              bgcolor: row.hasResult ? COLORS.rowPublished : isDisabled ? '#f0f0f0' : 'transparent',
-              '& fieldset': { border: row.hasResult ? 'none' : isDisabled ? '1px solid #ccc' : '1px solid #ddd' },
-              '&:hover fieldset': { border: row.hasResult ? 'none' : isDisabled ? '1px solid #ccc' : '1px solid #bbb' },
-              '&.Mui-focused fieldset': { border: `1px solid ${COLORS.primary}` },
-              '&.Mui-disabled': {
-                bgcolor: row.hasResult ? COLORS.rowPublished : '#f5f5f5',
-                '& fieldset': { border: row.hasResult ? 'none' : '1px solid #ddd' },
-              },
-            },
-          }}
-        />
-      </TableCell>
-    );
-  };
 
   // ---------------------------------------------------------------------------
   // Render
@@ -1017,7 +926,7 @@ const Results = (): React.ReactElement => {
                       { field: 'num1' as const, label: '1ra', maxLen: 2, enabled: enabledFields.num1 },
                       { field: 'num2' as const, label: '2da', maxLen: 2, enabled: enabledFields.num2 },
                       { field: 'num3' as const, label: '3ra', maxLen: 2, enabled: enabledFields.num3 },
-                      { field: 'cash3' as const, label: 'Cash 3', maxLen: 3, enabled: enabledFields.cash3 },
+                      { field: 'cash3' as const, label: 'Pick 3', maxLen: 3, enabled: enabledFields.cash3 },
                       { field: 'pickFour' as const, label: 'Pick 4', maxLen: 4, enabled: enabledFields.play4 },
                       { field: 'pickFive' as const, label: 'Pick 5', maxLen: 5, enabled: enabledFields.pick5 },
                       { field: 'bolita1' as const, label: 'Bolita 1', maxLen: 2, enabled: enabledFields.bolita1 },
@@ -1146,48 +1055,6 @@ const Results = (): React.ReactElement => {
                 </Box>
               </Paper>
 
-              {/* Action Bar */}
-              <Box sx={{ display: 'flex', gap: 2, mb: 2, flexWrap: 'wrap', alignItems: 'center' }}>
-                <Button
-                  variant="contained"
-                  startIcon={
-                    fetchingExternal ? (
-                      <CircularProgress size={16} color="inherit" />
-                    ) : (
-                      <CloudDownloadIcon />
-                    )
-                  }
-                  onClick={handleFetchExternal}
-                  disabled={fetchingExternal}
-                  sx={{
-                    bgcolor: COLORS.success,
-                    '&:hover': { bgcolor: '#45a049' },
-                    textTransform: 'none',
-                    fontWeight: 600,
-                  }}
-                >
-                  {fetchingExternal ? 'Obteniendo...' : 'Obtener resultados externos'}
-                </Button>
-                <Button
-                  variant="contained"
-                  startIcon={
-                    comparing ? <CircularProgress size={16} color="inherit" /> : <CompareIcon />
-                  }
-                  onClick={handleCompareResults}
-                  disabled={comparing}
-                  sx={{
-                    bgcolor: '#2196f3',
-                    '&:hover': { bgcolor: '#1976d2' },
-                    textTransform: 'none',
-                    fontWeight: 600,
-                  }}
-                >
-                  {comparing ? 'Comparando...' : 'Comparar con externos'}
-                </Button>
-                <IconButton onClick={loadData} sx={{ bgcolor: '#e0e0e0' }}>
-                  <RefreshIcon />
-                </IconButton>
-              </Box>
 
               {/* Results Table Section */}
               <Box sx={{ mt: 2 }}>
@@ -1195,66 +1062,60 @@ const Results = (): React.ReactElement => {
                   Resultados {selectedDate}
                 </Typography>
 
-                {/* Action buttons */}
-                <Box sx={{ display: 'flex', gap: 1, mb: 2, alignItems: 'center', flexWrap: 'wrap' }}>
-                  <Button
-                    variant="contained"
-                    onClick={handlePublishAll}
-                    sx={{
-                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                      '&:hover': {
-                        background: 'linear-gradient(135deg, #5568d3 0%, #63408a 100%)',
-                      },
-                      textTransform: 'uppercase',
-                      fontWeight: 700,
-                      fontSize: '13px',
-                      px: 3,
-                      py: 1.5,
-                      borderRadius: 6,
-                      boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                      color: '#fff',
-                    }}
-                  >
-                    PUBLICAR
-                    <br />
-                    RESULTADOS
-                  </Button>
-                  <Button
-                    variant="contained"
-                    startIcon={<LockIcon sx={{ fontSize: 18 }} />}
-                    sx={{
-                      background: '#f5d623 !important',
-                      '&:hover': { background: '#e6c700 !important' },
-                      textTransform: 'none',
-                      fontWeight: 600,
-                      fontSize: '12px',
-                      color: '#333 !important',
-                      px: 2,
-                      py: 1,
-                      borderRadius: 6,
-                    }}
-                  >
-                    DESBLOQUEAR
-                  </Button>
-                </Box>
-
-                {/* Filter by draw name */}
-                <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
+                {/* Action buttons and filter */}
+                <Box sx={{ display: 'flex', gap: 1, mb: 1, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' }}>
+                  <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                    <Button
+                      variant="contained"
+                      onClick={handlePublishAll}
+                      sx={{
+                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                        '&:hover': {
+                          background: 'linear-gradient(135deg, #5568d3 0%, #63408a 100%)',
+                        },
+                        textTransform: 'uppercase',
+                        fontWeight: 700,
+                        fontSize: '12px',
+                        px: 2,
+                        py: 1,
+                        borderRadius: 6,
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                        color: '#fff',
+                      }}
+                    >
+                      PUBLICAR RESULTADOS
+                    </Button>
+                    <Button
+                      variant="contained"
+                      startIcon={<LockIcon sx={{ fontSize: 18 }} />}
+                      sx={{
+                        background: '#f5d623 !important',
+                        '&:hover': { background: '#e6c700 !important' },
+                        textTransform: 'uppercase',
+                        fontWeight: 600,
+                        fontSize: '12px',
+                        color: '#333 !important',
+                        px: 2,
+                        py: 1,
+                        borderRadius: 6,
+                      }}
+                    >
+                      DESBLOQUEAR
+                    </Button>
+                  </Box>
                   <TextField
                     size="small"
-                    placeholder="Filtrar por sorteo..."
+                    placeholder="Filtrar sorteo..."
                     value={drawFilter}
                     onChange={(e) => setDrawFilter(e.target.value)}
-                    sx={{ width: 250 }}
-                    InputProps={{
-                      sx: { bgcolor: '#fff' },
+                    sx={{
+                      width: 200,
+                      '& .MuiOutlinedInput-root': {
+                        bgcolor: '#fff',
+                        fontSize: '12px',
+                      }
                     }}
                   />
-                  {drawFilter && (
-                    <Typography variant="body2" color="text.secondary">
-                      Mostrando {filteredDrawResults.length} de {drawResults.length} sorteos
-                    </Typography>
-                  )}
                 </Box>
 
                 {loading ? (
@@ -1279,13 +1140,13 @@ const Results = (): React.ReactElement => {
                             3ra
                           </TableCell>
                           <TableCell align="center" sx={{ fontWeight: 600, bgcolor: COLORS.headerBg, minWidth: 65, fontSize: '13px', color: '#555' }}>
-                            Cash 3
+                            Pick 3
                           </TableCell>
                           <TableCell align="center" sx={{ fontWeight: 600, bgcolor: COLORS.headerBg, minWidth: 65, fontSize: '13px', color: '#555' }}>
-                            Play 4
+                            Pick 4
                           </TableCell>
                           <TableCell align="center" sx={{ fontWeight: 600, bgcolor: COLORS.headerBg, minWidth: 75, fontSize: '13px', color: '#555' }}>
-                            Pick five
+                            Pick 5
                           </TableCell>
                           <TableCell align="center" sx={{ fontWeight: 600, bgcolor: COLORS.headerBg, minWidth: 70, fontSize: '13px', color: '#555' }}>
                             Detalles
@@ -1301,84 +1162,16 @@ const Results = (): React.ReactElement => {
                             </TableCell>
                           </TableRow>
                         ) : (
-                          filteredDrawResults.map((row) => {
-                            const enabledFields = getEnabledFields(row.drawName);
-                            return (
-                              <TableRow
-                                key={row.drawId}
-                                hover
-                                sx={{
-                                  bgcolor: row.hasResult ? COLORS.rowPublished : 'transparent',
-                                  '&:hover': { bgcolor: row.hasResult ? COLORS.rowPublishedHover : COLORS.rowHover },
-                                }}
-                              >
-                                {/* Draw name */}
-                                <TableCell
-                                  sx={{
-                                    fontWeight: 600,
-                                    whiteSpace: 'nowrap',
-                                    fontSize: '12px',
-                                    bgcolor: COLORS.headerBg,
-                                    color: '#333',
-                                    borderRight: `1px solid ${COLORS.border}`,
-                                  }}
-                                >
-                                  {row.drawName}
-                                  {row.matchesExternal === false && (
-                                    <Tooltip title="No coincide con externo">
-                                      <WarningIcon
-                                        sx={{ ml: 1, fontSize: 14, color: COLORS.warning, verticalAlign: 'middle' }}
-                                      />
-                                    </Tooltip>
-                                  )}
-                                </TableCell>
-
-                                {/* Number input cells */}
-                                {renderNumberInputCell(row, 'num1', enabledFields)}
-                                {renderNumberInputCell(row, 'num2', enabledFields)}
-                                {renderNumberInputCell(row, 'num3', enabledFields)}
-                                {renderNumberInputCell(row, 'cash3', enabledFields)}
-                                {renderNumberInputCell(row, 'play4', enabledFields)}
-                                {renderNumberInputCell(row, 'pick5', enabledFields)}
-
-                                {/* View details button */}
-                                <TableCell align="center" sx={{ p: 0.5 }}>
-                                  <Button
-                                    size="small"
-                                    variant="contained"
-                                    onClick={() => handleViewDetails(row)}
-                                    disabled={!row.hasResult}
-                                    sx={{
-                                      bgcolor: COLORS.primary,
-                                      '&:hover': { bgcolor: COLORS.primaryHover },
-                                      '&.Mui-disabled': { bgcolor: '#e0e0e0', color: '#999' },
-                                      textTransform: 'none',
-                                      minWidth: 40,
-                                      fontWeight: 500,
-                                      fontSize: '11px',
-                                      py: 0.3,
-                                      px: 1,
-                                    }}
-                                  >
-                                    ver
-                                  </Button>
-                                </TableCell>
-
-                                {/* Edit button */}
-                                <TableCell align="center" sx={{ p: 0.5 }}>
-                                  <Tooltip title="Editar">
-                                    <IconButton
-                                      size="small"
-                                      onClick={() => handleEditRow(row)}
-                                      sx={{ color: COLORS.primary }}
-                                    >
-                                      <EditIcon fontSize="small" />
-                                    </IconButton>
-                                  </Tooltip>
-                                </TableCell>
-                              </TableRow>
-                            );
-                          })
+                          filteredDrawResults.map((row) => (
+                            <ResultsTableRow
+                              key={row.drawId}
+                              row={row}
+                              enabledFields={enabledFieldsMap.get(row.drawId)!}
+                              onFieldChange={handleFieldChange}
+                              onSave={handleViewDetails}
+                              onEdit={handleEditRow}
+                            />
+                          ))
                         )}
                       </TableBody>
                     </Table>
@@ -1536,7 +1329,7 @@ const Results = (): React.ReactElement => {
 
             // USA-specific fields (use != null to handle "0" values which are falsy)
             if (isUsaDraw) {
-              if (viewDetailsRow.cash3 != null && viewDetailsRow.cash3 !== '') fields.push({ label: 'CASH 3', value: viewDetailsRow.cash3 });
+              if (viewDetailsRow.cash3 != null && viewDetailsRow.cash3 !== '') fields.push({ label: 'PICK THREE', value: viewDetailsRow.cash3 });
               if (viewDetailsRow.play4 != null && viewDetailsRow.play4 !== '') fields.push({ label: 'PICK FOUR', value: viewDetailsRow.play4 });
               if (viewDetailsRow.pick5 != null && viewDetailsRow.pick5 !== '') fields.push({ label: 'PICK FIVE', value: viewDetailsRow.pick5 });
               if (viewDetailsRow.bolita1 != null && viewDetailsRow.bolita1 !== '') fields.push({ label: 'BOLITA 1', value: viewDetailsRow.bolita1 });
@@ -1604,49 +1397,6 @@ const Results = (): React.ReactElement => {
         </DialogActions>
       </Dialog>
 
-      {/* Comparison Dialog */}
-      <Dialog open={showCompareDialog} onClose={() => actions.setShowCompareDialog(false)} maxWidth="md" fullWidth>
-        <DialogTitle>Comparación con Resultados Externos</DialogTitle>
-        <DialogContent>
-          <TableContainer>
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell>Sorteo</TableCell>
-                  <TableCell align="center">Local</TableCell>
-                  <TableCell align="center">Externo</TableCell>
-                  <TableCell align="center">Estado</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {drawResults
-                  .filter((r) => r.hasExternalResult)
-                  .map((row) => (
-                    <TableRow key={row.drawId}>
-                      <TableCell>{row.drawName}</TableCell>
-                      <TableCell align="center" sx={{ fontWeight: 600 }}>
-                        {row.num1}-{row.num2}-{row.num3}
-                      </TableCell>
-                      <TableCell align="center" sx={{ fontWeight: 600 }}>
-                        {row.externalNum1}-{row.externalNum2}-{row.externalNum3}
-                      </TableCell>
-                      <TableCell align="center">
-                        {row.matchesExternal ? (
-                          <Chip label="Coincide" size="small" color="success" icon={<CheckIcon />} />
-                        ) : (
-                          <Chip label="No coincide" size="small" color="error" icon={<WarningIcon />} />
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => actions.setShowCompareDialog(false)}>Cerrar</Button>
-        </DialogActions>
-      </Dialog>
     </Box>
   );
 };

@@ -62,6 +62,20 @@ const ALL_DISABLED: EnabledFields = {
 };
 
 /**
+ * Draws that only have "1ra" (first number) - no other bet types
+ * These are special draws that only show a single winning number
+ */
+const SINGLE_NUMBER_DRAWS = [
+  'LA CHICA',
+  'LA DIARIA 3PM',
+  'LA DIARIA 9PM',
+  'DIARIA 3PM',
+  'DIARIA 9PM',
+  'FL PICK2 AM',
+  'FL PICK2 PM',
+];
+
+/**
  * Cache for enabled fields by draw name
  * Prevents recalculation on every render
  */
@@ -80,6 +94,14 @@ export const getEnabledFields = (drawName: string): EnabledFields => {
   // Check cache first
   const cached = enabledFieldsCache.get(drawName);
   if (cached) return cached;
+
+  // Check for single-number draws first (only 1ra)
+  const normalizedName = drawName.toUpperCase().trim();
+  if (SINGLE_NUMBER_DRAWS.some(d => normalizedName.includes(d) || d.includes(normalizedName))) {
+    const result = { ...ALL_DISABLED, num1: true };
+    enabledFieldsCache.set(drawName, result);
+    return result;
+  }
 
   const category = getDrawCategory(drawName);
   let result: EnabledFields;
