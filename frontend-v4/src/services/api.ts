@@ -64,14 +64,25 @@ const apiFetch = async <T = unknown>(endpoint: string, options: ApiFetchOptions 
     // Handle different HTTP status codes
     if (!response.ok) {
       const errorData = (await response.json().catch(() => ({}))) as Record<string, unknown>
-      
+
       // Log error response
       logger.error('API_ERROR', `${response.status} ${endpoint}`, {
         status: response.status,
         statusText: response.statusText,
         errorData
       })
-      
+
+      // Handle 401 Unauthorized - token expired or invalid
+      if (response.status === 401) {
+        logger.warn('AUTH_EXPIRED', 'Token expirado o inválido - cerrando sesión automáticamente')
+        localStorage.removeItem('authToken')
+
+        // Redirect to login page (avoid redirect loop if already on login)
+        if (!window.location.pathname.includes('/login')) {
+          window.location.href = '/login'
+        }
+      }
+
       const error = new ApiError(errorData.message as string || `HTTP error! status: ${response.status}`)
       error.response = {
         status: response.status,
