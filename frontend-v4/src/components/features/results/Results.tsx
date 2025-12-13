@@ -69,7 +69,7 @@ import {
   calculateUsaFields,
   isUsaTriggerField,
 } from './utils';
-import { getDrawCategory } from '@services/betTypeCompatibilityService';
+import { getDrawCategory, DRAW_CATEGORIES } from '@services/betTypeCompatibilityService';
 import { ResultsTableRow } from './components/ResultsTable';
 
 // =============================================================================
@@ -134,19 +134,77 @@ const Results = (): React.ReactElement => {
   // Filter state for table
   const [drawFilter, setDrawFilter] = useState<string>('');
 
+  // Status filter: 'all' | 'pending' | 'completed'
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'completed'>('all');
+
   // Filter state for logs tab
   const [logsFilter, setLogsFilter] = useState<string>('');
 
   // State for view details modal
   const [viewDetailsRow, setViewDetailsRow] = useState<DrawResultRow | null>(null);
 
-  // Filtered draw results
+  // Filtered draw results (by status and text filter)
   const filteredDrawResults = useMemo(() => {
-    if (!drawFilter) return drawResults;
-    return drawResults.filter((row) =>
-      row.drawName.toLowerCase().includes(drawFilter.toLowerCase())
-    );
-  }, [drawResults, drawFilter]);
+    let results = drawResults;
+
+    // Apply status filter
+    if (statusFilter === 'pending') {
+      results = results.filter((row) => !row.hasResult);
+    } else if (statusFilter === 'completed') {
+      results = results.filter((row) => row.hasResult);
+    }
+
+    // Apply text filter
+    if (drawFilter) {
+      results = results.filter((row) =>
+        row.drawName.toLowerCase().includes(drawFilter.toLowerCase())
+      );
+    }
+
+    return results;
+  }, [drawResults, drawFilter, statusFilter]);
+
+  // Counts for filter tabs
+  const filterCounts = useMemo(() => ({
+    all: drawResults.length,
+    pending: drawResults.filter((row) => !row.hasResult).length,
+    completed: drawResults.filter((row) => row.hasResult).length,
+  }), [drawResults]);
+
+  // Category labels for display (in Spanish)
+  const categoryLabels: Record<string, string> = {
+    USA: '🇺🇸 Loterías USA',
+    DOMINICAN: '🇩🇴 Loterías Dominicanas',
+    ANGUILA: '🇦🇮 Anguila',
+    PANAMA: '🇵🇦 Panamá',
+    SUPER_PALE: '🎯 Super Palé',
+    GENERAL: '📋 Otros',
+  };
+
+  // Category order for display
+  const categoryOrder = ['USA', 'DOMINICAN', 'ANGUILA', 'PANAMA', 'SUPER_PALE', 'GENERAL'];
+
+  // Group filtered draw results by category
+  const groupedDrawResults = useMemo(() => {
+    const groups: Record<string, DrawResultRow[]> = {};
+
+    filteredDrawResults.forEach((row) => {
+      const category = getDrawCategory(row.drawName);
+      if (!groups[category]) {
+        groups[category] = [];
+      }
+      groups[category].push(row);
+    });
+
+    // Return array of groups in order, filtering out empty groups
+    return categoryOrder
+      .filter((cat) => groups[cat] && groups[cat].length > 0)
+      .map((cat) => ({
+        category: cat,
+        label: categoryLabels[cat] || cat,
+        draws: groups[cat],
+      }));
+  }, [filteredDrawResults]);
 
   // Filtered logs
   const filteredLogs = useMemo(() => {
@@ -1131,6 +1189,76 @@ const Results = (): React.ReactElement => {
                   Resultados {selectedDate}
                 </Typography>
 
+                {/* Status Filter Tabs */}
+                <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+                  <Button
+                    variant={statusFilter === 'all' ? 'contained' : 'outlined'}
+                    size="small"
+                    onClick={() => setStatusFilter('all')}
+                    sx={{
+                      borderRadius: 20,
+                      textTransform: 'none',
+                      fontWeight: 600,
+                      px: 2,
+                      py: 0.5,
+                      fontSize: '13px',
+                      bgcolor: statusFilter === 'all' ? COLORS.primary : 'transparent',
+                      borderColor: statusFilter === 'all' ? COLORS.primary : '#ccc',
+                      color: statusFilter === 'all' ? '#fff' : '#666',
+                      '&:hover': {
+                        bgcolor: statusFilter === 'all' ? COLORS.primaryHover : '#f5f5f5',
+                        borderColor: COLORS.primary,
+                      },
+                    }}
+                  >
+                    📋 Todos ({filterCounts.all})
+                  </Button>
+                  <Button
+                    variant={statusFilter === 'pending' ? 'contained' : 'outlined'}
+                    size="small"
+                    onClick={() => setStatusFilter('pending')}
+                    sx={{
+                      borderRadius: 20,
+                      textTransform: 'none',
+                      fontWeight: 600,
+                      px: 2,
+                      py: 0.5,
+                      fontSize: '13px',
+                      bgcolor: statusFilter === 'pending' ? '#f5a623' : 'transparent',
+                      borderColor: statusFilter === 'pending' ? '#f5a623' : '#ccc',
+                      color: statusFilter === 'pending' ? '#fff' : '#666',
+                      '&:hover': {
+                        bgcolor: statusFilter === 'pending' ? '#e69500' : '#fff8e1',
+                        borderColor: '#f5a623',
+                      },
+                    }}
+                  >
+                    ⏳ Pendientes ({filterCounts.pending})
+                  </Button>
+                  <Button
+                    variant={statusFilter === 'completed' ? 'contained' : 'outlined'}
+                    size="small"
+                    onClick={() => setStatusFilter('completed')}
+                    sx={{
+                      borderRadius: 20,
+                      textTransform: 'none',
+                      fontWeight: 600,
+                      px: 2,
+                      py: 0.5,
+                      fontSize: '13px',
+                      bgcolor: statusFilter === 'completed' ? '#4caf50' : 'transparent',
+                      borderColor: statusFilter === 'completed' ? '#4caf50' : '#ccc',
+                      color: statusFilter === 'completed' ? '#fff' : '#666',
+                      '&:hover': {
+                        bgcolor: statusFilter === 'completed' ? '#43a047' : '#e8f5e9',
+                        borderColor: '#4caf50',
+                      },
+                    }}
+                  >
+                    ✅ Con resultado ({filterCounts.completed})
+                  </Button>
+                </Box>
+
                 {/* Action buttons and filter */}
                 <Box sx={{ display: 'flex', gap: 1, mb: 1, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' }}>
                   <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
@@ -1231,16 +1359,49 @@ const Results = (): React.ReactElement => {
                             </TableCell>
                           </TableRow>
                         ) : (
-                          filteredDrawResults.map((row) => (
-                            <ResultsTableRow
-                              key={row.drawId}
-                              row={row}
-                              enabledFields={enabledFieldsMap.get(row.drawId)!}
-                              onFieldChange={handleFieldChange}
-                              onSave={handleViewDetails}
-                              onDelete={handleDeleteRow}
-                              onEdit={handleEditRow}
-                            />
+                          groupedDrawResults.map((group) => (
+                            <React.Fragment key={group.category}>
+                              {/* Category Header Row */}
+                              <TableRow>
+                                <TableCell
+                                  colSpan={9}
+                                  sx={{
+                                    bgcolor: group.category === 'USA' ? '#e3f2fd' :
+                                            group.category === 'DOMINICAN' ? '#fff3e0' :
+                                            group.category === 'ANGUILA' ? '#e8f5e9' :
+                                            group.category === 'PANAMA' ? '#fce4ec' :
+                                            group.category === 'SUPER_PALE' ? '#f3e5f5' :
+                                            '#f5f5f5',
+                                    fontWeight: 700,
+                                    fontSize: '13px',
+                                    py: 1,
+                                    px: 2,
+                                    borderBottom: '2px solid',
+                                    borderColor: group.category === 'USA' ? '#2196f3' :
+                                                group.category === 'DOMINICAN' ? '#ff9800' :
+                                                group.category === 'ANGUILA' ? '#4caf50' :
+                                                group.category === 'PANAMA' ? '#e91e63' :
+                                                group.category === 'SUPER_PALE' ? '#9c27b0' :
+                                                '#9e9e9e',
+                                    color: '#333',
+                                  }}
+                                >
+                                  {group.label} ({group.draws.length})
+                                </TableCell>
+                              </TableRow>
+                              {/* Draw rows for this category */}
+                              {group.draws.map((row) => (
+                                <ResultsTableRow
+                                  key={row.drawId}
+                                  row={row}
+                                  enabledFields={enabledFieldsMap.get(row.drawId)!}
+                                  onFieldChange={handleFieldChange}
+                                  onSave={handleViewDetails}
+                                  onDelete={handleDeleteRow}
+                                  onEdit={handleEditRow}
+                                />
+                              ))}
+                            </React.Fragment>
                           ))
                         )}
                       </TableBody>
