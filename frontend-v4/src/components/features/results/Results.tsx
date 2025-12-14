@@ -68,6 +68,8 @@ import {
   sanitizeNumberInput,
   calculateUsaFields,
   isUsaTriggerField,
+  calculatePlay4OnlyFields,
+  isPlay4OnlyDraw,
 } from './utils';
 import { getDrawCategory, DRAW_CATEGORIES } from '@services/betTypeCompatibilityService';
 import { ResultsTableRow } from './components/ResultsTable';
@@ -562,23 +564,34 @@ const Results = (): React.ReactElement => {
         if (row) {
           const category = getDrawCategory(row.drawName);
           if (category === 'USA') {
-            // Get current values, using the new value for the changed field
-            const cash3Value = field === 'cash3' ? sanitizedValue : row.cash3;
-            const play4Value = field === 'play4' ? sanitizedValue : row.play4;
+            // Check if this is a Play4-only draw (Massachusetts)
+            if (isPlay4OnlyDraw(row.drawName)) {
+              // Massachusetts only has Play4 - calculate only num2 and num3
+              if (field === 'play4') {
+                const play4Value = sanitizedValue;
+                const calculated = calculatePlay4OnlyFields(play4Value);
+                actions.updateField(drawId, 'num2', calculated.num2);
+                actions.updateField(drawId, 'num3', calculated.num3);
+              }
+            } else {
+              // Standard USA lottery - calculate all fields from cash3 and play4
+              const cash3Value = field === 'cash3' ? sanitizedValue : row.cash3;
+              const play4Value = field === 'play4' ? sanitizedValue : row.play4;
 
-            // Calculate all derived fields
-            const calculated = calculateUsaFields(cash3Value, play4Value);
+              // Calculate all derived fields
+              const calculated = calculateUsaFields(cash3Value, play4Value);
 
-            // Update all auto-calculated fields
-            actions.updateField(drawId, 'num1', calculated.num1);
-            actions.updateField(drawId, 'num2', calculated.num2);
-            actions.updateField(drawId, 'num3', calculated.num3);
-            actions.updateField(drawId, 'bolita1', calculated.bolita1);
-            actions.updateField(drawId, 'bolita2', calculated.bolita2);
-            actions.updateField(drawId, 'singulaccion1', calculated.singulaccion1);
-            actions.updateField(drawId, 'singulaccion2', calculated.singulaccion2);
-            actions.updateField(drawId, 'singulaccion3', calculated.singulaccion3);
-            actions.updateField(drawId, 'pick5', calculated.pick5);
+              // Update all auto-calculated fields
+              actions.updateField(drawId, 'num1', calculated.num1);
+              actions.updateField(drawId, 'num2', calculated.num2);
+              actions.updateField(drawId, 'num3', calculated.num3);
+              actions.updateField(drawId, 'bolita1', calculated.bolita1);
+              actions.updateField(drawId, 'bolita2', calculated.bolita2);
+              actions.updateField(drawId, 'singulaccion1', calculated.singulaccion1);
+              actions.updateField(drawId, 'singulaccion2', calculated.singulaccion2);
+              actions.updateField(drawId, 'singulaccion3', calculated.singulaccion3);
+              actions.updateField(drawId, 'pick5', calculated.pick5);
+            }
           }
         }
       }
@@ -619,25 +632,38 @@ const Results = (): React.ReactElement => {
         if (selectedDraw) {
           const category = getDrawCategory(selectedDraw.drawName);
           if (category === 'USA') {
-            // Get current values, using the new value for the changed field
-            const cash3Value = field === 'cash3' ? sanitizedValue : individualForm.cash3;
-            const pickFourValue = field === 'pickFour' ? sanitizedValue : individualForm.pickFour;
+            // Check if this is a Play4-only draw (Massachusetts)
+            if (isPlay4OnlyDraw(selectedDraw.drawName)) {
+              // Massachusetts only has Play4 - calculate only num2 and num3
+              if (field === 'pickFour') {
+                const pickFourValue = sanitizedValue;
+                const calculated = calculatePlay4OnlyFields(pickFourValue);
+                actions.setIndividualForm({
+                  num2: calculated.num2,
+                  num3: calculated.num3,
+                });
+              }
+            } else {
+              // Standard USA lottery - calculate all fields from cash3 and play4
+              const cash3Value = field === 'cash3' ? sanitizedValue : individualForm.cash3;
+              const pickFourValue = field === 'pickFour' ? sanitizedValue : individualForm.pickFour;
 
-            // Calculate all derived fields
-            const calculated = calculateUsaFields(cash3Value, pickFourValue);
+              // Calculate all derived fields
+              const calculated = calculateUsaFields(cash3Value, pickFourValue);
 
-            // Update all auto-calculated fields in the individual form
-            actions.setIndividualForm({
-              num1: calculated.num1,
-              num2: calculated.num2,
-              num3: calculated.num3,
-              bolita1: calculated.bolita1,
-              bolita2: calculated.bolita2,
-              singulaccion1: calculated.singulaccion1,
-              singulaccion2: calculated.singulaccion2,
-              singulaccion3: calculated.singulaccion3,
-              pickFive: calculated.pick5,
-            });
+              // Update all auto-calculated fields in the individual form
+              actions.setIndividualForm({
+                num1: calculated.num1,
+                num2: calculated.num2,
+                num3: calculated.num3,
+                bolita1: calculated.bolita1,
+                bolita2: calculated.bolita2,
+                singulaccion1: calculated.singulaccion1,
+                singulaccion2: calculated.singulaccion2,
+                singulaccion3: calculated.singulaccion3,
+                pickFive: calculated.pick5,
+              });
+            }
           }
         }
       }
@@ -1047,7 +1073,7 @@ const Results = (): React.ReactElement => {
                         sx={{ bgcolor: '#fff' }}
                       >
                         {drawResults
-                          .filter((draw) => !draw.hasResult)
+                          .filter((draw) => !draw.hasResult || draw.drawId === individualForm.selectedDrawId)
                           .map((draw) => (
                             <MenuItem key={draw.drawId} value={draw.drawId}>
                               {draw.drawName}

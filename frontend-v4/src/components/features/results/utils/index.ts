@@ -15,4 +15,6 @@ export {
   sanitizeNumberInput,
   calculateUsaFields,
   isUsaTriggerField,
+  calculatePlay4OnlyFields,
+  isPlay4OnlyDraw,
 } from './fieldConfig';

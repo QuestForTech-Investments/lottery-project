@@ -75,6 +75,15 @@ const SINGLE_NUMBER_DRAWS = [
 ];
 
 /**
+ * Draws that only have Play4 (4 numbers) - no Cash3/Pick3
+ * Massachusetts lottery only draws 4 numbers, not 3
+ */
+const PLAY4_ONLY_DRAWS = [
+  'MASS AM',
+  'MASS PM',
+];
+
+/**
  * Cache for enabled fields by draw name
  * Prevents recalculation on every render
  */
@@ -98,6 +107,16 @@ export const getEnabledFields = (drawName: string): EnabledFields => {
   const normalizedName = drawName.toUpperCase().trim();
   if (SINGLE_NUMBER_DRAWS.some(d => normalizedName.includes(d) || d.includes(normalizedName))) {
     const result = { ...ALL_DISABLED, num1: true };
+    enabledFieldsCache.set(drawName, result);
+    return result;
+  }
+
+  // Check for Play4-only draws (Massachusetts - only has 4 numbers, no Pick3)
+  if (PLAY4_ONLY_DRAWS.some(d => normalizedName.includes(d) || d.includes(normalizedName))) {
+    const result = {
+      ...ALL_DISABLED,
+      play4: true,       // Only Play4 is editable - Massachusetts only draws 4 numbers
+    };
     enabledFieldsCache.set(drawName, result);
     return result;
   }
@@ -311,4 +330,54 @@ export const calculateUsaFields = (cash3: string, play4: string): UsaAutoCalcula
  */
 export const isUsaTriggerField = (field: string): boolean => {
   return field === 'cash3' || field === 'play4';
+};
+
+/**
+ * Auto-calculated fields for Play4-only lotteries (Massachusetts)
+ */
+export interface Play4OnlyCalculatedFields {
+  num2: string;       // 2da = DE
+  num3: string;       // 3ra = FG
+}
+
+/**
+ * Auto-calculate derived fields for Play4-only lotteries (Massachusetts)
+ *
+ * Algorithm:
+ * Given Play4 = "DEFG" (4 digits):
+ *   - num2 (2da) = DE
+ *   - num3 (3ra) = FG
+ *
+ * @param play4 - 4-digit Play4 number (e.g., "4173")
+ * @returns Object with auto-calculated fields
+ *
+ * @example
+ * calculatePlay4OnlyFields("4173")
+ * // Returns:
+ * // {
+ * //   num2: "41",
+ * //   num3: "73",
+ * // }
+ */
+export const calculatePlay4OnlyFields = (play4: string): Play4OnlyCalculatedFields => {
+  // Ensure proper format with leading zeros
+  const p4 = (play4 || '').padStart(4, '0').slice(0, 4);
+
+  const D = p4[0] || '0';
+  const E = p4[1] || '0';
+  const F = p4[2] || '0';
+  const G = p4[3] || '0';
+
+  return {
+    num2: D + E,      // 2da = first 2 digits of play4
+    num3: F + G,      // 3ra = last 2 digits of play4
+  };
+};
+
+/**
+ * Check if a draw is Play4-only (Massachusetts)
+ */
+export const isPlay4OnlyDraw = (drawName: string): boolean => {
+  const normalizedName = drawName.toUpperCase().trim();
+  return PLAY4_ONLY_DRAWS.some(d => normalizedName.includes(d) || d.includes(normalizedName));
 };
