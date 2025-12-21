@@ -539,12 +539,12 @@ const DailySales = (): React.ReactElement => {
                   onChange={(e, newValue) => newValue && setFilterType(newValue)}
                   size="small"
                   sx={{
-                    border: '1px solid #d1d5db',
+                    border: '2px solid #8b5cf6',
                     borderRadius: '6px',
                     overflow: 'hidden',
                     '& .MuiToggleButton-root': {
                       border: 'none',
-                      borderRight: '1px solid #d1d5db',
+                      borderRight: '1px solid #c4b5fd',
                       borderRadius: 0,
                       px: 2,
                       py: 0.6,
