@@ -23,29 +23,32 @@ interface MainLayoutProps {
 }
 
 export default function MainLayout({ children }: MainLayoutProps) {
-  // Sidebar siempre colapsado por defecto - se expande automáticamente con hover
+  // sidebarPinned = false: modo automático (se expande/contrae con hover, contenido fijo en 60px)
+  // sidebarPinned = true: modo fijo (sidebar expandido, contenido desplazado a 280px)
+  const [sidebarPinned, setSidebarPinned] = useState(false)
   const [sidebarHovered, setSidebarHovered] = useState(false)
 
-  // Ya no se necesita toggle - el sidebar se expande/contrae automáticamente
-  const toggleSidebar = () => {}
+  // Alternar entre modo automático y modo fijo
+  const toggleSidebarPin = () => {
+    setSidebarPinned((prev) => !prev)
+  }
 
-  // El contenido siempre mantiene el margen mínimo (60px)
-  // El sidebar se superpone encima del contenido cuando se expande
-  const contentMarginLeft = 60
+  // En modo fijo: contenido a 280px. En modo automático: contenido fijo a 60px
+  const contentMarginLeft = sidebarPinned ? 280 : 60
 
   return (
     <Box sx={{ height: '100vh' }}>
       <Sidebar
-        collapsed={true}
+        collapsed={!sidebarPinned}
         hovered={sidebarHovered}
-        onToggleCollapse={toggleSidebar}
+        onToggleCollapse={toggleSidebarPin}
         onHoverChange={setSidebarHovered}
       />
 
       <Header
-        sidebarCollapsed={true}
+        sidebarCollapsed={!sidebarPinned}
         sidebarHovered={sidebarHovered}
-        onToggleSidebar={toggleSidebar}
+        onToggleSidebar={toggleSidebarPin}
       />
 
       <Box

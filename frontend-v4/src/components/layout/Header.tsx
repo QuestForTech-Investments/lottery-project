@@ -180,8 +180,9 @@ const Header = ({ sidebarCollapsed, sidebarHovered, onToggleSidebar }: HeaderPro
     setActiveIcon(null)
   }
 
-  // Header siempre usa margen fijo de 60px - el sidebar se superpone
-  const headerMarginLeft = 60
+  // En modo fijo (sidebarCollapsed=false): header a 280px
+  // En modo automático (sidebarCollapsed=true): header fijo a 60px
+  const headerMarginLeft = sidebarCollapsed ? 60 : 280
 
   return (
     <AppBar
@@ -195,6 +196,7 @@ const Header = ({ sidebarCollapsed, sidebarHovered, onToggleSidebar }: HeaderPro
         left: `${headerMarginLeft}px`,
         right: 0,
         width: `calc(100% - ${headerMarginLeft}px)`,
+        transition: 'all 0.25s cubic-bezier(0.4, 0.0, 0.2, 1)',
         zIndex: 1200,
       }}
     >
