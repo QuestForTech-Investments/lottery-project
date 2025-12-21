@@ -544,7 +544,7 @@ const DailySales = (): React.ReactElement => {
                     overflow: 'hidden',
                     '& .MuiToggleButton-root': {
                       border: 'none',
-                      borderRight: '1px solid #c4b5fd',
+                      borderRight: '2px solid #8b5cf6',
                       borderRadius: 0,
                       px: 2,
                       py: 0.6,
