@@ -59,7 +59,6 @@ export default function MainLayout({ children }: MainLayoutProps) {
           padding: 2,
           backgroundColor: '#f4f3ef',
           minHeight: 'calc(100vh - 64px)',
-          transition: 'margin-left 0.25s cubic-bezier(0.4, 0.0, 0.2, 1)'
         }}
       >
         <Suspense fallback={<ContentLoadingFallback />}>{children}</Suspense>
