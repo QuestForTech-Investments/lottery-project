@@ -23,13 +23,11 @@ interface MainLayoutProps {
 }
 
 export default function MainLayout({ children }: MainLayoutProps) {
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  // Sidebar siempre colapsado por defecto - se expande automáticamente con hover
   const [sidebarHovered, setSidebarHovered] = useState(false)
 
-  // Función para alternar entre colapsado y expandido
-  const toggleSidebar = () => {
-    setSidebarCollapsed((prev) => !prev)
-  }
+  // Ya no se necesita toggle - el sidebar se expande/contrae automáticamente
+  const toggleSidebar = () => {}
 
   // El contenido siempre mantiene el margen mínimo (60px)
   // El sidebar se superpone encima del contenido cuando se expande
@@ -38,14 +36,14 @@ export default function MainLayout({ children }: MainLayoutProps) {
   return (
     <Box sx={{ height: '100vh' }}>
       <Sidebar
-        collapsed={sidebarCollapsed}
+        collapsed={true}
         hovered={sidebarHovered}
         onToggleCollapse={toggleSidebar}
         onHoverChange={setSidebarHovered}
       />
 
       <Header
-        sidebarCollapsed={sidebarCollapsed}
+        sidebarCollapsed={true}
         sidebarHovered={sidebarHovered}
         onToggleSidebar={toggleSidebar}
       />
