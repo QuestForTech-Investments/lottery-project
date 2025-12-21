@@ -31,10 +31,9 @@ export default function MainLayout({ children }: MainLayoutProps) {
     setSidebarCollapsed((prev) => !prev)
   }
 
-  // Calcular el ancho del margen del contenido
-  // El contenido NO se mueve cuando el sidebar está colapsado y se hace hover
-  // El sidebar se superpone encima del contenido
-  const contentMarginLeft = sidebarCollapsed ? 60 : 280
+  // El contenido siempre mantiene el margen mínimo (60px)
+  // El sidebar se superpone encima del contenido cuando se expande
+  const contentMarginLeft = 60
 
   return (
     <Box sx={{ height: '100vh' }}>

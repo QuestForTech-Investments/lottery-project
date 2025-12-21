@@ -1,4 +1,4 @@
-import { memo, useState, type MouseEvent } from 'react'
+import { memo, useState, useEffect, type MouseEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   AppBar,
@@ -28,11 +28,13 @@ import {
   ShoppingCart,
   AccountBalance,
   CalendarMonth,
+  Schedule,
 } from '@mui/icons-material'
 import type { SvgIconComponent } from '@mui/icons-material'
-import { useTime } from '@hooks/useTime'
+import { useTimezone } from '@hooks/useTimezone'
 import LanguageSelector from '@components/common/LanguageSelector'
 import ChangePasswordModal from '@components/modals/ChangePasswordModal'
+import TimezoneModal from '@components/modals/TimezoneModal'
 import * as authService from '@services/authService'
 import * as logger from '@utils/logger'
 
@@ -49,17 +51,29 @@ interface QuickAccessButtonConfig {
 }
 
 const TimeDisplay = memo(() => {
-  const currentTime = useTime()
+  const { getCurrentTime, timezoneLabel } = useTimezone()
+  const [currentTime, setCurrentTime] = useState(getCurrentTime())
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(getCurrentTime())
+    }, 1000)
+    return () => clearInterval(timer)
+  }, [getCurrentTime])
+
   return (
-    <Typography
-      variant="body2"
-      sx={{
-        fontWeight: 700,
-        color: 'text.primary',
-      }}
-    >
-      {currentTime}
-    </Typography>
+    <Tooltip title={`Zona horaria: ${timezoneLabel}`}>
+      <Typography
+        variant="body2"
+        sx={{
+          fontWeight: 700,
+          color: 'text.primary',
+          cursor: 'default',
+        }}
+      >
+        {currentTime}
+      </Typography>
+    </Tooltip>
   )
 })
 
@@ -128,6 +142,7 @@ const Header = ({ sidebarCollapsed, sidebarHovered, onToggleSidebar }: HeaderPro
   const navigate = useNavigate()
   const [settingsAnchorEl, setSettingsAnchorEl] = useState<HTMLElement | null>(null)
   const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] = useState(false)
+  const [isTimezoneModalOpen, setIsTimezoneModalOpen] = useState(false)
   const [hoveredIcon, setHoveredIcon] = useState<string | null>(null)
   const [activeIcon, setActiveIcon] = useState<string | null>(null)
   const openSettings = Boolean(settingsAnchorEl)
@@ -148,6 +163,11 @@ const Header = ({ sidebarCollapsed, sidebarHovered, onToggleSidebar }: HeaderPro
     setActiveIcon('key')
   }
 
+  const handleTimezone = () => {
+    handleSettingsClose()
+    setIsTimezoneModalOpen(true)
+  }
+
   const handleLogout = () => {
     handleSettingsClose()
     logger.info('LOGOUT', 'User logging out from header')
@@ -160,7 +180,8 @@ const Header = ({ sidebarCollapsed, sidebarHovered, onToggleSidebar }: HeaderPro
     setActiveIcon(null)
   }
 
-  const effectiveSidebarWidth = sidebarCollapsed ? (sidebarHovered ? 280 : 60) : 280
+  // Header siempre usa margen fijo de 60px - el sidebar se superpone
+  const headerMarginLeft = 60
 
   return (
     <AppBar
@@ -171,10 +192,9 @@ const Header = ({ sidebarCollapsed, sidebarHovered, onToggleSidebar }: HeaderPro
         minHeight: '64px !important',
         maxHeight: '64px !important',
         top: 0,
-        left: `${effectiveSidebarWidth}px`,
+        left: `${headerMarginLeft}px`,
         right: 0,
-        width: `calc(100% - ${effectiveSidebarWidth}px)`,
-        transition: 'all 0.25s cubic-bezier(0.4, 0.0, 0.2, 1)',
+        width: `calc(100% - ${headerMarginLeft}px)`,
         zIndex: 1200,
       }}
     >
@@ -394,6 +414,12 @@ const Header = ({ sidebarCollapsed, sidebarHovered, onToggleSidebar }: HeaderPro
           </ListItemIcon>
           <ListItemText>Cambiar contraseña</ListItemText>
         </MenuItem>
+        <MenuItem onClick={handleTimezone}>
+          <ListItemIcon>
+            <Schedule fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Zona horaria</ListItemText>
+        </MenuItem>
         <MenuItem onClick={handleLogout}>
           <ListItemIcon>
             <Logout fontSize="small" />
@@ -403,6 +429,7 @@ const Header = ({ sidebarCollapsed, sidebarHovered, onToggleSidebar }: HeaderPro
       </Menu>
 
       <ChangePasswordModal isOpen={isChangePasswordModalOpen} onClose={handleClosePasswordModal} />
+      <TimezoneModal isOpen={isTimezoneModalOpen} onClose={() => setIsTimezoneModalOpen(false)} />
     </AppBar>
   )
 }
