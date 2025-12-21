@@ -538,19 +538,34 @@ const DailySales = (): React.ReactElement => {
                   exclusive
                   onChange={(e, newValue) => newValue && setFilterType(newValue)}
                   size="small"
-                  sx={{ flexWrap: 'wrap' }}
+                  sx={{
+                    flexWrap: 'wrap',
+                    gap: 0.5,
+                    '& .MuiToggleButton-root': {
+                      border: 'none',
+                      borderRadius: '20px !important',
+                      px: 2.5,
+                      py: 0.8,
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      textTransform: 'none',
+                      color: '#666',
+                      backgroundColor: '#f0f0f0',
+                      '&:hover': {
+                        backgroundColor: '#e0e0e0',
+                      },
+                      '&.Mui-selected': {
+                        backgroundColor: '#51cbce',
+                        color: '#fff',
+                        '&:hover': {
+                          backgroundColor: '#45b8bb',
+                        },
+                      },
+                    },
+                  }}
                 >
                   {FILTER_OPTIONS.map(option => (
-                    <ToggleButton
-                      key={option.value}
-                      value={option.value}
-                      sx={{
-                        textTransform: 'uppercase',
-                        fontSize: '0.75rem',
-                        px: 2,
-                        py: 0.8
-                      }}
-                    >
+                    <ToggleButton key={option.value} value={option.value}>
                       {option.label}
                     </ToggleButton>
                   ))}
