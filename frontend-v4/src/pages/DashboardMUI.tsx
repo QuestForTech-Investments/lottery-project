@@ -19,9 +19,7 @@ import {
   Chip,
 } from '@mui/material';
 import {
-  Send as SendIcon,
   Add as AddIcon,
-  Lock as LockIcon,
   Dashboard as DashboardIcon,
   Assessment as AssessmentIcon,
 } from '@mui/icons-material';
@@ -150,25 +148,6 @@ const DashboardMUI = () => {
                   </Select>
                 </FormControl>
 
-                <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-                  <Button
-                    fullWidth
-                    variant="contained"
-                    startIcon={<SendIcon />}
-                    onClick={handleQuickPublish}
-                    sx={{
-                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                      color: 'white',
-                      borderRadius: '25px',
-                      py: 1.5,
-                      '&:hover': {
-                        background: 'linear-gradient(135deg, #5568d3 0%, #63418b 100%)',
-                      },
-                    }}
-                  >
-                    Publicar
-                  </Button>
-                </Box>
               </Box>
             </Paper>
           </Grid>
@@ -249,16 +228,6 @@ const DashboardMUI = () => {
                   >
                     Agregar
                   </Button>
-                  <Button
-                    variant="contained"
-                    size="small"
-                    color="error"
-                    startIcon={<LockIcon />}
-                    onClick={handleBlockNumbers}
-                    disabled={blockedNumbers.length === 0}
-                  >
-                    Bloquear
-                  </Button>
                 </Box>
               </Box>
             </Paper>
@@ -269,9 +238,16 @@ const DashboardMUI = () => {
         <Paper elevation={3} sx={{ p: 2, mb: 3 }}>
           <Typography variant="body1" align="center" sx={{ fontWeight: 500 }}>
             Bancas vendiendo:{' '}
-            Martes: <Box component="span" sx={{ color: '#4dd4d4', fontWeight: 'bold' }}>{bancasVendiendo.martes}</Box>,
-            {' '}Miércoles: <Box component="span" sx={{ color: '#4dd4d4', fontWeight: 'bold' }}>{bancasVendiendo.miercoles}</Box>,
-            {' '}hoy: <Box component="span" sx={{ color: '#4dd4d4', fontWeight: 'bold' }}>{bancasVendiendo.hoy}</Box>
+            {bancasVendiendo.length > 0 ? (
+              bancasVendiendo.map((day, index) => (
+                <span key={day.dayName}>
+                  {index > 0 && ', '}
+                  {day.dayName}: <Box component="span" sx={{ color: '#4dd4d4', fontWeight: 'bold' }}>{day.count}</Box>
+                </span>
+              ))
+            ) : (
+              <Box component="span" sx={{ color: '#94a3b8' }}>Cargando...</Box>
+            )}
           </Typography>
         </Paper>
 

@@ -1,5 +1,6 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import type { SelectChangeEvent } from '@mui/material';
+import api from '@services/api';
 
 // Types
 interface Jugada {
@@ -15,10 +16,14 @@ interface BlockedNumber {
   number: string;
 }
 
-interface BancasVendiendo {
-  martes: number;
-  miercoles: number;
-  hoy: number;
+interface DaySales {
+  dayName: string;
+  count: number;
+}
+
+interface BettingPoolSalesDto {
+  bettingPoolId: number;
+  totalSold: number;
 }
 
 type ActiveMode = 'cobro' | 'pago';
@@ -53,12 +58,49 @@ const useDashboard = () => {
   const [jugadaInput, setJugadaInput] = useState<string>('');
   const [blockedNumbers, setBlockedNumbers] = useState<BlockedNumber[]>([]);
 
-  // Statistics
-  const bancasVendiendo: BancasVendiendo = {
-    martes: 72,
-    miercoles: 79,
-    hoy: 14,
+  // Statistics - Bancas vendiendo últimos 3 días
+  const [bancasVendiendo, setBancasVendiendo] = useState<DaySales[]>([]);
+
+  // Helper to get Spanish day name
+  const getDayName = (date: Date): string => {
+    const days = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+    return days[date.getDay()];
   };
+
+  // Fetch bancas vendiendo for last 3 days
+  useEffect(() => {
+    const fetchBancasVendiendo = async () => {
+      try {
+        const today = new Date();
+        const results: DaySales[] = [];
+
+        for (let i = 2; i >= 0; i--) {
+          const date = new Date(today);
+          date.setDate(today.getDate() - i);
+          const dateStr = date.toISOString().split('T')[0];
+          const dayName = i === 0 ? 'Hoy' : getDayName(date);
+
+          try {
+            const response = await api.get<BettingPoolSalesDto[]>(
+              `/reports/sales/by-betting-pool?startDate=${dateStr}&endDate=${dateStr}`
+            );
+            // Count betting pools with sales > 0
+            const poolsWithSales = (response || []).filter(p => p.totalSold > 0).length;
+            results.push({ dayName, count: poolsWithSales });
+          } catch {
+            results.push({ dayName, count: 0 });
+          }
+        }
+
+        setBancasVendiendo(results);
+      } catch (err) {
+        console.error('Error fetching bancas vendiendo:', err);
+        setBancasVendiendo([]);
+      }
+    };
+
+    fetchBancasVendiendo();
+  }, []);
 
   /**
    * Handle mode change (Cobro/Pago)

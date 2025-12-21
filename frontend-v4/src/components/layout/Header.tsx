@@ -181,8 +181,8 @@ const Header = ({ sidebarCollapsed, sidebarHovered, onToggleSidebar }: HeaderPro
   }
 
   // En modo fijo (sidebarCollapsed=false): header a 280px
-  // En modo automático (sidebarCollapsed=true): header fijo a 60px
-  const headerMarginLeft = sidebarCollapsed ? 60 : 280
+  // En modo automático (sidebarCollapsed=true): header fijo a 91px
+  const headerMarginLeft = sidebarCollapsed ? 91 : 280
 
   return (
     <AppBar
@@ -218,6 +218,7 @@ const Header = ({ sidebarCollapsed, sidebarHovered, onToggleSidebar }: HeaderPro
           sx={{
             background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
             color: 'white',
+            marginLeft: '1px',
             marginRight: 2,
             boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
             transition: 'all 0.3s ease',

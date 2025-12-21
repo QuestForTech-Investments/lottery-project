@@ -91,7 +91,7 @@ function Sidebar({ collapsed, hovered, onHoverChange }: SidebarProps) {
 
   // El drawer se expande si está en hover (cuando collapsed)
   const drawerWidth = collapsed
-    ? (hovered ? 280 : 60)
+    ? (hovered ? 280 : 91)
     : 280;
 
   // Show contenido expandido si NO está colapsado O si está colapsado pero con hover
@@ -110,13 +110,37 @@ function Sidebar({ collapsed, hovered, onHoverChange }: SidebarProps) {
           boxSizing: 'border-box',
           transition: 'width 0.25s cubic-bezier(0.4, 0.0, 0.2, 1)',
           overflowX: 'hidden',
+          overflowY: 'auto',
           WebkitFontSmoothing: 'antialiased',
           textRendering: 'optimizeLegibility',
           position: 'fixed',
           top: 0,
           left: 0,
           height: '100vh',
-          zIndex: 1300
+          zIndex: 1300,
+          borderRadius: 0,
+          // Hide scrollbar by default
+          scrollbarWidth: 'none', // Firefox
+          '&::-webkit-scrollbar': {
+            width: '0px',
+          },
+          // Show scrollbar on hover
+          '&:hover': {
+            scrollbarWidth: 'thin', // Firefox
+            '&::-webkit-scrollbar': {
+              width: '6px',
+            },
+            '&::-webkit-scrollbar-track': {
+              background: 'transparent',
+            },
+            '&::-webkit-scrollbar-thumb': {
+              background: 'rgba(255, 255, 255, 0.3)',
+              borderRadius: '3px',
+            },
+            '&::-webkit-scrollbar-thumb:hover': {
+              background: 'rgba(255, 255, 255, 0.5)',
+            },
+          },
         },
       }}
     >
@@ -186,7 +210,7 @@ function Sidebar({ collapsed, hovered, onHoverChange }: SidebarProps) {
       </Box>
 
       {/* Menu Items */}
-      <List sx={{ padding: 0 }}>
+      <List sx={{ padding: 0, paddingTop: '20px' }}>
         {MENU_ITEMS.map((item) => {
           const Icon = item.icon;
           const active = isActive(item);
@@ -203,9 +227,10 @@ function Sidebar({ collapsed, hovered, onHoverChange }: SidebarProps) {
                       onMouseEnter={() => handleItemHover(item.id)}
                       onMouseLeave={() => handleItemHover(null)}
                       sx={{
-                        minHeight: 48,
+                        minHeight: 16,
+                        py: 0.3,
                         justifyContent: 'center',
-                        margin: '4px 8px',
+                        margin: '1px 8px',
                         borderRadius: '8px',
                         transition: 'all 0.3s ease',
                         '&:hover': {
@@ -218,7 +243,7 @@ function Sidebar({ collapsed, hovered, onHoverChange }: SidebarProps) {
                         sx={{
                           minWidth: 0,
                           justifyContent: 'center',
-                          color: active ? '#818cf8' : (isHovered ? '#f8fafc' : 'rgba(248, 250, 252, 0.7)'),
+                          color: active ? '#c084fc' : (isHovered ? '#cbd5e1' : '#94a3b8'),
                           transition: 'all 0.3s ease-in-out'
                         }}
                       >
@@ -232,8 +257,9 @@ function Sidebar({ collapsed, hovered, onHoverChange }: SidebarProps) {
                     onMouseEnter={() => handleItemHover(item.id)}
                     onMouseLeave={() => handleItemHover(null)}
                     sx={{
-                      minHeight: 48,
-                      margin: '4px 8px',
+                      minHeight: 16,
+                      py: 0.3,
+                      margin: '1px 8px',
                       borderRadius: '8px',
                       transition: 'all 0.3s ease',
                       '&:hover': {
@@ -245,7 +271,7 @@ function Sidebar({ collapsed, hovered, onHoverChange }: SidebarProps) {
                     <ListItemIcon
                       sx={{
                         minWidth: 40,
-                        color: active ? '#818cf8' : (isHovered ? '#f8fafc' : 'rgba(248, 250, 252, 0.7)'),
+                        color: active ? '#c084fc' : (isHovered ? '#ffffff' : '#ffffff'),
                         transition: 'all 0.3s ease-in-out'
                       }}
                     >
@@ -255,10 +281,10 @@ function Sidebar({ collapsed, hovered, onHoverChange }: SidebarProps) {
                       primary={getMenuLabel(item)}
                       sx={{
                         '& .MuiListItemText-primary': {
-                          fontSize: '14px',
+                          fontSize: '11.5px',
                           fontWeight: 600,
                           textTransform: 'uppercase',
-                          color: active ? '#818cf8' : (isHovered ? '#f8fafc' : 'rgba(248, 250, 252, 0.7)'),
+                          color: active ? '#c084fc' : (isHovered ? '#ffffff' : '#ffffff'),
                           fontFamily: '"Montserrat","Helvetica Neue",Arial,sans-serif',
                           WebkitFontSmoothing: 'antialiased',
                           textRendering: 'optimizeLegibility',
@@ -278,7 +304,7 @@ function Sidebar({ collapsed, hovered, onHoverChange }: SidebarProps) {
                     />
                     {item.submenu && (
                       <Box sx={{
-                        color: active ? '#818cf8' : (isHovered ? '#f8fafc' : 'rgba(248, 250, 252, 0.7)'),
+                        color: active ? '#c084fc' : (isHovered ? '#ffffff' : '#ffffff'),
                         transition: 'all 0.3s ease-in-out'
                       }}>
                         {isExpanded ? <ExpandLess /> : <ExpandMore />}
@@ -303,8 +329,9 @@ function Sidebar({ collapsed, hovered, onHoverChange }: SidebarProps) {
                             onMouseLeave={() => handleItemHover(null)}
                             sx={{
                               pl: 4,
-                              minHeight: 36,
-                              margin: '2px 8px 2px 12px',
+                              minHeight: 16,
+                              py: 0.2,
+                              margin: '1px 8px 1px 12px',
                               borderRadius: '8px',
                               transition: 'all 0.3s ease',
                               '&:hover': {
@@ -316,8 +343,8 @@ function Sidebar({ collapsed, hovered, onHoverChange }: SidebarProps) {
                             {subitem.shortcut && (
                               <Typography
                                 sx={{
-                                  color: subActive ? '#818cf8' : (isSubHovered ? '#f8fafc' : 'rgba(248, 250, 252, 0.5)'),
-                                  fontSize: '10px',
+                                  color: subActive ? '#c084fc' : (isSubHovered ? '#ffffff' : '#ffffff'),
+                                  fontSize: '10.5px',
                                   fontWeight: (subActive || isSubHovered) ? 'bold' : 'normal',
                                   marginRight: 1,
                                   textTransform: 'uppercase',
@@ -333,9 +360,9 @@ function Sidebar({ collapsed, hovered, onHoverChange }: SidebarProps) {
                               primary={subitem.label}
                               sx={{
                                 '& .MuiListItemText-primary': {
-                                  fontSize: '13px',
+                                  fontSize: '10.5px',
                                   fontWeight: 600,
-                                  color: subActive ? '#818cf8' : (isSubHovered ? '#f8fafc' : 'rgba(248, 250, 252, 0.6)'),
+                                  color: subActive ? '#c084fc' : (isSubHovered ? '#ffffff' : '#ffffff'),
                                   fontFamily: '"Montserrat","Helvetica Neue",Arial,sans-serif',
                                   WebkitFontSmoothing: 'antialiased',
                                   textRendering: 'optimizeLegibility',
@@ -363,7 +390,7 @@ function Sidebar({ collapsed, hovered, onHoverChange }: SidebarProps) {
 
               {/* Collapsed submenu */}
               {item.submenu && !showExpandedContent && isExpanded && (
-                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 1 }}>
+                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 0.3 }}>
                   {item.submenu.map((subitem) => {
                     const subActive = isSubActive(subitem);
                     const isSubHovered = hoveredItem === subitem.id;
@@ -374,13 +401,13 @@ function Sidebar({ collapsed, hovered, onHoverChange }: SidebarProps) {
                           onMouseEnter={() => handleItemHover(subitem.id)}
                           onMouseLeave={() => handleItemHover(null)}
                           sx={{
-                            width: 36,
-                            height: 36,
-                            margin: '4px 0',
-                            borderRadius: '8px',
-                            backgroundColor: subActive ? 'rgba(99, 102, 241, 0.2)' : 'transparent',
-                            color: subActive ? '#818cf8' : (isSubHovered ? '#f8fafc' : 'rgba(248, 250, 252, 0.7)'),
-                            fontSize: '12px',
+                            width: 28,
+                            height: 22,
+                            margin: '1px 0',
+                            borderRadius: '6px',
+                            backgroundColor: 'transparent',
+                            color: subActive ? '#c084fc' : (isSubHovered ? '#ffffff' : '#ffffff'),
+                            fontSize: '10.5px',
                             fontWeight: (subActive || isSubHovered) ? 'bold' : 'normal',
                             transition: 'all 0.3s ease-in-out',
                             '&:hover': {
