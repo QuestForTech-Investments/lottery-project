@@ -522,7 +522,7 @@ const DailySales = (): React.ReactElement => {
               </Tabs>
 
               {/* Total with highlighted background */}
-              <Typography variant="h5" align="center" gutterBottom sx={{ fontWeight: 400, mb: 3 }}>
+              <Typography variant="h5" align="center" gutterBottom sx={{ fontWeight: 400, mb: 3, fontSize: '1.7rem' }}>
                 Venta del día Total: <Box component="span" sx={{
                   backgroundColor: '#e0f7fa',
                   px: 2,
