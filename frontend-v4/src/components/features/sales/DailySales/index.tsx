@@ -539,31 +539,31 @@ const DailySales = (): React.ReactElement => {
                   onChange={(e, newValue) => newValue && setFilterType(newValue)}
                   size="small"
                   sx={{
-                    flexWrap: 'wrap',
-                    gap: 1,
-                    backgroundColor: 'transparent',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    overflow: 'hidden',
                     '& .MuiToggleButton-root': {
-                      border: '1px solid #e0e0e0',
-                      borderRadius: '24px !important',
-                      px: 2.5,
-                      py: 0.75,
-                      fontSize: '0.8rem',
+                      border: 'none',
+                      borderRight: '1px solid #d1d5db',
+                      borderRadius: 0,
+                      px: 2,
+                      py: 0.6,
+                      fontSize: '0.75rem',
                       fontWeight: 500,
                       textTransform: 'none',
                       color: '#64748b',
                       backgroundColor: '#fff',
-                      boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-                      transition: 'all 0.2s ease',
+                      transition: 'all 0.15s ease',
+                      '&:last-of-type': {
+                        borderRight: 'none',
+                      },
                       '&:hover': {
                         backgroundColor: '#f8f7ff',
-                        borderColor: '#a78bfa',
                         color: '#7c3aed',
                       },
                       '&.Mui-selected': {
                         background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
                         color: '#fff',
-                        border: '1px solid transparent',
-                        boxShadow: '0 4px 12px rgba(139, 92, 246, 0.35)',
                         '&:hover': {
                           background: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)',
                         },
