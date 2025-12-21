@@ -31,11 +31,10 @@ export default function MainLayout({ children }: MainLayoutProps) {
     setSidebarCollapsed((prev) => !prev)
   }
 
-  // Calcular el ancho efectivo del sidebar
-  // Si está colapsado pero con hover, se expande temporalmente
-  const effectiveSidebarWidth = sidebarCollapsed
-    ? (sidebarHovered ? 280 : 60)
-    : 280
+  // Calcular el ancho del margen del contenido
+  // El contenido NO se mueve cuando el sidebar está colapsado y se hace hover
+  // El sidebar se superpone encima del contenido
+  const contentMarginLeft = sidebarCollapsed ? 60 : 280
 
   return (
     <Box sx={{ height: '100vh' }}>
@@ -55,7 +54,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
       <Box
         component="main"
         sx={{
-          marginLeft: `${effectiveSidebarWidth}px`,
+          marginLeft: `${contentMarginLeft}px`,
           marginTop: '64px',
           padding: 2,
           backgroundColor: '#f4f3ef',
