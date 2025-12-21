@@ -206,30 +206,8 @@ export const theme = createTheme({
         root: {
           borderRadius: 16,
           boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)',
-          transition: 'all 0.4s cubic-bezier(0.4, 0.0, 0.2, 1)',
-          background: 'rgba(255, 255, 255, 0.85)',
-          backdropFilter: 'blur(12px) saturate(180%)',
-          border: '1px solid rgba(255, 255, 255, 0.4)',
-          position: 'relative',
-          overflow: 'hidden',
-          '&::before': {
-            content: '""',
-            position: 'absolute',
-            top: 0,
-            left: '-100%',
-            width: '100%',
-            height: '100%',
-            background: 'linear-gradient(90deg, transparent, rgba(99, 102, 241, 0.1), transparent)',
-            transition: 'left 0.5s'
-          },
-          '&:hover': {
-            boxShadow: '0 20px 25px -5px rgba(99, 102, 241, 0.15), 0 8px 10px -6px rgba(99, 102, 241, 0.1)',
-            transform: 'translateY(-6px) scale(1.02)',
-            border: '1px solid rgba(99, 102, 241, 0.3)',
-            '&::before': {
-              left: '100%'
-            }
-          }
+          background: 'rgba(255, 255, 255, 0.95)',
+          border: '1px solid rgba(0, 0, 0, 0.08)',
         }
       }
     },
