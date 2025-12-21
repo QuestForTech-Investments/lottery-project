@@ -591,24 +591,6 @@ const DailySales = (): React.ReactElement => {
                       </TableCell>
                     ))}
                   </TableRow>
-                  {/* Totals Row */}
-                  <TableRow sx={{ backgroundColor: 'grey.100' }}>
-                    <TableCell><strong>Totales</strong></TableCell>
-                    <TableCell>-</TableCell>
-                    <TableCell align="center">{totals.p}</TableCell>
-                    <TableCell align="center">{totals.l}</TableCell>
-                    <TableCell align="center">{totals.w}</TableCell>
-                    <TableCell align="right">{totals.total}</TableCell>
-                    <TableCell align="right">{formatCurrency(totals.sales)}</TableCell>
-                    <TableCell align="right">{formatCurrency(totals.commissions)}</TableCell>
-                    <TableCell align="right">{formatCurrency(totals.discounts)}</TableCell>
-                    <TableCell align="right">{formatCurrency(totals.prizes)}</TableCell>
-                    <TableCell align="right">{formatCurrency(totals.net)}</TableCell>
-                    <TableCell align="right">{formatCurrency(totals.fall)}</TableCell>
-                    <TableCell align="right">{formatCurrency(totals.final)}</TableCell>
-                    <TableCell align="right">{formatCurrency(totals.balance)}</TableCell>
-                    <TableCell align="right">{formatCurrency(totals.accumulatedFall)}</TableCell>
-                  </TableRow>
                 </TableHead>
                 <TableBody>
                   {filteredData.length === 0 ? (
@@ -618,29 +600,49 @@ const DailySales = (): React.ReactElement => {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filteredData.map((row) => (
-                      <TableRow key={row.id} hover>
-                        <TableCell>{row.ref}</TableCell>
-                        <TableCell>{row.code}</TableCell>
-                        <TableCell align="center">{row.p}</TableCell>
-                        <TableCell align="center">{row.l}</TableCell>
-                        <TableCell align="center">{row.w}</TableCell>
-                        <TableCell align="right">{row.total}</TableCell>
-                        <TableCell align="right">{formatCurrency(row.sales)}</TableCell>
-                        <TableCell align="right">{formatCurrency(row.commissions)}</TableCell>
-                        <TableCell align="right">{formatCurrency(row.discounts)}</TableCell>
-                        <TableCell align="right">{formatCurrency(row.prizes)}</TableCell>
-                        <TableCell align="right" sx={{ color: row.net < 0 ? 'error.main' : 'inherit' }}>
-                          {formatCurrency(row.net)}
-                        </TableCell>
-                        <TableCell align="right">{formatCurrency(row.fall)}</TableCell>
-                        <TableCell align="right">{formatCurrency(row.final)}</TableCell>
-                        <TableCell align="right" sx={{ color: row.balance < 0 ? 'error.main' : 'success.main' }}>
-                          {formatCurrency(row.balance)}
-                        </TableCell>
-                        <TableCell align="right">{formatCurrency(row.accumulatedFall)}</TableCell>
+                    <>
+                      {filteredData.map((row) => (
+                        <TableRow key={row.id} hover>
+                          <TableCell>{row.ref}</TableCell>
+                          <TableCell>{row.code}</TableCell>
+                          <TableCell align="center">{row.p}</TableCell>
+                          <TableCell align="center">{row.l}</TableCell>
+                          <TableCell align="center">{row.w}</TableCell>
+                          <TableCell align="right">{row.total}</TableCell>
+                          <TableCell align="right">{formatCurrency(row.sales)}</TableCell>
+                          <TableCell align="right">{formatCurrency(row.commissions)}</TableCell>
+                          <TableCell align="right">{formatCurrency(row.discounts)}</TableCell>
+                          <TableCell align="right">{formatCurrency(row.prizes)}</TableCell>
+                          <TableCell align="right" sx={{ color: row.net < 0 ? 'error.main' : 'inherit' }}>
+                            {formatCurrency(row.net)}
+                          </TableCell>
+                          <TableCell align="right">{formatCurrency(row.fall)}</TableCell>
+                          <TableCell align="right">{formatCurrency(row.final)}</TableCell>
+                          <TableCell align="right" sx={{ color: row.balance < 0 ? 'error.main' : 'success.main' }}>
+                            {formatCurrency(row.balance)}
+                          </TableCell>
+                          <TableCell align="right">{formatCurrency(row.accumulatedFall)}</TableCell>
+                        </TableRow>
+                      ))}
+                      {/* Totals Row */}
+                      <TableRow sx={{ backgroundColor: 'grey.100' }}>
+                        <TableCell><strong>Totales</strong></TableCell>
+                        <TableCell>-</TableCell>
+                        <TableCell align="center">{totals.p}</TableCell>
+                        <TableCell align="center">{totals.l}</TableCell>
+                        <TableCell align="center">{totals.w}</TableCell>
+                        <TableCell align="right">{totals.total}</TableCell>
+                        <TableCell align="right">{formatCurrency(totals.sales)}</TableCell>
+                        <TableCell align="right">{formatCurrency(totals.commissions)}</TableCell>
+                        <TableCell align="right">{formatCurrency(totals.discounts)}</TableCell>
+                        <TableCell align="right">{formatCurrency(totals.prizes)}</TableCell>
+                        <TableCell align="right">{formatCurrency(totals.net)}</TableCell>
+                        <TableCell align="right">{formatCurrency(totals.fall)}</TableCell>
+                        <TableCell align="right">{formatCurrency(totals.final)}</TableCell>
+                        <TableCell align="right">{formatCurrency(totals.balance)}</TableCell>
+                        <TableCell align="right">{formatCurrency(totals.accumulatedFall)}</TableCell>
                       </TableRow>
-                    ))
+                    </>
                   )}
                 </TableBody>
               </Table>
