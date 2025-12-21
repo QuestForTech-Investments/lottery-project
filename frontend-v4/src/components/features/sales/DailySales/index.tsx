@@ -370,9 +370,9 @@ const DailySales = (): React.ReactElement => {
   }
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box sx={{ p: 1, pt: 0 }}>
       {/* Main Tabs */}
-      <Tabs value={mainTab} onChange={(e, v) => setMainTab(v)} sx={{ mb: 2 }}>
+      <Tabs value={mainTab} onChange={(e, v) => setMainTab(v)} sx={{ mb: 1 }}>
         {MAIN_TABS.map((tab, index) => (
           <Tab key={index} label={tab} />
         ))}
@@ -381,9 +381,9 @@ const DailySales = (): React.ReactElement => {
       {/* General Tab Content */}
       {mainTab === 0 && (
         <Card>
-          <CardContent>
+          <CardContent sx={{ pt: 1 }}>
             {/* Filters */}
-            <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+            <Box sx={{ display: 'flex', gap: 2, mb: 2, flexWrap: 'wrap', alignItems: 'flex-end' }}>
               <Box>
                 <Typography variant="caption" sx={{ color: 'text.secondary', mb: 0.5, display: 'block' }}>
                   Fecha
