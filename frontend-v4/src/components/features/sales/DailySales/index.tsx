@@ -515,11 +515,6 @@ const DailySales = (): React.ReactElement => {
               </Button>
             </Box>
 
-            {/* Net Total Summary */}
-            <Typography variant="h5" align="center" gutterBottom sx={{ fontWeight: 400, mb: 3 }}>
-              Neto (banca/grupos/agentes): {formatCurrency(totals.net)}
-            </Typography>
-
             {/* Bancas Sub-Tab */}
             <Box sx={{ mb: 3 }}>
               <Tabs value={0} sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
