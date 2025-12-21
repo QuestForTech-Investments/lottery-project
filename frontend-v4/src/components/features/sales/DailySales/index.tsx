@@ -382,10 +382,6 @@ const DailySales = (): React.ReactElement => {
       {mainTab === 0 && (
         <Card>
           <CardContent>
-            <Typography variant="h5" align="center" gutterBottom sx={{ fontWeight: 400, mb: 3 }}>
-              Venta del día
-            </Typography>
-
             {/* Filters */}
             <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap', alignItems: 'flex-end' }}>
               <Box>
