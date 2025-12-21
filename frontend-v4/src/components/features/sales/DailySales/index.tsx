@@ -550,7 +550,7 @@ const DailySales = (): React.ReactElement => {
                       py: 0.6,
                       fontSize: '0.75rem',
                       fontWeight: 500,
-                      textTransform: 'none',
+                      textTransform: 'uppercase',
                       color: '#64748b',
                       backgroundColor: '#fff',
                       transition: 'all 0.15s ease',
