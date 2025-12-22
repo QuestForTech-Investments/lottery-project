@@ -68,7 +68,7 @@ const UsersTabbedMUI: React.FC = () => {
         {/* Header */}
         <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
           <Typography variant="h5" component="h1" align="center">
-            Gestión de Usuarios
+            Lista de usuarios
           </Typography>
         </Box>
 

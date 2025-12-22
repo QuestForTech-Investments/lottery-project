@@ -7,7 +7,6 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  TablePagination,
   TextField,
   Typography,
   IconButton,
@@ -21,43 +20,50 @@ import {
   Alert,
 } from '@mui/material';
 import {
-  Search as SearchIcon,
   Clear as ClearIcon,
   VpnKey as KeyIcon,
-  Replay as ReplayIcon,
-  Check as CheckIcon,
-  Refresh as RefreshIcon,
+  Edit as EditIcon,
 } from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
 import useUserAdministrators from '../UserAdministrators/hooks/useUserAdministrators';
 
 /**
  * UserAdministratorsContent Component
- * Content for Administrators tab - without Paper wrapper
+ * Content for Administrators tab - matches original Vue.js design
  */
 const UserAdministratorsContent: React.FC = () => {
+  const navigate = useNavigate();
   const {
     administradores,
     totalAdministradores,
     searchText,
-    page,
-    rowsPerPage,
-    passwordModalOpen,
-    selectedUsername,
     loading,
     error,
     handleSearchChange,
     handleClearSearch,
-    handleChangePage,
-    handleChangeRowsPerPage,
     handlePasswordClick,
     handleClosePasswordModal,
-    handleResetPassword,
-    refreshData,
+    passwordModalOpen,
+    selectedUsername,
   } = useUserAdministrators();
+
+  // Local state for quick filter
+  const [quickFilter, setQuickFilter] = useState<string>('');
 
   // Local state for password change
   const [newPassword, setNewPassword] = useState<string>('');
   const [confirmPassword, setConfirmPassword] = useState<string>('');
+
+  /**
+   * Filter administrators based on both filters
+   */
+  const filteredAdministradores = administradores.filter(admin => {
+    const matchesUserFilter = !searchText ||
+      admin.username.toLowerCase().includes(searchText.toLowerCase());
+    const matchesQuickFilter = !quickFilter ||
+      admin.username.toLowerCase().includes(quickFilter.toLowerCase());
+    return matchesUserFilter && matchesQuickFilter;
+  });
 
   /**
    * Handle save password
@@ -83,6 +89,13 @@ const UserAdministratorsContent: React.FC = () => {
     handleClosePasswordModal();
   };
 
+  /**
+   * Handle edit user click
+   */
+  const handleEditClick = (userId: number) => {
+    navigate(`/users/${userId}/edit`);
+  };
+
   return (
     <>
       {/* Error Alert */}
@@ -92,21 +105,16 @@ const UserAdministratorsContent: React.FC = () => {
         </Alert>
       )}
 
-      {/* Search Filter */}
+      {/* Search Filters - Two fields like original */}
       <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
         <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
           <TextField
-            placeholder="Búsqueda rápida por nombre de usuario..."
+            placeholder="Filtrado por usuario"
             value={searchText}
             onChange={handleSearchChange}
             size="small"
-            sx={{ minWidth: 300 }}
+            sx={{ flex: 1 }}
             InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon />
-                </InputAdornment>
-              ),
               endAdornment: searchText && (
                 <InputAdornment position="end">
                   <IconButton size="small" onClick={handleClearSearch}>
@@ -116,30 +124,32 @@ const UserAdministratorsContent: React.FC = () => {
               ),
             }}
           />
-          <IconButton
-            onClick={refreshData}
-            disabled={loading}
-            title="Actualizar datos"
-            color="primary"
-          >
-            <RefreshIcon />
-          </IconButton>
+          <TextField
+            placeholder="Filtro rapido"
+            value={quickFilter}
+            onChange={(e) => setQuickFilter(e.target.value)}
+            size="small"
+            sx={{ flex: 1 }}
+            InputProps={{
+              endAdornment: quickFilter && (
+                <InputAdornment position="end">
+                  <IconButton size="small" onClick={() => setQuickFilter('')}>
+                    <ClearIcon />
+                  </IconButton>
+                </InputAdornment>
+              ),
+            }}
+          />
         </Box>
       </Box>
 
-      {/* Table */}
+      {/* Table - Simplified columns like original */}
       <TableContainer>
         <Table>
           <TableHead>
-            <TableRow>
+            <TableRow sx={{ bgcolor: '#f5f5f5' }}>
               <TableCell>
-                <strong>Nombre de usuario</strong>
-              </TableCell>
-              <TableCell>
-                <strong>Nombre completo</strong>
-              </TableCell>
-              <TableCell align="center">
-                <strong>Requiere cambio de contraseña</strong>
+                <strong>Usuario</strong>
               </TableCell>
               <TableCell align="center">
                 <strong>Acciones</strong>
@@ -149,7 +159,7 @@ const UserAdministratorsContent: React.FC = () => {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={4} align="center">
+                <TableCell colSpan={2} align="center">
                   <Box sx={{ py: 3, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 2 }}>
                     <CircularProgress size={24} />
                     <Typography variant="body2" color="text.secondary">
@@ -158,16 +168,16 @@ const UserAdministratorsContent: React.FC = () => {
                   </Box>
                 </TableCell>
               </TableRow>
-            ) : administradores.length === 0 ? (
+            ) : filteredAdministradores.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} align="center">
+                <TableCell colSpan={2} align="center">
                   <Typography variant="body2" color="text.secondary" sx={{ py: 3 }}>
                     No se encontraron administradores
                   </Typography>
                 </TableCell>
               </TableRow>
             ) : (
-              administradores.map((admin) => (
+              filteredAdministradores.map((admin) => (
                 <TableRow
                   key={admin.userId}
                   sx={{
@@ -176,33 +186,34 @@ const UserAdministratorsContent: React.FC = () => {
                   }}
                 >
                   <TableCell>{admin.username}</TableCell>
-                  <TableCell>{admin.fullName || '-'}</TableCell>
-                  <TableCell align="center">
-                    {admin.requiereCambio && (
-                      <CheckIcon color="success" />
-                    )}
-                  </TableCell>
                   <TableCell align="center">
                     <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
                       <IconButton
-                        color="primary"
                         size="small"
                         onClick={() => handlePasswordClick(admin.userId, admin.username)}
                         title="Cambiar contraseña"
+                        sx={{
+                          bgcolor: '#51cbce',
+                          color: 'white',
+                          '&:hover': { bgcolor: '#45b8bb' },
+                          borderRadius: 1,
+                        }}
                       >
-                        <KeyIcon />
+                        <KeyIcon fontSize="small" />
                       </IconButton>
-                      {admin.tieneRestablecimiento && (
-                        <Button
-                          variant="outlined"
-                          size="small"
-                          startIcon={<ReplayIcon />}
-                          onClick={() => handleResetPassword(admin.username)}
-                          title="Restablecer contraseña"
-                        >
-                          Restablecer
-                        </Button>
-                      )}
+                      <IconButton
+                        size="small"
+                        onClick={() => handleEditClick(admin.userId)}
+                        title="Editar usuario"
+                        sx={{
+                          bgcolor: '#51cbce',
+                          color: 'white',
+                          '&:hover': { bgcolor: '#45b8bb' },
+                          borderRadius: 1,
+                        }}
+                      >
+                        <EditIcon fontSize="small" />
+                      </IconButton>
                     </Box>
                   </TableCell>
                 </TableRow>
@@ -212,20 +223,12 @@ const UserAdministratorsContent: React.FC = () => {
         </Table>
       </TableContainer>
 
-      {/* Pagination */}
-      <TablePagination
-        rowsPerPageOptions={[5, 10, 20, 50, 100]}
-        component="div"
-        count={totalAdministradores}
-        rowsPerPage={rowsPerPage}
-        page={page}
-        onPageChange={handleChangePage}
-        onRowsPerPageChange={handleChangeRowsPerPage}
-        labelRowsPerPage="Filas por página:"
-        labelDisplayedRows={({ from, to, count }) =>
-          `${from}-${to} de ${count !== -1 ? count : `más de ${to}`}`
-        }
-      />
+      {/* Footer with count */}
+      <Box sx={{ p: 2, borderTop: 1, borderColor: 'divider' }}>
+        <Typography variant="body2" color="text.secondary">
+          Mostrando {filteredAdministradores.length} entradas
+        </Typography>
+      </Box>
 
       {/* Password Change Dialog */}
       <Dialog open={passwordModalOpen} onClose={handleClose} maxWidth="sm" fullWidth>

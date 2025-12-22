@@ -20,10 +20,12 @@ interface ZoneFromApi {
 
 interface User {
   id: string;
+  bettingPoolId: number;
   bettingPool: string;
   reference: string;
   requiresPasswordChange: boolean;
   zone: string;
+  userId?: number;
 }
 
 interface UseUserBettingPoolsReturn {
@@ -92,6 +94,7 @@ const useUserBettingPools = (): UseUserBettingPoolsReturn => {
         .filter(bp => bp.isActive) // Only show active betting pools
         .map(bp => ({
           id: bp.username || bp.bettingPoolCode,
+          bettingPoolId: bp.bettingPoolId,
           bettingPool: bp.bettingPoolName,
           reference: bp.reference || '',
           requiresPasswordChange: false, // TODO: Add this field to API if needed
