@@ -147,7 +147,7 @@ const UserAdministratorsContent: React.FC = () => {
       <TableContainer>
         <Table>
           <TableHead>
-            <TableRow sx={{ bgcolor: '#f5f5f5' }}>
+            <TableRow sx={{ bgcolor: '#e3e3e3' }}>
               <TableCell>
                 <strong>Usuario</strong>
               </TableCell>
