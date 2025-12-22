@@ -1,3 +1,4 @@
+import { useState, useCallback, useMemo } from 'react';
 import {
   Box,
   Card,
@@ -18,16 +19,45 @@ import {
   TableHead,
   TableRow,
   Paper,
-  InputAdornment
+  InputAdornment,
+  CircularProgress
 } from '@mui/material';
 import type { SelectChangeEvent } from '@mui/material/Select';
 import { Search as SearchIcon } from '@mui/icons-material';
+import api from '@services/api';
 
 interface Zone {
   zoneId?: number;
   id?: number;
   zoneName?: string;
   name?: string;
+}
+
+interface DrawSalesDto {
+  drawId: number;
+  drawName: string;
+  lotteryName: string | null;
+  drawTime: string;
+  drawColor: string | null;
+  ticketCount: number;
+  lineCount: number;
+  winnerCount: number;
+  totalSold: number;
+  totalPrizes: number;
+  totalCommissions: number;
+  totalNet: number;
+}
+
+interface DrawSalesResponse {
+  date: string;
+  draws: DrawSalesDto[];
+  summary: {
+    totalSold: number;
+    totalPrizes: number;
+    totalCommissions: number;
+    totalNet: number;
+  };
+  totalCount: number;
 }
 
 interface PorSorteoTabProps {
@@ -39,6 +69,40 @@ interface PorSorteoTabProps {
 }
 
 const PorSorteoTab = ({ selectedDate, setSelectedDate, zones, selectedZones, handleZoneChange }: PorSorteoTabProps): React.ReactElement => {
+  const [loading, setLoading] = useState(false);
+  const [data, setData] = useState<DrawSalesDto[]>([]);
+  const [summary, setSummary] = useState({ totalSold: 0, totalPrizes: 0, totalCommissions: 0, totalNet: 0 });
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await api.get<DrawSalesResponse>(
+        `/reports/sales/by-draw?date=${selectedDate}`
+      );
+      setData(response.draws || []);
+      setSummary(response.summary || { totalSold: 0, totalPrizes: 0, totalCommissions: 0, totalNet: 0 });
+    } catch (error) {
+      console.error('Error loading sales by draw:', error);
+      setData([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedDate]);
+
+  const filteredData = useMemo(() => {
+    if (!searchTerm) return data;
+    const term = searchTerm.toLowerCase();
+    return data.filter(d =>
+      d.drawName.toLowerCase().includes(term) ||
+      (d.lotteryName && d.lotteryName.toLowerCase().includes(term))
+    );
+  }, [data, searchTerm]);
+
+  const formatCurrency = (value: number): string => {
+    return `$${(value || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
+
   return (
     <Card>
       <CardContent>
@@ -49,27 +113,18 @@ const PorSorteoTab = ({ selectedDate, setSelectedDate, zones, selectedZones, han
         <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap', alignItems: 'flex-end' }}>
           <Box>
             <Typography variant="caption" sx={{ color: 'text.secondary', mb: 0.5, display: 'block' }}>
-              Fecha inicial
+              Fecha
             </Typography>
             <TextField
               type="date"
               size="small"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
-              sx={{ width: 200 }}
-            />
-          </Box>
-
-          <Box>
-            <Typography variant="caption" sx={{ color: 'text.secondary', mb: 0.5, display: 'block' }}>
-              Fecha final
-            </Typography>
-            <TextField
-              type="date"
-              size="small"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              sx={{ width: 200 }}
+              sx={{
+                width: 200,
+                '& .MuiInputBase-root': { height: 32 },
+                '& .MuiInputBase-input': { py: 0.5, fontSize: '0.8rem' },
+              }}
             />
           </Box>
 
@@ -77,7 +132,14 @@ const PorSorteoTab = ({ selectedDate, setSelectedDate, zones, selectedZones, han
             <Typography variant="caption" sx={{ color: 'text.secondary', mb: 0.5, display: 'block' }}>
               Zonas
             </Typography>
-            <FormControl sx={{ minWidth: 200 }} size="small">
+            <FormControl
+              sx={{
+                minWidth: 200,
+                '& .MuiInputBase-root': { height: 32 },
+                '& .MuiSelect-select': { py: 0.5, fontSize: '0.8rem' },
+              }}
+              size="small"
+            >
               <Select
                 multiple
                 value={selectedZones}
@@ -102,34 +164,38 @@ const PorSorteoTab = ({ selectedDate, setSelectedDate, zones, selectedZones, han
         <Box sx={{ mb: 3 }}>
           <Button
             variant="contained"
+            onClick={loadData}
+            disabled={loading}
+            size="small"
             sx={{
-              bgcolor: '#51cbce',
-              '&:hover': { bgcolor: '#45b8bb' },
               borderRadius: '20px',
-              px: 4,
-              py: 1,
+              px: 2.5,
+              py: 0.5,
+              fontSize: '0.75rem',
               textTransform: 'uppercase',
-              fontWeight: 500,
-              color: 'white',
-              fontSize: '0.875rem'
+              fontWeight: 500
             }}
           >
-            VER VENTAS
+            {loading ? <CircularProgress size={16} color="inherit" /> : 'Ver ventas'}
           </Button>
         </Box>
 
         <Typography variant="h5" align="center" gutterBottom sx={{ fontWeight: 400, mb: 4, fontSize: '1.5rem' }}>
-          Total neto: $0.00
+          Total neto: {formatCurrency(summary.totalNet)}
         </Typography>
 
-        <Typography variant="h6" align="center" sx={{ color: 'text.secondary', mb: 4, fontSize: '1.25rem' }}>
-          No hay entradas para la fecha elegida
-        </Typography>
+        {data.length === 0 && !loading && (
+          <Typography variant="h6" align="center" sx={{ color: 'text.secondary', mb: 4, fontSize: '1.25rem' }}>
+            No hay entradas para el sorteo y la fecha elegidos
+          </Typography>
+        )}
 
         <Box sx={{ mb: 2 }}>
           <TextField
             size="small"
             placeholder="Filtrado rápido"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
             InputProps={{
               endAdornment: (
                 <InputAdornment position="end">
@@ -146,6 +212,9 @@ const PorSorteoTab = ({ selectedDate, setSelectedDate, zones, selectedZones, han
             <TableHead sx={{ backgroundColor: 'grey.100' }}>
               <TableRow>
                 <TableCell sx={{ cursor: 'pointer' }}>Sorteo</TableCell>
+                <TableCell align="right" sx={{ cursor: 'pointer' }}>Tickets</TableCell>
+                <TableCell align="right" sx={{ cursor: 'pointer' }}>Líneas</TableCell>
+                <TableCell align="right" sx={{ cursor: 'pointer' }}>Ganadores</TableCell>
                 <TableCell align="right" sx={{ cursor: 'pointer' }}>Total Vendido</TableCell>
                 <TableCell align="right" sx={{ cursor: 'pointer' }}>Total premios</TableCell>
                 <TableCell align="right" sx={{ cursor: 'pointer' }}>Total comisiones</TableCell>
@@ -153,24 +222,56 @@ const PorSorteoTab = ({ selectedDate, setSelectedDate, zones, selectedZones, han
               </TableRow>
             </TableHead>
             <TableBody>
-              <TableRow>
-                <TableCell colSpan={5} align="center" sx={{ py: 3, color: 'text.secondary' }}>
-                  No hay entradas disponibles
-                </TableCell>
-              </TableRow>
+              {filteredData.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={8} align="center" sx={{ py: 3, color: 'text.secondary' }}>
+                    {loading ? 'Cargando...' : 'No hay entradas para el sorteo y la fecha elegidos'}
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredData.map((row) => (
+                  <TableRow key={row.drawId} hover>
+                    <TableCell>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        {row.drawColor && (
+                          <Box sx={{
+                            width: 12,
+                            height: 12,
+                            borderRadius: '50%',
+                            bgcolor: row.drawColor
+                          }} />
+                        )}
+                        {row.drawName}
+                      </Box>
+                    </TableCell>
+                    <TableCell align="right">{row.ticketCount}</TableCell>
+                    <TableCell align="right">{row.lineCount}</TableCell>
+                    <TableCell align="right">{row.winnerCount}</TableCell>
+                    <TableCell align="right">{formatCurrency(row.totalSold)}</TableCell>
+                    <TableCell align="right">{formatCurrency(row.totalPrizes)}</TableCell>
+                    <TableCell align="right">{formatCurrency(row.totalCommissions)}</TableCell>
+                    <TableCell align="right" sx={{ color: row.totalNet < 0 ? 'error.main' : 'inherit' }}>
+                      {formatCurrency(row.totalNet)}
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
               <TableRow sx={{ backgroundColor: 'grey.200' }}>
                 <TableCell><strong>Totales</strong></TableCell>
-                <TableCell align="right"><strong>$0.00</strong></TableCell>
-                <TableCell align="right"><strong>$0.00</strong></TableCell>
-                <TableCell align="right"><strong>$0.00</strong></TableCell>
-                <TableCell align="right"><strong>$0.00</strong></TableCell>
+                <TableCell align="right"><strong>{filteredData.reduce((sum, r) => sum + r.ticketCount, 0)}</strong></TableCell>
+                <TableCell align="right"><strong>{filteredData.reduce((sum, r) => sum + r.lineCount, 0)}</strong></TableCell>
+                <TableCell align="right"><strong>{filteredData.reduce((sum, r) => sum + r.winnerCount, 0)}</strong></TableCell>
+                <TableCell align="right"><strong>{formatCurrency(summary.totalSold)}</strong></TableCell>
+                <TableCell align="right"><strong>{formatCurrency(summary.totalPrizes)}</strong></TableCell>
+                <TableCell align="right"><strong>{formatCurrency(summary.totalCommissions)}</strong></TableCell>
+                <TableCell align="right"><strong>{formatCurrency(summary.totalNet)}</strong></TableCell>
               </TableRow>
             </TableBody>
           </Table>
         </TableContainer>
 
         <Typography variant="body2" sx={{ mt: 2 }}>
-          Mostrando 0 de 0 entradas
+          Mostrando {filteredData.length} de {data.length} entradas
         </Typography>
       </CardContent>
     </Card>

@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using LotteryApi.Data;
 using LotteryApi.DTOs;
 using LotteryApi.Models;
+using LotteryApi.Helpers;
 using LotteryApi.Services.ExternalResults;
 using System.Security.Claims;
 
@@ -35,22 +36,26 @@ public class ResultsController : ControllerBase
     [ProducesResponseType(typeof(List<ResultDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetResults([FromQuery] DateTime? date, [FromQuery] int? drawId)
     {
-        var targetDate = date ?? DateTime.Today;
+        var targetDate = date ?? DateTimeHelper.TodayInBusinessTimezone();
 
+        // OPTIMIZED: Use projection to avoid loading full entities
         var query = _context.Results
-            .Include(r => r.Draw)
             .Where(r => r.ResultDate.Date == targetDate.Date)
-            .Where(r => r.Draw != null && r.Draw.IsActive) // Only show results for active draws
+            .Join(_context.Draws,
+                r => r.DrawId,
+                d => d.DrawId,
+                (r, d) => new { Result = r, Draw = d })
+            .Where(joined => joined.Draw.IsActive) // Only show results for active draws
             .AsQueryable();
 
         if (drawId.HasValue)
         {
-            query = query.Where(r => r.DrawId == drawId.Value);
+            query = query.Where(joined => joined.Result.DrawId == drawId.Value);
         }
 
         var results = await query
-            .OrderBy(r => r.Draw!.DrawName)
-            .Select(r => MapToDto(r))
+            .OrderBy(joined => joined.Draw.DrawName)
+            .Select(joined => MapToDtoFromProjection(joined.Result, joined.Draw))
             .ToListAsync();
 
         return Ok(results);
@@ -360,6 +365,7 @@ public class ResultsController : ControllerBase
     /// Shows draws whose scheduled time has passed for the specified date (for entering results)
     /// For draws with UseWeeklySchedule=true, checks weekly schedule; otherwise uses DrawTime for all days
     /// Uses America/Santo_Domingo timezone for time comparison (lottery business timezone)
+    /// OPTIMIZED: Filters in SQL using query predicates instead of loading all data to memory
     /// </summary>
     [HttpGet("draws")]
     [ProducesResponseType(typeof(List<object>), StatusCodes.Status200OK)]
@@ -378,30 +384,28 @@ public class ResultsController : ControllerBase
         _logger.LogInformation("Getting draws for date {Date}, dayOfWeek={DayOfWeek}, current time {Time} (America/Santo_Domingo), isToday={IsToday}",
             targetDate.ToString("yyyy-MM-dd"), dayOfWeekByte, currentTime.ToString(@"hh\:mm\:ss"), isToday);
 
-        // Get all active draws, include weekly schedules for those that use them
-        var allDraws = await _context.Draws
-            .Include(d => d.WeeklySchedules)
+        // OPTIMIZED: Build query with SQL-side filtering
+        var baseQuery = _context.Draws
             .Where(d => d.IsActive == true)
+            .AsQueryable();
+
+        // Filter by day of week for draws that use weekly schedules
+        // For draws with UseWeeklySchedule=false, they appear every day
+        // For draws with UseWeeklySchedule=true, only include if they have an active schedule for this day
+        var drawsQuery = baseQuery
+            .Where(d => d.UseWeeklySchedule != true ||
+                        d.WeeklySchedules.Any(s => s.DayOfWeek == dayOfWeekByte && s.IsActive));
+
+        // OPTIMIZED: Filter by time in SQL for "today" queries
+        if (isToday)
+        {
+            drawsQuery = drawsQuery.Where(d => d.DrawTime <= currentTime);
+        }
+
+        // OPTIMIZED: Use projection (Select) before materializing to avoid loading full entities
+        var filteredDraws = await drawsQuery
             .OrderBy(d => d.DrawTime)
             .ThenBy(d => d.DrawName)
-            .ToListAsync();
-
-        _logger.LogInformation("Found {AllCount} total active draws", allDraws.Count);
-
-        // Filter by schedule:
-        // - If UseWeeklySchedule is true, check if draw has schedule for this day of week
-        // - If UseWeeklySchedule is false/null, draw runs every day (use DrawTime)
-        var scheduledDraws = allDraws
-            .Where(d =>
-                d.UseWeeklySchedule != true || // If not using weekly schedule, show every day
-                d.WeeklySchedules.Any(s => s.DayOfWeek == dayOfWeekByte && s.IsActive)) // Or if has active schedule for today
-            .ToList();
-
-        _logger.LogInformation("After day-of-week filter: {Count} draws", scheduledDraws.Count);
-
-        // Filter by time: for today, only show draws whose time has passed; for past dates, show all
-        var filteredDraws = scheduledDraws
-            .Where(d => !isToday || d.DrawTime <= currentTime)
             .Select(d => new
             {
                 d.DrawId,
@@ -410,9 +414,9 @@ public class ResultsController : ControllerBase
                 DrawTime = d.DrawTime.ToString(@"hh\:mm\:ss"),
                 Color = d.DisplayColor ?? "#37b9f9"
             })
-            .ToList();
+            .ToListAsync();
 
-        _logger.LogInformation("After time filter: {Count} draws (isToday={IsToday}, currentTime={Time})",
+        _logger.LogInformation("Found {Count} draws after filtering (isToday={IsToday}, currentTime={Time})",
             filteredDraws.Count, isToday, currentTime.ToString(@"hh\:mm\:ss"));
 
         return Ok(filteredDraws);
@@ -425,7 +429,7 @@ public class ResultsController : ControllerBase
     [ProducesResponseType(typeof(RefreshResultsResponse), StatusCodes.Status200OK)]
     public async Task<IActionResult> RefreshResults([FromQuery] DateTime? date)
     {
-        var targetDate = date ?? DateTime.Today;
+        var targetDate = date ?? DateTimeHelper.TodayInBusinessTimezone();
 
         _logger.LogInformation("Manual refresh requested for date {Date}", targetDate.ToString("yyyy-MM-dd"));
 
@@ -466,7 +470,7 @@ public class ResultsController : ControllerBase
     [ProducesResponseType(typeof(RefreshResultsResponse), StatusCodes.Status200OK)]
     public async Task<IActionResult> RefreshResultForDraw(int drawId, [FromQuery] DateTime? date)
     {
-        var targetDate = date ?? DateTime.Today;
+        var targetDate = date ?? DateTimeHelper.TodayInBusinessTimezone();
 
         _logger.LogInformation("Manual refresh requested for draw {DrawId} on {Date}", drawId, targetDate.ToString("yyyy-MM-dd"));
 
@@ -813,6 +817,61 @@ public class ResultsController : ControllerBase
             ResultId = result.ResultId,
             DrawId = result.DrawId,
             DrawName = result.Draw?.DrawName ?? "Unknown",
+            WinningNumber = result.WinningNumber,
+            AdditionalNumber = result.AdditionalNumber,
+            Position = result.Position,
+            ResultDate = result.ResultDate,
+            CreatedAt = result.CreatedAt,
+            CreatedBy = result.CreatedBy,
+            UpdatedAt = result.UpdatedAt,
+            ApprovedAt = result.ApprovedAt,
+            ApprovedBy = result.ApprovedBy,
+            Num1 = num1,
+            Num2 = num2,
+            Num3 = num3,
+            Cash3 = cash3,
+            Play4 = play4,
+            Pick5 = pick5,
+            Bolita1 = bolita1,
+            Bolita2 = bolita2,
+            Singulaccion1 = singulaccion1,
+            Singulaccion2 = singulaccion2,
+            Singulaccion3 = singulaccion3
+        };
+    }
+
+    /// <summary>
+    /// Map Result and Draw to ResultDto (optimized version for projections)
+    /// Used when Result and Draw are already loaded separately to avoid navigation property access
+    /// </summary>
+    private static ResultDto MapToDtoFromProjection(Result result, Draw draw)
+    {
+        var winningNumber = result.WinningNumber ?? "";
+
+        // Parse winning number into individual components
+        // Format: "889475" -> num1=88, num2=94, num3=75
+        var num1 = winningNumber.Length >= 2 ? winningNumber.Substring(0, 2) : "";
+        var num2 = winningNumber.Length >= 4 ? winningNumber.Substring(2, 2) : "";
+        var num3 = winningNumber.Length >= 6 ? winningNumber.Substring(4, 2) : "";
+
+        // Additional number might contain cash3, play4, pick5
+        var additionalNumber = result.AdditionalNumber ?? "";
+        var cash3 = additionalNumber.Length >= 3 ? additionalNumber.Substring(0, 3) : "";
+        var play4 = additionalNumber.Length >= 7 ? additionalNumber.Substring(3, 4) : "";
+        var pick5 = additionalNumber.Length >= 12 ? additionalNumber.Substring(7, 5) : "";
+
+        // Calculate derived bet types from Cash3 for USA lotteries
+        var bolita1 = cash3.Length >= 2 ? cash3.Substring(0, 2) : "";
+        var bolita2 = cash3.Length >= 3 ? cash3.Substring(1, 2) : "";
+        var singulaccion1 = cash3.Length >= 1 ? cash3.Substring(0, 1) : "";
+        var singulaccion2 = cash3.Length >= 2 ? cash3.Substring(1, 1) : "";
+        var singulaccion3 = cash3.Length >= 3 ? cash3.Substring(2, 1) : "";
+
+        return new ResultDto
+        {
+            ResultId = result.ResultId,
+            DrawId = result.DrawId,
+            DrawName = draw.DrawName,
             WinningNumber = result.WinningNumber,
             AdditionalNumber = result.AdditionalNumber,
             Position = result.Position,

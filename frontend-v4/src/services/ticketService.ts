@@ -5,6 +5,30 @@
 
 import api from './api';
 
+// Constants
+const SANTO_DOMINGO_TIMEZONE = 'America/Santo_Domingo';
+
+/**
+ * Format date to Santo Domingo timezone with time in AM/PM format
+ * The lottery system operates in Santo Domingo timezone (UTC-4)
+ */
+const formatDateToSantoDomingo = (dateString: string): string => {
+  const date = new Date(dateString);
+  const dateFormatted = date.toLocaleDateString('en-US', {
+    timeZone: SANTO_DOMINGO_TIMEZONE,
+    month: '2-digit',
+    day: '2-digit',
+    year: 'numeric',
+  });
+  const timeFormatted = date.toLocaleTimeString('en-US', {
+    timeZone: SANTO_DOMINGO_TIMEZONE,
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+  });
+  return `${dateFormatted} ${timeFormatted}`;
+};
+
 // Types
 export interface TicketLine {
   drawId: number;
@@ -155,12 +179,12 @@ export const mapTicketResponse = (ticket: TicketResponse): MappedTicket => {
   return {
     id: ticket.ticketId,
     numero: ticket.ticketCode,
-    fecha: new Date(ticket.createdAt).toLocaleDateString(),
+    fecha: formatDateToSantoDomingo(ticket.createdAt),
     usuario: ticket.userName || 'N/A',
     monto: ticket.grandTotal,
     premio: ticket.totalPrize || 0,
     fechaCancelacion: ticket.cancelledAt
-      ? new Date(ticket.cancelledAt).toLocaleDateString()
+      ? formatDateToSantoDomingo(ticket.cancelledAt)
       : null,
     estado,
   };

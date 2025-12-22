@@ -2,14 +2,18 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box, Paper, Typography, TextField, Grid, Autocomplete, Button, Stack,
   Tabs, Tab, ToggleButtonGroup, ToggleButton, Table, TableHead, TableBody, TableRow, TableCell,
-  Checkbox, FormControlLabel, FormControl, InputLabel, Select, MenuItem, InputAdornment
+  Checkbox, FormControlLabel, FormControl, InputLabel, Select, MenuItem, InputAdornment,
+  CircularProgress
 } from '@mui/material';
 import type { SelectChangeEvent } from '@mui/material/Select';
 import { FilterList, PictureAsPdf, Download, Search } from '@mui/icons-material';
+import api from '@services/api';
 
 interface Zona {
   id: number;
+  zoneId?: number;
   name: string;
+  zoneName?: string;
 }
 
 interface Grupo {
@@ -33,6 +37,8 @@ interface BancaData {
 interface SorteoData {
   sorteo: string;
   tickets: number;
+  lineas: number;
+  ganadores: number;
   venta: number;
   comisiones: number;
   descuentos: number;
@@ -42,6 +48,9 @@ interface SorteoData {
 
 interface CombinacionData {
   combinacion: string;
+  sorteo: string;
+  tipoApuesta: string;
+  lineas: number;
   totalVendido: number;
   comisiones: number;
   comisiones2: number;
@@ -54,6 +63,7 @@ interface ZonaData {
   nombre?: string;
   bancasActivas?: number;
   tickets?: number;
+  lineas?: number;
   venta: number;
   comisiones: number;
   descuentos: number;
@@ -79,6 +89,72 @@ interface Totals {
   final: number;
 }
 
+// API Response interfaces
+interface BettingPoolSalesDto {
+  bettingPoolId: number;
+  bettingPoolName: string;
+  bettingPoolCode: string;
+  totalSold: number;
+  totalPrizes: number;
+  totalCommissions: number;
+  totalNet: number;
+}
+
+interface DrawSalesDto {
+  drawId: number;
+  drawName: string;
+  ticketCount: number;
+  lineCount: number;
+  winnerCount: number;
+  totalSold: number;
+  totalPrizes: number;
+  totalCommissions: number;
+  totalNet: number;
+}
+
+interface DrawSalesResponse {
+  draws: DrawSalesDto[];
+  summary: { totalSold: number; totalPrizes: number; totalCommissions: number; totalNet: number };
+}
+
+interface CombinationSalesDto {
+  betNumber: string;
+  drawName: string;
+  betTypeName: string;
+  lineCount: number;
+  totalSold: number;
+  totalCommissions: number;
+  totalPrizes: number;
+  balance: number;
+}
+
+interface CombinationSalesResponse {
+  combinations: CombinationSalesDto[];
+  summary: { totalSold: number; totalPrizes: number; totalCommissions: number; totalNet: number };
+}
+
+interface ZoneSalesDto {
+  zoneId: number;
+  zoneName: string;
+  bettingPoolCount: number;
+  ticketCount: number;
+  lineCount: number;
+  winnerCount: number;
+  totalSold: number;
+  totalPrizes: number;
+  totalCommissions: number;
+  totalDiscounts: number;
+  totalNet: number;
+  fall: number;
+  final: number;
+  balance: number;
+}
+
+interface ZoneSalesResponse {
+  zones: ZoneSalesDto[];
+  summary: { totalSold: number; totalPrizes: number; totalCommissions: number; totalNet: number };
+}
+
 const HistoricalSales = (): React.ReactElement => {
   const [mainTab, setMainTab] = useState<number>(0);
   const [fechaInicial, setFechaInicial] = useState<string>(new Date().toISOString().split('T')[0]);
@@ -88,6 +164,7 @@ const HistoricalSales = (): React.ReactElement => {
   const [mostrarComision2, setMostrarComision2] = useState<boolean>(false);
   const [filterType, setFilterType] = useState<string>('todos');
   const [filtroRapido, setFiltroRapido] = useState<string>('');
+  const [loading, setLoading] = useState<boolean>(false);
 
   // Data for different tabs
   const [bancasData, setBancasData] = useState<BancaData[]>([]);
@@ -101,16 +178,182 @@ const HistoricalSales = (): React.ReactElement => {
 
   const formatCurrency = useCallback((amount: number): string => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount), []);
 
+  // Load zones on mount
   useEffect(() => {
-    // Initialize with empty data - will be loaded from API when implemented
-    setBancasData([]);
-    setSorteoData([]);
-    setCombinacionesData([]);
-    setZonasData([]);
-    setTotals({ tickets: 0, venta: 0, comisiones: 0, descuentos: 0, premios: 0, neto: 0, caida: 0, final: 0 });
-    setZonasList([]);
-    setGruposList([]);
+    const loadZones = async () => {
+      try {
+        const response = await api.get<{ items?: Zona[] } | Zona[]>('/zones');
+        const zonesArray = (response && typeof response === 'object' && 'items' in response)
+          ? (response.items || [])
+          : (response as Zona[] || []);
+
+        const normalizedZones = zonesArray.map((z: Zona) => ({
+          id: z.zoneId || z.id,
+          name: z.zoneName || z.name
+        }));
+        setZonasList(normalizedZones);
+        setZonas(normalizedZones); // Select all by default
+      } catch (error) {
+        console.error('Error loading zones:', error);
+      }
+    };
+    loadZones();
   }, []);
+
+  // Load sales by betting pool (General tab)
+  const loadBancasData = async () => {
+    setLoading(true);
+    try {
+      const zoneIds = zonas.map(z => z.id).join(',');
+      const response = await api.get<BettingPoolSalesDto[]>(
+        `/reports/sales/by-betting-pool?startDate=${fechaInicial}&endDate=${fechaFinal}${zoneIds ? `&zoneIds=${zoneIds}` : ''}`
+      );
+
+      const mapped: BancaData[] = (response || []).map(item => ({
+        ref: item.bettingPoolName,
+        codigo: item.bettingPoolCode,
+        tickets: 0,
+        venta: item.totalSold,
+        comisiones: item.totalCommissions,
+        descuentos: 0,
+        premios: item.totalPrizes,
+        neto: item.totalNet,
+        caida: 0,
+        final: item.totalNet
+      }));
+
+      setBancasData(mapped);
+
+      const newTotals = mapped.reduce((acc, row) => ({
+        tickets: acc.tickets + row.tickets,
+        venta: acc.venta + row.venta,
+        comisiones: acc.comisiones + row.comisiones,
+        descuentos: acc.descuentos + row.descuentos,
+        premios: acc.premios + row.premios,
+        neto: acc.neto + row.neto,
+        caida: acc.caida + row.caida,
+        final: acc.final + row.final
+      }), { tickets: 0, venta: 0, comisiones: 0, descuentos: 0, premios: 0, neto: 0, caida: 0, final: 0 });
+
+      setTotals(newTotals);
+    } catch (error) {
+      console.error('Error loading bancas data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load sales by draw (Por sorteo tab)
+  const loadSorteoData = async () => {
+    setLoading(true);
+    try {
+      const zoneIds = zonas.map(z => z.id).join(',');
+      const response = await api.get<DrawSalesResponse>(
+        `/reports/sales/by-draw?date=${fechaInicial}${zoneIds ? `&zoneIds=${zoneIds}` : ''}`
+      );
+
+      const mapped: SorteoData[] = (response?.draws || []).map(item => ({
+        sorteo: item.drawName,
+        tickets: item.ticketCount,
+        lineas: item.lineCount,
+        ganadores: item.winnerCount,
+        venta: item.totalSold,
+        comisiones: item.totalCommissions,
+        descuentos: 0,
+        premios: item.totalPrizes,
+        neto: item.totalNet
+      }));
+
+      setSorteoData(mapped);
+    } catch (error) {
+      console.error('Error loading sorteo data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load combinations (Combinaciones tab)
+  const loadCombinacionesData = async () => {
+    setLoading(true);
+    try {
+      const zoneIds = zonas.map(z => z.id).join(',');
+      const response = await api.get<CombinationSalesResponse>(
+        `/reports/sales/combinations?date=${fechaInicial}${zoneIds ? `&zoneIds=${zoneIds}` : ''}`
+      );
+
+      const mapped: CombinacionData[] = (response?.combinations || []).map(item => ({
+        combinacion: item.betNumber,
+        sorteo: item.drawName,
+        tipoApuesta: item.betTypeName,
+        lineas: item.lineCount,
+        totalVendido: item.totalSold,
+        comisiones: item.totalCommissions,
+        comisiones2: 0,
+        premios: item.totalPrizes,
+        balances: item.balance
+      }));
+
+      setCombinacionesData(mapped);
+    } catch (error) {
+      console.error('Error loading combinaciones data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load sales by zone (Por zona tab)
+  const loadZonasData = async () => {
+    setLoading(true);
+    try {
+      const zoneIds = zonas.map(z => z.id).join(',');
+      const response = await api.get<ZoneSalesResponse>(
+        `/reports/sales/by-zone?date=${fechaInicial}${zoneIds ? `&zoneIds=${zoneIds}` : ''}`
+      );
+
+      const mapped: ZonaData[] = (response?.zones || []).map(item => ({
+        nombre: item.zoneName,
+        bancasActivas: item.bettingPoolCount,
+        tickets: item.ticketCount,
+        lineas: item.lineCount,
+        venta: item.totalSold,
+        comisiones: item.totalCommissions,
+        descuentos: item.totalDiscounts,
+        premios: item.totalPrizes,
+        neto: item.totalNet,
+        p: 0,
+        l: 0,
+        w: item.winnerCount,
+        total: item.lineCount,
+        caida: item.fall,
+        final: item.final,
+        balance: item.balance
+      }));
+
+      setZonasData(mapped);
+    } catch (error) {
+      console.error('Error loading zonas data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle search based on current tab
+  const handleSearch = () => {
+    switch (mainTab) {
+      case 0:
+        loadBancasData();
+        break;
+      case 1:
+        loadSorteoData();
+        break;
+      case 2:
+        loadCombinacionesData();
+        break;
+      case 3:
+        loadZonasData();
+        break;
+    }
+  };
 
   const FILTER_OPTIONS = [
     { value: 'todos', label: 'Todos' },
@@ -258,6 +501,9 @@ const HistoricalSales = (): React.ReactElement => {
             <Box sx={{ mb: 3 }}>
               <Button
                 variant="contained"
+                onClick={handleSearch}
+                disabled={loading}
+                startIcon={loading ? <CircularProgress size={20} color="inherit" /> : null}
                 sx={{
                   bgcolor: '#667eea',
                   '&:hover': { bgcolor: '#5568d3' },
@@ -439,6 +685,9 @@ const HistoricalSales = (): React.ReactElement => {
             <Box sx={{ mb: 3 }}>
               <Button
                 variant="contained"
+                onClick={handleSearch}
+                disabled={loading}
+                startIcon={loading ? <CircularProgress size={20} color="inherit" /> : null}
                 sx={{
                   bgcolor: '#51cbce',
                   '&:hover': { bgcolor: '#45b8bb' },
@@ -568,6 +817,9 @@ const HistoricalSales = (): React.ReactElement => {
             <Box sx={{ display: 'flex', gap: 1.5, mb: 3 }}>
               <Button
                 variant="contained"
+                onClick={handleSearch}
+                disabled={loading}
+                startIcon={loading ? <CircularProgress size={20} color="inherit" /> : null}
                 sx={{
                   bgcolor: '#51cbce',
                   '&:hover': { bgcolor: '#45b8bb' },
@@ -774,7 +1026,7 @@ const HistoricalSales = (): React.ReactElement => {
               </Box>
 
               <Stack direction="row" spacing={2} sx={{ mb: 3 }}>
-                <Button variant="contained" startIcon={<FilterList />} sx={{ px: 4, borderRadius: '30px', textTransform: 'uppercase' }}>Ver ventas</Button>
+                <Button variant="contained" startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <FilterList />} onClick={handleSearch} disabled={loading} sx={{ px: 4, borderRadius: '30px', textTransform: 'uppercase' }}>Ver ventas</Button>
                 <Button variant="contained" startIcon={<Download />} sx={{ borderRadius: '30px', textTransform: 'uppercase' }}>CSV</Button>
                 <Button variant="contained" startIcon={<PictureAsPdf />} sx={{ borderRadius: '30px', textTransform: 'uppercase' }}>PDF</Button>
               </Stack>

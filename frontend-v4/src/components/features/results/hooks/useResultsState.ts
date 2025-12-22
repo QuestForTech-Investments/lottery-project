@@ -402,7 +402,7 @@ export function useResultsState(): UseResultsStateReturn {
     () => ({
       dirtyRows: state.drawResults.filter((r) => r.isDirty && (r.num1 || r.cash3)),
       rowsWithResults: state.drawResults.filter((r) => r.hasResult),
-      pendingCount: state.drawResults.filter((r) => r.isDirty).length,
+      pendingCount: state.drawResults.filter((r) => !r.hasResult).length,
       totalCount: state.drawResults.length,
       withResultsCount: state.drawResults.filter((r) => r.hasResult).length,
     }),

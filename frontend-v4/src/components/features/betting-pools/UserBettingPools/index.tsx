@@ -26,12 +26,15 @@ import {
   DialogContent,
   DialogActions,
   Button,
+  CircularProgress,
+  Alert,
 } from '@mui/material';
 import {
   Search as SearchIcon,
   Clear as ClearIcon,
   VpnKey as KeyIcon,
   Check as CheckIcon,
+  Refresh as RefreshIcon,
 } from '@mui/icons-material';
 import useUserBettingPools from './hooks/useUserBettingPools';
 
@@ -57,6 +60,8 @@ const UserBancasMUI: React.FC = () => {
     rowsPerPage,
     passwordModalOpen,
     selectedUsername,
+    loading,
+    error,
     handleZoneChange,
     handleSearchChange,
     handleClearSearch,
@@ -64,6 +69,7 @@ const UserBancasMUI: React.FC = () => {
     handleChangeRowsPerPage,
     handlePasswordClick,
     handleClosePasswordModal,
+    refreshData,
   } = useUserBettingPools();
 
   // Local state for password change
@@ -104,9 +110,24 @@ const UserBancasMUI: React.FC = () => {
             variant="h6"
             component="div"
           >
-            Lista de Usuarios
+            Lista de Usuarios de Bancas
           </Typography>
+          <IconButton
+            onClick={refreshData}
+            disabled={loading}
+            title="Actualizar datos"
+            sx={{ mr: 1 }}
+          >
+            <RefreshIcon />
+          </IconButton>
         </Toolbar>
+
+        {/* Error Alert */}
+        {error && (
+          <Alert severity="error" sx={{ mx: 2, mb: 2 }}>
+            {error}
+          </Alert>
+        )}
 
         {/* Filters */}
         <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
@@ -189,7 +210,18 @@ const UserBancasMUI: React.FC = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {users.length === 0 ? (
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={5} align="center">
+                    <Box sx={{ py: 3, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 2 }}>
+                      <CircularProgress size={24} />
+                      <Typography variant="body2" color="text.secondary">
+                        Cargando usuarios...
+                      </Typography>
+                    </Box>
+                  </TableCell>
+                </TableRow>
+              ) : users.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} align="center">
                     <Typography variant="body2" color="text.secondary" sx={{ py: 3 }}>

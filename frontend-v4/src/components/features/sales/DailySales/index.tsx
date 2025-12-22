@@ -393,7 +393,16 @@ const DailySales = (): React.ReactElement => {
                   size="small"
                   value={selectedDate}
                   onChange={(e) => setSelectedDate(e.target.value)}
-                  sx={{ width: 200 }}
+                  sx={{
+                    width: 200,
+                    '& .MuiInputBase-root': {
+                      height: 32,
+                    },
+                    '& .MuiInputBase-input': {
+                      py: 0.5,
+                      fontSize: '0.8rem',
+                    },
+                  }}
                   InputLabelProps={{ shrink: true }}
                 />
               </Box>
@@ -402,7 +411,19 @@ const DailySales = (): React.ReactElement => {
                 <Typography variant="caption" sx={{ color: 'text.secondary', mb: 0.5, display: 'block' }}>
                   Zonas
                 </Typography>
-                <FormControl sx={{ minWidth: 200 }} size="small">
+                <FormControl
+                  sx={{
+                    minWidth: 200,
+                    '& .MuiInputBase-root': {
+                      height: 32,
+                    },
+                    '& .MuiSelect-select': {
+                      py: 0.5,
+                      fontSize: '0.8rem',
+                    },
+                  }}
+                  size="small"
+                >
                   <Select
                     multiple
                     value={selectedZones}
@@ -427,7 +448,19 @@ const DailySales = (): React.ReactElement => {
                 <Typography variant="caption" sx={{ color: 'text.secondary', mb: 0.5, display: 'block' }}>
                   Grupo
                 </Typography>
-                <FormControl sx={{ minWidth: 150 }} size="small">
+                <FormControl
+                  sx={{
+                    minWidth: 150,
+                    '& .MuiInputBase-root': {
+                      height: 32,
+                    },
+                    '& .MuiSelect-select': {
+                      py: 0.5,
+                      fontSize: '0.8rem',
+                    },
+                  }}
+                  size="small"
+                >
                   <Select
                     value={selectedGroup}
                     onChange={(e) => setSelectedGroup(e.target.value)}
@@ -442,15 +475,17 @@ const DailySales = (): React.ReactElement => {
             </Box>
 
             {/* Action Buttons - Pill Style */}
-            <Box sx={{ display: 'flex', gap: 1.5, mb: 4, flexWrap: 'wrap' }}>
+            <Box sx={{ display: 'flex', gap: 1, mb: 3, flexWrap: 'wrap' }}>
               <Button
                 variant="contained"
                 onClick={handleSearch}
                 disabled={loading}
+                size="small"
                 sx={{
-                  borderRadius: '30px',
-                  px: 4,
-                  py: 1.2,
+                  borderRadius: '20px',
+                  px: 2.5,
+                  py: 0.5,
+                  fontSize: '0.75rem',
                   textTransform: 'uppercase',
                   fontWeight: 500
                 }}
@@ -460,10 +495,12 @@ const DailySales = (): React.ReactElement => {
               <Button
                 variant="contained"
                 onClick={handleExportPdf}
+                size="small"
                 sx={{
-                  borderRadius: '30px',
-                  px: 4,
-                  py: 1.2,
+                  borderRadius: '20px',
+                  px: 2.5,
+                  py: 0.5,
+                  fontSize: '0.75rem',
                   textTransform: 'uppercase',
                   fontWeight: 500
                 }}
@@ -473,10 +510,12 @@ const DailySales = (): React.ReactElement => {
               <Button
                 variant="contained"
                 onClick={handleExportCsv}
+                size="small"
                 sx={{
-                  borderRadius: '30px',
-                  px: 4,
-                  py: 1.2,
+                  borderRadius: '20px',
+                  px: 2.5,
+                  py: 0.5,
+                  fontSize: '0.75rem',
                   textTransform: 'uppercase',
                   fontWeight: 500
                 }}
@@ -486,10 +525,12 @@ const DailySales = (): React.ReactElement => {
               <Button
                 variant="contained"
                 onClick={handleProcessTodayTickets}
+                size="small"
                 sx={{
-                  borderRadius: '30px',
-                  px: 4,
-                  py: 1.2,
+                  borderRadius: '20px',
+                  px: 2.5,
+                  py: 0.5,
+                  fontSize: '0.75rem',
                   textTransform: 'uppercase',
                   fontWeight: 500
                 }}
@@ -499,10 +540,12 @@ const DailySales = (): React.ReactElement => {
               <Button
                 variant="contained"
                 onClick={handleProcessYesterdaySales}
+                size="small"
                 sx={{
-                  borderRadius: '30px',
-                  px: 4,
-                  py: 1.2,
+                  borderRadius: '20px',
+                  px: 2.5,
+                  py: 0.5,
+                  fontSize: '0.75rem',
                   textTransform: 'uppercase',
                   fontWeight: 500
                 }}
@@ -613,8 +656,8 @@ const DailySales = (): React.ReactElement => {
                 <TableBody>
                   {filteredData.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={15} align="center">
-                        No hay datos disponibles
+                      <TableCell colSpan={15} align="center" sx={{ py: 3, color: 'text.secondary' }}>
+                        No hay entradas para el sorteo y la fecha elegidos
                       </TableCell>
                     </TableRow>
                   ) : (

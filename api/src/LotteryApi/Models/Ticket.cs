@@ -35,7 +35,7 @@ public class Ticket
     public string? IpAddress { get; set; }
 
     [Column("created_at")]
-    public DateTime CreatedAt { get; set; } = DateTime.Now;
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     [Column("global_multiplier", TypeName = "decimal(5,2)")]
     public decimal GlobalMultiplier { get; set; } = 1.00m;

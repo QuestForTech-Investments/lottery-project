@@ -102,8 +102,8 @@ const QuickAccessButton = memo(({ Icon, label, path, index }: QuickAccessButtonP
           onClick={() => navigate(path)}
           sx={{
             color: 'text.primary',
-            width: 56,
-            height: 56,
+            width: 40,
+            height: 40,
             transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
             '&:hover': {
               backgroundColor: 'rgba(99, 102, 241, 0.1)',
@@ -116,7 +116,7 @@ const QuickAccessButton = memo(({ Icon, label, path, index }: QuickAccessButtonP
             },
           }}
         >
-          <Icon sx={{ fontSize: 36 }} />
+          <Icon sx={{ fontSize: 28 }} />
         </IconButton>
       </Box>
     </Tooltip>
@@ -232,7 +232,7 @@ const Header = ({ sidebarCollapsed, sidebarHovered, onToggleSidebar }: HeaderPro
           {sidebarCollapsed ? <ChevronRight /> : <ChevronLeft />}
         </IconButton>
 
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0 }}>
           {quickAccessButtons.map(({ Icon: IconComp, label, path }, idx) => (
             <QuickAccessButton key={label} Icon={IconComp} label={label} path={path} index={idx} />
           ))}

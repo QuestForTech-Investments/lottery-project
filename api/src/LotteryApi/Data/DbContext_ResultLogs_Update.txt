@@ -1,0 +1,75 @@
+// =============================================
+// INSTRUCTIONS TO UPDATE LotteryDbContext.cs
+// =============================================
+
+// 1. ADD this DbSet property after line 29 (after Results DbSet):
+
+    // Results and Audit
+    public DbSet<Result> Results { get; set; }
+    public DbSet<ResultLog> ResultLogs { get; set; }  // <-- ADD THIS LINE
+
+
+// 2. ADD index configuration in ConfigureIndexes method (around line 152):
+
+    // ResultLog indexes
+    modelBuilder.Entity<ResultLog>()
+        .HasIndex(rl => rl.ResultId);
+
+    modelBuilder.Entity<ResultLog>()
+        .HasIndex(rl => rl.UserId);
+
+    modelBuilder.Entity<ResultLog>()
+        .HasIndex(rl => rl.CreatedAt);
+
+    modelBuilder.Entity<ResultLog>()
+        .HasIndex(rl => rl.Action);
+
+    modelBuilder.Entity<ResultLog>()
+        .HasIndex(rl => new { rl.UserId, rl.CreatedAt });
+
+    modelBuilder.Entity<ResultLog>()
+        .HasIndex(rl => new { rl.ResultId, rl.CreatedAt });
+
+    modelBuilder.Entity<ResultLog>()
+        .HasIndex(rl => rl.IpAddress)
+        .HasFilter("[ip_address] IS NOT NULL");
+
+
+// 3. ADD relationship configuration in ConfigureRelationships method (around line 321):
+
+    // ResultLog -> Result
+    modelBuilder.Entity<ResultLog>()
+        .HasOne(rl => rl.Result)
+        .WithMany()
+        .HasForeignKey(rl => rl.ResultId)
+        .OnDelete(DeleteBehavior.Restrict);
+
+    // ResultLog -> User
+    modelBuilder.Entity<ResultLog>()
+        .HasOne(rl => rl.User)
+        .WithMany()
+        .HasForeignKey(rl => rl.UserId)
+        .OnDelete(DeleteBehavior.Restrict);
+
+
+// =============================================
+// COMPLETE UPDATED FILE PREVIEW
+// =============================================
+
+using Microsoft.EntityFrameworkCore;
+using LotteryApi.Models;
+
+namespace LotteryApi.Data;
+
+public class LotteryDbContext : DbContext
+{
+    // ... existing code ...
+
+    // Results and Audit
+    public DbSet<Result> Results { get; set; }
+    public DbSet<ResultLog> ResultLogs { get; set; }  // <-- NEW
+
+    // User and Permissions
+    public DbSet<Role> Roles { get; set; }
+    // ... rest of existing code ...
+}

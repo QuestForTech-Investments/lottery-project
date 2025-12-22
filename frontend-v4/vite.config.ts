@@ -56,7 +56,8 @@ export default defineConfig({
     global: 'globalThis',
   },
   server: {
-    port: 4000,
+    port: 4001,
+    strictPort: true, // Always use port 4001, fail if busy
     host: '0.0.0.0',
     open: true,
     hmr: {

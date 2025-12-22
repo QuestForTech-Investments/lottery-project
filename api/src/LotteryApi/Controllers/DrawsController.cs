@@ -279,7 +279,7 @@ public class DrawsController : ControllerBase
             Abbreviation = dto.Abbreviation,
             DisplayColor = dto.DisplayColor,
             IsActive = true,
-            CreatedAt = DateTime.Now
+            CreatedAt = DateTime.UtcNow
         };
 
         await _drawRepository.AddAsync(draw);
@@ -321,7 +321,7 @@ public class DrawsController : ControllerBase
         draw.Abbreviation = dto.Abbreviation;
         draw.DisplayColor = dto.DisplayColor;
         draw.IsActive = dto.IsActive;
-        draw.UpdatedAt = DateTime.Now;
+        draw.UpdatedAt = DateTime.UtcNow;
 
         // Entity is tracked by this context, save will persist changes
         await _context.SaveChangesAsync();

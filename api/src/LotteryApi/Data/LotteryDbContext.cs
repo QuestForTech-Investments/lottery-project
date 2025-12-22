@@ -151,6 +151,24 @@ public class LotteryDbContext : DbContext
         modelBuilder.Entity<User>()
             .HasIndex(u => u.Email)
             .HasFilter("[email] IS NOT NULL");
+
+        // Draw indexes for Results optimization
+        modelBuilder.Entity<Draw>()
+            .HasIndex(d => new { d.IsActive, d.DrawTime, d.DrawName });
+
+        modelBuilder.Entity<Draw>()
+            .HasIndex(d => new { d.IsActive, d.UseWeeklySchedule });
+
+        // DrawWeeklySchedule indexes for efficient day-of-week filtering
+        modelBuilder.Entity<DrawWeeklySchedule>()
+            .HasIndex(dws => new { dws.DrawId, dws.DayOfWeek, dws.IsActive });
+
+        // Result indexes for date-based queries
+        modelBuilder.Entity<Result>()
+            .HasIndex(r => new { r.ResultDate, r.DrawId });
+
+        modelBuilder.Entity<Result>()
+            .HasIndex(r => r.DrawId);
     }
 
     private void ConfigureUniqueConstraints(ModelBuilder modelBuilder)

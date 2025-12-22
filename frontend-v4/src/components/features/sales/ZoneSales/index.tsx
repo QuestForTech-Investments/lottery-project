@@ -1,10 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Box, Paper, Typography, TextField, Grid, Autocomplete, Button, Stack, Table, TableHead, TableBody, TableRow, TableCell, ToggleButtonGroup, ToggleButton } from '@mui/material';
+import { Box, Paper, Typography, TextField, Grid, Autocomplete, Button, Stack, Table, TableHead, TableBody, TableRow, TableCell, ToggleButtonGroup, ToggleButton, CircularProgress } from '@mui/material';
 import { FilterList, PictureAsPdf, Download } from '@mui/icons-material';
+import api from '@services/api';
 
 interface Zona {
   id: number;
+  zoneId?: number;
   name: string;
+  zoneName?: string;
 }
 
 interface ZonaSalesData {
@@ -24,6 +27,17 @@ interface Totals {
   neto: number;
 }
 
+// API Response interface
+interface ZoneSalesDto {
+  zoneId: number;
+  zoneName: string;
+  bettingPoolCount: number;
+  totalSold: number;
+  totalPrizes: number;
+  totalCommissions: number;
+  totalNet: number;
+}
+
 const ZoneSales = (): React.ReactElement => {
   const [fechaInicial, setFechaInicial] = useState<string>(new Date().toISOString().split('T')[0]);
   const [fechaFinal, setFechaFinal] = useState<string>(new Date().toISOString().split('T')[0]);
@@ -33,15 +47,66 @@ const ZoneSales = (): React.ReactElement => {
   const [data, setData] = useState<ZonaSalesData[]>([]);
   const [zonasList, setZonasList] = useState<Zona[]>([]);
   const [totals, setTotals] = useState<Totals>({ bancas: 0, ventas: 0, comisiones: 0, premios: 0, neto: 0 });
+  const [loading, setLoading] = useState<boolean>(false);
 
   const formatCurrency = useCallback((amount: number): string => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount), []);
 
+  // Load zones on mount
   useEffect(() => {
-    // Initialize with empty data - will be loaded from API when implemented
-    setData([]);
-    setTotals({ bancas: 0, ventas: 0, comisiones: 0, premios: 0, neto: 0 });
-    setZonasList([]);
+    const loadZones = async () => {
+      try {
+        const response = await api.get<{ items?: Zona[] } | Zona[]>('/zones');
+        const zonesArray = (response && typeof response === 'object' && 'items' in response)
+          ? (response.items || [])
+          : (response as Zona[] || []);
+
+        const normalizedZones = zonesArray.map((z: Zona) => ({
+          id: z.zoneId || z.id,
+          name: z.zoneName || z.name
+        }));
+        setZonasList(normalizedZones);
+      } catch (error) {
+        console.error('Error loading zones:', error);
+      }
+    };
+    loadZones();
   }, []);
+
+  // Load sales by zone
+  const handleSearch = async () => {
+    setLoading(true);
+    try {
+      const zoneIds = zonas.map(z => z.id).join(',');
+      const response = await api.get<ZoneSalesDto[]>(
+        `/reports/sales/by-zone?startDate=${fechaInicial}&endDate=${fechaFinal}${zoneIds ? `&zoneIds=${zoneIds}` : ''}`
+      );
+
+      const mapped: ZonaSalesData[] = (response || []).map(item => ({
+        zona: item.zoneName,
+        bancas: item.bettingPoolCount,
+        ventas: item.totalSold,
+        comisiones: item.totalCommissions,
+        premios: item.totalPrizes,
+        neto: item.totalNet
+      }));
+
+      setData(mapped);
+
+      const newTotals = mapped.reduce((acc, row) => ({
+        bancas: acc.bancas + row.bancas,
+        ventas: acc.ventas + row.ventas,
+        comisiones: acc.comisiones + row.comisiones,
+        premios: acc.premios + row.premios,
+        neto: acc.neto + row.neto
+      }), { bancas: 0, ventas: 0, comisiones: 0, premios: 0, neto: 0 });
+
+      setTotals(newTotals);
+    } catch (error) {
+      console.error('Error loading zone sales:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const FILTER_OPTIONS = [
     { value: 'todos', label: 'Todos' },
@@ -75,7 +140,15 @@ const ZoneSales = (): React.ReactElement => {
           </Grid>
 
           <Stack direction="row" spacing={2} sx={{ mb: 3 }}>
-            <Button variant="contained" startIcon={<FilterList />} sx={{ px: 4, borderRadius: '30px', textTransform: 'uppercase' }}>Ver ventas</Button>
+            <Button
+              variant="contained"
+              onClick={handleSearch}
+              disabled={loading}
+              startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <FilterList />}
+              sx={{ px: 4, borderRadius: '30px', textTransform: 'uppercase' }}
+            >
+              Ver ventas
+            </Button>
             <Button variant="contained" startIcon={<Download />} sx={{ borderRadius: '30px', textTransform: 'uppercase' }}>CSV</Button>
             <Button variant="contained" startIcon={<PictureAsPdf />} sx={{ borderRadius: '30px', textTransform: 'uppercase' }}>PDF</Button>
           </Stack>

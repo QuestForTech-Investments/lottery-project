@@ -158,7 +158,7 @@ public class LotteriesController : ControllerBase
             LotteryType = dto.LotteryType,
             Description = dto.Description,
             IsActive = true,
-            CreatedAt = DateTime.Now
+            CreatedAt = DateTime.UtcNow
         };
 
         await _lotteryRepository.AddAsync(lottery);
@@ -195,7 +195,7 @@ public class LotteriesController : ControllerBase
         lottery.LotteryType = dto.LotteryType;
         lottery.Description = dto.Description;
         lottery.IsActive = dto.IsActive;
-        lottery.UpdatedAt = DateTime.Now;
+        lottery.UpdatedAt = DateTime.UtcNow;
 
         await _lotteryRepository.UpdateAsync(lottery);
 

@@ -382,6 +382,7 @@ public class UsersController : ControllerBase
         };
 
         await _userRepository.AddAsync(user);
+        await _context.SaveChangesAsync(); // Save to get the generated UserId
 
         // Add user permissions
         if (dto.PermissionIds != null && dto.PermissionIds.Any())

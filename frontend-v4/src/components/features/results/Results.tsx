@@ -1322,7 +1322,7 @@ const Results = (): React.ReactElement => {
                     <CircularProgress />
                   </Box>
                 ) : (
-                  <TableContainer component={Paper} variant="outlined" sx={{ maxHeight: 600 }}>
+                  <TableContainer component={Paper} variant="outlined">
                     <Table size="small" stickyHeader>
                       <TableHead>
                         <TableRow>

@@ -110,7 +110,7 @@ public class TicketLine
     public string? LimitOverrideReason { get; set; }
 
     [Column("created_at")]
-    public DateTime CreatedAt { get; set; } = DateTime.Now;
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     [Column("created_by")]
     public int? CreatedBy { get; set; }

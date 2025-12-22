@@ -49,7 +49,7 @@ public class User
     public DateTime? CreatedAt { get; set; }
 
     [Column("updated_at")]
-    public DateTime UpdatedAt { get; set; } = DateTime.Now;
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
     [Column("created_by")]
     public int? CreatedBy { get; set; }

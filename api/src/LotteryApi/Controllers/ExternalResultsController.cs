@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using LotteryApi.DTOs;
+using LotteryApi.Helpers;
 using LotteryApi.Services.ExternalResults;
 
 namespace LotteryApi.Controllers;
@@ -29,7 +30,7 @@ public class ExternalResultsController : ControllerBase
     [ProducesResponseType(typeof(ResultFetchResponse), StatusCodes.Status200OK)]
     public async Task<IActionResult> FetchResults([FromQuery] DateTime? date)
     {
-        var targetDate = date ?? DateTime.Today;
+        var targetDate = date ?? DateTimeHelper.TodayInBusinessTimezone();
 
         _logger.LogInformation("Manual fetch triggered for {Date}", targetDate.ToString("yyyy-MM-dd"));
 
@@ -47,7 +48,7 @@ public class ExternalResultsController : ControllerBase
     [ProducesResponseType(typeof(ResultFetchResponse), StatusCodes.Status200OK)]
     public async Task<IActionResult> FetchResultsForDraw(int drawId, [FromQuery] DateTime? date)
     {
-        var targetDate = date ?? DateTime.Today;
+        var targetDate = date ?? DateTimeHelper.TodayInBusinessTimezone();
 
         _logger.LogInformation("Manual fetch triggered for draw {DrawId} on {Date}",
             drawId, targetDate.ToString("yyyy-MM-dd"));
@@ -65,7 +66,7 @@ public class ExternalResultsController : ControllerBase
     [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
     public async Task<IActionResult> ProcessTickets([FromQuery] DateTime? date)
     {
-        var targetDate = date ?? DateTime.Today;
+        var targetDate = date ?? DateTimeHelper.TodayInBusinessTimezone();
 
         _logger.LogInformation("Processing tickets for {Date}", targetDate.ToString("yyyy-MM-dd"));
 

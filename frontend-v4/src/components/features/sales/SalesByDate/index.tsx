@@ -1,16 +1,22 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Box, Paper, Typography, TextField, Grid, Autocomplete, Button, Stack, Table, TableHead, TableBody, TableRow, TableCell, Checkbox, FormControlLabel, InputAdornment } from '@mui/material';
+import { Box, Paper, Typography, TextField, Grid, Autocomplete, Button, Stack, Table, TableHead, TableBody, TableRow, TableCell, Checkbox, FormControlLabel, InputAdornment, CircularProgress } from '@mui/material';
 import { PictureAsPdf, Search } from '@mui/icons-material';
+import api from '@services/api';
 
 interface Banca {
   id: number;
+  bettingPoolId?: number;
   codigo: string;
+  code?: string;
   nombre: string;
+  name?: string;
 }
 
 interface Zona {
   id: number;
+  zoneId?: number;
   name: string;
+  zoneName?: string;
 }
 
 interface SalesData {
@@ -32,6 +38,17 @@ interface Totals {
   neto: number;
 }
 
+// API Response interface
+interface DailySalesDto {
+  date: string;
+  totalSold: number;
+  totalPrizes: number;
+  totalCommissions: number;
+  totalDiscounts: number;
+  fall: number;
+  totalNet: number;
+}
+
 const SalesByDate = (): React.ReactElement => {
   const [fechaInicial, setFechaInicial] = useState<string>(new Date().toISOString().split('T')[0]);
   const [fechaFinal, setFechaFinal] = useState<string>(new Date().toISOString().split('T')[0]);
@@ -43,16 +60,81 @@ const SalesByDate = (): React.ReactElement => {
   const [bancasList, setBancasList] = useState<Banca[]>([]);
   const [zonasList, setZonasList] = useState<Zona[]>([]);
   const [totals, setTotals] = useState<Totals>({ venta: 0, premios: 0, comisiones: 0, descuentos: 0, caida: 0, neto: 0 });
+  const [loading, setLoading] = useState<boolean>(false);
 
   const formatCurrency = useCallback((amount: number): string => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount), []);
 
+  // Load zones and bancas on mount
   useEffect(() => {
-    // Initialize with empty data - will be loaded from API when implemented
-    setData([]);
-    setTotals({ venta: 0, premios: 0, comisiones: 0, descuentos: 0, caida: 0, neto: 0 });
-    setBancasList([]);
-    setZonasList([]);
+    const loadFilters = async () => {
+      try {
+        // Load zones
+        const zonesResponse = await api.get<{ items?: Zona[] } | Zona[]>('/zones');
+        const zonesArray = (zonesResponse && typeof zonesResponse === 'object' && 'items' in zonesResponse)
+          ? (zonesResponse.items || [])
+          : (zonesResponse as Zona[] || []);
+        const normalizedZones = zonesArray.map((z: Zona) => ({
+          id: z.zoneId || z.id,
+          name: z.zoneName || z.name
+        }));
+        setZonasList(normalizedZones);
+
+        // Load bancas (betting pools)
+        const bancasResponse = await api.get<{ items?: Banca[] } | Banca[]>('/betting-pools');
+        const bancasArray = (bancasResponse && typeof bancasResponse === 'object' && 'items' in bancasResponse)
+          ? (bancasResponse.items || [])
+          : (bancasResponse as Banca[] || []);
+        const normalizedBancas = bancasArray.map((b: Banca) => ({
+          id: b.bettingPoolId || b.id,
+          codigo: b.code || b.codigo || '',
+          nombre: b.name || b.nombre || ''
+        }));
+        setBancasList(normalizedBancas);
+      } catch (error) {
+        console.error('Error loading filters:', error);
+      }
+    };
+    loadFilters();
   }, []);
+
+  // Load sales by date
+  const handleSearch = async () => {
+    setLoading(true);
+    try {
+      const zoneIds = zonas.map(z => z.id).join(',');
+      const bancaIds = bancas.map(b => b.id).join(',');
+      const response = await api.get<DailySalesDto[]>(
+        `/reports/sales/daily-summary?startDate=${fechaInicial}&endDate=${fechaFinal}${zoneIds ? `&zoneIds=${zoneIds}` : ''}${bancaIds ? `&bettingPoolIds=${bancaIds}` : ''}`
+      );
+
+      const mapped: SalesData[] = (response || []).map(item => ({
+        fecha: new Date(item.date).toLocaleDateString('es-ES'),
+        venta: item.totalSold,
+        premios: item.totalPrizes,
+        comisiones: item.totalCommissions,
+        descuentos: item.totalDiscounts,
+        caida: item.fall || 0,
+        neto: item.totalNet
+      }));
+
+      setData(mapped);
+
+      const newTotals = mapped.reduce((acc, row) => ({
+        venta: acc.venta + row.venta,
+        premios: acc.premios + row.premios,
+        comisiones: acc.comisiones + row.comisiones,
+        descuentos: acc.descuentos + row.descuentos,
+        caida: acc.caida + row.caida,
+        neto: acc.neto + row.neto
+      }), { venta: 0, premios: 0, comisiones: 0, descuentos: 0, caida: 0, neto: 0 });
+
+      setTotals(newTotals);
+    } catch (error) {
+      console.error('Error loading sales by date:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <Box sx={{ p: 2 }}>
@@ -91,14 +173,22 @@ const SalesByDate = (): React.ReactElement => {
           </Box>
 
           <Stack direction="row" spacing={2} sx={{ mb: 3 }}>
-            <Button variant="contained" sx={{
-              bgcolor: '#51cbce',
-              '&:hover': { bgcolor: '#45b8bb' },
-              px: 4,
-              borderRadius: '30px',
-              textTransform: 'uppercase',
-              color: 'white'
-            }}>Ver ventas</Button>
+            <Button
+              variant="contained"
+              onClick={handleSearch}
+              disabled={loading}
+              startIcon={loading ? <CircularProgress size={20} color="inherit" /> : null}
+              sx={{
+                bgcolor: '#51cbce',
+                '&:hover': { bgcolor: '#45b8bb' },
+                px: 4,
+                borderRadius: '30px',
+                textTransform: 'uppercase',
+                color: 'white'
+              }}
+            >
+              Ver ventas
+            </Button>
             <Button variant="contained" startIcon={<PictureAsPdf />} sx={{
               bgcolor: '#51cbce',
               '&:hover': { bgcolor: '#45b8bb' },

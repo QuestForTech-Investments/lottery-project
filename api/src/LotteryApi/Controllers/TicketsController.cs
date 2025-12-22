@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using LotteryApi.Data;
 using LotteryApi.DTOs;
 using LotteryApi.Models;
+using LotteryApi.Helpers;
 using System.Text;
 
 namespace LotteryApi.Controllers;
@@ -37,8 +38,8 @@ public class TicketsController : ControllerBase
     {
         try
         {
-            var today = DateTime.Today;
-            var now = DateTime.Now;
+            var today = DateTimeHelper.TodayInBusinessTimezone();
+            var now = DateTimeHelper.NowInBusinessTimezone();
 
             _logger.LogInformation("Getting ticket creation params for category {Category}, bettingPoolId {BettingPoolId}",
                 category, bettingPoolId);
@@ -292,8 +293,8 @@ public class TicketsController : ControllerBase
             }
 
             // 3. Validate cutoff times for all draws
-            var now = DateTime.Now;
-            var today = DateTime.Today;
+            var now = DateTime.UtcNow;
+            var todayBusiness = DateTimeHelper.TodayInBusinessTimezone();
             var drawIds = dto.Lines.Select(l => l.DrawId).Distinct().ToList();
             var betTypeIds = dto.Lines.Select(l => l.BetTypeId).Distinct().ToList();
 
@@ -397,7 +398,7 @@ public class TicketsController : ControllerBase
             foreach (var lineDto in dto.Lines)
             {
                 var draw = draws.First(d => d.DrawId == lineDto.DrawId);
-                var drawDateTime = today.Add(draw.DrawTime);
+                var drawDateTime = todayBusiness.Add(draw.DrawTime);
 
                 if (!earliestDrawTime.HasValue || drawDateTime < earliestDrawTime)
                     earliestDrawTime = drawDateTime;
@@ -414,7 +415,7 @@ public class TicketsController : ControllerBase
                     LineNumber = lineNumber++,
                     // LotteryId se obtiene de Draw.LotteryId, no duplicar
                     DrawId = lineDto.DrawId,
-                    DrawDate = today,
+                    DrawDate = todayBusiness,
                     DrawTime = draw.DrawTime,
                     BetNumber = lineDto.BetNumber,
                     BetTypeId = lineDto.BetTypeId,
@@ -843,7 +844,7 @@ public class TicketsController : ControllerBase
 
             // 4. Validate cancellation time window (default 30 minutes)
             var cancelMinutes = 30; // TODO: Get from config
-            var now = DateTime.Now;
+            var now = DateTime.UtcNow;
             var timeSinceCreation = now - ticket.CreatedAt;
 
             if (timeSinceCreation.TotalMinutes > cancelMinutes)
@@ -948,7 +949,7 @@ public class TicketsController : ControllerBase
             }
 
             // 6. Mark ticket as paid
-            var now = DateTime.Now;
+            var now = DateTime.UtcNow;
             ticket.IsPaid = true;
             ticket.PaidAt = now;
             ticket.PaidBy = dto.PaidBy;

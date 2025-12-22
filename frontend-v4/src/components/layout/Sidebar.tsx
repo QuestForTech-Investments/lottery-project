@@ -262,10 +262,11 @@ function Sidebar({ collapsed, hovered, onHoverChange }: SidebarProps) {
                       margin: '1px 8px',
                       borderRadius: '8px',
                       transition: 'all 0.3s ease',
+                      position: 'relative',
                       '&:hover': {
                         backgroundColor: 'rgba(99, 102, 241, 0.1)',
                         transform: 'translateX(4px)'
-                      }
+                      },
                     }}
                   >
                     <ListItemIcon
@@ -334,10 +335,11 @@ function Sidebar({ collapsed, hovered, onHoverChange }: SidebarProps) {
                               margin: '1px 8px 1px 12px',
                               borderRadius: '8px',
                               transition: 'all 0.3s ease',
+                              position: 'relative',
                               '&:hover': {
                                 backgroundColor: 'rgba(99, 102, 241, 0.08)',
                                 transform: 'translateX(4px)'
-                              }
+                              },
                             }}
                           >
                             {subitem.shortcut && (

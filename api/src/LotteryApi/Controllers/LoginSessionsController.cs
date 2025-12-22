@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using LotteryApi.DTOs;
+using LotteryApi.Helpers;
 using LotteryApi.Services;
 
 namespace LotteryApi.Controllers;
@@ -63,7 +64,7 @@ public class LoginSessionsController : ControllerBase
     {
         var query = new LoginSessionQueryDto
         {
-            Date = DateTime.Today,
+            Date = DateTimeHelper.TodayInBusinessTimezone(),
             ZoneIds = string.IsNullOrWhiteSpace(zoneIds)
                 ? null
                 : zoneIds.Split(',').Select(int.Parse).ToList(),

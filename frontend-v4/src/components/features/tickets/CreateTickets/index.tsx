@@ -2,10 +2,11 @@ import React, { useState, useEffect, useRef, memo, useMemo, type KeyboardEvent }
 import {
   Box, TextField, Select, MenuItem, FormControl,
   Typography, Paper, Switch, IconButton, Autocomplete,
-  CircularProgress, Dialog, DialogContent
+  CircularProgress, Dialog, DialogContent, Snackbar, Alert
 } from '@mui/material';
 import { Trash2, Dices } from 'lucide-react';
 import api from '@services/api';
+import { getCurrentUser } from '@services/authService';
 import HelpModal from './HelpModal';
 import TicketPrinter from '../TicketPrinter';
 
@@ -240,6 +241,9 @@ const CreateTickets: React.FC = () => {
   // State for ticket modal
   const [ticketModalOpen, setTicketModalOpen] = useState<boolean>(false);
   const [ticketData, setTicketData] = useState<TicketData | null>(null);
+
+  // Success snackbar state
+  const [successMessage, setSuccessMessage] = useState<string>('');
 
   // Ref for bet number input (for keyboard navigation)
   const betNumberInputRef = useRef<HTMLInputElement>(null);
@@ -626,6 +630,17 @@ const CreateTickets: React.FC = () => {
     }
   };
 
+  // Determine bet type ID based on number length
+  const getBetTypeId = (betNumber: string): number => {
+    const numLength = betNumber.replace(/[^0-9]/g, '').length;
+    if (numLength === 2) return 1; // Directo
+    if (numLength === 4) return 2; // Pale
+    if (numLength === 6) return 3; // Tripleta
+    if (numLength === 3) return 4; // Cash3
+    if (numLength >= 5) return 10; // Play4/Pick5
+    return 1; // Default to Directo
+  };
+
   // Create ticket
   const handleCreateTicket = async (): Promise<void> => {
     const allBets: Bet[] = [
@@ -640,41 +655,39 @@ const CreateTickets: React.FC = () => {
       return;
     }
 
-    try {
-      const now = new Date();
-      const ticketCode = `${now.getDate()}-${selectedPool?.bettingPoolName?.toUpperCase()}-${selectedPool?.bettingPoolId}-${Math.random().toString(36).substring(2, 15)}`;
-      const totalAmount = parseFloat(grandTotal);
+    if (!selectedPool) {
+      alert('Debe seleccionar una banca');
+      return;
+    }
 
-      const mockTicket = {
-        ticketId: Math.floor(Math.random() * 10000),
-        ticketCode: ticketCode,
-        barcode: btoa(ticketCode),
-        status: 'pending',
-        bettingPoolId: selectedPool?.bettingPoolId || 9,
-        bettingPoolName: selectedPool?.bettingPoolName || 'admin',
-        userName: 'Admin User',
-        createdAt: now.toISOString(),
-        totalBetAmount: totalAmount,
-        totalCommission: totalAmount * 0.1,
-        grandTotal: totalAmount,
-        lines: allBets.map((bet, index) => ({
-          lineId: index + 1,
-          lotteryName: bet.drawName || 'Lottery',
-          drawName: bet.drawName || 'Draw',
-          betNumber: bet.betNumber,
-          betTypeName: bet.betType?.name || 'Directo',
-          betAmount: bet.betAmount || 0,
-          netAmount: bet.betAmount || 0
-        }))
+    try {
+      // Build API request payload
+      const ticketPayload = {
+        bettingPoolId: selectedPool.bettingPoolId,
+        userId: parseInt(getCurrentUser()?.id || '1', 10),
+        lines: allBets.map((bet) => ({
+          drawId: bet.drawId,
+          betNumber: bet.betNumber.replace(/[^0-9]/g, ''), // Clean number
+          betTypeId: getBetTypeId(bet.betNumber),
+          betAmount: bet.betAmount,
+          multiplier: 1.00,
+          isLuckyPick: false
+        })),
+        globalMultiplier: 1.00,
+        globalDiscount: discountActive ? 0.00 : 0.00
       };
 
-      setTicketData(mockTicket);
-      setTicketModalOpen(true);
+      // Send to API
+      const response = await api.post('/tickets', ticketPayload) as TicketData;
 
+      // Ticket created successfully - clear bets and show confirmation
       setDirectBets([]);
       setPaleBets([]);
       setCash3Bets([]);
       setPlay4Bets([]);
+
+      // Show success message with ticket code from API
+      setSuccessMessage(`Ticket creado: ${response.ticketCode || 'OK'}`);
     } catch (error) {
       console.error('Error creating ticket:', error);
       alert('Error al crear el ticket');
@@ -1272,6 +1285,23 @@ const CreateTickets: React.FC = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Success Snackbar */}
+      <Snackbar
+        open={!!successMessage}
+        autoHideDuration={3000}
+        onClose={() => setSuccessMessage('')}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={() => setSuccessMessage('')}
+          severity="success"
+          variant="filled"
+          sx={{ width: '100%', fontSize: '16px' }}
+        >
+          {successMessage}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using LotteryApi.Data;
 using LotteryApi.DTOs;
+using LotteryApi.Helpers;
 using LotteryApi.Models;
 
 namespace LotteryApi.Services;
@@ -18,7 +19,7 @@ public class LoginSessionService : ILoginSessionService
 
     public async Task<LoginSessionsResponseDto> GetLoginSessionsAsync(LoginSessionQueryDto query)
     {
-        var date = query.Date ?? DateTime.Today;
+        var date = query.Date ?? DateTimeHelper.TodayInBusinessTimezone();
         var startOfDay = date.Date;
         var endOfDay = startOfDay.AddDays(1);
 

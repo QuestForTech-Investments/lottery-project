@@ -1,5 +1,22 @@
-import { useState, useMemo, type ChangeEvent, type MouseEvent } from 'react';
+import { useState, useEffect, useMemo, useCallback, type ChangeEvent, type MouseEvent } from 'react';
 import type { SelectChangeEvent } from '@mui/material';
+import api from '@services/api';
+
+interface BettingPoolFromApi {
+  bettingPoolId: number;
+  bettingPoolCode: string;
+  bettingPoolName: string;
+  zoneId: number;
+  zoneName: string | null;
+  username: string | null;
+  reference: string | null;
+  isActive: boolean;
+}
+
+interface ZoneFromApi {
+  zoneId: number;
+  zoneName: string;
+}
 
 interface User {
   id: string;
@@ -20,6 +37,8 @@ interface UseUserBettingPoolsReturn {
   rowsPerPage: number;
   passwordModalOpen: boolean;
   selectedUsername: string;
+  loading: boolean;
+  error: string | null;
   handleZoneChange: (event: SelectChangeEvent<string[]>) => void;
   handleSearchChange: (event: ChangeEvent<HTMLInputElement>) => void;
   handleClearSearch: () => void;
@@ -27,61 +46,90 @@ interface UseUserBettingPoolsReturn {
   handleChangeRowsPerPage: (event: ChangeEvent<HTMLInputElement>) => void;
   handlePasswordClick: (username: string) => void;
   handleClosePasswordModal: () => void;
+  refreshData: () => void;
 }
 
 /**
  * Custom hook for managing UserBettingPools state and logic
+ * Fetches real data from the API
  */
 const useUserBettingPools = (): UseUserBettingPoolsReturn => {
-  // Mock data - In a real app, this would come from an API
-  const users = [
-    { id: '001', bettingPool: 'LA CENTRAL 01', reference: 'GILBERTO ISLA GORDA TL', requiresPasswordChange: false, zone: 'GRUPO GILBERTO TL' },
-    { id: '010', bettingPool: 'LA CENTRAL 10', reference: 'GILBERTO TL', requiresPasswordChange: false, zone: 'GRUPO GILBERTO TL' },
-    { id: '016', bettingPool: 'LA CENTRAL 16', reference: 'CHINO TL', requiresPasswordChange: false, zone: 'GRUPO KENDRICK TL' },
-    { id: '063', bettingPool: 'LA CENTRAL 63', reference: 'NELL TL', requiresPasswordChange: false, zone: 'GRUPO KENDRICK TL' },
-    { id: '101', bettingPool: 'LA CENTRAL 101', reference: 'FELO TL', requiresPasswordChange: false, zone: 'GRUPO GILBERTO TL' },
-    { id: '119', bettingPool: 'LA CENTRAL 119', reference: 'EUDDY (GF)', requiresPasswordChange: true, zone: 'GRUPO GUYANA (JHON)' },
-    { id: '135', bettingPool: 'LA CENTRAL 135', reference: 'MORENA D (GF)', requiresPasswordChange: true, zone: 'GRUPO GUYANA (JHON)' },
-    { id: '150', bettingPool: 'LA CENTRAL 150', reference: 'DANNY (GF)', requiresPasswordChange: false, zone: 'GRUPO GUYANA (OMAR)' },
-    { id: '165', bettingPool: 'LA CENTRAL 165', reference: 'MANUELL (GF)', requiresPasswordChange: true, zone: 'GRUPO GUYANA (DANI)' },
-    { id: '182', bettingPool: 'LA CENTRAL 182', reference: 'TONA (GF)', requiresPasswordChange: true, zone: 'GRUPO GUYANA (EL GUARDIA)' },
-    { id: '185', bettingPool: 'LA CENTRAL 185', reference: 'JUDELAINE (GF)', requiresPasswordChange: true, zone: 'GUYANA (JUDELAINE)' },
-    { id: '194', bettingPool: 'LA CENTRAL 194', reference: 'HAITI (GF)', requiresPasswordChange: true, zone: 'GRUPO GUYANA (COGNON)' },
-    { id: '198', bettingPool: 'CARIBBEAN 198', reference: 'LISSET (GF)', requiresPasswordChange: true, zone: 'GRUPO GUYANA (ROSA KOUROU)' },
-    { id: '201', bettingPool: 'LA CENTRAL 201', reference: 'CLOTILDE (GF)', requiresPasswordChange: false, zone: 'GRUPO GUYANA (JHON)' },
-    { id: '203', bettingPool: 'LA CENTRAL 203', reference: 'IVAN (GF)', requiresPasswordChange: true, zone: 'GRUPO GUYANA (OMAR)' },
-    { id: '230', bettingPool: 'LA CENTRAL 230', reference: 'YAN (GF)', requiresPasswordChange: false, zone: 'GRUPO GUYANA (DANI)' },
-    { id: '254', bettingPool: 'LA CENTRAL 254', reference: 'DENIS (GF)', requiresPasswordChange: false, zone: 'GRUPO GUYANA (EL GUARDIA)' },
-    { id: '264', bettingPool: 'CARIBBEAN 264', reference: 'RAFAEL (FR)', requiresPasswordChange: true, zone: 'GRUPO GUYANA (COGNON)' },
-    { id: '269', bettingPool: 'LA CENTRAL 269', reference: 'JONATHAN TL', requiresPasswordChange: false, zone: 'GRUPO KENDRICK TL' },
-    { id: '279', bettingPool: 'CARIBBEAN 279', reference: 'MIKI(FR)', requiresPasswordChange: true, zone: 'GRUPO GUYANA (ROSA KOUROU)' },
-    { id: '300', bettingPool: 'LA CENTRAL 300', reference: 'NATIVIDAD (GF)', requiresPasswordChange: true, zone: 'GUYANA (JUDELAINE)' },
-  ];
+  // State for API data
+  const [allUsers, setAllUsers] = useState<User[]>([]);
+  const [zones, setZones] = useState<string[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const zones = [
-    'GRUPO GUYANA (JHON)',
-    'GRUPO KENDRICK TL',
-    'GRUPO GILBERTO TL',
-    'GRUPO GUYANA (OMAR)',
-    'GRUPO GUYANA (DANI)',
-    'GRUPO GUYANA (EL GUARDIA)',
-    'GRUPO GUYANA (COGNON)',
-    'GRUPO GUYANA (ROSA KOUROU)',
-    'GUYANA (JUDELAINE)',
-  ];
-
-  // State
-  const [selectedZones, setSelectedZones] = useState<string[]>([...zones]);
+  // Filter state
+  const [selectedZones, setSelectedZones] = useState<string[]>([]);
   const [searchText, setSearchText] = useState<string>('');
   const [page, setPage] = useState<number>(0);
   const [rowsPerPage, setRowsPerPage] = useState<number>(20);
   const [passwordModalOpen, setPasswordModalOpen] = useState<boolean>(false);
   const [selectedUsername, setSelectedUsername] = useState<string>('');
 
+  /**
+   * Fetch betting pools and zones from API
+   */
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Fetch betting pools - get all with large page size
+      const bettingPoolsResponse = await api.get<{
+        items: BettingPoolFromApi[];
+        totalCount: number;
+      }>('/betting-pools?pageSize=1000');
+
+      // Fetch zones
+      const zonesResponse = await api.get<ZoneFromApi[]>('/zones');
+
+      // Transform betting pools to users format
+      // Show all betting pools - use username if available, otherwise bettingPoolCode
+      const bettingPools = bettingPoolsResponse?.items || [];
+      const transformedUsers: User[] = bettingPools
+        .filter(bp => bp.isActive) // Only show active betting pools
+        .map(bp => ({
+          id: bp.username || bp.bettingPoolCode,
+          bettingPool: bp.bettingPoolName,
+          reference: bp.reference || '',
+          requiresPasswordChange: false, // TODO: Add this field to API if needed
+          zone: bp.zoneName || 'Sin zona',
+        }));
+
+      setAllUsers(transformedUsers);
+
+      // Extract unique zones from betting pools
+      const uniqueZones = Array.from(
+        new Set(
+          bettingPools
+            .map(bp => bp.zoneName)
+            .filter((z): z is string => z !== null && z !== undefined)
+        )
+      ).sort();
+
+      setZones(uniqueZones);
+
+      // Select all zones by default
+      setSelectedZones(uniqueZones);
+
+    } catch (err) {
+      console.error('Error fetching betting pool users:', err);
+      setError('Error al cargar los usuarios de bancas');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Fetch data on mount
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
   // Filtered users based on zones and search
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- users mock data is stable
   const filteredUsers = useMemo((): User[] => {
-    return users.filter(user => {
+    return allUsers.filter(user => {
       const matchesZone = selectedZones.length === 0 || selectedZones.includes(user.zone);
       const matchesSearch = !searchText ||
         user.id.toLowerCase().includes(searchText.toLowerCase()) ||
@@ -90,7 +138,7 @@ const useUserBettingPools = (): UseUserBettingPoolsReturn => {
 
       return matchesZone && matchesSearch;
     });
-  }, [selectedZones, searchText]);
+  }, [allUsers, selectedZones, searchText]);
 
   // Paginated users
   const paginatedUsers = useMemo((): User[] => {
@@ -180,6 +228,8 @@ const useUserBettingPools = (): UseUserBettingPoolsReturn => {
     rowsPerPage,
     passwordModalOpen,
     selectedUsername,
+    loading,
+    error,
 
     // Handlers
     handleZoneChange,
@@ -189,6 +239,7 @@ const useUserBettingPools = (): UseUserBettingPoolsReturn => {
     handleChangeRowsPerPage,
     handlePasswordClick,
     handleClosePasswordModal,
+    refreshData: fetchData,
   };
 };
 

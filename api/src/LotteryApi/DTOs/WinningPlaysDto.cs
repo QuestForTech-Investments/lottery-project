@@ -38,8 +38,8 @@ public class WinningPlayDto
 /// </summary>
 public class WinningPlaysFilterDto
 {
-    public DateTime StartDate { get; set; } = DateTime.Today;
-    public DateTime EndDate { get; set; } = DateTime.Today;
+    public DateTime StartDate { get; set; } = DateTime.UtcNow.Date;
+    public DateTime EndDate { get; set; } = DateTime.UtcNow.Date;
     public int? DrawId { get; set; }
     public List<int>? ZoneIds { get; set; }
     public int? BettingPoolId { get; set; }

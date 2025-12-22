@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using LotteryApi.Data;
 using LotteryApi.DTOs;
+using LotteryApi.Helpers;
 
 namespace LotteryApi.Controllers;
 
@@ -43,7 +44,7 @@ public class WinningPlaysController : ControllerBase
                     LotteryId = d.LotteryId,
                     LotteryName = d.Lottery != null ? d.Lottery.LotteryName : "",
                     LotteryCode = null,
-                    DrawDate = DateTime.Today,
+                    DrawDate = DateTimeHelper.TodayInBusinessTimezone(),
                     DrawTime = d.DrawTime,
                     CutoffTime = null,
                     IsActive = d.IsActive,
@@ -96,8 +97,8 @@ public class WinningPlaysController : ControllerBase
     {
         try
         {
-            var start = startDate ?? DateTime.Today;
-            var end = endDate ?? DateTime.Today;
+            var start = startDate ?? DateTimeHelper.TodayInBusinessTimezone();
+            var end = endDate ?? DateTimeHelper.TodayInBusinessTimezone();
 
             _logger.LogInformation(
                 "Getting winning plays: startDate={StartDate}, endDate={EndDate}, drawId={DrawId}, zoneIds={ZoneIds}, bettingPoolId={BettingPoolId}",

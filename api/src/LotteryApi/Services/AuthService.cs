@@ -38,7 +38,7 @@ public class AuthService : IAuthService
         }
 
         // Update last login
-        user.LastLoginAt = DateTime.Now;
+        user.LastLoginAt = DateTime.UtcNow;
         await _userRepository.UpdateAsync(user);
 
         // Log the session if context is provided
@@ -56,7 +56,7 @@ public class AuthService : IAuthService
             Email = user.Email,
             FullName = user.FullName,
             Role = user.Role?.RoleName,
-            ExpiresAt = DateTime.Now.AddHours(12)
+            ExpiresAt = DateTime.UtcNow.AddHours(12)
         };
     }
 
@@ -123,7 +123,7 @@ public class AuthService : IAuthService
             FullName = registerDto.FullName,
             Phone = registerDto.Phone,
             IsActive = true,
-            CreatedAt = DateTime.Now
+            CreatedAt = DateTime.UtcNow
         };
 
         await _userRepository.AddAsync(newUser);
@@ -136,7 +136,7 @@ public class AuthService : IAuthService
             Username = newUser.Username,
             Email = newUser.Email,
             FullName = newUser.FullName,
-            ExpiresAt = DateTime.Now.AddHours(12)
+            ExpiresAt = DateTime.UtcNow.AddHours(12)
         };
     }
 
@@ -165,7 +165,7 @@ public class AuthService : IAuthService
             issuer: jwtIssuer,
             audience: jwtAudience,
             claims: claims,
-            expires: DateTime.Now.AddHours(12),
+            expires: DateTime.UtcNow.AddHours(12),
             signingCredentials: credentials
         );
 

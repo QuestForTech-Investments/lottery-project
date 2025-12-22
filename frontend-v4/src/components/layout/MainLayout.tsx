@@ -33,8 +33,8 @@ export default function MainLayout({ children }: MainLayoutProps) {
     setSidebarPinned((prev) => !prev)
   }
 
-  // En modo fijo: contenido a 280px. En modo automático: contenido fijo a 60px
-  const contentMarginLeft = sidebarPinned ? 280 : 60
+  // En modo fijo: contenido a 280px. En modo automático: contenido fijo a 91px
+  const contentMarginLeft = sidebarPinned ? 280 : 91
 
   return (
     <Box sx={{ height: '100vh' }}>

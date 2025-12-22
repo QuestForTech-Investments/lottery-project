@@ -1,10 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import { Box, Paper, Typography, TextField, Grid, Autocomplete, Button, Table, TableHead, TableBody, TableRow, TableCell } from '@mui/material';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Box, Paper, Typography, TextField, Grid, Autocomplete, Button, Table, TableHead, TableBody, TableRow, TableCell, CircularProgress } from '@mui/material';
 import { FilterList } from '@mui/icons-material';
+import api from '@services/api';
 
 interface Zona {
   id: number;
+  zoneId?: number;
   name: string;
+  zoneName?: string;
 }
 
 interface PercentageData {
@@ -14,18 +17,66 @@ interface PercentageData {
   porcentajeNeto: string;
 }
 
+// API Response interface
+interface PercentageCategoryDto {
+  betTypeName: string;
+  salesPercentage: number;
+  prizesPercentage: number;
+  netPercentage: number;
+}
+
 const PlayTypePrizesPercentages = (): React.ReactElement => {
   const [fechaInicial, setFechaInicial] = useState<string>(new Date().toISOString().split('T')[0]);
   const [fechaFinal, setFechaFinal] = useState<string>(new Date().toISOString().split('T')[0]);
   const [zonas, setZonas] = useState<Zona[]>([]);
   const [data, setData] = useState<PercentageData[]>([]);
   const [zonasList, setZonasList] = useState<Zona[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
 
+  // Load zones on mount
   useEffect(() => {
-    // Initialize with empty data - will be loaded from API when implemented
-    setData([]);
-    setZonasList([]);
+    const loadZones = async () => {
+      try {
+        const response = await api.get<{ items?: Zona[] } | Zona[]>('/zones');
+        const zonesArray = (response && typeof response === 'object' && 'items' in response)
+          ? (response.items || [])
+          : (response as Zona[] || []);
+
+        const normalizedZones = zonesArray.map((z: Zona) => ({
+          id: z.zoneId || z.id,
+          name: z.zoneName || z.name
+        }));
+        setZonasList(normalizedZones);
+      } catch (error) {
+        console.error('Error loading zones:', error);
+      }
+    };
+    loadZones();
   }, []);
+
+  // Load percentages
+  const handleSearch = async () => {
+    setLoading(true);
+    try {
+      const zoneIds = zonas.map(z => z.id).join(',');
+      const response = await api.get<PercentageCategoryDto[]>(
+        `/reports/sales/prize-percentages?startDate=${fechaInicial}&endDate=${fechaFinal}${zoneIds ? `&zoneIds=${zoneIds}` : ''}`
+      );
+
+      const mapped: PercentageData[] = (response || []).map(item => ({
+        tipoJugada: item.betTypeName,
+        porcentajeVentas: `${item.salesPercentage.toFixed(1)}%`,
+        porcentajePremios: `${item.prizesPercentage.toFixed(1)}%`,
+        porcentajeNeto: `${item.netPercentage.toFixed(1)}%`
+      }));
+
+      setData(mapped);
+    } catch (error) {
+      console.error('Error loading percentages:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <Box sx={{ p: 2 }}>
@@ -51,7 +102,13 @@ const PlayTypePrizesPercentages = (): React.ReactElement => {
           </Grid>
 
           <Box sx={{ textAlign: 'center', mb: 3 }}>
-            <Button variant="contained" startIcon={<FilterList />} sx={{ px: 6, borderRadius: '30px', textTransform: 'uppercase' }}>
+            <Button
+              variant="contained"
+              onClick={handleSearch}
+              disabled={loading}
+              startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <FilterList />}
+              sx={{ px: 6, borderRadius: '30px', textTransform: 'uppercase' }}
+            >
               Filtrar
             </Button>
           </Box>

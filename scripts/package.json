@@ -1,0 +1,12 @@
+{
+  "name": "lottery-scripts",
+  "version": "1.0.0",
+  "description": "Lottery monitoring and utility scripts",
+  "scripts": {
+    "monitor": "node results-monitor.js",
+    "monitor:daemon": "node results-monitor.js --daemon"
+  },
+  "dependencies": {
+    "playwright": "^1.40.0"
+  }
+}

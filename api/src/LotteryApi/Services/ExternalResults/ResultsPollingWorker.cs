@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Options;
+using LotteryApi.Helpers;
 
 namespace LotteryApi.Services.ExternalResults;
 
@@ -54,8 +55,8 @@ public class ResultsPollingWorker : BackgroundService
         using var scope = _serviceProvider.CreateScope();
         var resultsService = scope.ServiceProvider.GetRequiredService<IExternalResultsService>();
 
-        // Fetch results for today
-        var today = DateTime.Today;
+        // Fetch results for today (in business timezone)
+        var today = DateTimeHelper.TodayInBusinessTimezone();
         var response = await resultsService.FetchAndProcessResultsAsync(today, stoppingToken);
 
         if (response.Success)
