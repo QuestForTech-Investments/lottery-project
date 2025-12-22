@@ -31,7 +31,8 @@ public class UsersController : ControllerBase
     }
 
     /// <summary>
-    /// Get all users with pagination and filters
+    /// Get all administrator users with pagination and filters.
+    /// Excludes betting pool users (banca users).
     /// </summary>
     [HttpGet]
     [ProducesResponseType(typeof(PagedResponse<UserDto>), StatusCodes.Status200OK)]
@@ -42,8 +43,16 @@ public class UsersController : ControllerBase
         [FromQuery] int? roleId = null,
         [FromQuery] int? zoneId = null)
     {
+        // Get all betting pool usernames to exclude them
+        var bettingPoolUsernames = await _context.BettingPools
+            .Where(bp => bp.Username != null)
+            .Select(bp => bp.Username!)
+            .ToListAsync();
+
         var query = _context.Users
             .Where(u => u.IsActive)
+            // Exclude betting pool users (banca users)
+            .Where(u => !bettingPoolUsernames.Contains(u.Username))
             .AsQueryable();
 
         // Apply filters
@@ -498,6 +507,7 @@ public class UsersController : ControllerBase
         }
 
         // Update only provided fields
+        if (dto.Username != null) user.Username = dto.Username;
         if (dto.FullName != null) user.FullName = dto.FullName;
         if (dto.Email != null) user.Email = dto.Email;
         if (dto.Phone != null) user.Phone = dto.Phone;
@@ -507,6 +517,7 @@ public class UsersController : ControllerBase
 
         user.UpdatedAt = DateTime.UtcNow;
         await _userRepository.UpdateAsync(user);
+        await _context.SaveChangesAsync();
 
         return NoContent();
     }

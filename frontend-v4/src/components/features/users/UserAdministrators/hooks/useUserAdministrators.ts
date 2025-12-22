@@ -1,56 +1,124 @@
-import { useState, useMemo, useCallback, type ChangeEvent, type MouseEvent } from 'react';
+import { useState, useEffect, useMemo, useCallback, type ChangeEvent, type MouseEvent } from 'react';
+import api from '@services/api';
 
-interface _Administrator {
+interface UserFromApi {
+  userId: number;
   username: string;
+  email: string | null;
+  fullName: string | null;
+  phone: string | null;
+  roleId: number | null;
+  roleName: string | null;
+  commissionRate: number;
+  isActive: boolean;
+  lastLoginAt: string | null;
+  createdAt: string | null;
+  updatedAt: string;
+}
+
+interface Administrator {
+  userId: number;
+  username: string;
+  fullName: string | null;
+  email: string | null;
   requiereCambio: boolean;
   tieneRestablecimiento: boolean;
 }
 
+interface UseUserAdministratorsReturn {
+  administradores: Administrator[];
+  totalAdministradores: number;
+  searchText: string;
+  page: number;
+  rowsPerPage: number;
+  passwordModalOpen: boolean;
+  selectedUsername: string;
+  selectedUserId: number | null;
+  loading: boolean;
+  error: string | null;
+  handleSearchChange: (event: ChangeEvent<HTMLInputElement>) => void;
+  handleClearSearch: () => void;
+  handleChangePage: (event: MouseEvent<HTMLButtonElement> | null, newPage: number) => void;
+  handleChangeRowsPerPage: (event: ChangeEvent<HTMLInputElement>) => void;
+  handlePasswordClick: (userId: number, username: string) => void;
+  handleClosePasswordModal: () => void;
+  handleResetPassword: (username: string) => void;
+  refreshData: () => void;
+}
+
 /**
  * Custom hook for managing UserAdministrators state and logic
+ * Fetches real data from the API
  */
-const useUserAdministrators = () => {
-  // Mock data - In a real app, this would come from an API
-  const administradores = [
-    { username: 'la', requiereCambio: false, tieneRestablecimiento: false },
-    { username: 'juanpaulino', requiereCambio: false, tieneRestablecimiento: false },
-    { username: 'jose', requiereCambio: false, tieneRestablecimiento: true },
-    { username: 'cecilia', requiereCambio: false, tieneRestablecimiento: false },
-    { username: 'dl', requiereCambio: true, tieneRestablecimiento: false },
-    { username: 'rg', requiereCambio: true, tieneRestablecimiento: false },
-    { username: 'gf', requiereCambio: false, tieneRestablecimiento: false },
-    { username: 'jm', requiereCambio: false, tieneRestablecimiento: false },
-    { username: 'sairy', requiereCambio: false, tieneRestablecimiento: false },
-    { username: 'ag', requiereCambio: false, tieneRestablecimiento: false },
-    { username: 'yd', requiereCambio: false, tieneRestablecimiento: false },
-    { username: 'daysi', requiereCambio: false, tieneRestablecimiento: false },
-    { username: 'afj', requiereCambio: false, tieneRestablecimiento: true },
-    { username: 'wandy', requiereCambio: false, tieneRestablecimiento: false },
-    { username: 'cintia', requiereCambio: false, tieneRestablecimiento: false },
-    { username: 'felix', requiereCambio: false, tieneRestablecimiento: false },
-    { username: 'oliver', requiereCambio: false, tieneRestablecimiento: false },
-    { username: 'cb', requiereCambio: false, tieneRestablecimiento: false },
-    { username: 'bola', requiereCambio: false, tieneRestablecimiento: true },
-    { username: 'genesis', requiereCambio: true, tieneRestablecimiento: false },
-  ];
+const useUserAdministrators = (): UseUserAdministratorsReturn => {
+  // State for API data
+  const [allAdministradores, setAllAdministradores] = useState<Administrator[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // State
+  // Filter state
   const [searchText, setSearchText] = useState<string>('');
   const [page, setPage] = useState<number>(0);
   const [rowsPerPage, setRowsPerPage] = useState<number>(20);
   const [passwordModalOpen, setPasswordModalOpen] = useState<boolean>(false);
   const [selectedUsername, setSelectedUsername] = useState<string>('');
+  const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
+
+  /**
+   * Fetch users from API
+   */
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Fetch all users with large page size
+      const response = await api.get<{
+        items: UserFromApi[];
+        totalCount: number;
+      }>('/users?pageSize=1000');
+
+      // Transform users to administrators format
+      const users = response?.items || [];
+      const transformedAdmins: Administrator[] = users
+        .filter(user => user.isActive) // Only show active users
+        .map(user => ({
+          userId: user.userId,
+          username: user.username,
+          fullName: user.fullName,
+          email: user.email,
+          requiereCambio: false, // TODO: Add this field to API if needed
+          tieneRestablecimiento: false, // TODO: Add this field to API if needed
+        }));
+
+      setAllAdministradores(transformedAdmins);
+    } catch (err) {
+      console.error('Error fetching administrators:', err);
+      setError('Error al cargar los administradores');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Fetch data on mount
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   // Filtered administradores based on search
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- administradores mock data is stable
-  const filteredAdministradores = useMemo(() => {
-    return administradores.filter(admin =>
-      admin.username.toLowerCase().includes(searchText.toLowerCase())
-    );
-  }, [searchText]);
+  const filteredAdministradores = useMemo((): Administrator[] => {
+    return allAdministradores.filter(admin => {
+      const matchesSearch = !searchText ||
+        admin.username.toLowerCase().includes(searchText.toLowerCase()) ||
+        (admin.fullName?.toLowerCase().includes(searchText.toLowerCase()) ?? false) ||
+        (admin.email?.toLowerCase().includes(searchText.toLowerCase()) ?? false);
+
+      return matchesSearch;
+    });
+  }, [allAdministradores, searchText]);
 
   // Paginated administradores
-  const paginatedAdministradores = useMemo(() => {
+  const paginatedAdministradores = useMemo((): Administrator[] => {
     const startIndex = page * rowsPerPage;
     return filteredAdministradores.slice(startIndex, startIndex + rowsPerPage);
   }, [filteredAdministradores, page, rowsPerPage]);
@@ -89,7 +157,8 @@ const useUserAdministrators = () => {
   /**
    * Handle password change action
    */
-  const handlePasswordClick = useCallback((username: string) => {
+  const handlePasswordClick = useCallback((userId: number, username: string) => {
+    setSelectedUserId(userId);
     setSelectedUsername(username);
     setPasswordModalOpen(true);
   }, []);
@@ -100,6 +169,7 @@ const useUserAdministrators = () => {
   const handleClosePasswordModal = useCallback(() => {
     setPasswordModalOpen(false);
     setSelectedUsername('');
+    setSelectedUserId(null);
   }, []);
 
   /**
@@ -121,6 +191,9 @@ const useUserAdministrators = () => {
     rowsPerPage,
     passwordModalOpen,
     selectedUsername,
+    selectedUserId,
+    loading,
+    error,
 
     // Handlers
     handleSearchChange,
@@ -130,6 +203,7 @@ const useUserAdministrators = () => {
     handlePasswordClick,
     handleClosePasswordModal,
     handleResetPassword,
+    refreshData: fetchData,
   };
 };
 

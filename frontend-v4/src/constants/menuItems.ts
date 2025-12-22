@@ -90,8 +90,6 @@ export const MENU_ITEMS: MenuItem[] = [
     icon: People,
     submenu: [
       { id: 'users-list', label: 'Lista', shortcut: 'L', path: '/users/list' },
-      { id: 'users-betting-pools', label: 'Bancas', shortcut: 'B', path: '/users/betting-pools' },
-      { id: 'administrators', label: 'Administradores', shortcut: 'A', path: '/users/administrators' },
       { id: 'create-user', label: 'Crear', shortcut: 'C', path: '/users/new' },
       { id: 'login-history', label: 'Inicios de sesión', shortcut: 'I', path: '/users/login-history' },
       { id: 'blocked-sessions', label: 'Sesiones bloqueadas', shortcut: 'S', path: '/users/blocked-sessions' }

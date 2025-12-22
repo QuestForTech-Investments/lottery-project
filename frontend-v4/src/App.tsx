@@ -15,6 +15,7 @@ const DashboardMUI = lazy(() => import('@pages/DashboardMUI'))
 const CreateUserMUI = lazy(() => import('@components/features/users/CreateUser'))
 const EditUserMUI = lazy(() => import('@components/features/users/EditUser'))
 const UserListMUI = lazy(() => import('@components/features/users/UserList'))
+const UsersTabbedMUI = lazy(() => import('@components/features/users/UsersTabbed'))
 const UserAdministratorsMUI = lazy(() => import('@components/features/users/UserAdministrators'))
 const UserSessionsMUI = lazy(() => import('@components/features/users/UserSessions'))
 const UserBlockedSessionsMUI = lazy(() => import('@components/features/users/UserBlockedSessions'))
@@ -158,7 +159,8 @@ function App() {
                           {/* Users */}
                           <Route path="/users/new" element={<LazyRoute component={CreateUserMUI} />} />
                           <Route path="/users/edit/:userId" element={<LazyRoute component={EditUserMUI} />} />
-                          <Route path="/users/list" element={<LazyRoute component={UserListMUI} />} />
+                          <Route path="/users/list" element={<LazyRoute component={UsersTabbedMUI} />} />
+                          <Route path="/users/all" element={<LazyRoute component={UserListMUI} />} />
                           <Route path="/users/betting-pools" element={<LazyRoute component={UserBettingPoolsMUI} />} />
                           <Route path="/users/administrators" element={<LazyRoute component={UserAdministratorsMUI} />} />
                           <Route path="/users/login-history" element={<LazyRoute component={UserSessionsMUI} />} />

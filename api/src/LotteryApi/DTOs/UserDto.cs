@@ -42,6 +42,7 @@ public class CreateUserDto
 /// </summary>
 public class UpdateUserDto
 {
+    public string? Username { get; set; }
     public string? FullName { get; set; }
     public string? Email { get; set; }
     public string? Phone { get; set; }
