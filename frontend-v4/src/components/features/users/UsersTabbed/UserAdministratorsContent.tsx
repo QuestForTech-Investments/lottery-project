@@ -204,8 +204,8 @@ const UserAdministratorsContent: React.FC = () => {
                         onClick={() => handleEditClick(admin.userId)}
                         title="Editar usuario"
                         sx={{
-                          color: '#51cbce',
-                          '&:hover': { bgcolor: 'rgba(81, 203, 206, 0.1)' },
+                          color: '#6366f1',
+                          '&:hover': { bgcolor: 'rgba(99, 102, 241, 0.1)' },
                         }}
                       >
                         <EditIcon fontSize="small" />
