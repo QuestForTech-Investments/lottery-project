@@ -193,10 +193,8 @@ const UserAdministratorsContent: React.FC = () => {
                         onClick={() => handlePasswordClick(admin.userId, admin.username)}
                         title="Cambiar contraseña"
                         sx={{
-                          bgcolor: '#51cbce',
-                          color: 'white',
-                          '&:hover': { bgcolor: '#45b8bb' },
-                          borderRadius: 1,
+                          color: '#6366f1',
+                          '&:hover': { bgcolor: 'rgba(99, 102, 241, 0.1)' },
                         }}
                       >
                         <KeyIcon fontSize="small" />
@@ -206,10 +204,8 @@ const UserAdministratorsContent: React.FC = () => {
                         onClick={() => handleEditClick(admin.userId)}
                         title="Editar usuario"
                         sx={{
-                          bgcolor: '#51cbce',
-                          color: 'white',
-                          '&:hover': { bgcolor: '#45b8bb' },
-                          borderRadius: 1,
+                          color: '#51cbce',
+                          '&:hover': { bgcolor: 'rgba(81, 203, 206, 0.1)' },
                         }}
                       >
                         <EditIcon fontSize="small" />
