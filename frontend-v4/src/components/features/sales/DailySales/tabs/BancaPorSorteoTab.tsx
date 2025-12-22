@@ -262,9 +262,9 @@ const BancaPorSorteoTab = ({ selectedDate, setSelectedDate, zones, selectedZones
         ) : (
           <TableContainer component={Paper} variant="outlined" sx={{ maxHeight: 600, overflowX: 'auto' }}>
             <Table size="small" stickyHeader>
-              <TableHead sx={{ backgroundColor: 'grey.100' }}>
+              <TableHead sx={{ backgroundColor: '#e3e3e3' }}>
                 <TableRow>
-                  <TableCell sx={{ minWidth: 150, position: 'sticky', left: 0, backgroundColor: 'grey.100', zIndex: 3 }}>
+                  <TableCell sx={{ minWidth: 150, position: 'sticky', left: 0, backgroundColor: '#e3e3e3', zIndex: 3 }}>
                     Banca
                   </TableCell>
                   {uniqueDraws.map(draw => (

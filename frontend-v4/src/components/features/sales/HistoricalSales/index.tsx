@@ -394,7 +394,7 @@ const HistoricalSales = (): React.ReactElement => {
 
             <Table size="small">
               <TableHead>
-                <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+                <TableRow sx={{ backgroundColor: '#e3e3e3' }}>
                   {['Ref.', 'Código', 'Tickets', 'Venta', 'Comisiones', 'Descuentos', 'Premios', 'Neto', 'Caída', 'Final'].map(h => (
                     <TableCell key={h} sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.75rem' }}>{h}</TableCell>
                   ))}
@@ -546,7 +546,7 @@ const HistoricalSales = (): React.ReactElement => {
             </Box>
 
             <Table size="small">
-              <TableHead sx={{ backgroundColor: 'grey.100' }}>
+              <TableHead sx={{ backgroundColor: '#e3e3e3' }}>
                 <TableRow>
                   <TableCell sx={{ cursor: 'pointer' }}>Sorteo</TableCell>
                   <TableCell align="right" sx={{ cursor: 'pointer' }}>Total Vendido</TableCell>
@@ -722,7 +722,7 @@ const HistoricalSales = (): React.ReactElement => {
             </Box>
 
             <Table size="small">
-              <TableHead sx={{ backgroundColor: 'grey.100' }}>
+              <TableHead sx={{ backgroundColor: '#e3e3e3' }}>
                 <TableRow>
                   <TableCell sx={{ cursor: 'pointer' }}>Combinación</TableCell>
                   <TableCell align="right" sx={{ cursor: 'pointer' }}>Total Vendido</TableCell>
@@ -904,7 +904,7 @@ const HistoricalSales = (): React.ReactElement => {
             </Box>
 
             <Table size="small">
-              <TableHead sx={{ backgroundColor: 'grey.100' }}>
+              <TableHead sx={{ backgroundColor: '#e3e3e3' }}>
                 <TableRow>
                   <TableCell>Nombre</TableCell>
                   <TableCell align="center">P</TableCell>

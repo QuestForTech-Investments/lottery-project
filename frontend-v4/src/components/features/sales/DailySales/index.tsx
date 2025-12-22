@@ -686,7 +686,7 @@ const DailySales = (): React.ReactElement => {
                         </TableRow>
                       ))}
                       {/* Totals Row */}
-                      <TableRow sx={{ backgroundColor: 'grey.100' }}>
+                      <TableRow sx={{ backgroundColor: '#e3e3e3' }}>
                         <TableCell><strong>Totales</strong></TableCell>
                         <TableCell>-</TableCell>
                         <TableCell align="center">{totals.p}</TableCell>

@@ -325,7 +325,7 @@ const PorZonaTab = ({ selectedDate, setSelectedDate, zones, selectedZones, handl
 
         <TableContainer component={Paper} variant="outlined">
           <Table size="small">
-            <TableHead sx={{ backgroundColor: 'grey.100' }}>
+            <TableHead sx={{ backgroundColor: '#e3e3e3' }}>
               <TableRow>
                 <TableCell>Nombre</TableCell>
                 <TableCell align="center">Bancas</TableCell>

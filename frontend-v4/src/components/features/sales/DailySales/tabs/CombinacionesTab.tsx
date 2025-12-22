@@ -215,7 +215,7 @@ const CombinacionesTab = ({ selectedDate, setSelectedDate, zones, selectedZones,
 
         <TableContainer component={Paper} variant="outlined" sx={{ maxHeight: 500 }}>
           <Table size="small" stickyHeader>
-            <TableHead sx={{ backgroundColor: 'grey.100' }}>
+            <TableHead sx={{ backgroundColor: '#e3e3e3' }}>
               <TableRow>
                 <TableCell>Combinación</TableCell>
                 <TableCell>Sorteo</TableCell>

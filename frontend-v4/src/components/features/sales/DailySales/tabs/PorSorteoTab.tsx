@@ -209,7 +209,7 @@ const PorSorteoTab = ({ selectedDate, setSelectedDate, zones, selectedZones, han
 
         <TableContainer component={Paper} variant="outlined">
           <Table size="small">
-            <TableHead sx={{ backgroundColor: 'grey.100' }}>
+            <TableHead sx={{ backgroundColor: '#e3e3e3' }}>
               <TableRow>
                 <TableCell sx={{ cursor: 'pointer' }}>Sorteo</TableCell>
                 <TableCell align="right" sx={{ cursor: 'pointer' }}>Tickets</TableCell>

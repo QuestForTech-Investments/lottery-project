@@ -115,7 +115,7 @@ const PlayTypePrizesPercentages = (): React.ReactElement => {
 
           <Table size="small">
             <TableHead>
-              <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+              <TableRow sx={{ backgroundColor: '#e3e3e3' }}>
                 {['Tipo de jugada', '% de Ventas', '% de Premios', '% de Neto'].map(h => (
                   <TableCell key={h} sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.75rem' }}>{h}</TableCell>
                 ))}
