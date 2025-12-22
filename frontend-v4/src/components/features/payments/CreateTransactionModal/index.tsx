@@ -234,7 +234,7 @@ const CreateTransactionModal = ({ open, onClose }: CreateTransactionModalProps):
         {/* Transaction table */}
         <TableContainer component={Paper} variant="outlined" sx={{ mb: 3 }}>
           <Table size="small">
-            <TableHead sx={{ bgcolor: '#f5f5f5' }}>
+            <TableHead sx={{ bgcolor: '#e3e3e3' }}>
               <TableRow>
                 <TableCell sx={{ fontSize: '13px', fontWeight: 600 }}>Tipo</TableCell>
                 <TableCell sx={{ fontSize: '13px', fontWeight: 600 }}>Entidad</TableCell>

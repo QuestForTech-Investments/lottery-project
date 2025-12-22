@@ -233,7 +233,7 @@ const DebtCollectors = (): React.ReactElement => {
               <TableContainer component={Paper} variant="outlined">
                 <Table>
                   <TableHead>
-                    <TableRow sx={{ bgcolor: '#f5f5f5' }}>
+                    <TableRow sx={{ bgcolor: '#e3e3e3' }}>
                       <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878' }}>#</TableCell>
                       <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878' }}>Banca</TableCell>
                       <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878' }}>Inicio</TableCell>
@@ -330,7 +330,7 @@ const DebtCollectors = (): React.ReactElement => {
               <TableContainer component={Paper} variant="outlined">
                 <Table>
                   <TableHead>
-                    <TableRow sx={{ bgcolor: '#f5f5f5' }}>
+                    <TableRow sx={{ bgcolor: '#e3e3e3' }}>
                       <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878' }}>Tipo</TableCell>
                       <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878' }}>Fecha</TableCell>
                       <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878' }}>#</TableCell>

@@ -226,7 +226,7 @@ const CollectionsPaymentsList = (): React.ReactElement => {
         {/* Data Table */}
         <TableContainer component={Paper} variant="outlined">
           <Table size="small">
-            <TableHead sx={{ bgcolor: '#f5f5f5' }}>
+            <TableHead sx={{ bgcolor: '#e3e3e3' }}>
               <TableRow>
                 <TableCell
                   onClick={() => handleSort('numero')}

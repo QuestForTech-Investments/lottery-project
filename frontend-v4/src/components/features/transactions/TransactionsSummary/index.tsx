@@ -153,7 +153,7 @@ const TransactionsSummary = (): React.ReactElement => {
       <TableContainer component={Paper} sx={{ mb: 5 }}>
         <Table size="small">
           <TableHead>
-            <TableRow sx={{ bgcolor: '#f5f5f5' }}>
+            <TableRow sx={{ bgcolor: '#e3e3e3' }}>
               <TableCell rowSpan={2} align="center" sx={{ fontWeight: 'bold', verticalAlign: 'middle' }}>Código</TableCell>
               <TableCell rowSpan={2} align="center" sx={{ fontWeight: 'bold', verticalAlign: 'middle' }}>Banca</TableCell>
               <TableCell rowSpan={2} align="center" sx={{ fontWeight: 'bold', verticalAlign: 'middle' }}>Zona</TableCell>
@@ -161,7 +161,7 @@ const TransactionsSummary = (): React.ReactElement => {
               <TableCell colSpan={3} align="center" sx={{ fontWeight: 'bold', borderBottom: '1px solid #dee2e6' }}>Resultados de Sorteo</TableCell>
               <TableCell rowSpan={2} align="center" sx={{ fontWeight: 'bold', verticalAlign: 'middle' }}>Caída</TableCell>
             </TableRow>
-            <TableRow sx={{ bgcolor: '#f5f5f5' }}>
+            <TableRow sx={{ bgcolor: '#e3e3e3' }}>
               <TableCell align="center"><TableSortLabel active={orderBy === 'cobros'} direction={orderBy === 'cobros' ? order : 'asc'} onClick={() => handleRequestSort('cobros')}>Cobros</TableSortLabel></TableCell>
               <TableCell align="center"><TableSortLabel active={orderBy === 'pagos'} direction={orderBy === 'pagos' ? order : 'asc'} onClick={() => handleRequestSort('pagos')}>Pagos</TableSortLabel></TableCell>
               <TableCell align="center" sx={{ bgcolor: '#d1ecf1' }}><TableSortLabel active={orderBy === 'netoFlujo'} direction={orderBy === 'netoFlujo' ? order : 'asc'} onClick={() => handleRequestSort('netoFlujo')}>Neto</TableSortLabel></TableCell>
@@ -213,10 +213,10 @@ const TransactionsSummary = (): React.ReactElement => {
         <TableContainer component={Paper}>
           <Table>
             <TableHead>
-              <TableRow sx={{ bgcolor: '#f5f5f5' }}>
+              <TableRow sx={{ bgcolor: '#e3e3e3' }}>
                 <TableCell colSpan={3} align="center" sx={{ fontWeight: 'bold', borderBottom: '1px solid #dee2e6' }}>Ajustes</TableCell>
               </TableRow>
-              <TableRow sx={{ bgcolor: '#f5f5f5' }}>
+              <TableRow sx={{ bgcolor: '#e3e3e3' }}>
                 <TableCell align="center" sx={{ fontWeight: 'bold' }}>Retiros de efectivo</TableCell>
                 <TableCell align="center" sx={{ fontWeight: 'bold' }}>Débito</TableCell>
                 <TableCell align="center" sx={{ fontWeight: 'bold' }}>Crédito</TableCell>

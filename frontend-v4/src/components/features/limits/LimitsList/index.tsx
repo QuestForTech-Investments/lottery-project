@@ -307,7 +307,7 @@ const LimitsList = (): React.ReactElement => {
           <TableContainer component={Paper} variant="outlined">
             <Table>
               <TableHead>
-                <TableRow sx={{ bgcolor: '#f5f5f5' }}>
+                <TableRow sx={{ bgcolor: '#e3e3e3' }}>
                   <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878' }}>Tipo de jugada</TableCell>
                   <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878' }}>Monto</TableCell>
                   <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878' }}>Fecha de expiración</TableCell>

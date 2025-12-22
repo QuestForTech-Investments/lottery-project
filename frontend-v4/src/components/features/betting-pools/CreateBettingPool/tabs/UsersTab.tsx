@@ -171,7 +171,7 @@ const UsersTab: React.FC<UsersTabProps> = ({ formData, handleChange, bettingPool
         <TableContainer component={Paper} variant="outlined" sx={{ mt: 2 }}>
           <Table size="small">
             <TableHead>
-              <TableRow sx={{ bgcolor: '#f5f5f5' }}>
+              <TableRow sx={{ bgcolor: '#e3e3e3' }}>
                 <TableCell sx={{ fontWeight: 'bold' }}>Usuario</TableCell>
                 <TableCell align="right" sx={{ fontWeight: 'bold' }}>Acciones</TableCell>
               </TableRow>

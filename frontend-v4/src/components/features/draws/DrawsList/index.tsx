@@ -340,7 +340,7 @@ const DrawsList = (): React.ReactElement => {
           <TableContainer component={Paper} variant="outlined">
             <Table>
               <TableHead>
-                <TableRow sx={{ bgcolor: '#f5f5f5' }}>
+                <TableRow sx={{ bgcolor: '#e3e3e3' }}>
                   <TableCell sx={{ fontSize: '14px', fontWeight: 600, color: '#787878', width: '70px', py: 2 }}>Index</TableCell>
                   <TableCell sx={{ fontSize: '14px', fontWeight: 600, color: '#787878', py: 2 }}>
                     <TableSortLabel

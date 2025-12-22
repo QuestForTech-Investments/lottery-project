@@ -67,7 +67,7 @@ const HotNumbers = (): React.ReactElement => {
             <Box>
               <Table sx={{ mb: 3 }}>
                 <TableHead>
-                  <TableRow sx={{ bgcolor: '#f5f5f5' }}>
+                  <TableRow sx={{ bgcolor: '#e3e3e3' }}>
                     <TableCell sx={{ fontSize: '12px' }}>Sorteos</TableCell>
                     <TableCell sx={{ fontSize: '12px' }}>Directo</TableCell>
                     <TableCell sx={{ fontSize: '12px' }}>Pale 1 caliente</TableCell>

@@ -230,7 +230,7 @@ const ManageDebtCollectors = (): React.ReactElement => {
           <TableContainer component={Paper} variant="outlined">
             <Table>
               <TableHead>
-                <TableRow sx={{ bgcolor: '#f5f5f5' }}>
+                <TableRow sx={{ bgcolor: '#e3e3e3' }}>
                   <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878' }}>Usuario</TableCell>
                   <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878' }}>Bancas</TableCell>
                   <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878' }}>Bancos</TableCell>

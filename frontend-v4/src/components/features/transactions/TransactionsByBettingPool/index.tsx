@@ -159,7 +159,7 @@ const TransactionsByBettingPool = (): React.ReactElement => {
 
             <TableContainer component={Paper} variant="outlined">
               <Table size="small">
-                <TableHead sx={{ bgcolor: '#f5f5f5' }}>
+                <TableHead sx={{ bgcolor: '#e3e3e3' }}>
                   <TableRow>
                     <TableCell sx={{ fontSize: '13px', fontWeight: 600 }}>Fecha</TableCell>
                     <TableCell sx={{ fontSize: '13px', fontWeight: 600 }}>Hora</TableCell>

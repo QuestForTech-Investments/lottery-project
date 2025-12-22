@@ -224,7 +224,7 @@ const AccountableEntities = (): React.ReactElement => {
             <TableContainer component={Paper} variant="outlined">
               <Table>
                 <TableHead>
-                  <TableRow sx={{ bgcolor: '#f5f5f5' }}>
+                  <TableRow sx={{ bgcolor: '#e3e3e3' }}>
                     {getColumns().map(col => (
                       <TableCell key={col} sx={{ fontSize: '12px', fontWeight: 600, color: '#787878' }}>
                         <TableSortLabel
