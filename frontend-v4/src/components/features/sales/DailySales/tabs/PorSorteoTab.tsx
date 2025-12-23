@@ -211,20 +211,17 @@ const PorSorteoTab = ({ selectedDate, setSelectedDate, zones, selectedZones, han
           <Table size="small">
             <TableHead sx={{ backgroundColor: '#e3e3e3' }}>
               <TableRow>
-                <TableCell sx={{ cursor: 'pointer' }}>Sorteo</TableCell>
-                <TableCell align="right" sx={{ cursor: 'pointer' }}>Tickets</TableCell>
-                <TableCell align="right" sx={{ cursor: 'pointer' }}>Líneas</TableCell>
-                <TableCell align="right" sx={{ cursor: 'pointer' }}>Ganadores</TableCell>
-                <TableCell align="right" sx={{ cursor: 'pointer' }}>Total Vendido</TableCell>
-                <TableCell align="right" sx={{ cursor: 'pointer' }}>Total premios</TableCell>
-                <TableCell align="right" sx={{ cursor: 'pointer' }}>Total comisiones</TableCell>
-                <TableCell align="right" sx={{ cursor: 'pointer' }}>Total neto</TableCell>
+                <TableCell sx={{ cursor: 'pointer', fontWeight: 600 }}>Sorteo</TableCell>
+                <TableCell align="right" sx={{ cursor: 'pointer', fontWeight: 600 }}>Total Vendido</TableCell>
+                <TableCell align="right" sx={{ cursor: 'pointer', fontWeight: 600 }}>Total premios</TableCell>
+                <TableCell align="right" sx={{ cursor: 'pointer', fontWeight: 600 }}>Total comisiones</TableCell>
+                <TableCell align="right" sx={{ cursor: 'pointer', fontWeight: 600 }}>Total neto</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {filteredData.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} align="center" sx={{ py: 3, color: 'text.secondary' }}>
+                  <TableCell colSpan={5} align="center" sx={{ py: 3, color: 'text.secondary' }}>
                     {loading ? 'Cargando...' : 'No hay entradas para el sorteo y la fecha elegidos'}
                   </TableCell>
                 </TableRow>
@@ -244,9 +241,6 @@ const PorSorteoTab = ({ selectedDate, setSelectedDate, zones, selectedZones, han
                         {row.drawName}
                       </Box>
                     </TableCell>
-                    <TableCell align="right">{row.ticketCount}</TableCell>
-                    <TableCell align="right">{row.lineCount}</TableCell>
-                    <TableCell align="right">{row.winnerCount}</TableCell>
                     <TableCell align="right">{formatCurrency(row.totalSold)}</TableCell>
                     <TableCell align="right">{formatCurrency(row.totalPrizes)}</TableCell>
                     <TableCell align="right">{formatCurrency(row.totalCommissions)}</TableCell>
@@ -256,15 +250,12 @@ const PorSorteoTab = ({ selectedDate, setSelectedDate, zones, selectedZones, han
                   </TableRow>
                 ))
               )}
-              <TableRow sx={{ backgroundColor: 'grey.200' }}>
-                <TableCell><strong>Totales</strong></TableCell>
-                <TableCell align="right"><strong>{filteredData.reduce((sum, r) => sum + r.ticketCount, 0)}</strong></TableCell>
-                <TableCell align="right"><strong>{filteredData.reduce((sum, r) => sum + r.lineCount, 0)}</strong></TableCell>
-                <TableCell align="right"><strong>{filteredData.reduce((sum, r) => sum + r.winnerCount, 0)}</strong></TableCell>
-                <TableCell align="right"><strong>{formatCurrency(summary.totalSold)}</strong></TableCell>
-                <TableCell align="right"><strong>{formatCurrency(summary.totalPrizes)}</strong></TableCell>
-                <TableCell align="right"><strong>{formatCurrency(summary.totalCommissions)}</strong></TableCell>
-                <TableCell align="right"><strong>{formatCurrency(summary.totalNet)}</strong></TableCell>
+              <TableRow sx={{ backgroundColor: '#f5f7fa', '& td': { fontWeight: 600 } }}>
+                <TableCell>Totales</TableCell>
+                <TableCell align="right">{formatCurrency(summary.totalSold)}</TableCell>
+                <TableCell align="right">{formatCurrency(summary.totalPrizes)}</TableCell>
+                <TableCell align="right">{formatCurrency(summary.totalCommissions)}</TableCell>
+                <TableCell align="right">{formatCurrency(summary.totalNet)}</TableCell>
               </TableRow>
             </TableBody>
           </Table>

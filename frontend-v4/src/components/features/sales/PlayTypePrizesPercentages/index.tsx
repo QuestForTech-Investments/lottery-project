@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Box, Paper, Typography, TextField, Grid, Autocomplete, Button, Table, TableHead, TableBody, TableRow, TableCell, CircularProgress } from '@mui/material';
-import { FilterList } from '@mui/icons-material';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { Box, Paper, Typography, TextField, Grid, Autocomplete, Button, Stack, Table, TableHead, TableBody, TableRow, TableCell, CircularProgress, InputAdornment } from '@mui/material';
+import { Refresh, PictureAsPdf, Search } from '@mui/icons-material';
 import api from '@services/api';
 
 interface Zona {
@@ -32,6 +32,7 @@ const PlayTypePrizesPercentages = (): React.ReactElement => {
   const [data, setData] = useState<PercentageData[]>([]);
   const [zonasList, setZonasList] = useState<Zona[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
+  const [searchTerm, setSearchTerm] = useState<string>('');
 
   // Load zones on mount
   useEffect(() => {
@@ -78,15 +79,21 @@ const PlayTypePrizesPercentages = (): React.ReactElement => {
     }
   };
 
+  const filteredData = useMemo(() => {
+    if (!searchTerm) return data;
+    const term = searchTerm.toLowerCase();
+    return data.filter(d => d.tipoJugada.toLowerCase().includes(term));
+  }, [data, searchTerm]);
+
   return (
     <Box sx={{ p: 2 }}>
       <Paper elevation={3}>
         <Box sx={{ p: 3 }}>
-          <Typography variant="h5" align="center" sx={{ color: '#1976d2', mb: 4, fontWeight: 400 }}>
-            Porcentajes de premios por jugada
+          <Typography variant="h5" align="center" sx={{ mb: 4, fontWeight: 400 }}>
+            Reporte de porcentaje de jugadas
           </Typography>
 
-          <Grid container spacing={2} sx={{ mb: 3 }}>
+          <Grid container spacing={2} sx={{ mb: 2 }}>
             <Grid item xs={12} md={4}>
               <TextField fullWidth type="date" label="Fecha inicial" value={fechaInicial}
                 onChange={(e) => setFechaInicial(e.target.value)} InputLabelProps={{ shrink: true }} size="small" />
@@ -97,41 +104,83 @@ const PlayTypePrizesPercentages = (): React.ReactElement => {
             </Grid>
             <Grid item xs={12} md={4}>
               <Autocomplete multiple options={zonasList} getOptionLabel={(o) => o.name || ''} value={zonas}
-                onChange={(e, v) => setZonas(v)} renderInput={(params) => <TextField {...params} label="Zonas" size="small" />} />
+                onChange={(e, v) => setZonas(v)}
+                renderInput={(params) => <TextField {...params} label="Zonas" size="small"
+                  placeholder={zonas.length === 0 ? "Seleccione" : `${zonas.length} seleccionadas`} />} />
             </Grid>
           </Grid>
 
-          <Box sx={{ textAlign: 'center', mb: 3 }}>
+          <Stack direction="row" spacing={2} sx={{ mb: 3 }}>
             <Button
               variant="contained"
               onClick={handleSearch}
               disabled={loading}
-              startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <FilterList />}
-              sx={{ px: 6, borderRadius: '30px', textTransform: 'uppercase' }}
+              startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <Refresh />}
+              sx={{
+                px: 4,
+                borderRadius: '30px',
+                textTransform: 'uppercase'
+              }}
             >
-              Filtrar
+              Refrescar
             </Button>
+            <Button
+              variant="contained"
+              startIcon={<PictureAsPdf />}
+              sx={{
+                borderRadius: '30px',
+                textTransform: 'uppercase'
+              }}
+            >
+              PDF
+            </Button>
+          </Stack>
+
+          <Box sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end' }}>
+            <TextField
+              size="small"
+              placeholder="Filtrado rápido"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <Search />
+                  </InputAdornment>
+                ),
+              }}
+              sx={{ width: 300 }}
+            />
           </Box>
 
-          <Table size="small">
-            <TableHead>
-              <TableRow sx={{ backgroundColor: '#e3e3e3' }}>
-                {['Tipo de jugada', '% de Ventas', '% de Premios', '% de Neto'].map(h => (
-                  <TableCell key={h} sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.75rem' }}>{h}</TableCell>
-                ))}
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {data.map((d, i) => (
-                <TableRow key={i} sx={{ '&:hover': { backgroundColor: 'action.hover' } }}>
-                  <TableCell sx={{ fontWeight: 500 }}>{d.tipoJugada}</TableCell>
-                  <TableCell>{d.porcentajeVentas}</TableCell>
-                  <TableCell>{d.porcentajePremios}</TableCell>
-                  <TableCell sx={{ color: d.porcentajeNeto.includes('-') ? 'error.main' : 'success.main' }}>{d.porcentajeNeto}</TableCell>
+          {filteredData.length === 0 ? (
+            <Typography variant="h6" sx={{ color: 'text.secondary', textAlign: 'center', py: 4 }}>
+              No hay entradas disponibles
+            </Typography>
+          ) : (
+            <Table size="small">
+              <TableHead sx={{ backgroundColor: '#e3e3e3' }}>
+                <TableRow>
+                  {['Tipo de jugada', '% de Ventas', '% de Premios', '% de Neto'].map(h => (
+                    <TableCell key={h} sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.75rem' }}>{h}</TableCell>
+                  ))}
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHead>
+              <TableBody>
+                {filteredData.map((d, i) => (
+                  <TableRow key={i} sx={{ '&:hover': { backgroundColor: 'action.hover' } }}>
+                    <TableCell sx={{ fontWeight: 500 }}>{d.tipoJugada}</TableCell>
+                    <TableCell>{d.porcentajeVentas}</TableCell>
+                    <TableCell>{d.porcentajePremios}</TableCell>
+                    <TableCell sx={{ color: d.porcentajeNeto.includes('-') ? 'error.main' : 'success.main' }}>{d.porcentajeNeto}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+          <Typography variant="caption" sx={{ color: 'text.secondary', mt: 1, display: 'block' }}>
+            Mostrando {filteredData.length} de {data.length} entradas
+          </Typography>
         </Box>
       </Paper>
     </Box>

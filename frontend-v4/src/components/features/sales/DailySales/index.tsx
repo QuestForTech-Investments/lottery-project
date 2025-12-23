@@ -39,6 +39,7 @@ import CombinacionesTab from './tabs/CombinacionesTab';
 import PorZonaTab from './tabs/PorZonaTab';
 import CategoriaPremiosTab from './tabs/CategoriaPremiosTab';
 import CategoriaPremiosPaleTab from './tabs/CategoriaPremiosPaleTab';
+import ResultadosSubTab from './tabs/ResultadosSubTab';
 
 interface Zone {
   zoneId?: number;
@@ -158,6 +159,7 @@ const DailySales = (): React.ReactElement => {
 
   // Tab state
   const [mainTab, setMainTab] = useState<number>(0);
+  const [subTab, setSubTab] = useState<number>(0); // 0 = Bancas, 1 = Resultados
 
   // Filter state
   const [selectedDate, setSelectedDate] = useState<string>(() => {
@@ -554,165 +556,181 @@ const DailySales = (): React.ReactElement => {
               </Button>
             </Box>
 
-            {/* Bancas Sub-Tab */}
+            {/* Sub-Tabs: Bancas and Resultados */}
             <Box sx={{ mb: 3 }}>
-              <Tabs value={0} sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
+              <Tabs value={subTab} onChange={(e, v) => setSubTab(v)} sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
                 <Tab label="Bancas" />
+                <Tab label="Resultados" />
               </Tabs>
 
-              {/* Total with highlighted background */}
-              <Typography variant="h5" align="center" gutterBottom sx={{ fontWeight: 400, mb: 3, fontSize: '1.7rem' }}>
-                Venta del día Total: <Box component="span" sx={{
-                  backgroundColor: '#e0f7fa',
-                  px: 2,
-                  py: 0.5,
-                  borderRadius: 1,
-                  color: '#00838f'
-                }}>{formatCurrency(totals.sales)}</Box>
-              </Typography>
-
-              {/* Filter Toggle Buttons */}
-              <Box sx={{ mb: 2 }}>
-                <Typography variant="caption" sx={{ color: 'text.secondary', mb: 1, display: 'block' }}>
-                  Filtros
-                </Typography>
-                <ToggleButtonGroup
-                  value={filterType}
-                  exclusive
-                  onChange={(e, newValue) => newValue && setFilterType(newValue)}
-                  size="small"
-                  sx={{
-                    border: '2px solid #8b5cf6',
-                    borderRadius: '6px',
-                    overflow: 'hidden',
-                    '& .MuiToggleButton-root': {
-                      border: 'none',
-                      borderRight: '2px solid #8b5cf6',
-                      borderRadius: 0,
+              {/* Bancas Sub-Tab Content */}
+              {subTab === 0 && (
+                <>
+                  {/* Total with highlighted background */}
+                  <Typography variant="h5" align="center" gutterBottom sx={{ fontWeight: 400, mb: 3, fontSize: '1.7rem' }}>
+                    Venta del día Total: <Box component="span" sx={{
+                      backgroundColor: '#e0f7fa',
                       px: 2,
-                      py: 0.6,
-                      fontSize: '0.75rem',
-                      fontWeight: 500,
-                      textTransform: 'uppercase',
-                      color: '#64748b',
-                      backgroundColor: '#fff',
-                      transition: 'all 0.15s ease',
-                      '&:last-of-type': {
-                        borderRight: 'none',
-                      },
-                      '&:hover': {
-                        backgroundColor: '#f8f7ff',
-                        color: '#7c3aed',
-                      },
-                      '&.Mui-selected': {
-                        background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
-                        color: '#fff',
-                        '&:hover': {
-                          background: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)',
+                      py: 0.5,
+                      borderRadius: 1,
+                      color: '#00838f'
+                    }}>{formatCurrency(totals.sales)}</Box>
+                  </Typography>
+
+                  {/* Filter Toggle Buttons */}
+                  <Box sx={{ mb: 2 }}>
+                    <Typography variant="caption" sx={{ color: 'text.secondary', mb: 1, display: 'block' }}>
+                      Filtros
+                    </Typography>
+                    <ToggleButtonGroup
+                      value={filterType}
+                      exclusive
+                      onChange={(e, newValue) => newValue && setFilterType(newValue)}
+                      size="small"
+                      sx={{
+                        border: '2px solid #8b5cf6',
+                        borderRadius: '6px',
+                        overflow: 'hidden',
+                        '& .MuiToggleButton-root': {
+                          border: 'none',
+                          borderRight: '2px solid #8b5cf6',
+                          borderRadius: 0,
+                          px: 2,
+                          py: 0.6,
+                          fontSize: '0.75rem',
+                          fontWeight: 500,
+                          textTransform: 'uppercase',
+                          color: '#64748b',
+                          backgroundColor: '#fff',
+                          transition: 'all 0.15s ease',
+                          '&:last-of-type': {
+                            borderRight: 'none',
+                          },
+                          '&:hover': {
+                            backgroundColor: '#f8f7ff',
+                            color: '#7c3aed',
+                          },
+                          '&.Mui-selected': {
+                            background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+                            color: '#fff',
+                            '&:hover': {
+                              background: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)',
+                            },
+                          },
                         },
-                      },
-                    },
-                  }}
-                >
-                  {FILTER_OPTIONS.map(option => (
-                    <ToggleButton key={option.value} value={option.value}>
-                      {option.label}
-                    </ToggleButton>
-                  ))}
-                </ToggleButtonGroup>
-              </Box>
-            </Box>
-
-            {/* Quick Filter */}
-            <Box sx={{ mb: 2, textAlign: 'right' }}>
-              <TextField
-                size="small"
-                placeholder="Filtro rapido"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <SearchIcon />
-                    </InputAdornment>
-                  ),
-                }}
-                sx={{ width: 300 }}
-              />
-            </Box>
-
-            {/* Data Table */}
-            <TableContainer component={Paper} variant="outlined" sx={{ maxHeight: 600 }}>
-              <Table size="small" stickyHeader>
-                <TableHead>
-                  <TableRow>
-                    {TABLE_COLUMNS.map(col => (
-                      <TableCell key={col.key} align={col.align}>
-                        {col.label}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {filteredData.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={15} align="center" sx={{ py: 3, color: 'text.secondary' }}>
-                        No hay entradas para el sorteo y la fecha elegidos
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    <>
-                      {filteredData.map((row) => (
-                        <TableRow key={row.id} hover>
-                          <TableCell>{row.ref}</TableCell>
-                          <TableCell>{row.code}</TableCell>
-                          <TableCell align="center">{row.p}</TableCell>
-                          <TableCell align="center">{row.l}</TableCell>
-                          <TableCell align="center">{row.w}</TableCell>
-                          <TableCell align="right">{row.total}</TableCell>
-                          <TableCell align="right">{formatCurrency(row.sales)}</TableCell>
-                          <TableCell align="right">{formatCurrency(row.commissions)}</TableCell>
-                          <TableCell align="right">{formatCurrency(row.discounts)}</TableCell>
-                          <TableCell align="right">{formatCurrency(row.prizes)}</TableCell>
-                          <TableCell align="right" sx={{ color: row.net < 0 ? 'error.main' : 'inherit' }}>
-                            {formatCurrency(row.net)}
-                          </TableCell>
-                          <TableCell align="right">{formatCurrency(row.fall)}</TableCell>
-                          <TableCell align="right">{formatCurrency(row.final)}</TableCell>
-                          <TableCell align="right" sx={{ color: row.balance < 0 ? 'error.main' : 'success.main' }}>
-                            {formatCurrency(row.balance)}
-                          </TableCell>
-                          <TableCell align="right">{formatCurrency(row.accumulatedFall)}</TableCell>
-                        </TableRow>
+                      }}
+                    >
+                      {FILTER_OPTIONS.map(option => (
+                        <ToggleButton key={option.value} value={option.value}>
+                          {option.label}
+                        </ToggleButton>
                       ))}
-                      {/* Totals Row */}
-                      <TableRow sx={{ backgroundColor: '#e3e3e3' }}>
-                        <TableCell><strong>Totales</strong></TableCell>
-                        <TableCell>-</TableCell>
-                        <TableCell align="center">{totals.p}</TableCell>
-                        <TableCell align="center">{totals.l}</TableCell>
-                        <TableCell align="center">{totals.w}</TableCell>
-                        <TableCell align="right">{totals.total}</TableCell>
-                        <TableCell align="right">{formatCurrency(totals.sales)}</TableCell>
-                        <TableCell align="right">{formatCurrency(totals.commissions)}</TableCell>
-                        <TableCell align="right">{formatCurrency(totals.discounts)}</TableCell>
-                        <TableCell align="right">{formatCurrency(totals.prizes)}</TableCell>
-                        <TableCell align="right">{formatCurrency(totals.net)}</TableCell>
-                        <TableCell align="right">{formatCurrency(totals.fall)}</TableCell>
-                        <TableCell align="right">{formatCurrency(totals.final)}</TableCell>
-                        <TableCell align="right">{formatCurrency(totals.balance)}</TableCell>
-                        <TableCell align="right">{formatCurrency(totals.accumulatedFall)}</TableCell>
-                      </TableRow>
-                    </>
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
+                    </ToggleButtonGroup>
+                  </Box>
+                </>
+              )}
 
-            {/* Entry Counter */}
-            <Typography variant="body2" sx={{ mt: 2 }}>
-              Mostrando {filteredData.length} entradas
-            </Typography>
+              {/* Resultados Sub-Tab Content */}
+              {subTab === 1 && (
+                <ResultadosSubTab selectedDate={selectedDate} />
+              )}
+            </Box>
+
+            {/* Bancas Tab Content: Quick Filter, Data Table, Entry Counter */}
+            {subTab === 0 && (
+              <>
+                {/* Quick Filter */}
+                <Box sx={{ mb: 2, textAlign: 'right' }}>
+                  <TextField
+                    size="small"
+                    placeholder="Filtro rapido"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    InputProps={{
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <SearchIcon />
+                        </InputAdornment>
+                      ),
+                    }}
+                    sx={{ width: 300 }}
+                  />
+                </Box>
+
+                {/* Data Table */}
+                <TableContainer component={Paper} variant="outlined" sx={{ maxHeight: 600 }}>
+                  <Table size="small" stickyHeader>
+                    <TableHead sx={{ backgroundColor: '#e3e3e3' }}>
+                      <TableRow>
+                        {TABLE_COLUMNS.map(col => (
+                          <TableCell key={col.key} align={col.align} sx={{ backgroundColor: '#e3e3e3', fontWeight: 600 }}>
+                            {col.label}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {filteredData.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={15} align="center" sx={{ py: 3, color: 'text.secondary' }}>
+                            No hay entradas para el sorteo y la fecha elegidos
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        <>
+                          {filteredData.map((row) => (
+                            <TableRow key={row.id} hover>
+                              <TableCell>{row.ref}</TableCell>
+                              <TableCell>{row.code}</TableCell>
+                              <TableCell align="center">{row.p}</TableCell>
+                              <TableCell align="center">{row.l}</TableCell>
+                              <TableCell align="center">{row.w}</TableCell>
+                              <TableCell align="right">{row.total}</TableCell>
+                              <TableCell align="right">{formatCurrency(row.sales)}</TableCell>
+                              <TableCell align="right">{formatCurrency(row.commissions)}</TableCell>
+                              <TableCell align="right">{formatCurrency(row.discounts)}</TableCell>
+                              <TableCell align="right">{formatCurrency(row.prizes)}</TableCell>
+                              <TableCell align="right" sx={{ color: row.net < 0 ? 'error.main' : 'inherit' }}>
+                                {formatCurrency(row.net)}
+                              </TableCell>
+                              <TableCell align="right">{formatCurrency(row.fall)}</TableCell>
+                              <TableCell align="right">{formatCurrency(row.final)}</TableCell>
+                              <TableCell align="right" sx={{ color: row.balance < 0 ? 'error.main' : 'success.main' }}>
+                                {formatCurrency(row.balance)}
+                              </TableCell>
+                              <TableCell align="right">{formatCurrency(row.accumulatedFall)}</TableCell>
+                            </TableRow>
+                          ))}
+                          {/* Totals Row */}
+                          <TableRow sx={{ backgroundColor: '#f5f7fa', '& td': { fontWeight: 600 } }}>
+                            <TableCell>Totales</TableCell>
+                            <TableCell>-</TableCell>
+                            <TableCell align="center">{totals.p}</TableCell>
+                            <TableCell align="center">{totals.l}</TableCell>
+                            <TableCell align="center">{totals.w}</TableCell>
+                            <TableCell align="right">{totals.total}</TableCell>
+                            <TableCell align="right">{formatCurrency(totals.sales)}</TableCell>
+                            <TableCell align="right">{formatCurrency(totals.commissions)}</TableCell>
+                            <TableCell align="right">{formatCurrency(totals.discounts)}</TableCell>
+                            <TableCell align="right">{formatCurrency(totals.prizes)}</TableCell>
+                            <TableCell align="right">{formatCurrency(totals.net)}</TableCell>
+                            <TableCell align="right">{formatCurrency(totals.fall)}</TableCell>
+                            <TableCell align="right">{formatCurrency(totals.final)}</TableCell>
+                            <TableCell align="right">{formatCurrency(totals.balance)}</TableCell>
+                            <TableCell align="right">{formatCurrency(totals.accumulatedFall)}</TableCell>
+                          </TableRow>
+                        </>
+                      )}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+
+                {/* Entry Counter */}
+                <Typography variant="body2" sx={{ mt: 2 }}>
+                  Mostrando {filteredData.length} entradas
+                </Typography>
+              </>
+            )}
           </CardContent>
         </Card>
       )}

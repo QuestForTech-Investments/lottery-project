@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import {
   Box,
   Card,
@@ -19,9 +19,11 @@ import {
   TableHead,
   TableRow,
   Paper,
-  CircularProgress
+  CircularProgress,
+  InputAdornment
 } from '@mui/material';
 import type { SelectChangeEvent } from '@mui/material/Select';
+import { Search as SearchIcon } from '@mui/icons-material';
 import api from '@services/api';
 
 interface Zone {
@@ -96,6 +98,9 @@ const BancaPorSorteoTab = ({ selectedDate, setSelectedDate, zones, selectedZones
   const [summary, setSummary] = useState({ totalSold: 0, totalPrizes: 0, totalCommissions: 0, totalNet: 0 });
   const [draws, setDraws] = useState<Draw[]>([]);
   const [selectedDraws, setSelectedDraws] = useState<number[]>([]);
+  const [fechaInicial, setFechaInicial] = useState(selectedDate);
+  const [fechaFinal, setFechaFinal] = useState(selectedDate);
+  const [searchTerm, setSearchTerm] = useState('');
 
   // Load draws on mount
   useEffect(() => {
@@ -118,7 +123,7 @@ const BancaPorSorteoTab = ({ selectedDate, setSelectedDate, zones, selectedZones
     setLoading(true);
     try {
       const response = await api.get<BettingPoolDrawResponse>(
-        `/reports/sales/betting-pool-by-draw?date=${selectedDate}`
+        `/reports/sales/betting-pool-by-draw?startDate=${fechaInicial}&endDate=${fechaFinal}`
       );
       setData(response.bettingPools || []);
       setDrawTotals(response.drawTotals || []);
@@ -130,7 +135,17 @@ const BancaPorSorteoTab = ({ selectedDate, setSelectedDate, zones, selectedZones
     } finally {
       setLoading(false);
     }
-  }, [selectedDate]);
+  }, [fechaInicial, fechaFinal]);
+
+  // Filter data based on search term
+  const filteredData = useMemo(() => {
+    if (!searchTerm) return data;
+    const term = searchTerm.toLowerCase();
+    return data.filter(d =>
+      d.bettingPoolName.toLowerCase().includes(term) ||
+      d.bettingPoolCode.toLowerCase().includes(term)
+    );
+  }, [data, searchTerm]);
 
   const handleDrawChange = (event: SelectChangeEvent<number[]>) => {
     const value = event.target.value;
@@ -144,6 +159,16 @@ const BancaPorSorteoTab = ({ selectedDate, setSelectedDate, zones, selectedZones
   // Get unique draws from data for columns
   const uniqueDraws = drawTotals;
 
+  // Calculate totals for the filtered data
+  const totals = useMemo(() => {
+    return filteredData.reduce((acc, row) => ({
+      totalSold: acc.totalSold + row.totalSold,
+      totalPrizes: acc.totalPrizes + row.totalPrizes,
+      totalCommissions: acc.totalCommissions + row.totalCommissions,
+      totalNet: acc.totalNet + row.totalNet
+    }), { totalSold: 0, totalPrizes: 0, totalCommissions: 0, totalNet: 0 });
+  }, [filteredData]);
+
   return (
     <Card>
       <CardContent>
@@ -155,13 +180,30 @@ const BancaPorSorteoTab = ({ selectedDate, setSelectedDate, zones, selectedZones
         <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap', alignItems: 'flex-end' }}>
           <Box>
             <Typography variant="caption" sx={{ color: 'text.secondary', mb: 0.5, display: 'block' }}>
-              Fecha
+              Fecha inicial
             </Typography>
             <TextField
               type="date"
               size="small"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
+              value={fechaInicial}
+              onChange={(e) => setFechaInicial(e.target.value)}
+              sx={{
+                width: 200,
+                '& .MuiInputBase-root': { height: 32 },
+                '& .MuiInputBase-input': { py: 0.5, fontSize: '0.8rem' },
+              }}
+            />
+          </Box>
+
+          <Box>
+            <Typography variant="caption" sx={{ color: 'text.secondary', mb: 0.5, display: 'block' }}>
+              Fecha final
+            </Typography>
+            <TextField
+              type="date"
+              size="small"
+              value={fechaFinal}
+              onChange={(e) => setFechaFinal(e.target.value)}
               sx={{
                 width: 200,
                 '& .MuiInputBase-root': { height: 32 },
@@ -252,82 +294,75 @@ const BancaPorSorteoTab = ({ selectedDate, setSelectedDate, zones, selectedZones
         </Box>
 
         <Typography variant="h5" align="center" gutterBottom sx={{ fontWeight: 400, mb: 3 }}>
-          Total neto: {formatCurrency(summary.totalNet)}
+          Total neto: {formatCurrency(totals.totalNet)}
         </Typography>
 
-        {data.length === 0 && !loading ? (
-          <Typography variant="h6" align="center" sx={{ color: 'text.secondary', mt: 4 }}>
-            No hay entradas para el sorteo y la fecha elegidos
-          </Typography>
-        ) : (
-          <TableContainer component={Paper} variant="outlined" sx={{ maxHeight: 600, overflowX: 'auto' }}>
-            <Table size="small" stickyHeader>
-              <TableHead sx={{ backgroundColor: '#e3e3e3' }}>
+        <Box sx={{ mb: 2 }}>
+          <TextField
+            size="small"
+            placeholder="Filtrado rápido"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  <SearchIcon />
+                </InputAdornment>
+              ),
+            }}
+            sx={{ width: 300 }}
+          />
+        </Box>
+
+        <TableContainer component={Paper} variant="outlined" sx={{ maxHeight: 500 }}>
+          <Table size="small" stickyHeader>
+            <TableHead sx={{ backgroundColor: '#e3e3e3' }}>
+              <TableRow>
+                <TableCell sx={{ fontWeight: 600, backgroundColor: '#e3e3e3' }}>Ref.</TableCell>
+                <TableCell sx={{ fontWeight: 600, backgroundColor: '#e3e3e3' }}>Banca</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600, backgroundColor: '#e3e3e3' }}>Total Vendido</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600, backgroundColor: '#e3e3e3' }}>Total premios</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600, backgroundColor: '#e3e3e3' }}>Total comisiones</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600, backgroundColor: '#e3e3e3' }}>Total neto</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {filteredData.length === 0 ? (
                 <TableRow>
-                  <TableCell sx={{ minWidth: 150, position: 'sticky', left: 0, backgroundColor: '#e3e3e3', zIndex: 3 }}>
-                    Banca
+                  <TableCell colSpan={6} align="center" sx={{ py: 3, color: 'text.secondary' }}>
+                    {loading ? 'Cargando...' : 'No hay entradas para el sorteo y la fecha elegidos'}
                   </TableCell>
-                  {uniqueDraws.map(draw => (
-                    <TableCell key={draw.drawId} align="right" sx={{ minWidth: 100 }}>
-                      {draw.drawName}
-                    </TableCell>
-                  ))}
-                  <TableCell align="right" sx={{ minWidth: 100 }}><strong>Total</strong></TableCell>
                 </TableRow>
-              </TableHead>
-              <TableBody>
-                {loading ? (
-                  <TableRow>
-                    <TableCell colSpan={uniqueDraws.length + 2} align="center" sx={{ py: 3 }}>
-                      <CircularProgress size={24} />
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  <>
-                    {data.map((pool) => (
-                      <TableRow key={pool.bettingPoolId} hover>
-                        <TableCell sx={{ position: 'sticky', left: 0, backgroundColor: 'white', zIndex: 1 }}>
-                          {pool.bettingPoolName}
-                          <Typography variant="caption" display="block" color="text.secondary">
-                            {pool.bettingPoolCode}
-                          </Typography>
-                        </TableCell>
-                        {uniqueDraws.map(draw => {
-                          const drawSale = pool.drawSales.find(ds => ds.drawId === draw.drawId);
-                          return (
-                            <TableCell key={draw.drawId} align="right">
-                              {formatCurrency(drawSale?.sold || 0)}
-                            </TableCell>
-                          );
-                        })}
-                        <TableCell align="right">
-                          <strong>{formatCurrency(pool.totalSold)}</strong>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                    {/* Totals row */}
-                    <TableRow sx={{ backgroundColor: 'grey.200' }}>
-                      <TableCell sx={{ position: 'sticky', left: 0, backgroundColor: 'grey.200', zIndex: 1 }}>
-                        <strong>Totales</strong>
-                      </TableCell>
-                      {uniqueDraws.map(draw => (
-                        <TableCell key={draw.drawId} align="right">
-                          <strong>{formatCurrency(draw.totalSold)}</strong>
-                        </TableCell>
-                      ))}
-                      <TableCell align="right">
-                        <strong>{formatCurrency(summary.totalSold)}</strong>
+              ) : (
+                <>
+                  {filteredData.map((pool) => (
+                    <TableRow key={pool.bettingPoolId} hover>
+                      <TableCell>{pool.bettingPoolCode}</TableCell>
+                      <TableCell>{pool.bettingPoolName}</TableCell>
+                      <TableCell align="right">{formatCurrency(pool.totalSold)}</TableCell>
+                      <TableCell align="right">{formatCurrency(pool.totalPrizes)}</TableCell>
+                      <TableCell align="right">{formatCurrency(pool.totalCommissions)}</TableCell>
+                      <TableCell align="right" sx={{ color: pool.totalNet < 0 ? 'error.main' : 'inherit' }}>
+                        {formatCurrency(pool.totalNet)}
                       </TableCell>
                     </TableRow>
-                  </>
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        )}
+                  ))}
+                  {/* Totals row */}
+                  <TableRow sx={{ backgroundColor: '#f5f7fa', '& td': { fontWeight: 600 } }}>
+                    <TableCell colSpan={2}>Totales</TableCell>
+                    <TableCell align="right">{formatCurrency(totals.totalSold)}</TableCell>
+                    <TableCell align="right">{formatCurrency(totals.totalPrizes)}</TableCell>
+                    <TableCell align="right">{formatCurrency(totals.totalCommissions)}</TableCell>
+                    <TableCell align="right">{formatCurrency(totals.totalNet)}</TableCell>
+                  </TableRow>
+                </>
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
 
         <Typography variant="body2" sx={{ mt: 2 }}>
-          Mostrando {data.length} bancas, {uniqueDraws.length} sorteos
+          Mostrando {filteredData.length} de {data.length} entradas
         </Typography>
       </CardContent>
     </Card>

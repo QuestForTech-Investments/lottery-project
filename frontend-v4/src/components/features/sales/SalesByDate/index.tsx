@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Box, Paper, Typography, TextField, Grid, Autocomplete, Button, Stack, Table, TableHead, TableBody, TableRow, TableCell, Checkbox, FormControlLabel, InputAdornment, CircularProgress } from '@mui/material';
+import { Box, Paper, Typography, TextField, Grid, Autocomplete, Button, Stack, Table, TableHead, TableBody, TableRow, TableCell, Switch, FormControlLabel, InputAdornment, CircularProgress } from '@mui/material';
 import { PictureAsPdf, Search } from '@mui/icons-material';
 import api from '@services/api';
 
@@ -140,7 +140,7 @@ const SalesByDate = (): React.ReactElement => {
     <Box sx={{ p: 2 }}>
       <Paper elevation={3}>
         <Box sx={{ p: 3 }}>
-          <Typography variant="h5" align="center" sx={{ color: '#1976d2', mb: 4, fontWeight: 400 }}>
+          <Typography variant="h5" align="center" sx={{ mb: 4, fontWeight: 400 }}>
             Ventas por fecha
           </Typography>
 
@@ -167,8 +167,9 @@ const SalesByDate = (): React.ReactElement => {
 
           <Box sx={{ mb: 2 }}>
             <FormControlLabel
-              control={<Checkbox checked={mostrarComision2} onChange={(e) => setMostrarComision2(e.target.checked)} />}
+              control={<Switch checked={mostrarComision2} onChange={(e) => setMostrarComision2(e.target.checked)} color="primary" />}
               label="Mostrar comisión #2"
+              sx={{ '& .MuiFormControlLabel-label': { fontSize: '0.875rem' } }}
             />
           </Box>
 
@@ -198,7 +199,7 @@ const SalesByDate = (): React.ReactElement => {
             }}>PDF</Button>
           </Stack>
 
-          <Box sx={{ mb: 2 }}>
+          <Box sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end' }}>
             <TextField
               size="small"
               placeholder="Filtrado rápido"
@@ -215,13 +216,9 @@ const SalesByDate = (): React.ReactElement => {
             />
           </Box>
 
-          <Typography variant="h5" align="center" sx={{ mb: 3, color: '#1976d2' }}>
-            Total Neto: {formatCurrency(totals.neto)}
-          </Typography>
-
           <Table size="small">
-            <TableHead>
-              <TableRow sx={{ backgroundColor: '#e3e3e3' }}>
+            <TableHead sx={{ backgroundColor: '#e3e3e3' }}>
+              <TableRow>
                 {['Fecha', 'Venta', 'Premios', 'Comisiones', 'Descuentos', 'Caída', 'Neto'].map(h => (
                   <TableCell key={h} sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.75rem' }}>{h}</TableCell>
                 ))}
@@ -247,14 +244,14 @@ const SalesByDate = (): React.ReactElement => {
                       <TableCell sx={{ color: d.neto >= 0 ? 'success.main' : 'error.main' }}>{formatCurrency(d.neto)}</TableCell>
                     </TableRow>
                   ))}
-                  <TableRow sx={{ backgroundColor: '#e3f2fd' }}>
-                    <TableCell sx={{ fontWeight: 600 }}>Totales</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>{formatCurrency(totals.venta)}</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>{formatCurrency(totals.premios)}</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>{formatCurrency(totals.comisiones)}</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>{formatCurrency(totals.descuentos)}</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>{formatCurrency(totals.caida)}</TableCell>
-                    <TableCell sx={{ fontWeight: 600, color: totals.neto >= 0 ? 'success.main' : 'error.main' }}>{formatCurrency(totals.neto)}</TableCell>
+                  <TableRow sx={{ backgroundColor: '#f5f7fa', '& td': { fontWeight: 600 } }}>
+                    <TableCell>Totales</TableCell>
+                    <TableCell>{formatCurrency(totals.venta)}</TableCell>
+                    <TableCell>{formatCurrency(totals.premios)}</TableCell>
+                    <TableCell>{formatCurrency(totals.comisiones)}</TableCell>
+                    <TableCell>{formatCurrency(totals.descuentos)}</TableCell>
+                    <TableCell>{formatCurrency(totals.caida)}</TableCell>
+                    <TableCell sx={{ color: totals.neto >= 0 ? 'success.main' : 'error.main' }}>{formatCurrency(totals.neto)}</TableCell>
                   </TableRow>
                 </>
               )}

@@ -82,7 +82,8 @@ const FILTER_OPTIONS: FilterOption[] = [
   { value: 'with-sales', label: 'Con ventas' },
   { value: 'with-prizes', label: 'Con premios' },
   { value: 'negative-net', label: 'Con ventas netas negativas' },
-  { value: 'positive-net', label: 'Con ventas netas positivas' }
+  { value: 'positive-net', label: 'Con ventas netas positivas' },
+  { value: 'with-pending-tickets', label: 'Con tickets pendientes' }
 ];
 
 const PorZonaTab = ({ selectedDate, setSelectedDate, zones, selectedZones, handleZoneChange }: PorZonaTabProps): React.ReactElement => {
@@ -124,6 +125,9 @@ const PorZonaTab = ({ selectedDate, setSelectedDate, zones, selectedZones, handl
         break;
       case 'positive-net':
         result = result.filter(d => d.totalNet > 0);
+        break;
+      case 'with-pending-tickets':
+        result = result.filter(d => d.ticketCount > 0 && d.winnerCount === 0);
         break;
     }
 
@@ -327,19 +331,19 @@ const PorZonaTab = ({ selectedDate, setSelectedDate, zones, selectedZones, handl
           <Table size="small">
             <TableHead sx={{ backgroundColor: '#e3e3e3' }}>
               <TableRow>
-                <TableCell>Nombre</TableCell>
-                <TableCell align="center">Bancas</TableCell>
-                <TableCell align="center">Tickets</TableCell>
-                <TableCell align="center">Líneas</TableCell>
-                <TableCell align="center">W</TableCell>
-                <TableCell align="right">Venta</TableCell>
-                <TableCell align="right">Comisiones</TableCell>
-                <TableCell align="right">Descuentos</TableCell>
-                <TableCell align="right">Premios</TableCell>
-                <TableCell align="right">Neto</TableCell>
-                <TableCell align="right">Caída</TableCell>
-                <TableCell align="right">Final</TableCell>
-                <TableCell align="right">Balance</TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>Nombre</TableCell>
+                <TableCell align="center" sx={{ fontWeight: 600 }}>P</TableCell>
+                <TableCell align="center" sx={{ fontWeight: 600 }}>L</TableCell>
+                <TableCell align="center" sx={{ fontWeight: 600 }}>W</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600 }}>Total</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600 }}>Venta</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600 }}>Comisiones</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600 }}>Descuentos</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600 }}>Premios</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600 }}>Neto</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600 }}>Caída</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600 }}>Final</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600 }}>Balance</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -355,9 +359,9 @@ const PorZonaTab = ({ selectedDate, setSelectedDate, zones, selectedZones, handl
                     <TableRow key={row.zoneId} hover>
                       <TableCell>{row.zoneName}</TableCell>
                       <TableCell align="center">{row.bettingPoolCount}</TableCell>
-                      <TableCell align="center">{row.ticketCount}</TableCell>
                       <TableCell align="center">{row.lineCount}</TableCell>
                       <TableCell align="center">{row.winnerCount}</TableCell>
+                      <TableCell align="right">{row.bettingPoolCount + row.lineCount + row.winnerCount}</TableCell>
                       <TableCell align="right">{formatCurrency(row.totalSold)}</TableCell>
                       <TableCell align="right">{formatCurrency(row.totalCommissions)}</TableCell>
                       <TableCell align="right">{formatCurrency(row.totalDiscounts)}</TableCell>
@@ -372,20 +376,20 @@ const PorZonaTab = ({ selectedDate, setSelectedDate, zones, selectedZones, handl
                       </TableCell>
                     </TableRow>
                   ))}
-                  <TableRow sx={{ backgroundColor: 'grey.200' }}>
-                    <TableCell><strong>Totales</strong></TableCell>
-                    <TableCell align="center"><strong>{totals.bettingPoolCount}</strong></TableCell>
-                    <TableCell align="center"><strong>{totals.ticketCount}</strong></TableCell>
-                    <TableCell align="center"><strong>{totals.lineCount}</strong></TableCell>
-                    <TableCell align="center"><strong>{totals.winnerCount}</strong></TableCell>
-                    <TableCell align="right"><strong>{formatCurrency(totals.totalSold)}</strong></TableCell>
-                    <TableCell align="right"><strong>{formatCurrency(totals.totalCommissions)}</strong></TableCell>
-                    <TableCell align="right"><strong>{formatCurrency(totals.totalDiscounts)}</strong></TableCell>
-                    <TableCell align="right"><strong>{formatCurrency(totals.totalPrizes)}</strong></TableCell>
-                    <TableCell align="right"><strong>{formatCurrency(totals.totalNet)}</strong></TableCell>
-                    <TableCell align="right"><strong>{formatCurrency(totals.fall)}</strong></TableCell>
-                    <TableCell align="right"><strong>{formatCurrency(totals.final)}</strong></TableCell>
-                    <TableCell align="right"><strong>{formatCurrency(totals.balance)}</strong></TableCell>
+                  <TableRow sx={{ backgroundColor: '#f5f7fa', '& td': { fontWeight: 600 } }}>
+                    <TableCell>Totales</TableCell>
+                    <TableCell align="center">{totals.bettingPoolCount}</TableCell>
+                    <TableCell align="center">{totals.lineCount}</TableCell>
+                    <TableCell align="center">{totals.winnerCount}</TableCell>
+                    <TableCell align="right">{totals.bettingPoolCount + totals.lineCount + totals.winnerCount}</TableCell>
+                    <TableCell align="right">{formatCurrency(totals.totalSold)}</TableCell>
+                    <TableCell align="right">{formatCurrency(totals.totalCommissions)}</TableCell>
+                    <TableCell align="right">{formatCurrency(totals.totalDiscounts)}</TableCell>
+                    <TableCell align="right">{formatCurrency(totals.totalPrizes)}</TableCell>
+                    <TableCell align="right">{formatCurrency(totals.totalNet)}</TableCell>
+                    <TableCell align="right">{formatCurrency(totals.fall)}</TableCell>
+                    <TableCell align="right">{formatCurrency(totals.final)}</TableCell>
+                    <TableCell align="right">{formatCurrency(totals.balance)}</TableCell>
                   </TableRow>
                 </>
               )}

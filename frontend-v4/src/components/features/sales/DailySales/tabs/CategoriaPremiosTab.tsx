@@ -160,20 +160,21 @@ const CategoriaPremiosTab = ({ selectedDate, setSelectedDate }: CategoriaPremios
           <Table size="small">
             <TableHead sx={{ backgroundColor: '#e3e3e3' }}>
               <TableRow>
-                <TableCell>Tipo de Apuesta</TableCell>
-                <TableCell>Código</TableCell>
-                <TableCell align="center">Líneas</TableCell>
-                <TableCell align="center">Ganadores</TableCell>
-                <TableCell align="right">Total Vendido</TableCell>
-                <TableCell align="right">Total Premios</TableCell>
-                <TableCell align="right">Neto</TableCell>
-                <TableCell align="right">% Ganancia</TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>Premio</TableCell>
+                <TableCell align="center" sx={{ fontWeight: 600 }}>L</TableCell>
+                <TableCell align="center" sx={{ fontWeight: 600 }}>W</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600 }}>Total</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600 }}>Venta</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600 }}>Comisiones</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600 }}>Premios</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600 }}>Neto</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600 }}>Balance</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {filteredData.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} align="center" sx={{ py: 3, color: 'text.secondary' }}>
+                  <TableCell colSpan={9} align="center" sx={{ py: 3, color: 'text.secondary' }}>
                     {loading ? 'Cargando...' : 'No hay entradas para el sorteo y la fecha elegidos'}
                   </TableCell>
                 </TableRow>
@@ -182,33 +183,30 @@ const CategoriaPremiosTab = ({ selectedDate, setSelectedDate }: CategoriaPremios
                   {filteredData.map((row) => (
                     <TableRow key={row.betTypeId} hover>
                       <TableCell>{row.betTypeName}</TableCell>
-                      <TableCell>{row.betTypeCode || '-'}</TableCell>
                       <TableCell align="center">{row.lineCount}</TableCell>
                       <TableCell align="center">{row.winnerCount}</TableCell>
+                      <TableCell align="right">{row.lineCount + row.winnerCount}</TableCell>
                       <TableCell align="right">{formatCurrency(row.totalSold)}</TableCell>
+                      <TableCell align="right">{formatCurrency(0)}</TableCell>
                       <TableCell align="right">{formatCurrency(row.totalPrizes)}</TableCell>
                       <TableCell align="right" sx={{ color: row.totalNet < 0 ? 'error.main' : 'inherit' }}>
                         {formatCurrency(row.totalNet)}
                       </TableCell>
-                      <TableCell align="right" sx={{ color: row.profitPercentage < 0 ? 'error.main' : 'success.main' }}>
-                        {row.profitPercentage}%
+                      <TableCell align="right" sx={{ color: row.totalNet < 0 ? 'error.main' : 'success.main' }}>
+                        {formatCurrency(row.totalNet)}
                       </TableCell>
                     </TableRow>
                   ))}
-                  <TableRow sx={{ backgroundColor: 'grey.200' }}>
-                    <TableCell colSpan={2}><strong>Totales</strong></TableCell>
-                    <TableCell align="center"><strong>{totals.lineCount}</strong></TableCell>
-                    <TableCell align="center"><strong>{totals.winnerCount}</strong></TableCell>
-                    <TableCell align="right"><strong>{formatCurrency(totals.totalSold)}</strong></TableCell>
-                    <TableCell align="right"><strong>{formatCurrency(totals.totalPrizes)}</strong></TableCell>
-                    <TableCell align="right"><strong>{formatCurrency(totals.totalNet)}</strong></TableCell>
-                    <TableCell align="right">
-                      <strong>
-                        {totals.totalSold > 0
-                          ? `${((totals.totalNet / totals.totalSold) * 100).toFixed(2)}%`
-                          : '0%'}
-                      </strong>
-                    </TableCell>
+                  <TableRow sx={{ backgroundColor: '#f5f7fa', '& td': { fontWeight: 600 } }}>
+                    <TableCell>Totales</TableCell>
+                    <TableCell align="center">{totals.lineCount}</TableCell>
+                    <TableCell align="center">{totals.winnerCount}</TableCell>
+                    <TableCell align="right">{totals.lineCount + totals.winnerCount}</TableCell>
+                    <TableCell align="right">{formatCurrency(totals.totalSold)}</TableCell>
+                    <TableCell align="right">{formatCurrency(0)}</TableCell>
+                    <TableCell align="right">{formatCurrency(totals.totalPrizes)}</TableCell>
+                    <TableCell align="right">{formatCurrency(totals.totalNet)}</TableCell>
+                    <TableCell align="right">{formatCurrency(totals.totalNet)}</TableCell>
                   </TableRow>
                 </>
               )}

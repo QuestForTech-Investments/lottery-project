@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import {
   Box,
   Card,
@@ -59,6 +59,19 @@ interface CombinationsResponse {
   totalCount: number;
 }
 
+interface Draw {
+  drawId: number;
+  drawName?: string;
+  lotteryName?: string;
+}
+
+interface BettingPool {
+  id: number;
+  bettingPoolId?: number;
+  name?: string;
+  code?: string;
+}
+
 interface CombinacionesTabProps {
   selectedDate: string;
   setSelectedDate: (date: string) => void;
@@ -72,6 +85,50 @@ const CombinacionesTab = ({ selectedDate, setSelectedDate, zones, selectedZones,
   const [data, setData] = useState<CombinationSalesDto[]>([]);
   const [summary, setSummary] = useState({ totalSold: 0, totalPrizes: 0, totalCommissions: 0, totalNet: 0 });
   const [searchTerm, setSearchTerm] = useState('');
+  const [draws, setDraws] = useState<Draw[]>([]);
+  const [selectedDraws, setSelectedDraws] = useState<number[]>([]);
+  const [bancas, setBancas] = useState<BettingPool[]>([]);
+  const [selectedBancas, setSelectedBancas] = useState<number[]>([]);
+
+  // Load draws and bancas on mount
+  useEffect(() => {
+    const loadFilters = async () => {
+      try {
+        // Load draws
+        const drawsResponse = await api.get<{ items?: Draw[] } | Draw[]>('/draws');
+        const drawsArray = (drawsResponse && typeof drawsResponse === 'object' && 'items' in drawsResponse)
+          ? (drawsResponse.items || [])
+          : (drawsResponse as Draw[] || []);
+        setDraws(drawsArray);
+        setSelectedDraws(drawsArray.map(d => d.drawId));
+
+        // Load bancas
+        const bancasResponse = await api.get<{ items?: BettingPool[] } | BettingPool[]>('/betting-pools');
+        const bancasArray = (bancasResponse && typeof bancasResponse === 'object' && 'items' in bancasResponse)
+          ? (bancasResponse.items || [])
+          : (bancasResponse as BettingPool[] || []);
+        const normalizedBancas = bancasArray.map((b: BettingPool) => ({
+          id: b.bettingPoolId || b.id,
+          name: b.name || '',
+          code: b.code || ''
+        }));
+        setBancas(normalizedBancas);
+      } catch (error) {
+        console.error('Error loading filters:', error);
+      }
+    };
+    loadFilters();
+  }, []);
+
+  const handleDrawChange = (event: SelectChangeEvent<number[]>) => {
+    const value = event.target.value;
+    setSelectedDraws(typeof value === 'string' ? value.split(',').map(Number) : value);
+  };
+
+  const handleBancaChange = (event: SelectChangeEvent<number[]>) => {
+    const value = event.target.value;
+    setSelectedBancas(typeof value === 'string' ? value.split(',').map(Number) : value);
+  };
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -142,6 +199,35 @@ const CombinacionesTab = ({ selectedDate, setSelectedDate, zones, selectedZones,
 
           <Box>
             <Typography variant="caption" sx={{ color: 'text.secondary', mb: 0.5, display: 'block' }}>
+              Sorteos
+            </Typography>
+            <FormControl
+              sx={{
+                minWidth: 200,
+                '& .MuiInputBase-root': { height: 32 },
+                '& .MuiSelect-select': { py: 0.5, fontSize: '0.8rem' },
+              }}
+              size="small"
+            >
+              <Select
+                multiple
+                value={selectedDraws}
+                onChange={handleDrawChange}
+                input={<OutlinedInput />}
+                renderValue={(selected) => `${selected.length} seleccionados`}
+              >
+                {draws.map((draw) => (
+                  <MenuItem key={draw.drawId} value={draw.drawId}>
+                    <Checkbox checked={selectedDraws.indexOf(draw.drawId) > -1} />
+                    <ListItemText primary={draw.drawName || draw.lotteryName || `Draw ${draw.drawId}`} />
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
+
+          <Box>
+            <Typography variant="caption" sx={{ color: 'text.secondary', mb: 0.5, display: 'block' }}>
               Zonas
             </Typography>
             <FormControl
@@ -171,6 +257,35 @@ const CombinacionesTab = ({ selectedDate, setSelectedDate, zones, selectedZones,
               </Select>
             </FormControl>
           </Box>
+
+          <Box>
+            <Typography variant="caption" sx={{ color: 'text.secondary', mb: 0.5, display: 'block' }}>
+              Bancas
+            </Typography>
+            <FormControl
+              sx={{
+                minWidth: 200,
+                '& .MuiInputBase-root': { height: 32 },
+                '& .MuiSelect-select': { py: 0.5, fontSize: '0.8rem' },
+              }}
+              size="small"
+            >
+              <Select
+                multiple
+                value={selectedBancas}
+                onChange={handleBancaChange}
+                input={<OutlinedInput />}
+                renderValue={(selected) => `${selected.length} seleccionadas`}
+              >
+                {bancas.map((banca) => (
+                  <MenuItem key={banca.id} value={banca.id}>
+                    <Checkbox checked={selectedBancas.indexOf(banca.id) > -1} />
+                    <ListItemText primary={`${banca.code} - ${banca.name}`} />
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
         </Box>
 
         <Box sx={{ mb: 3 }}>
@@ -192,11 +307,7 @@ const CombinacionesTab = ({ selectedDate, setSelectedDate, zones, selectedZones,
           </Button>
         </Box>
 
-        <Typography variant="h5" align="center" gutterBottom sx={{ fontWeight: 400, mb: 3 }}>
-          Total vendido: {formatCurrency(summary.totalSold)}
-        </Typography>
-
-        <Box sx={{ mb: 2, textAlign: 'right' }}>
+        <Box sx={{ mb: 2 }}>
           <TextField
             size="small"
             placeholder="Filtrado rápido"
@@ -217,20 +328,18 @@ const CombinacionesTab = ({ selectedDate, setSelectedDate, zones, selectedZones,
           <Table size="small" stickyHeader>
             <TableHead sx={{ backgroundColor: '#e3e3e3' }}>
               <TableRow>
-                <TableCell>Combinación</TableCell>
-                <TableCell>Sorteo</TableCell>
-                <TableCell>Tipo de apuesta</TableCell>
-                <TableCell align="center">Líneas</TableCell>
-                <TableCell align="right">Total Vendido</TableCell>
-                <TableCell align="right">Total comisiones</TableCell>
-                <TableCell align="right">Total premios</TableCell>
-                <TableCell align="right">Balance</TableCell>
+                <TableCell sx={{ fontWeight: 600, backgroundColor: '#e3e3e3' }}>Combinación</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600, backgroundColor: '#e3e3e3' }}>Total Vendido</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600, backgroundColor: '#e3e3e3' }}>Total comisiones</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600, backgroundColor: '#e3e3e3' }}>Total comisiones 2</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600, backgroundColor: '#e3e3e3' }}>Total premios</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600, backgroundColor: '#e3e3e3' }}>Balances</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {filteredData.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} align="center" sx={{ py: 3, color: 'text.secondary' }}>
+                  <TableCell colSpan={6} align="center" sx={{ py: 3, color: 'text.secondary' }}>
                     {loading ? 'Cargando...' : 'No hay entradas para el sorteo y la fecha elegidos'}
                   </TableCell>
                 </TableRow>
@@ -243,24 +352,22 @@ const CombinacionesTab = ({ selectedDate, setSelectedDate, zones, selectedZones,
                           {row.betNumber}
                         </Typography>
                       </TableCell>
-                      <TableCell>{row.drawName}</TableCell>
-                      <TableCell>{row.betTypeName}</TableCell>
-                      <TableCell align="center">{row.lineCount}</TableCell>
                       <TableCell align="right">{formatCurrency(row.totalSold)}</TableCell>
                       <TableCell align="right">{formatCurrency(row.totalCommissions)}</TableCell>
+                      <TableCell align="right">{formatCurrency(0)}</TableCell>
                       <TableCell align="right">{formatCurrency(row.totalPrizes)}</TableCell>
                       <TableCell align="right" sx={{ color: row.balance < 0 ? 'error.main' : 'success.main' }}>
                         {formatCurrency(row.balance)}
                       </TableCell>
                     </TableRow>
                   ))}
-                  <TableRow sx={{ backgroundColor: 'grey.200' }}>
-                    <TableCell colSpan={3}><strong>Totales</strong></TableCell>
-                    <TableCell align="center"><strong>{totals.lineCount}</strong></TableCell>
-                    <TableCell align="right"><strong>{formatCurrency(totals.totalSold)}</strong></TableCell>
-                    <TableCell align="right"><strong>{formatCurrency(totals.totalCommissions)}</strong></TableCell>
-                    <TableCell align="right"><strong>{formatCurrency(totals.totalPrizes)}</strong></TableCell>
-                    <TableCell align="right"><strong>{formatCurrency(totals.balance)}</strong></TableCell>
+                  <TableRow sx={{ backgroundColor: '#f5f7fa', '& td': { fontWeight: 600 } }}>
+                    <TableCell>Totales</TableCell>
+                    <TableCell align="right">{formatCurrency(totals.totalSold)}</TableCell>
+                    <TableCell align="right">{formatCurrency(totals.totalCommissions)}</TableCell>
+                    <TableCell align="right">{formatCurrency(0)}</TableCell>
+                    <TableCell align="right">{formatCurrency(totals.totalPrizes)}</TableCell>
+                    <TableCell align="right">{formatCurrency(totals.balance)}</TableCell>
                   </TableRow>
                 </>
               )}

@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Box, Paper, Typography, TextField, Grid, Autocomplete, Button, Stack, Table, TableHead, TableBody, TableRow, TableCell, ToggleButtonGroup, ToggleButton, CircularProgress } from '@mui/material';
-import { FilterList, PictureAsPdf, Download } from '@mui/icons-material';
+import { Box, Paper, Typography, TextField, Grid, Autocomplete, Button, Table, TableHead, TableBody, TableRow, TableCell, CircularProgress } from '@mui/material';
 import api from '@services/api';
 
 interface Banca {
@@ -38,11 +37,8 @@ interface BettingPoolSalesDto {
 }
 
 const BettingPoolSales = (): React.ReactElement => {
-  const [fechaInicial, setFechaInicial] = useState<string>(new Date().toISOString().split('T')[0]);
-  const [fechaFinal, setFechaFinal] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [fecha, setFecha] = useState<string>(new Date().toISOString().split('T')[0]);
   const [banca, setBanca] = useState<Banca | null>(null);
-  const [filterType, setFilterType] = useState<string>('todos');
-  const [filtroRapido, setFiltroRapido] = useState<string>('');
   const [data, setData] = useState<SalesData[]>([]);
   const [bancasList, setBancasList] = useState<Banca[]>([]);
   const [totals, setTotals] = useState<Totals>({ ventas: 0, comisiones: 0, premios: 0, neto: 0 });
@@ -77,7 +73,7 @@ const BettingPoolSales = (): React.ReactElement => {
     setLoading(true);
     try {
       const response = await api.get<BettingPoolSalesDto[]>(
-        `/reports/sales/by-betting-pool?startDate=${fechaInicial}&endDate=${fechaFinal}${banca ? `&bettingPoolId=${banca.id}` : ''}`
+        `/reports/sales/by-betting-pool?startDate=${fecha}&endDate=${fecha}${banca ? `&bettingPoolId=${banca.id}` : ''}`
       );
 
       const mapped: SalesData[] = (response || []).map(item => ({
@@ -106,85 +102,69 @@ const BettingPoolSales = (): React.ReactElement => {
     }
   };
 
-  const FILTER_OPTIONS = [
-    { value: 'todos', label: 'Todos' },
-    { value: 'con_ventas', label: 'Con ventas' },
-    { value: 'con_premios', label: 'Con premios' },
-    { value: 'ventas_negativas', label: 'Ventas negativas' },
-    { value: 'ventas_positivas', label: 'Ventas positivas' }
-  ];
-
   return (
     <Box sx={{ p: 2 }}>
       <Paper elevation={3}>
         <Box sx={{ p: 3 }}>
-          <Typography variant="h5" align="center" sx={{ color: '#1976d2', mb: 4, fontWeight: 400 }}>
-            Ventas por banca
-          </Typography>
-
-          <Grid container spacing={2} sx={{ mb: 2 }}>
-            <Grid item xs={12} md={4}>
-              <TextField fullWidth type="date" label="Fecha inicial" value={fechaInicial}
-                onChange={(e) => setFechaInicial(e.target.value)} InputLabelProps={{ shrink: true }} size="small" />
-            </Grid>
-            <Grid item xs={12} md={4}>
-              <TextField fullWidth type="date" label="Fecha final" value={fechaFinal}
-                onChange={(e) => setFechaFinal(e.target.value)} InputLabelProps={{ shrink: true }} size="small" />
-            </Grid>
-            <Grid item xs={12} md={4}>
-              <Autocomplete options={bancasList} getOptionLabel={(o) => o.name || ''} value={banca}
-                onChange={(e, v) => setBanca(v)} renderInput={(params) => <TextField {...params} label="Banca" size="small" />} />
-            </Grid>
-          </Grid>
-
-          <Stack direction="row" spacing={2} sx={{ mb: 3 }}>
+          <Box sx={{ display: 'flex', gap: 2, mb: 3, alignItems: 'flex-end', justifyContent: 'center', flexWrap: 'wrap' }}>
+            <Box>
+              <Typography variant="caption" sx={{ color: 'text.secondary', mb: 0.5, display: 'block' }}>
+                Fecha
+              </Typography>
+              <TextField
+                type="date"
+                size="small"
+                value={fecha}
+                onChange={(e) => setFecha(e.target.value)}
+                sx={{ width: 180 }}
+              />
+            </Box>
+            <Box sx={{ minWidth: 200 }}>
+              <Typography variant="caption" sx={{ color: 'text.secondary', mb: 0.5, display: 'block' }}>
+                Banca
+              </Typography>
+              <Autocomplete
+                options={bancasList}
+                getOptionLabel={(o) => o.name || ''}
+                value={banca}
+                onChange={(e, v) => setBanca(v)}
+                renderInput={(params) => <TextField {...params} size="small" placeholder="Seleccione" />}
+                sx={{ minWidth: 200 }}
+              />
+            </Box>
             <Button
               variant="contained"
               onClick={handleSearch}
               disabled={loading}
-              startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <FilterList />}
-              sx={{ px: 4, borderRadius: '30px', textTransform: 'uppercase' }}
+              sx={{
+                bgcolor: '#51cbce',
+                '&:hover': { bgcolor: '#45b8bb' },
+                borderRadius: '30px',
+                px: 4,
+                textTransform: 'uppercase',
+                color: 'white'
+              }}
             >
-              Ver ventas
+              {loading ? <CircularProgress size={20} color="inherit" /> : 'Ver ventas'}
             </Button>
-            <Button variant="contained" startIcon={<Download />} sx={{ borderRadius: '30px', textTransform: 'uppercase' }}>CSV</Button>
-            <Button variant="contained" startIcon={<PictureAsPdf />} sx={{ borderRadius: '30px', textTransform: 'uppercase' }}>PDF</Button>
-          </Stack>
-
-          <Typography variant="h5" align="center" sx={{ mb: 3, color: '#1976d2' }}>
-            Total Neto: {formatCurrency(totals.neto)}
-          </Typography>
-
-          <Box sx={{ mb: 2 }}>
-            <Typography variant="caption" sx={{ color: 'text.secondary', mb: 1, display: 'block' }}>Filtrar</Typography>
-            <ToggleButtonGroup exclusive value={filterType} onChange={(e, v) => v && setFilterType(v)} size="small">
-              {FILTER_OPTIONS.map(opt => (
-                <ToggleButton key={opt.value} value={opt.value} sx={{ textTransform: 'uppercase', fontSize: '0.7rem' }}>
-                  {opt.label}
-                </ToggleButton>
-              ))}
-            </ToggleButtonGroup>
           </Box>
 
-          <TextField fullWidth placeholder="Filtro rapido" value={filtroRapido} onChange={(e) => setFiltroRapido(e.target.value)}
-            size="small" sx={{ mb: 2, maxWidth: 300 }} />
-
           <Table size="small">
-            <TableHead>
-              <TableRow sx={{ backgroundColor: '#e3e3e3' }}>
+            <TableHead sx={{ backgroundColor: '#e3e3e3' }}>
+              <TableRow>
                 {['Código', 'Nombre', 'Ventas', 'Comisiones', 'Premios', 'Neto'].map(h => (
                   <TableCell key={h} sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.75rem' }}>{h}</TableCell>
                 ))}
               </TableRow>
             </TableHead>
             <TableBody>
-              <TableRow sx={{ backgroundColor: '#e3f2fd' }}>
-                <TableCell sx={{ fontWeight: 600 }}>Totales</TableCell>
+              <TableRow sx={{ backgroundColor: '#f5f7fa', '& td': { fontWeight: 600 } }}>
+                <TableCell>Totales</TableCell>
                 <TableCell>-</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>{formatCurrency(totals.ventas)}</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>{formatCurrency(totals.comisiones)}</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>{formatCurrency(totals.premios)}</TableCell>
-                <TableCell sx={{ fontWeight: 600, color: totals.neto >= 0 ? 'success.main' : 'error.main' }}>{formatCurrency(totals.neto)}</TableCell>
+                <TableCell>{formatCurrency(totals.ventas)}</TableCell>
+                <TableCell>{formatCurrency(totals.comisiones)}</TableCell>
+                <TableCell>{formatCurrency(totals.premios)}</TableCell>
+                <TableCell sx={{ color: totals.neto >= 0 ? 'success.main' : 'error.main' }}>{formatCurrency(totals.neto)}</TableCell>
               </TableRow>
               {data.map((d, i) => (
                 <TableRow key={i} sx={{ '&:hover': { backgroundColor: 'action.hover' } }}>

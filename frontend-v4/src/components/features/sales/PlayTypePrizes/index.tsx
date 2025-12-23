@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Box, Paper, Typography, TextField, Grid, Autocomplete, Button, Stack, Table, TableHead, TableBody, TableRow, TableCell, CircularProgress } from '@mui/material';
-import { FilterList, PictureAsPdf } from '@mui/icons-material';
+import { Refresh } from '@mui/icons-material';
 import api from '@services/api';
 
 interface Zona {
@@ -8,13 +8,6 @@ interface Zona {
   zoneId?: number;
   name: string;
   zoneName?: string;
-}
-
-interface Sorteo {
-  id: number;
-  drawId?: number;
-  name: string;
-  drawName?: string;
 }
 
 interface PlayTypeData {
@@ -35,17 +28,16 @@ interface PrizeCategoryDto {
 }
 
 const PlayTypePrizes = (): React.ReactElement => {
-  const [fecha, setFecha] = useState<string>(new Date().toISOString().split('T')[0]);
-  const [sorteo, setSorteo] = useState<Sorteo | null>(null);
+  const [fechaInicial, setFechaInicial] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [fechaFinal, setFechaFinal] = useState<string>(new Date().toISOString().split('T')[0]);
   const [zonas, setZonas] = useState<Zona[]>([]);
   const [data, setData] = useState<PlayTypeData[]>([]);
-  const [sorteosList, setSorteosList] = useState<Sorteo[]>([]);
   const [zonasList, setZonasList] = useState<Zona[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
 
   const formatCurrency = useCallback((amount: number): string => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount), []);
 
-  // Load zones and draws on mount
+  // Load zones on mount
   useEffect(() => {
     const loadFilters = async () => {
       try {
@@ -59,17 +51,6 @@ const PlayTypePrizes = (): React.ReactElement => {
           name: z.zoneName || z.name
         }));
         setZonasList(normalizedZones);
-
-        // Load draws
-        const drawsResponse = await api.get<{ items?: Sorteo[] } | Sorteo[]>('/draws');
-        const drawsArray = (drawsResponse && typeof drawsResponse === 'object' && 'items' in drawsResponse)
-          ? (drawsResponse.items || [])
-          : (drawsResponse as Sorteo[] || []);
-        const normalizedDraws = drawsArray.map((d: Sorteo) => ({
-          id: d.drawId || d.id,
-          name: d.drawName || d.name
-        }));
-        setSorteosList(normalizedDraws);
       } catch (error) {
         console.error('Error loading filters:', error);
       }
@@ -83,7 +64,7 @@ const PlayTypePrizes = (): React.ReactElement => {
     try {
       const zoneIds = zonas.map(z => z.id).join(',');
       const response = await api.get<PrizeCategoryDto[]>(
-        `/reports/sales/prize-categories?date=${fecha}${sorteo ? `&drawId=${sorteo.id}` : ''}${zoneIds ? `&zoneIds=${zoneIds}` : ''}`
+        `/reports/sales/prize-categories?startDate=${fechaInicial}&endDate=${fechaFinal}${zoneIds ? `&zoneIds=${zoneIds}` : ''}`
       );
 
       const mapped: PlayTypeData[] = (response || []).map(item => ({
@@ -110,22 +91,24 @@ const PlayTypePrizes = (): React.ReactElement => {
     <Box sx={{ p: 2 }}>
       <Paper elevation={3}>
         <Box sx={{ p: 3 }}>
-          <Typography variant="h5" align="center" sx={{ color: '#1976d2', mb: 4, fontWeight: 400 }}>
-            Premios por jugada
+          <Typography variant="h5" align="center" sx={{ mb: 4, fontWeight: 400 }}>
+            Premios por tipo de jugada
           </Typography>
 
           <Grid container spacing={2} sx={{ mb: 2 }}>
             <Grid item xs={12} md={4}>
-              <TextField fullWidth type="date" label="Fecha" value={fecha}
-                onChange={(e) => setFecha(e.target.value)} InputLabelProps={{ shrink: true }} size="small" />
+              <TextField fullWidth type="date" label="Fecha inicial" value={fechaInicial}
+                onChange={(e) => setFechaInicial(e.target.value)} InputLabelProps={{ shrink: true }} size="small" />
             </Grid>
             <Grid item xs={12} md={4}>
-              <Autocomplete options={sorteosList} getOptionLabel={(o) => o.name || ''} value={sorteo}
-                onChange={(e, v) => setSorteo(v)} renderInput={(params) => <TextField {...params} label="Sorteo" size="small" />} />
+              <TextField fullWidth type="date" label="Fecha final" value={fechaFinal}
+                onChange={(e) => setFechaFinal(e.target.value)} InputLabelProps={{ shrink: true }} size="small" />
             </Grid>
             <Grid item xs={12} md={4}>
               <Autocomplete multiple options={zonasList} getOptionLabel={(o) => o.name || ''} value={zonas}
-                onChange={(e, v) => setZonas(v)} renderInput={(params) => <TextField {...params} label="Zonas" size="small" />} />
+                onChange={(e, v) => setZonas(v)}
+                renderInput={(params) => <TextField {...params} label="Zonas" size="small"
+                  placeholder={zonas.length === 0 ? "Seleccione" : `${zonas.length} seleccionadas`} />} />
             </Grid>
           </Grid>
 
@@ -134,41 +117,59 @@ const PlayTypePrizes = (): React.ReactElement => {
               variant="contained"
               onClick={handleSearch}
               disabled={loading}
-              startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <FilterList />}
-              sx={{ px: 4, borderRadius: '30px', textTransform: 'uppercase' }}
+              startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <Refresh />}
+              sx={{
+                px: 4,
+                borderRadius: '30px',
+                textTransform: 'uppercase'
+              }}
             >
-              Filtrar
+              Refrescar
             </Button>
-            <Button variant="contained" startIcon={<PictureAsPdf />} sx={{ borderRadius: '30px', textTransform: 'uppercase' }}>PDF</Button>
+            <Button
+              variant="contained"
+              sx={{
+                borderRadius: '30px',
+                textTransform: 'uppercase'
+              }}
+            >
+              CSV
+            </Button>
           </Stack>
 
-          <Table size="small">
-            <TableHead>
-              <TableRow sx={{ backgroundColor: '#e3e3e3' }}>
-                {['Tipo de jugada', 'Ventas', 'Premios', 'Neto', '% Ganancia'].map(h => (
-                  <TableCell key={h} sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.75rem' }}>{h}</TableCell>
-                ))}
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              <TableRow sx={{ backgroundColor: '#e3f2fd' }}>
-                <TableCell sx={{ fontWeight: 600 }}>Totales</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>{formatCurrency(totalVentas)}</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>{formatCurrency(totalPremios)}</TableCell>
-                <TableCell sx={{ fontWeight: 600, color: totalNeto >= 0 ? 'success.main' : 'error.main' }}>{formatCurrency(totalNeto)}</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>{totalVentas > 0 ? ((totalNeto / totalVentas) * 100).toFixed(1) : '0.0'}%</TableCell>
-              </TableRow>
-              {data.map((d, i) => (
-                <TableRow key={i} sx={{ '&:hover': { backgroundColor: 'action.hover' } }}>
-                  <TableCell>{d.tipoJugada}</TableCell>
-                  <TableCell>{formatCurrency(d.ventas)}</TableCell>
-                  <TableCell>{formatCurrency(d.premios)}</TableCell>
-                  <TableCell sx={{ color: d.neto >= 0 ? 'success.main' : 'error.main' }}>{formatCurrency(d.neto)}</TableCell>
-                  <TableCell sx={{ color: d.neto >= 0 ? 'success.main' : 'error.main' }}>{d.porcentaje}</TableCell>
+          {data.length === 0 ? (
+            <Typography variant="h6" sx={{ color: 'text.secondary', textAlign: 'center', py: 4 }}>
+              No hay entradas para el sorteo y la fecha elegidos
+            </Typography>
+          ) : (
+            <Table size="small">
+              <TableHead sx={{ backgroundColor: '#e3e3e3' }}>
+                <TableRow>
+                  {['Tipo de jugada', 'Ventas', 'Premios', 'Neto', '% Ganancia'].map(h => (
+                    <TableCell key={h} sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.75rem' }}>{h}</TableCell>
+                  ))}
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHead>
+              <TableBody>
+                <TableRow sx={{ backgroundColor: '#f5f7fa', '& td': { fontWeight: 600 } }}>
+                  <TableCell>Totales</TableCell>
+                  <TableCell>{formatCurrency(totalVentas)}</TableCell>
+                  <TableCell>{formatCurrency(totalPremios)}</TableCell>
+                  <TableCell sx={{ color: totalNeto >= 0 ? 'success.main' : 'error.main' }}>{formatCurrency(totalNeto)}</TableCell>
+                  <TableCell>{totalVentas > 0 ? ((totalNeto / totalVentas) * 100).toFixed(1) : '0.0'}%</TableCell>
+                </TableRow>
+                {data.map((d, i) => (
+                  <TableRow key={i} sx={{ '&:hover': { backgroundColor: 'action.hover' } }}>
+                    <TableCell>{d.tipoJugada}</TableCell>
+                    <TableCell>{formatCurrency(d.ventas)}</TableCell>
+                    <TableCell>{formatCurrency(d.premios)}</TableCell>
+                    <TableCell sx={{ color: d.neto >= 0 ? 'success.main' : 'error.main' }}>{formatCurrency(d.neto)}</TableCell>
+                    <TableCell sx={{ color: d.neto >= 0 ? 'success.main' : 'error.main' }}>{d.porcentaje}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </Box>
       </Paper>
     </Box>

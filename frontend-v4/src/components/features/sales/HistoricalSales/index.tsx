@@ -380,9 +380,46 @@ const HistoricalSales = (): React.ReactElement => {
 
             <Box sx={{ mb: 2 }}>
               <Typography variant="caption" sx={{ color: 'text.secondary', mb: 1, display: 'block' }}>Filtrar</Typography>
-              <ToggleButtonGroup exclusive value={filterType} onChange={(e, v) => v && setFilterType(v)} size="small">
+              <ToggleButtonGroup
+                exclusive
+                value={filterType}
+                onChange={(e, v) => v && setFilterType(v)}
+                size="small"
+                sx={{
+                  border: '2px solid #8b5cf6',
+                  borderRadius: '6px',
+                  overflow: 'hidden',
+                  '& .MuiToggleButton-root': {
+                    border: 'none',
+                    borderRight: '2px solid #8b5cf6',
+                    borderRadius: 0,
+                    px: 2,
+                    py: 0.6,
+                    fontSize: '0.75rem',
+                    fontWeight: 500,
+                    textTransform: 'uppercase',
+                    color: '#64748b',
+                    backgroundColor: '#fff',
+                    transition: 'all 0.15s ease',
+                    '&:last-of-type': {
+                      borderRight: 'none',
+                    },
+                    '&:hover': {
+                      backgroundColor: '#f8f7ff',
+                      color: '#7c3aed',
+                    },
+                    '&.Mui-selected': {
+                      background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+                      color: '#fff',
+                      '&:hover': {
+                        background: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)',
+                      },
+                    },
+                  },
+                }}
+              >
                 {FILTER_OPTIONS.map(opt => (
-                  <ToggleButton key={opt.value} value={opt.value} sx={{ textTransform: 'none', fontSize: '0.75rem' }}>
+                  <ToggleButton key={opt.value} value={opt.value}>
                     {opt.label}
                   </ToggleButton>
                 ))}
@@ -393,25 +430,25 @@ const HistoricalSales = (): React.ReactElement => {
               size="small" sx={{ mb: 2, maxWidth: 300 }} />
 
             <Table size="small">
-              <TableHead>
-                <TableRow sx={{ backgroundColor: '#e3e3e3' }}>
+              <TableHead sx={{ backgroundColor: '#e3e3e3' }}>
+                <TableRow>
                   {['Ref.', 'Código', 'Tickets', 'Venta', 'Comisiones', 'Descuentos', 'Premios', 'Neto', 'Caída', 'Final'].map(h => (
                     <TableCell key={h} sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.75rem' }}>{h}</TableCell>
                   ))}
                 </TableRow>
               </TableHead>
               <TableBody>
-                <TableRow sx={{ backgroundColor: '#e3f2fd' }}>
-                  <TableCell sx={{ fontWeight: 600 }}>Totales</TableCell>
+                <TableRow sx={{ backgroundColor: '#f5f7fa', '& td': { fontWeight: 600 } }}>
+                  <TableCell>Totales</TableCell>
                   <TableCell>-</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>{totals.tickets}</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>{formatCurrency(totals.venta)}</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>{formatCurrency(totals.comisiones)}</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>{formatCurrency(totals.descuentos)}</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>{formatCurrency(totals.premios)}</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>{formatCurrency(totals.neto)}</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>{formatCurrency(totals.caida)}</TableCell>
-                  <TableCell sx={{ fontWeight: 600, color: totals.final >= 0 ? 'success.main' : 'error.main' }}>{formatCurrency(totals.final)}</TableCell>
+                  <TableCell>{totals.tickets}</TableCell>
+                  <TableCell>{formatCurrency(totals.venta)}</TableCell>
+                  <TableCell>{formatCurrency(totals.comisiones)}</TableCell>
+                  <TableCell>{formatCurrency(totals.descuentos)}</TableCell>
+                  <TableCell>{formatCurrency(totals.premios)}</TableCell>
+                  <TableCell>{formatCurrency(totals.neto)}</TableCell>
+                  <TableCell>{formatCurrency(totals.caida)}</TableCell>
+                  <TableCell sx={{ color: totals.final >= 0 ? 'success.main' : 'error.main' }}>{formatCurrency(totals.final)}</TableCell>
                 </TableRow>
                 {bancasData.map((d, i) => (
                   <TableRow key={i} sx={{ '&:hover': { backgroundColor: 'action.hover' } }}>
@@ -503,20 +540,17 @@ const HistoricalSales = (): React.ReactElement => {
                 variant="contained"
                 onClick={handleSearch}
                 disabled={loading}
-                startIcon={loading ? <CircularProgress size={20} color="inherit" /> : null}
+                size="small"
                 sx={{
-                  bgcolor: '#667eea',
-                  '&:hover': { bgcolor: '#5568d3' },
                   borderRadius: '20px',
-                  px: 4,
-                  py: 1,
+                  px: 2.5,
+                  py: 0.5,
+                  fontSize: '0.75rem',
                   textTransform: 'uppercase',
-                  fontWeight: 500,
-                  color: 'white',
-                  fontSize: '0.875rem'
+                  fontWeight: 500
                 }}
               >
-                VER VENTAS
+                {loading ? <CircularProgress size={16} color="inherit" /> : 'Ver ventas'}
               </Button>
             </Box>
 
@@ -548,11 +582,11 @@ const HistoricalSales = (): React.ReactElement => {
             <Table size="small">
               <TableHead sx={{ backgroundColor: '#e3e3e3' }}>
                 <TableRow>
-                  <TableCell sx={{ cursor: 'pointer' }}>Sorteo</TableCell>
-                  <TableCell align="right" sx={{ cursor: 'pointer' }}>Total Vendido</TableCell>
-                  <TableCell align="right" sx={{ cursor: 'pointer' }}>Total premios</TableCell>
-                  <TableCell align="right" sx={{ cursor: 'pointer' }}>Total comisiones</TableCell>
-                  <TableCell align="right" sx={{ cursor: 'pointer' }}>Total neto</TableCell>
+                  <TableCell sx={{ cursor: 'pointer', fontWeight: 600 }}>Sorteo</TableCell>
+                  <TableCell align="right" sx={{ cursor: 'pointer', fontWeight: 600 }}>Total Vendido</TableCell>
+                  <TableCell align="right" sx={{ cursor: 'pointer', fontWeight: 600 }}>Total premios</TableCell>
+                  <TableCell align="right" sx={{ cursor: 'pointer', fontWeight: 600 }}>Total comisiones</TableCell>
+                  <TableCell align="right" sx={{ cursor: 'pointer', fontWeight: 600 }}>Total neto</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -573,12 +607,12 @@ const HistoricalSales = (): React.ReactElement => {
                     </TableRow>
                   ))
                 )}
-                <TableRow sx={{ backgroundColor: 'grey.200' }}>
-                  <TableCell><strong>Totales</strong></TableCell>
-                  <TableCell align="right"><strong>{formatCurrency(totalVendido)}</strong></TableCell>
-                  <TableCell align="right"><strong>{formatCurrency(totalPremios)}</strong></TableCell>
-                  <TableCell align="right"><strong>{formatCurrency(totalComisiones)}</strong></TableCell>
-                  <TableCell align="right"><strong>{formatCurrency(totalNeto)}</strong></TableCell>
+                <TableRow sx={{ backgroundColor: '#f5f7fa', '& td': { fontWeight: 600 } }}>
+                  <TableCell>Totales</TableCell>
+                  <TableCell align="right">{formatCurrency(totalVendido)}</TableCell>
+                  <TableCell align="right">{formatCurrency(totalPremios)}</TableCell>
+                  <TableCell align="right">{formatCurrency(totalComisiones)}</TableCell>
+                  <TableCell align="right">{formatCurrency(totalNeto)}</TableCell>
                 </TableRow>
               </TableBody>
             </Table>
@@ -687,20 +721,17 @@ const HistoricalSales = (): React.ReactElement => {
                 variant="contained"
                 onClick={handleSearch}
                 disabled={loading}
-                startIcon={loading ? <CircularProgress size={20} color="inherit" /> : null}
+                size="small"
                 sx={{
-                  bgcolor: '#51cbce',
-                  '&:hover': { bgcolor: '#45b8bb' },
                   borderRadius: '20px',
-                  px: 4,
-                  py: 1,
+                  px: 2.5,
+                  py: 0.5,
+                  fontSize: '0.75rem',
                   textTransform: 'uppercase',
-                  fontWeight: 500,
-                  color: 'white',
-                  fontSize: '0.875rem'
+                  fontWeight: 500
                 }}
               >
-                VER VENTAS
+                {loading ? <CircularProgress size={16} color="inherit" /> : 'Ver ventas'}
               </Button>
             </Box>
 
@@ -724,12 +755,12 @@ const HistoricalSales = (): React.ReactElement => {
             <Table size="small">
               <TableHead sx={{ backgroundColor: '#e3e3e3' }}>
                 <TableRow>
-                  <TableCell sx={{ cursor: 'pointer' }}>Combinación</TableCell>
-                  <TableCell align="right" sx={{ cursor: 'pointer' }}>Total Vendido</TableCell>
-                  <TableCell align="right" sx={{ cursor: 'pointer' }}>Total comisiones</TableCell>
-                  <TableCell align="right" sx={{ cursor: 'pointer' }}>Total comisiones 2</TableCell>
-                  <TableCell align="right" sx={{ cursor: 'pointer' }}>Total premios</TableCell>
-                  <TableCell align="right" sx={{ cursor: 'pointer' }}>Balances</TableCell>
+                  <TableCell sx={{ cursor: 'pointer', fontWeight: 600 }}>Combinación</TableCell>
+                  <TableCell align="right" sx={{ cursor: 'pointer', fontWeight: 600 }}>Total Vendido</TableCell>
+                  <TableCell align="right" sx={{ cursor: 'pointer', fontWeight: 600 }}>Total comisiones</TableCell>
+                  <TableCell align="right" sx={{ cursor: 'pointer', fontWeight: 600 }}>Total comisiones 2</TableCell>
+                  <TableCell align="right" sx={{ cursor: 'pointer', fontWeight: 600 }}>Total premios</TableCell>
+                  <TableCell align="right" sx={{ cursor: 'pointer', fontWeight: 600 }}>Balances</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -751,13 +782,13 @@ const HistoricalSales = (): React.ReactElement => {
                     </TableRow>
                   ))
                 )}
-                <TableRow sx={{ backgroundColor: 'grey.200' }}>
-                  <TableCell><strong>Totales</strong></TableCell>
-                  <TableCell align="right"><strong>$0.00</strong></TableCell>
-                  <TableCell align="right"><strong>$0.00</strong></TableCell>
-                  <TableCell align="right"><strong>$0.00</strong></TableCell>
-                  <TableCell align="right"><strong>$0.00</strong></TableCell>
-                  <TableCell align="right"><strong>$0.00</strong></TableCell>
+                <TableRow sx={{ backgroundColor: '#f5f7fa', '& td': { fontWeight: 600 } }}>
+                  <TableCell>Totales</TableCell>
+                  <TableCell align="right">$0.00</TableCell>
+                  <TableCell align="right">$0.00</TableCell>
+                  <TableCell align="right">$0.00</TableCell>
+                  <TableCell align="right">$0.00</TableCell>
+                  <TableCell align="right">$0.00</TableCell>
                 </TableRow>
               </TableBody>
             </Table>
@@ -778,14 +809,35 @@ const HistoricalSales = (): React.ReactElement => {
             <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap', alignItems: 'flex-end' }}>
               <Box>
                 <Typography variant="caption" sx={{ color: 'text.secondary', mb: 0.5, display: 'block' }}>
-                  Fecha
+                  Fecha inicial
                 </Typography>
                 <TextField
                   type="date"
                   size="small"
                   value={fechaInicial}
                   onChange={(e) => setFechaInicial(e.target.value)}
-                  sx={{ width: 200 }}
+                  sx={{
+                    width: 200,
+                    '& .MuiInputBase-root': { height: 32 },
+                    '& .MuiInputBase-input': { py: 0.5, fontSize: '0.8rem' },
+                  }}
+                />
+              </Box>
+
+              <Box>
+                <Typography variant="caption" sx={{ color: 'text.secondary', mb: 0.5, display: 'block' }}>
+                  Fecha final
+                </Typography>
+                <TextField
+                  type="date"
+                  size="small"
+                  value={fechaFinal}
+                  onChange={(e) => setFechaFinal(e.target.value)}
+                  sx={{
+                    width: 200,
+                    '& .MuiInputBase-root': { height: 32 },
+                    '& .MuiInputBase-input': { py: 0.5, fontSize: '0.8rem' },
+                  }}
                 />
               </Box>
 
@@ -793,7 +845,14 @@ const HistoricalSales = (): React.ReactElement => {
                 <Typography variant="caption" sx={{ color: 'text.secondary', mb: 0.5, display: 'block' }}>
                   Zonas
                 </Typography>
-                <FormControl sx={{ minWidth: 200 }} size="small">
+                <FormControl
+                  sx={{
+                    minWidth: 200,
+                    '& .MuiInputBase-root': { height: 32 },
+                    '& .MuiSelect-select': { py: 0.5, fontSize: '0.8rem' },
+                  }}
+                  size="small"
+                >
                   <Select
                     multiple
                     value={zonas.map(z => z.id)}
@@ -812,38 +871,41 @@ const HistoricalSales = (): React.ReactElement => {
                   </Select>
                 </FormControl>
               </Box>
+
+              <FormControlLabel
+                control={<Checkbox checked={mostrarComision2} onChange={(e) => setMostrarComision2(e.target.checked)} />}
+                label="Mostrar comisión #2"
+                sx={{ '& .MuiFormControlLabel-label': { fontSize: '0.8rem' } }}
+              />
             </Box>
 
-            <Box sx={{ display: 'flex', gap: 1.5, mb: 3 }}>
+            <Box sx={{ display: 'flex', gap: 1, mb: 3 }}>
               <Button
                 variant="contained"
                 onClick={handleSearch}
                 disabled={loading}
-                startIcon={loading ? <CircularProgress size={20} color="inherit" /> : null}
+                size="small"
                 sx={{
-                  bgcolor: '#51cbce',
-                  '&:hover': { bgcolor: '#45b8bb' },
-                  borderRadius: '30px',
-                  px: 4,
-                  py: 1.2,
+                  borderRadius: '20px',
+                  px: 2.5,
+                  py: 0.5,
+                  fontSize: '0.75rem',
                   textTransform: 'uppercase',
-                  fontWeight: 500,
-                  color: 'white'
+                  fontWeight: 500
                 }}
               >
-                Ver ventas
+                {loading ? <CircularProgress size={16} color="inherit" /> : 'Ver ventas'}
               </Button>
               <Button
                 variant="contained"
+                size="small"
                 sx={{
-                  bgcolor: '#51cbce',
-                  '&:hover': { bgcolor: '#45b8bb' },
-                  borderRadius: '30px',
-                  px: 4,
-                  py: 1.2,
+                  borderRadius: '20px',
+                  px: 2.5,
+                  py: 0.5,
+                  fontSize: '0.75rem',
                   textTransform: 'uppercase',
-                  fontWeight: 500,
-                  color: 'white'
+                  fontWeight: 500
                 }}
               >
                 PDF
@@ -863,26 +925,43 @@ const HistoricalSales = (): React.ReactElement => {
                 exclusive
                 onChange={(e, newValue) => newValue && setFilterType(newValue)}
                 size="small"
-                sx={{ flexWrap: 'wrap' }}
+                sx={{
+                  border: '2px solid #8b5cf6',
+                  borderRadius: '6px',
+                  overflow: 'hidden',
+                  '& .MuiToggleButton-root': {
+                    border: 'none',
+                    borderRight: '2px solid #8b5cf6',
+                    borderRadius: 0,
+                    px: 2,
+                    py: 0.6,
+                    fontSize: '0.75rem',
+                    fontWeight: 500,
+                    textTransform: 'uppercase',
+                    color: '#64748b',
+                    backgroundColor: '#fff',
+                    transition: 'all 0.15s ease',
+                    '&:last-of-type': {
+                      borderRight: 'none',
+                    },
+                    '&:hover': {
+                      backgroundColor: '#f8f7ff',
+                      color: '#7c3aed',
+                    },
+                    '&.Mui-selected': {
+                      background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+                      color: '#fff',
+                      '&:hover': {
+                        background: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)',
+                      },
+                    },
+                  },
+                }}
               >
-                <ToggleButton value="todos" sx={{ textTransform: 'uppercase', fontSize: '0.75rem', px: 2, py: 0.8 }}>
-                  Todos
-                </ToggleButton>
-                <ToggleButton value="con-ventas" sx={{ textTransform: 'uppercase', fontSize: '0.75rem', px: 2, py: 0.8 }}>
-                  Con ventas
-                </ToggleButton>
-                <ToggleButton value="con-premios" sx={{ textTransform: 'uppercase', fontSize: '0.75rem', px: 2, py: 0.8 }}>
-                  Con premios
-                </ToggleButton>
-                <ToggleButton value="tickets-pendientes" sx={{ textTransform: 'uppercase', fontSize: '0.75rem', px: 2, py: 0.8 }}>
-                  Con tickets pendientes
-                </ToggleButton>
-                <ToggleButton value="negativas" sx={{ textTransform: 'uppercase', fontSize: '0.75rem', px: 2, py: 0.8 }}>
-                  Con ventas netas negativas
-                </ToggleButton>
-                <ToggleButton value="positivas" sx={{ textTransform: 'uppercase', fontSize: '0.75rem', px: 2, py: 0.8 }}>
-                  Con ventas netas positivas
-                </ToggleButton>
+                <ToggleButton value="todos">Todos</ToggleButton>
+                <ToggleButton value="con-ventas">Con ventas</ToggleButton>
+                <ToggleButton value="con-premios">Con premios</ToggleButton>
+                <ToggleButton value="tickets-pendientes">Con tickets pendientes</ToggleButton>
               </ToggleButtonGroup>
             </Box>
 
@@ -906,34 +985,34 @@ const HistoricalSales = (): React.ReactElement => {
             <Table size="small">
               <TableHead sx={{ backgroundColor: '#e3e3e3' }}>
                 <TableRow>
-                  <TableCell>Nombre</TableCell>
-                  <TableCell align="center">P</TableCell>
-                  <TableCell align="center">L</TableCell>
-                  <TableCell align="center">W</TableCell>
-                  <TableCell align="right">Total</TableCell>
-                  <TableCell align="right">Venta</TableCell>
-                  <TableCell align="right">Comisiones</TableCell>
-                  <TableCell align="right">Descuentos</TableCell>
-                  <TableCell align="right">Premios</TableCell>
-                  <TableCell align="right">Neto</TableCell>
-                  <TableCell align="right">Caída</TableCell>
-                  <TableCell align="right">Final</TableCell>
-                  <TableCell align="right">Balance</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Nombre</TableCell>
+                  <TableCell align="center" sx={{ fontWeight: 600 }}>P</TableCell>
+                  <TableCell align="center" sx={{ fontWeight: 600 }}>L</TableCell>
+                  <TableCell align="center" sx={{ fontWeight: 600 }}>W</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 600 }}>Total</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 600 }}>Venta</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 600 }}>Comisiones</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 600 }}>Descuentos</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 600 }}>Premios</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 600 }}>Neto</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 600 }}>Caída</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 600 }}>Final</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 600 }}>Balance</TableCell>
                 </TableRow>
-                <TableRow sx={{ backgroundColor: 'grey.200' }}>
-                  <TableCell><strong>Totales</strong></TableCell>
-                  <TableCell align="center"><strong>0</strong></TableCell>
-                  <TableCell align="center"><strong>0</strong></TableCell>
-                  <TableCell align="center"><strong>0</strong></TableCell>
-                  <TableCell align="right"><strong>0</strong></TableCell>
-                  <TableCell align="right"><strong>$0.00</strong></TableCell>
-                  <TableCell align="right"><strong>$0.00</strong></TableCell>
-                  <TableCell align="right"><strong>$0.00</strong></TableCell>
-                  <TableCell align="right"><strong>$0.00</strong></TableCell>
-                  <TableCell align="right"><strong>$0.00</strong></TableCell>
-                  <TableCell align="right"><strong>$0.00</strong></TableCell>
-                  <TableCell align="right"><strong>$0.00</strong></TableCell>
-                  <TableCell align="right"><strong>$0.00</strong></TableCell>
+                <TableRow sx={{ backgroundColor: '#f5f7fa', '& td': { fontWeight: 600 } }}>
+                  <TableCell>Totales</TableCell>
+                  <TableCell align="center">0</TableCell>
+                  <TableCell align="center">0</TableCell>
+                  <TableCell align="center">0</TableCell>
+                  <TableCell align="right">0</TableCell>
+                  <TableCell align="right">$0.00</TableCell>
+                  <TableCell align="right">$0.00</TableCell>
+                  <TableCell align="right">$0.00</TableCell>
+                  <TableCell align="right">$0.00</TableCell>
+                  <TableCell align="right">$0.00</TableCell>
+                  <TableCell align="right">$0.00</TableCell>
+                  <TableCell align="right">$0.00</TableCell>
+                  <TableCell align="right">$0.00</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -1026,9 +1105,51 @@ const HistoricalSales = (): React.ReactElement => {
               </Box>
 
               <Stack direction="row" spacing={2} sx={{ mb: 3 }}>
-                <Button variant="contained" startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <FilterList />} onClick={handleSearch} disabled={loading} sx={{ px: 4, borderRadius: '30px', textTransform: 'uppercase' }}>Ver ventas</Button>
-                <Button variant="contained" startIcon={<Download />} sx={{ borderRadius: '30px', textTransform: 'uppercase' }}>CSV</Button>
-                <Button variant="contained" startIcon={<PictureAsPdf />} sx={{ borderRadius: '30px', textTransform: 'uppercase' }}>PDF</Button>
+                <Button
+                  variant="contained"
+                  startIcon={loading ? <CircularProgress size={16} color="inherit" /> : null}
+                  onClick={handleSearch}
+                  disabled={loading}
+                  size="small"
+                  sx={{
+                    borderRadius: '20px',
+                    px: 2.5,
+                    py: 0.5,
+                    fontSize: '0.75rem',
+                    textTransform: 'uppercase',
+                    fontWeight: 500
+                  }}
+                >
+                  Ver ventas
+                </Button>
+                <Button
+                  variant="contained"
+                  size="small"
+                  sx={{
+                    borderRadius: '20px',
+                    px: 2.5,
+                    py: 0.5,
+                    fontSize: '0.75rem',
+                    textTransform: 'uppercase',
+                    fontWeight: 500
+                  }}
+                >
+                  CSV
+                </Button>
+                <Button
+                  variant="contained"
+                  size="small"
+                  sx={{
+                    borderRadius: '20px',
+                    px: 2.5,
+                    py: 0.5,
+                    fontSize: '0.75rem',
+                    textTransform: 'uppercase',
+                    fontWeight: 500
+                  }}
+                >
+                  PDF
+                </Button>
               </Stack>
             </>
           )}
