@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Box, Paper, Typography, TextField, Grid, Autocomplete, Button, Stack, Table, TableHead, TableBody, TableRow, TableCell, CircularProgress } from '@mui/material';
+import { Box, Paper, Typography, TextField, Grid, Autocomplete, Button, Stack, Table, TableHead, TableBody, TableRow, TableCell, CircularProgress, InputAdornment } from '@mui/material';
 import { Refresh } from '@mui/icons-material';
 import api from '@services/api';
 
@@ -107,8 +107,19 @@ const PlayTypePrizes = (): React.ReactElement => {
             <Grid item xs={12} md={4}>
               <Autocomplete multiple options={zonasList} getOptionLabel={(o) => o.name || ''} value={zonas}
                 onChange={(e, v) => setZonas(v)}
-                renderInput={(params) => <TextField {...params} label="Zonas" size="small"
-                  placeholder={zonas.length === 0 ? "Seleccione" : `${zonas.length} seleccionadas`} />} />
+                renderTags={() => null}
+                renderInput={(params) => (
+                  <TextField {...params} label="Zonas" size="small"
+                    InputProps={{
+                      ...params.InputProps,
+                      startAdornment: zonas.length > 0 ? (
+                        <InputAdornment position="start" sx={{ ml: 1 }}>
+                          {zonas.length} seleccionadas
+                        </InputAdornment>
+                      ) : null
+                    }}
+                    placeholder={zonas.length === 0 ? "Seleccione" : ""} />
+                )} />
             </Grid>
           </Grid>
 
@@ -151,13 +162,6 @@ const PlayTypePrizes = (): React.ReactElement => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                <TableRow sx={{ backgroundColor: '#f5f7fa', '& td': { fontWeight: 600 } }}>
-                  <TableCell>Totales</TableCell>
-                  <TableCell>{formatCurrency(totalVentas)}</TableCell>
-                  <TableCell>{formatCurrency(totalPremios)}</TableCell>
-                  <TableCell sx={{ color: totalNeto >= 0 ? 'success.main' : 'error.main' }}>{formatCurrency(totalNeto)}</TableCell>
-                  <TableCell>{totalVentas > 0 ? ((totalNeto / totalVentas) * 100).toFixed(1) : '0.0'}%</TableCell>
-                </TableRow>
                 {data.map((d, i) => (
                   <TableRow key={i} sx={{ '&:hover': { backgroundColor: 'action.hover' } }}>
                     <TableCell>{d.tipoJugada}</TableCell>
@@ -167,6 +171,13 @@ const PlayTypePrizes = (): React.ReactElement => {
                     <TableCell sx={{ color: d.neto >= 0 ? 'success.main' : 'error.main' }}>{d.porcentaje}</TableCell>
                   </TableRow>
                 ))}
+                <TableRow sx={{ backgroundColor: '#f5f7fa', '& td': { fontWeight: 600 } }}>
+                  <TableCell>Totales</TableCell>
+                  <TableCell>{formatCurrency(totalVentas)}</TableCell>
+                  <TableCell>{formatCurrency(totalPremios)}</TableCell>
+                  <TableCell sx={{ color: totalNeto >= 0 ? 'success.main' : 'error.main' }}>{formatCurrency(totalNeto)}</TableCell>
+                  <TableCell>{totalVentas > 0 ? ((totalNeto / totalVentas) * 100).toFixed(1) : '0.0'}%</TableCell>
+                </TableRow>
               </TableBody>
             </Table>
           )}

@@ -158,14 +158,6 @@ const BettingPoolSales = (): React.ReactElement => {
               </TableRow>
             </TableHead>
             <TableBody>
-              <TableRow sx={{ backgroundColor: '#f5f7fa', '& td': { fontWeight: 600 } }}>
-                <TableCell>Totales</TableCell>
-                <TableCell>-</TableCell>
-                <TableCell>{formatCurrency(totals.ventas)}</TableCell>
-                <TableCell>{formatCurrency(totals.comisiones)}</TableCell>
-                <TableCell>{formatCurrency(totals.premios)}</TableCell>
-                <TableCell sx={{ color: totals.neto >= 0 ? 'success.main' : 'error.main' }}>{formatCurrency(totals.neto)}</TableCell>
-              </TableRow>
               {data.map((d, i) => (
                 <TableRow key={i} sx={{ '&:hover': { backgroundColor: 'action.hover' } }}>
                   <TableCell>{d.codigo}</TableCell>
@@ -176,6 +168,14 @@ const BettingPoolSales = (): React.ReactElement => {
                   <TableCell sx={{ color: d.neto >= 0 ? 'success.main' : 'error.main' }}>{formatCurrency(d.neto)}</TableCell>
                 </TableRow>
               ))}
+              <TableRow sx={{ backgroundColor: '#f5f7fa', '& td': { fontWeight: 600 } }}>
+                <TableCell>Totales</TableCell>
+                <TableCell>-</TableCell>
+                <TableCell>{formatCurrency(totals.ventas)}</TableCell>
+                <TableCell>{formatCurrency(totals.comisiones)}</TableCell>
+                <TableCell>{formatCurrency(totals.premios)}</TableCell>
+                <TableCell sx={{ color: totals.neto >= 0 ? 'success.main' : 'error.main' }}>{formatCurrency(totals.neto)}</TableCell>
+              </TableRow>
             </TableBody>
           </Table>
           <Typography variant="caption" sx={{ color: 'text.secondary' }}>Mostrando {data.length} entradas</Typography>

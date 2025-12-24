@@ -438,18 +438,6 @@ const HistoricalSales = (): React.ReactElement => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                <TableRow sx={{ backgroundColor: '#f5f7fa', '& td': { fontWeight: 600 } }}>
-                  <TableCell>Totales</TableCell>
-                  <TableCell>-</TableCell>
-                  <TableCell>{totals.tickets}</TableCell>
-                  <TableCell>{formatCurrency(totals.venta)}</TableCell>
-                  <TableCell>{formatCurrency(totals.comisiones)}</TableCell>
-                  <TableCell>{formatCurrency(totals.descuentos)}</TableCell>
-                  <TableCell>{formatCurrency(totals.premios)}</TableCell>
-                  <TableCell>{formatCurrency(totals.neto)}</TableCell>
-                  <TableCell>{formatCurrency(totals.caida)}</TableCell>
-                  <TableCell sx={{ color: totals.final >= 0 ? 'success.main' : 'error.main' }}>{formatCurrency(totals.final)}</TableCell>
-                </TableRow>
                 {bancasData.map((d, i) => (
                   <TableRow key={i} sx={{ '&:hover': { backgroundColor: 'action.hover' } }}>
                     <TableCell>{d.ref}</TableCell>
@@ -464,6 +452,18 @@ const HistoricalSales = (): React.ReactElement => {
                     <TableCell sx={{ color: d.final >= 0 ? 'success.main' : 'error.main' }}>{formatCurrency(d.final)}</TableCell>
                   </TableRow>
                 ))}
+                <TableRow sx={{ backgroundColor: '#f5f7fa', '& td': { fontWeight: 600 } }}>
+                  <TableCell>Totales</TableCell>
+                  <TableCell>-</TableCell>
+                  <TableCell>{totals.tickets}</TableCell>
+                  <TableCell>{formatCurrency(totals.venta)}</TableCell>
+                  <TableCell>{formatCurrency(totals.comisiones)}</TableCell>
+                  <TableCell>{formatCurrency(totals.descuentos)}</TableCell>
+                  <TableCell>{formatCurrency(totals.premios)}</TableCell>
+                  <TableCell>{formatCurrency(totals.neto)}</TableCell>
+                  <TableCell>{formatCurrency(totals.caida)}</TableCell>
+                  <TableCell sx={{ color: totals.final >= 0 ? 'success.main' : 'error.main' }}>{formatCurrency(totals.final)}</TableCell>
+                </TableRow>
               </TableBody>
             </Table>
             <Typography variant="caption" sx={{ color: 'text.secondary' }}>Mostrando {bancasData.length} entradas</Typography>
@@ -999,21 +999,6 @@ const HistoricalSales = (): React.ReactElement => {
                   <TableCell align="right" sx={{ fontWeight: 600 }}>Final</TableCell>
                   <TableCell align="right" sx={{ fontWeight: 600 }}>Balance</TableCell>
                 </TableRow>
-                <TableRow sx={{ backgroundColor: '#f5f7fa', '& td': { fontWeight: 600 } }}>
-                  <TableCell>Totales</TableCell>
-                  <TableCell align="center">0</TableCell>
-                  <TableCell align="center">0</TableCell>
-                  <TableCell align="center">0</TableCell>
-                  <TableCell align="right">0</TableCell>
-                  <TableCell align="right">$0.00</TableCell>
-                  <TableCell align="right">$0.00</TableCell>
-                  <TableCell align="right">$0.00</TableCell>
-                  <TableCell align="right">$0.00</TableCell>
-                  <TableCell align="right">$0.00</TableCell>
-                  <TableCell align="right">$0.00</TableCell>
-                  <TableCell align="right">$0.00</TableCell>
-                  <TableCell align="right">$0.00</TableCell>
-                </TableRow>
               </TableHead>
               <TableBody>
                 {zonasData.length === 0 ? (
@@ -1023,23 +1008,40 @@ const HistoricalSales = (): React.ReactElement => {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  zonasData.map((d, i) => (
-                    <TableRow key={i} sx={{ '&:hover': { backgroundColor: 'action.hover' } }}>
-                      <TableCell sx={{ fontWeight: 500 }}>{d.nombre}</TableCell>
-                      <TableCell align="center">{d.p}</TableCell>
-                      <TableCell align="center">{d.l}</TableCell>
-                      <TableCell align="center">{d.w}</TableCell>
-                      <TableCell align="right">{d.total}</TableCell>
-                      <TableCell align="right">{formatCurrency(d.venta)}</TableCell>
-                      <TableCell align="right">{formatCurrency(d.comisiones)}</TableCell>
-                      <TableCell align="right">{formatCurrency(d.descuentos)}</TableCell>
-                      <TableCell align="right">{formatCurrency(d.premios)}</TableCell>
-                      <TableCell align="right" sx={{ color: d.neto >= 0 ? 'success.main' : 'error.main' }}>{formatCurrency(d.neto)}</TableCell>
-                      <TableCell align="right">{formatCurrency(d.caida || 0)}</TableCell>
-                      <TableCell align="right">{formatCurrency(d.final || 0)}</TableCell>
-                      <TableCell align="right">{formatCurrency(d.balance || 0)}</TableCell>
+                  <>
+                    {zonasData.map((d, i) => (
+                      <TableRow key={i} sx={{ '&:hover': { backgroundColor: 'action.hover' } }}>
+                        <TableCell sx={{ fontWeight: 500 }}>{d.nombre}</TableCell>
+                        <TableCell align="center">{d.p}</TableCell>
+                        <TableCell align="center">{d.l}</TableCell>
+                        <TableCell align="center">{d.w}</TableCell>
+                        <TableCell align="right">{d.total}</TableCell>
+                        <TableCell align="right">{formatCurrency(d.venta)}</TableCell>
+                        <TableCell align="right">{formatCurrency(d.comisiones)}</TableCell>
+                        <TableCell align="right">{formatCurrency(d.descuentos)}</TableCell>
+                        <TableCell align="right">{formatCurrency(d.premios)}</TableCell>
+                        <TableCell align="right" sx={{ color: d.neto >= 0 ? 'success.main' : 'error.main' }}>{formatCurrency(d.neto)}</TableCell>
+                        <TableCell align="right">{formatCurrency(d.caida || 0)}</TableCell>
+                        <TableCell align="right">{formatCurrency(d.final || 0)}</TableCell>
+                        <TableCell align="right">{formatCurrency(d.balance || 0)}</TableCell>
+                      </TableRow>
+                    ))}
+                    <TableRow sx={{ backgroundColor: '#f5f7fa', '& td': { fontWeight: 600 } }}>
+                      <TableCell>Totales</TableCell>
+                      <TableCell align="center">{zonasData.reduce((sum, d) => sum + (d.p || 0), 0)}</TableCell>
+                      <TableCell align="center">{zonasData.reduce((sum, d) => sum + (d.l || 0), 0)}</TableCell>
+                      <TableCell align="center">{zonasData.reduce((sum, d) => sum + (d.w || 0), 0)}</TableCell>
+                      <TableCell align="right">{zonasData.reduce((sum, d) => sum + (d.total || 0), 0)}</TableCell>
+                      <TableCell align="right">{formatCurrency(zonasData.reduce((sum, d) => sum + d.venta, 0))}</TableCell>
+                      <TableCell align="right">{formatCurrency(zonasData.reduce((sum, d) => sum + d.comisiones, 0))}</TableCell>
+                      <TableCell align="right">{formatCurrency(zonasData.reduce((sum, d) => sum + d.descuentos, 0))}</TableCell>
+                      <TableCell align="right">{formatCurrency(zonasData.reduce((sum, d) => sum + d.premios, 0))}</TableCell>
+                      <TableCell align="right">{formatCurrency(zonasData.reduce((sum, d) => sum + d.neto, 0))}</TableCell>
+                      <TableCell align="right">{formatCurrency(zonasData.reduce((sum, d) => sum + (d.caida || 0), 0))}</TableCell>
+                      <TableCell align="right">{formatCurrency(zonasData.reduce((sum, d) => sum + (d.final || 0), 0))}</TableCell>
+                      <TableCell align="right">{formatCurrency(zonasData.reduce((sum, d) => sum + (d.balance || 0), 0))}</TableCell>
                     </TableRow>
-                  ))
+                  </>
                 )}
               </TableBody>
             </Table>
@@ -1085,8 +1087,20 @@ const HistoricalSales = (): React.ReactElement => {
                 </Grid>
                 <Grid item xs={12} md={3}>
                   <Autocomplete multiple options={zonasList} getOptionLabel={(o) => o.name || ''} value={zonas}
-                    onChange={(e, v) => setZonas(v)} renderInput={(params) => <TextField {...params} label="Zonas" size="small"
-                      helperText={zonas.length > 0 ? `${zonas.length} seleccionadas` : ''} />} />
+                    onChange={(e, v) => setZonas(v)}
+                    renderTags={() => null}
+                    renderInput={(params) => (
+                      <TextField {...params} label="Zonas" size="small"
+                        InputProps={{
+                          ...params.InputProps,
+                          startAdornment: zonas.length > 0 ? (
+                            <InputAdornment position="start" sx={{ ml: 1 }}>
+                              {zonas.length} seleccionadas
+                            </InputAdornment>
+                          ) : null
+                        }}
+                        placeholder={zonas.length === 0 ? "Seleccione" : ""} />
+                    )} />
                 </Grid>
                 <Grid item xs={12} md={3}>
                   <FormControl fullWidth size="small">
