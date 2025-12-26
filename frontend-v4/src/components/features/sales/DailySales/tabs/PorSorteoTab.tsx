@@ -145,7 +145,13 @@ const PorSorteoTab = ({ selectedDate, setSelectedDate, zones, selectedZones, han
                 value={selectedZones}
                 onChange={handleZoneChange}
                 input={<OutlinedInput />}
-                renderValue={(selected) => `${selected.length} seleccionadas`}
+                renderValue={(selected) => {
+                  if (selected.length === 1) {
+                    const zone = zones.find(z => (z.zoneId || z.id) === selected[0]);
+                    return zone?.zoneName || zone?.name || '1 seleccionada';
+                  }
+                  return `${selected.length} seleccionadas`;
+                }}
               >
                 {zones.map((zone) => {
                   const zoneId = zone.zoneId || zone.id || 0;
@@ -180,8 +186,14 @@ const PorSorteoTab = ({ selectedDate, setSelectedDate, zones, selectedZones, han
           </Button>
         </Box>
 
-        <Typography variant="h5" align="center" gutterBottom sx={{ fontWeight: 400, mb: 4, fontSize: '1.5rem' }}>
-          Total neto: {formatCurrency(summary.totalNet)}
+        <Typography variant="h5" align="center" gutterBottom sx={{ fontWeight: 400, mb: 4, fontSize: '1.7rem' }}>
+          Total neto: <Box component="span" sx={{
+            backgroundColor: '#e0f7fa',
+            px: 2,
+            py: 0.5,
+            borderRadius: 1,
+            color: '#00838f'
+          }}>{formatCurrency(summary.totalNet)}</Box>
         </Typography>
 
         {data.length === 0 && !loading && (

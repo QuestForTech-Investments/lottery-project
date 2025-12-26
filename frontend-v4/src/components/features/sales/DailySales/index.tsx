@@ -431,7 +431,13 @@ const DailySales = (): React.ReactElement => {
                     value={selectedZones}
                     onChange={handleZoneChange}
                     input={<OutlinedInput />}
-                    renderValue={(selected) => `${selected.length} seleccionadas`}
+                    renderValue={(selected) => {
+                      if (selected.length === 1) {
+                        const zone = zones.find(z => (z.zoneId || z.id) === selected[0]);
+                        return zone?.zoneName || zone?.name || '1 seleccionada';
+                      }
+                      return `${selected.length} seleccionadas`;
+                    }}
                   >
                     {zones.map((zone) => {
                       const zoneId = zone.zoneId || zone.id || 0;

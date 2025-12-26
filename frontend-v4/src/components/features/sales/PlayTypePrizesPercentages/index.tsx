@@ -112,7 +112,7 @@ const PlayTypePrizesPercentages = (): React.ReactElement => {
                       ...params.InputProps,
                       startAdornment: zonas.length > 0 ? (
                         <InputAdornment position="start" sx={{ ml: 1 }}>
-                          {zonas.length} seleccionadas
+                          {zonas.length === 1 ? zonas[0].name : `${zonas.length} seleccionadas`}
                         </InputAdornment>
                       ) : null
                     }}

@@ -160,8 +160,19 @@ const SalesByDate = (): React.ReactElement => {
             <Grid item xs={12} md={3}>
               <Autocomplete multiple options={zonasList} getOptionLabel={(o) => o.name || ''} value={zonas}
                 onChange={(e, v) => setZonas(v)}
-                renderInput={(params) => <TextField {...params} label="Zonas" size="small"
-                  placeholder={zonas.length === 0 ? "Seleccione" : `${zonas.length} seleccionadas`} />} />
+                renderTags={() => null}
+                renderInput={(params) => (
+                  <TextField {...params} label="Zonas" size="small"
+                    InputProps={{
+                      ...params.InputProps,
+                      startAdornment: zonas.length > 0 ? (
+                        <InputAdornment position="start" sx={{ ml: 1 }}>
+                          {zonas.length === 1 ? zonas[0].name : `${zonas.length} seleccionadas`}
+                        </InputAdornment>
+                      ) : null
+                    }}
+                    placeholder={zonas.length === 0 ? "Seleccione" : ""} />
+                )} />
             </Grid>
           </Grid>
 

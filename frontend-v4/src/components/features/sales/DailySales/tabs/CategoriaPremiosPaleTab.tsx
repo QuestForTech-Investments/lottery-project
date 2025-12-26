@@ -117,8 +117,14 @@ const CategoriaPremiosPaleTab = ({ selectedDate, setSelectedDate }: CategoriaPre
   return (
     <Card>
       <CardContent>
-        <Typography variant="h5" align="center" gutterBottom sx={{ fontWeight: 400, mb: 3 }}>
-          Total: {formatCurrency(summary.totalSold)}
+        <Typography variant="h5" align="center" gutterBottom sx={{ fontWeight: 400, mb: 3, fontSize: '1.7rem' }}>
+          Total: <Box component="span" sx={{
+            backgroundColor: '#e0f7fa',
+            px: 2,
+            py: 0.5,
+            borderRadius: 1,
+            color: '#00838f'
+          }}>{formatCurrency(summary.totalSold)}</Box>
         </Typography>
 
         <Box sx={{ display: 'flex', gap: 2, mb: 3, alignItems: 'flex-end' }}>

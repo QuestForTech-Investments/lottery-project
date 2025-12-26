@@ -243,7 +243,13 @@ const CombinacionesTab = ({ selectedDate, setSelectedDate, zones, selectedZones,
                 value={selectedZones}
                 onChange={handleZoneChange}
                 input={<OutlinedInput />}
-                renderValue={(selected) => `${selected.length} seleccionadas`}
+                renderValue={(selected) => {
+                  if (selected.length === 1) {
+                    const zone = zones.find(z => (z.zoneId || z.id) === selected[0]);
+                    return zone?.zoneName || zone?.name || '1 seleccionada';
+                  }
+                  return `${selected.length} seleccionadas`;
+                }}
               >
                 {zones.map((zone) => {
                   const zoneId = zone.zoneId || zone.id || 0;
@@ -275,7 +281,13 @@ const CombinacionesTab = ({ selectedDate, setSelectedDate, zones, selectedZones,
                 value={selectedBancas}
                 onChange={handleBancaChange}
                 input={<OutlinedInput />}
-                renderValue={(selected) => `${selected.length} seleccionadas`}
+                renderValue={(selected) => {
+                  if (selected.length === 1) {
+                    const banca = bancas.find(b => b.id === selected[0]);
+                    return banca?.name || '1 seleccionada';
+                  }
+                  return `${selected.length} seleccionadas`;
+                }}
               >
                 {bancas.map((banca) => (
                   <MenuItem key={banca.id} value={banca.id}>

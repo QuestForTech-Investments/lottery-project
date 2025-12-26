@@ -31,6 +31,7 @@ interface BancaData {
   premios: number;
   neto: number;
   caida: number;
+  gastos: number;
   final: number;
 }
 
@@ -86,6 +87,7 @@ interface Totals {
   premios: number;
   neto: number;
   caida: number;
+  gastos: number;
   final: number;
 }
 
@@ -161,7 +163,6 @@ const HistoricalSales = (): React.ReactElement => {
   const [fechaFinal, setFechaFinal] = useState<string>(new Date().toISOString().split('T')[0]);
   const [zonas, setZonas] = useState<Zona[]>([]);
   const [grupo, setGrupo] = useState<string | number>('');
-  const [mostrarComision2, setMostrarComision2] = useState<boolean>(false);
   const [filterType, setFilterType] = useState<string>('todos');
   const [filtroRapido, setFiltroRapido] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
@@ -174,7 +175,7 @@ const HistoricalSales = (): React.ReactElement => {
 
   const [zonasList, setZonasList] = useState<Zona[]>([]);
   const [gruposList, setGruposList] = useState<Grupo[]>([]);
-  const [totals, setTotals] = useState<Totals>({ tickets: 0, venta: 0, comisiones: 0, descuentos: 0, premios: 0, neto: 0, caida: 0, final: 0 });
+  const [totals, setTotals] = useState<Totals>({ tickets: 0, venta: 0, comisiones: 0, descuentos: 0, premios: 0, neto: 0, caida: 0, gastos: 0, final: 0 });
 
   const formatCurrency = useCallback((amount: number): string => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount), []);
 
@@ -219,6 +220,7 @@ const HistoricalSales = (): React.ReactElement => {
         premios: item.totalPrizes,
         neto: item.totalNet,
         caida: 0,
+        gastos: 0,
         final: item.totalNet
       }));
 
@@ -232,8 +234,9 @@ const HistoricalSales = (): React.ReactElement => {
         premios: acc.premios + row.premios,
         neto: acc.neto + row.neto,
         caida: acc.caida + row.caida,
+        gastos: acc.gastos + row.gastos,
         final: acc.final + row.final
-      }), { tickets: 0, venta: 0, comisiones: 0, descuentos: 0, premios: 0, neto: 0, caida: 0, final: 0 });
+      }), { tickets: 0, venta: 0, comisiones: 0, descuentos: 0, premios: 0, neto: 0, caida: 0, gastos: 0, final: 0 });
 
       setTotals(newTotals);
     } catch (error) {
@@ -374,8 +377,14 @@ const HistoricalSales = (): React.ReactElement => {
               <Tabs value={0}><Tab label="Bancas" /></Tabs>
             </Box>
 
-            <Typography variant="h5" align="center" sx={{ mb: 3, color: '#1976d2' }}>
-              Total: {formatCurrency(totals.final)}
+            <Typography variant="h5" align="center" gutterBottom sx={{ fontWeight: 400, mb: 3, fontSize: '1.7rem' }}>
+              Total: <Box component="span" sx={{
+                backgroundColor: '#e0f7fa',
+                px: 2,
+                py: 0.5,
+                borderRadius: 1,
+                color: '#00838f'
+              }}>{formatCurrency(totals.final)}</Box>
             </Typography>
 
             <Box sx={{ mb: 2 }}>
@@ -432,7 +441,7 @@ const HistoricalSales = (): React.ReactElement => {
             <Table size="small">
               <TableHead sx={{ backgroundColor: '#e3e3e3' }}>
                 <TableRow>
-                  {['Ref.', 'Código', 'Tickets', 'Venta', 'Comisiones', 'Descuentos', 'Premios', 'Neto', 'Caída', 'Final'].map(h => (
+                  {['Ref.', 'Código', 'Tickets', 'Venta', 'Comisiones', 'Descuentos', 'Premios', 'Neto', 'Caída', 'Gastos', 'Final'].map(h => (
                     <TableCell key={h} sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.75rem' }}>{h}</TableCell>
                   ))}
                 </TableRow>
@@ -449,6 +458,7 @@ const HistoricalSales = (): React.ReactElement => {
                     <TableCell>{formatCurrency(d.premios)}</TableCell>
                     <TableCell>{formatCurrency(d.neto)}</TableCell>
                     <TableCell>{formatCurrency(d.caida)}</TableCell>
+                    <TableCell>{formatCurrency(d.gastos)}</TableCell>
                     <TableCell sx={{ color: d.final >= 0 ? 'success.main' : 'error.main' }}>{formatCurrency(d.final)}</TableCell>
                   </TableRow>
                 ))}
@@ -462,6 +472,7 @@ const HistoricalSales = (): React.ReactElement => {
                   <TableCell>{formatCurrency(totals.premios)}</TableCell>
                   <TableCell>{formatCurrency(totals.neto)}</TableCell>
                   <TableCell>{formatCurrency(totals.caida)}</TableCell>
+                  <TableCell>{formatCurrency(totals.gastos)}</TableCell>
                   <TableCell sx={{ color: totals.final >= 0 ? 'success.main' : 'error.main' }}>{formatCurrency(totals.final)}</TableCell>
                 </TableRow>
               </TableBody>
@@ -522,7 +533,7 @@ const HistoricalSales = (): React.ReactElement => {
                       const selectedIds = e.target.value as number[];
                       setZonas(zonasList.filter(z => selectedIds.includes(z.id)));
                     }}
-                    renderValue={(selected) => `${selected.length} seleccionadas`}
+                    renderValue={(selected) => selected.length === 1 ? zonasList.find(z => z.id === selected[0])?.name || '1 seleccionada' : `${selected.length} seleccionadas`}
                   >
                     {zonasList.map((zone) => (
                       <MenuItem key={zone.id} value={zone.id}>
@@ -554,8 +565,14 @@ const HistoricalSales = (): React.ReactElement => {
               </Button>
             </Box>
 
-            <Typography variant="h5" align="center" gutterBottom sx={{ fontWeight: 400, mb: 4, fontSize: '1.5rem' }}>
-              Total neto: {formatCurrency(totalNeto)}
+            <Typography variant="h5" align="center" gutterBottom sx={{ fontWeight: 400, mb: 3, fontSize: '1.7rem' }}>
+              Total neto: <Box component="span" sx={{
+                backgroundColor: '#e0f7fa',
+                px: 2,
+                py: 0.5,
+                borderRadius: 1,
+                color: '#00838f'
+              }}>{formatCurrency(totalNeto)}</Box>
             </Typography>
 
             <Typography variant="h6" align="center" sx={{ color: 'text.secondary', mb: 4, fontSize: '1.25rem' }}>
@@ -687,7 +704,7 @@ const HistoricalSales = (): React.ReactElement => {
                       const selectedIds = e.target.value as number[];
                       setZonas(zonasList.filter(z => selectedIds.includes(z.id)));
                     }}
-                    renderValue={(selected) => `${selected.length} seleccionadas`}
+                    renderValue={(selected) => selected.length === 1 ? zonasList.find(z => z.id === selected[0])?.name || '1 seleccionada' : `${selected.length} seleccionadas`}
                   >
                     {zonasList.map((zone) => (
                       <MenuItem key={zone.id} value={zone.id}>
@@ -860,7 +877,7 @@ const HistoricalSales = (): React.ReactElement => {
                       const selectedIds = e.target.value as number[];
                       setZonas(zonasList.filter(z => selectedIds.includes(z.id)));
                     }}
-                    renderValue={(selected) => `${selected.length} seleccionadas`}
+                    renderValue={(selected) => selected.length === 1 ? zonasList.find(z => z.id === selected[0])?.name || '1 seleccionada' : `${selected.length} seleccionadas`}
                   >
                     {zonasList.map((zone) => (
                       <MenuItem key={zone.id} value={zone.id}>
@@ -871,12 +888,6 @@ const HistoricalSales = (): React.ReactElement => {
                   </Select>
                 </FormControl>
               </Box>
-
-              <FormControlLabel
-                control={<Checkbox checked={mostrarComision2} onChange={(e) => setMostrarComision2(e.target.checked)} />}
-                label="Mostrar comisión #2"
-                sx={{ '& .MuiFormControlLabel-label': { fontSize: '0.8rem' } }}
-              />
             </Box>
 
             <Box sx={{ display: 'flex', gap: 1, mb: 3 }}>
@@ -912,8 +923,14 @@ const HistoricalSales = (): React.ReactElement => {
               </Button>
             </Box>
 
-            <Typography variant="h5" align="center" gutterBottom sx={{ fontWeight: 400, mb: 3 }}>
-              Total: $0.00
+            <Typography variant="h5" align="center" gutterBottom sx={{ fontWeight: 400, mb: 3, fontSize: '1.7rem' }}>
+              Total: <Box component="span" sx={{
+                backgroundColor: '#e0f7fa',
+                px: 2,
+                py: 0.5,
+                borderRadius: 1,
+                color: '#00838f'
+              }}>{formatCurrency(zonasData.reduce((sum, d) => sum + d.neto, 0))}</Box>
             </Typography>
 
             <Box sx={{ mb: 2 }}>
@@ -1072,11 +1089,11 @@ const HistoricalSales = (): React.ReactElement => {
         <Box sx={{ p: 3 }}>
           {mainTab === 0 && (
             <>
-              <Typography variant="h5" align="center" sx={{ color: '#1976d2', mb: 4, fontWeight: 400 }}>
+              <Typography variant="h5" align="center" sx={{ color: '#1976d2', mb: 2, fontWeight: 400 }}>
                 Reportes
               </Typography>
 
-              <Grid container spacing={2} sx={{ mb: 2 }}>
+              <Grid container spacing={2} sx={{ mb: 1 }}>
                 <Grid item xs={12} md={3}>
                   <TextField fullWidth type="date" label="Fecha inicial" value={fechaInicial}
                     onChange={(e) => setFechaInicial(e.target.value)} InputLabelProps={{ shrink: true }} size="small" />
@@ -1095,7 +1112,7 @@ const HistoricalSales = (): React.ReactElement => {
                           ...params.InputProps,
                           startAdornment: zonas.length > 0 ? (
                             <InputAdornment position="start" sx={{ ml: 1 }}>
-                              {zonas.length} seleccionadas
+                              {zonas.length === 1 ? zonas[0].name : `${zonas.length} seleccionadas`}
                             </InputAdornment>
                           ) : null
                         }}
@@ -1112,11 +1129,6 @@ const HistoricalSales = (): React.ReactElement => {
                   </FormControl>
                 </Grid>
               </Grid>
-
-              <Box sx={{ mb: 3 }}>
-                <FormControlLabel control={<Checkbox checked={mostrarComision2} onChange={(e) => setMostrarComision2(e.target.checked)} />}
-                  label="Mostrar comisión #2" />
-              </Box>
 
               <Stack direction="row" spacing={2} sx={{ mb: 3 }}>
                 <Button
