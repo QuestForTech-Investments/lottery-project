@@ -378,9 +378,9 @@ public class TicketsController : ControllerBase
             };
 
             // 7. Get commission and discount percentages
-            // Commission comes from user's commission rate (configured per user)
+            // Commission disabled - set to 0 for all sales
             // Discount comes from request or defaults to 0
-            var commissionPercentage = user.CommissionRate; // User's configured commission rate
+            var commissionPercentage = 0.00m; // Commissions disabled
             var discountPercentage = dto.GlobalDiscount > 0 ? dto.GlobalDiscount : 0.00m;
 
             // 8. Create ticket lines and calculate totals
@@ -497,6 +497,7 @@ public class TicketsController : ControllerBase
                 TotalPrize = ticket.TotalPrize,
                 WinningLines = ticket.WinningLines,
                 Status = ticket.Status,
+                TicketState = ticket.TicketState,
                 IsCancelled = ticket.IsCancelled,
                 CancelledAt = ticket.CancelledAt,
                 CancelledBy = ticket.CancelledBy,
@@ -734,6 +735,7 @@ public class TicketsController : ControllerBase
                     TotalPrize = t.TotalPrize,
                     WinningLines = t.WinningLines,
                     Status = t.Status,
+                    TicketState = t.TicketState,
                     IsCancelled = t.IsCancelled,
                     CancelledAt = t.CancelledAt,
                     IsPaid = t.IsPaid,
@@ -1109,6 +1111,7 @@ public class TicketsController : ControllerBase
             TotalPrize = ticket.TotalPrize,
             WinningLines = ticket.WinningLines,
             Status = ticket.Status,
+            TicketState = ticket.TicketState,
             IsCancelled = ticket.IsCancelled,
             CancelledAt = ticket.CancelledAt,
             CancelledBy = ticket.CancelledBy,
@@ -1277,6 +1280,41 @@ public class TicketsController : ControllerBase
         {
             _logger.LogError(ex, "Error getting plays summary");
             return StatusCode(500, new { message = "Error al obtener el resumen de jugadas" });
+        }
+    }
+
+    /// <summary>
+    /// POST /api/tickets/reset-commissions
+    /// Reset all commissions to 0 for all tickets and ticket lines
+    /// </summary>
+    [HttpPost("reset-commissions")]
+    public async Task<ActionResult> ResetCommissions()
+    {
+        try
+        {
+            _logger.LogInformation("Resetting all commissions to 0");
+
+            // Update all ticket lines
+            var linesUpdated = await _context.Database.ExecuteSqlRawAsync(
+                "UPDATE ticket_lines SET commission_amount = 0, commission_percentage = 0");
+
+            // Update all tickets
+            var ticketsUpdated = await _context.Database.ExecuteSqlRawAsync(
+                "UPDATE tickets SET total_commission = 0");
+
+            _logger.LogInformation("Reset commissions: {Lines} lines, {Tickets} tickets updated",
+                linesUpdated, ticketsUpdated);
+
+            return Ok(new {
+                message = "Comisiones reseteadas a 0",
+                linesUpdated,
+                ticketsUpdated
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error resetting commissions");
+            return StatusCode(500, new { message = "Error al resetear las comisiones" });
         }
     }
 }

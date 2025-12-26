@@ -115,6 +115,10 @@ public class TicketListDto
     public decimal TotalPrize { get; set; }
     public int WinningLines { get; set; }
     public string Status { get; set; } = "pending";
+    /// <summary>
+    /// Estado del ticket según resultados: P=Pending, W=Winner, L=Loser
+    /// </summary>
+    public string TicketState { get; set; } = "P";
     public bool IsCancelled { get; set; }
     public DateTime? CancelledAt { get; set; }
     public bool IsPaid { get; set; }
@@ -160,6 +164,10 @@ public class TicketDetailDto
 
     // Status
     public string Status { get; set; } = "pending";
+    /// <summary>
+    /// Estado del ticket según resultados: P=Pending, W=Winner, L=Loser
+    /// </summary>
+    public string TicketState { get; set; } = "P";
     public bool IsCancelled { get; set; }
     public DateTime? CancelledAt { get; set; }
     public int? CancelledBy { get; set; }

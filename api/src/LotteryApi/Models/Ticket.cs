@@ -82,6 +82,13 @@ public class Ticket
     [Column("status")]
     public string Status { get; set; } = "pending";
 
+    /// <summary>
+    /// Estado del ticket según resultados: P=Pending, W=Winner, L=Loser
+    /// </summary>
+    [MaxLength(1)]
+    [Column("ticket_state")]
+    public string TicketState { get; set; } = "P";
+
     [Column("is_cancelled")]
     public bool IsCancelled { get; set; } = false;
 
