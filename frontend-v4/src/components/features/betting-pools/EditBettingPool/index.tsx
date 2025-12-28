@@ -174,6 +174,7 @@ const EditBettingPoolMUI: React.FC = () => {
                 zones={zones as unknown as Parameters<typeof GeneralTab>[0]['zones']}
                 loadingZones={loadingZones}
                 handleChange={handleChange as unknown as Parameters<typeof GeneralTab>[0]['handleChange']}
+                isEditMode={true}
               />
             )}
 

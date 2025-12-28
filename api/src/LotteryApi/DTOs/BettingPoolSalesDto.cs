@@ -11,4 +11,22 @@ public class BettingPoolSalesDto
     public decimal TotalPrizes { get; set; }
     public decimal TotalCommissions { get; set; }
     public decimal TotalNet { get; set; }
+
+    /// <summary>
+    /// Count of tickets with Pending state (ticket_state = 'P')
+    /// </summary>
+    [System.Text.Json.Serialization.JsonInclude]
+    public int PendingCount { get; set; }
+
+    /// <summary>
+    /// Count of tickets with Winner state (ticket_state = 'W')
+    /// </summary>
+    [System.Text.Json.Serialization.JsonInclude]
+    public int WinnerCount { get; set; }
+
+    /// <summary>
+    /// Count of tickets with Loser state (ticket_state = 'L')
+    /// </summary>
+    [System.Text.Json.Serialization.JsonInclude]
+    public int LoserCount { get; set; }
 }

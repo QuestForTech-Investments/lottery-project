@@ -237,6 +237,11 @@ public class SalesReportsController : ControllerBase
                     var totalPrizes = x.Tickets.Sum(t => t.TotalPrize);
                     var totalCommissions = x.Tickets.Sum(t => t.TotalCommission);
 
+                    // Count tickets by state
+                    var pendingCount = x.Tickets.Count(t => t.TicketState == "P");
+                    var winnerCount = x.Tickets.Count(t => t.TicketState == "W");
+                    var loserCount = x.Tickets.Count(t => t.TicketState == "L");
+
                     return new BettingPoolSalesDto
                     {
                         BettingPoolId = x.BettingPool.BettingPoolId,
@@ -247,7 +252,10 @@ public class SalesReportsController : ControllerBase
                         TotalSold = totalSold,
                         TotalPrizes = totalPrizes,
                         TotalCommissions = totalCommissions,
-                        TotalNet = totalSold - totalCommissions - totalPrizes
+                        TotalNet = totalSold - totalCommissions - totalPrizes,
+                        PendingCount = pendingCount,
+                        WinnerCount = winnerCount,
+                        LoserCount = loserCount
                     };
                 })
                 .OrderBy(x => x.BettingPoolCode)

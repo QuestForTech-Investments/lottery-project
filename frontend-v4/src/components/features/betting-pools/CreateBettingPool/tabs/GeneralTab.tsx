@@ -6,7 +6,6 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  Typography,
   Box,
   type SelectChangeEvent,
 } from '@mui/material';
@@ -48,26 +47,20 @@ interface GeneralTabProps {
   zones: Zone[];
   loadingZones: boolean;
   handleChange: (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | SelectChangeEvent<string>) => void;
+  isEditMode?: boolean;
 }
 
-/**
- * GeneralTab Component
- * Contains basic information fields for creating a banca
- */
-const GeneralTab: React.FC<GeneralTabProps> = ({ formData, errors, zones, loadingZones, handleChange }) => {
+const GeneralTab: React.FC<GeneralTabProps> = ({ formData, errors, zones, loadingZones, handleChange, isEditMode = false }) => {
   return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h6" gutterBottom>
-        Información General
-      </Typography>
-
-      <Grid container spacing={3}>
-        {/* Branch Name */}
+    <Box sx={{ p: 2 }}>
+      <Grid container spacing={2}>
+        {/* Row 1: Nombre | Número */}
         <Grid item xs={12} md={6}>
           <TextField
             fullWidth
+            size="small"
             required
-            label="Nombre de la Banca"
+            label="Nombre"
             name="bettingPoolName"
             value={formData.bettingPoolName}
             onChange={handleChange}
@@ -75,108 +68,214 @@ const GeneralTab: React.FC<GeneralTabProps> = ({ formData, errors, zones, loadin
             helperText={errors.bettingPoolName}
           />
         </Grid>
-
-        {/* Branch Code */}
         <Grid item xs={12} md={6}>
           <TextField
             fullWidth
-            required
-            label="Código de la Banca"
+            size="small"
+            label="Número"
             name="branchCode"
             value={formData.branchCode}
             onChange={handleChange}
-            error={!!errors.branchCode}
-            helperText={errors.branchCode || 'Generado automaticmente'}
+            disabled
+            InputProps={{ readOnly: true }}
+            sx={{
+              '& .MuiInputBase-input.Mui-disabled': {
+                WebkitTextFillColor: '#333',
+                backgroundColor: '#f5f5f5',
+              }
+            }}
           />
         </Grid>
 
-        {/* Zone */}
-        <Grid item xs={12} md={6}>
-          <FormControl fullWidth required error={!!errors.zoneId}>
-            <InputLabel>Zona</InputLabel>
-            <Select
-              name="zoneId"
-              value={formData.zoneId || ''}
-              label="Zona"
-              onChange={handleChange}
-              disabled={loadingZones}
-            >
-              <MenuItem value="" disabled>
-                <em>Seleccione una zona</em>
-              </MenuItem>
-              {zones.map((zone) => (
-                <MenuItem key={zone.zoneId} value={String(zone.zoneId)}>
-                  {zone.zoneName}
+        {/* Row 2: Usuario | Ubicación (Create) OR Ubicación | Referencia (Edit) */}
+        {!isEditMode ? (
+          <>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                size="small"
+                required
+                label="Nombre de usuario"
+                name="username"
+                placeholder="Usuario"
+                value={formData.username}
+                onChange={handleChange}
+                error={!!errors.username}
+                helperText={errors.username}
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                size="small"
+                label="Ubicación"
+                name="location"
+                value={formData.location}
+                onChange={handleChange}
+              />
+            </Grid>
+          </>
+        ) : (
+          <>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                size="small"
+                label="Ubicación"
+                name="location"
+                value={formData.location}
+                onChange={handleChange}
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                size="small"
+                label="Referencia"
+                name="reference"
+                value={formData.reference}
+                onChange={handleChange}
+              />
+            </Grid>
+          </>
+        )}
+
+        {/* Row 3: Contraseña | Referencia (Create) OR Zona | Comentario (Edit) */}
+        {!isEditMode ? (
+          <>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                size="small"
+                required
+                type="password"
+                label="Contraseña"
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                error={!!errors.password}
+                helperText={errors.password}
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                size="small"
+                label="Referencia"
+                name="reference"
+                value={formData.reference}
+                onChange={handleChange}
+              />
+            </Grid>
+          </>
+        ) : (
+          <>
+            <Grid item xs={12} md={6}>
+              <FormControl fullWidth size="small" error={!!errors.zoneId}>
+                <InputLabel>Zona</InputLabel>
+                <Select
+                  name="zoneId"
+                  value={formData.zoneId || ''}
+                  label="Zona"
+                  onChange={handleChange}
+                  disabled={loadingZones}
+                >
+                  <MenuItem value="" disabled>
+                    <em>Seleccione una zona</em>
+                  </MenuItem>
+                  {zones.map((zone) => (
+                    <MenuItem key={zone.zoneId} value={String(zone.zoneId)}>
+                      {zone.zoneName}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                size="small"
+                multiline
+                rows={2}
+                label="Comentario"
+                name="comment"
+                value={formData.comment}
+                onChange={handleChange}
+              />
+            </Grid>
+          </>
+        )}
+
+        {/* Row 4: Confirmación | Comentario (Create only) */}
+        {!isEditMode && (
+          <>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                size="small"
+                required
+                type="password"
+                label="Confirmación de contraseña"
+                name="confirmPassword"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                error={!!errors.confirmPassword}
+                helperText={errors.confirmPassword}
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                size="small"
+                multiline
+                rows={2}
+                label="Comentario"
+                name="comment"
+                value={formData.comment}
+                onChange={handleChange}
+              />
+            </Grid>
+          </>
+        )}
+
+        {/* Row 5: Zona (Create only) */}
+        {!isEditMode && (
+          <Grid item xs={12} md={6}>
+            <FormControl fullWidth size="small" error={!!errors.zoneId}>
+              <InputLabel>Zona</InputLabel>
+              <Select
+                name="zoneId"
+                value={formData.zoneId || ''}
+                label="Zona"
+                onChange={handleChange}
+                disabled={loadingZones}
+              >
+                <MenuItem value="" disabled>
+                  <em>Seleccione una zona</em>
                 </MenuItem>
-              ))}
-            </Select>
-            {errors.zoneId && (
-              <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.5 }}>
-                {errors.zoneId}
-              </Typography>
-            )}
-          </FormControl>
-        </Grid>
-
-        {/* Location */}
-        <Grid item xs={12} md={6}>
-          <TextField
-            fullWidth
-            label="Ubicación"
-            name="location"
-            value={formData.location}
-            onChange={handleChange}
-            helperText="Ubicación física de la banca"
-          />
-        </Grid>
-
-        {/* Reference */}
-        <Grid item xs={12} md={6}>
-          <TextField
-            fullWidth
-            label="Referencia"
-            name="reference"
-            value={formData.reference}
-            onChange={handleChange}
-            helperText="Referencia o información adicional"
-          />
-        </Grid>
-
-        {/* Comment */}
-        <Grid item xs={12}>
-          <TextField
-            fullWidth
-            multiline
-            rows={3}
-            label="Comentarios"
-            name="comment"
-            value={formData.comment}
-            onChange={handleChange}
-            helperText="Notas o comentarios adicionales"
-          />
-        </Grid>
+                {zones.map((zone) => (
+                  <MenuItem key={zone.zoneId} value={String(zone.zoneId)}>
+                    {zone.zoneName}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+        )}
       </Grid>
     </Box>
   );
 };
 
-/**
- * Custom comparison function for GeneralTab
- * Only re-renders when relevant fields for this tab change
- * Prevents cross-tab re-renders (70-80% reduction in unnecessary renders)
- */
 const arePropsEqual = (prevProps: GeneralTabProps, nextProps: GeneralTabProps): boolean => {
-  // Check if zones or loadingZones changed
   if (prevProps.zones !== nextProps.zones || prevProps.loadingZones !== nextProps.loadingZones) {
     return false;
   }
 
-  // Check if handleChange changed (it shouldn't if properly memoized)
-  if (prevProps.handleChange !== nextProps.handleChange) {
+  if (prevProps.handleChange !== nextProps.handleChange || prevProps.isEditMode !== nextProps.isEditMode) {
     return false;
   }
 
-  // Check only the form fields this tab uses
   const generalFields: (keyof GeneralFormData)[] = ['bettingPoolName', 'branchCode', 'zoneId', 'location', 'reference', 'username', 'password', 'confirmPassword', 'comment'];
 
   for (const field of generalFields) {
@@ -188,7 +287,6 @@ const arePropsEqual = (prevProps: GeneralTabProps, nextProps: GeneralTabProps): 
     }
   }
 
-  // No relevant changes, skip re-render
   return true;
 };
 

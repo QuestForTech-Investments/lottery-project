@@ -118,6 +118,7 @@ public class TicketListDto
     /// <summary>
     /// Estado del ticket según resultados: P=Pending, W=Winner, L=Loser
     /// </summary>
+    [System.Text.Json.Serialization.JsonInclude]
     public string TicketState { get; set; } = "P";
     public bool IsCancelled { get; set; }
     public DateTime? CancelledAt { get; set; }

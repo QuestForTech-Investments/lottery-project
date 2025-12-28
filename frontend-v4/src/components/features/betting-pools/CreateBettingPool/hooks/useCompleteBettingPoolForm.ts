@@ -348,7 +348,7 @@ const getInitialFormData = (branchCode = ''): FormData => ({
  * This is the FULL version matching the original CreateBettingPool
  */
 const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
-  const _navigate = useNavigate();
+  const navigate = useNavigate();
   const location = useLocation();
 
   // Form state - ALL 168 fields from original CreateBanca
@@ -728,20 +728,31 @@ const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
       newErrors.zoneId = 'Debe seleccionar una zona';
     }
 
-    if (formData.password && formData.password.length < 6) {
+    // Username is required for betting pool
+    if (!formData.username || !formData.username.trim()) {
+      newErrors.username = 'El usuario de banca es requerido';
+    }
+
+    // Password is required for betting pool
+    if (!formData.password) {
+      newErrors.password = 'La contraseña es requerida';
+    } else if (formData.password.length < 6) {
       newErrors.password = 'La contraseña debe tener al menos 6 caracteres';
     }
 
-    if (formData.password && formData.password !== formData.confirmPassword) {
+    // Confirm password validation
+    if (!formData.confirmPassword) {
+      newErrors.confirmPassword = 'Debe confirmar la contraseña';
+    } else if (formData.password !== formData.confirmPassword) {
       newErrors.confirmPassword = 'Las contraseñas no coinciden';
     }
 
-    if (formData.password && !formData.username) {
-      newErrors.username = 'El usuario es requerido si se proporciona una contraseña';
-    }
+    const hasErrors = Object.keys(newErrors).length > 0;
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    // Force a new object reference to trigger re-render
+    setErrors({ ...newErrors });
+
+    return !hasErrors;
   };
 
   /**
@@ -1019,10 +1030,24 @@ const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
         // For now, only essential fields are sent
       };
 
-      const response = await createBettingPool(bettingPoolData) as { success: boolean; data?: { bettingPoolId?: number; id?: number } };
+      const response = await createBettingPool(bettingPoolData) as {
+        success?: boolean;
+        data?: { bettingPoolId?: number; id?: number };
+        bettingPoolId?: number;  // Direct API response format
+        BettingPoolId?: number;  // PascalCase API response format
+      };
 
-      if (response.success) {
-        const createdBettingPoolId = response.data?.bettingPoolId || response.data?.id;
+      // Handle both wrapped response {success: true, data: {...}}
+      // and direct response {BettingPoolId: 123, ...}
+      const isSuccess = response.success === true ||
+                        response.bettingPoolId !== undefined ||
+                        response.BettingPoolId !== undefined;
+
+      if (isSuccess) {
+        const createdBettingPoolId = response.data?.bettingPoolId ||
+                                     response.data?.id ||
+                                     response.bettingPoolId ||
+                                     response.BettingPoolId;
 
         // Save prize configurations if betting pool was created successfully
         if (createdBettingPoolId) {
@@ -1112,32 +1137,19 @@ const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
           }
         }
 
-        // Show success message temporarily
+        // Show success message and navigate to list
         setSuccess(true);
+        console.log('[SUCCESS] Banca creada exitosamente, redirigiendo a la lista...');
 
-        // Get next branch code from API
-        try {
-          const codeData = await getNextBettingPoolCode() as { nextCode?: string };
-          if (codeData && codeData.nextCode) {
-            // Reset form with new code
-            resetFormToDefaults(codeData.nextCode);
-            console.log('Form reset with new code:', codeData.nextCode);
-          } else {
-            // If no code available, reset without code
-            resetFormToDefaults('');
-          }
-        } catch (codeError) {
-          console.error('Error getting next code:', codeError);
-          // Reset form anyway without new code
-          resetFormToDefaults('');
-        }
-
-        // Clear success message after 3 seconds
+        // Navigate to list after a brief delay to show success message
         setTimeout(() => {
-          setSuccess(false);
-        }, 3000);
-
-        // DO NOT navigate away - stay on the page for next entry
+          navigate('/betting-pools/list', {
+            state: {
+              message: 'Banca creada exitosamente',
+              type: 'success'
+            }
+          });
+        }, 1000);
       }
     } catch (error) {
       console.error('Error creating banca:', error);

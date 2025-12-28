@@ -358,11 +358,17 @@ const CreateBettingPoolMUI: React.FC = () => {
               Cancelar
             </Button>
             <Button
-              type="submit"
+              type="button"
               variant="contained"
               startIcon={loading ? <CircularProgress size={20} /> : <SaveIcon />}
               disabled={loading}
               sx={{ minWidth: 200 }}
+              onClick={() => {
+                const form = document.querySelector('form');
+                if (form) {
+                  form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+                }
+              }}
             >
               {loading ? 'Creando...' : 'Crear Banca'}
             </Button>

@@ -359,7 +359,7 @@ const TicketMonitoring: FC = () => {
     [banca?.id, fecha, loteria, zona, numero]
   );
 
-  // Initialize data on mount with cleanup
+  // Initialize data on mount with cleanup - runs only once
   useEffect(() => {
     const controller = new AbortController();
     abortControllerRef.current = controller;
@@ -389,7 +389,8 @@ const TicketMonitoring: FC = () => {
     return () => {
       controller.abort();
     };
-  }, [loadBancas, loadLoterias, loadTickets]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty deps - only run on mount
 
   // Filter tickets based on estado and search (using debounced value)
   const filteredTickets = useMemo<MappedTicket[]>(() => {

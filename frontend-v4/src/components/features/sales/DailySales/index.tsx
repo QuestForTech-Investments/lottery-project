@@ -84,6 +84,9 @@ interface BettingPoolSalesDto {
   totalPrizes: number;
   totalCommissions: number;
   totalNet: number;
+  pendingCount: number;
+  winnerCount: number;
+  loserCount: number;
 }
 
 interface _SalesTotals {
@@ -187,10 +190,10 @@ const DailySales = (): React.ReactElement => {
         id: item.bettingPoolId,
         ref: item.bettingPoolName,
         code: item.bettingPoolCode,
-        p: 0, // Not available from this endpoint
-        l: 0, // Not available from this endpoint
-        w: 0, // Not available from this endpoint
-        total: 0, // Not available from this endpoint
+        p: item.pendingCount || 0,
+        l: item.loserCount || 0,
+        w: item.winnerCount || 0,
+        total: (item.pendingCount || 0) + (item.loserCount || 0) + (item.winnerCount || 0),
         sales: item.totalSold,
         commissions: item.totalCommissions,
         discounts: 0, // Not available from this endpoint

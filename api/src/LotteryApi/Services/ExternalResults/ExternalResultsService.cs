@@ -323,6 +323,9 @@ public class ExternalResultsService : IExternalResultsService
 
         _logger.LogInformation("Processing {Count} pending ticket lines", pendingLines.Count);
 
+        // Track affected tickets to update their state
+        var affectedTicketIds = new HashSet<long>();
+
         foreach (var line in pendingLines)
         {
             if (!results.TryGetValue(line.DrawId, out var result))
@@ -350,6 +353,7 @@ public class ExternalResultsService : IExternalResultsService
                 {
                     line.Ticket.WinningLines++;
                     line.Ticket.TotalPrize += line.PrizeAmount;
+                    affectedTicketIds.Add(line.TicketId);
                 }
 
                 _logger.LogInformation("Winner found! Ticket {TicketId} Line {LineId}: {BetNumber} matches {Result}",
@@ -358,7 +362,14 @@ public class ExternalResultsService : IExternalResultsService
             else
             {
                 line.LineStatus = "lost";
+                affectedTicketIds.Add(line.TicketId);
             }
+        }
+
+        // Update TicketState for all affected tickets
+        if (affectedTicketIds.Any())
+        {
+            await UpdateTicketStatesAsync(affectedTicketIds, cancellationToken);
         }
 
         await _context.SaveChangesAsync(cancellationToken);
@@ -388,6 +399,9 @@ public class ExternalResultsService : IExternalResultsService
                 !tl.Ticket!.IsCancelled)
             .ToListAsync(cancellationToken);
 
+        // Track affected tickets to update their state
+        var affectedTicketIds = new HashSet<long>();
+
         foreach (var line in pendingLines)
         {
             ticketsProcessed++;
@@ -408,17 +422,78 @@ public class ExternalResultsService : IExternalResultsService
                 {
                     line.Ticket.WinningLines++;
                     line.Ticket.TotalPrize += line.PrizeAmount;
+                    affectedTicketIds.Add(line.TicketId);
                 }
             }
             else
             {
                 line.LineStatus = "lost";
+                affectedTicketIds.Add(line.TicketId);
             }
+        }
+
+        // Update TicketState for all affected tickets
+        if (affectedTicketIds.Any())
+        {
+            await UpdateTicketStatesAsync(affectedTicketIds, cancellationToken);
         }
 
         await _context.SaveChangesAsync(cancellationToken);
 
         return (ticketsProcessed, winnersFound);
+    }
+
+    /// <summary>
+    /// Updates the TicketState for tickets based on their lines' status:
+    /// - "W" (Winner) if any line is a winner
+    /// - "L" (Loser) if all lines are processed and none are winners
+    /// - "P" (Pending) if any lines are still pending
+    /// </summary>
+    private async Task UpdateTicketStatesAsync(HashSet<long> ticketIds, CancellationToken cancellationToken)
+    {
+        var tickets = await _context.Set<Ticket>()
+            .Include(t => t.TicketLines)
+            .Where(t => ticketIds.Contains(t.TicketId))
+            .ToListAsync(cancellationToken);
+
+        foreach (var ticket in tickets)
+        {
+            var lines = ticket.TicketLines ?? new List<TicketLine>();
+
+            if (lines.Count == 0)
+                continue;
+
+            // Check if any line is a winner
+            var hasWinner = lines.Any(l => l.IsWinner == true);
+
+            // Check if all lines are processed (no pending lines)
+            var allProcessed = lines.All(l => l.LineStatus == "winner" || l.LineStatus == "lost");
+
+            // Check if any line is still pending
+            var hasPending = lines.Any(l => l.LineStatus == "pending");
+
+            string newState;
+            if (hasWinner)
+            {
+                newState = "W"; // Winner - at least one winning line
+            }
+            else if (allProcessed && !hasPending)
+            {
+                newState = "L"; // Loser - all lines processed, none won
+            }
+            else
+            {
+                newState = "P"; // Pending - some lines not yet processed
+            }
+
+            if (ticket.TicketState != newState)
+            {
+                _logger.LogInformation(
+                    "Updating TicketState for ticket {TicketId}: {OldState} -> {NewState}",
+                    ticket.TicketId, ticket.TicketState, newState);
+                ticket.TicketState = newState;
+            }
+        }
     }
 
     private bool CheckIfWinner(TicketLine line, Result result)
