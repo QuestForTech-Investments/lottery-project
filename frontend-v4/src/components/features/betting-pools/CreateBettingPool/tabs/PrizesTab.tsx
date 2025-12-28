@@ -6,17 +6,15 @@ import {
   Box,
   CircularProgress,
   Alert,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
   Chip,
   IconButton,
   Tabs,
   Tab,
   Button,
   Snackbar,
+  Paper,
 } from '@mui/material';
-import { ExpandMore as ExpandMoreIcon, ChevronLeft, ChevronRight, Save as SaveIcon, CheckCircle as CheckCircleIcon } from '@mui/icons-material';
+import { ChevronLeft, ChevronRight, Save as SaveIcon, CheckCircle as CheckCircleIcon } from '@mui/icons-material';
 import { getAllBetTypesWithFields } from '@services/prizeService';
 import { filterBetTypesForDraw } from '@services/betTypeCompatibilityService';
 // ⚡ getAllDraws removed - draws now loaded in parent
@@ -180,6 +178,39 @@ const SUPER_PALE_DRAWS = [
 const PANAMA_DRAWS = ['PANAMA MIERCOLES', 'PANAMA DOMINGO'];
 
 /**
+ * Orden específico de los tipos de apuesta según la app original (la-numbers.apk.lol)
+ * Este orden determina cómo se muestran las tarjetas en el grid de Premios & Comisiones
+ */
+const BET_TYPE_ORDER = [
+  'DIRECTO',
+  'PALÉ',
+  'TRIPLETA',
+  'CASH3_STRAIGHT',
+  'CASH3_BOX',
+  'PLAY4 STRAIGHT',
+  'PLAY4 BOX',
+  'SUPER_PALE',
+  'BOLITA 1',
+  'BOLITA 2',
+  'SINGULACIÓN 1',
+  'SINGULACIÓN 2',
+  'SINGULACIÓN 3',
+  'PICK5 STRAIGHT',
+  'PICK5 BOX',
+  'PICK TWO',
+  'PICK2',
+  'CASH3 FRONT STRAIGHT',
+  'CASH3_FRONT_BOX',
+  'CASH3_BACK_STRAIGHT',
+  'CASH3 BACK BOX',
+  'PICK TWO FRONT',
+  'PICK TWO BACK',
+  'PICK TWO MIDDLE',
+  'SINGULACION',
+  'PANAMA',
+];
+
+/**
  * Get allowed bet type codes for a specific draw
  */
 const getAllowedBetTypesForDraw = (drawName: string): string[] | null => {
@@ -237,7 +268,16 @@ const PrizesTab: React.FC<PrizesTabProps> = ({ formData, handleChange, bettingPo
   }, [activeDraw, draws]);
 
   const filteredBetTypes = useMemo(() => {
-    return filterBetTypesForDraw(betTypes, activeDrawName);
+    const filtered = filterBetTypesForDraw(betTypes, activeDrawName);
+    // Sort bet types according to the original app order
+    return [...filtered].sort((a, b) => {
+      const indexA = BET_TYPE_ORDER.indexOf(a.betTypeCode);
+      const indexB = BET_TYPE_ORDER.indexOf(b.betTypeCode);
+      // If not in the order list, put at the end
+      const posA = indexA === -1 ? 999 : indexA;
+      const posB = indexB === -1 ? 999 : indexB;
+      return posA - posB;
+    });
   }, [betTypes, activeDrawName]);
 
   // State for valores "general" (usados como fallback)
@@ -575,106 +615,108 @@ const PrizesTab: React.FC<PrizesTabProps> = ({ formData, handleChange, bettingPo
   };
 
   /**
-   * Render Premios content
+   * Render Premios content - FLAT GRID LAYOUT (like original Vue.js app)
+   * All bet types visible at once in a multi-column grid
    */
   const renderPremiosContent = () => {
     return (
       <>
-        {/* Bet Types Accordions - Filtered by active draw */}
-        {filteredBetTypes.map((betType, index) => (
-          <Accordion key={betType.betTypeId} defaultExpanded={index === 0}>
-            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%' }}>
-                <Typography variant="subtitle1" fontWeight="bold">
+        {/* Flat Grid Layout - All bet types visible at once */}
+        <Grid container spacing={2}>
+          {filteredBetTypes.map((betType) => (
+            <Grid item xs={12} sm={6} md={4} lg={3} key={betType.betTypeId}>
+              <Paper
+                elevation={0}
+                sx={{
+                  p: 2,
+                  height: '100%',
+                  bgcolor: 'transparent',
+                  border: 'none',
+                }}
+              >
+                {/* Bet Type Header */}
+                <Typography
+                  variant="subtitle2"
+                  fontWeight="bold"
+                  color="primary"
+                  sx={{
+                    mb: 1.5,
+                    textTransform: 'uppercase',
+                    fontSize: '0.85rem',
+                    borderBottom: '1px solid',
+                    borderColor: 'divider',
+                    pb: 0.5,
+                  }}
+                >
                   {betType.betTypeName}
                 </Typography>
-                {betType.description && (
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                    sx={{ fontStyle: 'italic', flex: 1 }}
-                  >
-                    {betType.description}
-                  </Typography>
-                )}
-              </Box>
-            </AccordionSummary>
 
-            <AccordionDetails>
-              <Grid container spacing={2}>
-                {/* Render prize type fields for this bet type */}
-                {betType.prizeFields && betType.prizeFields.length > 0 ? (
-                  betType.prizeFields.map((field) => {
-                    const fieldKey = getFieldName(betType.betTypeCode, field);
-                    const currentValue = formData[fieldKey];
-                    const generalKey = `general_${betType.betTypeCode}_${field.fieldCode}`;
-                    // 🔥 FIX: Priorizar formData (cambios del usuario) sobre generalValues (valores de la API)
-                    const formDataGenVal = formData[generalKey];
-                    const generalValue = (formDataGenVal !== undefined && formDataGenVal !== null && formDataGenVal !== '' && typeof formDataGenVal !== 'boolean')
-                      ? formDataGenVal
-                      : generalValues[generalKey];
+                {/* Prize Fields - Stacked vertically */}
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                  {betType.prizeFields && betType.prizeFields.length > 0 ? (
+                    betType.prizeFields.map((field) => {
+                      const fieldKey = getFieldName(betType.betTypeCode, field);
+                      const currentValue = formData[fieldKey];
+                      const generalKey = `general_${betType.betTypeCode}_${field.fieldCode}`;
+                      const formDataGenVal = formData[generalKey];
+                      const generalValue = (formDataGenVal !== undefined && formDataGenVal !== null && formDataGenVal !== '' && typeof formDataGenVal !== 'boolean')
+                        ? formDataGenVal
+                        : generalValues[generalKey];
 
-                    // Determinar si es un valor personalizado
-                    const isCustomValue = activeDraw !== 'general' &&
-                                         currentValue !== undefined &&
-                                         currentValue !== null &&
-                                         currentValue !== '';
+                      const isCustomValue = activeDraw !== 'general' &&
+                                           currentValue !== undefined &&
+                                           currentValue !== null &&
+                                           currentValue !== '';
 
-                    // Create placeholder que muestre el valor de general si aplica
-                    const placeholderText = activeDraw === 'general'
-                      ? field.defaultMultiplier?.toString() || '0'
-                      : `${generalValue || field.defaultMultiplier || 0} (general)`;
-
-                    return (
-                      <Grid item xs={12} md={6} key={field.prizeTypeId}>
-                        <TextField
-                          fullWidth
-                          type="text"
-                          label={field.fieldName}
-                          name={fieldKey}
-                          value={getFieldValue(betType.betTypeCode, field)}
-                          onChange={handleFieldChange(betType.betTypeCode, field)}
-                          placeholder={placeholderText}
-                          inputProps={{
-                            step: "0.01",
-                            min: field.minMultiplier || 0,
-                            max: field.maxMultiplier || 10000,
-                            'data-type-id': field.prizeTypeId,
-                            'data-field-code': field.fieldCode,
-                            'data-default': field.defaultMultiplier,
-                            'data-min': field.minMultiplier,
-                            'data-max': field.maxMultiplier
-                          }}
-                          helperText={
-                            activeDraw === 'general'
-                              ? `Default: ${field.defaultMultiplier || 0} | Rango: ${field.minMultiplier || 0} - ${field.maxMultiplier || 10000}`
-                              : isCustomValue
-                                ? `✓ Valor personalizado | Rango: ${field.minMultiplier || 0} - ${field.maxMultiplier || 10000}`
-                                : `Usando valor de "General": ${generalValue || field.defaultMultiplier || 0} | Rango: ${field.minMultiplier || 0} - ${field.maxMultiplier || 10000}`
-                          }
-                          FormHelperTextProps={{
-                            sx: {
-                              fontSize: '0.7rem',
-                              color: isCustomValue ? 'primary.main' : 'text.secondary'
-                            }
-                          }}
-                        />
-                      </Grid>
-                    );
-                  })
-                ) : (
-                  <Grid item xs={12}>
-                    <Typography variant="body2" color="text.secondary" align="center">
-                      No hay campos de premios configurados para este tipo de juego
+                      return (
+                        <Box key={field.prizeTypeId}>
+                          <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            sx={{ display: 'block', mb: 0.5, fontSize: '0.75rem' }}
+                          >
+                            {field.fieldName}
+                          </Typography>
+                          <TextField
+                            fullWidth
+                            size="small"
+                            type="text"
+                            name={fieldKey}
+                            value={getFieldValue(betType.betTypeCode, field)}
+                            onChange={handleFieldChange(betType.betTypeCode, field)}
+                            placeholder={activeDraw === 'general' ? (field.defaultMultiplier?.toString() || '0') : `${generalValue || field.defaultMultiplier || 0}`}
+                            inputProps={{
+                              step: "0.01",
+                              min: field.minMultiplier || 0,
+                              max: field.maxMultiplier || 10000,
+                              'data-type-id': field.prizeTypeId,
+                              'data-field-code': field.fieldCode,
+                            }}
+                            sx={{
+                              '& .MuiOutlinedInput-root': {
+                                bgcolor: isCustomValue ? 'rgba(81, 203, 206, 0.08)' : 'white',
+                              },
+                              '& .MuiOutlinedInput-input': {
+                                py: 1,
+                                fontSize: '0.9rem',
+                              }
+                            }}
+                          />
+                        </Box>
+                      );
+                    })
+                  ) : (
+                    <Typography variant="caption" color="text.secondary">
+                      Sin campos
                     </Typography>
-                  </Grid>
-                )}
-              </Grid>
-            </AccordionDetails>
-          </Accordion>
-        ))}
+                  )}
+                </Box>
+              </Paper>
+            </Grid>
+          ))}
+        </Grid>
 
-        {/* 🔥 NEW: ACTUALIZAR button (like Vue.js original) */}
+        {/* ACTUALIZAR button */}
         {bettingPoolId && onSavePrizeConfig && (
           <Box sx={{ mt: 3, display: 'flex', justifyContent: 'center' }}>
             <Button
@@ -782,89 +824,99 @@ const PrizesTab: React.FC<PrizesTabProps> = ({ formData, handleChange, bettingPo
   };
 
   /**
-   * Render Comisiones content
+   * Render Comisiones content - FLAT GRID LAYOUT
    * Shows commission discount fields (1-4) per bet type
    */
   const renderComisionesContent = () => {
     return (
       <>
-        {/* Bet Types Accordions with Commission Fields - Filtered by active draw */}
-        {filteredBetTypes.map((betType, index) => (
-          <Accordion key={`commission-${betType.betTypeId}`} defaultExpanded={index === 0}>
-            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%' }}>
-                <Typography variant="subtitle1" fontWeight="bold">
+        {/* Flat Grid Layout - All bet types visible at once */}
+        <Grid container spacing={2}>
+          {filteredBetTypes.map((betType) => (
+            <Grid item xs={12} sm={6} md={4} lg={3} key={`commission-${betType.betTypeId}`}>
+              <Paper
+                elevation={0}
+                sx={{
+                  p: 2,
+                  height: '100%',
+                  bgcolor: 'transparent',
+                  border: 'none',
+                }}
+              >
+                {/* Bet Type Header */}
+                <Typography
+                  variant="subtitle2"
+                  fontWeight="bold"
+                  color="primary"
+                  sx={{
+                    mb: 1.5,
+                    textTransform: 'uppercase',
+                    fontSize: '0.85rem',
+                    borderBottom: '1px solid',
+                    borderColor: 'divider',
+                    pb: 0.5,
+                  }}
+                >
                   {betType.betTypeName}
                 </Typography>
-                <Typography
-                  variant="caption"
-                  color="text.secondary"
-                  sx={{ fontStyle: 'italic', flex: 1 }}
-                >
-                  Comisiones de descuento
-                </Typography>
-              </Box>
-            </AccordionSummary>
 
-            <AccordionDetails>
-              <Grid container spacing={2}>
-                {COMMISSION_FIELDS.map((field) => {
-                  const fieldKey = getCommissionFieldName(betType.betTypeCode, field.fieldCode);
-                  const currentValue = formData[fieldKey];
-                  const generalKey = `general_COMMISSION_${betType.betTypeCode}_${field.fieldCode}`;
-                  const generalValue = formData[generalKey];
+                {/* Commission Fields - Stacked vertically */}
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                  {COMMISSION_FIELDS.map((field) => {
+                    const fieldKey = getCommissionFieldName(betType.betTypeCode, field.fieldCode);
+                    const currentValue = formData[fieldKey];
+                    const generalKey = `general_COMMISSION_${betType.betTypeCode}_${field.fieldCode}`;
+                    const generalValue = formData[generalKey];
 
-                  // Determine if it's a custom value
-                  const isCustomValue = activeDraw !== 'general' &&
-                                       currentValue !== undefined &&
-                                       currentValue !== null &&
-                                       currentValue !== '';
+                    const isCustomValue = activeDraw !== 'general' &&
+                                         currentValue !== undefined &&
+                                         currentValue !== null &&
+                                         currentValue !== '';
 
-                  // Placeholder showing general value
-                  const placeholderText = activeDraw === 'general'
-                    ? '0'
-                    : `${generalValue || 0} (general)`;
-
-                  return (
-                    <Grid item xs={12} sm={6} md={3} key={field.id}>
-                      <TextField
-                        fullWidth
-                        type="text"
-                        label={field.name}
-                        name={fieldKey}
-                        value={getCommissionFieldValue(betType.betTypeCode, field.fieldCode)}
-                        onChange={handleCommissionFieldChange(betType.betTypeCode, field.fieldCode)}
-                        placeholder={placeholderText}
-                        InputProps={{
-                          endAdornment: <Typography variant="caption" sx={{ ml: 1 }}>%</Typography>
-                        }}
-                        inputProps={{
-                          step: "0.01",
-                          min: 0,
-                          max: 100,
-                          'data-field-code': field.fieldCode,
-                        }}
-                        helperText={
-                          activeDraw === 'general'
-                            ? 'Rango: 0 - 100%'
-                            : isCustomValue
-                              ? '✓ Valor personalizado'
-                              : `Usando valor de "General": ${generalValue || 0}%`
-                        }
-                        FormHelperTextProps={{
-                          sx: {
-                            fontSize: '0.7rem',
-                            color: isCustomValue ? 'primary.main' : 'text.secondary'
-                          }
-                        }}
-                      />
-                    </Grid>
-                  );
-                })}
-              </Grid>
-            </AccordionDetails>
-          </Accordion>
-        ))}
+                    return (
+                      <Box key={field.id}>
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                          sx={{ display: 'block', mb: 0.5, fontSize: '0.75rem' }}
+                        >
+                          {field.name}
+                        </Typography>
+                        <TextField
+                          fullWidth
+                          size="small"
+                          type="text"
+                          name={fieldKey}
+                          value={getCommissionFieldValue(betType.betTypeCode, field.fieldCode)}
+                          onChange={handleCommissionFieldChange(betType.betTypeCode, field.fieldCode)}
+                          placeholder={activeDraw === 'general' ? '0' : `${generalValue || 0}`}
+                          InputProps={{
+                            endAdornment: <Typography variant="caption" sx={{ ml: 1 }}>%</Typography>
+                          }}
+                          inputProps={{
+                            step: "0.01",
+                            min: 0,
+                            max: 100,
+                            'data-field-code': field.fieldCode,
+                          }}
+                          sx={{
+                            '& .MuiOutlinedInput-root': {
+                              bgcolor: isCustomValue ? 'rgba(81, 203, 206, 0.08)' : 'white',
+                            },
+                            '& .MuiOutlinedInput-input': {
+                              py: 1,
+                              fontSize: '0.9rem',
+                            }
+                          }}
+                        />
+                      </Box>
+                    );
+                  })}
+                </Box>
+              </Paper>
+            </Grid>
+          ))}
+        </Grid>
 
         {/* ACTUALIZAR button for Comisiones */}
         {bettingPoolId && onSavePrizeConfig && (
@@ -974,89 +1026,99 @@ const PrizesTab: React.FC<PrizesTabProps> = ({ formData, handleChange, bettingPo
   };
 
   /**
-   * Render Comisiones 2 content
+   * Render Comisiones 2 content - FLAT GRID LAYOUT
    * Shows commission 2 discount fields (1-4) per bet type
    */
   const renderComisiones2Content = () => {
     return (
       <>
-        {/* Bet Types Accordions with Commission 2 Fields - Filtered by active draw */}
-        {filteredBetTypes.map((betType, index) => (
-          <Accordion key={`commission2-${betType.betTypeId}`} defaultExpanded={index === 0}>
-            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%' }}>
-                <Typography variant="subtitle1" fontWeight="bold">
+        {/* Flat Grid Layout - All bet types visible at once */}
+        <Grid container spacing={2}>
+          {filteredBetTypes.map((betType) => (
+            <Grid item xs={12} sm={6} md={4} lg={3} key={`commission2-${betType.betTypeId}`}>
+              <Paper
+                elevation={0}
+                sx={{
+                  p: 2,
+                  height: '100%',
+                  bgcolor: 'transparent',
+                  border: 'none',
+                }}
+              >
+                {/* Bet Type Header */}
+                <Typography
+                  variant="subtitle2"
+                  fontWeight="bold"
+                  color="primary"
+                  sx={{
+                    mb: 1.5,
+                    textTransform: 'uppercase',
+                    fontSize: '0.85rem',
+                    borderBottom: '1px solid',
+                    borderColor: 'divider',
+                    pb: 0.5,
+                  }}
+                >
                   {betType.betTypeName}
                 </Typography>
-                <Typography
-                  variant="caption"
-                  color="text.secondary"
-                  sx={{ fontStyle: 'italic', flex: 1 }}
-                >
-                  Comisiones 2 de descuento
-                </Typography>
-              </Box>
-            </AccordionSummary>
 
-            <AccordionDetails>
-              <Grid container spacing={2}>
-                {COMMISSION_2_FIELDS.map((field) => {
-                  const fieldKey = getCommission2FieldName(betType.betTypeCode, field.fieldCode);
-                  const currentValue = formData[fieldKey];
-                  const generalKey = `general_COMMISSION2_${betType.betTypeCode}_${field.fieldCode}`;
-                  const generalValue = formData[generalKey];
+                {/* Commission 2 Fields - Stacked vertically */}
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                  {COMMISSION_2_FIELDS.map((field) => {
+                    const fieldKey = getCommission2FieldName(betType.betTypeCode, field.fieldCode);
+                    const currentValue = formData[fieldKey];
+                    const generalKey = `general_COMMISSION2_${betType.betTypeCode}_${field.fieldCode}`;
+                    const generalValue = formData[generalKey];
 
-                  // Determine if it's a custom value
-                  const isCustomValue = activeDraw !== 'general' &&
-                                       currentValue !== undefined &&
-                                       currentValue !== null &&
-                                       currentValue !== '';
+                    const isCustomValue = activeDraw !== 'general' &&
+                                         currentValue !== undefined &&
+                                         currentValue !== null &&
+                                         currentValue !== '';
 
-                  // Placeholder showing general value
-                  const placeholderText = activeDraw === 'general'
-                    ? '0'
-                    : `${generalValue || 0} (general)`;
-
-                  return (
-                    <Grid item xs={12} sm={6} md={3} key={field.id}>
-                      <TextField
-                        fullWidth
-                        type="text"
-                        label={field.name}
-                        name={fieldKey}
-                        value={getCommission2FieldValue(betType.betTypeCode, field.fieldCode)}
-                        onChange={handleCommission2FieldChange(betType.betTypeCode, field.fieldCode)}
-                        placeholder={placeholderText}
-                        InputProps={{
-                          endAdornment: <Typography variant="caption" sx={{ ml: 1 }}>%</Typography>
-                        }}
-                        inputProps={{
-                          step: "0.01",
-                          min: 0,
-                          max: 100,
-                          'data-field-code': field.fieldCode,
-                        }}
-                        helperText={
-                          activeDraw === 'general'
-                            ? 'Rango: 0 - 100%'
-                            : isCustomValue
-                              ? '✓ Valor personalizado'
-                              : `Usando valor de "General": ${generalValue || 0}%`
-                        }
-                        FormHelperTextProps={{
-                          sx: {
-                            fontSize: '0.7rem',
-                            color: isCustomValue ? 'primary.main' : 'text.secondary'
-                          }
-                        }}
-                      />
-                    </Grid>
-                  );
-                })}
-              </Grid>
-            </AccordionDetails>
-          </Accordion>
-        ))}
+                    return (
+                      <Box key={field.id}>
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                          sx={{ display: 'block', mb: 0.5, fontSize: '0.75rem' }}
+                        >
+                          {field.name}
+                        </Typography>
+                        <TextField
+                          fullWidth
+                          size="small"
+                          type="text"
+                          name={fieldKey}
+                          value={getCommission2FieldValue(betType.betTypeCode, field.fieldCode)}
+                          onChange={handleCommission2FieldChange(betType.betTypeCode, field.fieldCode)}
+                          placeholder={activeDraw === 'general' ? '0' : `${generalValue || 0}`}
+                          InputProps={{
+                            endAdornment: <Typography variant="caption" sx={{ ml: 1 }}>%</Typography>
+                          }}
+                          inputProps={{
+                            step: "0.01",
+                            min: 0,
+                            max: 100,
+                            'data-field-code': field.fieldCode,
+                          }}
+                          sx={{
+                            '& .MuiOutlinedInput-root': {
+                              bgcolor: isCustomValue ? 'rgba(81, 203, 206, 0.08)' : 'white',
+                            },
+                            '& .MuiOutlinedInput-input': {
+                              py: 1,
+                              fontSize: '0.9rem',
+                            }
+                          }}
+                        />
+                      </Box>
+                    );
+                  })}
+                </Box>
+              </Paper>
+            </Grid>
+          ))}
+        </Grid>
 
         {/* ACTUALIZAR button for Comisiones 2 */}
         {bettingPoolId && onSavePrizeConfig && (
