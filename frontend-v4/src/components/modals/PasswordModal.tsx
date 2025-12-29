@@ -39,11 +39,29 @@ export default function PasswordModal({ isOpen, onClose, userId, username }: Pas
 
   /**
    * Generate random password
+   * Both temporary and permanent passwords must contain at least one letter and one number
    */
   const generateRandomPassword = (length: number = 12, temporary: boolean = false): string => {
     if (temporary) {
-      // Temporary password: 6-digit number
-      return Math.floor(100000 + Math.random() * 900000).toString();
+      // Temporary password: 6 characters with letters and numbers (e.g., "A3b7X2")
+      const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      const lowercase = 'abcdefghijklmnopqrstuvwxyz';
+      const numbers = '0123456789';
+      const all = uppercase + lowercase + numbers;
+
+      let password = '';
+      // Ensure at least one letter and one number
+      password += uppercase[Math.floor(Math.random() * uppercase.length)];
+      password += lowercase[Math.floor(Math.random() * lowercase.length)];
+      password += numbers[Math.floor(Math.random() * numbers.length)];
+
+      // Fill the rest (3 more characters for 6 total)
+      for (let i = 3; i < 6; i++) {
+        password += all[Math.floor(Math.random() * all.length)];
+      }
+
+      // Shuffle
+      return password.split('').sort(() => Math.random() - 0.5).join('');
     }
 
     // Permanent password: Strong password with uppercase, lowercase, numbers and symbols

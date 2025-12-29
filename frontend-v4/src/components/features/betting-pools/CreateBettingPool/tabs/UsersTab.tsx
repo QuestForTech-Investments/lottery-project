@@ -94,6 +94,18 @@ const UsersTab: React.FC<UsersTabProps> = ({ formData, handleChange, bettingPool
       return;
     }
 
+    // Must contain at least one letter
+    if (!/[a-zA-Z]/.test(newUser.password)) {
+      setError('La contraseña debe contener al menos una letra');
+      return;
+    }
+
+    // Must contain at least one number
+    if (!/\d/.test(newUser.password)) {
+      setError('La contraseña debe contener al menos un número');
+      return;
+    }
+
     // Check for duplicate username
     const existingUser = users.find(
       u => u.username.toLowerCase() === newUser.username.trim().toLowerCase()
@@ -224,6 +236,7 @@ const UsersTab: React.FC<UsersTabProps> = ({ formData, handleChange, bettingPool
               type="password"
               value={newUser.password}
               onChange={handleNewUserChange}
+              helperText="Mínimo 6 caracteres, al menos una letra y un número"
             />
 
             <TextField

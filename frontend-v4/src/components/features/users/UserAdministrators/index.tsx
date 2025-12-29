@@ -59,15 +59,35 @@ const UserAdministratorsMUI = () => {
    * Handle save password
    */
   const handleSavePassword = () => {
-    if (newPassword === confirmPassword && newPassword.length >= 6) {
-      // TODO: Call API to update password
-      console.log('Update password for user:', selectedUsername, 'to:', newPassword);
-      setNewPassword('');
-      setConfirmPassword('');
-      handleClosePasswordModal();
-    } else {
-      alert('Las contraseñas no coinciden o son muy cortas (mínimo 6 caracteres)');
+    // Validate password length
+    if (newPassword.length < 6) {
+      alert('La contraseña debe tener al menos 6 caracteres');
+      return;
     }
+
+    // Must contain at least one letter
+    if (!/[a-zA-Z]/.test(newPassword)) {
+      alert('La contraseña debe contener al menos una letra');
+      return;
+    }
+
+    // Must contain at least one number
+    if (!/\d/.test(newPassword)) {
+      alert('La contraseña debe contener al menos un número');
+      return;
+    }
+
+    // Passwords must match
+    if (newPassword !== confirmPassword) {
+      alert('Las contraseñas no coinciden');
+      return;
+    }
+
+    // TODO: Call API to update password
+    console.log('Update password for user:', selectedUsername, 'to:', newPassword);
+    setNewPassword('');
+    setConfirmPassword('');
+    handleClosePasswordModal();
   };
 
   /**
@@ -216,7 +236,7 @@ const UserAdministratorsMUI = () => {
               label="Nueva Contraseña"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
-              helperText="Mínimo 6 caracteres"
+              helperText="Mínimo 6 caracteres, al menos una letra y un número"
               sx={{ mb: 2 }}
             />
             <TextField
@@ -245,7 +265,9 @@ const UserAdministratorsMUI = () => {
               !newPassword ||
               !confirmPassword ||
               newPassword !== confirmPassword ||
-              newPassword.length < 6
+              newPassword.length < 6 ||
+              !/[a-zA-Z]/.test(newPassword) ||
+              !/\d/.test(newPassword)
             }
           >
             Guardar
