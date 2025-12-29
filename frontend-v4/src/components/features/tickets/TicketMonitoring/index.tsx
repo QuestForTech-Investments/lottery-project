@@ -8,6 +8,7 @@ import {
   type ChangeEvent,
   type FC,
 } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Box,
   Paper,
@@ -227,12 +228,17 @@ function useDebounce<T>(value: T, delay: number): T {
 // ============================================================================
 
 const TicketMonitoring: FC = () => {
+  // URL params for deep linking (e.g., from DailySales code click)
+  const [searchParams] = useSearchParams();
+  const urlBettingPoolId = searchParams.get('bettingPoolId');
+  const urlDate = searchParams.get('date');
+
   // Refs
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  // Filter states
+  // Filter states - use URL params if available
   const [fecha, setFecha] = useState<string>(
-    () => new Date().toISOString().split('T')[0]
+    () => urlDate || new Date().toISOString().split('T')[0]
   );
   const [banca, setBanca] = useState<BettingPool | null>(null);
   const [bancas, setBancas] = useState<BettingPool[]>([]);
@@ -374,9 +380,18 @@ const TicketMonitoring: FC = () => {
       if (controller.signal.aborted) return;
 
       if (mappedPools.length > 0) {
-        const firstPool = mappedPools[0];
-        setBanca(firstPool);
-        await loadTickets(firstPool.id, controller.signal);
+        // Check if bettingPoolId was passed via URL params
+        const targetPoolId = urlBettingPoolId ? parseInt(urlBettingPoolId, 10) : null;
+        const targetPool = targetPoolId
+          ? mappedPools.find(p => p.id === targetPoolId)
+          : mappedPools[0];
+
+        if (targetPool) {
+          setBanca(targetPool);
+          // Use URL date if provided, otherwise use current fecha state
+          const dateToUse = urlDate || fecha;
+          await loadTickets(targetPool.id, controller.signal, dateToUse);
+        }
       }
 
       if (!controller.signal.aborted) {

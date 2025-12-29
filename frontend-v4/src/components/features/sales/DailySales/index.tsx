@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Card,
@@ -24,7 +25,8 @@ import {
   Tabs,
   Tab,
   ToggleButton,
-  ToggleButtonGroup
+  ToggleButtonGroup,
+  Link
 } from '@mui/material';
 import type { SelectChangeEvent } from '@mui/material/Select';
 import {
@@ -155,6 +157,7 @@ const FILTER_OPTIONS = [
 
 const DailySales = (): React.ReactElement => {
   console.log('[DATA] DailySales component mounted');
+  const navigate = useNavigate();
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [bettingPools, setBettingPools] = useState<BettingPool[]>([]);
@@ -348,6 +351,11 @@ const DailySales = (): React.ReactElement => {
   const formatCurrency = useCallback((value: number): string => {
     return `$${(value || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   }, []);
+
+  // Navigate to ticket monitoring with betting pool filter
+  const handleCodeClick = useCallback((bettingPoolId: number) => {
+    navigate(`/tickets/monitoring?bettingPoolId=${bettingPoolId}&date=${selectedDate}`);
+  }, [navigate, selectedDate]);
 
   if (loading && bettingPools.length === 0) {
     return (
@@ -690,7 +698,23 @@ const DailySales = (): React.ReactElement => {
                           {filteredData.map((row) => (
                             <TableRow key={row.id} hover>
                               <TableCell>{row.ref}</TableCell>
-                              <TableCell>{row.code}</TableCell>
+                              <TableCell>
+                                <Link
+                                  component="button"
+                                  variant="body2"
+                                  onClick={() => handleCodeClick(row.id)}
+                                  sx={{
+                                    cursor: 'pointer',
+                                    color: '#1976d2',
+                                    textDecoration: 'none',
+                                    '&:hover': {
+                                      textDecoration: 'underline',
+                                    },
+                                  }}
+                                >
+                                  {row.code}
+                                </Link>
+                              </TableCell>
                               <TableCell align="center">{row.p}</TableCell>
                               <TableCell align="center">{row.l}</TableCell>
                               <TableCell align="center">{row.w}</TableCell>
