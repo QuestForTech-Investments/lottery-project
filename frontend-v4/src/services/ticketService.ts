@@ -83,6 +83,16 @@ export interface TicketFilterResponse {
   totalRecords: number;
 }
 
+export interface MappedTicketLine {
+  drawId: number;
+  drawName: string;
+  betNumber: string;
+  betTypeId: number;
+  betTypeName: string;
+  betAmount: number;
+  prizeAmount: number;
+}
+
 export interface MappedTicket {
   id: number;
   numero: string;
@@ -92,6 +102,7 @@ export interface MappedTicket {
   premio: number;
   fechaCancelacion: string | null;
   estado: 'Ganador' | 'Cancelado' | 'Pagado' | 'Pendiente';
+  lines?: MappedTicketLine[];
 }
 
 export interface TicketCounts {
