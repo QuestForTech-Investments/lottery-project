@@ -57,9 +57,17 @@ export default defineConfig({
   },
   server: {
     port: 4001,
-    strictPort: true, // Always use port 4001, fail if busy
+    strictPort: true,
     host: '0.0.0.0',
-    open: true,
+    open: false, // Don't auto-open browser on server
+    // Security: Only allow specific hosts (not "*")
+    allowedHosts: [
+      'localhost',
+      '127.0.0.1',
+      'lottobook.net',
+      'www.lottobook.net',
+      '88.223.95.55'
+    ],
     hmr: {
       overlay: true,
       protocol: 'ws',

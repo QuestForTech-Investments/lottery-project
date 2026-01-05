@@ -27,6 +27,11 @@ public interface IExternalResultsService
     Task<int> ProcessPendingTicketsAsync(DateTime date, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Recalculate prizes for existing winners (when prize config changes)
+    /// </summary>
+    Task<(int linesUpdated, decimal totalPrize)> RecalculatePrizesAsync(DateTime date, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Get draw mappings configuration
     /// </summary>
     List<DrawMapping> GetDrawMappings();
@@ -180,6 +185,71 @@ public class ExternalResultsService : IExternalResultsService
     public List<DrawMapping> GetDrawMappings()
     {
         return _settings.DrawMappings;
+    }
+
+    public async Task<(int linesUpdated, decimal totalPrize)> RecalculatePrizesAsync(DateTime date, CancellationToken cancellationToken = default)
+    {
+        var linesUpdated = 0;
+        var totalPrize = 0m;
+
+        // Get all winning lines for the date
+        var winningLines = await _context.Set<TicketLine>()
+            .Include(tl => tl.Ticket)
+            .Where(tl =>
+                tl.DrawDate.Date == date.Date &&
+                tl.IsWinner == true &&
+                !tl.Ticket!.IsCancelled)
+            .ToListAsync(cancellationToken);
+
+        _logger.LogInformation("Recalculating prizes for {Count} winning lines", winningLines.Count);
+
+        // Track affected tickets to update their totals
+        var ticketPrizes = new Dictionary<long, decimal>();
+
+        foreach (var line in winningLines)
+        {
+            var oldPrize = line.PrizeAmount;
+
+            // Clear existing prize multiplier to force recalculation
+            line.PrizeMultiplier = null;
+
+            // Recalculate prize
+            line.PrizeAmount = await CalculatePrizeAsync(line);
+
+            if (line.PrizeAmount != oldPrize)
+            {
+                linesUpdated++;
+                _logger.LogInformation("Updated line {LineId}: {OldPrize} -> {NewPrize}",
+                    line.LineId, oldPrize, line.PrizeAmount);
+            }
+
+            // Accumulate prize per ticket
+            if (!ticketPrizes.ContainsKey(line.TicketId))
+                ticketPrizes[line.TicketId] = 0;
+            ticketPrizes[line.TicketId] += line.PrizeAmount;
+
+            totalPrize += line.PrizeAmount;
+        }
+
+        // Update ticket totals
+        foreach (var (ticketId, prize) in ticketPrizes)
+        {
+            var ticket = await _context.Set<Ticket>()
+                .FirstOrDefaultAsync(t => t.TicketId == ticketId, cancellationToken);
+
+            if (ticket != null)
+            {
+                ticket.TotalPrize = prize;
+                _logger.LogInformation("Updated ticket {TicketId} total prize: {Prize}", ticketId, prize);
+            }
+        }
+
+        await _context.SaveChangesAsync(cancellationToken);
+
+        _logger.LogInformation("Recalculated {Count} lines, total prize: {Total}",
+            linesUpdated, totalPrize);
+
+        return (linesUpdated, totalPrize);
     }
 
     private async Task<int> SaveResultsAsync(List<ExternalResultDto> results, CancellationToken cancellationToken)
@@ -346,7 +416,7 @@ public class ExternalResultsService : IExternalResultsService
                 winnersFound++;
 
                 // Calculate prize amount based on bet type and prize multiplier
-                line.PrizeAmount = CalculatePrize(line);
+                line.PrizeAmount = await CalculatePrizeAsync(line);
 
                 // Update ticket totals
                 if (line.Ticket != null)
@@ -356,12 +426,12 @@ public class ExternalResultsService : IExternalResultsService
                     affectedTicketIds.Add(line.TicketId);
                 }
 
-                _logger.LogInformation("Winner found! Ticket {TicketId} Line {LineId}: {BetNumber} matches {Result}",
-                    line.TicketId, line.LineId, line.BetNumber, result.WinningNumber);
+                _logger.LogInformation("Winner found! Ticket {TicketId} Line {LineId}: {BetNumber} matches {Result}, Prize: {Prize}",
+                    line.TicketId, line.LineId, line.BetNumber, result.WinningNumber, line.PrizeAmount);
             }
             else
             {
-                line.LineStatus = "lost";
+                line.LineStatus = "loser";
                 affectedTicketIds.Add(line.TicketId);
             }
         }
@@ -416,7 +486,7 @@ public class ExternalResultsService : IExternalResultsService
                 line.IsWinner = true;
                 line.LineStatus = "winner";
                 winnersFound++;
-                line.PrizeAmount = CalculatePrize(line);
+                line.PrizeAmount = await CalculatePrizeAsync(line);
 
                 if (line.Ticket != null)
                 {
@@ -424,10 +494,12 @@ public class ExternalResultsService : IExternalResultsService
                     line.Ticket.TotalPrize += line.PrizeAmount;
                     affectedTicketIds.Add(line.TicketId);
                 }
+
+                _logger.LogInformation("Winner found in draw {DrawId}! Prize: {Prize}", drawId, line.PrizeAmount);
             }
             else
             {
-                line.LineStatus = "lost";
+                line.LineStatus = "loser";
                 affectedTicketIds.Add(line.TicketId);
             }
         }
@@ -467,7 +539,7 @@ public class ExternalResultsService : IExternalResultsService
             var hasWinner = lines.Any(l => l.IsWinner == true);
 
             // Check if all lines are processed (no pending lines)
-            var allProcessed = lines.All(l => l.LineStatus == "winner" || l.LineStatus == "lost");
+            var allProcessed = lines.All(l => l.LineStatus == "winner" || l.LineStatus == "loser");
 
             // Check if any line is still pending
             var hasPending = lines.Any(l => l.LineStatus == "pending");
@@ -502,32 +574,50 @@ public class ExternalResultsService : IExternalResultsService
         var winningNumber = result.WinningNumber.Trim();
         var betTypeCode = line.BetTypeCode?.ToUpper() ?? "";
 
+        // Extract individual positions from winning number (format: NNNNNN = num1+num2+num3)
+        var num1 = winningNumber.Length >= 2 ? winningNumber.Substring(0, 2) : winningNumber;
+        var num2 = winningNumber.Length >= 4 ? winningNumber.Substring(2, 2) : "";
+        var num3 = winningNumber.Length >= 6 ? winningNumber.Substring(4, 2) : "";
+
         // Different matching rules based on bet type
         return betTypeCode switch
         {
-            // Directo/Straight - exact match
+            // Directo/Straight - 2 digit bet matches first position (num1)
             "DIRECTO" or "STRAIGHT" or "DIR" =>
-                betNumber == winningNumber,
+                betNumber.Length == 2 ? betNumber == num1 : betNumber == winningNumber,
 
-            // Box/Combinado - any permutation matches
+            // Box/Combinado - any permutation of 2 digits matches first position
             "BOX" or "COMBINADO" or "COMB" =>
-                IsBoxMatch(betNumber, winningNumber),
+                IsBoxMatch(betNumber, num1),
 
-            // Pale - first two digits
+            // Pale - 4 digit bet (AABB) matches first two positions in any order
             "PALE" or "FIRST2" =>
-                winningNumber.StartsWith(betNumber) || winningNumber.EndsWith(betNumber),
+                CheckPaleMatch(betNumber, num1, num2),
 
-            // Tripleta - first three digits
+            // Tripleta - 6 digit bet matches all three positions exactly
             "TRIPLETA" or "FIRST3" =>
-                winningNumber.StartsWith(betNumber),
+                betNumber == winningNumber || betNumber == (num1 + num2 + num3),
 
-            // Pulito - last digit matches
+            // Pulito - last digit of bet matches last digit of first position
             "PULITO" or "LAST1" =>
-                winningNumber.EndsWith(betNumber),
+                num1.EndsWith(betNumber),
 
-            // Default - exact match
-            _ => betNumber == winningNumber
+            // Default - check if bet matches first position
+            _ => betNumber == num1 || betNumber == winningNumber
         };
+    }
+
+    private bool CheckPaleMatch(string betNumber, string num1, string num2)
+    {
+        if (betNumber.Length != 4 || string.IsNullOrEmpty(num1) || string.IsNullOrEmpty(num2))
+            return false;
+
+        var betFirst = betNumber.Substring(0, 2);
+        var betSecond = betNumber.Substring(2, 2);
+
+        // Pale wins if both numbers appear in first two positions (any order)
+        return (betFirst == num1 && betSecond == num2) ||
+               (betFirst == num2 && betSecond == num1);
     }
 
     private bool IsBoxMatch(string betNumber, string winningNumber)
@@ -541,10 +631,53 @@ public class ExternalResultsService : IExternalResultsService
         return betDigits.SequenceEqual(winDigits);
     }
 
-    private decimal CalculatePrize(TicketLine line)
+    private async Task<decimal> CalculatePrizeAsync(TicketLine line)
     {
-        // Prize = BetAmount * PrizeMultiplier
-        var multiplier = line.PrizeMultiplier ?? 0;
+        // First check if line already has a prize multiplier
+        if (line.PrizeMultiplier.HasValue && line.PrizeMultiplier.Value > 0)
+        {
+            return line.BetAmount * line.PrizeMultiplier.Value;
+        }
+
+        // Get the betting pool ID from the ticket
+        var bettingPoolId = line.Ticket?.BettingPoolId;
+
+        // Find the prize type for this bet type (use first position / primer pago)
+        var prizeType = await _context.PrizeTypes
+            .Where(pt => pt.BetTypeId == line.BetTypeId && pt.IsActive)
+            .OrderBy(pt => pt.DisplayOrder)
+            .FirstOrDefaultAsync();
+
+        if (prizeType == null)
+        {
+            _logger.LogWarning("No prize type found for bet type {BetTypeId}", line.BetTypeId);
+            return 0;
+        }
+
+        decimal multiplier = prizeType.DefaultMultiplier;
+
+        // Check for custom banca configuration
+        if (bettingPoolId.HasValue)
+        {
+            var bancaConfig = await _context.BancaPrizeConfigs
+                .FirstOrDefaultAsync(bc =>
+                    bc.BettingPoolId == bettingPoolId.Value &&
+                    bc.PrizeTypeId == prizeType.PrizeTypeId);
+
+            if (bancaConfig != null)
+            {
+                multiplier = bancaConfig.CustomValue;
+                _logger.LogInformation("Using custom banca multiplier {Multiplier} for pool {PoolId}",
+                    multiplier, bettingPoolId);
+            }
+        }
+
+        // Store the multiplier in the line for future reference
+        line.PrizeMultiplier = multiplier;
+
+        _logger.LogInformation("Prize calculation: {BetAmount} x {Multiplier} = {Prize} for bet type {BetType}",
+            line.BetAmount, multiplier, line.BetAmount * multiplier, line.BetTypeCode);
+
         return line.BetAmount * multiplier;
     }
 }

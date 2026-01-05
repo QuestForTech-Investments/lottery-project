@@ -87,7 +87,7 @@ type FilterEstado = 'todos' | 'ganadores' | 'pendientes' | 'perdedores' | 'cance
 const ESTADO_MAP: Record<Exclude<FilterEstado, 'todos'>, MappedTicket['estado']> = {
   ganadores: 'Ganador',
   pendientes: 'Pendiente',
-  perdedores: 'Pagado',
+  perdedores: 'Perdedor',
   cancelados: 'Cancelado',
 };
 

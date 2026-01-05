@@ -305,22 +305,24 @@ const WinningPlays: React.FC = () => {
 
                   {/* Summary row */}
                   {winningPlays.length > 0 && (
-                    <Paper sx={{ p: 2, mt: 2, backgroundColor: '#f5f5f5' }}>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
-                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                          Total registros: {winningPlays.length}
-                        </Typography>
-                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                          Ventas: {formatCurrency(totalSales)}
-                        </Typography>
-                        <Typography variant="body2" sx={{ fontWeight: 500, color: 'success.main' }}>
-                          Premios: {formatCurrency(totalPrizes)}
-                        </Typography>
-                        <Typography variant="body2" sx={{ fontWeight: 600, color: grandTotal < 0 ? 'error.main' : 'success.main' }}>
-                          Total: {formatCurrency(grandTotal)}
-                        </Typography>
-                      </Box>
-                    </Paper>
+                    <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
+                      <Paper sx={{ px: 4, py: 2, backgroundColor: '#f5f5f5', textAlign: 'center', width: 'fit-content' }} elevation={0}>
+                        <Box sx={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: 4 }}>
+                          <Typography variant="h6" sx={{ color: '#1976d2' }}>
+                            Total registros: {winningPlays.length}
+                          </Typography>
+                          <Typography variant="h6" sx={{ color: '#1976d2' }}>
+                            Ventas: {formatCurrency(totalSales)}
+                          </Typography>
+                          <Typography variant="h6" sx={{ color: '#28a745' }}>
+                            Premios: {formatCurrency(totalPrizes)}
+                          </Typography>
+                          <Typography variant="h6" sx={{ fontWeight: 600, color: grandTotal < 0 ? '#dc3545' : '#28a745' }}>
+                            Total: {formatCurrency(grandTotal)}
+                          </Typography>
+                        </Box>
+                      </Paper>
+                    </Box>
                   )}
                 </>
               )}

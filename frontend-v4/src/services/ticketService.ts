@@ -61,6 +61,8 @@ export interface TicketResponse {
   isPaid: boolean;
   bettingPoolId: number;
   bettingPoolName?: string;
+  ticketState?: string; // P=Pending, W=Winner, L=Loser
+  winningLines?: number;
 }
 
 export interface TicketFilterParams {
@@ -101,7 +103,7 @@ export interface MappedTicket {
   monto: number;
   premio: number;
   fechaCancelacion: string | null;
-  estado: 'Ganador' | 'Cancelado' | 'Pagado' | 'Pendiente';
+  estado: 'Ganador' | 'Cancelado' | 'Pagado' | 'Pendiente' | 'Perdedor';
   lines?: MappedTicketLine[];
 }
 
@@ -179,8 +181,10 @@ export const mapTicketResponse = (ticket: TicketResponse): MappedTicket => {
 
   if (ticket.isCancelled) {
     estado = 'Cancelado';
-  } else if (ticket.totalPrize > 0) {
+  } else if (ticket.ticketState === 'W' || ticket.totalPrize > 0) {
     estado = 'Ganador';
+  } else if (ticket.ticketState === 'L') {
+    estado = 'Perdedor';
   } else if (ticket.isPaid) {
     estado = 'Pagado';
   } else {
@@ -209,7 +213,7 @@ export const calculateTicketCounts = (tickets: MappedTicket[]): TicketCounts => 
     todos: tickets.length,
     ganadores: tickets.filter(t => t.estado === 'Ganador').length,
     pendientes: tickets.filter(t => t.estado === 'Pendiente').length,
-    perdedores: tickets.filter(t => t.estado === 'Pagado').length,
+    perdedores: tickets.filter(t => t.estado === 'Perdedor').length,
     cancelados: tickets.filter(t => t.estado === 'Cancelado').length,
   };
 };

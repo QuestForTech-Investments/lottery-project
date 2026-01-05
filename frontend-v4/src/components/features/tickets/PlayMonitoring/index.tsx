@@ -320,11 +320,13 @@ const PlayMonitoring: React.FC = () => {
               ) : !loading && playData.length > 0 ? (
                 <>
                   {/* Summary */}
-                  <Paper sx={{ p: 2, mb: 2, backgroundColor: '#f5f5f5' }}>
-                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                      Total de números: {playData.length} | Ventas totales: {formatCurrency(totalSales)}
-                    </Typography>
-                  </Paper>
+                  <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
+                    <Paper sx={{ px: 4, py: 2, backgroundColor: '#f5f5f5', textAlign: 'center', width: 'fit-content' }} elevation={0}>
+                      <Typography variant="h6" sx={{ color: '#1976d2' }}>
+                        Total de números: {playData.length} | Ventas totales: {formatCurrency(totalSales)}
+                      </Typography>
+                    </Paper>
+                  </Box>
 
                   {/* Data Table */}
                   <Box sx={{ maxHeight: 400, overflow: 'auto' }}>
