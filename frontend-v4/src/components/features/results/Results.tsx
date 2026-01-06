@@ -51,7 +51,7 @@ import {
 
 // Internal module imports
 import { useResultsState } from './hooks';
-import type { DrawResultRow, IndividualResultForm, EnabledFields } from './types';
+import type { DrawResultRow, IndividualResultForm as IndividualResultFormType, EnabledFields } from './types';
 import {
   EMPTY_INDIVIDUAL_FORM,
   COLORS,
@@ -72,7 +72,7 @@ import {
   isPlay4OnlyDraw,
 } from './utils';
 import { getDrawCategory, DRAW_CATEGORIES } from '@services/betTypeCompatibilityService';
-import { ResultsTableRow } from './components/ResultsTable';
+import { ResultsTableRow, IndividualResultForm, ResultsLogsTab, ViewDetailsDialog } from './components';
 
 // =============================================================================
 // Validation Helpers
@@ -565,7 +565,7 @@ const Results = (): React.ReactElement => {
   );
 
   const handleIndividualFormChange = useCallback(
-    (field: keyof IndividualResultForm, value: string, enabledFieldsList?: string[]) => {
+    (field: keyof IndividualResultFormType, value: string, enabledFieldsList?: string[]) => {
       const sanitizedValue = sanitizeNumberInput(value);
       const maxLength = getIndividualMaxLength(field);
 
@@ -1401,204 +1401,21 @@ const Results = (): React.ReactElement => {
           )}
 
           {activeTab === 1 && (
-            <>
-              <Typography variant="h5" align="center" sx={{ mb: 3, fontWeight: 600 }}>
-                Logs de resultados
-              </Typography>
-
-              {/* Date Filter */}
-              <Box sx={{ mb: 2 }}>
-                <Typography variant="body2" sx={{ mb: 0.5, color: '#666', fontSize: '12px' }}>
-                  Fecha
-                </Typography>
-                <TextField
-                  type="date"
-                  value={logsFilterDate}
-                  onChange={handleLogsFilterDateChange}
-                  size="small"
-                  sx={{ minWidth: 200, bgcolor: '#fff' }}
-                />
-              </Box>
-
-              {/* Quick Filter (Filtrado rápido) */}
-              <Box sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end' }}>
-                <TextField
-                  size="small"
-                  placeholder="Filtrado rápido"
-                  value={logsFilter}
-                  onChange={(e) => setLogsFilter(e.target.value)}
-                  sx={{ width: 250, bgcolor: '#fff' }}
-                  InputProps={{
-                    sx: { bgcolor: '#fff' },
-                  }}
-                />
-              </Box>
-
-              <TableContainer component={Paper} variant="outlined">
-                <Table size="small">
-                  <TableHead>
-                    <TableRow sx={{ bgcolor: '#f8f9fa' }}>
-                      <TableCell sx={{ fontWeight: 600, cursor: 'pointer', color: '#555' }}>
-                        Sorteo
-                      </TableCell>
-                      <TableCell sx={{ fontWeight: 600, cursor: 'pointer', color: '#555' }}>
-                        Usuario
-                      </TableCell>
-                      <TableCell sx={{ fontWeight: 600, cursor: 'pointer', color: '#555' }}>
-                        Fecha de resultado
-                      </TableCell>
-                      <TableCell sx={{ fontWeight: 600, cursor: 'pointer', color: '#555' }}>
-                        Fecha de registro
-                      </TableCell>
-                      <TableCell sx={{ fontWeight: 600, color: '#555' }}>
-                        Números
-                      </TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {filteredLogs.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={5} align="center" sx={{ color: 'text.secondary', py: 3 }}>
-                          No hay entradas disponibles
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      filteredLogs.map((log, index) => (
-                        <TableRow
-                          key={index}
-                          hover
-                          sx={{ bgcolor: index % 2 === 0 ? '#fff' : '#f0f0f0' }}
-                        >
-                          <TableCell sx={{ fontWeight: 500 }}>{log.drawName}</TableCell>
-                          <TableCell>{log.username}</TableCell>
-                          <TableCell>{new Date(log.resultDate).toLocaleDateString()}</TableCell>
-                          <TableCell>
-                            {log.createdAt
-                              ? new Date(log.createdAt).toLocaleDateString() +
-                                ' ' +
-                                new Date(log.createdAt).toLocaleTimeString([], {
-                                  hour: '2-digit',
-                                  minute: '2-digit',
-                                  hour12: true,
-                                })
-                              : '-'}
-                          </TableCell>
-                          <TableCell>{renderLogWinningNumbers(log)}</TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-
-              <Typography variant="body2" sx={{ mt: 2, color: 'text.secondary' }}>
-                Mostrando {filteredLogs.length} de {logsData.length} entradas
-              </Typography>
-            </>
+            <ResultsLogsTab
+              logsData={logsData}
+              logsFilterDate={logsFilterDate}
+              onFilterDateChange={(date) => actions.setLogsFilterDate(date)}
+            />
           )}
         </Box>
       </Paper>
 
       {/* View Details Dialog */}
-      <Dialog
+      <ViewDetailsDialog
+        row={viewDetailsRow}
         open={!!viewDetailsRow}
         onClose={handleCloseViewDetails}
-        maxWidth="sm"
-        fullWidth
-        PaperProps={{
-          sx: { borderRadius: 2 }
-        }}
-      >
-        <DialogTitle sx={{
-          bgcolor: COLORS.primary,
-          color: '#fff',
-          fontWeight: 600,
-          py: 1.5,
-        }}>
-          {viewDetailsRow?.drawName}
-        </DialogTitle>
-        <DialogContent sx={{ pt: 3 }}>
-          {viewDetailsRow && (() => {
-            const category = getDrawCategory(viewDetailsRow.drawName);
-            const isUsaDraw = category === 'USA';
-
-            // Build fields array based on lottery type
-            const fields: { label: string; value: string }[] = [];
-
-            // Base fields (always shown if have value)
-            if (viewDetailsRow.num1) fields.push({ label: '1RA', value: viewDetailsRow.num1 });
-            if (viewDetailsRow.num2) fields.push({ label: '2DA', value: viewDetailsRow.num2 });
-            if (viewDetailsRow.num3) fields.push({ label: '3RA', value: viewDetailsRow.num3 });
-
-            // USA-specific fields (use != null to handle "0" values which are falsy)
-            if (isUsaDraw) {
-              if (viewDetailsRow.cash3 != null && viewDetailsRow.cash3 !== '') fields.push({ label: 'PICK THREE', value: viewDetailsRow.cash3 });
-              if (viewDetailsRow.play4 != null && viewDetailsRow.play4 !== '') fields.push({ label: 'PICK FOUR', value: viewDetailsRow.play4 });
-              if (viewDetailsRow.pick5 != null && viewDetailsRow.pick5 !== '') fields.push({ label: 'PICK FIVE', value: viewDetailsRow.pick5 });
-              if (viewDetailsRow.bolita1 != null && viewDetailsRow.bolita1 !== '') fields.push({ label: 'BOLITA 1', value: viewDetailsRow.bolita1 });
-              if (viewDetailsRow.bolita2 != null && viewDetailsRow.bolita2 !== '') fields.push({ label: 'BOLITA 2', value: viewDetailsRow.bolita2 });
-              if (viewDetailsRow.singulaccion1 != null && viewDetailsRow.singulaccion1 !== '') fields.push({ label: 'SINGULACCION 1', value: viewDetailsRow.singulaccion1 });
-              if (viewDetailsRow.singulaccion2 != null && viewDetailsRow.singulaccion2 !== '') fields.push({ label: 'SINGULACCION 2', value: viewDetailsRow.singulaccion2 });
-              if (viewDetailsRow.singulaccion3 != null && viewDetailsRow.singulaccion3 !== '') fields.push({ label: 'SINGULACCION 3', value: viewDetailsRow.singulaccion3 });
-            }
-
-            return (
-              <Box sx={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))',
-                gap: 2,
-                py: 1,
-              }}>
-                {fields.map((field, idx) => (
-                  <Box
-                    key={idx}
-                    sx={{
-                      textAlign: 'center',
-                      p: 1,
-                    }}
-                  >
-                    <Typography
-                      variant="caption"
-                      sx={{
-                        color: '#666',
-                        fontWeight: 600,
-                        display: 'block',
-                        mb: 0.5,
-                        fontSize: '11px',
-                      }}
-                    >
-                      {field.label}
-                    </Typography>
-                    <Typography
-                      variant="h6"
-                      sx={{
-                        fontWeight: 700,
-                        color: '#333',
-                        fontSize: '20px',
-                      }}
-                    >
-                      {field.value}
-                    </Typography>
-                  </Box>
-                ))}
-              </Box>
-            );
-          })()}
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button
-            onClick={handleCloseViewDetails}
-            variant="contained"
-            sx={{
-              bgcolor: COLORS.primary,
-              '&:hover': { bgcolor: COLORS.primaryHover },
-              textTransform: 'none',
-            }}
-          >
-            Cerrar
-          </Button>
-        </DialogActions>
-      </Dialog>
+      />
 
     </Box>
   );
