@@ -30,6 +30,7 @@ import {
   Visibility as VisibilityIcon
 } from '@mui/icons-material';
 import api from '@services/api';
+import { formatCurrency } from '@/utils/formatCurrency';
 
 interface WeekDay {
   key: string;
@@ -225,10 +226,6 @@ const DaysWithoutSalesReport: React.FC = () => {
 
     return data;
   }, [poolsWithWeeklyData, selectedZones, zones.length, searchTerm, orderBy, order]);
-
-  const formatCurrency = (value: number | undefined): string => {
-    return `$${(value || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  };
 
   if (loading && bettingPools.length === 0) {
     return (

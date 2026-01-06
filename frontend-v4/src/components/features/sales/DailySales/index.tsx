@@ -33,6 +33,7 @@ import {
   Search as SearchIcon
 } from '@mui/icons-material';
 import api from '@services/api';
+import { formatCurrency } from '@/utils/formatCurrency';
 
 // Import tab components
 import BancaPorSorteoTab from './tabs/BancaPorSorteoTab';
@@ -342,10 +343,6 @@ const DailySales = (): React.ReactElement => {
       prizes: 0, net: 0, fall: 0, final: 0, balance: 0, accumulatedFall: 0
     });
   }, [filteredData]);
-
-  const formatCurrency = useCallback((value: number): string => {
-    return `$${(value || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  }, []);
 
   // Navigate to ticket monitoring with betting pool filter
   const handleCodeClick = useCallback((bettingPoolId: number) => {

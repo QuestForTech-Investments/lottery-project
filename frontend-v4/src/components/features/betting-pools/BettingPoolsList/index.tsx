@@ -40,6 +40,7 @@ import {
 } from '@mui/icons-material';
 import useBettingPoolsList from './hooks/useBettingPoolsList';
 import PasswordModal from '@components/modals/PasswordModal';
+import { formatCurrency } from '@/utils/formatCurrency';
 
 interface TableColumn {
   id: string;
@@ -115,16 +116,6 @@ const BancasListMUI: React.FC = () => {
    */
   const createSortHandler = (property: string) => (): void => {
     handleRequestSort(property);
-  };
-
-  /**
-   * Format currency
-   */
-  const formatCurrency = (amount: number): string => {
-    return new Intl.NumberFormat('es-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(amount);
   };
 
   /**

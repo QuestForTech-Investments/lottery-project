@@ -20,6 +20,7 @@ import {
   Alert
 } from '@mui/material';
 import { Search as SearchIcon, Edit as EditIcon } from '@mui/icons-material';
+import { formatCurrency } from '@/utils/formatCurrency';
 
 type SortOrder = 'asc' | 'desc';
 
@@ -116,11 +117,6 @@ const AccountableEntities = (): React.ReactElement => {
 
   const handleEdit = useCallback((id: number) => {
     alert(`Editar entidad ${id} (mockup)`);
-  }, []);
-
-  const formatCurrency = useCallback((amount: number): string => {
-    const formatted = Math.abs(amount).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-    return amount < 0 ? `-$${formatted}` : `$${formatted}`;
   }, []);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps -- tabs array is stable
