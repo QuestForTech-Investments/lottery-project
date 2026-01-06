@@ -1,10 +1,15 @@
+/**
+ * TicketMonitoring Component
+ *
+ * Main ticket monitoring view with filters, table, and detail panel.
+ */
+
 import {
   useState,
   useEffect,
   useMemo,
   useCallback,
   useRef,
-  memo,
   type ChangeEvent,
   type FC,
 } from 'react';
@@ -19,33 +24,23 @@ import {
   Switch,
   FormControlLabel,
   Button,
-  ToggleButtonGroup,
-  ToggleButton,
   Table,
   TableHead,
   TableBody,
   TableRow,
   TableCell,
-  IconButton,
   CircularProgress,
   Alert,
-  Divider,
-  Chip,
 } from '@mui/material';
-import { Close as CloseIcon, Print as PrintIcon, Cancel as CancelIcon, Send as SendIcon } from '@mui/icons-material';
 
 // Centralized imports
 import api from '../../../../services/api';
 import ticketService, {
-  type MappedTicket,
-  type TicketCounts,
-  type TicketTotals,
   mapTicketResponse,
   calculateTicketCounts,
   calculateTicketTotals,
 } from '../../../../services/ticketService';
 import { getAllLotteries } from '../../../../services/lotteryService';
-import { formatCurrency } from '../../../../utils/formatCurrency';
 import { useDebounce } from '../../../../hooks';
 import type { BettingPool, Lottery, SelectOption } from '../../../../types';
 import {
@@ -54,304 +49,21 @@ import {
   TICKET_STATUS_MAP,
   DEBOUNCE_DELAY,
   TICKET_TABLE_HEADERS,
-  buttonStyles,
 } from '../../../../constants';
 
-// ============================================================================
-// Types (Local only - not duplicated from centralized types)
-// ============================================================================
-
-interface BettingPoolApiResponse {
-  bettingPoolId: number;
-  bettingPoolName: string;
-  bettingPoolCode: string;
-}
-
-interface TicketRowProps {
-  ticket: MappedTicket;
-  onRowClick: (id: number) => void;
-  onPrint: (id: number) => void;
-  onSend: (id: number) => void;
-  onCancel: (id: number) => void;
-}
-
-type FilterEstado = 'todos' | 'ganadores' | 'pendientes' | 'perdedores' | 'cancelados';
+// Local imports
+import type { BettingPoolApiResponse, FilterEstado, MappedTicket, TicketCounts, TicketTotals } from './types';
+import { INITIAL_COUNTS, INITIAL_TOTALS, STYLES } from './constants';
+import { TicketRow, TicketDetailPanel, StatusToggle, TotalsPanel } from './components';
 
 // ============================================================================
-// Constants (Local only - use centralized constants where possible)
+// Constants
 // ============================================================================
 
 const ESTADO_MAP = TICKET_STATUS_MAP;
-
-const INITIAL_COUNTS: TicketCounts = {
-  todos: 0,
-  ganadores: 0,
-  pendientes: 0,
-  perdedores: 0,
-  cancelados: 0,
-};
-
-const INITIAL_TOTALS: TicketTotals = {
-  montoTotal: 0,
-  totalPremios: 0,
-  totalPendiente: 0,
-};
-
-// Use centralized constants - aliased for backwards compatibility
 const TIPOS_JUGADA = BET_TYPES;
 const ZONAS = ZONES;
 const TABLE_HEADERS = TICKET_TABLE_HEADERS;
-
-// Extracted styles as constants to prevent re-creation on each render
-const STYLES = {
-  container: { p: 2 },
-  content: { p: 3 },
-  title: { color: '#1976d2', mb: 4, fontWeight: 400 },
-  alertMargin: { mb: 3 },
-  filterButton: buttonStyles.primaryRounded,
-  totalsContainer: { display: 'flex', justifyContent: 'center', mb: 3 },
-  totalsPanel: { px: 4, py: 2, backgroundColor: '#f5f5f5', textAlign: 'center' as const, width: 'fit-content' },
-  totalsText: { color: '#1976d2' },
-  quickSearch: { mb: 2, maxWidth: 300 },
-  tableHeader: { backgroundColor: '#f5f5f5' },
-  tableHeaderCell: { fontWeight: 600, color: 'text.secondary', fontSize: '0.75rem' },
-  loadingCell: { py: 5 },
-  emptyCell: { py: 3, color: 'text.secondary' },
-} as const;
-
-// ============================================================================
-// Helper Functions
-// ============================================================================
-
-// formatCurrency is now imported from utils/formatCurrency
-
-function getEstadoColor(estado: MappedTicket['estado']): string {
-  switch (estado) {
-    case 'Ganador':
-      return 'success.main';
-    case 'Cancelado':
-      return 'error.main';
-    default:
-      return 'inherit';
-  }
-}
-
-// ============================================================================
-// Memoized Sub-Components
-// ============================================================================
-
-const TicketRow: FC<TicketRowProps> = memo(({ ticket, onRowClick, onPrint, onSend, onCancel }) => {
-  const handleRowClick = useCallback(() => {
-    onRowClick(ticket.id);
-  }, [ticket.id, onRowClick]);
-
-  const handlePrintClick = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent row click
-    onPrint(ticket.id);
-  }, [ticket.id, onPrint]);
-
-  const handleSendClick = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent row click
-    onSend(ticket.id);
-  }, [ticket.id, onSend]);
-
-  const handleCancelClick = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent row click
-    onCancel(ticket.id);
-  }, [ticket.id, onCancel]);
-
-  return (
-    <TableRow
-      sx={{ '&:hover': { backgroundColor: 'action.hover' }, cursor: 'pointer' }}
-      onClick={handleRowClick}
-    >
-      <TableCell>{ticket.numero}</TableCell>
-      <TableCell>{ticket.fecha}</TableCell>
-      <TableCell>{ticket.usuario}</TableCell>
-      <TableCell>{formatCurrency(ticket.monto)}</TableCell>
-      <TableCell>{formatCurrency(ticket.premio)}</TableCell>
-      <TableCell>{ticket.fechaCancelacion || '-'}</TableCell>
-      <TableCell sx={{ color: getEstadoColor(ticket.estado) }}>
-        {ticket.estado}
-      </TableCell>
-      <TableCell>
-        <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
-          <IconButton size="small" color="primary" onClick={handlePrintClick} title="Imprimir ticket">
-            <PrintIcon fontSize="small" />
-          </IconButton>
-          <IconButton size="small" color="info" onClick={handleSendClick} title="Enviar ticket">
-            <SendIcon fontSize="small" />
-          </IconButton>
-          {ticket.estado !== 'Cancelado' && (
-            <IconButton size="small" color="error" onClick={handleCancelClick} title="Cancelar ticket">
-              <CancelIcon fontSize="small" />
-            </IconButton>
-          )}
-        </Box>
-      </TableCell>
-    </TableRow>
-  );
-});
-
-TicketRow.displayName = 'TicketRow';
-
-// ============================================================================
-// Ticket Detail Panel Component
-// ============================================================================
-
-interface TicketDetailPanelProps {
-  ticket: MappedTicket;
-  onClose: () => void;
-}
-
-const TicketDetailPanel: FC<TicketDetailPanelProps> = memo(({ ticket, onClose }) => {
-  return (
-    <Paper elevation={3} sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      {/* Header */}
-      <Box sx={{
-        p: 2,
-        bgcolor: '#51cbce',
-        color: 'white',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center'
-      }}>
-        <Typography variant="h6">
-          Ticket #{ticket.numero}
-        </Typography>
-        <IconButton size="small" onClick={onClose} sx={{ color: 'white' }}>
-          <CloseIcon />
-        </IconButton>
-      </Box>
-
-      {/* Content */}
-      <Box sx={{ p: 3, flex: 1, overflow: 'auto' }}>
-        {/* Status Chip */}
-        <Box sx={{ mb: 3, display: 'flex', justifyContent: 'center' }}>
-          <Chip
-            label={ticket.estado}
-            color={
-              ticket.estado === 'Ganador' ? 'success' :
-              ticket.estado === 'Cancelado' ? 'error' :
-              ticket.estado === 'Pendiente' ? 'warning' : 'default'
-            }
-            size="medium"
-            sx={{ fontWeight: 'bold', px: 2 }}
-          />
-        </Box>
-
-        {/* Ticket Info */}
-        <Box sx={{ mb: 3 }}>
-          <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-            Información del Ticket
-          </Typography>
-          <Divider sx={{ mb: 2 }} />
-
-          <Grid container spacing={2}>
-            <Grid item xs={6}>
-              <Typography variant="caption" color="text.secondary">Número</Typography>
-              <Typography variant="body1" fontWeight="bold">{ticket.numero}</Typography>
-            </Grid>
-            <Grid item xs={6}>
-              <Typography variant="caption" color="text.secondary">Usuario</Typography>
-              <Typography variant="body1" fontWeight="bold">{ticket.usuario}</Typography>
-            </Grid>
-            <Grid item xs={6}>
-              <Typography variant="caption" color="text.secondary">Fecha</Typography>
-              <Typography variant="body1">{ticket.fecha}</Typography>
-            </Grid>
-            <Grid item xs={6}>
-              <Typography variant="caption" color="text.secondary">Monto</Typography>
-              <Typography variant="body1" fontWeight="bold" color="primary">
-                {formatCurrency(ticket.monto)}
-              </Typography>
-            </Grid>
-            {ticket.premio > 0 && (
-              <Grid item xs={6}>
-                <Typography variant="caption" color="text.secondary">Premio</Typography>
-                <Typography variant="body1" fontWeight="bold" color="success.main">
-                  {formatCurrency(ticket.premio)}
-                </Typography>
-              </Grid>
-            )}
-            {ticket.fechaCancelacion && (
-              <Grid item xs={6}>
-                <Typography variant="caption" color="text.secondary">Fecha Cancelación</Typography>
-                <Typography variant="body1" color="error.main">{ticket.fechaCancelacion}</Typography>
-              </Grid>
-            )}
-          </Grid>
-        </Box>
-
-        {/* Ticket Lines (Plays) */}
-        <Box sx={{ mb: 3 }}>
-          <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-            Jugadas del Ticket
-          </Typography>
-          <Divider sx={{ mb: 2 }} />
-
-          {ticket.lines && ticket.lines.length > 0 ? (
-            <Table size="small">
-              <TableHead>
-                <TableRow sx={{ bgcolor: '#f5f5f5' }}>
-                  <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem' }}>Sorteo</TableCell>
-                  <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem' }}>Número</TableCell>
-                  <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem' }}>Tipo</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 600, fontSize: '0.75rem' }}>Monto</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 600, fontSize: '0.75rem' }}>Premio</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {ticket.lines.map((line, index) => (
-                  <TableRow key={index} sx={{ '&:hover': { bgcolor: 'action.hover' } }}>
-                    <TableCell>{line.drawName || '-'}</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>{line.betNumber}</TableCell>
-                    <TableCell>{line.betTypeName || '-'}</TableCell>
-                    <TableCell align="right">{formatCurrency(line.betAmount)}</TableCell>
-                    <TableCell align="right" sx={{ color: line.prizeAmount > 0 ? 'success.main' : 'inherit' }}>
-                      {formatCurrency(line.prizeAmount)}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          ) : (
-            <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 2 }}>
-              No hay jugadas disponibles
-            </Typography>
-          )}
-        </Box>
-      </Box>
-
-      {/* Actions Footer */}
-      <Box sx={{ p: 2, borderTop: 1, borderColor: 'divider', display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
-        <Button
-          variant="outlined"
-          size="small"
-          startIcon={<PrintIcon />}
-          onClick={() => console.log('Print ticket:', ticket.id)}
-        >
-          Imprimir
-        </Button>
-        {ticket.estado !== 'Cancelado' && (
-          <Button
-            variant="outlined"
-            color="error"
-            size="small"
-            startIcon={<CancelIcon />}
-            onClick={() => console.log('Cancel ticket:', ticket.id)}
-          >
-            Cancelar
-          </Button>
-        )}
-      </Box>
-    </Paper>
-  );
-});
-
-TicketDetailPanel.displayName = 'TicketDetailPanel';
-
-// useDebounce is now imported from hooks/useDebounce
 
 // ============================================================================
 // Main Component
@@ -426,14 +138,13 @@ const TicketMonitoring: FC = () => {
     }
   }, []);
 
-  // Load lotteries from API (for timezone-aware filtering)
+  // Load lotteries from API
   const loadLoterias = useCallback(async (signal?: AbortSignal): Promise<Lottery[]> => {
     try {
       const response = await getAllLotteries({ loadAll: true });
 
       if (signal?.aborted) return [];
 
-      // Handle both response formats
       const lotteriesData = 'data' in response ? response.data : (response as { items?: { lotteryId: number; lotteryName: string }[] }).items || [];
 
       const mappedLotteries: Lottery[] = lotteriesData.map((l) => ({
@@ -459,7 +170,6 @@ const TicketMonitoring: FC = () => {
       const bettingPoolId = selectedBancaId ?? banca?.id ?? null;
       const fechaToUse = selectedFecha ?? fecha;
 
-      // Validate at least one filter is selected
       if (!bettingPoolId && !loteria && !zona && !numero) {
         setError('Seleccione al menos una banca, lotería, zona o número para filtrar.');
         setIsLoading(false);
@@ -468,10 +178,10 @@ const TicketMonitoring: FC = () => {
 
       try {
         const response = await ticketService.filterTickets({
-          date: fechaToUse,  // API expects 'date', not 'startDate/endDate'
+          date: fechaToUse,
           bettingPoolId: bettingPoolId ?? undefined,
-          lotteryId: loteria?.id,  // Pass lotteryId for timezone-aware filtering
-          pageNumber: 1,  // API expects 'pageNumber', not 'page'
+          lotteryId: loteria?.id,
+          pageNumber: 1,
           pageSize: 100,
         });
 
@@ -498,13 +208,12 @@ const TicketMonitoring: FC = () => {
     [banca?.id, fecha, loteria, zona, numero]
   );
 
-  // Initialize data on mount with cleanup - runs only once
+  // Initialize data on mount
   useEffect(() => {
     const controller = new AbortController();
     abortControllerRef.current = controller;
 
     const initializeData = async () => {
-      // Load bancas and loterias in parallel
       const [mappedPools] = await Promise.all([
         loadBancas(controller.signal),
         loadLoterias(controller.signal),
@@ -513,7 +222,6 @@ const TicketMonitoring: FC = () => {
       if (controller.signal.aborted) return;
 
       if (mappedPools.length > 0) {
-        // Check if bettingPoolId was passed via URL params
         const targetPoolId = urlBettingPoolId ? parseInt(urlBettingPoolId, 10) : null;
         const targetPool = targetPoolId
           ? mappedPools.find(p => p.id === targetPoolId)
@@ -521,7 +229,6 @@ const TicketMonitoring: FC = () => {
 
         if (targetPool) {
           setBanca(targetPool);
-          // Use URL date if provided, otherwise use current fecha state
           const dateToUse = urlDate || fecha;
           await loadTickets(targetPool.id, controller.signal, dateToUse);
         }
@@ -538,19 +245,17 @@ const TicketMonitoring: FC = () => {
       controller.abort();
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Empty deps - only run on mount
+  }, []);
 
-  // Filter tickets based on estado and search (using debounced value)
+  // Filter tickets based on estado and search
   const filteredTickets = useMemo<MappedTicket[]>(() => {
     let data = tickets;
 
-    // Filter by estado
     if (filtroEstado !== 'todos') {
       const targetEstado = ESTADO_MAP[filtroEstado];
       data = data.filter((t) => t.estado === targetEstado);
     }
 
-    // Filter by quick search (debounced)
     if (debouncedFiltroRapido) {
       const term = debouncedFiltroRapido.toLowerCase();
       data = data.filter(
@@ -570,97 +275,61 @@ const TicketMonitoring: FC = () => {
 
   const handleFiltroEstadoChange = useCallback(
     (_: React.MouseEvent<HTMLElement>, value: FilterEstado | null) => {
-      if (value) {
-        setFiltroEstado(value);
-      }
+      if (value) setFiltroEstado(value);
     },
     []
   );
 
   const handleBancaChange = useCallback(
-    (_: React.SyntheticEvent, value: BettingPool | null) => {
-      setBanca(value);
-    },
+    (_: React.SyntheticEvent, value: BettingPool | null) => setBanca(value),
     []
   );
 
   const handleLoteriaChange = useCallback(
-    (_: React.SyntheticEvent, value: Lottery | null) => {
-      setLoteria(value);
-    },
+    (_: React.SyntheticEvent, value: Lottery | null) => setLoteria(value),
     []
   );
 
   const handleTipoJugadaChange = useCallback(
-    (_: React.SyntheticEvent, value: SelectOption | null) => {
-      setTipoJugada(value);
-    },
+    (_: React.SyntheticEvent, value: SelectOption | null) => setTipoJugada(value),
     []
   );
 
   const handleZonaChange = useCallback(
-    (_: React.SyntheticEvent, value: SelectOption | null) => {
-      setZona(value);
-    },
+    (_: React.SyntheticEvent, value: SelectOption | null) => setZona(value),
     []
   );
 
-  const handleFechaChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
-    setFecha(e.target.value);
-  }, []);
-
-  const handleNumeroChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
-    setNumero(e.target.value);
-  }, []);
-
-  const handleFiltroRapidoChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
-    setFiltroRapido(e.target.value);
-  }, []);
-
-  const handlePendientesPagoChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
-    setPendientesPago(e.target.checked);
-  }, []);
-
-  const handleSoloGanadoresChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
-    setSoloGanadores(e.target.checked);
-  }, []);
-
-  const handleErrorClose = useCallback(() => {
-    setError(null);
-  }, []);
+  const handleFechaChange = useCallback((e: ChangeEvent<HTMLInputElement>) => setFecha(e.target.value), []);
+  const handleNumeroChange = useCallback((e: ChangeEvent<HTMLInputElement>) => setNumero(e.target.value), []);
+  const handleFiltroRapidoChange = useCallback((e: ChangeEvent<HTMLInputElement>) => setFiltroRapido(e.target.value), []);
+  const handlePendientesPagoChange = useCallback((e: ChangeEvent<HTMLInputElement>) => setPendientesPago(e.target.checked), []);
+  const handleSoloGanadoresChange = useCallback((e: ChangeEvent<HTMLInputElement>) => setSoloGanadores(e.target.checked), []);
+  const handleErrorClose = useCallback(() => setError(null), []);
 
   const handleRowClick = useCallback((ticketId: number) => {
     const ticket = tickets.find(t => t.id === ticketId);
-    if (ticket) {
-      setSelectedTicket(ticket);
-    }
+    if (ticket) setSelectedTicket(ticket);
   }, [tickets]);
 
-  const handleCloseDetail = useCallback(() => {
-    setSelectedTicket(null);
-  }, []);
+  const handleCloseDetail = useCallback(() => setSelectedTicket(null), []);
 
-  const handlePrintTicket = useCallback((ticketId: number) => {
+  const handlePrintTicket = useCallback((_ticketId: number) => {
     // TODO: Implement print ticket functionality
-    // Could open a print dialog or generate a PDF
   }, []);
 
-  const handleSendTicket = useCallback((ticketId: number) => {
+  const handleSendTicket = useCallback((_ticketId: number) => {
     // TODO: Implement send ticket functionality
-    // Could open a dialog to enter email/phone or send via WhatsApp
   }, []);
 
   const handleCancelTicket = useCallback(async (ticketId: number) => {
-    // Confirm before canceling
     if (!window.confirm('¿Está seguro de que desea cancelar este ticket?')) {
       return;
     }
 
     try {
       await ticketService.cancelTicket(ticketId);
-      // Refresh tickets after cancellation
       await loadTickets(null, undefined, fecha);
-      // Clear selected ticket if it was the one canceled
       if (selectedTicket?.id === ticketId) {
         setSelectedTicket(null);
       }
@@ -670,7 +339,7 @@ const TicketMonitoring: FC = () => {
     }
   }, [loadTickets, fecha, selectedTicket?.id]);
 
-  // Render helpers
+  // Render table content
   const renderTableContent = useMemo(() => {
     if (isLoading) {
       return (
@@ -707,9 +376,10 @@ const TicketMonitoring: FC = () => {
     ));
   }, [isLoading, filteredTickets, handleRowClick, handlePrintTicket, handleSendTicket, handleCancelTicket]);
 
+  const isCompactView = !!selectedTicket;
+
   return (
     <Box sx={STYLES.container}>
-      {/* Split-screen layout: table on left, detail on right when a ticket is selected */}
       <Grid container spacing={2}>
         {/* Left Panel - Filters and Table */}
         <Grid item xs={12} md={selectedTicket ? 6 : 12}>
@@ -725,9 +395,9 @@ const TicketMonitoring: FC = () => {
                 </Alert>
               )}
 
-              {/* Filters Section - Compact when detail is shown */}
-              <Grid container spacing={selectedTicket ? 1 : 2} sx={{ mb: 2 }}>
-                <Grid item xs={12} md={selectedTicket ? 6 : 3}>
+              {/* Filters Section */}
+              <Grid container spacing={isCompactView ? 1 : 2} sx={{ mb: 2 }}>
+                <Grid item xs={12} md={isCompactView ? 6 : 3}>
                   <TextField
                     fullWidth
                     type="date"
@@ -738,7 +408,7 @@ const TicketMonitoring: FC = () => {
                     size="small"
                   />
                 </Grid>
-                <Grid item xs={12} md={selectedTicket ? 6 : 3}>
+                <Grid item xs={12} md={isCompactView ? 6 : 3}>
                   <Autocomplete
                     options={bancas}
                     getOptionLabel={(o) => (o.name ? `${o.name} (${o.code || ''})` : '')}
@@ -750,7 +420,7 @@ const TicketMonitoring: FC = () => {
                     )}
                   />
                 </Grid>
-                <Grid item xs={12} md={selectedTicket ? 6 : 3}>
+                <Grid item xs={12} md={isCompactView ? 6 : 3}>
                   <Autocomplete
                     options={loterias}
                     getOptionLabel={(o) => o.name || ''}
@@ -764,8 +434,8 @@ const TicketMonitoring: FC = () => {
                 </Grid>
               </Grid>
 
-              {/* Second row of filters - hidden when detail is shown for compact view */}
-              {!selectedTicket && (
+              {/* Extended filters - hidden in compact view */}
+              {!isCompactView && (
                 <>
                   <Grid container spacing={2} sx={{ mb: 2 }}>
                     <Grid item xs={12} md={3}>
@@ -790,26 +460,14 @@ const TicketMonitoring: FC = () => {
                     </Grid>
                     <Grid item xs={12} md={2}>
                       <FormControlLabel
-                        control={
-                          <Switch
-                            checked={pendientesPago}
-                            onChange={handlePendientesPagoChange}
-                          />
-                        }
+                        control={<Switch checked={pendientesPago} onChange={handlePendientesPagoChange} />}
                         label={<Typography variant="caption">Pendientes de pago</Typography>}
                       />
                     </Grid>
                     <Grid item xs={12} md={2}>
                       <FormControlLabel
-                        control={
-                          <Switch
-                            checked={soloGanadores}
-                            onChange={handleSoloGanadoresChange}
-                          />
-                        }
-                        label={
-                          <Typography variant="caption">Sólo tickets ganadores</Typography>
-                        }
+                        control={<Switch checked={soloGanadores} onChange={handleSoloGanadoresChange} />}
+                        label={<Typography variant="caption">Sólo tickets ganadores</Typography>}
                       />
                     </Grid>
                   </Grid>
@@ -840,8 +498,8 @@ const TicketMonitoring: FC = () => {
                 </>
               )}
 
-              {/* Filter Button - Only shown when selectedTicket is active (compact view) */}
-              {selectedTicket && (
+              {/* Compact filter button */}
+              {isCompactView && (
                 <Box sx={{ textAlign: 'center', mb: 2 }}>
                   <Button
                     variant="contained"
@@ -855,42 +513,14 @@ const TicketMonitoring: FC = () => {
               )}
 
               {/* Status Toggle Buttons */}
-              <Box sx={{ mb: 2 }}>
-                <Typography
-                  variant="caption"
-                  sx={{ color: 'text.secondary', mb: 1, display: 'block' }}
-                >
-                  Filtrar
-                </Typography>
-                <ToggleButtonGroup
-                  exclusive
-                  value={filtroEstado}
-                  onChange={handleFiltroEstadoChange}
-                  size="small"
-                  sx={{ flexWrap: 'wrap' }}
-                >
-                  <ToggleButton value="todos">TODOS ({counts.todos})</ToggleButton>
-                  <ToggleButton value="ganadores">GANADORES ({counts.ganadores})</ToggleButton>
-                  <ToggleButton value="pendientes">PENDIENTES ({counts.pendientes})</ToggleButton>
-                  <ToggleButton value="perdedores">PERDEDORES ({counts.perdedores})</ToggleButton>
-                  <ToggleButton value="cancelados">CANCELADO ({counts.cancelados})</ToggleButton>
-                </ToggleButtonGroup>
-              </Box>
+              <StatusToggle
+                filtroEstado={filtroEstado}
+                counts={counts}
+                onFilterChange={handleFiltroEstadoChange}
+              />
 
               {/* Totals Panel */}
-              <Box sx={STYLES.totalsContainer}>
-                <Paper sx={STYLES.totalsPanel} elevation={0}>
-                  <Typography variant={selectedTicket ? 'body1' : 'h6'} sx={STYLES.totalsText}>
-                    Monto total: {formatCurrency(totals.montoTotal)}
-                  </Typography>
-                  <Typography variant={selectedTicket ? 'body1' : 'h6'} sx={STYLES.totalsText}>
-                    Total de premios: {formatCurrency(totals.totalPremios)}
-                  </Typography>
-                  <Typography variant={selectedTicket ? 'body1' : 'h6'} sx={STYLES.totalsText}>
-                    Total pendiente de pago: {formatCurrency(totals.totalPendiente)}
-                  </Typography>
-                </Paper>
-              </Box>
+              <TotalsPanel totals={totals} isCompact={isCompactView} />
 
               {/* Quick Search */}
               <TextField
@@ -903,7 +533,7 @@ const TicketMonitoring: FC = () => {
               />
 
               {/* Tickets Table */}
-              <Box sx={{ maxHeight: selectedTicket ? 400 : 'none', overflow: 'auto' }}>
+              <Box sx={{ maxHeight: isCompactView ? 400 : 'none', overflow: 'auto' }}>
                 <Table size="small" stickyHeader>
                   <TableHead>
                     <TableRow sx={STYLES.tableHeader}>
@@ -927,7 +557,7 @@ const TicketMonitoring: FC = () => {
           </Paper>
         </Grid>
 
-        {/* Right Panel - Ticket Detail (only shown when a ticket is selected) */}
+        {/* Right Panel - Ticket Detail */}
         {selectedTicket && (
           <Grid item xs={12} md={6}>
             <Box sx={{ position: 'sticky', top: 16 }}>
