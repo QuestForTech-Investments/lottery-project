@@ -1,7 +1,16 @@
 import type { ChangeEvent, FormEvent } from 'react';
 import type { SelectChangeEvent } from '@mui/material';
 
-// User entity
+// Re-export common types for backwards compatibility
+export type { FormErrors, SortOrder, ApiResponse } from './common';
+
+// ============================================================================
+// User Types
+// ============================================================================
+
+/**
+ * User entity
+ */
 export interface User {
   userId: number;
   username: string;
@@ -14,7 +23,9 @@ export interface User {
   permissions?: Permission[];
 }
 
-// Permission entity
+/**
+ * Permission entity
+ */
 export interface Permission {
   permissionId: number;
   name: string;
@@ -22,13 +33,17 @@ export interface Permission {
   description?: string;
 }
 
-// Permission category
+/**
+ * Permission category
+ */
 export interface PermissionCategory {
   category: string;
   permissions: Permission[];
 }
 
-// User form data
+/**
+ * User form data
+ */
 export interface UserFormData {
   username: string;
   password?: string;
@@ -39,8 +54,10 @@ export interface UserFormData {
   bettingPoolId: number | null;
 }
 
-// Form errors
-export interface FormErrors {
+/**
+ * User form specific errors
+ */
+export interface UserFormErrors {
   username?: string | null;
   password?: string | null;
   confirmPassword?: string | null;
@@ -49,24 +66,17 @@ export interface FormErrors {
   bettingPool?: string | null;
   submit?: string | null;
   general?: string | null;
-  [key: string]: string | null | undefined;
 }
 
-// Sort order type
-export type SortOrder = 'asc' | 'desc';
-
-// User list sort fields
+/**
+ * User list sort fields
+ */
 export type UserSortField = 'userId' | 'username' | 'fullName' | 'email' | 'createdAt';
 
-// API response types
-export interface ApiResponse<T> {
-  success: boolean;
-  data?: T;
-  message?: string;
-  error?: string;
-}
+// ============================================================================
+// Event Handler Types
+// ============================================================================
 
-// Event handler types
 export type InputChangeHandler = (event: ChangeEvent<HTMLInputElement>) => void;
 export type SelectChangeHandler = (event: SelectChangeEvent<string>) => void;
 export type FormSubmitHandler = (event: FormEvent<HTMLFormElement>) => void;
