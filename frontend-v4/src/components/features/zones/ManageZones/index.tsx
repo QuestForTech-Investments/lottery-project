@@ -258,7 +258,6 @@ const ManageZonesMUI = (): React.ReactElement => {
         return;
       }
 
-      console.log('Saving assignments for zones:', zonesToUpdate.map(([zoneId]) => zoneId));
 
       // Save assignments for all zones in parallel
       const savePromises = zonesToUpdate.map(([zoneId, data]) =>

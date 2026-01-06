@@ -699,8 +699,6 @@ const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
         ...updates,
       }));
 
-      console.log('[TEMPLATE] Applied template data from betting pool:', selectedTemplateId);
-      console.log('[TEMPLATE] Fields updated:', Object.keys(updates));
 
     } catch (error) {
       console.error('Error applying template:', error);
@@ -857,11 +855,9 @@ const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
       const prizesByDrawAndBetType = extractPrizeValuesFromFormData(formData);
 
       if (Object.keys(prizesByDrawAndBetType).length === 0) {
-        console.log('No custom prize values to save');
         return { success: true, message: 'No custom prizes' };
       }
 
-      console.log('[DATA] Prize configurations to save:', prizesByDrawAndBetType);
 
       // Get all bet types to map field codes to prize type IDs
       const betTypes = await getAllBetTypesWithFields() as BetType[];
@@ -877,7 +873,6 @@ const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
         }
       });
 
-      console.log(`[LIST] Built prize type map with ${Object.keys(prizeTypeMap).length} fields`);
 
       let totalSaved = 0;
       let totalFailed = 0;
@@ -887,7 +882,6 @@ const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
       for (const [drawId, betTypesForDraw] of Object.entries(prizesByDrawAndBetType)) {
         if (drawId === 'general') {
           // Save GENERAL configurations (supported)
-          console.log(`[SAVE] Saving GENERAL configurations...`);
 
           // Build the API request format
           const prizeConfigs: Array<{ prizeTypeId: number; fieldCode: string; value: number }> = [];
@@ -913,9 +907,7 @@ const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
 
           if (prizeConfigs.length > 0) {
             try {
-              console.log(`[SEND] Sending ${prizeConfigs.length} prize configs to API...`);
               const response = await savePrizeConfig(bettingPoolId, prizeConfigs);
-              console.log('[SUCCESS] General configurations saved successfully:', response);
               totalSaved += prizeConfigs.length;
             } catch (error) {
               console.error('[ERROR] Error saving general configurations:', error);
@@ -958,13 +950,11 @@ const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
       // Transform schedule fields to API format
       const schedules = transformSchedulesToApiFormat(formData as unknown as Parameters<typeof transformSchedulesToApiFormat>[0]);
 
-      console.log(`Saving schedules for betting pool ${bettingPoolId}...`);
 
       // Save schedules
       const result = await saveBettingPoolSchedules(bettingPoolId, schedules) as { success: boolean };
 
       if (result.success) {
-        console.log(`[SUCCESS] Schedules saved successfully for betting pool ${bettingPoolId}`);
         return { success: true };
       } else {
         console.warn(`[WARN] Failed to save schedules`);
@@ -1051,14 +1041,12 @@ const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
 
         // Save prize configurations if betting pool was created successfully
         if (createdBettingPoolId) {
-          console.log(`Betting pool created with ID: ${createdBettingPoolId}. Saving configurations...`);
 
           // Save prize configurations
           try {
             const prizeResult = await savePrizeConfigurations(createdBettingPoolId, formData);
 
             if (prizeResult.success) {
-              console.log(`[SUCCESS] Prize configurations saved successfully for betting pool ${createdBettingPoolId}`);
               if (prizeResult.warnings && prizeResult.warnings.length > 0) {
                 console.warn('[WARN] Warnings during prize save:', prizeResult.warnings);
                 // Show warning to user about lottery-specific configs not saved
@@ -1092,7 +1080,6 @@ const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
           // Save draws configurations
           try {
             if (formData.selectedDraws && formData.selectedDraws.length > 0) {
-              console.log(`Saving draws for betting pool ${createdBettingPoolId}...`);
 
               interface DrawToSave {
                 drawId: number;
@@ -1123,12 +1110,10 @@ const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
               const drawsResult = await saveBettingPoolDraws(createdBettingPoolId, drawsToSave) as { success: boolean };
 
               if (drawsResult.success) {
-                console.log(`[SUCCESS] Draws saved successfully for betting pool ${createdBettingPoolId}`);
               } else {
                 console.warn(`[WARN] Failed to save draws`);
               }
             } else {
-              console.log('No draws selected, skipping draws');
             }
           } catch (drawsError) {
             console.error('Error saving draws:', drawsError);
@@ -1139,7 +1124,6 @@ const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
 
         // Show success message and navigate to list
         setSuccess(true);
-        console.log('[SUCCESS] Banca creada exitosamente, redirigiendo a la lista...');
 
         // Navigate to list after a brief delay to show success message
         setTimeout(() => {

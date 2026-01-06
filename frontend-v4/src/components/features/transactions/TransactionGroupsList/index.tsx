@@ -55,7 +55,6 @@ const TransactionGroupsList = (): React.ReactElement => {
   ];
 
   const handleFilter = useCallback(() => {
-    console.log('Filtering with dates:', startDate, endDate);
   }, [startDate, endDate]);
 
   const handleSort = useCallback((key: keyof TransactionGroup) => {

@@ -642,13 +642,11 @@ const TicketMonitoring: FC = () => {
 
   const handlePrintTicket = useCallback((ticketId: number) => {
     // TODO: Implement print ticket functionality
-    console.log('Print ticket:', ticketId);
     // Could open a print dialog or generate a PDF
   }, []);
 
   const handleSendTicket = useCallback((ticketId: number) => {
     // TODO: Implement send ticket functionality
-    console.log('Send ticket:', ticketId);
     // Could open a dialog to enter email/phone or send via WhatsApp
   }, []);
 

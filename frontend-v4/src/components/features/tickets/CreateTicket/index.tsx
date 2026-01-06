@@ -354,7 +354,6 @@ const CreateTicket: React.FC = () => {
         }
       }) as MockTicket;
 
-      console.log('Ticket creado:', response);
 
       setCreatedTicket(response);
       setShowPrintView(true);

@@ -79,7 +79,6 @@ const useBettingPoolsList = (): UseBettingPoolsListReturn => {
 
       // ⚡ Performance tracking
       const startTime = performance.now();
-      console.log('[START] Loading betting pools list...');
 
       // ⚡ OPTIMIZATION: Load zones and betting pools in parallel
       const [zonesResponse, response] = await Promise.all([
@@ -111,7 +110,6 @@ const useBettingPoolsList = (): UseBettingPoolsListReturn => {
           zMap[zone.zoneId] = zone.name;
         });
         setZonesMap(zMap);
-        console.log(`[SUCCESS] Loaded ${zonesResponse.data.length} zones`);
       }
 
       // Check if response has items
@@ -122,7 +120,6 @@ const useBettingPoolsList = (): UseBettingPoolsListReturn => {
         return;
       }
 
-      console.log(`[SUCCESS] Loaded ${response.items.length} betting pools from API`);
 
       // Transform API data to component format
       const transformStartTime = performance.now();
@@ -149,13 +146,11 @@ const useBettingPoolsList = (): UseBettingPoolsListReturn => {
       });
 
       const transformTime = (performance.now() - transformStartTime).toFixed(2);
-      console.log(`[SUCCESS] Transformed ${transformedBettingPools.length} betting pools in ${transformTime}ms`);
 
       setBettingPools(transformedBettingPools);
 
       // ⚡ Total time logging
       const totalTime = (performance.now() - startTime).toFixed(2);
-      console.log(`[SUCCESS] Betting pools list loaded successfully in ${totalTime}ms`);
 
       setLoading(false);
     } catch (err) {

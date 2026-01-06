@@ -130,7 +130,6 @@ const WinningPlays: React.FC = () => {
   // Handle PDF export
   const handlePdfExport = () => {
     // TODO: Implement PDF export
-    console.log('PDF export not implemented yet');
   };
 
   return (

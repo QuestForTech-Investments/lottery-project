@@ -115,7 +115,6 @@ const AccountableEntities = (): React.ReactElement => {
   }, [sortBy, sortOrder]);
 
   const handleEdit = useCallback((id: number) => {
-    console.log('Edit entity:', id);
     alert(`Editar entidad ${id} (mockup)`);
   }, []);
 

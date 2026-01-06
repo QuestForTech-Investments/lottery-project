@@ -73,7 +73,6 @@ const CreateAccountableEntity = (): React.ReactElement => {
 
   const handleSubmit = useCallback((e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    console.log('Crear entidad:', formData);
     alert(`Entidad creada (mockup):\nNombre: ${formData.nombre}\nCódigo: ${formData.codigo}\nTipo: ${formData.tipoEntidad}\nZona: ${formData.zona}`);
 
     // Reset form

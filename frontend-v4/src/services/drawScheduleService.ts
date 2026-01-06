@@ -59,7 +59,6 @@ export const getDrawSchedules = async (lotteryId: number | string | null = null)
       : '/draws/schedules';
 
     const data = await api.get(endpoint) as DrawSchedule[];
-    console.log('[SCHEDULE] [DRAW SCHEDULE] Fetched schedules:', data);
     return { success: true, data };
   } catch (error) {
     console.error('[ERROR] [DRAW SCHEDULE] Error getting draw schedules:', error);
@@ -72,12 +71,10 @@ export const getDrawSchedules = async (lotteryId: number | string | null = null)
  */
 export const updateDrawSchedules = async (schedules: DrawSchedule[]): Promise<UpdateResponse> => {
   try {
-    console.log('[SCHEDULE] [DRAW SCHEDULE] Updating schedules:', schedules);
 
     const payload = { schedules };
     const data = await api.patch('/draws/schedules', payload);
 
-    console.log('[SUCCESS] [DRAW SCHEDULE] Schedules updated successfully:', data);
     return { success: true, data };
   } catch (error) {
     console.error('[ERROR] [DRAW SCHEDULE] Error updating draw schedules:', error);

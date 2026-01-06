@@ -90,7 +90,6 @@ const ManageDebtCollectors = (): React.ReactElement => {
   }, [formData, collectors.length]);
 
   const handleEdit = useCallback((id: number): void => {
-    console.log('Edit collector:', id);
     alert(`Editar cobrador ${id} (mockup)`);
   }, []);
 

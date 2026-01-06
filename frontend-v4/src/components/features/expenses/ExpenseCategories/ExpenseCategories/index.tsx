@@ -88,17 +88,14 @@ const ExpenseCategories = (): React.ReactElement => {
   }, [sortConfig]);
 
   const handleEdit = useCallback((category: Category): void => {
-    console.log('Edit category:', category);
     // TODO: Implementar edit modal
   }, []);
 
   const handleDelete = useCallback((category: Category): void => {
-    console.log('Delete category:', category);
     // TODO: Implementar confirmación de eliminación
   }, []);
 
   const handleCreate = useCallback((): void => {
-    console.log('Create new category');
     // TODO: Implementar modal de creación
   }, []);
 

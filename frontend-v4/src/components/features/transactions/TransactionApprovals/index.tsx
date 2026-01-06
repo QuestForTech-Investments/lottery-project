@@ -93,7 +93,6 @@ const TransactionApprovals = (): React.ReactElement => {
   }, [sortConfig]);
 
   const handleFilter = useCallback(() => {
-    console.log('Filtering with:', { startDate, endDate, selectedZone, selectedBank, selectedCollector, selectedType });
   }, [startDate, endDate, selectedZone, selectedBank, selectedCollector, selectedType]);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps -- mockupData is stable
@@ -134,11 +133,9 @@ const TransactionApprovals = (): React.ReactElement => {
   };
 
   const handleApprove = useCallback((id: number) => {
-    console.log('Approve transaction:', id);
   }, []);
 
   const handleReject = useCallback((id: number) => {
-    console.log('Reject transaction:', id);
   }, []);
 
   return (

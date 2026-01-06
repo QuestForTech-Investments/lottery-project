@@ -64,7 +64,6 @@ const CreateTransactionModal = ({ open, onClose }: CreateTransactionModalProps):
   const [transactions] = useState<Transaction[]>([]);
 
   const handleSubmit = useCallback((): void => {
-    console.log('Registering transaction...');
     // TODO: API call to create transaction
     onClose();
   }, [onClose]);

@@ -88,7 +88,6 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
    */
   // eslint-disable-next-line react-hooks/exhaustive-deps -- loadInitialData should only run when id changes
   useEffect(() => {
-    console.log('[INFO] [HOOK] useEffect running, id:', id);
     loadInitialData();
   }, [id]);
 
@@ -99,9 +98,7 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
    * Phase 2: Load prizes in background - SLOW, show loading indicators in tabs
    */
   const loadInitialData = async (): Promise<void> => {
-    console.log('[OK] [HOOK] loadInitialData() called, id:', id);
     const startTime = performance.now();
-    console.log('[START] [PHASE 1] Loading basic data (zones + betting pool)...');
 
     try {
       setLoadingZones(true);
@@ -109,11 +106,9 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
 
       if (id) {
         // ⚡ PHASE 1: Load zones, basic betting pool data, and configuration (FAST)
-        console.log('[TIMING] Phase 1: Loading zones, betting pool, and configuration in parallel...');
 
         // ⚡ PERFORMANCE: Parallelize all API calls (including draws for tabs)
         const apiStartTime = performance.now();
-        console.log('[TIMING] [TIMING] Starting parallel API calls at', apiStartTime.toFixed(2), 'ms');
 
         const [zonesResponse, bettingPoolResponse, configResponse, schedulesResponse, drawsResponse, allDrawsResponse] = await Promise.all([
           getAllZones(),
@@ -133,16 +128,13 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
 
         const apiEndTime = performance.now();
         const apiDuration = apiEndTime - apiStartTime;
-        console.log('[PERF] [TIMING] All 6 parallel API calls completed in', apiDuration.toFixed(2), 'ms');
 
         // Start processing data
         const processingStartTime = performance.now();
-        console.log('[TIMING] [TIMING] Starting data processing...');
 
         // Process zones
         if (zonesResponse.success && zonesResponse.data) {
           setZones(zonesResponse.data);
-          console.log(`[SUCCESS] Loaded ${zonesResponse.data.length} zones`);
         }
         setLoadingZones(false);
 
@@ -176,14 +168,12 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
             ...formattedForPrizes
           ]);
 
-          console.log(`[SUCCESS] Loaded ${sortedDraws.length} draws for tabs`);
         }
         setLoadingDraws(false);
 
         // Process betting pool basic data
         if (bettingPoolResponse.success && bettingPoolResponse.data) {
           const branch = bettingPoolResponse.data;
-          console.log('[SUCCESS] Loaded betting pool data');
 
           // ⚡ OPTIMIZATION: Update form with basic data first
           const basicFormData: Partial<FormData> = {
@@ -202,7 +192,6 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
           let configFormData: Partial<FormData> = {};
           if (configResponse && configResponse.success && configResponse.data) {
             configFormData = mapConfigToFormData(configResponse.data);
-            console.log('[SUCCESS] Loaded configuration data');
           }
 
           // ✅ Process schedules data (now loaded in parallel)
@@ -210,7 +199,6 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
           try {
             if (schedulesResponse.success && schedulesResponse.data && schedulesResponse.data.length > 0) {
               scheduleFormData = transformSchedulesToFormFormat(schedulesResponse.data as Parameters<typeof transformSchedulesToFormFormat>[0]) as Partial<FormData>;
-              console.log('[SUCCESS] Loaded schedule data for all 7 days');
             }
           } catch (scheduleError) {
             console.error('[ERROR] Error processing schedules:', scheduleError);
@@ -218,8 +206,6 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
           }
 
           // ✅ Process draws data (NEW API format)
-          console.log('[WARN] [HOOK] Processing draws data...');
-          console.log('[DEBUG] [DEBUG] drawsResponse from /betting-pools/draws:', drawsResponse.data);
           let drawsFormData: { selectedDraws: number[]; anticipatedClosing: string; anticipatedClosingDraws: number[] } = { selectedDraws: [], anticipatedClosing: '', anticipatedClosingDraws: [] };
           try {
             if (drawsResponse.success && drawsResponse.data && drawsResponse.data.length > 0) {
@@ -230,7 +216,6 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
               const enabledDraws = drawsResponse.data.filter(d => d.isActive);
               const enabledDrawIds = enabledDraws.map(d => d.drawId);
 
-              console.log('[DEBUG] [DEBUG] enabledDrawIds (from /draws API):', enabledDrawIds);
               console.log('[DEBUG] [DEBUG] enabledDraws:', enabledDraws.map(d => ({
                 drawId: d.drawId,
                 drawName: d.drawName,
@@ -254,8 +239,6 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
                 anticipatedClosingDraws: drawIdsWithClosing
               };
 
-              console.log('[DEBUG] [DEBUG] drawsFormData:', drawsFormData);
-              console.log(`[SUCCESS] Loaded ${drawsFormData.selectedDraws.length} selected draws, ${drawsFormData.anticipatedClosingDraws.length} with anticipated closing`);
             } else {
               console.warn('[WARN] [DEBUG] No draws data found or empty array');
             }
@@ -280,22 +263,18 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
 
           const processingEndTime = performance.now();
           const processingDuration = processingEndTime - processingStartTime;
-          console.log('[PERF] [TIMING] Data processing completed in', processingDuration.toFixed(2), 'ms');
 
           const phase1Time = (performance.now() - startTime).toFixed(2);
-          console.log(`[SUCCESS] [PHASE 1] Basic data loaded in ${phase1Time}ms (API: ${apiDuration.toFixed(2)}ms + Processing: ${processingDuration.toFixed(2)}ms)`);
 
           // ⚡ UNLOCK UI: User can now see and interact with the form
           setLoadingBasicData(false);
 
           // ⚡ PHASE 2: Load prizes in background (SLOW, doesn't block UI)
-          console.log('[SYNC] [PHASE 2] Loading prize data in background...');
           setLoadingPrizes(true);
 
           loadPrizeValues(id)
             .then(prizeValues => {
               if (Object.keys(prizeValues).length > 0) {
-                console.log(`[SUCCESS] Loaded ${Object.keys(prizeValues).length} prize values`);
 
                 setFormData(prev => ({
                   ...prev,
@@ -310,7 +289,6 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
               }
 
               const phase2Time = (performance.now() - startTime).toFixed(2);
-              console.log(`[SUCCESS] [PHASE 2] Prize data loaded in ${phase2Time}ms`);
             })
             .catch(error => {
               console.error('[ERROR] Error loading prize values:', error);
@@ -319,7 +297,6 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
             .finally(() => {
               setLoadingPrizes(false);
               const totalTime = (performance.now() - startTime).toFixed(2);
-              console.log(`[SUCCESS] All data loaded successfully in ${totalTime}ms`);
             });
         }
       } else {
@@ -393,7 +370,6 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
     initialData: FormData | null = null
   ): Promise<SavePrizeResult> => {
     const startTime = performance.now();
-    console.log('[SAVE] Building prize configurations to save...');
 
     try {
       // Get all bet types to build fieldCode -> prizeTypeId map
@@ -409,7 +385,6 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
         }
       });
 
-      console.log(`Built fieldCode map with ${Object.keys(fieldCodeToId).length} prize types`);
 
       // Group configs by lottery (general vs lottery_XX)
       const configsByLottery: Record<string, PrizeConfig[]> = {};
@@ -417,9 +392,6 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
 
       // ⚡ OPTIMIZED: More efficient filtering + DIRTY TRACKING
       // Group fields by lottery ID
-      console.log('[DEBUG] [DEBUG] Starting prize change detection...');
-      console.log('[DEBUG] [DEBUG] initialData exists?', !!initialData);
-      console.log('[DEBUG] [DEBUG] currentFormData keys count:', Object.keys(currentFormData).length);
 
       let debugCount = 0;
       Object.keys(currentFormData).forEach(key => {
@@ -475,13 +447,6 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
 
             // Debug first 3 fields
             if (debugCount < 3 && key.startsWith('general_')) {
-              console.log(`[DEBUG] [DEBUG #${debugCount + 1}] Field: ${key}`);
-              console.log(`  - currentValue (raw): "${rawValue}" (type: ${typeof rawValue})`);
-              console.log(`  - currentValue (parsed): ${currentValue}`);
-              console.log(`  - initialValue (raw): "${initialValue}" (type: ${typeof initialValue})`);
-              console.log(`  - initialValue (parsed): ${initialValueParsed}`);
-              console.log(`  - initialData[key] exists? ${initialValue !== undefined}`);
-              console.log(`  - Are they equal? ${initialValueParsed === currentValue}`);
               debugCount++;
             }
 
@@ -500,18 +465,15 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
                 fieldCode: fieldCode,
                 value: currentValue
               });
-              console.log(`[OK] Changed [${lotteryId}]: ${key} -> ${fieldCode} = ${rawValue} (was: ${initialValue ?? 'N/A'})`);
             }
           }
         }
       });
 
       if (Object.keys(configsByLottery).length === 0) {
-        console.log('[OK] No prize values changed - skipping save');
         return { success: true, message: 'No changes', skipped: true };
       }
 
-      console.log(`[SAVE] Saving prize configurations for ${Object.keys(configsByLottery).length} lottery groups...`);
 
       // Save each lottery's configs
       const savePromises: Promise<{ success: boolean; lottery: string; count?: number; error?: string }>[] = [];
@@ -521,11 +483,9 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
       for (const [lotteryIdKey, prizeConfigs] of Object.entries(configsByLottery)) {
         if (lotteryIdKey === 'general') {
           // Save general configs
-          console.log(`[SAVE] Saving ${prizeConfigs.length} general prize config(s)...`);
           savePromises.push(
             savePrizeConfig(bettingPoolId || '', prizeConfigs)
               .then(() => {
-                console.log(`[SUCCESS] General configs saved successfully`);
                 totalSaved += prizeConfigs.length;
                 return { success: true, lottery: 'general', count: prizeConfigs.length };
               })
@@ -539,7 +499,6 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
           // New format: "draw_XX" where XX is the drawId directly
           const drawId = parseInt(lotteryIdKey.split('_')[1]);
 
-          console.log(`[SAVE] Saving ${prizeConfigs.length} prize config(s) for draw ${drawId}...`);
 
           // Directly save to draw-specific endpoint (no need to lookup)
           savePromises.push(
@@ -558,7 +517,6 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
                 return response.json();
               })
               .then(() => {
-                console.log(`[SUCCESS] Draw ${drawId} configs saved successfully`);
                 totalSaved += prizeConfigs.length;
                 return { success: true, lottery: lotteryIdKey, count: prizeConfigs.length };
               })
@@ -572,7 +530,6 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
           // Legacy format: "lottery_XX" where XX is the lotteryId (need to lookup drawId)
           const lotteryIdNum = parseInt(lotteryIdKey.split('_')[1]);
 
-          console.log(`[SAVE] Saving ${prizeConfigs.length} prize config(s) for lottery ${lotteryIdNum}...`);
 
           // For lottery-specific: Get first draw ID, then save
           savePromises.push(
@@ -592,7 +549,6 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
                 const firstDraw = draws[0];
                 const drawId = firstDraw.drawId;
 
-                console.log(`  -> Using draw ${drawId} (${firstDraw.drawName || 'N/A'}) for lottery ${lotteryIdNum}`);
 
                 // Save to draw-specific endpoint
                 return fetch(`/api/betting-pools/${bettingPoolId}/draws/${drawId}/prize-config`, {
@@ -611,7 +567,6 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
                 return response.json();
               })
               .then(() => {
-                console.log(`[SUCCESS] Lottery ${lotteryIdNum} configs saved successfully`);
                 totalSaved += prizeConfigs.length;
                 return { success: true, lottery: lotteryIdKey, count: prizeConfigs.length };
               })
@@ -631,7 +586,6 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
       const saveTime = (endTime - startTime).toFixed(2);
 
       if (totalFailed === 0) {
-        console.log(`[SUCCESS] All prize configurations saved successfully in ${saveTime}ms`);
       } else {
         console.warn(`[WARN] Prize configurations partially saved: ${totalSaved} succeeded, ${totalFailed} failed`);
       }
@@ -661,13 +615,11 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
    */
   const loadPrizeValues = async (bettingPoolId: string): Promise<Record<string, string | number>> => {
     try {
-      console.log(`Loading prize values for betting pool ${bettingPoolId}...`);
 
       // Get merged prize data (defaults + custom values)
       const prizeData = await getMergedPrizeData(bettingPoolId as unknown as null) as PrizeData | null;
 
       if (!prizeData || !prizeData.betTypes) {
-        console.log('No prize data available');
         return {};
       }
 
@@ -693,9 +645,7 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
           // Override with custom value if it exists
           if (customMap[customKey] !== undefined) {
             value = customMap[customKey];
-            console.log(`Found custom value for ${fieldKey}: ${value} (overriding default: ${field.defaultMultiplier})`);
           } else {
-            console.log(`Using default value for ${fieldKey}: ${value}`);
           }
 
           // Store in formData format with "general_" prefix
@@ -703,7 +653,6 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
         });
       });
 
-      console.log(`Loaded ${Object.keys(prizeFormData).length} prize type values`);
       return prizeFormData;
     } catch (error) {
       console.error('Error loading prize values:', error);
@@ -721,11 +670,9 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
     try {
       // ⚡ PERFORMANCE: Check cache first
       if (drawValuesCache[drawId]) {
-        console.log(`[PERF] Using cached values for draw ${drawId} (skipping API calls)`);
         return drawValuesCache[drawId];
       }
 
-      console.log(`[DRAW] Loading draw-specific values for draw ${drawId}...`);
 
       // 🔥 FIX: Directly call the prize-config endpoint with the drawId
       // The old code was calling /api/draws/lottery/${lotteryId} which doesn't exist
@@ -737,15 +684,12 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
       });
 
       if (!configResponse.ok) {
-        console.log(`[INFO] No custom prize config found for draw ${drawId} (status: ${configResponse.status})`);
         return {};
       }
 
       const configs = await configResponse.json();
-      console.log(`  -> Raw API response:`, configs);
 
       if (!configs || configs.length === 0) {
-        console.log(`[INFO] No custom values for draw ${drawId}`);
         return {};
       }
 
@@ -761,7 +705,6 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
         // ✅ FIX: API returns 'customValue', not 'value'
         drawFormData[fieldKey] = config.customValue;
 
-        console.log(`  [OK] Loaded: ${fieldKey} = ${config.customValue}`);
       });
 
       // ⚡ PERFORMANCE: Store in cache for future use
@@ -770,7 +713,6 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
         [drawId]: drawFormData
       }));
 
-      console.log(`[SUCCESS] Loaded ${Object.keys(drawFormData).length} draw-specific values (cached for future use)`);
       return drawFormData;
 
     } catch (error) {
@@ -818,7 +760,6 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
     }
 
     const startTime = performance.now();
-    console.log('[START] Starting save operation...');
 
     setLoading(true);
     setErrors({});
@@ -903,9 +844,6 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
       // ========================================
       // 3️⃣ CALL BOTH ENDPOINTS IN PARALLEL
       // ========================================
-      console.log('[SEND] Calling 2 endpoints in parallel...');
-      console.log('  - PUT /api/betting-pools/' + id, basicData);
-      console.log('  - POST /api/betting-pools/' + id + '/config', configData);
 
       const bettingPoolId = id as string;
       const [basicResponse, configResponse] = await Promise.all([
@@ -913,23 +851,18 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
         updateBettingPoolConfig(bettingPoolId, configData)
       ]);
 
-      console.log('[SUCCESS] Basic data response:', basicResponse);
-      console.log('[SUCCESS] Config response:', configResponse);
 
       if (basicResponse.success && configResponse.success) {
         // ========================================
         // 4️⃣ SAVE PRIZE CONFIGURATIONS
         // ========================================
-        console.log(`Betting pool updated with ID: ${id}. Saving prize configurations...`);
 
         try {
           const prizeResult = await savePrizeConfigurations(id, formData, initialFormData);
 
           if (prizeResult.success) {
             if (prizeResult.skipped) {
-              console.log(`[OK] No prize changes to save`);
             } else {
-              console.log(`[SUCCESS] ${prizeResult.total} prize configuration(s) saved successfully`);
             }
           } else {
             console.warn(`[WARN] Some prize configurations failed to save: ${prizeResult.failed} of ${prizeResult.total}`);
@@ -942,7 +875,6 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
         // ========================================
         // 5️⃣ SAVE SCHEDULES IF CHANGED
         // ========================================
-        console.log('[DEBUG] [HOOK] Checking schedule changes...');
         console.log('[DEBUG] [HOOK] Current formData schedules:', {
           domingoInicio: formData.domingoInicio,
           domingoFin: formData.domingoFin,
@@ -957,34 +889,27 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
         });
 
         const scheduleChanged = hasScheduleDataChanged();
-        console.log(`[DEBUG] [HOOK] Schedule changed: ${scheduleChanged}`);
 
         if (scheduleChanged) {
           try {
-            console.log('[SCHEDULE] [HOOK] Updating schedules...');
             const schedules = transformSchedulesToApiFormat(formData as unknown as Parameters<typeof transformSchedulesToApiFormat>[0]);
-            console.log('[SCHEDULE] [HOOK] Transformed schedules:', schedules);
             const scheduleResult = await saveBettingPoolSchedules(id || '', schedules);
             if (scheduleResult.success) {
-              console.log('[SUCCESS] [HOOK] Schedules updated successfully');
             }
           } catch (scheduleError) {
             console.error('[ERROR] [HOOK] Error saving schedules:', scheduleError);
             // Don't fail the whole operation if schedules fail to save
           }
         } else {
-          console.log('[OK] [HOOK] No schedule changes to save');
         }
 
         // ========================================
         // 🎯 PASO 6: SAVE DRAWS IF CHANGED
         // ========================================
         const drawsChanged = hasDrawsDataChanged();
-        console.log(`[DEBUG] [HOOK] Draws changed: ${drawsChanged}`);
 
         if (drawsChanged) {
           try {
-            console.log('[TARGET] [HOOK] Updating draws...');
             console.log('[LIST] [HOOK] FormData antes de guardar:', {
               selectedDraws: formData.selectedDraws,
               anticipatedClosing: formData.anticipatedClosing,
@@ -1010,30 +935,24 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
               });
             });
 
-            console.log('[SEND] [HOOK] Draws payload (NEW format):', drawsToSave);
-            console.log(`[SEND] [HOOK] Enviando ${drawsToSave.length} draws al endpoint`);
 
             const drawsResult = await saveBettingPoolDraws(id || '', drawsToSave);
             if (drawsResult.success) {
-              console.log('[SUCCESS] [HOOK] Draws updated successfully');
             }
           } catch (drawsError) {
             console.error('[ERROR] [HOOK] Error saving draws:', drawsError);
             // Don't fail the whole operation if draws fail to save
           }
         } else {
-          console.log('[OK] [HOOK] No draw changes to save');
         }
 
         // ========================================
         // 7️⃣ ✅ FIX: UPDATE initialFormData WITH NEW VALUES
         // ========================================
         setInitialFormData({ ...formData });
-        console.log('[SUCCESS] initialFormData updated with new values');
 
         const endTime = performance.now();
         const saveTime = (endTime - startTime).toFixed(2);
-        console.log(`[SUCCESS] Save operation completed successfully in ${saveTime}ms`);
 
         // Show success message and stay on form
         setSuccessMessage('✅ Banca actualizada exitosamente');
@@ -1047,7 +966,6 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
       console.error('[ERROR] Error updating betting pool:', error);
       const endTime = performance.now();
       const saveTime = (endTime - startTime).toFixed(2);
-      console.log(`[ERROR] Save operation failed after ${saveTime}ms`);
 
       const errorMessage = handleBettingPoolError(error, 'update betting pool');
       setErrors({ submit: errorMessage });
@@ -1061,7 +979,6 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
    * @param {string} drawId - The draw ID (e.g., "general" or "draw_43")
    */
   const savePrizeConfigForSingleDraw = async (drawId: string): Promise<SavePrizeResult> => {
-    console.log(`[SAVE] [SINGLE DRAW SAVE] Saving prize config for draw: ${drawId}`);
 
     try {
       // Filter formData to only include fields for this specific draw
@@ -1074,14 +991,12 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
         }
       });
 
-      console.log(`[SAVE] [SINGLE DRAW SAVE] Found ${Object.keys(filteredFormData).length} fields for ${drawId}`);
 
       // Call the existing savePrizeConfigurations function
       // but with filtered data containing only this draw's fields
       const result = await savePrizeConfigurations(id, filteredFormData, initialFormData);
 
       if (result.success) {
-        console.log(`[SUCCESS] [SINGLE DRAW SAVE] Successfully saved config for ${drawId}`);
       }
 
       return result;
@@ -1122,7 +1037,6 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
             bettingPoolCode: pool.bettingPoolCode,
           }));
         setTemplateBettingPools(filteredPools);
-        console.log(`[TEMPLATE] Loaded ${filteredPools.length} betting pools for template selection`);
       }
     } catch (error) {
       console.error('[TEMPLATE] Error loading betting pools:', error);
@@ -1166,7 +1080,6 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
     }
 
     setLoadingTemplateData(true);
-    console.log(`[TEMPLATE] Applying template from betting pool ${selectedTemplateId}...`);
 
     try {
       // Fetch all data in parallel
@@ -1212,7 +1125,6 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
             if (templateFields.configuration) {
               const configUpdates = mapConfigToFormData(configData);
               Object.assign(updates, configUpdates);
-              console.log('[TEMPLATE] Applied configuration fields');
             }
 
             // Footers fields
@@ -1224,7 +1136,6 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
               updates.footerText4 = configData.footer.footerLine4 ?? '';
               updates.showBranchInfo = configData.footer.showBranchInfo ?? true;
               updates.showDateTime = configData.footer.showDateTime ?? true;
-              console.log('[TEMPLATE] Applied footer fields');
             }
 
             // Styles fields (from print config)
@@ -1234,7 +1145,6 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
               updates.printTicketCopy = configData.printConfig.printTicketCopy ?? true;
               updates.printRechargeReceipt = configData.printConfig.printRechargeReceipt ?? true;
               updates.smsOnly = configData.printConfig.smsOnly ?? false;
-              console.log('[TEMPLATE] Applied styles fields');
             }
           }
 
@@ -1245,7 +1155,6 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
               const key = `general_${config.betTypeCode}_${config.fieldCode}`;
               (updates as Record<string, unknown>)[key] = config.value;
             });
-            console.log(`[TEMPLATE] Applied ${prizeConfigs.length} prize configurations`);
           }
 
           // Process schedules
@@ -1254,7 +1163,6 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
             if (schedulesData.length > 0) {
               const scheduleUpdates = transformSchedulesToFormFormat(schedulesData) as Partial<FormData>;
               Object.assign(updates, scheduleUpdates);
-              console.log('[TEMPLATE] Applied schedule fields');
             }
           }
 
@@ -1274,7 +1182,6 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
             updates.selectedDraws = enabledDrawIds;
             updates.anticipatedClosing = anticipatedClosing;
             updates.anticipatedClosingDraws = drawIdsWithClosing;
-            console.log(`[TEMPLATE] Applied ${enabledDrawIds.length} draws, ${drawIdsWithClosing.length} with anticipated closing`);
           }
         } else if (result.status === 'rejected') {
           console.error(`[TEMPLATE] Error loading ${dataType}:`, result.reason);
@@ -1287,7 +1194,6 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
         ...updates,
       }) as FormData);
 
-      console.log('[TEMPLATE] Template applied successfully');
       setSuccessMessage('✅ Plantilla aplicada correctamente');
 
       // Auto-clear success message after 3 seconds

@@ -65,7 +65,6 @@ const AutomaticLimits = (): React.ReactElement => {
   }, []);
 
   const handleSaveGeneral = useCallback((): void => {
-    console.log('Saving general controls:', { generalNumberControls, lineControls });
     alert('Configuración guardada exitosamente');
   }, [generalNumberControls, lineControls]);
 
@@ -74,7 +73,6 @@ const AutomaticLimits = (): React.ReactElement => {
       alert('Por favor complete todos los campos');
       return;
     }
-    console.log('Updating random blocking:', { selectedDraws, selectedBanca, palesToBlock });
     alert('Bloqueo actualizado exitosamente');
   }, [selectedDraws, selectedBanca, palesToBlock]);
 

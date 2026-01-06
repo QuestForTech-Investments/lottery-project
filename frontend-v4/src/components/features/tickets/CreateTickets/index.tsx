@@ -319,7 +319,6 @@ const CreateTickets: React.FC = () => {
         });
         setDrawGameTypes(gameTypesMap);
 
-        console.log('[DEBUG] gameTypesMap:', Object.fromEntries(gameTypesMap));
 
         // Clear selected draws when changing betting pool
         setSelectedDraw(null);

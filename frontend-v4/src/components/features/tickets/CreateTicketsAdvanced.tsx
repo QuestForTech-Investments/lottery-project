@@ -133,7 +133,6 @@ const CreateTicketsAdvanced: React.FC = () => {
         setSelectedDraws([drawsList[0]]);
       }
 
-      console.log('[SUCCESS] Sorteos cargados con tipos de juego habilitados:', drawsData);
     } catch (error) {
       console.error('Error cargando sorteos:', error);
       // Usar datos mock si falla la API
@@ -412,7 +411,6 @@ const CreateTicketsAdvanced: React.FC = () => {
       });
 
       alert('Ticket creado exitosamente!');
-      console.log('Ticket creado:', response);
 
       // Clear formulario
       setLines([]);

@@ -259,7 +259,6 @@ const PrizesTab: React.FC<PrizesTabProps> = ({ formData, handleChange, bettingPo
   const loadingDraws = propDraws.length > 0 ? propLoadingDraws : localLoadingDraws;
 
   // 🔍 DEBUG: Log draws to diagnose issue
-  console.log(`[DEBUG] [PrizesTab DEBUG] propDraws.length=${propDraws.length}, localDraws.length=${localDraws.length}, final draws.length=${draws.length}`);
 
   // 🔥 Filter bet types based on active draw (using betTypeCompatibilityService)
   const activeDrawName = useMemo(() => {
@@ -307,7 +306,6 @@ const PrizesTab: React.FC<PrizesTabProps> = ({ formData, handleChange, bettingPo
               ...unorderedDraws
             ];
             setLocalDraws(formattedDraws);
-            console.log(`[SUCCESS] Loaded ${formattedDraws.length} draws locally (PrizesTab fallback)`);
           } else {
             setLocalDraws([{ id: 'general', name: 'General' }]);
           }
@@ -338,7 +336,6 @@ const PrizesTab: React.FC<PrizesTabProps> = ({ formData, handleChange, bettingPo
    * 🔥 NEW: Load draw-specific values when switching to a draw tab
    */
   useEffect(() => {
-    console.log(`[DEBUG] [LOAD CHECK] activeDraw: ${activeDraw}, bettingPoolId: ${bettingPoolId}, hasLoadFn: ${!!loadDrawSpecificValues}`);
 
     // Only load if:
     // 1. We're editing (bettingPoolId exists)
@@ -346,12 +343,10 @@ const PrizesTab: React.FC<PrizesTabProps> = ({ formData, handleChange, bettingPo
     // 3. We're on a specific draw tab (not general)
     if (bettingPoolId && loadDrawSpecificValues && activeDraw !== 'general' && activeDraw.startsWith('draw_')) {
       const drawId = parseInt(activeDraw.split('_')[1]);
-      console.log(`[TARGET] Tab changed to draw ${drawId}, loading specific values...`);
 
       loadDrawSpecificValues(drawId, bettingPoolId)
         .then(drawValues => {
           if (Object.keys(drawValues).length > 0) {
-            console.log(`[SUCCESS] Loaded draw values, updating form data...`);
             // Merge draw-specific values into formData
             Object.keys(drawValues).forEach(key => {
               handleChange({
@@ -376,7 +371,6 @@ const PrizesTab: React.FC<PrizesTabProps> = ({ formData, handleChange, bettingPo
   useEffect(() => {
     const loadGeneralDefaults = async () => {
       try {
-        console.log('[LIST] [FALLBACK] Loading general values for fallback...');
         const allBetTypes = await getAllBetTypesWithFields() as unknown as BetType[];
 
         if (allBetTypes && Array.isArray(allBetTypes)) {
@@ -397,7 +391,6 @@ const PrizesTab: React.FC<PrizesTabProps> = ({ formData, handleChange, bettingPo
             });
           });
 
-          console.log(`[SUCCESS] [FALLBACK] General values loaded: ${Object.keys(generalVals).length} fields`);
           setGeneralValues(generalVals);
         }
       } catch (error) {
@@ -423,10 +416,8 @@ const PrizesTab: React.FC<PrizesTabProps> = ({ formData, handleChange, bettingPo
       const currentDraw = draws.find(d => d.id === activeDraw);
       const drawName = currentDraw?.name || 'General';
 
-      console.log(`[LIST] Loading bet types for ${activeDraw} (${drawName})`);
       const betTypesData = await getAllBetTypesWithFields();
 
-      console.log(`[SUCCESS] Loaded ${betTypesData.length} total bet types from API`);
 
       // Map service BetType to local BetType (ensure required fields have defaults)
       let mappedBetTypes: BetType[] = betTypesData.map(bt => ({
@@ -448,10 +439,7 @@ const PrizesTab: React.FC<PrizesTabProps> = ({ formData, handleChange, bettingPo
       const allowedCodes = getAllowedBetTypesForDraw(drawName);
       if (allowedCodes) {
         mappedBetTypes = mappedBetTypes.filter(bt => allowedCodes.includes(bt.betTypeCode));
-        console.log(`[FILTER] ${drawName} allows ${allowedCodes.length} bet types: ${allowedCodes.join(', ')}`);
-        console.log(`[FILTER] Filtered to ${mappedBetTypes.length} bet types`);
       } else {
-        console.log(`[FILTER] ${drawName} shows ALL bet types (${mappedBetTypes.length})`);
       }
 
       setBetTypes(mappedBetTypes);
@@ -594,12 +582,10 @@ const PrizesTab: React.FC<PrizesTabProps> = ({ formData, handleChange, bettingPo
     try {
       setSaving(true);
       setSaveError(null);
-      console.log(`[SAVE] Saving prize config for draw: ${activeDraw}`);
 
       await onSavePrizeConfig(activeDraw);
 
       setSaveSuccess(true);
-      console.log(`[SUCCESS] Prize config saved successfully for ${activeDraw}`);
 
       // Auto-hide success message after 3 seconds
       setTimeout(() => {

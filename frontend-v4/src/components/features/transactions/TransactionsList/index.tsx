@@ -76,7 +76,6 @@ const TransactionsList = (): React.ReactElement => {
   ];
 
   const handleFilter = useCallback(() => {
-    console.log('Filtering with:', { startDate, endDate, selectedEntityType, selectedEntity, selectedTransactionType, selectedCreatedBy, showNotes });
   }, [startDate, endDate, selectedEntityType, selectedEntity, selectedTransactionType, selectedCreatedBy, showNotes]);
 
   const handleExportCSV = useCallback(() => { console.log('Exporting to CSV'); }, []);

@@ -156,7 +156,6 @@ const FILTER_OPTIONS = [
 ];
 
 const DailySales = (): React.ReactElement => {
-  console.log('[DATA] DailySales component mounted');
   const navigate = useNavigate();
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -183,7 +182,6 @@ const DailySales = (): React.ReactElement => {
   // Function to load sales data from API
   const loadSalesData = async (date: string) => {
     try {
-      console.log('[DATA] Loading sales for date:', date);
       const response = await api.get<BettingPoolSalesDto[]>(
         `/reports/sales/by-betting-pool?startDate=${date}&endDate=${date}`
       );
@@ -208,7 +206,6 @@ const DailySales = (): React.ReactElement => {
         accumulatedFall: 0, // Not available from this endpoint
       }));
 
-      console.log('[DATA] Sales data loaded:', mappedData.length, 'records');
       setSalesData(mappedData);
     } catch (err) {
       console.error('[DATA] Error loading sales:', err);
@@ -220,7 +217,6 @@ const DailySales = (): React.ReactElement => {
     setLoading(true);
     setError(null);
     try {
-      console.log('[DATA] Loading initial data...');
       const [poolsData, zonesData] = await Promise.all([
         api.get<{ items?: BettingPool[] } | BettingPool[]>('/betting-pools'),
         api.get<{ items?: Zone[] } | Zone[]>('/zones')
@@ -233,7 +229,6 @@ const DailySales = (): React.ReactElement => {
         ? (zonesData.items || [])
         : (zonesData as Zone[] || []);
 
-      console.log('[DATA] Pools:', poolsArray.length, 'Zones:', zonesArray.length);
 
       setBettingPools(poolsArray);
       setZones(zonesArray);

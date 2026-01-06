@@ -129,7 +129,6 @@ const DebtCollectors = (): React.ReactElement => {
   }, []);
 
   const handleAgregar = useCallback(() => {
-    console.log('Add transaction:', createForm);
     alert('Transacción agregada (mockup)');
     // Reset form
     setCreateForm({

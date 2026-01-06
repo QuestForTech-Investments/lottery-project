@@ -66,7 +66,6 @@ const F8Monitor = (): React.ReactElement => {
   }, []);
 
   const handleRefresh = useCallback((): void => {
-    console.log('Refrescar datos:', filters);
     alert(`Refrescando datos (mockup)\nFecha: ${filters.fecha}\nSorteo: ${filters.sorteo || 'Todos'}\nJugada: ${filters.jugada || 'Todas'}`);
   }, [filters]);
 

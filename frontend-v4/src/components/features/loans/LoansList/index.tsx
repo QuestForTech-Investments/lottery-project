@@ -148,7 +148,6 @@ const LoansList = (): React.ReactElement => {
 
   const handlePayment = useCallback((e: FormEvent<HTMLFormElement>): void => {
     e.preventDefault();
-    console.log('Pay loan:', selectedLoan, paymentData);
     alert(`Pago registrado: $${paymentData.amount} para préstamo ${selectedLoan?.loanNumber}`);
     handleClosePaymentModal();
   }, [selectedLoan, paymentData, handleClosePaymentModal]);
@@ -164,7 +163,6 @@ const LoansList = (): React.ReactElement => {
   }, []);
 
   const handleConfirmDelete = useCallback((): void => {
-    console.log('Delete loan:', selectedLoan);
     alert(`Préstamo ${selectedLoan?.loanNumber} eliminado exitosamente`);
     handleCloseDeleteModal();
   }, [selectedLoan, handleCloseDeleteModal]);

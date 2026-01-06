@@ -63,7 +63,6 @@ const CreateEmailReceiver = (): React.ReactElement => {
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>): void => {
     e.preventDefault();
-    console.log('Crear receptor de correo:', formData);
     alert(`Receptor de correo creado (mockup)\n\nNombre: ${formData.nombre}\nEmail: ${formData.email}\nTipo de notificación: ${formData.tipoNotificacion}\nActivo: ${formData.activo ? 'Sí' : 'No'}`);
 
     // Reset form

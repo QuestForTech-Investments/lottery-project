@@ -74,7 +74,6 @@ const UserBettingPoolsContent: React.FC = () => {
   const handleSavePassword = (): void => {
     if (newPassword === confirmPassword && newPassword.length >= 6) {
       // TODO: Call API to update password
-      console.log('Update password for user:', selectedUsername, 'to:', newPassword);
       setNewPassword('');
       setConfirmPassword('');
       handleClosePasswordModal();

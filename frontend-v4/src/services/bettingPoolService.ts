@@ -268,7 +268,6 @@ export const getNextBettingPoolCode = async (): Promise<{ nextCode: string } | n
  */
 export const createBettingPool = async (bettingPoolData: BettingPoolCreateData): Promise<ApiResponse<BettingPool>> => {
   try {
-    console.log('Enviando datos a la API:', bettingPoolData);
 
     const response = await fetch(API_BASE_URL, {
       method: 'POST',

@@ -107,7 +107,6 @@ const BancasListMUI: React.FC = () => {
    * Handle toggle active status
    */
   const handleToggleActive = (bettingPoolId: number): void => {
-    console.log(`Toggle active status for betting pool ${bettingPoolId}`);
     // TODO: Implement API call to update betting pool status
   };
 

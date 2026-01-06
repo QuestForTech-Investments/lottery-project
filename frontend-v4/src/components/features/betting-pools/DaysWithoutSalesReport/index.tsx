@@ -78,7 +78,6 @@ const WEEKDAYS: WeekDay[] = [
 ];
 
 const DaysWithoutSalesReport: React.FC = () => {
-  console.log('[SCHEDULE] DaysWithoutSalesReport component mounted');
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [bettingPools, setBettingPools] = useState<BettingPool[]>([]);
@@ -104,7 +103,6 @@ const DaysWithoutSalesReport: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      console.log('[SCHEDULE] Loading initial data...');
       const [poolsData, zonesData] = await Promise.all([
         api.get('/betting-pools') as Promise<{ items?: BettingPool[] } | BettingPool[]>,
         api.get('/zones') as Promise<{ items?: Zone[] } | Zone[]>
@@ -113,7 +111,6 @@ const DaysWithoutSalesReport: React.FC = () => {
       const poolsArray: BettingPool[] = Array.isArray(poolsData) ? poolsData : (poolsData?.items || []);
       const zonesArray: Zone[] = Array.isArray(zonesData) ? zonesData : (zonesData?.items || []);
 
-      console.log('[SCHEDULE] Pools:', poolsArray.length, 'Zones:', zonesArray.length);
 
       setBettingPools(poolsArray);
       setZones(zonesArray);
@@ -127,7 +124,6 @@ const DaysWithoutSalesReport: React.FC = () => {
       setError(error.message || 'Error loading data');
     } finally {
       setLoading(false);
-      console.log('[SCHEDULE] Loading complete');
     }
   };
 
@@ -135,7 +131,6 @@ const DaysWithoutSalesReport: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      console.log('[SCHEDULE] Searching with date:', selectedDate, 'zones:', selectedZones);
       // TODO: Call actual API endpoint when available
       // const data = await api.get(`/betting-pools/weekly-sales?date=${selectedDate}&zoneIds=${selectedZones.join(',')}`);
       // setBettingPools(data?.items || data || []);
@@ -260,7 +255,6 @@ const DaysWithoutSalesReport: React.FC = () => {
     );
   }
 
-  console.log('[SCHEDULE] Rendering DaysWithoutSalesReport, pools:', filteredAndSortedData.length);
 
   return (
     <Box sx={{ p: 3 }}>

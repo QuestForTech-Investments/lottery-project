@@ -101,7 +101,6 @@ const DrawSchedules = (): React.ReactElement => {
       const { data } = await getDrawSchedules();
       const grouped = groupDrawsByLottery(data) as Lottery[];
       setLotteries(grouped);
-      console.log('[SCHEDULE] [DRAW SCHEDULES] Loaded lotteries:', grouped);
     } catch (error) {
       console.error('[ERROR] [DRAW SCHEDULES] Error loading:', error);
       showSnackbar('Error al cargar horarios de sorteos', 'error');
@@ -211,7 +210,6 @@ const DrawSchedules = (): React.ReactElement => {
         return;
       }
 
-      console.log('[SCHEDULE] [DRAW SCHEDULES] Saving schedules:', schedules);
       await updateDrawSchedules(schedules as unknown as Parameters<typeof updateDrawSchedules>[0]);
 
       showSnackbar('Horarios actualizados correctamente', 'success');

@@ -60,7 +60,6 @@ interface PoolWithDaysData extends BettingPool {
 type OrderDirection = 'asc' | 'desc';
 
 const BettingPoolsWithoutSales: React.FC = () => {
-  console.log('[DATA] BettingPoolsWithoutSales component mounted');
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [bettingPools, setBettingPools] = useState<BettingPool[]>([]);
@@ -83,7 +82,6 @@ const BettingPoolsWithoutSales: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      console.log('[DATA] Loading initial data...');
       const [poolsData, zonesData] = await Promise.all([
         api.get('/betting-pools') as Promise<{ items?: BettingPool[] } | BettingPool[]>,
         api.get('/zones') as Promise<{ items?: Zone[] } | Zone[]>
@@ -92,7 +90,6 @@ const BettingPoolsWithoutSales: React.FC = () => {
       const poolsArray: BettingPool[] = Array.isArray(poolsData) ? poolsData : (poolsData?.items || []);
       const zonesArray: Zone[] = Array.isArray(zonesData) ? zonesData : (zonesData?.items || []);
 
-      console.log('[DATA] Pools:', poolsArray.length, 'Zones:', zonesArray.length);
 
       setBettingPools(poolsArray);
       setZones(zonesArray);
@@ -106,7 +103,6 @@ const BettingPoolsWithoutSales: React.FC = () => {
       setError(error.message || 'Error loading data');
     } finally {
       setLoading(false);
-      console.log('[DATA] Loading complete');
     }
   };
 
@@ -114,7 +110,6 @@ const BettingPoolsWithoutSales: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      console.log('[DATA] Searching with days:', daysWithoutSales, 'zones:', selectedZones);
       // TODO: Call actual API endpoint when available
       // const data = await api.get(`/betting-pools/without-sales?days=${daysWithoutSales}&zoneIds=${selectedZones.join(',')}`);
       // setBettingPools(data?.items || data || []);
@@ -261,7 +256,6 @@ const BettingPoolsWithoutSales: React.FC = () => {
     );
   }
 
-  console.log('[DATA] Rendering BettingPoolsWithoutSales, pools:', filteredAndSortedData.length);
 
   return (
     <Box sx={{ p: 3 }}>

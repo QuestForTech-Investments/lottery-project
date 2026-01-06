@@ -33,7 +33,6 @@ type ThresholdMap = Record<MetricName, MetricThreshold>
 const sendToAnalytics = (metric: Metric): void => {
   // Log to console in development
   if (import.meta.env.DEV) {
-    console.log(`%c[METRICS] Web Vital: ${metric.name}`, 'color: #2196F3; font-weight: bold', metric);
   }
 
   // Log to our logging system

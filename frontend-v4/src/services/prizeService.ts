@@ -46,7 +46,6 @@ const CACHE_DURATION_MS = 5 * 60 * 1000; // 5 minutes
 export const clearBetTypesCache = (): void => {
   betTypesCache = null;
   betTypesCacheTimestamp = null;
-  console.log('[DELETE] Bet types cache cleared');
 };
 
 /**
@@ -79,12 +78,10 @@ export const getAllBetTypesWithFields = async (forceRefresh: boolean = false): P
                          (now - betTypesCacheTimestamp) < CACHE_DURATION_MS;
 
     if (!forceRefresh && cacheIsValid) {
-      console.log('[SUCCESS] Using cached bet types (cache hit)');
       return betTypesCache as BetType[];
     }
 
     // Cache miss or expired - fetch fresh data
-    console.log('[TIMING] Fetching bet types from API (cache miss)...');
     const fetchStartTime = performance.now();
 
     let sortedBetTypes: BetType[];
@@ -114,14 +111,12 @@ export const getAllBetTypesWithFields = async (forceRefresh: boolean = false): P
           }
         });
 
-        console.log(`[SUCCESS] Using OPTIMIZED endpoint`);
       } else {
         // Endpoint not available, use fallback
         throw new Error('Endpoint not available');
       }
     } catch {
       // 🔄 FALLBACK TO LEGACY METHOD: Multiple API calls
-      console.log('[WARN] Optimized endpoint not available, using legacy method...');
 
       const betTypesList = await getAllBetTypes();
       const detailPromises = betTypesList.map(betType =>
@@ -130,7 +125,6 @@ export const getAllBetTypesWithFields = async (forceRefresh: boolean = false): P
       const detailedBetTypes = await Promise.all(detailPromises);
       sortedBetTypes = detailedBetTypes.sort((a, b) => a.betTypeId - b.betTypeId);
 
-      console.log(`[SUCCESS] Using LEGACY method (${betTypesList.length} calls)`);
     }
 
     // Store in cache
@@ -138,7 +132,6 @@ export const getAllBetTypesWithFields = async (forceRefresh: boolean = false): P
     betTypesCacheTimestamp = now;
 
     const fetchTime = (performance.now() - fetchStartTime).toFixed(2);
-    console.log(`[SUCCESS] Bet types fetched and cached in ${fetchTime}ms (${sortedBetTypes.length} types)`);
 
     return sortedBetTypes;
   } catch (error) {
@@ -203,7 +196,6 @@ export const savePrizeConfig = async (bettingPoolId: number | string, prizeConfi
       ? { prizeConfigs: prizeConfig }
       : { prizeConfigs: [prizeConfig] };
 
-    console.log(`[SAVE] Sending ${Array.isArray(prizeConfig) ? prizeConfig.length : 1} prize configs to /api/betting-pools/${bettingPoolId}/prize-config`);
 
     const response = await fetch(`/api/betting-pools/${bettingPoolId}/prize-config`, {
       method: 'POST',
@@ -254,11 +246,9 @@ export const getMergedPrizeData = async (bettingPoolId: number | string | null =
         const customKey = `${betTypeCode}_${config.fieldCode}`;
         customMap[customKey] = value;
 
-        console.log(`Mapped custom value: ${customKey} = ${value}`);
       }
     });
 
-    console.log(`Built customMap with ${Object.keys(customMap).length} custom values`);
 
     return {
       betTypes,

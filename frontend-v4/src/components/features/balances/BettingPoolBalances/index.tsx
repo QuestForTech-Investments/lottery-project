@@ -105,7 +105,6 @@ const BettingPoolBalances = (): React.ReactElement => {
   }, []);
 
   const handleRefresh = useCallback(() => {
-    console.log('Refreshing data for:', selectedDate, selectedZones, balanceType);
     // TODO: Call API
   }, [selectedDate, selectedZones, balanceType]);
 
@@ -114,7 +113,6 @@ const BettingPoolBalances = (): React.ReactElement => {
   }, []);
 
   const handleExportPdf = useCallback(() => {
-    console.log('Exporting to PDF...');
     // TODO: Implement PDF export
   }, []);
 

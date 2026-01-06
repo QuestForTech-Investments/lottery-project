@@ -48,7 +48,6 @@ const CreateExternalAgent = (): React.ReactElement => {
 
   const handleSubmit = useCallback((e: FormEvent<HTMLFormElement>): void => {
     e.preventDefault();
-    console.log('Crear agente externo:', formData);
     alert(`Agente externo creado (mockup)\nNombre: ${formData.nombre}\nCódigo: ${formData.codigo}\nContacto: ${formData.contacto}`);
     // Reset form
     setFormData(initialFormData);

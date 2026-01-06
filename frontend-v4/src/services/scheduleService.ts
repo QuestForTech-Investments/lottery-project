@@ -60,15 +60,11 @@ export const saveBettingPoolSchedules = async (
   schedules: Schedule[]
 ): Promise<ScheduleResponse> => {
   try {
-    console.log('[SCHEDULE] [SCHEDULE SERVICE] Saving schedules for betting pool:', bettingPoolId);
-    console.log('[SCHEDULE] [SCHEDULE SERVICE] Schedules to save:', JSON.stringify(schedules, null, 2));
 
     const payload: SchedulePayload = { schedules: schedules };
-    console.log('[SCHEDULE] [SCHEDULE SERVICE] Request payload:', JSON.stringify(payload, null, 2));
 
     const data = await api.post(`/betting-pools/${bettingPoolId}/schedules`, payload) as ApiScheduleData;
 
-    console.log('[SUCCESS] [SCHEDULE SERVICE] Schedules saved successfully:', data);
     return { success: true, data: data.schedules || [] };
   } catch (err) {
     const error = err as Error & { response?: unknown; stack?: string };
@@ -86,8 +82,6 @@ export const saveBettingPoolSchedules = async (
  * Transform frontend schedule data (domingoInicio, domingoFin, etc.) to API format
  */
 export const transformSchedulesToApiFormat = (formData: FormScheduleData): Schedule[] => {
-  console.log('[SYNC] [TRANSFORM] Converting formData to API format');
-  console.log('[SYNC] [TRANSFORM] Input formData keys:', Object.keys(formData).filter(k => k.includes('Inicio') || k.includes('Fin')));
 
   const days: Array<{ key: string; dayOfWeek: number }> = [
     { key: 'domingo', dayOfWeek: 0 },
@@ -106,11 +100,9 @@ export const transformSchedulesToApiFormat = (formData: FormScheduleData): Sched
       closingTime: formData[`${day.key}Fin`] || null,
       isActive: true
     };
-    console.log(`[SYNC] [TRANSFORM] ${day.key}: opening="${schedule.openingTime}", closing="${schedule.closingTime}"`);
     return schedule;
   });
 
-  console.log('[SYNC] [TRANSFORM] Transformation complete:', result);
   return result;
 };
 
@@ -118,8 +110,6 @@ export const transformSchedulesToApiFormat = (formData: FormScheduleData): Sched
  * Transform API schedule data to frontend format (domingoInicio, domingoFin, etc.)
  */
 export const transformSchedulesToFormFormat = (schedules: Schedule[]): FormScheduleData => {
-  console.log('[SYNC] [TRANSFORM] Converting API data to form format');
-  console.log('[SYNC] [TRANSFORM] Input schedules:', schedules);
 
   const days = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
   const formData: FormScheduleData = {};
@@ -128,9 +118,7 @@ export const transformSchedulesToFormFormat = (schedules: Schedule[]): FormSched
     const dayKey = days[schedule.dayOfWeek];
     formData[`${dayKey}Inicio`] = schedule.openingTime || '12:00 AM';
     formData[`${dayKey}Fin`] = schedule.closingTime || '11:59 PM';
-    console.log(`[SYNC] [TRANSFORM] ${dayKey}: opening="${formData[`${dayKey}Inicio`]}", closing="${formData[`${dayKey}Fin`]}"`);
   });
 
-  console.log('[SYNC] [TRANSFORM] Form data result:', formData);
   return formData;
 };

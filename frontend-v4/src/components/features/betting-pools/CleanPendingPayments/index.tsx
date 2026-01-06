@@ -61,7 +61,6 @@ interface CleanSummary {
 type OrderDirection = 'asc' | 'desc';
 
 const CleanPendingPayments: React.FC = () => {
-  console.log('[CLEAN] CleanPendingPayments component mounted');
   const [loading, setLoading] = useState<boolean>(true);
   const [bettingPools, setBettingPools] = useState<BettingPool[]>([]);
   const [activeTab, setActiveTab] = useState<number>(0);
@@ -95,11 +94,8 @@ const CleanPendingPayments: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      console.log('[CLEAN] Loading betting pools...');
       const poolsData = await api.get('/betting-pools') as { items?: BettingPool[] } | BettingPool[];
-      console.log('[CLEAN] API Response:', poolsData);
       const poolsArray: BettingPool[] = Array.isArray(poolsData) ? poolsData : (poolsData?.items || []);
-      console.log('[CLEAN] Pools array:', poolsArray);
       setBettingPools(poolsArray);
     } catch (err) {
       const error = err as Error;
@@ -107,7 +103,6 @@ const CleanPendingPayments: React.FC = () => {
       setError(error.message || 'Error loading betting pools');
     } finally {
       setLoading(false);
-      console.log('[CLEAN] Loading complete');
     }
   };
 
@@ -277,7 +272,6 @@ const CleanPendingPayments: React.FC = () => {
     );
   }
 
-  console.log('[CLEAN] Rendering CleanPendingPayments, pools:', bettingPools.length);
 
   return (
     <Box sx={{ p: 3 }}>

@@ -43,9 +43,7 @@ export interface CreateBettingPoolDraw {
  */
 export const getBettingPoolDraws = async (bettingPoolId: number | string): Promise<DrawsResponse> => {
   try {
-    console.log(`[TARGET] [DRAW SERVICE] Loading draws for betting pool ${bettingPoolId}`);
     const data = await api.get(`/betting-pools/${bettingPoolId}/draws`) as BettingPoolDraw[];
-    console.log(`[SUCCESS] [DRAW SERVICE] Loaded ${data?.length || 0} draws`);
     return { success: true, data: data };
   } catch (error) {
     console.error('[ERROR] [DRAW SERVICE] Error getting draws:', error);
@@ -61,13 +59,10 @@ export const saveBettingPoolDraws = async (
   draws: CreateBettingPoolDraw[]
 ): Promise<DrawsResponse> => {
   try {
-    console.log(`[SAVE] [DRAW SERVICE] Saving ${draws.length} draws for betting pool ${bettingPoolId}`);
-    console.log('[SEND] [DRAW SERVICE] Payload:', JSON.stringify(draws, null, 2));
 
     // Note: Using /draws/bulk for batch operations (if supported), otherwise iterate with POST
     const data = await api.post(`/betting-pools/${bettingPoolId}/draws/bulk`, draws) as BettingPoolDraw[];
 
-    console.log(`[SUCCESS] [DRAW SERVICE] Draws saved successfully`);
     return { success: true, data: data };
   } catch (err) {
     const error = err as Error & { response?: unknown; stack?: string };
@@ -89,9 +84,7 @@ export const deleteBettingPoolDraw = async (
   bettingPoolDrawId: number | string
 ): Promise<SuccessResponse> => {
   try {
-    console.log(`[DELETE] [DRAW SERVICE] Deleting draw ${bettingPoolDrawId} from betting pool ${bettingPoolId}`);
     await api.delete(`/betting-pools/${bettingPoolId}/draws/${bettingPoolDrawId}`);
-    console.log('[SUCCESS] [DRAW SERVICE] Draw deleted successfully');
     return { success: true };
   } catch (error) {
     console.error('[ERROR] [DRAW SERVICE] Error deleting draw:', error);

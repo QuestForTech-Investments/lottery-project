@@ -113,12 +113,10 @@ const ExternalAgentsList = (): React.ReactElement => {
   }, []);
 
   const handleEdit = useCallback((id: number): void => {
-    console.log('Editar agente:', id);
     alert(`Editar agente #${id} (mockup)`);
   }, []);
 
   const handleDelete = useCallback((id: number): void => {
-    console.log('Eliminar agente:', id);
     if (window.confirm('¿Está seguro de eliminar este agente externo?')) {
       alert(`Agente #${id} eliminado (mockup)`);
     }

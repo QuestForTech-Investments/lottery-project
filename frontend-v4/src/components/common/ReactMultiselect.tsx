@@ -43,11 +43,8 @@ const ReactMultiselect = ({
         setError(null)
         const response = await getAllZones({ isActive: true, pageSize: 1000 })
 
-        console.log('[INFO] V2 ZONES API Response:', response)
-
         // Handle different response structures
         const zonesData = (response as { data?: Zone[] }).data ?? (response as Zone[])
-        console.log('[INFO] V2 Zones data:', zonesData)
         setZones(Array.isArray(zonesData) ? zonesData : [])
 
         logger.debug('REACT_MULTISELECT', 'Zones loaded successfully', {

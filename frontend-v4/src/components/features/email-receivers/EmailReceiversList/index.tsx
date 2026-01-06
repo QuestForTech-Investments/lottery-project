@@ -105,12 +105,10 @@ const EmailReceiversList = (): React.ReactElement => {
   }, [receivers, searchTerm, sortConfig]);
 
   const handleEdit = (id: number): void => {
-    console.log('Editar receptor:', id);
     alert(`Editar receptor #${id} (mockup)`);
   };
 
   const handleDelete = (id: number): void => {
-    console.log('Eliminar receptor:', id);
     if (window.confirm('¿Está seguro de eliminar este receptor de correo?')) {
       alert(`Receptor #${id} eliminado (mockup)`);
     }

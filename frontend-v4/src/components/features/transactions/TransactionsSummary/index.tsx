@@ -113,7 +113,6 @@ const TransactionsSummary = (): React.ReactElement => {
   }, [orderBy, order]);
 
   const handleFilter = useCallback(() => {
-    console.log('Filtering with:', { startDate, endDate, selectedZones });
   }, [startDate, endDate, selectedZones]);
 
   return (

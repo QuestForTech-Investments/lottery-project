@@ -104,7 +104,6 @@ const DrawsTab: React.FC<DrawsTabProps> = ({ formData, handleChange, draws: prop
               return indexA - indexB;
             });
             setLocalDraws(sortedDraws);
-            console.log(`[SUCCESS] Loaded ${sortedDraws.length} draws locally (DrawsTab fallback)`);
           }
         } catch (err) {
           console.error('[ERROR] Error loading draws locally:', err);

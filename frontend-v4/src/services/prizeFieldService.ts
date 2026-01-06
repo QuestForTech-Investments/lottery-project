@@ -50,7 +50,6 @@ interface ResolvedPrizeConfig {
  */
 export const getPrizeFields = async (): Promise<BetType[]> => {
   try {
-    console.log('[FETCH] Obteniendo campos de premios...');
     const response = await fetch('/api/prize-fields');
 
     if (!response.ok) {
@@ -58,7 +57,6 @@ export const getPrizeFields = async (): Promise<BetType[]> => {
     }
 
     const data = await response.json() as BetType[];
-    console.log(`[SUCCESS] Campos de premios obtenidos: ${data.length} bet types`);
     return data;
   } catch (error) {
     console.error('[ERROR] Error al obtener campos de premios:', error);
@@ -119,13 +117,11 @@ export const patchBancaPrizeConfig = async (
   prizeConfigs: PrizeConfig[]
 ): Promise<PatchResponse> => {
   try {
-    console.log(`[SEND] [PATCH] Enviando ${prizeConfigs.length} cambios a banca ${bettingPoolId}`);
 
     const response = await api.patch(`/betting-pools/${bettingPoolId}/prize-config`, {
       prizeConfigs
     } as PrizeConfigPayload) as PatchResponse;
 
-    console.log(`[SUCCESS] [PATCH] Update successful: ${response.updatedCount || 0} fields updated`);
     return response;
   } catch (error) {
     console.error(`[ERROR] Error updating prize config for betting pool ${bettingPoolId}:`, error);
@@ -138,9 +134,7 @@ export const patchBancaPrizeConfig = async (
  */
 export const getBancaPrizeConfig = async (bettingPoolId: number | string): Promise<PrizeConfig[]> => {
   try {
-    console.log(`[DEBUG] [PRIZE SERVICE] Calling GET /betting-pools/${bettingPoolId}/prize-config`);
     const response = await api.get(`/betting-pools/${bettingPoolId}/prize-config`) as PrizeConfig[];
-    console.log(`[SUCCESS] [PRIZE SERVICE] Returning response directly:`, response);
     return response;
   } catch (error) {
     console.error(`[ERROR] [PRIZE SERVICE] Error getting prize config for betting pool ${bettingPoolId}:`, error);

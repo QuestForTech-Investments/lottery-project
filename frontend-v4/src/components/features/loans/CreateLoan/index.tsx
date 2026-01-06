@@ -100,7 +100,6 @@ const CreateLoan = (): React.ReactElement => {
 
   const handleSubmit = useCallback((e: FormEvent<HTMLFormElement>): void => {
     e.preventDefault();
-    console.log('Create loan:', formData);
     // TODO: Implement API call
     alert('Préstamo creado exitosamente');
   }, [formData]);

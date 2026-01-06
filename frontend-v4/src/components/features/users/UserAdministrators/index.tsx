@@ -84,7 +84,6 @@ const UserAdministratorsMUI = () => {
     }
 
     // TODO: Call API to update password
-    console.log('Update password for user:', selectedUsername, 'to:', newPassword);
     setNewPassword('');
     setConfirmPassword('');
     handleClosePasswordModal();

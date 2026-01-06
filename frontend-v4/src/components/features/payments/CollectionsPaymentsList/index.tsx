@@ -119,7 +119,6 @@ const CollectionsPaymentsList = (): React.ReactElement => {
   const [showCreateModal, setShowCreateModal] = useState<boolean>(false);
 
   const handleFilter = useCallback((): void => {
-    console.log('Filtering...', { startDate, endDate });
     // TODO: Call API endpoint when confirmed
   }, [startDate, endDate]);
 

@@ -178,7 +178,6 @@ const useCreateTickets = () => {
 
     // In production, this would call an API
     if (import.meta.env.DEV) {
-      console.log('Creating ticket:', ticketData);
     }
     alert('Ticket creado exitosamente ✅');
 
