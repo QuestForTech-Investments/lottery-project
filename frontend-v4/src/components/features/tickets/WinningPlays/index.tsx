@@ -23,6 +23,7 @@ import {
   DrawParam,
   ZoneParam
 } from '../../../../services/winningPlayService';
+import { formatCurrency } from '@/utils/formatCurrency';
 
 // Primary color from design system
 const PRIMARY_COLOR = '#51cbce';
@@ -60,10 +61,6 @@ const WinningPlays: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [loadingFilters, setLoadingFilters] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  // Format currency
-  const formatCurrency = (amount: number): string =>
-    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
 
   // Load filter options
   useEffect(() => {

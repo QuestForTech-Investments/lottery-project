@@ -25,6 +25,7 @@ import {
 import type { SelectChangeEvent } from '@mui/material/Select';
 import { Search as SearchIcon } from '@mui/icons-material';
 import api from '@services/api';
+import { formatCurrency } from '@/utils/formatCurrency';
 
 interface Zone {
   zoneId?: number;
@@ -98,10 +99,6 @@ const PorSorteoTab = ({ selectedDate, setSelectedDate, zones, selectedZones, han
       (d.lotteryName && d.lotteryName.toLowerCase().includes(term))
     );
   }, [data, searchTerm]);
-
-  const formatCurrency = (value: number): string => {
-    return `$${(value || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  };
 
   return (
     <Card>

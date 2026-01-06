@@ -20,6 +20,7 @@ import { getAllDraws } from '../../../../services/drawService';
 import { getAllZones } from '../../../../services/zoneService';
 import { getBettingPools } from '../../../../services/bettingPoolService';
 import { getPlaysSummary, PlaySummary } from '../../../../services/playService';
+import { formatCurrency } from '@/utils/formatCurrency';
 
 // Types
 interface Draw {
@@ -67,10 +68,6 @@ const PlayMonitoring: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [loadingFilters, setLoadingFilters] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  // Format currency
-  const formatCurrency = (amount: number): string =>
-    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
 
   // Load filter options
   useEffect(() => {

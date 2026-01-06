@@ -18,6 +18,7 @@ import {
 } from '@mui/material';
 import { Search as SearchIcon } from '@mui/icons-material';
 import api from '@services/api';
+import { formatCurrency } from '@/utils/formatCurrency';
 
 interface PrizeCategoryDto {
   betTypeId: number;
@@ -81,9 +82,6 @@ const CategoriaPremiosTab = ({ selectedDate, setSelectedDate }: CategoriaPremios
     );
   }, [data, searchTerm]);
 
-  const formatCurrency = (value: number): string => {
-    return `$${(value || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  };
 
   const totals = useMemo(() => {
     return filteredData.reduce((acc, row) => ({

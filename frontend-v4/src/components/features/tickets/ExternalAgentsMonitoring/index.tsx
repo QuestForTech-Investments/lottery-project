@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, memo } from 'react';
+import { formatCurrency } from '@/utils/formatCurrency';
 import {
   Box, Paper, Typography, TextField, Grid, Autocomplete, Switch, FormControlLabel,
   Button, ToggleButtonGroup, ToggleButton, Table, TableHead, TableBody, TableRow, TableCell, IconButton
@@ -131,7 +132,6 @@ const ExternalAgentsMonitoring: React.FC = () => {
     return data;
   }, [tickets, filtroEstado, filtroRapido]);
 
-  const formatCurrency = (amount: number): string => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
 
   return (
     <Box sx={{ p: 2 }}>

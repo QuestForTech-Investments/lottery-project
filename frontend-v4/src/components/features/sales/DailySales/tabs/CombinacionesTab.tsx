@@ -25,6 +25,7 @@ import {
 import type { SelectChangeEvent } from '@mui/material/Select';
 import { Search as SearchIcon } from '@mui/icons-material';
 import api from '@services/api';
+import { formatCurrency } from '@/utils/formatCurrency';
 
 interface Zone {
   zoneId?: number;
@@ -156,9 +157,6 @@ const CombinacionesTab = ({ selectedDate, setSelectedDate, zones, selectedZones,
     );
   }, [data, searchTerm]);
 
-  const formatCurrency = (value: number): string => {
-    return `$${(value || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  };
 
   const totals = useMemo(() => {
     return filteredData.reduce((acc, row) => ({

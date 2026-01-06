@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { formatCurrency } from '@/utils/formatCurrency';
 import {
   Box, Paper, Typography, TextField, Grid, Autocomplete, Button, Stack,
   Tabs, Tab, ToggleButtonGroup, ToggleButton, Table, TableHead, TableBody, TableRow, TableCell,
@@ -177,7 +178,6 @@ const HistoricalSales = (): React.ReactElement => {
   const [gruposList, setGruposList] = useState<Grupo[]>([]);
   const [totals, setTotals] = useState<Totals>({ tickets: 0, venta: 0, comisiones: 0, descuentos: 0, premios: 0, neto: 0, caida: 0, gastos: 0, final: 0 });
 
-  const formatCurrency = useCallback((amount: number): string => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount), []);
 
   // Load zones on mount
   useEffect(() => {

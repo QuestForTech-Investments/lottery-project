@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { formatCurrency } from '@/utils/formatCurrency';
 import { Box, Paper, Typography, TextField, Grid, Autocomplete, Button, Table, TableHead, TableBody, TableRow, TableCell, CircularProgress } from '@mui/material';
 import api from '@services/api';
 
@@ -44,7 +45,6 @@ const BettingPoolSales = (): React.ReactElement => {
   const [totals, setTotals] = useState<Totals>({ ventas: 0, comisiones: 0, premios: 0, neto: 0 });
   const [loading, setLoading] = useState<boolean>(false);
 
-  const formatCurrency = useCallback((amount: number): string => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount), []);
 
   // Load bancas on mount
   useEffect(() => {

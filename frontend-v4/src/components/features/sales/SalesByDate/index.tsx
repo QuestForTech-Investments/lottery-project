@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { formatCurrency } from '@/utils/formatCurrency';
 import { Box, Paper, Typography, TextField, Grid, Autocomplete, Button, Stack, Table, TableHead, TableBody, TableRow, TableCell, Switch, FormControlLabel, InputAdornment, CircularProgress } from '@mui/material';
 import { PictureAsPdf, Search } from '@mui/icons-material';
 import api from '@services/api';
@@ -62,7 +63,6 @@ const SalesByDate = (): React.ReactElement => {
   const [totals, setTotals] = useState<Totals>({ venta: 0, premios: 0, comisiones: 0, descuentos: 0, caida: 0, neto: 0 });
   const [loading, setLoading] = useState<boolean>(false);
 
-  const formatCurrency = useCallback((amount: number): string => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount), []);
 
   // Load zones and bancas on mount
   useEffect(() => {

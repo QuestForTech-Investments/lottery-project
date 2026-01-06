@@ -25,6 +25,7 @@ import {
 import type { SelectChangeEvent } from '@mui/material/Select';
 import { Search as SearchIcon } from '@mui/icons-material';
 import api from '@services/api';
+import { formatCurrency } from '@/utils/formatCurrency';
 
 interface Zone {
   zoneId?: number;
@@ -152,9 +153,6 @@ const BancaPorSorteoTab = ({ selectedDate, setSelectedDate, zones, selectedZones
     setSelectedDraws(typeof value === 'string' ? value.split(',').map(Number) : value);
   };
 
-  const formatCurrency = (value: number): string => {
-    return `$${(value || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  };
 
   // Get unique draws from data for columns
   const uniqueDraws = drawTotals;

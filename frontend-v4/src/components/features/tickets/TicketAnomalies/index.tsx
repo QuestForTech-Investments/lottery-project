@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, memo } from 'react';
+import { formatCurrency } from '@/utils/formatCurrency';
 import { Box, Paper, Typography, TextField, Table, TableHead, TableBody, TableRow, TableCell, IconButton } from '@mui/material';
 import { Search } from '@mui/icons-material';
 
@@ -28,7 +29,6 @@ const TicketAnomalies: React.FC = () => {
   const [ticketsData, setTicketsData] = useState<AnomalousTicket[]>([]);
   const [cambiosData, setCambiosData] = useState<ResultChange[]>([]);
 
-  const formatCurrency = (amount: number): string => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
 
   useEffect(() => {
     // Mock anomalous tickets

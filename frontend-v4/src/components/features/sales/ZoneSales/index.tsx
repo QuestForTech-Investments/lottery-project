@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { formatCurrency } from '@/utils/formatCurrency';
 import { Box, Paper, Typography, TextField, Autocomplete, Button, Table, TableBody, TableRow, TableCell, CircularProgress, Divider } from '@mui/material';
 import api from '@services/api';
 
@@ -37,7 +38,6 @@ const ZoneSales = (): React.ReactElement => {
   const [zonasList, setZonasList] = useState<Zona[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
 
-  const formatCurrency = useCallback((amount: number): string => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount), []);
 
   // Load zones on mount
   useEffect(() => {
