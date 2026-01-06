@@ -20,7 +20,7 @@ export interface Column<T> {
   sortable?: boolean;
 }
 
-export interface DataTableProps<T extends Record<string, unknown>> {
+export interface DataTableProps<T extends object> {
   columns: Column<T>[];
   data: T[];
   totals?: Partial<T>;
@@ -49,7 +49,7 @@ export interface DataTableProps<T extends Record<string, unknown>> {
  * />
  * ```
  */
-function DataTableInner<T extends Record<string, unknown>>({
+function DataTableInner<T extends object>({
   columns,
   data,
   totals,
