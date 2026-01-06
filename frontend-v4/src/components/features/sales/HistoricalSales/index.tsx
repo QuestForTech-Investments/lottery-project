@@ -9,6 +9,7 @@ import {
 import type { SelectChangeEvent } from '@mui/material/Select';
 import { FilterList, PictureAsPdf, Download, Search } from '@mui/icons-material';
 import api from '@services/api';
+import PorZonaTab from './tabs/PorZonaTab';
 
 interface Zona {
   id: number;
@@ -818,255 +819,36 @@ const HistoricalSales = (): React.ReactElement => {
 
       case 3: // Por zona
         return (
-          <>
-            <Typography variant="h5" align="center" gutterBottom sx={{ fontWeight: 400, mb: 3 }}>
-              Zonas
-            </Typography>
-
-            <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-              <Box>
-                <Typography variant="caption" sx={{ color: 'text.secondary', mb: 0.5, display: 'block' }}>
-                  Fecha inicial
-                </Typography>
-                <TextField
-                  type="date"
-                  size="small"
-                  value={fechaInicial}
-                  onChange={(e) => setFechaInicial(e.target.value)}
-                  sx={{
-                    width: 200,
-                    '& .MuiInputBase-root': { height: 32 },
-                    '& .MuiInputBase-input': { py: 0.5, fontSize: '0.8rem' },
-                  }}
-                />
-              </Box>
-
-              <Box>
-                <Typography variant="caption" sx={{ color: 'text.secondary', mb: 0.5, display: 'block' }}>
-                  Fecha final
-                </Typography>
-                <TextField
-                  type="date"
-                  size="small"
-                  value={fechaFinal}
-                  onChange={(e) => setFechaFinal(e.target.value)}
-                  sx={{
-                    width: 200,
-                    '& .MuiInputBase-root': { height: 32 },
-                    '& .MuiInputBase-input': { py: 0.5, fontSize: '0.8rem' },
-                  }}
-                />
-              </Box>
-
-              <Box>
-                <Typography variant="caption" sx={{ color: 'text.secondary', mb: 0.5, display: 'block' }}>
-                  Zonas
-                </Typography>
-                <FormControl
-                  sx={{
-                    minWidth: 200,
-                    '& .MuiInputBase-root': { height: 32 },
-                    '& .MuiSelect-select': { py: 0.5, fontSize: '0.8rem' },
-                  }}
-                  size="small"
-                >
-                  <Select
-                    multiple
-                    value={zonas.map(z => z.id)}
-                    onChange={(e: SelectChangeEvent<number[]>) => {
-                      const selectedIds = e.target.value as number[];
-                      setZonas(zonasList.filter(z => selectedIds.includes(z.id)));
-                    }}
-                    renderValue={(selected) => selected.length === 1 ? zonasList.find(z => z.id === selected[0])?.name || '1 seleccionada' : `${selected.length} seleccionadas`}
-                  >
-                    {zonasList.map((zone) => (
-                      <MenuItem key={zone.id} value={zone.id}>
-                        <Checkbox checked={zonas.map(z => z.id).indexOf(zone.id) > -1} />
-                        {zone.name}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Box>
-            </Box>
-
-            <Box sx={{ display: 'flex', gap: 1, mb: 3 }}>
-              <Button
-                variant="contained"
-                onClick={handleSearch}
-                disabled={loading}
-                size="small"
-                sx={{
-                  borderRadius: '20px',
-                  px: 2.5,
-                  py: 0.5,
-                  fontSize: '0.75rem',
-                  textTransform: 'uppercase',
-                  fontWeight: 500
-                }}
-              >
-                {loading ? <CircularProgress size={16} color="inherit" /> : 'Ver ventas'}
-              </Button>
-              <Button
-                variant="contained"
-                size="small"
-                sx={{
-                  borderRadius: '20px',
-                  px: 2.5,
-                  py: 0.5,
-                  fontSize: '0.75rem',
-                  textTransform: 'uppercase',
-                  fontWeight: 500
-                }}
-              >
-                PDF
-              </Button>
-            </Box>
-
-            <Typography variant="h5" align="center" gutterBottom sx={{ fontWeight: 400, mb: 3, fontSize: '1.7rem' }}>
-              Total: <Box component="span" sx={{
-                backgroundColor: '#e0f7fa',
-                px: 2,
-                py: 0.5,
-                borderRadius: 1,
-                color: '#00838f'
-              }}>{formatCurrency(zonasData.reduce((sum, d) => sum + d.neto, 0))}</Box>
-            </Typography>
-
-            <Box sx={{ mb: 2 }}>
-              <Typography variant="caption" sx={{ color: 'text.secondary', mb: 1, display: 'block' }}>
-                Filtros
-              </Typography>
-              <ToggleButtonGroup
-                value={filterType}
-                exclusive
-                onChange={(e, newValue) => newValue && setFilterType(newValue)}
-                size="small"
-                sx={{
-                  border: '2px solid #8b5cf6',
-                  borderRadius: '6px',
-                  overflow: 'hidden',
-                  '& .MuiToggleButton-root': {
-                    border: 'none',
-                    borderRight: '2px solid #8b5cf6',
-                    borderRadius: 0,
-                    px: 2,
-                    py: 0.6,
-                    fontSize: '0.75rem',
-                    fontWeight: 500,
-                    textTransform: 'uppercase',
-                    color: '#64748b',
-                    backgroundColor: '#fff',
-                    transition: 'all 0.15s ease',
-                    '&:last-of-type': {
-                      borderRight: 'none',
-                    },
-                    '&:hover': {
-                      backgroundColor: '#f8f7ff',
-                      color: '#7c3aed',
-                    },
-                    '&.Mui-selected': {
-                      background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
-                      color: '#fff',
-                      '&:hover': {
-                        background: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)',
-                      },
-                    },
-                  },
-                }}
-              >
-                <ToggleButton value="todos">Todos</ToggleButton>
-                <ToggleButton value="con-ventas">Con ventas</ToggleButton>
-                <ToggleButton value="con-premios">Con premios</ToggleButton>
-                <ToggleButton value="tickets-pendientes">Con tickets pendientes</ToggleButton>
-              </ToggleButtonGroup>
-            </Box>
-
-            <Box sx={{ mb: 2, textAlign: 'right' }}>
-              <TextField
-                size="small"
-                placeholder="Filtrado rápido"
-                value={filtroRapido}
-                onChange={(e) => setFiltroRapido(e.target.value)}
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <Search />
-                    </InputAdornment>
-                  ),
-                }}
-                sx={{ width: 300 }}
-              />
-            </Box>
-
-            <Table size="small">
-              <TableHead sx={{ backgroundColor: '#e3e3e3' }}>
-                <TableRow>
-                  <TableCell sx={{ fontWeight: 600 }}>Nombre</TableCell>
-                  <TableCell align="center" sx={{ fontWeight: 600 }}>P</TableCell>
-                  <TableCell align="center" sx={{ fontWeight: 600 }}>L</TableCell>
-                  <TableCell align="center" sx={{ fontWeight: 600 }}>W</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 600 }}>Total</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 600 }}>Venta</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 600 }}>Comisiones</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 600 }}>Descuentos</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 600 }}>Premios</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 600 }}>Neto</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 600 }}>Caída</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 600 }}>Final</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 600 }}>Balance</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {zonasData.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={13} align="center" sx={{ py: 3, color: 'text.secondary' }}>
-                      No hay entradas disponibles
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  <>
-                    {zonasData.map((d, i) => (
-                      <TableRow key={i} sx={{ '&:hover': { backgroundColor: 'action.hover' } }}>
-                        <TableCell sx={{ fontWeight: 500 }}>{d.nombre}</TableCell>
-                        <TableCell align="center">{d.p}</TableCell>
-                        <TableCell align="center">{d.l}</TableCell>
-                        <TableCell align="center">{d.w}</TableCell>
-                        <TableCell align="right">{d.total}</TableCell>
-                        <TableCell align="right">{formatCurrency(d.venta)}</TableCell>
-                        <TableCell align="right">{formatCurrency(d.comisiones)}</TableCell>
-                        <TableCell align="right">{formatCurrency(d.descuentos)}</TableCell>
-                        <TableCell align="right">{formatCurrency(d.premios)}</TableCell>
-                        <TableCell align="right" sx={{ color: d.neto >= 0 ? 'success.main' : 'error.main' }}>{formatCurrency(d.neto)}</TableCell>
-                        <TableCell align="right">{formatCurrency(d.caida || 0)}</TableCell>
-                        <TableCell align="right">{formatCurrency(d.final || 0)}</TableCell>
-                        <TableCell align="right">{formatCurrency(d.balance || 0)}</TableCell>
-                      </TableRow>
-                    ))}
-                    <TableRow sx={{ backgroundColor: '#f5f7fa', '& td': { fontWeight: 600 } }}>
-                      <TableCell>Totales</TableCell>
-                      <TableCell align="center">{zonasData.reduce((sum, d) => sum + (d.p || 0), 0)}</TableCell>
-                      <TableCell align="center">{zonasData.reduce((sum, d) => sum + (d.l || 0), 0)}</TableCell>
-                      <TableCell align="center">{zonasData.reduce((sum, d) => sum + (d.w || 0), 0)}</TableCell>
-                      <TableCell align="right">{zonasData.reduce((sum, d) => sum + (d.total || 0), 0)}</TableCell>
-                      <TableCell align="right">{formatCurrency(zonasData.reduce((sum, d) => sum + d.venta, 0))}</TableCell>
-                      <TableCell align="right">{formatCurrency(zonasData.reduce((sum, d) => sum + d.comisiones, 0))}</TableCell>
-                      <TableCell align="right">{formatCurrency(zonasData.reduce((sum, d) => sum + d.descuentos, 0))}</TableCell>
-                      <TableCell align="right">{formatCurrency(zonasData.reduce((sum, d) => sum + d.premios, 0))}</TableCell>
-                      <TableCell align="right">{formatCurrency(zonasData.reduce((sum, d) => sum + d.neto, 0))}</TableCell>
-                      <TableCell align="right">{formatCurrency(zonasData.reduce((sum, d) => sum + (d.caida || 0), 0))}</TableCell>
-                      <TableCell align="right">{formatCurrency(zonasData.reduce((sum, d) => sum + (d.final || 0), 0))}</TableCell>
-                      <TableCell align="right">{formatCurrency(zonasData.reduce((sum, d) => sum + (d.balance || 0), 0))}</TableCell>
-                    </TableRow>
-                  </>
-                )}
-              </TableBody>
-            </Table>
-
-            <Typography variant="body2" sx={{ mt: 2 }}>
-              Mostrando {zonasData.length} de {zonasData.length} entradas
-            </Typography>
-          </>
+          <PorZonaTab
+            fechaInicial={fechaInicial}
+            fechaFinal={fechaFinal}
+            zonas={zonas.map(z => ({ id: z.id, name: z.name }))}
+            zonasList={zonasList.map(z => ({ id: z.id, name: z.name }))}
+            zonasData={zonasData.map(z => ({
+              nombre: z.nombre || z.zona || '',
+              p: z.p || 0,
+              l: z.l || 0,
+              w: z.w || 0,
+              total: z.total || 0,
+              venta: z.venta,
+              comisiones: z.comisiones,
+              descuentos: z.descuentos,
+              premios: z.premios,
+              neto: z.neto,
+              caida: z.caida || 0,
+              final: z.final || 0,
+              balance: z.balance || 0,
+            }))}
+            filterType={filterType}
+            filtroRapido={filtroRapido}
+            loading={loading}
+            setFechaInicial={setFechaInicial}
+            setFechaFinal={setFechaFinal}
+            setZonas={(zones) => setZonas(zones as Zona[])}
+            setFilterType={setFilterType}
+            setFiltroRapido={setFiltroRapido}
+            onSearch={handleSearch}
+          />
         );
 
       default:
