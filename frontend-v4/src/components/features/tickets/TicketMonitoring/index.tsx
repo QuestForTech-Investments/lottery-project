@@ -33,6 +33,8 @@ import {
   Chip,
 } from '@mui/material';
 import { Close as CloseIcon, Print as PrintIcon, Cancel as CancelIcon, Send as SendIcon } from '@mui/icons-material';
+
+// Centralized imports
 import api from '../../../../services/api';
 import ticketService, {
   type MappedTicket,
@@ -43,31 +45,26 @@ import ticketService, {
   calculateTicketTotals,
 } from '../../../../services/ticketService';
 import { getAllLotteries } from '../../../../services/lotteryService';
+import { formatCurrency } from '../../../../utils/formatCurrency';
+import { useDebounce } from '../../../../hooks';
+import type { BettingPool, Lottery, SelectOption } from '../../../../types';
+import {
+  BET_TYPES,
+  ZONES,
+  TICKET_STATUS_MAP,
+  DEBOUNCE_DELAY,
+  TICKET_TABLE_HEADERS,
+  buttonStyles,
+} from '../../../../constants';
 
 // ============================================================================
-// Types
+// Types (Local only - not duplicated from centralized types)
 // ============================================================================
-
-interface BettingPool {
-  id: number;
-  name: string;
-  code: string;
-}
-
-interface SelectOption {
-  id: number;
-  name: string;
-}
 
 interface BettingPoolApiResponse {
   bettingPoolId: number;
   bettingPoolName: string;
   bettingPoolCode: string;
-}
-
-interface Lottery {
-  id: number;
-  name: string;
 }
 
 interface TicketRowProps {
@@ -81,15 +78,10 @@ interface TicketRowProps {
 type FilterEstado = 'todos' | 'ganadores' | 'pendientes' | 'perdedores' | 'cancelados';
 
 // ============================================================================
-// Constants
+// Constants (Local only - use centralized constants where possible)
 // ============================================================================
 
-const ESTADO_MAP: Record<Exclude<FilterEstado, 'todos'>, MappedTicket['estado']> = {
-  ganadores: 'Ganador',
-  pendientes: 'Pendiente',
-  perdedores: 'Perdedor',
-  cancelados: 'Cancelado',
-};
+const ESTADO_MAP = TICKET_STATUS_MAP;
 
 const INITIAL_COUNTS: TicketCounts = {
   todos: 0,
@@ -105,34 +97,10 @@ const INITIAL_TOTALS: TicketTotals = {
   totalPendiente: 0,
 };
 
-const DEBOUNCE_DELAY = 300;
-
-// Note: LOTERIAS are now loaded dynamically from API
-
-const TIPOS_JUGADA: SelectOption[] = [
-  { id: 1, name: 'Directo' },
-  { id: 2, name: 'Pale' },
-  { id: 3, name: 'Tripleta' },
-  { id: 4, name: 'Pick Two' },
-];
-
-const ZONAS: SelectOption[] = [
-  { id: 1, name: 'Zona Norte' },
-  { id: 2, name: 'Zona Sur' },
-  { id: 3, name: 'Zona Este' },
-  { id: 4, name: 'Zona Oeste' },
-];
-
-const TABLE_HEADERS = [
-  'Número',
-  'Fecha',
-  'Usuario',
-  'Monto',
-  'Premio',
-  'Fecha de cancelación',
-  'Estado',
-  'Acciones',
-] as const;
+// Use centralized constants - aliased for backwards compatibility
+const TIPOS_JUGADA = BET_TYPES;
+const ZONAS = ZONES;
+const TABLE_HEADERS = TICKET_TABLE_HEADERS;
 
 // Extracted styles as constants to prevent re-creation on each render
 const STYLES = {
@@ -140,14 +108,7 @@ const STYLES = {
   content: { p: 3 },
   title: { color: '#1976d2', mb: 4, fontWeight: 400 },
   alertMargin: { mb: 3 },
-  filterButton: {
-    px: 6,
-    py: 1,
-    borderRadius: '30px',
-    textTransform: 'uppercase' as const,
-    bgcolor: '#51cbce',
-    '&:hover': { bgcolor: '#45b8bb' },
-  },
+  filterButton: buttonStyles.primaryRounded,
   totalsContainer: { display: 'flex', justifyContent: 'center', mb: 3 },
   totalsPanel: { px: 4, py: 2, backgroundColor: '#f5f5f5', textAlign: 'center' as const, width: 'fit-content' },
   totalsText: { color: '#1976d2' },
@@ -162,12 +123,7 @@ const STYLES = {
 // Helper Functions
 // ============================================================================
 
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-  }).format(amount);
-}
+// formatCurrency is now imported from utils/formatCurrency
 
 function getEstadoColor(estado: MappedTicket['estado']): string {
   switch (estado) {
@@ -349,7 +305,7 @@ const TicketDetailPanel: FC<TicketDetailPanelProps> = memo(({ ticket, onClose })
                 {ticket.lines.map((line, index) => (
                   <TableRow key={index} sx={{ '&:hover': { bgcolor: 'action.hover' } }}>
                     <TableCell>{line.drawName || '-'}</TableCell>
-                    <TableCell fontWeight="bold">{line.betNumber}</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>{line.betNumber}</TableCell>
                     <TableCell>{line.betTypeName || '-'}</TableCell>
                     <TableCell align="right">{formatCurrency(line.betAmount)}</TableCell>
                     <TableCell align="right" sx={{ color: line.prizeAmount > 0 ? 'success.main' : 'inherit' }}>
@@ -395,23 +351,7 @@ const TicketDetailPanel: FC<TicketDetailPanelProps> = memo(({ ticket, onClose })
 
 TicketDetailPanel.displayName = 'TicketDetailPanel';
 
-// ============================================================================
-// Custom Hooks
-// ============================================================================
-
-function useDebounce<T>(value: T, delay: number): T {
-  const [debouncedValue, setDebouncedValue] = useState<T>(value);
-
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedValue(value);
-    }, delay);
-
-    return () => clearTimeout(handler);
-  }, [value, delay]);
-
-  return debouncedValue;
-}
+// useDebounce is now imported from hooks/useDebounce
 
 // ============================================================================
 // Main Component
