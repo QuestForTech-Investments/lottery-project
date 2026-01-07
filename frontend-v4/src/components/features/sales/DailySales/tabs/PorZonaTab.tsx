@@ -100,8 +100,8 @@ const PorZonaTab = ({ selectedDate, setSelectedDate, zones, selectedZones, handl
       const response = await api.get<ZoneSalesResponse>(
         `/reports/sales/by-zone?date=${selectedDate}`
       );
-      setData(response.zones || []);
-      setSummary(response.summary || { totalSold: 0, totalPrizes: 0, totalCommissions: 0, totalNet: 0 });
+      setData(response?.zones || []);
+      setSummary(response?.summary || { totalSold: 0, totalPrizes: 0, totalCommissions: 0, totalNet: 0 });
     } catch (error) {
       console.error('Error loading sales by zone:', error);
       setData([]);

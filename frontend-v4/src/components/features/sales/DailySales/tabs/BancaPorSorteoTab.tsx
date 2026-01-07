@@ -126,9 +126,9 @@ const BancaPorSorteoTab = ({ selectedDate, setSelectedDate, zones, selectedZones
       const response = await api.get<BettingPoolDrawResponse>(
         `/reports/sales/betting-pool-by-draw?startDate=${fechaInicial}&endDate=${fechaFinal}`
       );
-      setData(response.bettingPools || []);
-      setDrawTotals(response.drawTotals || []);
-      setSummary(response.summary || { totalSold: 0, totalPrizes: 0, totalCommissions: 0, totalNet: 0 });
+      setData(response?.bettingPools || []);
+      setDrawTotals(response?.drawTotals || []);
+      setSummary(response?.summary || { totalSold: 0, totalPrizes: 0, totalCommissions: 0, totalNet: 0 });
     } catch (error) {
       console.error('Error loading betting pool by draw:', error);
       setData([]);

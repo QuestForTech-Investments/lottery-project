@@ -137,8 +137,8 @@ const CombinacionesTab = ({ selectedDate, setSelectedDate, zones, selectedZones,
       const response = await api.get<CombinationsResponse>(
         `/reports/sales/combinations?date=${selectedDate}`
       );
-      setData(response.combinations || []);
-      setSummary(response.summary || { totalSold: 0, totalPrizes: 0, totalCommissions: 0, totalNet: 0 });
+      setData(response?.combinations || []);
+      setSummary(response?.summary || { totalSold: 0, totalPrizes: 0, totalCommissions: 0, totalNet: 0 });
     } catch (error) {
       console.error('Error loading combinations:', error);
       setData([]);

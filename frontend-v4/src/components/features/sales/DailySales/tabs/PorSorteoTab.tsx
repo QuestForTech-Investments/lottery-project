@@ -81,8 +81,8 @@ const PorSorteoTab = ({ selectedDate, setSelectedDate, zones, selectedZones, han
       const response = await api.get<DrawSalesResponse>(
         `/reports/sales/by-draw?date=${selectedDate}`
       );
-      setData(response.draws || []);
-      setSummary(response.summary || { totalSold: 0, totalPrizes: 0, totalCommissions: 0, totalNet: 0 });
+      setData(response?.draws || []);
+      setSummary(response?.summary || { totalSold: 0, totalPrizes: 0, totalCommissions: 0, totalNet: 0 });
     } catch (error) {
       console.error('Error loading sales by draw:', error);
       setData([]);

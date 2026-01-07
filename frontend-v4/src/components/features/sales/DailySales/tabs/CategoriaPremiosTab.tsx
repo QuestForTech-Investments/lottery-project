@@ -63,8 +63,8 @@ const CategoriaPremiosTab = ({ selectedDate, setSelectedDate }: CategoriaPremios
       const response = await api.get<PrizeCategoryResponse>(
         `/reports/sales/prize-categories?date=${selectedDate}`
       );
-      setData(response.categories || []);
-      setSummary(response.summary || { totalSold: 0, totalPrizes: 0, totalCommissions: 0, totalNet: 0 });
+      setData(response?.categories || []);
+      setSummary(response?.summary || { totalSold: 0, totalPrizes: 0, totalCommissions: 0, totalNet: 0 });
     } catch (error) {
       console.error('Error loading prize categories:', error);
       setData([]);

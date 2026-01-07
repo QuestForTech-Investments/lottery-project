@@ -619,7 +619,7 @@ const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
 
       // Process Draw Schedules
       if (templateFields.drawSchedules && schedulesResult.status === 'fulfilled') {
-        const schedulesData = schedulesResult.value as { success: boolean; data?: Array<{ dayOfWeek: number; openTime: string; closeTime: string }> };
+        const schedulesData = schedulesResult.value as unknown as { success: boolean; data?: Array<{ dayOfWeek: number; openTime: string; closeTime: string }> };
         if (schedulesData.success && schedulesData.data) {
           const dayMap: Record<number, string> = {
             0: 'domingo',
@@ -682,7 +682,7 @@ const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
       if (templateFields.styles && basicDataResult.status === 'fulfilled') {
         // Styles might come from basic data or a separate endpoint
         // For now, we'll check if there are style fields in the basic data
-        const basicData = (basicDataResult.value as { success: boolean; data?: Record<string, unknown> })?.data;
+        const basicData = (basicDataResult.value as unknown as { success: boolean; data?: Record<string, unknown> })?.data;
         if (basicData) {
           if (basicData.sellScreenStyles) {
             updates.sellScreenStyles = basicData.sellScreenStyles as string;
@@ -697,7 +697,7 @@ const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
       setFormData(prev => ({
         ...prev,
         ...updates,
-      }));
+      } as FormData));
 
 
     } catch (error) {

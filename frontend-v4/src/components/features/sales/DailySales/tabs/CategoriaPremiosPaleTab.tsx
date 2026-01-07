@@ -67,7 +67,7 @@ const CategoriaPremiosPaleTab = ({ selectedDate, setSelectedDate }: CategoriaPre
         `/reports/sales/prize-categories?date=${selectedDate}`
       );
       // Filter only Pale-related bet types
-      const paleCategories = (response.categories || []).filter(c =>
+      const paleCategories = (response?.categories || []).filter(c =>
         c.betTypeName.toLowerCase().includes('pale') ||
         (c.betTypeCode && PALE_BET_TYPE_CODES.includes(c.betTypeCode.toUpperCase()))
       );

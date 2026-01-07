@@ -181,7 +181,7 @@ const UserAdministratorsMUI = () => {
                         <IconButton
                           color="primary"
                           size="small"
-                          onClick={() => handlePasswordClick(admin.username)}
+                          onClick={() => handlePasswordClick(admin.userId, admin.username)}
                           title="Cambiar contraseña"
                         >
                           <KeyIcon />
