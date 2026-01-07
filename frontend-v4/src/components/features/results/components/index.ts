@@ -13,3 +13,4 @@ export { default as LogWinningNumbersBadge } from './LogWinningNumbersBadge';
 export { default as StatusFilterTabs } from './StatusFilterTabs';
 export type { StatusFilterType } from './StatusFilterTabs';
 export { default as ResultEntryForm } from './ResultEntryForm';
+export { default as ResultsTableSection } from './ResultsTableSection';

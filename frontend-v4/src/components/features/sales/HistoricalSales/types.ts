@@ -177,3 +177,16 @@ export interface TabCommonProps {
   loading: boolean;
   onFilter: () => void;
 }
+
+// Default totals constant
+export const DEFAULT_TOTALS: Totals = {
+  tickets: 0,
+  venta: 0,
+  comisiones: 0,
+  descuentos: 0,
+  premios: 0,
+  neto: 0,
+  caida: 0,
+  gastos: 0,
+  final: 0,
+};

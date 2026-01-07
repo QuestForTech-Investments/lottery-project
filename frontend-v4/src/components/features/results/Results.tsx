@@ -6,38 +6,18 @@
  * - Types centralized in ./types
  * - Constants centralized in ./constants
  * - Utility functions in ./utils
+ * - UI components in ./components
  */
 
 import React, { useCallback, useEffect, useRef, useState, useMemo, type SyntheticEvent, type ChangeEvent } from 'react';
 import {
   Box,
   Paper,
-  Typography,
   Tabs,
   Tab,
-  TextField,
-  Button,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  CircularProgress,
-  Alert,
   Snackbar,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  MenuItem,
-  Select,
-  FormControl,
-  type SelectChangeEvent,
+  Alert,
 } from '@mui/material';
-import {
-  Lock as LockIcon,
-} from '@mui/icons-material';
 import {
   getResults,
   getResultLogs,
@@ -46,18 +26,12 @@ import {
   updateResult,
   deleteResult,
   type ResultDto,
-  type ResultLogDto,
 } from '@services/resultsService';
 
 // Internal module imports
 import { useResultsState } from './hooks';
 import type { DrawResultRow, IndividualResultForm as IndividualResultFormType, EnabledFields } from './types';
-import {
-  EMPTY_INDIVIDUAL_FORM,
-  COLORS,
-  FIELD_ORDER,
-  INDIVIDUAL_FIELD_ORDER,
-} from './constants';
+import { COLORS, INDIVIDUAL_FIELD_ORDER } from './constants';
 import {
   getMaxLength,
   getEnabledFields,
@@ -70,11 +44,10 @@ import {
 } from './utils';
 import { getDrawCategory } from '@services/betTypeCompatibilityService';
 import {
-  ResultsTableRow,
+  IndividualResultForm,
   ResultsLogsTab,
   ViewDetailsDialog,
-  StatusFilterTabs,
-  ResultEntryForm,
+  ResultsTableSection,
   type StatusFilterType,
 } from './components';
 
@@ -110,60 +83,42 @@ const Results = (): React.ReactElement => {
 
   // Filter state for table
   const [drawFilter, setDrawFilter] = useState<string>('');
-
-  // Status filter
   const [statusFilter, setStatusFilter] = useState<StatusFilterType>('all');
-
-
-  // Filter state for logs tab
-  const [logsFilter, setLogsFilter] = useState<string>('');
 
   // State for view details modal
   const [viewDetailsRow, setViewDetailsRow] = useState<DrawResultRow | null>(null);
 
-  // Filtered draw results (by status and text filter)
+  // Use ref to access current drawResults without triggering re-renders
+  const drawResultsRef = useRef<DrawResultRow[]>(drawResults);
+  useEffect(() => {
+    drawResultsRef.current = drawResults;
+  }, [drawResults]);
+
+  // ---------------------------------------------------------------------------
+  // Computed Values
+  // ---------------------------------------------------------------------------
+
   const filteredDrawResults = useMemo(() => {
     let results = drawResults;
-
-    // Apply status filter
     if (statusFilter === 'pending') {
       results = results.filter((row) => !row.hasResult);
     } else if (statusFilter === 'completed') {
       results = results.filter((row) => row.hasResult);
     }
-
-    // Apply text filter
     if (drawFilter) {
       results = results.filter((row) =>
         row.drawName.toLowerCase().includes(drawFilter.toLowerCase())
       );
     }
-
     return results;
   }, [drawResults, drawFilter, statusFilter]);
 
-  // Counts for filter tabs
   const filterCounts = useMemo(() => ({
     all: drawResults.length,
     pending: drawResults.filter((row) => !row.hasResult).length,
     completed: drawResults.filter((row) => row.hasResult).length,
   }), [drawResults]);
 
-
-
-  // Filtered logs
-  const filteredLogs = useMemo(() => {
-    if (!logsFilter) return logsData;
-    const filterLower = logsFilter.toLowerCase();
-    return logsData.filter((log) =>
-      log.drawName.toLowerCase().includes(filterLower) ||
-      log.username.toLowerCase().includes(filterLower) ||
-      log.winningNumbers.includes(logsFilter)
-    );
-  }, [logsData, logsFilter]);
-
-  // Memoized enabled fields map - calculate once for all draws
-  // This prevents calling getEnabledFields() 68+ times per render
   const enabledFieldsMap = useMemo(() => {
     const map = new Map<number, EnabledFields>();
     drawResults.forEach((row) => {
@@ -223,30 +178,19 @@ const Results = (): React.ReactElement => {
     }
   }, [selectedDate, actions]);
 
-  // Consolidated data loading effect
-  // Load results data on mount and when date changes
-  // Also auto-select first available draw when data loads
   useEffect(() => {
-    // Prevent duplicate API calls from React StrictMode double-mounting
-    // Skip if already loading or if we just loaded this same date
     if (isLoadingRef.current || lastLoadedDateRef.current === selectedDate) {
       return;
     }
 
     const loadDataAndSetup = async () => {
       isLoadingRef.current = true;
-
       await loadData();
-
       isLoadingRef.current = false;
       lastLoadedDateRef.current = selectedDate;
-
       actions.setLastRefresh(new Date());
 
-      // Auto-select first available draw if none selected
-      // Use setTimeout to ensure state is updated after loadData completes
       setTimeout(() => {
-        // Access latest state via ref to avoid stale closure
         const currentDrawResults = drawResultsRef.current;
         if (currentDrawResults.length > 0 && !individualForm.selectedDrawId) {
           const firstAvailableDraw = currentDrawResults.find((draw) => !draw.hasResult);
@@ -271,13 +215,10 @@ const Results = (): React.ReactElement => {
     };
 
     loadDataAndSetup();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedDate]); // loadData and actions are stable, excluded to prevent cascading
+  }, [selectedDate]);
 
-  // Load logs when tab changes to Logs tab
   useEffect(() => {
     if (activeTab !== 1) return;
-
     const loadLogs = async () => {
       try {
         const logs = await getResultLogs(logsFilterDate || undefined);
@@ -286,21 +227,12 @@ const Results = (): React.ReactElement => {
         console.error('Error loading logs:', err);
       }
     };
-
     loadLogs();
   }, [activeTab, logsFilterDate]);
 
   // ---------------------------------------------------------------------------
   // Field Change Handlers
   // ---------------------------------------------------------------------------
-
-  // Use ref to access current drawResults without triggering re-renders
-  const drawResultsRef = useRef<DrawResultRow[]>(drawResults);
-
-  // Update ref whenever drawResults changes
-  useEffect(() => {
-    drawResultsRef.current = drawResults;
-  }, [drawResults]);
 
   const handleFieldChange = useCallback(
     (drawId: number, field: string, value: string, inputElement?: HTMLInputElement) => {
@@ -309,32 +241,21 @@ const Results = (): React.ReactElement => {
 
       actions.updateField(drawId, field, sanitizedValue);
 
-      // USA Lottery Auto-calculation
-      // When cash3 or play4 changes, auto-calculate all derived fields
       if (isUsaTriggerField(field)) {
-        // Use ref to avoid dependency on drawResults array
         const row = drawResultsRef.current.find((r) => r.drawId === drawId);
         if (row) {
           const category = getDrawCategory(row.drawName);
           if (category === 'USA') {
-            // Check if this is a Play4-only draw (Massachusetts)
             if (isPlay4OnlyDraw(row.drawName)) {
-              // Massachusetts only has Play4 - calculate only num2 and num3
               if (field === 'play4') {
-                const play4Value = sanitizedValue;
-                const calculated = calculatePlay4OnlyFields(play4Value);
+                const calculated = calculatePlay4OnlyFields(sanitizedValue);
                 actions.updateField(drawId, 'num2', calculated.num2);
                 actions.updateField(drawId, 'num3', calculated.num3);
               }
             } else {
-              // Standard USA lottery - calculate all fields from cash3 and play4
               const cash3Value = field === 'cash3' ? sanitizedValue : row.cash3;
               const play4Value = field === 'play4' ? sanitizedValue : row.play4;
-
-              // Calculate all derived fields
               const calculated = calculateUsaFields(cash3Value, play4Value);
-
-              // Update all auto-calculated fields
               actions.updateField(drawId, 'num1', calculated.num1);
               actions.updateField(drawId, 'num2', calculated.num2);
               actions.updateField(drawId, 'num3', calculated.num3);
@@ -349,21 +270,17 @@ const Results = (): React.ReactElement => {
         }
       }
 
-      // Auto-advance to next input when field is complete
       if (sanitizedValue.length >= maxLength && inputElement) {
-        const currentFieldIndex = FIELD_ORDER.indexOf(field);
-        if (currentFieldIndex !== -1 && currentFieldIndex < FIELD_ORDER.length - 1) {
-          const row = inputElement.closest('tr');
-          if (row) {
-            const inputs = row.querySelectorAll('input[type="text"]');
-            const currentIndex = Array.from(inputs).indexOf(inputElement);
-            const nextInput = inputs[currentIndex + 1] as HTMLInputElement;
-            if (nextInput && !nextInput.disabled) {
-              setTimeout(() => {
-                nextInput.focus();
-                nextInput.select();
-              }, 10);
-            }
+        const row = inputElement.closest('tr');
+        if (row) {
+          const inputs = row.querySelectorAll('input[type="text"]');
+          const currentIndex = Array.from(inputs).indexOf(inputElement);
+          const nextInput = inputs[currentIndex + 1] as HTMLInputElement;
+          if (nextInput && !nextInput.disabled) {
+            setTimeout(() => {
+              nextInput.focus();
+              nextInput.select();
+            }, 10);
           }
         }
       }
@@ -378,33 +295,23 @@ const Results = (): React.ReactElement => {
 
       actions.setIndividualForm({ [field]: sanitizedValue });
 
-      // USA Lottery Auto-calculation for individual form
-      // When cash3 or pickFour changes, auto-calculate all derived fields
       if (field === 'cash3' || field === 'pickFour') {
         const selectedDraw = drawResults.find((d) => d.drawId === individualForm.selectedDrawId);
         if (selectedDraw) {
           const category = getDrawCategory(selectedDraw.drawName);
           if (category === 'USA') {
-            // Check if this is a Play4-only draw (Massachusetts)
             if (isPlay4OnlyDraw(selectedDraw.drawName)) {
-              // Massachusetts only has Play4 - calculate only num2 and num3
               if (field === 'pickFour') {
-                const pickFourValue = sanitizedValue;
-                const calculated = calculatePlay4OnlyFields(pickFourValue);
+                const calculated = calculatePlay4OnlyFields(sanitizedValue);
                 actions.setIndividualForm({
                   num2: calculated.num2,
                   num3: calculated.num3,
                 });
               }
             } else {
-              // Standard USA lottery - calculate all fields from cash3 and play4
               const cash3Value = field === 'cash3' ? sanitizedValue : individualForm.cash3;
               const pickFourValue = field === 'pickFour' ? sanitizedValue : individualForm.pickFour;
-
-              // Calculate all derived fields
               const calculated = calculateUsaFields(cash3Value, pickFourValue);
-
-              // Update all auto-calculated fields in the individual form
               actions.setIndividualForm({
                 num1: calculated.num1,
                 num2: calculated.num2,
@@ -421,7 +328,6 @@ const Results = (): React.ReactElement => {
         }
       }
 
-      // Auto-advance
       if (sanitizedValue.length >= maxLength && enabledFieldsList) {
         const currentIndex = enabledFieldsList.indexOf(field);
         if (currentIndex !== -1 && currentIndex < enabledFieldsList.length - 1) {
@@ -437,74 +343,6 @@ const Results = (): React.ReactElement => {
       }
     },
     [actions, drawResults, individualForm.selectedDrawId, individualForm.cash3, individualForm.pickFour]
-  );
-
-  // ---------------------------------------------------------------------------
-  // Save/Delete Handlers
-  // ---------------------------------------------------------------------------
-
-  const handleSaveResult = useCallback(
-    async (drawId: number) => {
-      const row = drawResults.find((r) => r.drawId === drawId);
-      if (!row) return;
-
-      const validation = validateResultRow(row);
-      if (!validation.valid) {
-        actions.setError(`Error en ${row.drawName}: ${validation.error}`);
-        return;
-      }
-
-      actions.setSaving(drawId, true);
-
-      try {
-        const winningNumber = row.num1 + row.num2 + row.num3;
-
-        // Build additionalNumber from cash3, play4, pick5 for USA lotteries
-        // Format expected by API: cash3 (3 digits) + play4 (4 digits) + pick5 (5 digits)
-        const additionalNumber = (row.cash3 || '') + (row.play4 || '') + (row.pick5 || '');
-
-        const data = {
-          drawId: row.drawId,
-          winningNumber,
-          additionalNumber: additionalNumber || null,
-          resultDate: selectedDate
-        };
-
-        let savedResult: ResultDto | null;
-        if (row.resultId) {
-          savedResult = await updateResult(row.resultId, data);
-        } else {
-          savedResult = await createResult(data);
-        }
-
-        actions.markSaved(drawId, savedResult?.resultId || row.resultId || 0);
-        actions.setSuccess(`Resultado guardado para ${row.drawName}`);
-      } catch (err) {
-        console.error('Error saving result:', err);
-        actions.setError(`Error al guardar resultado para ${row.drawName}`);
-        actions.setSaving(drawId, false);
-      }
-    },
-    [drawResults, selectedDate, actions]
-  );
-
-  const handleDeleteResult = useCallback(
-    async (drawId: number) => {
-      const row = drawResults.find((r) => r.drawId === drawId);
-      if (!row || !row.resultId) return;
-
-      if (!window.confirm(`¿Eliminar resultado de ${row.drawName}?`)) return;
-
-      try {
-        await deleteResult(row.resultId);
-        actions.markDeleted(drawId);
-        actions.setSuccess(`Resultado eliminado para ${row.drawName}`);
-      } catch (err) {
-        console.error('Error deleting result:', err);
-        actions.setError('Error al eliminar resultado');
-      }
-    },
-    [drawResults, actions]
   );
 
   // ---------------------------------------------------------------------------
@@ -531,10 +369,33 @@ const Results = (): React.ReactElement => {
     }
 
     for (const row of dirtyRows) {
-      await handleSaveResult(row.drawId);
+      actions.setSaving(row.drawId, true);
+      try {
+        const winningNumber = row.num1 + row.num2 + row.num3;
+        const additionalNumber = (row.cash3 || '') + (row.play4 || '') + (row.pick5 || '');
+        const data = {
+          drawId: row.drawId,
+          winningNumber,
+          additionalNumber: additionalNumber || null,
+          resultDate: selectedDate
+        };
+
+        let savedResult: ResultDto | null;
+        if (row.resultId) {
+          savedResult = await updateResult(row.resultId, data);
+        } else {
+          savedResult = await createResult(data);
+        }
+
+        actions.markSaved(row.drawId, savedResult?.resultId || row.resultId || 0);
+      } catch (err) {
+        console.error('Error saving result:', err);
+        actions.setError(`Error al guardar resultado para ${row.drawName}`);
+        actions.setSaving(row.drawId, false);
+      }
     }
     actions.setSuccess(`${dirtyRows.length} resultados publicados`);
-  }, [computed.dirtyRows, handleSaveResult, actions]);
+  }, [computed.dirtyRows, selectedDate, actions]);
 
   const handlePublishIndividual = useCallback(async () => {
     if (!individualForm.selectedDrawId) {
@@ -548,8 +409,6 @@ const Results = (): React.ReactElement => {
       if (!row) return;
 
       const winningNumber = individualForm.num1 + individualForm.num2 + individualForm.num3;
-
-      // Build additionalNumber from cash3, pickFour (play4), pickFive (pick5) for USA lotteries
       const additionalNumber = (individualForm.cash3 || '') + (individualForm.pickFour || '') + (individualForm.pickFive || '');
 
       const data = {
@@ -566,7 +425,6 @@ const Results = (): React.ReactElement => {
         savedResult = await createResult(data);
       }
 
-      // Update the row in drawResults
       const updatedResults = drawResults.map((r) => {
         if (r.drawId !== individualForm.selectedDrawId) return r;
         return {
@@ -590,12 +448,10 @@ const Results = (): React.ReactElement => {
       actions.setDrawResults(updatedResults);
       actions.setSuccess(`Resultado publicado para ${row.drawName}`);
 
-      // Find the next pending draw (without result) to auto-select
       const currentIndex = drawResults.findIndex((d) => d.drawId === individualForm.selectedDrawId);
       const nextPendingDraw = drawResults.find((d, index) => index > currentIndex && !d.hasResult);
 
       if (nextPendingDraw) {
-        // Select the next pending draw
         actions.setIndividualForm({
           selectedDrawId: nextPendingDraw.drawId,
           num1: nextPendingDraw.num1,
@@ -611,7 +467,6 @@ const Results = (): React.ReactElement => {
           singulaccion3: nextPendingDraw.singulaccion3,
         });
       } else {
-        // No more pending draws, reset form
         actions.resetIndividualForm();
       }
     } catch (err) {
@@ -626,75 +481,55 @@ const Results = (): React.ReactElement => {
   // UI Event Handlers
   // ---------------------------------------------------------------------------
 
-  const handleTabChange = useCallback(
-    (_event: SyntheticEvent, newValue: number) => {
-      actions.setTab(newValue);
-    },
-    [actions]
-  );
+  const handleTabChange = useCallback((_event: SyntheticEvent, newValue: number) => {
+    actions.setTab(newValue);
+  }, [actions]);
 
-  const handleDateChange = useCallback(
-    (e: ChangeEvent<HTMLInputElement>) => {
-      actions.setDate(e.target.value);
-    },
-    [actions]
-  );
-
-  const handleLogsFilterDateChange = useCallback(
-    (e: ChangeEvent<HTMLInputElement>) => {
-      actions.setLogsFilterDate(e.target.value);
-    },
-    [actions]
-  );
+  const handleDateChange = useCallback((value: string) => {
+    actions.setDate(value);
+  }, [actions]);
 
   const handleCloseSnackbar = useCallback(() => {
     actions.clearMessages();
   }, [actions]);
 
-  const handleDrawSelect = useCallback(
-    (event: SelectChangeEvent<number>) => {
-      const drawId = event.target.value as number;
-      const selectedDraw = drawResults.find((d) => d.drawId === drawId);
-      if (selectedDraw) {
-        actions.setIndividualForm({
-          selectedDrawId: drawId,
-          num1: selectedDraw.num1,
-          num2: selectedDraw.num2,
-          num3: selectedDraw.num3,
-          cash3: selectedDraw.cash3,
-          pickFour: selectedDraw.play4,
-          pickFive: selectedDraw.pick5,
-          bolita1: selectedDraw.bolita1,
-          bolita2: selectedDraw.bolita2,
-          singulaccion1: selectedDraw.singulaccion1,
-          singulaccion2: selectedDraw.singulaccion2,
-          singulaccion3: selectedDraw.singulaccion3,
-        });
-      }
-    },
-    [drawResults, actions]
-  );
-
-  const handleEditRow = useCallback(
-    (row: DrawResultRow) => {
+  const handleDrawSelect = useCallback((drawId: number) => {
+    const selectedDraw = drawResults.find((d) => d.drawId === drawId);
+    if (selectedDraw) {
       actions.setIndividualForm({
-        selectedDrawId: row.drawId,
-        num1: row.num1,
-        num2: row.num2,
-        num3: row.num3,
-        cash3: row.cash3,
-        pickFour: row.play4,
-        pickFive: row.pick5,
-        bolita1: row.bolita1,
-        bolita2: row.bolita2,
-        singulaccion1: row.singulaccion1,
-        singulaccion2: row.singulaccion2,
-        singulaccion3: row.singulaccion3,
+        selectedDrawId: drawId,
+        num1: selectedDraw.num1,
+        num2: selectedDraw.num2,
+        num3: selectedDraw.num3,
+        cash3: selectedDraw.cash3,
+        pickFour: selectedDraw.play4,
+        pickFive: selectedDraw.pick5,
+        bolita1: selectedDraw.bolita1,
+        bolita2: selectedDraw.bolita2,
+        singulaccion1: selectedDraw.singulaccion1,
+        singulaccion2: selectedDraw.singulaccion2,
+        singulaccion3: selectedDraw.singulaccion3,
       });
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    },
-    [actions]
-  );
+    }
+  }, [drawResults, actions]);
+
+  const handleEditRow = useCallback((row: DrawResultRow) => {
+    actions.setIndividualForm({
+      selectedDrawId: row.drawId,
+      num1: row.num1,
+      num2: row.num2,
+      num3: row.num3,
+      cash3: row.cash3,
+      pickFour: row.play4,
+      pickFive: row.pick5,
+      bolita1: row.bolita1,
+      bolita2: row.bolita2,
+      singulaccion1: row.singulaccion1,
+      singulaccion2: row.singulaccion2,
+      singulaccion3: row.singulaccion3,
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [actions]);
 
   const handleViewDetails = useCallback((row: DrawResultRow) => {
     setViewDetailsRow(row);
@@ -704,51 +539,45 @@ const Results = (): React.ReactElement => {
     setViewDetailsRow(null);
   }, []);
 
-  const handleDeleteRow = useCallback(
-    async (row: DrawResultRow) => {
-      if (!row.resultId) {
-        actions.setError('Este sorteo no tiene resultado para borrar');
-        return;
-      }
+  const handleDeleteRow = useCallback(async (row: DrawResultRow) => {
+    if (!row.resultId) {
+      actions.setError('Este sorteo no tiene resultado para borrar');
+      return;
+    }
 
-      if (!window.confirm(`¿Está seguro de borrar el resultado de ${row.drawName}?`)) {
-        return;
-      }
+    if (!window.confirm(`¿Está seguro de borrar el resultado de ${row.drawName}?`)) {
+      return;
+    }
 
-      try {
-        await deleteResult(row.resultId);
-
-        // Update the row in drawResults to clear the result
-        const updatedResults = drawResults.map((r) => {
-          if (r.drawId !== row.drawId) return r;
-          return {
-            ...r,
-            resultId: null,
-            num1: '',
-            num2: '',
-            num3: '',
-            cash3: '',
-            play4: '',
-            pick5: '',
-            bolita1: '',
-            bolita2: '',
-            singulaccion1: '',
-            singulaccion2: '',
-            singulaccion3: '',
-            hasResult: false,
-            isDirty: false,
-          };
-        });
-        actions.setDrawResults(updatedResults);
-        actions.setSuccess(`Resultado borrado para ${row.drawName}`);
-      } catch (err) {
-        console.error('Error deleting result:', err);
-        actions.setError('Error al borrar resultado');
-      }
-    },
-    [drawResults, actions]
-  );
-
+    try {
+      await deleteResult(row.resultId);
+      const updatedResults = drawResults.map((r) => {
+        if (r.drawId !== row.drawId) return r;
+        return {
+          ...r,
+          resultId: null,
+          num1: '',
+          num2: '',
+          num3: '',
+          cash3: '',
+          play4: '',
+          pick5: '',
+          bolita1: '',
+          bolita2: '',
+          singulaccion1: '',
+          singulaccion2: '',
+          singulaccion3: '',
+          hasResult: false,
+          isDirty: false,
+        };
+      });
+      actions.setDrawResults(updatedResults);
+      actions.setSuccess(`Resultado borrado para ${row.drawName}`);
+    } catch (err) {
+      console.error('Error deleting result:', err);
+      actions.setError('Error al borrar resultado');
+    }
+  }, [drawResults, actions]);
 
   // ---------------------------------------------------------------------------
   // Render
@@ -797,350 +626,39 @@ const Results = (): React.ReactElement => {
         <Box sx={{ p: 3 }}>
           {activeTab === 0 && (
             <>
-              <Typography
-                variant="h5"
-                align="center"
-                sx={{ mb: 3, fontWeight: 600, color: '#333' }}
-              >
-                Manejar resultados
-              </Typography>
-
               {/* Individual Result Entry Form */}
-              <Paper variant="outlined" sx={{ p: 2, mb: 3, border: '1px solid #ddd' }}>
-                {/* Row 1: Date + Draw Dropdown */}
-                <Box
-                  sx={{ display: 'flex', gap: 2, mb: 2, flexWrap: 'wrap', alignItems: 'flex-start' }}
-                >
-                  <Box>
-                    <Typography variant="body2" sx={{ mb: 0.5, color: '#666', fontSize: '12px' }}>
-                      Fecha
-                    </Typography>
-                    <TextField
-                      type="date"
-                      value={selectedDate}
-                      onChange={handleDateChange}
-                      size="small"
-                      sx={{ width: 200, bgcolor: '#fff' }}
-                    />
-                  </Box>
-                  <Box sx={{ flex: 1 }}>
-                    <Typography variant="body2" sx={{ mb: 0.5, color: '#666', fontSize: '12px' }}>
-                      Sorteo
-                    </Typography>
-                    <FormControl fullWidth size="small">
-                      <Select
-                        value={individualForm.selectedDrawId || ''}
-                        onChange={handleDrawSelect}
-                        sx={{ bgcolor: '#fff' }}
-                      >
-                        {drawResults
-                          .filter((draw) => !draw.hasResult || draw.drawId === individualForm.selectedDrawId)
-                          .map((draw) => (
-                            <MenuItem key={draw.drawId} value={draw.drawId}>
-                              {draw.drawName}
-                            </MenuItem>
-                          ))}
-                      </Select>
-                    </FormControl>
-                  </Box>
-                </Box>
-
-                {/* Row 2: Dynamic Input Fields based on draw category */}
-                {individualForm.selectedDrawId &&
-                  (() => {
-                    const selectedDraw = drawResults.find(
-                      (d) => d.drawId === individualForm.selectedDrawId
-                    );
-                    const enabledFields = selectedDraw
-                      ? getEnabledFields(selectedDraw.drawName)
-                      : getEnabledFields('');
-
-                    // Define all possible fields with their configuration
-                    // For USA draws: only cash3 and pickFour are editable (enabled)
-                    // Other draws: fields are shown based on enabledFields
-                    const allFields = [
-                      { field: 'num1' as const, label: '1ra', maxLen: 2, enabled: enabledFields.num1 },
-                      { field: 'num2' as const, label: '2da', maxLen: 2, enabled: enabledFields.num2 },
-                      { field: 'num3' as const, label: '3ra', maxLen: 2, enabled: enabledFields.num3 },
-                      { field: 'cash3' as const, label: 'Pick 3', maxLen: 3, enabled: enabledFields.cash3 },
-                      { field: 'pickFour' as const, label: 'Pick 4', maxLen: 4, enabled: enabledFields.play4 },
-                      { field: 'pickFive' as const, label: 'Pick 5', maxLen: 5, enabled: enabledFields.pick5 },
-                      { field: 'bolita1' as const, label: 'Bolita 1', maxLen: 2, enabled: enabledFields.bolita1 },
-                      { field: 'bolita2' as const, label: 'Bolita 2', maxLen: 2, enabled: enabledFields.bolita2 },
-                      { field: 'singulaccion1' as const, label: 'Sing. 1', maxLen: 1, enabled: enabledFields.singulaccion1 },
-                      { field: 'singulaccion2' as const, label: 'Sing. 2', maxLen: 1, enabled: enabledFields.singulaccion2 },
-                      { field: 'singulaccion3' as const, label: 'Sing. 3', maxLen: 1, enabled: enabledFields.singulaccion3 },
-                    ];
-
-                    // Check if this is a USA draw (has cash3 or play4 enabled)
-                    const isUsaDraw = enabledFields.cash3 && enabledFields.play4 && !enabledFields.num1;
-
-                    // For USA draws, show all fields; for others, only show enabled fields
-                    const visibleFields = isUsaDraw
-                      ? allFields  // Show all fields for USA draws
-                      : allFields.filter((f) => f.enabled);  // Only show enabled fields for other draws
-
-                    // For auto-advance, only consider editable fields
-                    const editableFieldsList = visibleFields.filter((f) => f.enabled).map((f) => f.field);
-
-                    return (
-                      <Box sx={{ border: '1px solid #ddd', borderRadius: 1, overflow: 'hidden' }}>
-                        {/* Header row */}
-                        <Box sx={{ display: 'flex', bgcolor: '#f5f5f5', borderBottom: '1px solid #ddd' }}>
-                          <Box sx={{ width: 140, p: 1, borderRight: '1px solid #ddd' }}></Box>
-                          {visibleFields.map((f, idx) => (
-                            <Box
-                              key={f.field}
-                              sx={{
-                                flex: 1,
-                                p: 1,
-                                textAlign: 'center',
-                                borderRight: idx < visibleFields.length - 1 ? '1px solid #ddd' : 'none',
-                                fontSize: '12px',
-                                color: f.enabled ? '#333' : '#999',
-                                fontWeight: f.enabled ? 600 : 400,
-                              }}
-                            >
-                              {f.label}
-                            </Box>
-                          ))}
-                        </Box>
-                        {/* Input row */}
-                        <Box sx={{ display: 'flex', bgcolor: '#fff' }}>
-                          <Box
-                            sx={{
-                              width: 140,
-                              p: 1,
-                              borderRight: '1px solid #ddd',
-                              fontWeight: 600,
-                              fontSize: '14px',
-                              display: 'flex',
-                              alignItems: 'center',
-                            }}
-                          >
-                            {selectedDraw?.drawName}
-                          </Box>
-                          {visibleFields.map((f, idx) => (
-                            <Box
-                              key={f.field}
-                              sx={{
-                                flex: 1,
-                                p: 0.5,
-                                borderRight: idx < visibleFields.length - 1 ? '1px solid #ddd' : 'none',
-                                bgcolor: f.enabled ? '#fff' : '#f5f5f5',
-                              }}
-                            >
-                              <TextField
-                                value={individualForm[f.field]}
-                                onChange={(e) =>
-                                  handleIndividualFormChange(f.field, e.target.value, editableFieldsList)
-                                }
-                                inputRef={(el) => {
-                                  individualFormRefs.current[f.field] = el;
-                                }}
-                                disabled={!f.enabled}
-                                size="small"
-                                inputProps={{
-                                  maxLength: f.maxLen,
-                                  style: {
-                                    textAlign: 'center',
-                                    padding: '8px',
-                                    color: f.enabled ? '#333' : '#666',
-                                    fontWeight: f.enabled ? 700 : 400,
-                                  },
-                                }}
-                                sx={{
-                                  '& .MuiOutlinedInput-root': {
-                                    bgcolor: f.enabled ? '#fff' : '#f0f0f0',
-                                    '&.Mui-disabled': {
-                                      bgcolor: '#f5f5f5',
-                                      '& fieldset': { border: '1px solid #ddd' },
-                                    },
-                                  },
-                                }}
-                                fullWidth
-                              />
-                            </Box>
-                          ))}
-                        </Box>
-                      </Box>
-                    );
-                  })()}
-
-                {/* Publish Individual Button */}
-                <Box sx={{ mt: 2 }}>
-                  <Button
-                    variant="contained"
-                    onClick={handlePublishIndividual}
-                    disabled={!individualForm.selectedDrawId || savingIndividual}
-                    sx={{
-                      bgcolor: COLORS.primary,
-                      '&:hover': { bgcolor: COLORS.primaryHover },
-                      textTransform: 'uppercase',
-                      fontWeight: 600,
-                      px: 3,
-                      color: '#fff',
-                    }}
-                  >
-                    {savingIndividual ? (
-                      <CircularProgress size={20} color="inherit" />
-                    ) : (
-                      'PUBLICAR RESULTADO'
-                    )}
-                  </Button>
-                </Box>
-              </Paper>
-
+              <IndividualResultForm
+                selectedDate={selectedDate}
+                drawResults={drawResults}
+                form={individualForm}
+                saving={savingIndividual}
+                onDateChange={handleDateChange}
+                onDrawSelect={handleDrawSelect}
+                onFieldChange={handleIndividualFormChange}
+                onPublish={handlePublishIndividual}
+              />
 
               {/* Results Table Section */}
-              <Box sx={{ mt: 2 }}>
-                <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: COLORS.primary }}>
-                  Resultados {selectedDate}
-                </Typography>
-
-                {/* Status Filter Tabs */}
-                <StatusFilterTabs
-                  statusFilter={statusFilter}
-                  filterCounts={filterCounts}
-                  onFilterChange={setStatusFilter}
-                />
-
-                {/* Action buttons and filter */}
-                <Box sx={{ display: 'flex', gap: 1, mb: 1, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' }}>
-                  <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                    <Button
-                      variant="contained"
-                      onClick={handlePublishAll}
-                      sx={{
-                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                        '&:hover': {
-                          background: 'linear-gradient(135deg, #5568d3 0%, #63408a 100%)',
-                        },
-                        textTransform: 'uppercase',
-                        fontWeight: 700,
-                        fontSize: '12px',
-                        px: 2,
-                        py: 1,
-                        borderRadius: 6,
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                        color: '#fff',
-                      }}
-                    >
-                      PUBLICAR RESULTADOS
-                    </Button>
-                    <Button
-                      variant="contained"
-                      startIcon={<LockIcon sx={{ fontSize: 18 }} />}
-                      sx={{
-                        background: '#f5d623 !important',
-                        '&:hover': { background: '#e6c700 !important' },
-                        textTransform: 'uppercase',
-                        fontWeight: 600,
-                        fontSize: '12px',
-                        color: '#333 !important',
-                        px: 2,
-                        py: 1,
-                        borderRadius: 6,
-                      }}
-                    >
-                      DESBLOQUEAR
-                    </Button>
-                  </Box>
-                  <TextField
-                    size="small"
-                    placeholder="Filtrar sorteo..."
-                    value={drawFilter}
-                    onChange={(e) => setDrawFilter(e.target.value)}
-                    sx={{
-                      width: 200,
-                      '& .MuiOutlinedInput-root': {
-                        bgcolor: '#fff',
-                        fontSize: '12px',
-                      }
-                    }}
-                  />
-                </Box>
-
-                {loading ? (
-                  <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-                    <CircularProgress />
-                  </Box>
-                ) : (
-                  <TableContainer component={Paper} variant="outlined">
-                    <Table size="small" stickyHeader>
-                      <TableHead>
-                        <TableRow>
-                          <TableCell sx={{ fontWeight: 600, bgcolor: COLORS.headerBg, minWidth: 140, fontSize: '13px', color: '#555' }}>
-                            Sorteos
-                          </TableCell>
-                          <TableCell align="center" sx={{ fontWeight: 600, bgcolor: COLORS.headerBg, minWidth: 55, fontSize: '13px', color: '#555' }}>
-                            1ra
-                          </TableCell>
-                          <TableCell align="center" sx={{ fontWeight: 600, bgcolor: COLORS.headerBg, minWidth: 55, fontSize: '13px', color: '#555' }}>
-                            2da
-                          </TableCell>
-                          <TableCell align="center" sx={{ fontWeight: 600, bgcolor: COLORS.headerBg, minWidth: 55, fontSize: '13px', color: '#555' }}>
-                            3ra
-                          </TableCell>
-                          <TableCell align="center" sx={{ fontWeight: 600, bgcolor: COLORS.headerBg, minWidth: 65, fontSize: '13px', color: '#555' }}>
-                            Pick 3
-                          </TableCell>
-                          <TableCell align="center" sx={{ fontWeight: 600, bgcolor: COLORS.headerBg, minWidth: 65, fontSize: '13px', color: '#555' }}>
-                            Pick 4
-                          </TableCell>
-                          <TableCell align="center" sx={{ fontWeight: 600, bgcolor: COLORS.headerBg, minWidth: 75, fontSize: '13px', color: '#555' }}>
-                            Pick 5
-                          </TableCell>
-                          <TableCell align="center" sx={{ fontWeight: 600, bgcolor: COLORS.headerBg, minWidth: 110, fontSize: '13px', color: '#555' }}>
-                            Acciones
-                          </TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {filteredDrawResults.length === 0 ? (
-                          <TableRow>
-                            <TableCell colSpan={8} align="center" sx={{ py: 4, color: 'text.secondary' }}>
-                              {drawFilter ? 'No se encontraron sorteos' : 'No hay sorteos configurados'}
-                            </TableCell>
-                          </TableRow>
-                        ) : (
-                          filteredDrawResults.map((row) => (
-                            <ResultsTableRow
-                              key={row.drawId}
-                              row={row}
-                              enabledFields={enabledFieldsMap.get(row.drawId)!}
-                              onFieldChange={handleFieldChange}
-                              onSave={handleViewDetails}
-                              onDelete={handleDeleteRow}
-                              onEdit={handleEditRow}
-                            />
-                          ))
-                        )}
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
-                )}
-
-                {/* Summary */}
-                <Box
-                  sx={{
-                    mt: 2,
-                    display: 'flex',
-                    gap: 2,
-                    alignItems: 'center',
-                    flexWrap: 'wrap',
-                    justifyContent: 'space-between',
-                  }}
-                >
-                  <Typography variant="body2" color="text.secondary">
-                    Total: {computed.totalCount} sorteos | Con resultado: {computed.withResultsCount} |
-                    Pendientes: {computed.pendingCount}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    Última actualización: {lastRefresh.toLocaleTimeString()}
-                  </Typography>
-                </Box>
-              </Box>
+              <ResultsTableSection
+                selectedDate={selectedDate}
+                filteredDrawResults={filteredDrawResults}
+                enabledFieldsMap={enabledFieldsMap}
+                loading={loading}
+                drawFilter={drawFilter}
+                statusFilter={statusFilter}
+                filterCounts={filterCounts}
+                totalCount={computed.totalCount}
+                withResultsCount={computed.withResultsCount}
+                pendingCount={computed.pendingCount}
+                lastRefresh={lastRefresh}
+                onDrawFilterChange={setDrawFilter}
+                onStatusFilterChange={setStatusFilter}
+                onFieldChange={handleFieldChange}
+                onPublishAll={handlePublishAll}
+                onViewDetails={handleViewDetails}
+                onDelete={handleDeleteRow}
+                onEdit={handleEditRow}
+              />
             </>
           )}
 
@@ -1160,7 +678,6 @@ const Results = (): React.ReactElement => {
         open={!!viewDetailsRow}
         onClose={handleCloseViewDetails}
       />
-
     </Box>
   );
 };
