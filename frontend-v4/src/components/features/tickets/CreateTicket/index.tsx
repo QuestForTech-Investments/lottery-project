@@ -1,171 +1,94 @@
-import React, { useState, useEffect, memo } from 'react';
+/**
+ * CreateTicket Component
+ *
+ * Form for creating lottery tickets with live preview.
+ */
+
+import React, { useState, useEffect, useCallback, useMemo, memo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  Box,
-  Button,
-  TextField,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
-  Typography,
-  Paper,
-  Table,
-  TableHead,
-  TableBody,
-  TableRow,
-  TableCell,
-  IconButton,
-  Grid,
-  Card,
-  CardContent
-} from '@mui/material';
-import { Plus, Trash2, RotateCcw, Receipt } from 'lucide-react';
+import { Box, Typography } from '@mui/material';
 import JsBarcode from 'jsbarcode';
 import api from '../../../../services/api';
 import TicketPrinter from '../TicketPrinter';
-import TicketPrintTemplate from '../TicketPrintTemplate';
 
-interface Draw {
-  drawId: number;
-  drawName: string;
-  lotteryName: string;
-  drawTime?: string;
-}
+// Types and constants
+import type { Draw, BetType, TicketLine, MockTicket, Totals } from './types';
+import { COMMISSION_RATE } from './constants';
 
-interface BetType {
-  betTypeId: number;
-  betTypeName: string;
-}
+// Components
+import {
+  AddLineSection,
+  LinesTable,
+  AdditionalDataSection,
+  TicketSummary,
+  TicketPreview,
+} from './components';
 
-interface TicketLine {
-  drawId: number;
-  drawName: string;
-  lotteryName: string;
-  betNumber: string;
-  betTypeId: number;
-  betTypeName: string;
-  betAmount: number;
-  multiplier: number;
-}
+// ============================================================================
+// Main Component
+// ============================================================================
 
-interface TicketLineForApi {
-  lineId: number;
-  lineNumber: number;
-  lotteryId: number;
-  lotteryName: string;
-  drawId: number;
-  drawName: string;
-  drawDate: string;
-  drawTime: string;
-  betNumber: string;
-  betTypeId: number;
-  betTypeName: string;
-  betAmount: number;
-  multiplier: number;
-  subtotal: number;
-  totalWithMultiplier: number;
-  discountAmount: number;
-  commissionPercentage: number;
-  commissionAmount: number;
-  netAmount: number;
-  isWinner: boolean;
-  prizeAmount: number;
-}
-
-interface MockTicket {
-  ticketId: number;
-  ticketCode: string;
-  barcode: string;
-  status: string;
-  bettingPoolId: number;
-  bettingPoolName: string;
-  userId: number;
-  userName: string;
-  customerName: string;
-  customerPhone: string;
-  totalBetAmount: number;
-  totalDiscount: number;
-  totalCommission: number;
-  totalNet: number;
-  grandTotal: number;
-  createdAt: string;
-  notes: string;
-  lines: TicketLineForApi[];
-}
-
-interface Totals {
-  totalBet: number | string;
-  totalCommission: number | string;
-  grandTotal: number | string;
-}
-
-/**
- * Componente para Crear Tickets (Material-UI Version)
- * Con vista previa en tiempo real del ticket
- */
 const CreateTicket: React.FC = () => {
   const navigate = useNavigate();
 
-  // Estados para parameters
+  // Parameter state
   const [draws, setDraws] = useState<Draw[]>([]);
   const [betTypes, setBetTypes] = useState<BetType[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // Estados del formulario
+  // Form state
   const [selectedDraw, setSelectedDraw] = useState<string>('');
   const [betNumber, setBetNumber] = useState<string>('');
   const [selectedBetType, setSelectedBetType] = useState<string>('');
   const [betAmount, setBetAmount] = useState<string>('');
   const [multiplier, setMultiplier] = useState<string>('1.00');
 
-  // Estados para datos adicionales
+  // Additional data
   const [customerName, setCustomerName] = useState<string>('');
   const [customerPhone, setCustomerPhone] = useState<string>('');
   const [notes, setNotes] = useState<string>('');
   const [globalMultiplier, setGlobalMultiplier] = useState<string>('1.00');
   const [globalDiscount, setGlobalDiscount] = useState<string>('0.00');
 
-  // Estado de ticket lines
+  // Ticket lines
   const [lines, setLines] = useState<TicketLine[]>([]);
 
-  // State for ticket creado
+  // Created ticket state
   const [createdTicket, setCreatedTicket] = useState<MockTicket | null>(null);
   const [showPrintView, setShowPrintView] = useState<boolean>(false);
 
-  // State for totales calculados
-  const [totals, setTotals] = useState<Totals>({
-    totalBet: 0,
-    totalCommission: 0,
-    grandTotal: 0
-  });
+  // Calculate totals
+  const totals = useMemo<Totals>(() => {
+    const discount = parseFloat(globalDiscount) || 0;
+    const mult = parseFloat(globalMultiplier) || 1;
 
-  // Load parameters on mount
-  useEffect(() => {
-    loadParams();
-  }, []);
+    let totalBet = 0;
+    let totalCommission = 0;
 
-  // Recalculate totales when changed lines
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- calculateTotals is stable
-  useEffect(() => {
-    calculateTotals();
+    lines.forEach(line => {
+      const amount = line.betAmount * line.multiplier * mult;
+      const discountAmount = amount * (discount / 100);
+      const afterDiscount = amount - discountAmount;
+      const commission = afterDiscount * COMMISSION_RATE;
+
+      totalBet += amount;
+      totalCommission += commission;
+    });
+
+    const grandTotal = totalBet - totalCommission - (totalBet * (discount / 100));
+
+    return {
+      totalBet: totalBet.toFixed(2),
+      totalCommission: totalCommission.toFixed(2),
+      grandTotal: grandTotal.toFixed(2)
+    };
   }, [lines, globalDiscount, globalMultiplier]);
 
-  // Generate barcode for preview
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- generatePreviewBarcode is stable
-  useEffect(() => {
-    if (lines.length > 0) {
-      generatePreviewBarcode();
-    }
-  }, [lines]);
+  // Generate mock ticket for preview
+  const mockTicketData = useMemo<MockTicket | null>(() => {
+    if (lines.length === 0) return null;
 
-  // Generate ticket mock for preview
-  const generateMockTicket = (): MockTicket | null => {
-    if (lines.length === 0) {
-      return null;
-    }
-
-    const mockTicket = {
+    return {
       ticketId: 0,
       ticketCode: 'PREVIEW-TICKET',
       barcode: 'PREVIEW-TICKET',
@@ -207,16 +130,35 @@ const CreateTicket: React.FC = () => {
         prizeAmount: 0.00
       }))
     };
+  }, [lines, customerName, customerPhone, notes, totals, globalMultiplier]);
 
-    return mockTicket;
-  };
+  // Load parameters on mount
+  useEffect(() => {
+    const loadParams = async () => {
+      try {
+        setLoading(true);
+        const token = localStorage.getItem('authToken');
+        const response = await api.get('/tickets/params/create', {
+          headers: { Authorization: `Bearer ${token}` }
+        }) as { draws?: Draw[]; betTypes?: BetType[] };
+
+        setDraws(response.draws || []);
+        setBetTypes(response.betTypes || []);
+      } catch (error) {
+        alert('Error al cargar parameters de creacion');
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadParams();
+  }, []);
 
   // Generate barcode for preview
-  const generatePreviewBarcode = (): void => {
-    try {
+  useEffect(() => {
+    if (lines.length > 0) {
       setTimeout(() => {
         const barcodeElement = document.getElementById('barcode-preview-ticket');
-        if (barcodeElement && lines.length > 0) {
+        if (barcodeElement) {
           JsBarcode(barcodeElement, 'PREVIEW', {
             format: 'CODE128',
             width: 2,
@@ -228,61 +170,13 @@ const CreateTicket: React.FC = () => {
           });
         }
       }, 100);
-    } catch (error) {
-      console.error('Error generando barcode preview:', error);
     }
-  };
+  }, [lines]);
 
-  const loadParams = async (): Promise<void> => {
-    try {
-      setLoading(true);
-      const token = localStorage.getItem('authToken');
-      const response = await api.get('/tickets/params/create', {
-        headers: { Authorization: `Bearer ${token}` }
-      }) as { draws?: Draw[]; betTypes?: BetType[] };
-
-      setDraws(response.draws || []);
-      setBetTypes(response.betTypes || []);
-    } catch (error) {
-      console.error('Error loading parameters:', error);
-      alert('Error al cargar parameters de creación');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Calculate totals
-  const calculateTotals = (): void => {
-    const discount = parseFloat(globalDiscount) || 0;
-    const multiplier = parseFloat(globalMultiplier) || 1;
-    const commissionRate = 0.10; // 10%
-
-    let totalBet = 0;
-    let totalCommission = 0;
-
-    lines.forEach(line => {
-      const amount = line.betAmount * line.multiplier * multiplier;
-      const discountAmount = amount * (discount / 100);
-      const afterDiscount = amount - discountAmount;
-      const commission = afterDiscount * commissionRate;
-
-      totalBet += amount;
-      totalCommission += commission;
-    });
-
-    const grandTotal = totalBet - totalCommission - (totalBet * (discount / 100));
-
-    setTotals({
-      totalBet: totalBet.toFixed(2),
-      totalCommission: totalCommission.toFixed(2),
-      grandTotal: grandTotal.toFixed(2)
-    });
-  };
-
-  // Add line
-  const handleAddLine = (): void => {
+  // Handlers
+  const handleAddLine = useCallback(() => {
     if (!selectedDraw || !betNumber || !selectedBetType || !betAmount) {
-      alert('Por favor complete todos los campos de la línea');
+      alert('Por favor complete todos los campos de la linea');
       return;
     }
 
@@ -290,11 +184,11 @@ const CreateTicket: React.FC = () => {
     const betType = betTypes.find(bt => bt.betTypeId === parseInt(selectedBetType));
 
     if (!draw || !betType) {
-      alert('Sorteo o bet type no válidos');
+      alert('Sorteo o bet type no validos');
       return;
     }
 
-    const newLine = {
+    const newLine: TicketLine = {
       drawId: draw.drawId,
       drawName: draw.drawName,
       lotteryName: draw.lotteryName,
@@ -305,23 +199,18 @@ const CreateTicket: React.FC = () => {
       multiplier: parseFloat(multiplier) || 1.00
     };
 
-    setLines([...lines, newLine]);
-
-    // Clear line fields
+    setLines(prev => [...prev, newLine]);
     setBetNumber('');
     setBetAmount('');
-  };
+  }, [selectedDraw, betNumber, selectedBetType, betAmount, multiplier, draws, betTypes]);
 
-  // Delete line
-  const handleRemoveLine = (index: number): void => {
-    const newLines = lines.filter((_, i) => i !== index);
-    setLines(newLines);
-  };
+  const handleRemoveLine = useCallback((index: number) => {
+    setLines(prev => prev.filter((_, i) => i !== index));
+  }, []);
 
-  // Create ticket
-  const handleCreateTicket = async (): Promise<void> => {
+  const handleCreateTicket = useCallback(async () => {
     if (lines.length === 0) {
-      alert('Debe agregar al menos una línea al ticket');
+      alert('Debe agregar al menos una linea al ticket');
       return;
     }
 
@@ -354,19 +243,16 @@ const CreateTicket: React.FC = () => {
         }
       }) as MockTicket;
 
-
       setCreatedTicket(response);
       setShowPrintView(true);
     } catch (err) {
-      console.error('Error creando ticket:', err);
       const error = err as { response?: { data?: { message?: string } }; message?: string };
       const errorMsg = error.response?.data?.message || error.message || 'Error al crear ticket';
       alert(`Error: ${errorMsg}`);
     }
-  };
+  }, [lines, globalMultiplier, globalDiscount, customerName, customerPhone, notes]);
 
-  // Reset formulario
-  const resetForm = (): void => {
+  const resetForm = useCallback(() => {
     setLines([]);
     setSelectedDraw('');
     setBetNumber('');
@@ -380,7 +266,7 @@ const CreateTicket: React.FC = () => {
     setGlobalDiscount('0.00');
     setCreatedTicket(null);
     setShowPrintView(false);
-  };
+  }, []);
 
   // Print view
   if (showPrintView && createdTicket) {
@@ -388,7 +274,7 @@ const CreateTicket: React.FC = () => {
       <TicketPrinter
         ticketData={createdTicket}
         onAfterPrint={() => {
-          const createAnother = window.confirm('¿Desea crear otro ticket?');
+          const createAnother = window.confirm('Desea crear otro ticket?');
           if (createAnother) {
             resetForm();
           } else {
@@ -407,335 +293,61 @@ const CreateTicket: React.FC = () => {
     );
   }
 
-  // Generate ticket mock for preview
-  const mockTicketData = generateMockTicket();
-
   return (
     <Box sx={{ padding: 3 }}>
       <Typography variant="h4" sx={{ marginBottom: 3, textAlign: 'center' }}>
-        🎫 Crear Ticket
+        Crear Ticket
       </Typography>
 
-      {/* LAYOUT DE DOS COLUMNAS */}
       <Box sx={{ display: 'flex', gap: 3, alignItems: 'flex-start' }}>
-        {/* COLUMNA IZQUIERDA: FORMULARIO */}
+        {/* Left Column: Form */}
         <Box sx={{ flex: 1, minWidth: '500px' }}>
-          {/* SECCIÓN 1: AGREGAR LÍNEA */}
-          <Card sx={{ marginBottom: 3 }}>
-            <CardContent>
-              <Typography variant="h6" sx={{ marginBottom: 2, color: '#51cbce' }}>
-                ➕ Agregar Línea
-              </Typography>
+          <AddLineSection
+            draws={draws}
+            betTypes={betTypes}
+            selectedDraw={selectedDraw}
+            betNumber={betNumber}
+            selectedBetType={selectedBetType}
+            betAmount={betAmount}
+            multiplier={multiplier}
+            onDrawChange={setSelectedDraw}
+            onBetNumberChange={setBetNumber}
+            onBetTypeChange={setSelectedBetType}
+            onBetAmountChange={setBetAmount}
+            onMultiplierChange={setMultiplier}
+            onAddLine={handleAddLine}
+          />
 
-              <Grid container spacing={2}>
-                <Grid item xs={12}>
-                  <FormControl fullWidth>
-                    <InputLabel>Sorteo</InputLabel>
-                    <Select
-                      value={selectedDraw}
-                      label="Sorteo"
-                      onChange={(e) => setSelectedDraw(e.target.value)}
-                    >
-                      <MenuItem value="">Seleccione sorteo...</MenuItem>
-                      {draws.map(draw => (
-                        <MenuItem key={draw.drawId} value={draw.drawId}>
-                          {draw.lotteryName} - {draw.drawName} ({draw.drawTime})
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </Grid>
+          <LinesTable lines={lines} onRemoveLine={handleRemoveLine} />
 
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="Número"
-                    placeholder="Ej: 25, 123, etc."
-                    value={betNumber}
-                    onChange={(e) => setBetNumber(e.target.value)}
-                    inputProps={{ maxLength: 20 }}
-                  />
-                </Grid>
+          <AdditionalDataSection
+            customerName={customerName}
+            customerPhone={customerPhone}
+            globalMultiplier={globalMultiplier}
+            globalDiscount={globalDiscount}
+            notes={notes}
+            onCustomerNameChange={setCustomerName}
+            onCustomerPhoneChange={setCustomerPhone}
+            onGlobalMultiplierChange={setGlobalMultiplier}
+            onGlobalDiscountChange={setGlobalDiscount}
+            onNotesChange={setNotes}
+          />
 
-                <Grid item xs={12} sm={6}>
-                  <FormControl fullWidth>
-                    <InputLabel>Tipo de Jugada</InputLabel>
-                    <Select
-                      value={selectedBetType}
-                      label="Tipo de Jugada"
-                      onChange={(e) => setSelectedBetType(e.target.value)}
-                    >
-                      <MenuItem value="">Seleccione tipo...</MenuItem>
-                      {betTypes.map(bt => (
-                        <MenuItem key={bt.betTypeId} value={bt.betTypeId}>
-                          {bt.betTypeName}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </Grid>
-
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    type="number"
-                    label="Monto"
-                    placeholder="$0.00"
-                    value={betAmount}
-                    onChange={(e) => setBetAmount(e.target.value)}
-                    inputProps={{ min: 1, step: 0.01 }}
-                  />
-                </Grid>
-
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    type="number"
-                    label="Multiplicador"
-                    value={multiplier}
-                    onChange={(e) => setMultiplier(e.target.value)}
-                    inputProps={{ min: 1, max: 100, step: 0.01 }}
-                  />
-                </Grid>
-
-                <Grid item xs={12}>
-                  <Button
-                    fullWidth
-                    variant="contained"
-                    startIcon={<Plus size={20} />}
-                    onClick={handleAddLine}
-                    sx={{
-                      bgcolor: '#28a745',
-                      '&:hover': { bgcolor: '#218838' }
-                    }}
-                  >
-                    AGREGAR LÍNEA
-                  </Button>
-                </Grid>
-              </Grid>
-            </CardContent>
-          </Card>
-
-          {/* SECCIÓN 2: LÍNEAS AGREGADAS */}
-          {lines.length > 0 && (
-            <Card sx={{ marginBottom: 3 }}>
-              <CardContent>
-                <Typography variant="h6" sx={{ marginBottom: 2, color: '#51cbce' }}>
-                  📋 Líneas del Ticket ({lines.length})
-                </Typography>
-
-                <Table size="small">
-                  <TableHead>
-                    <TableRow sx={{ bgcolor: '#51cbce' }}>
-                      <TableCell sx={{ color: '#fff' }}>#</TableCell>
-                      <TableCell sx={{ color: '#fff' }}>Sorteo</TableCell>
-                      <TableCell sx={{ color: '#fff' }}>Número</TableCell>
-                      <TableCell sx={{ color: '#fff' }}>Tipo</TableCell>
-                      <TableCell sx={{ color: '#fff', textAlign: 'right' }}>Monto</TableCell>
-                      <TableCell sx={{ color: '#fff', textAlign: 'center' }}>Acción</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {lines.map((line, index) => (
-                      <TableRow key={index}>
-                        <TableCell>{index + 1}</TableCell>
-                        <TableCell>{line.lotteryName} - {line.drawName}</TableCell>
-                        <TableCell sx={{ fontWeight: 'bold' }}>{line.betNumber}</TableCell>
-                        <TableCell>{line.betTypeName}</TableCell>
-                        <TableCell sx={{ textAlign: 'right' }}>${line.betAmount.toFixed(2)}</TableCell>
-                        <TableCell sx={{ textAlign: 'center' }}>
-                          <IconButton
-                            size="small"
-                            onClick={() => handleRemoveLine(index)}
-                            sx={{ color: '#dc3545' }}
-                          >
-                            <Trash2 size={18} />
-                          </IconButton>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* SECCIÓN 3: DATOS ADICIONALES */}
-          <Card sx={{ marginBottom: 3 }}>
-            <CardContent>
-              <Typography variant="h6" sx={{ marginBottom: 2, color: '#51cbce' }}>
-                📝 Datos Adicionales (Opcional)
-              </Typography>
-
-              <Grid container spacing={2}>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="Nombre del Cliente"
-                    placeholder="Juan Pérez"
-                    value={customerName}
-                    onChange={(e) => setCustomerName(e.target.value)}
-                    inputProps={{ maxLength: 100 }}
-                  />
-                </Grid>
-
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="Teléfono"
-                    placeholder="809-555-1234"
-                    value={customerPhone}
-                    onChange={(e) => setCustomerPhone(e.target.value)}
-                    inputProps={{ maxLength: 20 }}
-                  />
-                </Grid>
-
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    type="number"
-                    label="Multiplicador Global"
-                    value={globalMultiplier}
-                    onChange={(e) => setGlobalMultiplier(e.target.value)}
-                    inputProps={{ min: 1, max: 100, step: 0.01 }}
-                  />
-                </Grid>
-
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    type="number"
-                    label="Descuento Global (%)"
-                    value={globalDiscount}
-                    onChange={(e) => setGlobalDiscount(e.target.value)}
-                    inputProps={{ min: 0, max: 100, step: 0.01 }}
-                  />
-                </Grid>
-
-                <Grid item xs={12}>
-                  <TextField
-                    fullWidth
-                    multiline
-                    rows={3}
-                    label="Notas"
-                    placeholder="Notas adicionales..."
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    inputProps={{ maxLength: 500 }}
-                  />
-                </Grid>
-              </Grid>
-            </CardContent>
-          </Card>
-
-          {/* SECCIÓN 4: RESUMEN Y CREAR */}
-          <Paper sx={{ padding: 3, bgcolor: '#e9ecef' }}>
-            <Typography variant="h6" sx={{ marginBottom: 2, color: '#51cbce' }}>
-              💰 Resumen del Ticket
-            </Typography>
-
-            <Box sx={{ marginBottom: 3 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', marginBottom: 1 }}>
-                <Typography><strong>Total Líneas:</strong></Typography>
-                <Typography>{lines.length}</Typography>
-              </Box>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', marginBottom: 1 }}>
-                <Typography><strong>Total Apostado:</strong></Typography>
-                <Typography>${totals.totalBet}</Typography>
-              </Box>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', marginBottom: 1 }}>
-                <Typography><strong>Comisión (10%):</strong></Typography>
-                <Typography sx={{ color: '#dc3545' }}>-${totals.totalCommission}</Typography>
-              </Box>
-              <Box sx={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                paddingTop: 2,
-                borderTop: '2px solid #51cbce'
-              }}>
-                <Typography variant="h6"><strong>TOTAL A COBRAR:</strong></Typography>
-                <Typography variant="h6" sx={{ color: '#51cbce', fontWeight: 'bold' }}>
-                  ${totals.grandTotal}
-                </Typography>
-              </Box>
-            </Box>
-
-            <Box sx={{ display: 'flex', gap: 2 }}>
-              <Button
-                fullWidth
-                variant="contained"
-                startIcon={<Receipt size={20} />}
-                onClick={handleCreateTicket}
-                disabled={lines.length === 0}
-                sx={{
-                  bgcolor: lines.length > 0 ? '#51cbce' : '#ccc',
-                  '&:hover': { bgcolor: lines.length > 0 ? '#45b8bb' : '#ccc' }
-                }}
-              >
-                CREAR TICKET
-              </Button>
-
-              <Button
-                fullWidth
-                variant="outlined"
-                startIcon={<RotateCcw size={20} />}
-                onClick={resetForm}
-                sx={{
-                  color: '#6c757d',
-                  borderColor: '#6c757d',
-                  '&:hover': {
-                    borderColor: '#5a6268',
-                    bgcolor: 'rgba(108, 117, 125, 0.04)'
-                  }
-                }}
-              >
-                LIMPIAR
-              </Button>
-            </Box>
-          </Paper>
+          <TicketSummary
+            linesCount={lines.length}
+            totals={totals}
+            onCreateTicket={handleCreateTicket}
+            onReset={resetForm}
+          />
         </Box>
 
-        {/* COLUMNA DERECHA: VISTA PREVIA DEL TICKET */}
-        <Box sx={{
-          flex: '0 0 350px',
-          position: 'sticky',
-          top: 20,
-          maxHeight: '90vh',
-          overflowY: 'auto'
-        }}>
-          <Paper sx={{
-            border: '2px dashed #51cbce',
-            padding: 2,
-            textAlign: 'center'
-          }}>
-            <Typography variant="h6" sx={{ marginBottom: 2, color: '#51cbce' }}>
-              📋 Vista Previa del Ticket
-            </Typography>
-
-            {mockTicketData ? (
-              <Box>
-                <TicketPrintTemplate ticketData={mockTicketData} />
-                <Paper sx={{
-                  marginTop: 2,
-                  padding: 1.5,
-                  bgcolor: '#f8f9fa',
-                  fontSize: '12px',
-                  textAlign: 'left'
-                }}>
-                  <div><strong>Líneas:</strong> {lines.length}</div>
-                  <div><strong>Total:</strong> ${totals.grandTotal}</div>
-                  {customerName && <div><strong>Cliente:</strong> {customerName}</div>}
-                </Paper>
-              </Box>
-            ) : (
-              <Box sx={{ padding: 5, color: '#999' }}>
-                <Typography variant="h1" sx={{ fontSize: '48px' }}>🎫</Typography>
-                <Typography>Agrega líneas para ver</Typography>
-                <Typography>la vista previa del ticket</Typography>
-              </Box>
-            )}
-          </Paper>
-        </Box>
+        {/* Right Column: Preview */}
+        <TicketPreview
+          mockTicketData={mockTicketData}
+          linesCount={lines.length}
+          totals={totals}
+          customerName={customerName}
+        />
       </Box>
     </Box>
   );
