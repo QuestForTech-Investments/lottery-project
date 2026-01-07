@@ -381,3 +381,39 @@ export const isPlay4OnlyDraw = (drawName: string): boolean => {
   const normalizedName = drawName.toUpperCase().trim();
   return PLAY4_ONLY_DRAWS.some(d => normalizedName.includes(d) || d.includes(normalizedName));
 };
+
+// =============================================================================
+// Validation Functions
+// =============================================================================
+
+import type { DrawResultRow } from '../types';
+
+interface ValidationResult {
+  valid: boolean;
+  error: string | null;
+}
+
+/**
+ * Validate a result row before saving
+ */
+export const validateResultRow = (row: DrawResultRow): ValidationResult => {
+  if (row.num1 && !isValidLotteryNumber(row.num1)) {
+    return { valid: false, error: `"${row.num1}" no es un numero valido (debe ser 2 digitos)` };
+  }
+  if (row.num2 && !isValidLotteryNumber(row.num2)) {
+    return { valid: false, error: `"${row.num2}" no es un numero valido (debe ser 2 digitos)` };
+  }
+  if (row.num3 && !isValidLotteryNumber(row.num3)) {
+    return { valid: false, error: `"${row.num3}" no es un numero valido (debe ser 2 digitos)` };
+  }
+
+  const combined = row.num1 + row.num2 + row.num3;
+  if (combined && hasDateLikePattern(combined)) {
+    return {
+      valid: false,
+      error: `El resultado "${combined}" parece una fecha. Verifique los numeros.`,
+    };
+  }
+
+  return { valid: true, error: null };
+};

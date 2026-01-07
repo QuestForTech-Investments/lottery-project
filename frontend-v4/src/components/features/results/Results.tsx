@@ -60,48 +60,23 @@ import {
 } from './constants';
 import {
   getMaxLength,
-  getIndividualMaxLength,
-  getFieldWidth,
   getEnabledFields,
-  isValidLotteryNumber,
-  hasDateLikePattern,
   sanitizeNumberInput,
   calculateUsaFields,
   isUsaTriggerField,
   calculatePlay4OnlyFields,
   isPlay4OnlyDraw,
+  validateResultRow,
 } from './utils';
-import { getDrawCategory, DRAW_CATEGORIES } from '@services/betTypeCompatibilityService';
-import { ResultsTableRow, IndividualResultForm, ResultsLogsTab, ViewDetailsDialog } from './components';
-
-// =============================================================================
-// Validation Helpers
-// =============================================================================
-
-/**
- * Validate a result row before saving
- */
-const validateResultRow = (row: DrawResultRow): { valid: boolean; error: string | null } => {
-  if (row.num1 && !isValidLotteryNumber(row.num1)) {
-    return { valid: false, error: `"${row.num1}" no es un número válido (debe ser 2 dígitos)` };
-  }
-  if (row.num2 && !isValidLotteryNumber(row.num2)) {
-    return { valid: false, error: `"${row.num2}" no es un número válido (debe ser 2 dígitos)` };
-  }
-  if (row.num3 && !isValidLotteryNumber(row.num3)) {
-    return { valid: false, error: `"${row.num3}" no es un número válido (debe ser 2 dígitos)` };
-  }
-
-  const combined = row.num1 + row.num2 + row.num3;
-  if (combined && hasDateLikePattern(combined)) {
-    return {
-      valid: false,
-      error: `El resultado "${combined}" parece una fecha. Verifique los números.`,
-    };
-  }
-
-  return { valid: true, error: null };
-};
+import { getDrawCategory } from '@services/betTypeCompatibilityService';
+import {
+  ResultsTableRow,
+  ResultsLogsTab,
+  ViewDetailsDialog,
+  StatusFilterTabs,
+  ResultEntryForm,
+  type StatusFilterType,
+} from './components';
 
 // =============================================================================
 // Main Component
@@ -136,8 +111,8 @@ const Results = (): React.ReactElement => {
   // Filter state for table
   const [drawFilter, setDrawFilter] = useState<string>('');
 
-  // Status filter: 'all' | 'pending' | 'completed'
-  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'completed'>('all');
+  // Status filter
+  const [statusFilter, setStatusFilter] = useState<StatusFilterType>('all');
 
 
   // Filter state for logs tab
@@ -196,174 +171,6 @@ const Results = (): React.ReactElement => {
     });
     return map;
   }, [drawResults]);
-
-  /**
-   * Parse winning numbers string and return formatted display with labels and badges
-   * Input format could be: "405691" (6 digits) or with additional numbers like "405691741344974134"
-   * The winningNumbers field from API contains the formatted string ready to display
-   */
-  const renderWinningNumbers = useCallback((winningNumbers: string) => {
-    if (!winningNumbers) return '-';
-
-    // If the API already returns formatted string like "1ra: 40, 2da: 56, 3ra: 91"
-    // Parse it and create badges. Otherwise, try to parse raw numbers.
-
-    // Try to detect if it's already formatted with labels
-    if (winningNumbers.includes(':') || winningNumbers.includes('1ra')) {
-      // Already formatted, parse and display with badges
-      const parts = winningNumbers.split(/[,;]/).map(p => p.trim()).filter(Boolean);
-      return (
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, alignItems: 'center' }}>
-          {parts.map((part, idx) => {
-            const match = part.match(/^(.+?)[:.]?\s*(\d+)$/);
-            if (match) {
-              const [, label, value] = match;
-              return (
-                <Box key={idx} sx={{ display: 'flex', alignItems: 'center', gap: 0.3 }}>
-                  <Typography variant="caption" sx={{ color: '#666', fontSize: '11px' }}>
-                    {label.trim()}
-                  </Typography>
-                  <Box
-                    sx={{
-                      bgcolor: '#f0f0f0',
-                      border: '1px solid #ddd',
-                      borderRadius: '4px',
-                      px: 0.8,
-                      py: 0.2,
-                      minWidth: '28px',
-                      textAlign: 'center',
-                    }}
-                  >
-                    <Typography variant="caption" sx={{ fontWeight: 600, fontSize: '12px', color: '#333' }}>
-                      {value}
-                    </Typography>
-                  </Box>
-                </Box>
-              );
-            }
-            return null;
-          })}
-        </Box>
-      );
-    }
-
-    // If it's raw numbers, try to parse (e.g., "405691" = 40, 56, 91)
-    // Basic format: 6 digits = 3 x 2-digit numbers
-    const cleanNumbers = winningNumbers.replace(/\D/g, '');
-
-    if (cleanNumbers.length >= 6) {
-      const num1 = cleanNumbers.substring(0, 2);
-      const num2 = cleanNumbers.substring(2, 4);
-      const num3 = cleanNumbers.substring(4, 6);
-      const remaining = cleanNumbers.substring(6);
-
-      const labels: { label: string; value: string }[] = [
-        { label: '1ra', value: num1 },
-        { label: '2da', value: num2 },
-        { label: '3ra', value: num3 },
-      ];
-
-      // Parse additional numbers if present (Pick 3: 3 digits, Pick 4: 4 digits, Pick 5: 5 digits)
-      if (remaining.length >= 3) {
-        labels.push({ label: 'Pick 3', value: remaining.substring(0, 3) });
-        const afterCash3 = remaining.substring(3);
-        if (afterCash3.length >= 4) {
-          labels.push({ label: 'Pick 4', value: afterCash3.substring(0, 4) });
-          const afterPlay4 = afterCash3.substring(4);
-          if (afterPlay4.length >= 5) {
-            labels.push({ label: 'Pick 5', value: afterPlay4.substring(0, 5) });
-          }
-        }
-      }
-
-      return (
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, alignItems: 'center' }}>
-          {labels.map((item, idx) => (
-            <Box key={idx} sx={{ display: 'flex', alignItems: 'center', gap: 0.3 }}>
-              <Typography variant="caption" sx={{ color: '#666', fontSize: '11px' }}>
-                {item.label}
-              </Typography>
-              <Box
-                sx={{
-                  bgcolor: '#f0f0f0',
-                  border: '1px solid #ddd',
-                  borderRadius: '4px',
-                  px: 0.8,
-                  py: 0.2,
-                  minWidth: '28px',
-                  textAlign: 'center',
-                }}
-              >
-                <Typography variant="caption" sx={{ fontWeight: 600, fontSize: '12px', color: '#333' }}>
-                  {item.value}
-                </Typography>
-              </Box>
-            </Box>
-          ))}
-        </Box>
-      );
-    }
-
-    // Fallback: just show the raw string
-    return winningNumbers;
-  }, []);
-
-  /**
-   * Render log winning numbers using pre-parsed fields from API
-   * Uses the individual fields (num1, num2, num3, cash3, play4, pick5) from ResultLogDto
-   */
-  const renderLogWinningNumbers = useCallback((log: ResultLogDto) => {
-    const labels: { label: string; value: string }[] = [];
-
-    // Add main numbers (1ra, 2da, 3ra) if present
-    if (log.num1) labels.push({ label: '1ra', value: log.num1 });
-    if (log.num2) labels.push({ label: '2da', value: log.num2 });
-    if (log.num3) labels.push({ label: '3ra', value: log.num3 });
-
-    // Add USA lottery bet types if present
-    if (log.cash3) labels.push({ label: 'Pick 3', value: log.cash3 });
-    if (log.play4) labels.push({ label: 'Pick 4', value: log.play4 });
-    if (log.pick5) labels.push({ label: 'Pick 5', value: log.pick5 });
-
-    // Add derived bet types (Bolita and Singulaccion) if present
-    if (log.bolita1) labels.push({ label: 'Bolita 1', value: log.bolita1 });
-    if (log.bolita2) labels.push({ label: 'Bolita 2', value: log.bolita2 });
-    if (log.singulaccion1) labels.push({ label: 'Singulaccion 1', value: log.singulaccion1 });
-    if (log.singulaccion2) labels.push({ label: 'Singulaccion 2', value: log.singulaccion2 });
-    if (log.singulaccion3) labels.push({ label: 'Singulaccion 3', value: log.singulaccion3 });
-
-    // If no labels, show fallback
-    if (labels.length === 0) {
-      return log.winningNumbers || '-';
-    }
-
-    return (
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, alignItems: 'center' }}>
-        {labels.map((item, idx) => (
-          <Box key={idx} sx={{ display: 'flex', alignItems: 'center', gap: 0.3 }}>
-            <Typography variant="caption" sx={{ color: '#666', fontSize: '11px' }}>
-              {item.label}
-            </Typography>
-            <Box
-              sx={{
-                bgcolor: '#f0f0f0',
-                border: '1px solid #ddd',
-                borderRadius: '4px',
-                px: 0.8,
-                py: 0.2,
-                minWidth: '28px',
-                textAlign: 'center',
-              }}
-            >
-              <Typography variant="caption" sx={{ fontWeight: 600, fontSize: '12px', color: '#333' }}>
-                {item.value}
-              </Typography>
-            </Box>
-          </Box>
-        ))}
-      </Box>
-    );
-  }, []);
 
   // ---------------------------------------------------------------------------
   // Data Loading
@@ -567,7 +374,7 @@ const Results = (): React.ReactElement => {
   const handleIndividualFormChange = useCallback(
     (field: keyof IndividualResultFormType, value: string, enabledFieldsList?: string[]) => {
       const sanitizedValue = sanitizeNumberInput(value);
-      const maxLength = getIndividualMaxLength(field);
+      const maxLength = getMaxLength(field);
 
       actions.setIndividualForm({ [field]: sanitizedValue });
 
@@ -916,7 +723,7 @@ const Results = (): React.ReactElement => {
           if (r.drawId !== row.drawId) return r;
           return {
             ...r,
-            resultId: undefined,
+            resultId: null,
             num1: '',
             num2: '',
             num3: '',
@@ -1192,74 +999,11 @@ const Results = (): React.ReactElement => {
                 </Typography>
 
                 {/* Status Filter Tabs */}
-                <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
-                  <Button
-                    variant={statusFilter === 'all' ? 'contained' : 'outlined'}
-                    size="small"
-                    onClick={() => setStatusFilter('all')}
-                    sx={{
-                      borderRadius: 20,
-                      textTransform: 'none',
-                      fontWeight: 600,
-                      px: 2,
-                      py: 0.5,
-                      fontSize: '13px',
-                      bgcolor: statusFilter === 'all' ? COLORS.primary : 'transparent',
-                      borderColor: statusFilter === 'all' ? COLORS.primary : '#ccc',
-                      color: statusFilter === 'all' ? '#fff' : '#666',
-                      '&:hover': {
-                        bgcolor: statusFilter === 'all' ? COLORS.primaryHover : '#f5f5f5',
-                        borderColor: COLORS.primary,
-                      },
-                    }}
-                  >
-                    Todos ({filterCounts.all})
-                  </Button>
-                  <Button
-                    variant={statusFilter === 'pending' ? 'contained' : 'outlined'}
-                    size="small"
-                    onClick={() => setStatusFilter('pending')}
-                    sx={{
-                      borderRadius: 20,
-                      textTransform: 'none',
-                      fontWeight: 600,
-                      px: 2,
-                      py: 0.5,
-                      fontSize: '13px',
-                      bgcolor: statusFilter === 'pending' ? '#f5a623' : 'transparent',
-                      borderColor: statusFilter === 'pending' ? '#f5a623' : '#ccc',
-                      color: statusFilter === 'pending' ? '#fff' : '#666',
-                      '&:hover': {
-                        bgcolor: statusFilter === 'pending' ? '#e69500' : '#fff8e1',
-                        borderColor: '#f5a623',
-                      },
-                    }}
-                  >
-                    Sin resultado ({filterCounts.pending})
-                  </Button>
-                  <Button
-                    variant={statusFilter === 'completed' ? 'contained' : 'outlined'}
-                    size="small"
-                    onClick={() => setStatusFilter('completed')}
-                    sx={{
-                      borderRadius: 20,
-                      textTransform: 'none',
-                      fontWeight: 600,
-                      px: 2,
-                      py: 0.5,
-                      fontSize: '13px',
-                      bgcolor: statusFilter === 'completed' ? '#4caf50' : 'transparent',
-                      borderColor: statusFilter === 'completed' ? '#4caf50' : '#ccc',
-                      color: statusFilter === 'completed' ? '#fff' : '#666',
-                      '&:hover': {
-                        bgcolor: statusFilter === 'completed' ? '#43a047' : '#e8f5e9',
-                        borderColor: '#4caf50',
-                      },
-                    }}
-                  >
-                    Con resultado ({filterCounts.completed})
-                  </Button>
-                </Box>
+                <StatusFilterTabs
+                  statusFilter={statusFilter}
+                  filterCounts={filterCounts}
+                  onFilterChange={setStatusFilter}
+                />
 
                 {/* Action buttons and filter */}
                 <Box sx={{ display: 'flex', gap: 1, mb: 1, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' }}>

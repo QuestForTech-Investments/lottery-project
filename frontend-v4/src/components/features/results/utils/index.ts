@@ -17,4 +17,5 @@ export {
   isUsaTriggerField,
   calculatePlay4OnlyFields,
   isPlay4OnlyDraw,
+  validateResultRow,
 } from './fieldConfig';
