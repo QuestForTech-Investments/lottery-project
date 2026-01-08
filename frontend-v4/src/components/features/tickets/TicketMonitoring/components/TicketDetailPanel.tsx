@@ -18,7 +18,7 @@ import type { MappedTicketLine } from '../../../../../services/ticketService';
 
 const PANEL_STYLES = {
   container: {
-    backgroundColor: '#fff',
+    backgroundColor: '#e3e3e3',
     borderRadius: '12px',
     boxShadow: 'rgba(0, 0, 0, 0.15) 0px 6px 10px -4px',
     fontFamily: 'Montserrat, "Helvetica Neue", Arial, sans-serif',
@@ -31,7 +31,7 @@ const PANEL_STYLES = {
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: '12px 15px',
-    borderBottom: '1px solid #e8e8e8',
+    borderBottom: '1px solid #ccc',
   },
   headerTitle: {
     fontSize: '14px',
@@ -55,7 +55,7 @@ const PANEL_STYLES = {
   infoSection: {
     textAlign: 'center' as const,
     padding: '10px 15px',
-    borderBottom: '1px solid #e8e8e8',
+    borderBottom: '1px solid #ccc',
   },
   infoText: {
     fontSize: '12px',
@@ -86,20 +86,20 @@ const PANEL_STYLES = {
     fontWeight: 400,
     color: 'rgb(37, 36, 34)',
     padding: '10px 15px',
-    borderBottom: '1px solid #e8e8e8',
+    borderBottom: '1px solid #ccc',
   },
   lotteryHeader: {
     fontSize: '14px',
     fontWeight: 400,
     color: 'rgb(102, 97, 91)',
     padding: '8px 8px 0 8px',
-    borderBottom: '1px solid #e8e8e8',
-    backgroundColor: '#fff',
+    borderBottom: '1px solid #ccc',
+    backgroundColor: '#e3e3e3',
   },
   tableHeader: {
     display: 'flex',
     backgroundColor: 'transparent',
-    borderBottom: '1px solid #e8e8e8',
+    borderBottom: '1px solid #ccc',
   },
   tableHeaderCell: {
     fontSize: '11.2px',
