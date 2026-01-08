@@ -4,29 +4,12 @@ Sistema de lotería con frontend React (TypeScript) y API (.NET).
 
 ---
 
-## 🎰 SINCRONIZACIÓN DE RESULTADOS
-
-**IMPORTANTE:** NO usar acceso directo a la API de lotocompany (`api.lotocompany.com`).
-
-Los datos de resultados de lotería se obtienen mediante **web scraping de la aplicación original**:
-- **URL:** https://la-numbers.apk.lol
-- **Credenciales:** `oliver` / `oliver0597@`
-- **Método:** Playwright para extraer datos visualmente de la interfaz
-
-**Razón:** La API de lotocompany bloquea acceso directo (returns "Forbidden").
-
-**Configuración:**
-- `appsettings.json` → `Lotocompany.IsEnabled: false`
-- El sync worker `LotocompanySyncWorker.cs` está deshabilitado
-
----
-
 ## 🚨 FRONTEND: frontend-v4
 
 **IMPORTANTE:** Todo el desarrollo de frontend se realiza en `frontend-v4`.
 
 ```bash
-cd frontend-v4 && npm run dev  # Puerto 5173
+cd frontend-v4 && npm run dev  # Puerto 4001
 ```
 
 ---
@@ -66,16 +49,6 @@ interface Bet {
   betAmount: number;   // ✅
 }
 
-// ❌ INCORRECTO - Variables en español
-const selectedBanca = useState();
-const jugadasDirecto = [];
-function calcularTotal() {}
-
-// ✅ CORRECTO - Variables en inglés
-const selectedPool = useState();
-const directBets = [];
-function calculateTotal() {}
-
 // ✅ UI EN ESPAÑOL (esto SÍ está bien)
 <Button>Crear Ticket</Button>
 <Typography>Seleccione un sorteo</Typography>
@@ -95,29 +68,29 @@ placeholder="Buscar banca..."
 ### Proceso de Rutas (3 Pasos)
 
 ```typescript
-// 1. Crear componente
-// 2. Agregar ruta en App.tsx
-<Route path="/entities/list" element={<Component />} />
+// 1. Crear componente en src/components/features/
+// 2. Agregar lazy import y ruta en App.tsx
+const ComponentMUI = lazy(() => import('@components/features/module/Component'))
+<Route path="/module/path" element={<LazyRoute component={ComponentMUI} />} />
 // 3. Conectar en menuItems.ts ⚠️ NO OLVIDAR
-{ path: '/entities/list', label: 'Lista' }
+{ path: '/module/path', label: 'Nombre Visible' }
 ```
 
 ---
 
-## 📦 ESTRUCTURA
+## 📦 ESTRUCTURA DEL PROYECTO
 
 ```
 lottery-project/
-├── CLAUDE.md              # Este archivo
-├── DESIGN_SYSTEM.md       # Colores, tipografía, componentes
+├── CLAUDE.md                    # Este archivo
+├── DESIGN_SYSTEM.md             # Colores, tipografía, componentes
 ├── docs/
-│   ├── FIXES_HISTORY.md           # Historial de fixes
-│   ├── MAINTAINABILITY_ANALYSIS.md # Análisis de código
-│   ├── API_ENDPOINTS_MAPPING.md   # Endpoints Vue.js original
-│   └── migration/                  # Documentación migración
-├── frontend-v4/           # React + TypeScript + Material-UI (puerto 5173)
-├── api/                   # .NET 8.0 API (puerto 5000)
-└── database/              # Scripts SQL
+│   ├── FIXES_HISTORY.md         # Historial de fixes
+│   ├── TPV_ROUTING_ARCHITECTURE.md  # Arquitectura routing TPV
+│   └── migration/               # Documentación migración
+├── frontend-v4/                 # React + TypeScript + MUI (puerto 4001)
+├── api/                         # .NET 8.0 API (puerto 5000)
+└── database/                    # Scripts SQL
 ```
 
 ---
@@ -126,9 +99,194 @@ lottery-project/
 
 | Componente | Tecnología | Puerto |
 |------------|------------|--------|
-| Frontend | React 18 + Vite + TypeScript + Material-UI | 5173 |
+| Frontend | React 18 + Vite + TypeScript + Material-UI | 4001 |
 | API Backend | .NET 8.0 + EF Core 8.0 | 5000 |
-| Database | SQL Server | 1433 |
+| Database | Azure SQL Server | 1433 |
+
+---
+
+## 📂 ESTRUCTURA DEL FRONTEND
+
+```
+frontend-v4/src/
+├── components/
+│   ├── common/              # Componentes reutilizables
+│   │   ├── ErrorBoundary.tsx
+│   │   ├── LazyRoute.tsx
+│   │   └── PrivateRoute.tsx
+│   ├── layout/
+│   │   └── MainLayout/      # Layout principal con sidebar
+│   └── features/            # Módulos por funcionalidad
+│       ├── balances/        # Balances (bancas, bancos, zonas, grupos)
+│       ├── betting-pools/   # Gestión de bancas
+│       ├── collectors/      # Cobradores
+│       ├── dashboard/       # Dashboard widgets
+│       ├── draws/           # Sorteos y horarios
+│       ├── excesses/        # Excedentes
+│       ├── expenses/        # Categorías de gastos
+│       ├── external-agents/ # Agentes externos
+│       ├── f8/              # Monitor F8
+│       ├── limits/          # Límites y números calientes
+│       ├── loans/           # Préstamos
+│       ├── payments/        # Cobros y pagos
+│       ├── results/         # Resultados de lotería
+│       ├── sales/           # Ventas (diarias, históricas, por fecha)
+│       ├── tickets/         # Tickets (crear, monitoreo, jugadas)
+│       ├── transactions/    # Transacciones contables
+│       ├── users/           # Gestión de usuarios
+│       └── zones/           # Zonas
+├── constants/
+│   └── menuItems.ts         # Configuración del menú sidebar
+├── context/                 # React Context providers
+├── hooks/                   # Custom hooks globales
+├── pages/
+│   ├── LoginMUI.tsx
+│   └── DashboardMUI.tsx
+├── services/                # Servicios API
+├── types/                   # Tipos TypeScript globales
+└── utils/                   # Utilidades
+```
+
+---
+
+## 🛣️ RUTAS IMPLEMENTADAS
+
+### Dashboard
+| Ruta | Componente |
+|------|------------|
+| `/dashboard` | DashboardMUI |
+
+### Usuarios
+| Ruta | Componente |
+|------|------------|
+| `/users/list` | UsersTabbedMUI (con tabs: Lista, Administradores, Bancas) |
+| `/users/new` | CreateUserMUI |
+| `/users/edit/:userId` | EditUserMUI |
+| `/users/login-history` | UserSessionsMUI |
+| `/users/blocked-sessions` | UserBlockedSessionsMUI |
+
+### Bancas
+| Ruta | Componente |
+|------|------------|
+| `/betting-pools/list` | BettingPoolsListMUI |
+| `/betting-pools/new` | CreateBettingPoolMUI |
+| `/betting-pools/edit/:id` | EditBettingPoolMUI |
+| `/betting-pools/mass-edit` | MassEditBettingPoolsMUI |
+| `/betting-pools/access` | BettingPoolAccessMUI |
+| `/betting-pools/clear-pending` | CleanPendingPaymentsMUI |
+| `/betting-pools/no-sales` | BettingPoolsWithoutSalesMUI |
+| `/betting-pools/days-report` | DaysWithoutSalesReportMUI |
+
+### Tickets
+| Ruta | Componente |
+|------|------------|
+| `/tickets/new` | CreateTicketsMUI |
+| `/tickets/monitoring` | TicketMonitoringMUI |
+| `/tickets/external-agents` | ExternalAgentsMonitoringMUI |
+| `/tickets/plays` | PlayMonitoringMUI |
+| `/tickets/winners` | WinningPlaysMUI |
+| `/tickets/board` | BlackboardMUI |
+| `/tickets/anomalies` | TicketAnomaliesMUI |
+
+### Ventas
+| Ruta | Componente |
+|------|------------|
+| `/sales/day` | DailySalesMUI |
+| `/sales/history` | HistoricalSalesMUI |
+| `/sales/by-date` | SalesByDateMUI |
+| `/sales/prizes` | PlayTypePrizesMUI |
+| `/sales/percentages` | PlayTypePrizesPercentagesMUI |
+| `/sales/betting-pools` | BettingPoolSalesMUI |
+| `/sales/zones` | ZoneSalesMUI |
+
+### Balances
+| Ruta | Componente |
+|------|------------|
+| `/balances/betting-pools` | BettingPoolBalancesMUI |
+| `/balances/banks` | BankBalancesMUI |
+| `/balances/zones` | ZoneBalancesMUI |
+| `/balances/groups` | GroupBalancesMUI |
+
+### Transacciones
+| Ruta | Componente |
+|------|------------|
+| `/accountable-transactions` | TransactionsListMUI |
+| `/accountable-transactions/betting-pool` | TransactionsByBettingPoolMUI |
+| `/accountable-transactions/summary` | TransactionsSummaryMUI |
+| `/accountable-transactions-groups` | TransactionGroupsListMUI |
+| `/accountable-transaction-approvals` | TransactionApprovalsMUI |
+
+### Otros Módulos
+| Ruta | Componente |
+|------|------------|
+| `/results` | ResultsMUI |
+| `/zones/list` | ZonesListMUI |
+| `/zones/new` | CreateZoneMUI |
+| `/zones/edit/:id` | EditZoneMUI |
+| `/zones/manage` | ManageZonesMUI |
+| `/draws/list` | DrawsListMUI |
+| `/draws/schedules` | DrawSchedulesMUI |
+| `/limits/list` | LimitsListMUI |
+| `/limits/new` | CreateLimitMUI |
+| `/limits/automatic` | AutomaticLimitsMUI |
+| `/limits/hot-numbers` | HotNumbersMUI |
+| `/loans/list` | LoansListMUI |
+| `/loans/new` | CreateLoanMUI |
+| `/surpluses/manage` | ManageExcessesMUI |
+| `/surpluses/report` | ExcessesReportMUI |
+| `/collectors` | DebtCollectorsMUI |
+| `/collector-management` | ManageDebtCollectorsMUI |
+| `/f8` | F8MonitorMUI |
+| `/external-agents/list` | ExternalAgentsListMUI |
+| `/external-agents/new` | CreateExternalAgentMUI |
+| `/entities/list` | AccountableEntitiesMUI |
+| `/entities/new` | CreateAccountableEntityMUI |
+| `/receivers/list` | EmailReceiversListMUI |
+| `/receivers/new` | CreateEmailReceiverMUI |
+| `/expenses/categories` | ExpenseCategoriesMUI |
+| `/collections-payments/list` | CollectionsPaymentsListMUI |
+| `/my-group/configuration` | GroupConfigurationMUI |
+
+---
+
+## 📡 SERVICIOS API
+
+```
+frontend-v4/src/services/
+├── api.ts                      # Cliente HTTP base (axios)
+├── authService.ts              # Login, logout, token management
+├── bettingPoolService.ts       # CRUD bancas
+├── betTypeCompatibilityService.ts
+├── branchService.ts
+├── drawScheduleService.ts      # Horarios de sorteos
+├── drawService.ts              # Sorteos
+├── lotteryService.ts           # Loterías
+├── permissionService.ts        # Permisos de usuario
+├── playService.ts              # Jugadas
+├── prizeFieldService.ts        # Campos de premio
+├── prizeService.ts             # Configuración de premios
+├── resultsService.ts           # Resultados de lotería
+├── roleService.ts              # Roles
+├── scheduleService.ts          # Horarios
+├── sortitionService.ts
+├── ticketService.ts            # Tickets CRUD
+├── userService.ts              # Usuarios CRUD
+├── winningPlayService.ts       # Jugadas ganadoras
+└── zoneService.ts              # Zonas
+```
+
+---
+
+## 🎰 SINCRONIZACIÓN DE RESULTADOS
+
+**IMPORTANTE:** NO usar acceso directo a la API de lotocompany (`api.lotocompany.com`).
+
+Los datos de resultados de lotería se obtienen mediante **web scraping de la aplicación original**:
+- **URL:** https://la-numbers.apk.lol
+- **Credenciales:** `oliver` / `oliver0597@`
+- **Método:** Playwright para extraer datos visualmente de la interfaz
+
+**Razón:** La API de lotocompany bloquea acceso directo (returns "Forbidden").
 
 ---
 
@@ -145,7 +303,7 @@ dotnet run --urls "http://0.0.0.0:5000"
 cd frontend-v4 && npm install && npm run dev
 
 # Verificar puertos
-lsof -ti:5173  # Frontend
+lsof -ti:4001  # Frontend
 lsof -ti:5000  # API
 ```
 
@@ -155,60 +313,27 @@ lsof -ti:5000  # API
 
 | Uso | Usuario | Contraseña |
 |-----|---------|------------|
-| Login | `admin` | `Admin123456` |
+| Login Local | `admin` | `Admin123456` |
 | Vue.js Original | `oliver` | `oliver0597@` |
 
 **Banca de Prueba:** ID 9, Nombre: admin, Código: RB003333
 
 ---
 
-## 📂 ESTRUCTURA DEL FRONTEND
-
-```
-frontend-v4/src/
-├── components/features/
-│   └── betting-pools/
-│       ├── EditBettingPool/
-│       │   └── hooks/     # Custom hooks para estado
-│       └── tabs/
-├── services/
-│   └── prizeService.ts    # Con transformación prizeTypes → prizeFields
-└── constants/menuItems.ts
-```
-
----
-
-## 📂 API BACKEND
-
-### Endpoints Principales
-
-```
-POST   /api/auth/login
-GET    /api/bet-types/with-fields      # Bet types con prize fields
-GET    /api/betting-pools
-GET    /api/betting-pools/{id}
-GET    /api/betting-pools/{id}/prize-config
-PATCH  /api/betting-pools/{id}/prize-config
-GET    /api/draws
-GET    /api/zones
-GET    /health
-```
-
-### Estructura
-```
-api/src/LotteryApi/
-├── Controllers/
-│   ├── AuthController.cs
-│   ├── BettingPoolsController.cs
-│   └── DrawsController.cs
-├── Models/
-├── DTOs/
-└── Validators/
-```
-
----
-
 ## 📋 PATRONES Y CONVENCIONES
+
+### Estructura de Componentes Feature
+
+```
+components/features/module-name/
+├── ComponentName/
+│   ├── index.tsx           # Componente principal
+│   ├── hooks/
+│   │   └── useComponentName.ts  # Custom hook con lógica
+│   ├── components/         # Sub-componentes (opcional)
+│   ├── types.ts            # Tipos locales (opcional)
+│   └── constants.ts        # Constantes locales (opcional)
+```
 
 ### Nomenclatura
 
@@ -219,33 +344,24 @@ api/src/LotteryApi/
 | TypeScript/React | camelCase/PascalCase | `getPrizeFields`, `PrizesTab.tsx` |
 | CSS | kebab-case | `prize-field-input` |
 
-### Transformación Prize Fields (IMPORTANTE)
-
-```typescript
-// API devuelve prizeTypes, frontend espera prizeFields
-// Transformar SIEMPRE en service layer:
-data.forEach(betType => {
-  if (betType.prizeTypes) {
-    betType.prizeFields = betType.prizeTypes;
-  }
-});
-```
-
 ### API Response Pattern
 
 ```typescript
 // api.get() retorna DATA directamente (no response.data)
 const data = await api.get('/endpoint');  // ← Ya es data
+
+// Para respuestas paginadas:
+const items = response.items || response;
 ```
 
 ### useEffect Dependencies
 
 ```typescript
 // ❌ Objeto como dependencia - re-render cada vez
-useEffect(() => {}, [selectedSorteo]);
+useEffect(() => {}, [selectedItem]);
 
 // ✅ Primitivo como dependencia
-useEffect(() => {}, [selectedSorteo?.sorteo_id]);
+useEffect(() => {}, [selectedItem?.id]);
 ```
 
 ---
@@ -278,20 +394,8 @@ sx={{
 
 1. **CORS:** API tiene CORS habilitado para todos los orígenes
 2. **Respuestas paginadas:** `response.items || response` para arrays
-
----
-
-## 🚨 MIGRACIÓN VUE.JS
-
-**Aplicación original:** https://la-numbers.apk.lol
-
-**Estrategia:**
-1. Análisis con Playwright
-2. Ingeniería inversa de endpoints
-3. Replicar en React
-4. Conectar a API .NET
-
-**Documentación:** Ver `docs/migration/VUE_APP_ANALYSIS.md`
+3. **Lazy Loading:** Todos los componentes feature usan `React.lazy()`
+4. **Puerto Frontend:** Configurado en `vite.config.ts` como `4001`
 
 ---
 
@@ -300,24 +404,8 @@ sx={{
 | Archivo | Contenido |
 |---------|-----------|
 | `docs/FIXES_HISTORY.md` | Historial detallado de fixes |
-| `docs/MAINTAINABILITY_ANALYSIS.md` | Análisis de calidad de código |
-| `docs/API_ENDPOINTS_MAPPING.md` | Endpoints de API Vue.js original |
+| `docs/TPV_ROUTING_ARCHITECTURE.md` | Arquitectura de routing TPV vs Admin |
 | `DESIGN_SYSTEM.md` | Sistema de diseño completo |
-
----
-
-## 🔧 SCRIPTS DE UTILIDAD
-
-```bash
-# Verificar nomenclatura
-./scripts/verify-naming.sh
-
-# Verificar coherencia de diseño
-./scripts/check-design-consistency.sh
-
-# ESLint personalizado
-npx eslint . -c .eslintrc.custom.cjs
-```
 
 ---
 
@@ -338,5 +426,5 @@ curl -H "Authorization: Bearer $TOKEN" http://localhost:5000/api/draws
 
 ---
 
-**Última actualización:** 2025-12-04
-**Versión:** 3.0 (simplificado - solo frontend-v4)
+**Última actualización:** 2026-01-08
+**Versión:** 4.0

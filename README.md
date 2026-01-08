@@ -6,13 +6,12 @@ Sistema completo de gestión de lotería con frontend React + TypeScript + Mater
 
 ```
 lottery-project/
-├── frontend-v4/          # Frontend React + TypeScript + MUI (Puerto 5173)
+├── frontend-v4/          # Frontend React + TypeScript + MUI (Puerto 4001)
 ├── api/                  # Backend .NET 8.0 (Puerto 5000)
-├── database/             # Scripts SQL y migraciones
-├── docs/                 # Documentación
-├── CLAUDE.md            # Documentación completa del proyecto
-├── DESIGN_SYSTEM.md     # Sistema de diseño
-└── scripts/             # Scripts de utilidad
+├── database/             # Scripts SQL y documentación BD
+├── docs/                 # Documentación general
+├── CLAUDE.md             # Guía de desarrollo y convenciones
+└── DESIGN_SYSTEM.md      # Sistema de diseño
 ```
 
 ## 🚀 Inicio Rápido
@@ -20,8 +19,6 @@ lottery-project/
 ### API (.NET)
 ```bash
 cd api/src/LotteryApi
-export DOTNET_ROOT=$HOME/.dotnet
-export PATH=$PATH:$HOME/.dotnet:$HOME/.dotnet/tools
 dotnet run --urls "http://0.0.0.0:5000"
 ```
 
@@ -34,7 +31,7 @@ npm run dev
 
 ### Verificar puertos
 ```bash
-lsof -ti:5173  # Frontend
+lsof -ti:4001  # Frontend
 lsof -ti:5000  # API
 ```
 
@@ -45,41 +42,106 @@ lsof -ti:5000  # API
 
 ## 🌐 URLs de Acceso
 
-- **Frontend:** http://localhost:5173
+- **Frontend:** http://localhost:4001
 - **API:** http://localhost:5000
+- **Swagger:** http://localhost:5000/swagger
 
 ## 📚 Módulos Implementados
 
-### ✅ Completados
-- Dashboard
-- Bancas (CRUD + Edición Masiva)
-- Usuarios
-- Zonas
-- Balances
-- Ventas
-- Transacciones
-- Préstamos
-- Excedentes
+### Dashboard
+- Panel principal con widgets de cobros/pagos
 
-### 🚧 Pendientes
-- Tickets
-- Resultados
-- Límites
-- Sorteos
+### Usuarios
+- Lista con tabs (Todos, Administradores, Bancas)
+- Crear / Editar usuario
+- Historial de sesiones
+- Sesiones bloqueadas
+
+### Bancas (Betting Pools)
+- Lista completa con filtros
+- Crear / Editar banca (tabs: General, Sorteos, Premios, Comisiones, etc.)
+- Edición masiva
+- Control de acceso
+- Limpiar pendientes de pago
+- Lista sin ventas
+- Reporte de días sin venta
+
+### Tickets
+- Crear ticket (TPV)
+- Monitoreo de tickets
+- Monitoreo de agentes externos
+- Monitor de jugadas
+- Jugadas ganadoras
+- Pizarra
+- Anomalías
+
+### Ventas
+- Ventas del día
+- Histórico de ventas
+- Ventas por fecha
+- Premios por jugada
+- Porcentajes
+- Ventas por banca
+- Ventas por zona
+
+### Resultados
+- Publicación y consulta de resultados de lotería
+
+### Balances
+- Balance por bancas
+- Balance por bancos
+- Balance por zonas
+- Balance por grupos
+
+### Transacciones
+- Lista de transacciones
+- Transacciones por banca
+- Lista por grupos
+- Aprobaciones
+- Resumen
+- Categorías de gastos
+
+### Límites
+- Lista de límites
+- Crear límite
+- Límites automáticos
+- Eliminar límites
+- Números calientes
+
+### Zonas
+- Lista de zonas
+- Crear / Editar zona
+- Manejar zonas
+
+### Sorteos
+- Lista de sorteos
+- Horarios
+
+### Otros Módulos
+- Préstamos (crear, listar)
+- Excedentes (manejar, reportes)
 - Cobradores
-- Agentes Externos
-
-## 📖 Documentación
-
-- **CLAUDE.md** - Documentación completa del proyecto, arquitectura y fixes
-- **DESIGN_SYSTEM.md** - Sistema de diseño (colores, tipografía, componentes)
-- **docs/migration/** - Análisis de la aplicación Vue.js original
+- Manejo de cobradores
+- Agentes externos
+- Entidades contables
+- Receptores de correo
+- Cobros/Pagos
+- Configuración de grupo
+- Monitor F8
 
 ## 🎯 Stack Tecnológico
 
-- **Frontend:** React 18 + Vite + TypeScript + Material-UI v5
-- **Backend:** .NET 8.0 + Entity Framework Core
-- **Database:** SQL Server (Azure SQL)
+| Componente | Tecnología |
+|------------|------------|
+| Frontend | React 18 + Vite + TypeScript + Material-UI v5 |
+| Backend | .NET 8.0 + Entity Framework Core 8.0 |
+| Database | Azure SQL Server |
+
+## 📖 Documentación
+
+- **[CLAUDE.md](./CLAUDE.md)** - Guía completa de desarrollo, rutas y convenciones
+- **[DESIGN_SYSTEM.md](./DESIGN_SYSTEM.md)** - Sistema de diseño (colores, tipografía)
+- **[docs/TPV_ROUTING_ARCHITECTURE.md](./docs/TPV_ROUTING_ARCHITECTURE.md)** - Arquitectura de routing TPV vs Admin
 
 ## 📞 Soporte
 

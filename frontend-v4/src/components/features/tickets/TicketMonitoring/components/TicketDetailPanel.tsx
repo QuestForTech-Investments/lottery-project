@@ -5,12 +5,45 @@
  * Styled to match the original Vue.js application exactly.
  */
 
-import { memo, useMemo, type FC } from 'react';
-import { Box, Typography, IconButton } from '@mui/material';
+import { memo, useMemo, useState, useCallback, type FC } from 'react';
+import {
+  Box,
+  Typography,
+  IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  TextField,
+  Alert,
+} from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
+import EditIcon from '@mui/icons-material/Edit';
 import { formatCurrency } from '../../../../../utils/formatCurrency';
+import ticketService from '../../../../../services/ticketService';
+import type { LinePrizeMultipliers } from '../../../../../services/ticketService';
 import type { TicketDetailPanelProps } from '../types';
 import type { MappedTicketLine } from '../../../../../services/ticketService';
+
+// ============================================================================
+// Prize Edit Modal Types
+// ============================================================================
+
+interface PrizeMultipliers {
+  firstPrize: number;
+  secondPrize: number;
+  thirdPrize: number;
+  doubles: number;
+}
+
+interface PrizeEditModalProps {
+  open: boolean;
+  betNumber: string;
+  multipliers: PrizeMultipliers;
+  onClose: () => void;
+  onSave: (multipliers: PrizeMultipliers) => void;
+}
 
 // ============================================================================
 // Style Constants - Extracted from original Vue.js app
@@ -137,6 +170,127 @@ const LEGEND_COLORS = {
   pendiente: 'rgb(167, 164, 166)',   // Gray
 };
 
+// Default prize multipliers (typical values from original app)
+const DEFAULT_MULTIPLIERS: PrizeMultipliers = {
+  firstPrize: 56,
+  secondPrize: 12,
+  thirdPrize: 4,
+  doubles: 56,
+};
+
+// ============================================================================
+// Prize Edit Modal Component
+// ============================================================================
+
+const PrizeEditModal: FC<PrizeEditModalProps> = memo(({
+  open,
+  betNumber,
+  multipliers,
+  onClose,
+  onSave,
+}) => {
+  const [formData, setFormData] = useState<PrizeMultipliers>(multipliers);
+
+  const handleChange = useCallback((field: keyof PrizeMultipliers) => (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const value = parseInt(e.target.value, 10) || 0;
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  }, []);
+
+  const handleSave = useCallback(() => {
+    onSave(formData);
+    onClose();
+  }, [formData, onSave, onClose]);
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+      <DialogTitle sx={{ fontFamily: 'Montserrat, sans-serif', fontSize: '16px' }}>
+        Modificar premios de jugadas ({betNumber})
+        <IconButton
+          onClick={onClose}
+          sx={{ position: 'absolute', right: 8, top: 8 }}
+        >
+          <CloseIcon />
+        </IconButton>
+      </DialogTitle>
+      <DialogContent>
+        <Alert
+          severity="warning"
+          sx={{
+            mb: 2,
+            backgroundColor: '#f0ad4e',
+            color: '#fff',
+            '& .MuiAlert-icon': { color: '#fff' },
+          }}
+        >
+          IMPORTANTE: para hacer efectivos los cambios a los premios de jugadas deberá re-procesar las ventas.
+        </Alert>
+        <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+          <TextField
+            label="Primer Pago"
+            type="number"
+            value={formData.firstPrize}
+            onChange={handleChange('firstPrize')}
+            size="small"
+            fullWidth
+          />
+          <TextField
+            label="Segundo Pago"
+            type="number"
+            value={formData.secondPrize}
+            onChange={handleChange('secondPrize')}
+            size="small"
+            fullWidth
+          />
+          <TextField
+            label="Tercer Pago"
+            type="number"
+            value={formData.thirdPrize}
+            onChange={handleChange('thirdPrize')}
+            size="small"
+            fullWidth
+          />
+          <TextField
+            label="Dobles"
+            type="number"
+            value={formData.doubles}
+            onChange={handleChange('doubles')}
+            size="small"
+            fullWidth
+          />
+        </Box>
+      </DialogContent>
+      <DialogActions sx={{ px: 3, pb: 2 }}>
+        <Button
+          onClick={onClose}
+          sx={{
+            bgcolor: '#666',
+            color: '#fff',
+            '&:hover': { bgcolor: '#555' },
+            textTransform: 'uppercase',
+          }}
+        >
+          Cancelar
+        </Button>
+        <Button
+          onClick={handleSave}
+          sx={{
+            bgcolor: '#51cbce',
+            color: '#fff',
+            '&:hover': { bgcolor: '#45b8bb' },
+            textTransform: 'uppercase',
+          }}
+        >
+          Actualizar jugada
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+});
+
+PrizeEditModal.displayName = 'PrizeEditModal';
+
 // ============================================================================
 // Helper Components
 // ============================================================================
@@ -146,23 +300,41 @@ interface PlayRowProps {
   index: number;
   isWinner: boolean;
   isPending: boolean;
+  onEditPrize: (betNumber: string) => void;
 }
 
-const PlayRow: FC<PlayRowProps> = memo(({ line, index, isWinner, isPending }) => {
+const PlayRow: FC<PlayRowProps> = memo(({ line, index, isWinner, isPending, onEditPrize }) => {
   const backgroundColor = useMemo(() => {
     if (isWinner) return ROW_COLORS.winner;
     if (isPending) return ROW_COLORS.pending;
     return index % 2 === 0 ? ROW_COLORS.loserEven : ROW_COLORS.loserOdd;
   }, [isWinner, isPending, index]);
 
+  const handleEditClick = useCallback(() => {
+    onEditPrize(line.betNumber);
+  }, [onEditPrize, line.betNumber]);
+
   return (
     <Box sx={{ ...PANEL_STYLES.tableRow, backgroundColor }}>
       <Typography sx={PANEL_STYLES.tableCell}>{line.betNumber}</Typography>
       <Typography sx={PANEL_STYLES.tableCell}>{line.betTypeName || '-'}</Typography>
       <Typography sx={PANEL_STYLES.tableCell}>{formatCurrency(line.betAmount)}</Typography>
-      <Typography sx={PANEL_STYLES.tableCell}>
-        {line.prizeAmount > 0 ? formatCurrency(line.prizeAmount) : '-'}
-      </Typography>
+      <Box sx={{ ...PANEL_STYLES.tableCell, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
+        <Typography component="span">
+          {line.prizeAmount > 0 ? formatCurrency(line.prizeAmount) : '-'}
+        </Typography>
+        <IconButton
+          size="small"
+          onClick={handleEditClick}
+          sx={{
+            p: 0.25,
+            color: 'rgb(102, 97, 91)',
+            '&:hover': { color: 'rgb(37, 36, 34)' },
+          }}
+        >
+          <EditIcon sx={{ fontSize: 14 }} />
+        </IconButton>
+      </Box>
       <Typography sx={PANEL_STYLES.tableCell}>
         {/* Pagado icon placeholder - would be a check/x icon */}
         -
@@ -178,6 +350,10 @@ PlayRow.displayName = 'PlayRow';
 // ============================================================================
 
 const TicketDetailPanel: FC<TicketDetailPanelProps> = memo(({ ticket, onClose }) => {
+  // Modal state for prize editing
+  const [prizeModalOpen, setPrizeModalOpen] = useState(false);
+  const [selectedBetNumber, setSelectedBetNumber] = useState('');
+
   // Group lines by draw/lottery
   const linesByDraw = useMemo(() => {
     if (!ticket.lines || ticket.lines.length === 0) return new Map<string, MappedTicketLine[]>();
@@ -202,6 +378,51 @@ const TicketDetailPanel: FC<TicketDetailPanelProps> = memo(({ ticket, onClose })
 
     return { totalMonto: monto || ticket.monto, totalPremios: premios || ticket.premio, totalPendiente: pendiente };
   }, [ticket]);
+
+  // Handle opening prize edit modal
+  const handleEditPrize = useCallback((betNumber: string) => {
+    setSelectedBetNumber(betNumber);
+    setPrizeModalOpen(true);
+  }, []);
+
+  // Handle closing prize edit modal
+  const handleClosePrizeModal = useCallback(() => {
+    setPrizeModalOpen(false);
+    setSelectedBetNumber('');
+  }, []);
+
+  // Handle saving prize multipliers
+  const handleSavePrizeMultipliers = useCallback(async (multipliers: PrizeMultipliers) => {
+    try {
+      // Find the line to get its ID
+      const line = ticket.lines?.find(l => l.betNumber === selectedBetNumber);
+      const lineId = line?.drawId || 0; // Using drawId as a proxy for lineId
+
+      const apiMultipliers: LinePrizeMultipliers = {
+        firstPrize: multipliers.firstPrize,
+        secondPrize: multipliers.secondPrize,
+        thirdPrize: multipliers.thirdPrize,
+        doubles: multipliers.doubles,
+      };
+
+      const result = await ticketService.updateLinePrizeMultipliers(
+        ticket.id,
+        lineId,
+        selectedBetNumber,
+        apiMultipliers
+      );
+
+      if (result.success) {
+        // Show success feedback (could add a snackbar in the future)
+        console.log('Prize multipliers updated:', result.message);
+      }
+    } catch (error) {
+      console.error('Error saving prize multipliers:', error);
+      // Could show error feedback (snackbar) in the future
+    } finally {
+      handleClosePrizeModal();
+    }
+  }, [ticket.id, ticket.lines, selectedBetNumber, handleClosePrizeModal]);
 
   return (
     <Box sx={PANEL_STYLES.container}>
@@ -276,6 +497,7 @@ const TicketDetailPanel: FC<TicketDetailPanelProps> = memo(({ ticket, onClose })
                 index={index}
                 isWinner={line.prizeAmount > 0}
                 isPending={ticket.estado === 'Pendiente'}
+                onEditPrize={handleEditPrize}
               />
             ))}
           </Box>
@@ -339,6 +561,15 @@ const TicketDetailPanel: FC<TicketDetailPanelProps> = memo(({ ticket, onClose })
           )}
         </Box>
       )}
+
+      {/* Prize Edit Modal */}
+      <PrizeEditModal
+        open={prizeModalOpen}
+        betNumber={selectedBetNumber}
+        multipliers={DEFAULT_MULTIPLIERS}
+        onClose={handleClosePrizeModal}
+        onSave={handleSavePrizeMultipliers}
+      />
     </Box>
   );
 });

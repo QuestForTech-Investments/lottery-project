@@ -9,6 +9,7 @@ import { useSearchParams } from 'react-router-dom';
 import api from '@services/api';
 import ticketService, {
   mapTicketResponse,
+  mapTicketWithLines,
   calculateTicketCounts,
   calculateTicketTotals,
 } from '@services/ticketService';
@@ -308,9 +309,18 @@ export const useTicketMonitoring = (): UseTicketMonitoringReturn => {
   const handleSoloGanadoresChange = useCallback((e: ChangeEvent<HTMLInputElement>) => setSoloGanadores(e.target.checked), []);
   const handleErrorClose = useCallback(() => setError(null), []);
 
-  const handleRowClick = useCallback((ticketId: number) => {
-    const ticket = tickets.find(t => t.id === ticketId);
-    if (ticket) setSelectedTicket(ticket);
+  const handleRowClick = useCallback(async (ticketId: number) => {
+    try {
+      // Fetch ticket detail with lines from API
+      const ticketDetail = await ticketService.getTicketById(ticketId);
+      const mappedTicket = mapTicketWithLines(ticketDetail);
+      setSelectedTicket(mappedTicket);
+    } catch (err) {
+      console.error('Error loading ticket detail:', err);
+      // Fallback to ticket from list (without lines)
+      const ticket = tickets.find(t => t.id === ticketId);
+      if (ticket) setSelectedTicket(ticket);
+    }
   }, [tickets]);
 
   const handleCloseDetail = useCallback(() => setSelectedTicket(null), []);

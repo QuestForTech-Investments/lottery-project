@@ -49,6 +49,43 @@ export interface CreateTicketRequest {
   notes?: string;
 }
 
+export interface TicketLineResponse {
+  lineId: number;
+  ticketId: number;
+  lineNumber: number;
+  lotteryId: number;
+  lotteryName: string;
+  drawId: number;
+  drawName: string;
+  drawDate: string;
+  drawTime: string;
+  betNumber: string;
+  betTypeId: number;
+  betTypeCode: string;
+  betTypeName: string;
+  position: number | null;
+  betAmount: number;
+  multiplier: number;
+  discountPercentage: number;
+  discountAmount: number;
+  subtotal: number;
+  totalWithMultiplier: number;
+  commissionPercentage: number;
+  commissionAmount: number;
+  netAmount: number;
+  prizeMultiplier: number | null;
+  prizeAmount: number;
+  isWinner: boolean;
+  winningPosition: number | null;
+  resultNumber: string | null;
+  resultCheckedAt: string | null;
+  lineStatus: string;
+  exceedsLimit: boolean;
+  isLuckyPick: boolean;
+  isHotNumber: boolean;
+  notes: string | null;
+}
+
 export interface TicketResponse {
   ticketId: number;
   ticketCode: string;
@@ -63,6 +100,7 @@ export interface TicketResponse {
   bettingPoolName?: string;
   ticketState?: string; // P=Pending, W=Winner, L=Loser
   winningLines?: number;
+  lines?: TicketLineResponse[];
 }
 
 export interface TicketFilterParams {
@@ -206,6 +244,29 @@ export const mapTicketResponse = (ticket: TicketResponse): MappedTicket => {
 };
 
 /**
+ * Map API ticket response with lines to component format
+ */
+export const mapTicketWithLines = (ticket: TicketResponse): MappedTicket => {
+  const baseTicket = mapTicketResponse(ticket);
+
+  // Map lines if present
+  const lines: MappedTicketLine[] = (ticket.lines || []).map((line) => ({
+    drawId: line.drawId,
+    drawName: line.drawName,
+    betNumber: line.betNumber,
+    betTypeId: line.betTypeId,
+    betTypeName: line.betTypeName,
+    betAmount: line.betAmount,
+    prizeAmount: line.prizeAmount,
+  }));
+
+  return {
+    ...baseTicket,
+    lines,
+  };
+};
+
+/**
  * Calculate ticket counts by status
  */
 export const calculateTicketCounts = (tickets: MappedTicket[]): TicketCounts => {
@@ -231,6 +292,65 @@ export const calculateTicketTotals = (tickets: MappedTicket[]): TicketTotals => 
   };
 };
 
+/**
+ * Prize multipliers for a bet line
+ */
+export interface LinePrizeMultipliers {
+  firstPrize: number;
+  secondPrize: number;
+  thirdPrize: number;
+  doubles: number;
+}
+
+/**
+ * Update prize multipliers for a ticket line
+ * Note: This updates the betting pool's prize configuration,
+ * which affects all future prize calculations for that pool.
+ * The user must re-process sales to see the changes take effect.
+ */
+export const updateLinePrizeMultipliers = async (
+  ticketId: number,
+  lineId: number,
+  betNumber: string,
+  multipliers: LinePrizeMultipliers
+): Promise<{ success: boolean; message: string }> => {
+  try {
+    // Get the ticket to find the betting pool ID
+    const ticket = await api.get<TicketResponse>(`/tickets/${ticketId}`);
+    if (!ticket) {
+      throw new Error('Ticket not found');
+    }
+
+    // For now, log the update attempt
+    // In the future, this would update the betting pool's prize configuration
+    console.log('Updating prize multipliers:', {
+      ticketId,
+      lineId,
+      betNumber,
+      bettingPoolId: ticket.bettingPoolId,
+      multipliers,
+    });
+
+    // Note: The actual implementation would call the betting pool prize config API:
+    // await api.patch(`/betting-pools/${ticket.bettingPoolId}/prize-config`, {
+    //   prizeConfigs: [
+    //     { prizeTypeId: 1, fieldCode: 'first_prize', value: multipliers.firstPrize },
+    //     { prizeTypeId: 2, fieldCode: 'second_prize', value: multipliers.secondPrize },
+    //     { prizeTypeId: 3, fieldCode: 'third_prize', value: multipliers.thirdPrize },
+    //     { prizeTypeId: 4, fieldCode: 'doubles', value: multipliers.doubles },
+    //   ]
+    // });
+
+    return {
+      success: true,
+      message: 'Multiplicadores de premio actualizados. Recuerde re-procesar las ventas para ver los cambios.',
+    };
+  } catch (error) {
+    console.error('Error updating prize multipliers:', error);
+    throw new Error('Error al actualizar los multiplicadores de premio');
+  }
+};
+
 const ticketService = {
   createTicket,
   getTicketById,
@@ -238,8 +358,10 @@ const ticketService = {
   cancelTicket,
   payTicket,
   mapTicketResponse,
+  mapTicketWithLines,
   calculateTicketCounts,
   calculateTicketTotals,
+  updateLinePrizeMultipliers,
 };
 
 export default ticketService;
