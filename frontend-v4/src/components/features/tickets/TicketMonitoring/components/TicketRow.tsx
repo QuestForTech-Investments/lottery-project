@@ -11,7 +11,7 @@ import { formatCurrency } from '../../../../../utils/formatCurrency';
 import { getEstadoColor } from '../constants';
 import type { TicketRowProps } from '../types';
 
-const TicketRow: FC<TicketRowProps> = memo(({ ticket, onRowClick, onPrint, onSend, onCancel }) => {
+const TicketRow: FC<TicketRowProps> = memo(({ ticket, isSelected, onRowClick, onPrint, onSend, onCancel }) => {
   const handleRowClick = useCallback(() => {
     onRowClick(ticket.id);
   }, [ticket.id, onRowClick]);
@@ -33,7 +33,12 @@ const TicketRow: FC<TicketRowProps> = memo(({ ticket, onRowClick, onPrint, onSen
 
   return (
     <TableRow
-      sx={{ '&:hover': { backgroundColor: 'action.hover' }, cursor: 'pointer' }}
+      sx={{
+        cursor: 'pointer',
+        backgroundColor: isSelected ? 'rgba(81, 203, 206, 0.15)' : 'inherit',
+        borderLeft: isSelected ? '3px solid #51cbce' : '3px solid transparent',
+        '&:hover': { backgroundColor: isSelected ? 'rgba(81, 203, 206, 0.25)' : 'action.hover' },
+      }}
       onClick={handleRowClick}
     >
       <TableCell>{ticket.numero}</TableCell>

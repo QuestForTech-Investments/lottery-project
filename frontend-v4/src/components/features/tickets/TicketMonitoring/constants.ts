@@ -113,13 +113,13 @@ export const STYLES = {
   filterButton: buttonStyles.primaryRounded,
   filtersRow: { display: 'flex', gap: 2, mb: 1, flexWrap: 'wrap', alignItems: 'flex-end' },
   filterLabel: { color: 'text.secondary', mb: 0.5, display: 'block' },
-  totalsContainer: { display: 'flex', justifyContent: 'center', mb: 0 },
-  totalsPanel: { px: 4, py: 2, backgroundColor: '#e8f4f8', textAlign: 'center' as const, width: 'fit-content' },
+  totalsContainer: { display: 'flex', justifyContent: 'center', mb: 0, mt: '-4px' },
+  totalsPanel: { px: 4, py: 0.5, backgroundColor: '#e8f4f8', textAlign: 'center' as const, width: 'fit-content' },
   totalsText: {
     color: 'rgb(43, 134, 169)',
     fontSize: '28px',
     fontWeight: 400,
-    lineHeight: '39.2px',
+    lineHeight: '30px',
     fontFamily: 'Montserrat, "Helvetica Neue", Arial, sans-serif',
   },
   quickSearch: { mb: 0, maxWidth: 200, '& .MuiInputBase-root': { height: 32 } },
@@ -135,14 +135,14 @@ export const STYLES = {
 
 // Column widths to match original app layout
 export const COLUMN_WIDTHS: Record<string, number> = {
-  'Número': 160,
-  'Fecha': 150,
-  'Usuario': 70,
-  'Monto': 65,
-  'Premio': 65,
-  'Fecha de cancelación': 95,
-  'Estado': 70,
-  'Acciones': 80,
+  'Número': 140,
+  'Fecha': 130,
+  'Usuario': 100,
+  'Monto': 90,
+  'Premio': 90,
+  'Fecha de cancelación': 110,
+  'Estado': 80,
+  'Acciones': 90,
 };
 
 // ============================================================================

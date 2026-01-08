@@ -56,15 +56,14 @@ const PANEL_STYLES = {
     boxShadow: 'rgba(0, 0, 0, 0.15) 0px 6px 10px -4px',
     fontFamily: 'Montserrat, "Helvetica Neue", Arial, sans-serif',
     overflow: 'hidden',
-    maxHeight: 600,
+    maxHeight: 'none',
     overflowY: 'auto' as const,
   },
   header: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: '12px 15px',
-    borderBottom: '1px solid #ccc',
+    padding: '6px 15px 2px 15px',
   },
   headerTitle: {
     fontSize: '14px',
@@ -74,11 +73,12 @@ const PANEL_STYLES = {
     textAlign: 'center' as const,
   },
   closeButton: {
-    backgroundColor: 'rgb(207, 207, 202)',
+    backgroundColor: '#dc3545',
     width: 24,
     height: 24,
+    marginTop: '4px',
     '&:hover': {
-      backgroundColor: 'rgb(180, 180, 175)',
+      backgroundColor: '#c82333',
     },
   },
   closeIcon: {
@@ -87,47 +87,49 @@ const PANEL_STYLES = {
   },
   infoSection: {
     textAlign: 'center' as const,
-    padding: '10px 15px',
-    borderBottom: '1px solid #ccc',
+    padding: '0px 15px',
   },
   infoText: {
     fontSize: '12px',
     color: 'rgb(102, 97, 91)',
-    marginBottom: '4px',
+    marginBottom: '0px',
+    lineHeight: 1.5,
   },
   legendTitle: {
-    fontSize: '14px',
+    fontSize: '13px',
     fontWeight: 400,
     color: 'rgb(37, 36, 34)',
     textAlign: 'center' as const,
-    marginBottom: '8px',
+    marginBottom: '2px',
+    marginTop: '0px',
   },
   legendContainer: {
     display: 'flex',
     justifyContent: 'center',
     gap: 0,
-    marginBottom: '12px',
+    marginBottom: '0px',
   },
   legendItem: {
-    padding: '4px 15px',
-    fontSize: '12px',
+    padding: '2px 12px',
+    fontSize: '11px',
     color: 'rgb(37, 36, 34)',
     textAlign: 'center' as const,
   },
   totalsLine: {
-    fontSize: '14px',
+    fontSize: '13px',
     fontWeight: 400,
     color: 'rgb(37, 36, 34)',
-    padding: '10px 15px',
+    padding: '4px 15px',
     borderBottom: '1px solid #ccc',
   },
   lotteryHeader: {
-    fontSize: '14px',
+    fontSize: '12px',
     fontWeight: 400,
     color: 'rgb(102, 97, 91)',
-    padding: '8px 8px 0 8px',
+    padding: '2px 8px',
     borderBottom: '1px solid #ccc',
     backgroundColor: '#e3e3e3',
+    textAlign: 'center' as const,
   },
   tableHeader: {
     display: 'flex',
@@ -135,10 +137,10 @@ const PANEL_STYLES = {
     borderBottom: '1px solid #ccc',
   },
   tableHeaderCell: {
-    fontSize: '11.2px',
+    fontSize: '10px',
     fontWeight: 400,
     color: 'rgb(37, 36, 34)',
-    padding: '6px 5px',
+    padding: '1px 4px',
     textAlign: 'center' as const,
     flex: 1,
   },
@@ -147,27 +149,29 @@ const PANEL_STYLES = {
     alignItems: 'center',
   },
   tableCell: {
-    fontSize: '12px',
+    fontSize: '10px',
     color: 'rgb(37, 36, 34)',
-    padding: '6px 5px',
+    padding: '1px 4px',
     textAlign: 'center' as const,
     flex: 1,
   },
 };
 
-// Row background colors based on status
+// Row background colors based on status - alternating shades for better visualization
 const ROW_COLORS = {
-  winner: 'rgb(153, 221, 255)',      // Light blue
-  loserEven: 'rgb(255, 152, 146)',   // Salmon
-  loserOdd: 'rgb(255, 176, 164)',    // Lighter salmon
-  pending: 'rgb(167, 164, 166)',     // Gray
+  winnerEven: 'rgb(153, 221, 255)',    // Light blue
+  winnerOdd: 'rgb(180, 232, 255)',     // Lighter blue
+  loserEven: 'rgb(255, 152, 146)',     // Salmon
+  loserOdd: 'rgb(255, 186, 182)',      // Lighter salmon
+  pendingEven: 'rgb(210, 208, 209)',   // Light gray
+  pendingOdd: 'rgb(225, 224, 224)',    // Lighter gray
 };
 
 // Legend colors
 const LEGEND_COLORS = {
   ganadora: 'rgb(153, 221, 255)',    // Light blue
   perdedora: 'rgb(255, 152, 146)',   // Salmon
-  pendiente: 'rgb(167, 164, 166)',   // Gray
+  pendiente: 'rgb(210, 208, 209)',   // Light gray
 };
 
 // Default prize multipliers (typical values from original app)
@@ -305,9 +309,10 @@ interface PlayRowProps {
 
 const PlayRow: FC<PlayRowProps> = memo(({ line, index, isWinner, isPending, onEditPrize }) => {
   const backgroundColor = useMemo(() => {
-    if (isWinner) return ROW_COLORS.winner;
-    if (isPending) return ROW_COLORS.pending;
-    return index % 2 === 0 ? ROW_COLORS.loserEven : ROW_COLORS.loserOdd;
+    const isEven = index % 2 === 0;
+    if (isWinner) return isEven ? ROW_COLORS.winnerEven : ROW_COLORS.winnerOdd;
+    if (isPending) return isEven ? ROW_COLORS.pendingEven : ROW_COLORS.pendingOdd;
+    return isEven ? ROW_COLORS.loserEven : ROW_COLORS.loserOdd;
   }, [isWinner, isPending, index]);
 
   const handleEditClick = useCallback(() => {
@@ -451,7 +456,7 @@ const TicketDetailPanel: FC<TicketDetailPanelProps> = memo(({ ticket, onClose })
       </Box>
 
       {/* Legend */}
-      <Box sx={{ padding: '10px 15px' }}>
+      <Box sx={{ padding: '2px 15px' }}>
         <Typography sx={PANEL_STYLES.legendTitle}>Leyenda</Typography>
         <Box sx={PANEL_STYLES.legendContainer}>
           <Box sx={{ ...PANEL_STYLES.legendItem, backgroundColor: LEGEND_COLORS.ganadora }}>

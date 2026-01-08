@@ -22,6 +22,7 @@ export interface BettingPoolApiResponse {
 
 export interface TicketRowProps {
   ticket: MappedTicket;
+  isSelected?: boolean;
   onRowClick: (id: number) => void;
   onPrint: (id: number) => void;
   onSend: (id: number) => void;

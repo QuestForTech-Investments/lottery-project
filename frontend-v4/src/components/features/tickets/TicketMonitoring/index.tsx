@@ -111,13 +111,14 @@ const TicketMonitoring: FC = () => {
       <TicketRow
         key={ticket.id}
         ticket={ticket}
+        isSelected={selectedTicket?.id === ticket.id}
         onRowClick={handleRowClick}
         onPrint={handlePrintTicket}
         onSend={handleSendTicket}
         onCancel={handleCancelTicket}
       />
     ));
-  }, [isLoading, filteredTickets, handleRowClick, handlePrintTicket, handleSendTicket, handleCancelTicket]);
+  }, [isLoading, filteredTickets, selectedTicket?.id, handleRowClick, handlePrintTicket, handleSendTicket, handleCancelTicket]);
 
   return (
     <Paper elevation={3} sx={{ minHeight: 'calc(100vh - 96px)' }}>
@@ -212,61 +213,46 @@ const TicketMonitoring: FC = () => {
         </Box>
 
         {/* Row 2: Zonas, Filter button, and toggles */}
-        {!isCompactView && (
-          <Box sx={{ ...STYLES.filtersRow, mb: 1, alignItems: 'center' }}>
-            <Box>
-              <Typography variant="caption" sx={STYLES.filterLabel}>
-                Zonas
-              </Typography>
-              <Autocomplete
-                options={ZONAS}
-                getOptionLabel={(o) => o.name || ''}
-                value={zona}
-                onChange={handleZonaChange}
-                renderInput={(params) => (
-                  <TextField {...params} size="small" sx={COMPACT_INPUT_STYLE} />
-                )}
-                sx={{ width: 200 }}
-              />
-            </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', pt: 2.5 }}>
-              <Button
-                variant="contained"
-                onClick={handleFilterClick}
-                disabled={isLoading || isInitialLoad}
-                sx={{ ...STYLES.filterButton, py: 0.6, fontSize: '0.8rem' }}
-              >
-                {isLoading ? 'Cargando...' : 'Filtrar'}
-              </Button>
-            </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', ml: '42px', pt: 2.5 }}>
-              <FormControlLabel
-                control={<IOSSwitch checked={pendientesPago} onChange={handlePendientesPagoChange} />}
-                label={<Typography variant="body2" sx={{ ml: 1 }}>Pend. pago</Typography>}
-                sx={{ mr: 1 }}
-              />
-              <FormControlLabel
-                control={<IOSSwitch checked={soloGanadores} onChange={handleSoloGanadoresChange} />}
-                label={<Typography variant="body2" sx={{ ml: 1 }}>Ganadores</Typography>}
-                sx={{ ml: '5px' }}
-              />
-            </Box>
+        <Box sx={{ ...STYLES.filtersRow, mb: 1, alignItems: 'center' }}>
+          <Box>
+            <Typography variant="caption" sx={STYLES.filterLabel}>
+              Zonas
+            </Typography>
+            <Autocomplete
+              options={ZONAS}
+              getOptionLabel={(o) => o.name || ''}
+              value={zona}
+              onChange={handleZonaChange}
+              renderInput={(params) => (
+                <TextField {...params} size="small" sx={COMPACT_INPUT_STYLE} />
+              )}
+              sx={{ width: 200 }}
+            />
           </Box>
-        )}
-
-        {/* Compact filter button */}
-        {isCompactView && (
-          <Box sx={{ textAlign: 'center', mb: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', pt: 2.5 }}>
             <Button
               variant="contained"
               onClick={handleFilterClick}
               disabled={isLoading || isInitialLoad}
-              sx={STYLES.filterButton}
+              sx={{ ...STYLES.filterButton, py: 0.6, fontSize: '0.8rem' }}
             >
               {isLoading ? 'Cargando...' : 'Filtrar'}
             </Button>
           </Box>
-        )}
+          <Box sx={{ display: 'flex', alignItems: 'center', ml: '42px', pt: 2.5 }}>
+            <FormControlLabel
+              control={<IOSSwitch checked={pendientesPago} onChange={handlePendientesPagoChange} />}
+              label={<Typography variant="body2" sx={{ ml: 1 }}>Pend. pago</Typography>}
+              sx={{ mr: 1 }}
+            />
+            <FormControlLabel
+              control={<IOSSwitch checked={soloGanadores} onChange={handleSoloGanadoresChange} />}
+              label={<Typography variant="body2" sx={{ ml: 1 }}>Ganadores</Typography>}
+              sx={{ ml: '5px' }}
+            />
+          </Box>
+        </Box>
+
 
         {/* Status Toggle Buttons */}
         <StatusToggle
@@ -288,36 +274,38 @@ const TicketMonitoring: FC = () => {
               value={filtroRapido}
               onChange={handleFiltroRapidoChange}
               size="small"
-              sx={STYLES.quickSearch}
+              sx={{ ...STYLES.quickSearch, mt: '-30px', mb: 1, position: 'relative', zIndex: 1 }}
             />
 
             {/* Tickets Table */}
-            <TableContainer component={Paper} variant="outlined" sx={{ maxHeight: isCompactView ? 400 : 600, ...STYLES.tableContainer }}>
-              <Table size="small" stickyHeader sx={{ tableLayout: 'fixed', width: '100%' }}>
-                <TableHead sx={STYLES.tableHeader}>
-                  <TableRow>
-                    {TABLE_HEADERS.map((h) => (
-                      <TableCell
-                        key={h}
-                        align={h === 'Acciones' ? 'center' : 'left'}
-                        sx={{
-                          ...STYLES.tableHeaderCell,
-                          width: COLUMN_WIDTHS[h] || 'auto',
-                        }}
-                      >
-                        {h}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                </TableHead>
-                <TableBody>{renderTableContent}</TableBody>
-              </Table>
-            </TableContainer>
+            <Box sx={{ height: isCompactView ? 400 : 'calc(100vh - 380px)', mt: '-11px' }}>
+              <TableContainer component={Paper} variant="outlined" sx={{ ...STYLES.tableContainer, height: '100%', overflow: 'auto' }}>
+                <Table size="small" stickyHeader sx={{ tableLayout: 'fixed', width: '100%' }}>
+                  <TableHead sx={STYLES.tableHeader}>
+                    <TableRow>
+                      {TABLE_HEADERS.map((h) => (
+                        <TableCell
+                          key={h}
+                          align={h === 'Acciones' ? 'center' : 'left'}
+                          sx={{
+                            ...STYLES.tableHeaderCell,
+                            width: COLUMN_WIDTHS[h] || 'auto',
+                          }}
+                        >
+                          {h}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>{renderTableContent}</TableBody>
+                </Table>
+              </TableContainer>
+            </Box>
           </Box>
 
           {/* Right: Ticket Detail Panel */}
           {selectedTicket && (
-            <Box sx={{ flexGrow: 1, position: 'sticky', top: 16 }}>
+            <Box sx={{ flexGrow: 1, position: 'sticky', top: 16, mt: '10px' }}>
               <TicketDetailPanel ticket={selectedTicket} onClose={handleCloseDetail} />
             </Box>
           )}
