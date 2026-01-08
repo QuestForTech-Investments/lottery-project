@@ -44,20 +44,25 @@ const LoginMUI = () => {
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         position: 'relative',
+        p: { xs: 2, sm: 3 },
+        boxSizing: 'border-box',
       }}
     >
       <Paper
         elevation={8}
         sx={{
           bgcolor: 'rgba(239, 239, 239, 0.89)',
-          border: '8px solid #394557',
-          borderRadius: '16px',
-          px: 4,
-          py: 8,
-          width: 384,
+          border: { xs: '4px solid #394557', sm: '8px solid #394557' },
+          borderRadius: { xs: '12px', sm: '16px' },
+          px: { xs: 2, sm: 4 },
+          py: { xs: 4, sm: 6, md: 8 },
+          width: '100%',
+          maxWidth: 384,
           textAlign: 'center',
           backdropFilter: 'blur(8px)',
-          mt: '-200px',
+          my: 'auto',
+          maxHeight: { xs: 'calc(100vh - 32px)', sm: 'calc(100vh - 48px)' },
+          overflowY: 'auto',
         }}
       >
         {/* Logo */}
@@ -66,9 +71,9 @@ const LoginMUI = () => {
           src={logoImage}
           alt="logo"
           sx={{
-            width: 256,
-            height: 256,
-            mb: 2,
+            width: { xs: 150, sm: 200, md: 256 },
+            height: { xs: 150, sm: 200, md: 256 },
+            mb: { xs: 1, sm: 2 },
             mx: 'auto',
             objectFit: 'contain',
           }}
@@ -212,9 +217,10 @@ const LoginMUI = () => {
       <Box
         sx={{
           position: 'absolute',
-          bottom: 16,
-          right: 16,
-          textAlign: 'right',
+          bottom: { xs: 8, sm: 16 },
+          right: { xs: 8, sm: 16 },
+          left: { xs: 8, sm: 'auto' },
+          textAlign: { xs: 'center', sm: 'right' },
         }}
       >
         <Link
@@ -223,7 +229,7 @@ const LoginMUI = () => {
           rel="noopener noreferrer"
           sx={{
             color: '#51cbce',
-            fontSize: '1.125rem',
+            fontSize: { xs: '0.875rem', sm: '1.125rem' },
             textDecoration: 'none',
             '&:hover': {
               textDecoration: 'underline',
@@ -237,6 +243,8 @@ const LoginMUI = () => {
           sx={{
             color: 'white',
             mt: 0.5,
+            fontSize: { xs: '0.75rem', sm: '1rem' },
+            display: { xs: 'none', sm: 'block' },
           }}
         >
           Firefox Silent Print:{' '}

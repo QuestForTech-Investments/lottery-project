@@ -11,12 +11,11 @@ import {
   Paper,
   Typography,
   TextField,
-  Grid,
   Autocomplete,
-  Switch,
   FormControlLabel,
   Button,
   Table,
+  TableContainer,
   TableHead,
   TableBody,
   TableRow,
@@ -27,7 +26,7 @@ import {
 
 import { BET_TYPES, ZONES, TICKET_TABLE_HEADERS } from '@constants/index';
 import { useTicketMonitoring } from './hooks/useTicketMonitoring';
-import { STYLES } from './constants';
+import { STYLES, COLUMN_WIDTHS, COMPACT_INPUT_STYLE, IOSSwitch } from './constants';
 import { TicketRow, TicketDetailPanel, StatusToggle, TotalsPanel } from './components';
 
 // ============================================================================
@@ -121,194 +120,210 @@ const TicketMonitoring: FC = () => {
   }, [isLoading, filteredTickets, handleRowClick, handlePrintTicket, handleSendTicket, handleCancelTicket]);
 
   return (
-    <Box sx={STYLES.container}>
-      <Grid container spacing={2}>
-        {/* Left Panel - Filters and Table */}
-        <Grid item xs={12} md={selectedTicket ? 6 : 12}>
-          <Paper elevation={3}>
-            <Box sx={STYLES.content}>
-              <Typography variant="h5" align="center" sx={STYLES.title}>
-                Monitor de tickets
-              </Typography>
+    <Paper elevation={3} sx={{ minHeight: 'calc(100vh - 96px)' }}>
+      <Box sx={{ p: 2 }}>
+        <Typography variant="h5" align="center" sx={STYLES.title}>
+          Monitor de tickets
+        </Typography>
 
-              {error && (
-                <Alert severity="error" sx={STYLES.alertMargin} onClose={handleErrorClose}>
-                  {error}
-                </Alert>
+        {error && (
+          <Alert severity="error" sx={STYLES.alertMargin} onClose={handleErrorClose}>
+            {error}
+          </Alert>
+        )}
+
+        {/* Filters Section - Row 1: All inputs and toggles */}
+        <Box sx={STYLES.filtersRow}>
+          <Box>
+            <Typography variant="caption" sx={STYLES.filterLabel}>
+              Fecha
+            </Typography>
+            <TextField
+              type="date"
+              value={fecha}
+              onChange={handleFechaChange}
+              InputLabelProps={{ shrink: true }}
+              size="small"
+              sx={{ width: 200, ...COMPACT_INPUT_STYLE }}
+            />
+          </Box>
+          <Box>
+            <Typography variant="caption" sx={STYLES.filterLabel}>
+              Banca
+            </Typography>
+            <Autocomplete
+              options={bancas}
+              getOptionLabel={(o) => (o.name ? `${o.name} (${o.code || ''})` : '')}
+              value={banca}
+              onChange={handleBancaChange}
+              isOptionEqualToValue={(option, value) => option.id === value?.id}
+              renderInput={(params) => (
+                <TextField {...params} size="small" sx={COMPACT_INPUT_STYLE} />
               )}
-
-              {/* Filters Section */}
-              <Grid container spacing={isCompactView ? 1 : 2} sx={{ mb: 2 }}>
-                <Grid item xs={12} md={isCompactView ? 6 : 3}>
-                  <TextField
-                    fullWidth
-                    type="date"
-                    label="Fecha"
-                    value={fecha}
-                    onChange={handleFechaChange}
-                    InputLabelProps={{ shrink: true }}
-                    size="small"
-                  />
-                </Grid>
-                <Grid item xs={12} md={isCompactView ? 6 : 3}>
-                  <Autocomplete
-                    options={bancas}
-                    getOptionLabel={(o) => (o.name ? `${o.name} (${o.code || ''})` : '')}
-                    value={banca}
-                    onChange={handleBancaChange}
-                    isOptionEqualToValue={(option, value) => option.id === value?.id}
-                    renderInput={(params) => (
-                      <TextField {...params} label="Banca" size="small" />
-                    )}
-                  />
-                </Grid>
-                <Grid item xs={12} md={isCompactView ? 6 : 3}>
-                  <Autocomplete
-                    options={loterias}
-                    getOptionLabel={(o) => o.name || ''}
-                    value={loteria}
-                    onChange={handleLoteriaChange}
-                    isOptionEqualToValue={(option, value) => option.id === value?.id}
-                    renderInput={(params) => (
-                      <TextField {...params} label="Lotería" size="small" />
-                    )}
-                  />
-                </Grid>
-              </Grid>
-
-              {/* Extended filters - hidden in compact view */}
-              {!isCompactView && (
-                <>
-                  <Grid container spacing={2} sx={{ mb: 2 }}>
-                    <Grid item xs={12} md={3}>
-                      <Autocomplete
-                        options={TIPOS_JUGADA}
-                        getOptionLabel={(o) => o.name || ''}
-                        value={tipoJugada}
-                        onChange={handleTipoJugadaChange}
-                        renderInput={(params) => (
-                          <TextField {...params} label="Tipo de jugada" size="small" />
-                        )}
-                      />
-                    </Grid>
-                    <Grid item xs={12} md={2}>
-                      <TextField
-                        fullWidth
-                        label="Número"
-                        value={numero}
-                        onChange={handleNumeroChange}
-                        size="small"
-                      />
-                    </Grid>
-                    <Grid item xs={12} md={2}>
-                      <FormControlLabel
-                        control={<Switch checked={pendientesPago} onChange={handlePendientesPagoChange} />}
-                        label={<Typography variant="caption">Pendientes de pago</Typography>}
-                      />
-                    </Grid>
-                    <Grid item xs={12} md={2}>
-                      <FormControlLabel
-                        control={<Switch checked={soloGanadores} onChange={handleSoloGanadoresChange} />}
-                        label={<Typography variant="caption">Sólo tickets ganadores</Typography>}
-                      />
-                    </Grid>
-                  </Grid>
-
-                  <Grid container spacing={2} sx={{ mb: 3, alignItems: 'center' }}>
-                    <Grid item xs={12} md={3}>
-                      <Autocomplete
-                        options={ZONAS}
-                        getOptionLabel={(o) => o.name || ''}
-                        value={zona}
-                        onChange={handleZonaChange}
-                        renderInput={(params) => (
-                          <TextField {...params} label="Zonas" size="small" />
-                        )}
-                      />
-                    </Grid>
-                    <Grid item xs={12} md={3}>
-                      <Button
-                        variant="contained"
-                        onClick={handleFilterClick}
-                        disabled={isLoading || isInitialLoad}
-                        sx={STYLES.filterButton}
-                      >
-                        {isLoading ? 'Cargando...' : 'Filtrar'}
-                      </Button>
-                    </Grid>
-                  </Grid>
-                </>
+              sx={{ width: 280 }}
+            />
+          </Box>
+          <Box>
+            <Typography variant="caption" sx={STYLES.filterLabel}>
+              Lotería
+            </Typography>
+            <Autocomplete
+              options={loterias}
+              getOptionLabel={(o) => o.name || ''}
+              value={loteria}
+              onChange={handleLoteriaChange}
+              isOptionEqualToValue={(option, value) => option.id === value?.id}
+              renderInput={(params) => (
+                <TextField {...params} size="small" sx={COMPACT_INPUT_STYLE} />
               )}
-
-              {/* Compact filter button */}
-              {isCompactView && (
-                <Box sx={{ textAlign: 'center', mb: 2 }}>
-                  <Button
-                    variant="contained"
-                    onClick={handleFilterClick}
-                    disabled={isLoading || isInitialLoad}
-                    sx={STYLES.filterButton}
-                  >
-                    {isLoading ? 'Cargando...' : 'Filtrar'}
-                  </Button>
-                </Box>
-              )}
-
-              {/* Status Toggle Buttons */}
-              <StatusToggle
-                filtroEstado={filtroEstado}
-                counts={counts}
-                onFilterChange={handleFiltroEstadoChange}
-              />
-
-              {/* Totals Panel */}
-              <TotalsPanel totals={totals} isCompact={isCompactView} />
-
-              {/* Quick Search */}
-              <TextField
-                fullWidth
-                placeholder="Filtro rapido"
-                value={filtroRapido}
-                onChange={handleFiltroRapidoChange}
-                size="small"
-                sx={STYLES.quickSearch}
-              />
-
-              {/* Tickets Table */}
-              <Box sx={{ maxHeight: isCompactView ? 400 : 'none', overflow: 'auto' }}>
-                <Table size="small" stickyHeader>
-                  <TableHead>
-                    <TableRow sx={STYLES.tableHeader}>
-                      {TABLE_HEADERS.map((h) => (
-                        <TableCell
-                          key={h}
-                          sx={{
-                            ...STYLES.tableHeaderCell,
-                            ...(h === 'Acciones' && { textAlign: 'center' })
-                          }}
-                        >
-                          {h}
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>{renderTableContent}</TableBody>
-                </Table>
+              sx={{ width: 200 }}
+            />
+          </Box>
+          {!isCompactView && (
+            <>
+              <Box>
+                <Typography variant="caption" sx={STYLES.filterLabel}>
+                  Tipo jugada
+                </Typography>
+                <Autocomplete
+                  options={TIPOS_JUGADA}
+                  getOptionLabel={(o) => o.name || ''}
+                  value={tipoJugada}
+                  onChange={handleTipoJugadaChange}
+                  renderInput={(params) => (
+                    <TextField {...params} size="small" sx={COMPACT_INPUT_STYLE} />
+                  )}
+                  sx={{ width: 200 }}
+                />
               </Box>
-            </Box>
-          </Paper>
-        </Grid>
+              <Box>
+                <Typography variant="caption" sx={STYLES.filterLabel}>
+                  Número
+                </Typography>
+                <TextField
+                  value={numero}
+                  onChange={handleNumeroChange}
+                  size="small"
+                  sx={{ width: 200, ...COMPACT_INPUT_STYLE }}
+                />
+              </Box>
+            </>
+          )}
+        </Box>
 
-        {/* Right Panel - Ticket Detail */}
-        {selectedTicket && (
-          <Grid item xs={12} md={6}>
-            <Box sx={{ position: 'sticky', top: 16 }}>
+        {/* Row 2: Zonas, Filter button, and toggles */}
+        {!isCompactView && (
+          <Box sx={{ ...STYLES.filtersRow, mb: 1, alignItems: 'center' }}>
+            <Box>
+              <Typography variant="caption" sx={STYLES.filterLabel}>
+                Zonas
+              </Typography>
+              <Autocomplete
+                options={ZONAS}
+                getOptionLabel={(o) => o.name || ''}
+                value={zona}
+                onChange={handleZonaChange}
+                renderInput={(params) => (
+                  <TextField {...params} size="small" sx={COMPACT_INPUT_STYLE} />
+                )}
+                sx={{ width: 200 }}
+              />
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', pt: 2.5 }}>
+              <Button
+                variant="contained"
+                onClick={handleFilterClick}
+                disabled={isLoading || isInitialLoad}
+                sx={{ ...STYLES.filterButton, py: 0.6, fontSize: '0.8rem' }}
+              >
+                {isLoading ? 'Cargando...' : 'Filtrar'}
+              </Button>
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', ml: '42px', pt: 2.5 }}>
+              <FormControlLabel
+                control={<IOSSwitch checked={pendientesPago} onChange={handlePendientesPagoChange} />}
+                label={<Typography variant="body2" sx={{ ml: 1 }}>Pend. pago</Typography>}
+                sx={{ mr: 1 }}
+              />
+              <FormControlLabel
+                control={<IOSSwitch checked={soloGanadores} onChange={handleSoloGanadoresChange} />}
+                label={<Typography variant="body2" sx={{ ml: 1 }}>Ganadores</Typography>}
+                sx={{ ml: '5px' }}
+              />
+            </Box>
+          </Box>
+        )}
+
+        {/* Compact filter button */}
+        {isCompactView && (
+          <Box sx={{ textAlign: 'center', mb: 2 }}>
+            <Button
+              variant="contained"
+              onClick={handleFilterClick}
+              disabled={isLoading || isInitialLoad}
+              sx={STYLES.filterButton}
+            >
+              {isLoading ? 'Cargando...' : 'Filtrar'}
+            </Button>
+          </Box>
+        )}
+
+        {/* Status Toggle Buttons */}
+        <StatusToggle
+          filtroEstado={filtroEstado}
+          counts={counts}
+          onFilterChange={handleFiltroEstadoChange}
+        />
+
+        {/* Totals Panel */}
+        <TotalsPanel totals={totals} />
+
+        {/* Table and Detail Panel side by side */}
+        <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
+          {/* Left: Quick Search and Table */}
+          <Box sx={{ flexShrink: 0 }}>
+            {/* Quick Search */}
+            <TextField
+              placeholder="Filtro rapido"
+              value={filtroRapido}
+              onChange={handleFiltroRapidoChange}
+              size="small"
+              sx={STYLES.quickSearch}
+            />
+
+            {/* Tickets Table */}
+            <TableContainer component={Paper} variant="outlined" sx={{ maxHeight: isCompactView ? 400 : 600, ...STYLES.tableContainer }}>
+              <Table size="small" stickyHeader sx={{ tableLayout: 'fixed', width: '100%' }}>
+                <TableHead sx={STYLES.tableHeader}>
+                  <TableRow>
+                    {TABLE_HEADERS.map((h) => (
+                      <TableCell
+                        key={h}
+                        align={h === 'Acciones' ? 'center' : 'left'}
+                        sx={{
+                          ...STYLES.tableHeaderCell,
+                          width: COLUMN_WIDTHS[h] || 'auto',
+                        }}
+                      >
+                        {h}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                </TableHead>
+                <TableBody>{renderTableContent}</TableBody>
+              </Table>
+            </TableContainer>
+          </Box>
+
+          {/* Right: Ticket Detail Panel */}
+          {selectedTicket && (
+            <Box sx={{ flexGrow: 1, position: 'sticky', top: 16 }}>
               <TicketDetailPanel ticket={selectedTicket} onClose={handleCloseDetail} />
             </Box>
-          </Grid>
-        )}
-      </Grid>
-    </Box>
+          )}
+        </Box>
+      </Box>
+    </Paper>
   );
 };
 

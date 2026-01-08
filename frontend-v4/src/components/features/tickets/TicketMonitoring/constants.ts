@@ -4,8 +4,61 @@
  * Local constants for the ticket monitoring feature.
  */
 
+import { styled } from '@mui/material/styles';
+import Switch from '@mui/material/Switch';
 import type { TicketCounts, TicketTotals } from '../../../../services/ticketService';
 import { buttonStyles } from '../../../../constants';
+
+// ============================================================================
+// iOS Style Switch
+// ============================================================================
+
+export const IOSSwitch = styled(Switch)(({ theme }) => ({
+  width: 52,
+  height: 28,
+  padding: 0,
+  '& .MuiSwitch-switchBase': {
+    padding: 0,
+    margin: 3,
+    transitionDuration: '300ms',
+    '&.Mui-checked': {
+      transform: 'translateX(24px)',
+      color: '#fff',
+      '& + .MuiSwitch-track': {
+        backgroundColor: '#8b5cf6',
+        opacity: 1,
+        border: 0,
+      },
+      '&.Mui-disabled + .MuiSwitch-track': {
+        opacity: 0.5,
+      },
+    },
+    '&.Mui-focusVisible .MuiSwitch-thumb': {
+      color: '#8b5cf6',
+      border: '6px solid #fff',
+    },
+    '&.Mui-disabled .MuiSwitch-thumb': {
+      color: theme.palette.grey[100],
+    },
+    '&.Mui-disabled + .MuiSwitch-track': {
+      opacity: 0.7,
+    },
+  },
+  '& .MuiSwitch-thumb': {
+    boxSizing: 'border-box',
+    width: 22,
+    height: 22,
+    boxShadow: '0 2px 4px 0 rgba(0,0,0,0.2)',
+  },
+  '& .MuiSwitch-track': {
+    borderRadius: 14,
+    backgroundColor: '#e0e0e0',
+    opacity: 1,
+    transition: theme.transitions.create(['background-color'], {
+      duration: 300,
+    }),
+  },
+}));
 
 // ============================================================================
 // Initial State Values
@@ -29,21 +82,68 @@ export const INITIAL_TOTALS: TicketTotals = {
 // Style Constants
 // ============================================================================
 
+export const COMPACT_INPUT_STYLE = {
+  '& .MuiInputBase-root': {
+    height: 32,
+    borderRadius: '12px',
+  },
+  '& .MuiInputBase-input': {
+    py: 0.5,
+    fontSize: '0.8rem',
+  },
+  '& .MuiOutlinedInput-notchedOutline': {
+    borderColor: '#6366f1',
+    borderWidth: '1px',
+  },
+  '&:hover .MuiOutlinedInput-notchedOutline': {
+    borderColor: '#818cf8',
+    borderWidth: '2px',
+  },
+  '& .Mui-focused .MuiOutlinedInput-notchedOutline': {
+    borderColor: '#6366f1',
+    borderWidth: '2px',
+  },
+};
+
 export const STYLES = {
-  container: { p: 2 },
-  content: { p: 3 },
-  title: { color: '#1976d2', mb: 4, fontWeight: 400 },
+  container: { p: 1, pb: 0 },
+  content: { p: 2, pb: 1 },
+  title: { color: '#1976d2', mb: 1, fontWeight: 400, fontSize: '1.7rem' },
   alertMargin: { mb: 3 },
   filterButton: buttonStyles.primaryRounded,
-  totalsContainer: { display: 'flex', justifyContent: 'center', mb: 3 },
-  totalsPanel: { px: 4, py: 2, backgroundColor: '#f5f5f5', textAlign: 'center' as const, width: 'fit-content' },
-  totalsText: { color: '#1976d2' },
-  quickSearch: { mb: 2, maxWidth: 300 },
-  tableHeader: { backgroundColor: '#f5f5f5' },
-  tableHeaderCell: { fontWeight: 600, color: 'text.secondary', fontSize: '0.75rem' },
+  filtersRow: { display: 'flex', gap: 2, mb: 1, flexWrap: 'wrap', alignItems: 'flex-end' },
+  filterLabel: { color: 'text.secondary', mb: 0.5, display: 'block' },
+  totalsContainer: { display: 'flex', justifyContent: 'center', mb: 0 },
+  totalsPanel: { px: 4, py: 2, backgroundColor: '#e8f4f8', textAlign: 'center' as const, width: 'fit-content' },
+  totalsText: {
+    color: 'rgb(43, 134, 169)',
+    fontSize: '28px',
+    fontWeight: 400,
+    lineHeight: '39.2px',
+    fontFamily: 'Montserrat, "Helvetica Neue", Arial, sans-serif',
+  },
+  quickSearch: { mb: 0, maxWidth: 200, '& .MuiInputBase-root': { height: 32 } },
+  tableContainer: { maxWidth: 950 },
+  tableHeader: { backgroundColor: '#e3e3e3' },
+  tableHeaderCell: {
+    fontWeight: 600,
+    backgroundColor: '#e3e3e3',
+  },
   loadingCell: { py: 5 },
   emptyCell: { py: 3, color: 'text.secondary' },
 } as const;
+
+// Column widths to match original app layout
+export const COLUMN_WIDTHS: Record<string, number> = {
+  'Número': 160,
+  'Fecha': 150,
+  'Usuario': 70,
+  'Monto': 65,
+  'Premio': 65,
+  'Fecha de cancelación': 95,
+  'Estado': 70,
+  'Acciones': 80,
+};
 
 // ============================================================================
 // Helper Functions

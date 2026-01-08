@@ -10,17 +10,17 @@ import { formatCurrency } from '../../../../../utils/formatCurrency';
 import { STYLES } from '../constants';
 import type { TotalsPanelProps } from '../types';
 
-const TotalsPanel: FC<TotalsPanelProps> = memo(({ totals, isCompact = false }) => {
+const TotalsPanel: FC<TotalsPanelProps> = memo(({ totals }) => {
   return (
     <Box sx={STYLES.totalsContainer}>
       <Paper sx={STYLES.totalsPanel} elevation={0}>
-        <Typography variant={isCompact ? 'body1' : 'h6'} sx={STYLES.totalsText}>
+        <Typography component="h3" sx={STYLES.totalsText}>
           Monto total: {formatCurrency(totals.montoTotal)}
         </Typography>
-        <Typography variant={isCompact ? 'body1' : 'h6'} sx={STYLES.totalsText}>
+        <Typography component="h3" sx={STYLES.totalsText}>
           Total de premios: {formatCurrency(totals.totalPremios)}
         </Typography>
-        <Typography variant={isCompact ? 'body1' : 'h6'} sx={STYLES.totalsText}>
+        <Typography component="h3" sx={STYLES.totalsText}>
           Total pendiente de pago: {formatCurrency(totals.totalPendiente)}
         </Typography>
       </Paper>

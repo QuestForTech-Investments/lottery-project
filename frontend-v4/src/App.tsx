@@ -3,7 +3,6 @@ import { lazy } from 'react'
 
 // Eager load: Login page (first page users see)
 import LoginMUI from '@pages/LoginMUI'
-import DebugPanel from '@components/common/DebugPanel'
 import PrivateRoute from '@components/common/PrivateRoute'
 import ErrorBoundary from '@components/common/ErrorBoundary'
 import MainLayout from '@components/layout/MainLayout'
@@ -123,7 +122,6 @@ const EmailReceiversListMUI = lazy(() => import('@components/features/email-rece
 function App() {
   return (
     <>
-      <DebugPanel />
       <ErrorBoundary>
         <Router>
           <Routes>
