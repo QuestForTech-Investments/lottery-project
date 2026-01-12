@@ -86,7 +86,7 @@ builder.Services.AddScoped<IPermissionRepository, PermissionRepository>();
 // Register Services
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ILoginSessionService, LoginSessionService>();
-builder.Services.AddSingleton<ICacheService, MemoryCacheService>();
+builder.Services.AddSingleton<ICacheService, RedisCacheService>();
 
 // Register External Results Services (lottery results fetching and ticket processing)
 builder.Services.AddExternalResultsServices(builder.Configuration);
@@ -309,6 +309,9 @@ app.UseSwaggerUI(c =>
     c.ShowExtensions();
 });
 
+// CORS must be first to handle preflight OPTIONS requests
+app.UseCors("AllowAll");
+
 // Use custom error handling middleware
 app.UseMiddleware<ErrorHandlingMiddleware>();
 
@@ -316,10 +319,6 @@ app.UseMiddleware<ErrorHandlingMiddleware>();
 app.UseIpRateLimiting();
 
 // app.UseHttpsRedirection(); // Commented out - API runs on HTTP only
-
-// ✅ IMPROVED: Use environment-specific CORS policy
-var corsPolicy = app.Environment.IsDevelopment() ? "DevPolicy" : "ProdPolicy";
-app.UseCors(corsPolicy);
 
 app.UseAuthentication();
 app.UseAuthorization();

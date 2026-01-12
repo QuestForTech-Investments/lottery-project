@@ -253,4 +253,115 @@ fetch(`${API_BASE}/endpoint`)
 
 ---
 
-**Ultima actualizacion:** 2026-01-10
+## Troubleshooting CORS (2026-01-12)
+
+### Problema: Error 405 o "No se pudo conectar con el servidor"
+
+Cuando se usa un dominio personalizado (ej: `lottobook.net`), pueden aparecer errores de CORS.
+
+### Causa Raiz
+
+**Conflicto entre CORS de Azure Platform y CORS de la aplicacion .NET.**
+
+Azure App Service tiene su propio sistema de CORS a nivel de plataforma. Si la aplicacion .NET tambien tiene CORS configurado, ambos pueden entrar en conflicto y causar errores 400 en las solicitudes OPTIONS (preflight).
+
+### Solucion
+
+**Usar SOLO el CORS de la aplicacion .NET, NO el de Azure Platform.**
+
+1. **Limpiar CORS de Azure Platform:**
+```bash
+az webapp cors remove --name lottery-api-prod --resource-group rg-lottery-api \
+  --allowed-origins "*" "https://..." "http://localhost:..."
+```
+
+2. **Verificar que CORS de Azure este vacio:**
+```bash
+az webapp cors show --name lottery-api-prod --resource-group rg-lottery-api
+# Debe mostrar: "allowedOrigins": []
+```
+
+3. **Configurar CORS en Program.cs:**
+```csharp
+// CORS debe ser el PRIMER middleware despues de app.Build()
+app.UseCors("AllowAll");
+
+// Despues van los demas middlewares
+app.UseMiddleware<ErrorHandlingMiddleware>();
+app.UseIpRateLimiting();
+app.UseAuthentication();
+app.UseAuthorization();
+```
+
+4. **Politica CORS en servicios:**
+```csharp
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+});
+```
+
+### Verificar que CORS funciona
+
+```bash
+# Test preflight (debe devolver 204 con headers CORS)
+curl -siX OPTIONS "https://lottery-api-prod.azurewebsites.net/api/auth/login" \
+  -H "Origin: https://lottobook.net" \
+  -H "Access-Control-Request-Method: POST" \
+  -H "Access-Control-Request-Headers: content-type"
+
+# Respuesta esperada:
+# HTTP/2 204
+# access-control-allow-origin: *
+# access-control-allow-methods: POST
+# access-control-allow-headers: content-type
+```
+
+### Comandos utiles de CORS en Azure
+
+```bash
+# Ver configuracion CORS actual
+az webapp cors show --name lottery-api-prod --resource-group rg-lottery-api
+
+# Agregar origen (NO recomendado si usas CORS en la app)
+az webapp cors add --name lottery-api-prod --resource-group rg-lottery-api \
+  --allowed-origins "https://example.com"
+
+# Remover origen
+az webapp cors remove --name lottery-api-prod --resource-group rg-lottery-api \
+  --allowed-origins "https://example.com"
+```
+
+### Regla de Oro
+
+> **NUNCA uses CORS de Azure Platform Y CORS de .NET al mismo tiempo.**
+> Elige uno u otro. Recomendacion: usar CORS de .NET para mayor control.
+
+---
+
+## Content Security Policy (CSP)
+
+El frontend usa CSP configurado en `frontend-v4/public/staticwebapp.config.json`.
+
+### Dominios permitidos actuales:
+
+| Directiva | Dominios |
+|-----------|----------|
+| `default-src` | 'self', lottobook.net |
+| `script-src` | 'self', 'unsafe-inline', 'unsafe-eval', lottobook.net |
+| `style-src` | 'self', 'unsafe-inline', fonts.googleapis.com, lottobook.net |
+| `font-src` | 'self', data:, fonts.gstatic.com |
+| `connect-src` | 'self', lottery-api-prod.azurewebsites.net, lottobook.net |
+
+### Agregar nuevo dominio al CSP
+
+Editar `frontend-v4/public/staticwebapp.config.json` y agregar el dominio a las directivas necesarias.
+
+---
+
+**Ultima actualizacion:** 2026-01-12
