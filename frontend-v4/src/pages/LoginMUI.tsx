@@ -13,14 +13,18 @@ import {
 import {
   Login as LoginIcon,
   Error as ErrorIcon,
+  Person as PersonIcon,
+  Lock as LockIcon,
 } from '@mui/icons-material';
-import backgroundImage from '@/assets/images/6e432d72ffa8381a97638a0e3e0b8fa6.jpg';
-import logoImage from '@/assets/images/logo.png';
+import backgroundImage from '@/assets/images/login-background.jpg';
+import logoImage from '@/assets/images/lottobook-logo.png';
+// Card background image from public folder
+const cardBackgroundImage = '/images/bannerlotto-02.jpg';
 import useLogin from './hooks/useLogin';
 
 /**
  * LoginMUI Component
- * Modern Material-UI version of Login
+ * Casual & Elegant Lottery Login
  */
 const LoginMUI = () => {
   const {
@@ -46,181 +50,308 @@ const LoginMUI = () => {
         position: 'relative',
         p: { xs: 2, sm: 3 },
         boxSizing: 'border-box',
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          inset: 0,
+          background: 'linear-gradient(135deg, rgba(15, 25, 35, 0.7) 0%, rgba(20, 40, 50, 0.5) 100%)',
+          zIndex: 0,
+        },
       }}
     >
       <Paper
-        elevation={8}
+        elevation={0}
         sx={{
-          bgcolor: 'rgba(239, 239, 239, 0.89)',
-          border: { xs: '4px solid #394557', sm: '8px solid #394557' },
-          borderRadius: { xs: '12px', sm: '16px' },
-          px: { xs: 2, sm: 4 },
-          py: { xs: 4, sm: 6, md: 8 },
+          position: 'relative',
+          zIndex: 1,
+          backgroundImage: `url(${cardBackgroundImage})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          borderRadius: { xs: '20px', sm: '28px' },
+          px: { xs: 3, sm: 5 },
+          py: { xs: 4, sm: 5 },
           width: '100%',
-          maxWidth: 384,
+          maxWidth: 400,
           textAlign: 'center',
-          backdropFilter: 'blur(8px)',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1)',
           my: 'auto',
           maxHeight: { xs: 'calc(100vh - 32px)', sm: 'calc(100vh - 48px)' },
           overflowY: 'auto',
+          overflow: 'hidden',
+          animation: 'fadeInUp 0.6s ease-out',
+          '@keyframes fadeInUp': {
+            from: {
+              opacity: 0,
+              transform: 'translateY(20px)',
+            },
+            to: {
+              opacity: 1,
+              transform: 'translateY(0)',
+            },
+          },
         }}
       >
         {/* Logo */}
         <Box
           component="img"
           src={logoImage}
-          alt="logo"
+          alt="Lottobook"
           sx={{
-            width: { xs: 150, sm: 200, md: 256 },
-            height: { xs: 150, sm: 200, md: 256 },
-            mb: { xs: 1, sm: 2 },
+            width: { xs: 180, sm: 240 },
+            height: { xs: 180, sm: 240 },
+            mb: 2,
             mx: 'auto',
             objectFit: 'contain',
+            filter: 'drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15))',
+            animation: 'fadeIn 0.8s ease-out 0.2s both',
+            '@keyframes fadeIn': {
+              from: { opacity: 0 },
+              to: { opacity: 1 },
+            },
           }}
           onError={(e: SyntheticEvent<HTMLImageElement>) => {
             e.currentTarget.style.display = 'none';
           }}
         />
 
+        {/* Welcome Text */}
+        <Typography
+          variant="h6"
+          sx={{
+            color: '#1e293b',
+            fontWeight: 600,
+            mb: 0.5,
+            fontSize: { xs: '1.1rem', sm: '1.25rem' },
+            letterSpacing: '-0.02em',
+          }}
+        >
+          Bienvenido
+        </Typography>
+        <Typography
+          variant="body2"
+          sx={{
+            color: '#64748b',
+            mb: 3,
+            fontSize: { xs: '0.85rem', sm: '0.9rem' },
+          }}
+        >
+          Ingresa tus credenciales para continuar
+        </Typography>
+
         {/* Error Alert */}
         {errors.general && (
-          <Alert severity="error" sx={{ mb: 2 }}>
+          <Alert
+            severity="error"
+            sx={{
+              mb: 2.5,
+              borderRadius: '12px',
+              '& .MuiAlert-icon': {
+                alignItems: 'center',
+              },
+            }}
+          >
             {errors.general}
           </Alert>
         )}
 
         {/* Login Form */}
-        <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <Box
+          component="form"
+          onSubmit={handleSubmit}
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 2,
+          }}
+        >
           {/* Username Field */}
-          <Box>
-            <TextField
-              fullWidth
-              id="username"
-              placeholder="Usuario"
-              value={username}
-              onChange={handleUsernameChange}
-              error={!!errors.username}
-              helperText={errors.username}
-              InputProps={{
-                endAdornment: errors.username && (
-                  <InputAdornment position="end">
-                    <ErrorIcon color="error" sx={{ fontSize: '1.25rem' }} />
-                  </InputAdornment>
-                ),
-                sx: {
-                  backgroundColor: 'white',
-                  borderRadius: '50px',
-                  textAlign: 'center',
-                  '& input': {
-                    textAlign: 'center',
-                  },
-                  '& input::placeholder': {
-                    textAlign: 'center',
-                  },
+          <TextField
+            fullWidth
+            id="username"
+            placeholder="Usuario"
+            value={username}
+            onChange={handleUsernameChange}
+            error={!!errors.username}
+            helperText={errors.username}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <PersonIcon sx={{ color: '#94a3b8', fontSize: '1.3rem' }} />
+                </InputAdornment>
+              ),
+              endAdornment: errors.username && (
+                <InputAdornment position="end">
+                  <ErrorIcon color="error" sx={{ fontSize: '1.2rem' }} />
+                </InputAdornment>
+              ),
+              sx: {
+                backgroundColor: '#f8fafc',
+                borderRadius: '14px',
+                px: 1,
+                transition: 'all 0.2s ease',
+                '&:hover': {
+                  backgroundColor: '#f1f5f9',
                 },
-              }}
-              FormHelperTextProps={{
-                sx: {
-                  textAlign: 'center',
-                  mx: 0,
+                '&.Mui-focused': {
+                  backgroundColor: '#fff',
+                  boxShadow: '0 0 0 3px rgba(59, 130, 246, 0.1)',
                 },
-              }}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  '&.Mui-focused fieldset': {
-                    borderColor: '#394557',
-                  },
+                '& input': {
+                  py: 1.5,
+                  fontSize: '0.95rem',
                 },
-              }}
-            />
-          </Box>
+                '& input::placeholder': {
+                  color: '#94a3b8',
+                  opacity: 1,
+                },
+              },
+            }}
+            FormHelperTextProps={{
+              sx: {
+                mx: 1.5,
+                mt: 0.5,
+              },
+            }}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                '& fieldset': {
+                  borderColor: '#e2e8f0',
+                  borderWidth: '1.5px',
+                  transition: 'border-color 0.2s ease',
+                },
+                '&:hover fieldset': {
+                  borderColor: '#cbd5e1',
+                },
+                '&.Mui-focused fieldset': {
+                  borderColor: '#3b82f6',
+                  borderWidth: '2px',
+                },
+              },
+            }}
+          />
 
           {/* Password Field */}
-          <Box>
-            <TextField
-              fullWidth
-              id="password"
-              type="password"
-              placeholder="Contraseña"
-              value={password}
-              onChange={handlePasswordChange}
-              error={!!errors.password}
-              helperText={errors.password}
-              InputProps={{
-                endAdornment: errors.password && (
-                  <InputAdornment position="end">
-                    <ErrorIcon color="error" sx={{ fontSize: '1.25rem' }} />
-                  </InputAdornment>
-                ),
-                sx: {
-                  backgroundColor: 'white',
-                  borderRadius: '50px',
-                  textAlign: 'center',
-                  '& input': {
-                    textAlign: 'center',
-                  },
-                  '& input::placeholder': {
-                    textAlign: 'center',
-                  },
+          <TextField
+            fullWidth
+            id="password"
+            type="password"
+            placeholder="Contraseña"
+            value={password}
+            onChange={handlePasswordChange}
+            error={!!errors.password}
+            helperText={errors.password}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <LockIcon sx={{ color: '#94a3b8', fontSize: '1.3rem' }} />
+                </InputAdornment>
+              ),
+              endAdornment: errors.password && (
+                <InputAdornment position="end">
+                  <ErrorIcon color="error" sx={{ fontSize: '1.2rem' }} />
+                </InputAdornment>
+              ),
+              sx: {
+                backgroundColor: '#f8fafc',
+                borderRadius: '14px',
+                px: 1,
+                transition: 'all 0.2s ease',
+                '&:hover': {
+                  backgroundColor: '#f1f5f9',
                 },
-              }}
-              FormHelperTextProps={{
-                sx: {
-                  textAlign: 'center',
-                  mx: 0,
+                '&.Mui-focused': {
+                  backgroundColor: '#fff',
+                  boxShadow: '0 0 0 3px rgba(59, 130, 246, 0.1)',
                 },
-              }}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  '&.Mui-focused fieldset': {
-                    borderColor: '#394557',
-                  },
+                '& input': {
+                  py: 1.5,
+                  fontSize: '0.95rem',
                 },
-              }}
-            />
-          </Box>
+                '& input::placeholder': {
+                  color: '#94a3b8',
+                  opacity: 1,
+                },
+              },
+            }}
+            FormHelperTextProps={{
+              sx: {
+                mx: 1.5,
+                mt: 0.5,
+              },
+            }}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                '& fieldset': {
+                  borderColor: '#e2e8f0',
+                  borderWidth: '1.5px',
+                  transition: 'border-color 0.2s ease',
+                },
+                '&:hover fieldset': {
+                  borderColor: '#cbd5e1',
+                },
+                '&.Mui-focused fieldset': {
+                  borderColor: '#3b82f6',
+                  borderWidth: '2px',
+                },
+              },
+            }}
+          />
 
           {/* Submit Button */}
           <Button
             id="log-in"
             type="submit"
             variant="contained"
+            color="inherit"
             disabled={isLoading}
-            startIcon={isLoading ? <CircularProgress size={20} color="inherit" /> : <LoginIcon />}
+            startIcon={
+              isLoading ? (
+                <CircularProgress size={20} sx={{ color: 'rgba(255,255,255,0.7)' }} />
+              ) : (
+                <LoginIcon />
+              )
+            }
             sx={{
-              bgcolor: '#121648',
-              color: 'white',
-              textTransform: 'uppercase',
+              mt: 1,
+              py: 1.6,
+              px: 4,
+              borderRadius: '14px',
+              fontSize: '0.95rem',
               fontWeight: 600,
-              py: 1.5,
-              px: 3,
-              borderRadius: '50px',
-              width: '75%',
-              mx: 'auto',
+              textTransform: 'none',
+              letterSpacing: '0.01em',
+              background: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
+              color: 'white',
+              boxShadow: '0 4px 14px rgba(220, 38, 38, 0.4)',
+              transition: 'all 0.25s ease',
               '&:hover': {
-                bgcolor: '#1a1f5e',
-                filter: 'brightness(1.1)',
+                background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                boxShadow: '0 6px 20px rgba(220, 38, 38, 0.5)',
+                transform: 'translateY(-1px)',
               },
-              '&:disabled': {
-                bgcolor: '#394557',
-                color: 'rgba(255, 255, 255, 0.5)',
+              '&:active': {
+                transform: 'translateY(0)',
               },
-              transition: 'all 0.2s',
+              '&.Mui-disabled': {
+                background: '#cbd5e1',
+                color: 'rgba(255, 255, 255, 0.7)',
+                boxShadow: 'none',
+              },
             }}
           >
-            {isLoading ? 'Iniciando sesión...' : 'Iniciar sesión'}
+            {isLoading ? 'Ingresando...' : 'Ingresar'}
           </Button>
         </Box>
       </Paper>
 
-      {/* Footer Link - Bottom Right */}
+      {/* Footer Link - Bottom Left */}
       <Box
         sx={{
           position: 'absolute',
-          bottom: { xs: 8, sm: 16 },
-          right: { xs: 8, sm: 16 },
-          left: { xs: 8, sm: 'auto' },
-          textAlign: { xs: 'center', sm: 'right' },
+          bottom: { xs: 12, sm: 20 },
+          left: { xs: 12, sm: 24 },
+          textAlign: 'left',
+          zIndex: 1,
         }}
       >
         <Link
@@ -228,10 +359,13 @@ const LoginMUI = () => {
           target="_blank"
           rel="noopener noreferrer"
           sx={{
-            color: '#51cbce',
-            fontSize: { xs: '0.875rem', sm: '1.125rem' },
+            color: 'rgba(255, 255, 255, 0.85)',
+            fontSize: { xs: '0.7rem', sm: '0.8rem' },
             textDecoration: 'none',
+            fontWeight: 500,
+            transition: 'color 0.2s ease',
             '&:hover': {
+              color: '#fff',
               textDecoration: 'underline',
             },
           }}
@@ -239,18 +373,39 @@ const LoginMUI = () => {
           Descargar Drivers de printers
         </Link>
         <Typography
-          variant="body1"
           sx={{
-            color: 'white',
+            color: 'rgba(255, 255, 255, 0.6)',
             mt: 0.5,
-            fontSize: { xs: '0.75rem', sm: '1rem' },
+            fontSize: { xs: '0.6rem', sm: '0.7rem' },
             display: { xs: 'none', sm: 'block' },
           }}
         >
           Firefox Silent Print:{' '}
-          <Box component="span" sx={{ fontWeight: 'bold', fontStyle: 'italic' }}>
+          <Box component="span" sx={{ fontWeight: 600, fontStyle: 'italic' }}>
             print.always_print_silent
           </Box>
+        </Typography>
+      </Box>
+
+      {/* Version - Bottom Right */}
+      <Box
+        sx={{
+          position: 'absolute',
+          bottom: { xs: 12, sm: 20 },
+          right: { xs: 12, sm: 24 },
+          textAlign: 'right',
+          zIndex: 1,
+        }}
+      >
+        <Typography
+          sx={{
+            color: 'rgba(255, 255, 255, 0.7)',
+            fontSize: { xs: '0.75rem', sm: '0.85rem' },
+            fontWeight: 500,
+            letterSpacing: '0.02em',
+          }}
+        >
+          Lottobook Version 777
         </Typography>
       </Box>
     </Box>
