@@ -3,6 +3,8 @@
  * Handles all prize-related API calls for betting pools
  */
 
+const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
+
 // Types - Export for re-use
 export interface PrizeType {
   prizeTypeId: number;
@@ -53,7 +55,7 @@ export const clearBetTypesCache = (): void => {
  */
 export const getAllBetTypes = async (): Promise<BetType[]> => {
   try {
-    const response = await fetch('/api/bet-types');
+    const response = await fetch(`${API_BASE}/bet-types`);
     if (!response.ok) {
       throw new Error(`Error fetching bet types: ${response.status}`);
     }
@@ -88,7 +90,7 @@ export const getAllBetTypesWithFields = async (forceRefresh: boolean = false): P
 
     // 🚀 TRY OPTIMIZED ENDPOINT FIRST: Single API call (5-8x faster)
     try {
-      const response = await fetch('/api/bet-types/with-fields');
+      const response = await fetch(`${API_BASE}/bet-types/with-fields`);
 
       if (response.ok) {
         // ✅ NEW OPTIMIZED ENDPOINT AVAILABLE
@@ -145,7 +147,7 @@ export const getAllBetTypesWithFields = async (forceRefresh: boolean = false): P
  */
 export const getBetTypeById = async (betTypeId: number): Promise<BetType> => {
   try {
-    const response = await fetch(`/api/bet-types/${betTypeId}`);
+    const response = await fetch(`${API_BASE}/bet-types/${betTypeId}`);
     if (!response.ok) {
       throw new Error(`Error fetching bet type: ${response.status}`);
     }
@@ -172,7 +174,7 @@ export const getBetTypeById = async (betTypeId: number): Promise<BetType> => {
  */
 export const getBettingPoolPrizeConfigs = async (bettingPoolId: number | string): Promise<PrizeConfig[]> => {
   try {
-    const response = await fetch(`/api/betting-pools/${bettingPoolId}/prize-config`);
+    const response = await fetch(`${API_BASE}/betting-pools/${bettingPoolId}/prize-config`);
     if (!response.ok) {
       // No custom configs found, return empty array
       return [];
@@ -197,7 +199,7 @@ export const savePrizeConfig = async (bettingPoolId: number | string, prizeConfi
       : { prizeConfigs: [prizeConfig] };
 
 
-    const response = await fetch(`/api/betting-pools/${bettingPoolId}/prize-config`, {
+    const response = await fetch(`${API_BASE}/betting-pools/${bettingPoolId}/prize-config`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

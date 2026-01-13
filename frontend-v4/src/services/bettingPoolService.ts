@@ -4,6 +4,8 @@
  * NOTA: Usa el endpoint /api/betting-pools del backend
  */
 
+import { api } from './api';
+
 // Types - Export for re-use
 export interface BettingPoolListParams {
   page?: number;
@@ -117,7 +119,7 @@ interface BettingPoolUser {
   email?: string;
 }
 
-const API_BASE_URL = '/api/betting-pools';
+const API_ENDPOINT = '/betting-pools';
 
 /**
  * Listar betting pools con filtros y paginación
@@ -140,34 +142,10 @@ export const getBettingPools = async (params: BettingPoolListParams = {}): Promi
     if (params.zoneId) queryParams.append('zoneId', String(params.zoneId));
     if (params.isActive !== undefined) queryParams.append('isActive', String(params.isActive));
 
-    const response = await fetch(`${API_BASE_URL}?${queryParams}`);
+    const queryString = queryParams.toString();
+    const endpoint = queryString ? `${API_ENDPOINT}?${queryString}` : API_ENDPOINT;
 
-    // Check content-type antes de parsear JSON
-    const contentType = response.headers.get('content-type');
-    let data = null;
-
-    if (contentType && contentType.includes('application/json')) {
-      const text = await response.text();
-      if (text.trim()) {
-        try {
-          data = JSON.parse(text);
-        } catch (parseError) {
-          console.error('Error parseando JSON en getBettingPools:', parseError);
-          console.error('Respuesta recibida:', text.substring(0, 200));
-          throw new Error('Respuesta inválida del servidor');
-        }
-      }
-    }
-
-    if (!response.ok) {
-      console.error('getBettingPools - Error response:', {
-        status: response.status,
-        statusText: response.statusText,
-        data: data
-      });
-      throw new Error(data?.message || `Error al obtener betting pools (${response.status})`);
-    }
-
+    const data = await api.get<BettingPoolListResponse>(endpoint);
     return data;
   } catch (error) {
     console.error('Error en getBettingPools:', error);
@@ -182,35 +160,10 @@ export const getBettingPools = async (params: BettingPoolListParams = {}): Promi
  */
 export const getBettingPoolById = async (bettingPoolId: number | string): Promise<ApiResponse<BettingPool>> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/${bettingPoolId}`);
-
-    // Check content-type antes de parsear JSON
-    const contentType = response.headers.get('content-type');
-    let data = null;
-
-    if (contentType && contentType.includes('application/json')) {
-      const text = await response.text();
-      if (text.trim()) {
-        try {
-          data = JSON.parse(text);
-        } catch (parseError) {
-          console.error('Error parseando JSON en getBettingPoolById:', parseError);
-          throw new Error('Respuesta inválida del servidor');
-        }
-      }
-    }
-
-    if (!response.ok) {
-      if (response.status === 404) {
-        throw new Error('Betting pool no encontrado');
-      }
-      throw new Error(data?.message || 'Error al obtener el betting pool');
-    }
-
-    // Envolver en formato consistente con otros servicios
+    const data = await api.get<BettingPool>(`${API_ENDPOINT}/${bettingPoolId}`);
     return {
       success: true,
-      data: data
+      data: data as BettingPool
     };
   } catch (error) {
     console.error('Error en getBettingPoolById:', error);
@@ -224,28 +177,7 @@ export const getBettingPoolById = async (bettingPoolId: number | string): Promis
  */
 export const getNextBettingPoolCode = async (): Promise<{ nextCode: string } | null> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/next-code`);
-
-    // Check content-type antes de parsear JSON
-    const contentType = response.headers.get('content-type');
-    let data = null;
-
-    if (contentType && contentType.includes('application/json')) {
-      const text = await response.text();
-      if (text.trim()) {
-        try {
-          data = JSON.parse(text);
-        } catch (parseError) {
-          console.error('Error parseando JSON en getNextBettingPoolCode:', parseError);
-          throw new Error('Respuesta inválida del servidor');
-        }
-      }
-    }
-
-    if (!response.ok) {
-      throw new Error(data?.message || 'Error al obtener el próximo código');
-    }
-
+    const data = await api.get<{ nextCode: string }>(`${API_ENDPOINT}/next-code`);
     return data;
   } catch (error) {
     console.error('Error en getNextBettingPoolCode:', error);
@@ -268,74 +200,14 @@ export const getNextBettingPoolCode = async (): Promise<{ nextCode: string } | n
  */
 export const createBettingPool = async (bettingPoolData: BettingPoolCreateData): Promise<ApiResponse<BettingPool>> => {
   try {
-
-    const response = await fetch(API_BASE_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(bettingPoolData)
-    });
-
-    console.log('Respuesta de la API:', {
-      status: response.status,
-      statusText: response.statusText,
-      headers: Object.fromEntries(response.headers.entries())
-    });
-
-    // Check if la respuesta tiene contenido antes de intentar parsear JSON
-    const contentType = response.headers.get('content-type');
-    let data = null;
-    
-    if (contentType && contentType.includes('application/json')) {
-      const text = await response.text();
-      if (text.trim()) {
-        try {
-          data = JSON.parse(text);
-        } catch (parseError) {
-          console.error('Error parseando JSON:', parseError);
-          console.error('Texto recibido:', text);
-          throw new Error('Respuesta inválida del servidor');
-        }
-      }
-    }
-
-    if (!response.ok) {
-      if (response.status === 400) {
-        throw new Error(data?.message || 'Validation error');
-      }
-      if (response.status === 409) {
-        throw new Error('El código del betting pool ya existe');
-      }
-      if (response.status === 500) {
-        throw new Error('Error interno del servidor');
-      }
-      throw new Error(data?.message || `Error del servidor (${response.status})`);
-    }
-
-    // Si no hay datos pero la respuesta es exitosa, crear una respuesta by default
-    if (!data) {
-      data = {
-        success: true,
-        message: 'Betting pool creado exitosamente',
-        data: {
-          bettingPoolId: Date.now(), // ID temporal
-          ...bettingPoolData
-        }
-      };
-    }
-
-    return data;
-  } catch (err) {
-    console.error('Error en createBettingPool:', err);
-    const error = err as Error;
-
-    // Si es un error de red, proporcionar un mensaje más específico
-    if (error.name === 'TypeError' && error.message?.includes('fetch')) {
-      throw new Error('No se pudo conectar con el servidor. Verifica que la API esté ejecutándose.');
-    }
-
-    throw err;
+    const data = await api.post<BettingPool>(API_ENDPOINT, bettingPoolData);
+    return {
+      success: true,
+      data: data as BettingPool
+    };
+  } catch (error) {
+    console.error('Error en createBettingPool:', error);
+    throw error;
   }
 };
 
@@ -351,44 +223,10 @@ export const createBettingPool = async (bettingPoolData: BettingPoolCreateData):
  */
 export const updateBettingPool = async (bettingPoolId: number | string, updateData: BettingPoolUpdateData): Promise<ApiResponse<BettingPool>> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/${bettingPoolId}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(updateData)
-    });
-
-    // Check content-type antes de parsear JSON
-    const contentType = response.headers.get('content-type');
-    let data = null;
-
-    if (contentType && contentType.includes('application/json')) {
-      const text = await response.text();
-      if (text.trim()) {
-        try {
-          data = JSON.parse(text);
-        } catch (parseError) {
-          console.error('Error parseando JSON en updateBettingPool:', parseError);
-          throw new Error('Respuesta inválida del servidor');
-        }
-      }
-    }
-
-    if (!response.ok) {
-      if (response.status === 404) {
-        throw new Error('Betting pool no encontrado');
-      }
-      if (response.status === 400) {
-        throw new Error(data?.message || 'Validation error');
-      }
-      throw new Error(data?.message || 'Error al actualizar el betting pool');
-    }
-
-    // Envolver en formato consistente con otros servicios
+    const data = await api.put<BettingPool>(`${API_ENDPOINT}/${bettingPoolId}`, updateData);
     return {
       success: true,
-      data: data
+      data: data as BettingPool
     };
   } catch (error) {
     console.error('Error en updateBettingPool:', error);
@@ -397,49 +235,16 @@ export const updateBettingPool = async (bettingPoolId: number | string, updateDa
 };
 
 /**
- * Update betting pool configuration (Config, Print, Discount, Footer)
- * @param {number} bettingPoolId - ID del betting pool
- * @param {Object} configData - Configuration data
- * @param {Object} configData.config - Main configuration
- * @param {Object} configData.printConfig - Print configuration
- * @param {Object} configData.discountConfig - Discount configuration
- * @param {Object} configData.footer - Footer configuration
- * @returns {Promise<Object>} Updated configuration
- */
-/**
  * Get betting pool configuration (Config, Print, Discount, Footer)
  * @param {number} bettingPoolId - ID del betting pool
  * @returns {Promise<Object>} Configuration data
  */
 export const getBettingPoolConfig = async (bettingPoolId: number | string): Promise<ApiResponse<BettingPoolConfigData>> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/${bettingPoolId}/config`);
-
-    const contentType = response.headers.get('content-type');
-    let data = null;
-
-    if (contentType && contentType.includes('application/json')) {
-      const text = await response.text();
-      if (text.trim()) {
-        try {
-          data = JSON.parse(text);
-        } catch (parseError) {
-          console.error('Error parseando JSON en getBettingPoolConfig:', parseError);
-          throw new Error('Respuesta inválida del servidor');
-        }
-      }
-    }
-
-    if (!response.ok) {
-      if (response.status === 404) {
-        throw new Error('Betting pool no encontrado');
-      }
-      throw new Error(data?.message || 'Error al obtener la configuration');
-    }
-
+    const data = await api.get<BettingPoolConfigData>(`${API_ENDPOINT}/${bettingPoolId}/config`);
     return {
       success: true,
-      data: data
+      data: data as BettingPoolConfigData
     };
   } catch (error) {
     console.error('Error en getBettingPoolConfig:', error);
@@ -459,42 +264,10 @@ export const getBettingPoolConfig = async (bettingPoolId: number | string): Prom
  */
 export const updateBettingPoolConfig = async (bettingPoolId: number | string, configData: BettingPoolConfigData): Promise<ApiResponse<BettingPoolConfigData>> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/${bettingPoolId}/config`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(configData)
-    });
-
-    const contentType = response.headers.get('content-type');
-    let data = null;
-
-    if (contentType && contentType.includes('application/json')) {
-      const text = await response.text();
-      if (text.trim()) {
-        try {
-          data = JSON.parse(text);
-        } catch (parseError) {
-          console.error('Error parseando JSON en updateBettingPoolConfig:', parseError);
-          throw new Error('Respuesta inválida del servidor');
-        }
-      }
-    }
-
-    if (!response.ok) {
-      if (response.status === 404) {
-        throw new Error('Betting pool no encontrado');
-      }
-      if (response.status === 400) {
-        throw new Error(data?.message || 'Validation error en configuration');
-      }
-      throw new Error(data?.message || 'Error al actualizar la configuration');
-    }
-
+    const data = await api.post<BettingPoolConfigData>(`${API_ENDPOINT}/${bettingPoolId}/config`, configData);
     return {
       success: true,
-      data: data
+      data: data as BettingPoolConfigData
     };
   } catch (error) {
     console.error('Error en updateBettingPoolConfig:', error);
@@ -509,37 +282,8 @@ export const updateBettingPoolConfig = async (bettingPoolId: number | string, co
  */
 export const deleteBettingPool = async (bettingPoolId: number | string): Promise<{ success: boolean; message?: string } | null> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/${bettingPoolId}`, {
-      method: 'DELETE'
-    });
-
-    // Check content-type antes de parsear JSON
-    const contentType = response.headers.get('content-type');
-    let data = null;
-
-    if (contentType && contentType.includes('application/json')) {
-      const text = await response.text();
-      if (text.trim()) {
-        try {
-          data = JSON.parse(text);
-        } catch (parseError) {
-          console.error('Error parseando JSON en deleteBettingPool:', parseError);
-          throw new Error('Respuesta inválida del servidor');
-        }
-      }
-    }
-
-    if (!response.ok) {
-      if (response.status === 404) {
-        throw new Error('Betting pool no encontrado');
-      }
-      if (response.status === 400) {
-        throw new Error(data?.message || 'No se puede eliminar el betting pool. Tiene usuarios asociados.');
-      }
-      throw new Error(data?.message || 'Error al eliminar el betting pool');
-    }
-
-    return data;
+    await api.delete(`${API_ENDPOINT}/${bettingPoolId}`);
+    return { success: true };
   } catch (error) {
     console.error('Error en deleteBettingPool:', error);
     throw error;
@@ -553,31 +297,7 @@ export const deleteBettingPool = async (bettingPoolId: number | string): Promise
  */
 export const getBettingPoolUsers = async (bettingPoolId: number | string): Promise<BettingPoolUser[] | null> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/${bettingPoolId}/users`);
-
-    // Check content-type antes de parsear JSON
-    const contentType = response.headers.get('content-type');
-    let data = null;
-
-    if (contentType && contentType.includes('application/json')) {
-      const text = await response.text();
-      if (text.trim()) {
-        try {
-          data = JSON.parse(text);
-        } catch (parseError) {
-          console.error('Error parseando JSON en getBettingPoolUsers:', parseError);
-          throw new Error('Respuesta inválida del servidor');
-        }
-      }
-    }
-
-    if (!response.ok) {
-      if (response.status === 404) {
-        throw new Error('Betting pool no encontrado');
-      }
-      throw new Error(data?.message || 'Error al obtener usuarios del betting pool');
-    }
-
+    const data = await api.get<BettingPoolUser[]>(`${API_ENDPOINT}/${bettingPoolId}/users`);
     return data;
   } catch (error) {
     console.error('Error en getBettingPoolUsers:', error);

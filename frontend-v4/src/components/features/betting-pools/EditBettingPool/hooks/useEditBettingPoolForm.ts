@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback, type ChangeEvent, type SyntheticEvent } from 'react';
+
+const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getBettingPoolById, getBettingPoolConfig, updateBettingPool, updateBettingPoolConfig, handleBettingPoolError, getBettingPools } from '@/services/bettingPoolService';
 import { getAllZones } from '@/services/zoneService';
@@ -502,7 +504,7 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
 
           // Directly save to draw-specific endpoint (no need to lookup)
           savePromises.push(
-            fetch(`/api/betting-pools/${bettingPoolId}/draws/${drawId}/prize-config`, {
+            fetch(`${API_BASE}/betting-pools/${bettingPoolId}/draws/${drawId}/prize-config`, {
               method: 'POST',
               headers: {
                 'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
@@ -533,7 +535,7 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
 
           // For lottery-specific: Get first draw ID, then save
           savePromises.push(
-            fetch(`/api/draws/lottery/${lotteryIdNum}`, {
+            fetch(`${API_BASE}/draws/lottery/${lotteryIdNum}`, {
               headers: {
                 'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
                 'Content-Type': 'application/json'
@@ -551,7 +553,7 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
 
 
                 // Save to draw-specific endpoint
-                return fetch(`/api/betting-pools/${bettingPoolId}/draws/${drawId}/prize-config`, {
+                return fetch(`${API_BASE}/betting-pools/${bettingPoolId}/draws/${drawId}/prize-config`, {
                   method: 'POST',
                   headers: {
                     'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
@@ -676,7 +678,7 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
 
       // 🔥 FIX: Directly call the prize-config endpoint with the drawId
       // The old code was calling /api/draws/lottery/${lotteryId} which doesn't exist
-      const configResponse = await fetch(`/api/betting-pools/${bettingPoolId}/draws/${drawId}/prize-config`, {
+      const configResponse = await fetch(`${API_BASE}/betting-pools/${bettingPoolId}/draws/${drawId}/prize-config`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
           'Content-Type': 'application/json'

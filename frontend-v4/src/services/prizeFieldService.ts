@@ -50,14 +50,8 @@ interface ResolvedPrizeConfig {
  */
 export const getPrizeFields = async (): Promise<BetType[]> => {
   try {
-    const response = await fetch('/api/prize-fields');
-
-    if (!response.ok) {
-      throw new Error(`Error ${response.status} al obtener campos de premios`);
-    }
-
-    const data = await response.json() as BetType[];
-    return data;
+    const response = await api.get('/prize-fields') as BetType[];
+    return response;
   } catch (error) {
     console.error('[ERROR] Error al obtener campos de premios:', error);
     throw error;
