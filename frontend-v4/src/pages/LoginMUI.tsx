@@ -125,7 +125,7 @@ const LoginMUI = () => {
             letterSpacing: '-0.02em',
           }}
         >
-          Bienvenido
+          Welcome
         </Typography>
         <Typography
           variant="body2"
@@ -135,7 +135,7 @@ const LoginMUI = () => {
             fontSize: { xs: '0.85rem', sm: '0.9rem' },
           }}
         >
-          Ingresa tus credenciales para continuar
+          Enter your credentials to continue
         </Typography>
 
         {/* Error Alert */}
@@ -168,7 +168,7 @@ const LoginMUI = () => {
           <TextField
             fullWidth
             id="username"
-            placeholder="Usuario"
+            placeholder="Username"
             value={username}
             onChange={handleUsernameChange}
             error={!!errors.username}
@@ -235,7 +235,7 @@ const LoginMUI = () => {
             fullWidth
             id="password"
             type="password"
-            placeholder="Contraseña"
+            placeholder="Password"
             value={password}
             onChange={handlePasswordChange}
             error={!!errors.password}
@@ -339,7 +339,7 @@ const LoginMUI = () => {
               },
             }}
           >
-            {isLoading ? 'Ingresando...' : 'Ingresar'}
+            {isLoading ? 'Signing in...' : 'Sign In'}
           </Button>
         </Box>
       </Paper>
@@ -370,7 +370,7 @@ const LoginMUI = () => {
             },
           }}
         >
-          Descargar Drivers de printers
+          Download Printer Drivers
         </Link>
         <Typography
           sx={{
