@@ -97,8 +97,8 @@ const LoginMUI = () => {
           src={logoImage}
           alt="Lottobook"
           sx={{
-            width: { xs: 180, sm: 240 },
-            height: { xs: 180, sm: 240 },
+            width: { xs: 180, sm: 241 },
+            height: { xs: 180, sm: 241 },
             mb: 2,
             mx: 'auto',
             objectFit: 'contain',
