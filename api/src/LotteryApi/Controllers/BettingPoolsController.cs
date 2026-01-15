@@ -85,7 +85,11 @@ public class BettingPoolsController : ControllerBase
                     Location = bp.Location,
                     Phone = bp.Phone,
                     Reference = bp.Reference,
-                    Username = bp.Username,
+                    Users = bp.UserBettingPools
+                        .Where(ubp => ubp.IsActive && ubp.User != null && ubp.User.IsActive
+                            && ubp.User.Role != null && ubp.User.Role.RoleName == "POS")
+                        .Select(ubp => ubp.User!.Username)
+                        .ToList(),
                     IsActive = bp.IsActive,
                     CreatedAt = bp.CreatedAt
                 })
@@ -441,7 +445,7 @@ public class BettingPoolsController : ControllerBase
     }
 
     /// <summary>
-    /// Get users assigned to a betting pool
+    /// Get POS users assigned to a betting pool
     /// </summary>
     [HttpGet("{id}/users")]
     public async Task<ActionResult<List<BettingPoolUserDto>>> GetBettingPoolUsers(int id)
@@ -455,14 +459,17 @@ public class BettingPoolsController : ControllerBase
             }
 
             var users = await _context.UserBettingPools
-                .Where(ubp => ubp.BettingPoolId == id)
+                .Where(ubp => ubp.BettingPoolId == id && ubp.IsActive)
                 .Include(ubp => ubp.User)
+                    .ThenInclude(u => u!.Role)
+                .Where(ubp => ubp.User != null && ubp.User.IsActive
+                    && ubp.User.Role != null && ubp.User.Role.RoleName == "POS")
                 .Select(ubp => new BettingPoolUserDto
                 {
                     UserId = ubp.User!.UserId,
                     Username = ubp.User.Username,
-                    FirstName = ubp.User.FullName,  // Using FullName as FirstName
-                    LastName = null,  // Not available in User model
+                    FirstName = ubp.User.FullName,
+                    LastName = null,
                     Email = ubp.User.Email,
                     IsActive = ubp.User.IsActive
                 })
@@ -474,6 +481,161 @@ public class BettingPoolsController : ControllerBase
         {
             _logger.LogError(ex, "Error getting users for betting pool {Id}", id);
             return StatusCode(500, new { message = "Error al obtener usuarios de la banca" });
+        }
+    }
+
+    /// <summary>
+    /// Create a new POS user and assign to a betting pool
+    /// </summary>
+    [HttpPost("{id}/users")]
+    public async Task<ActionResult<BettingPoolUserAssignmentResponse>> AddUserToBettingPool(
+        int id,
+        [FromBody] CreateBettingPoolUserDto dto)
+    {
+        try
+        {
+            // Validate betting pool exists
+            var bettingPool = await _context.BettingPools.FindAsync(id);
+            if (bettingPool == null)
+            {
+                return NotFound(new BettingPoolUserAssignmentResponse
+                {
+                    Success = false,
+                    Message = "Banca no encontrada"
+                });
+            }
+
+            // Check if username already exists
+            var existingUser = await _context.Users
+                .FirstOrDefaultAsync(u => u.Username.ToLower() == dto.Username.ToLower());
+            if (existingUser != null)
+            {
+                return Conflict(new BettingPoolUserAssignmentResponse
+                {
+                    Success = false,
+                    Message = "Ya existe un usuario con ese nombre"
+                });
+            }
+
+            // Get the POS role
+            var posRole = await _context.Roles.FirstOrDefaultAsync(r => r.RoleName == "POS");
+            if (posRole == null)
+            {
+                return StatusCode(500, new BettingPoolUserAssignmentResponse
+                {
+                    Success = false,
+                    Message = "Error: Rol POS no encontrado en el sistema"
+                });
+            }
+
+            // Create the user
+            var user = new User
+            {
+                Username = dto.Username,
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
+                FullName = dto.FullName,
+                Email = dto.Email ?? $"{dto.Username}@pos.local",
+                Phone = dto.Phone,
+                RoleId = posRole.RoleId,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            _context.Users.Add(user);
+            await _context.SaveChangesAsync();
+
+            // Create the user-betting pool association
+            var userBettingPool = new UserBettingPool
+            {
+                UserId = user.UserId,
+                BettingPoolId = id,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            _context.UserBettingPools.Add(userBettingPool);
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Created POS user {Username} for betting pool {BettingPoolId}",
+                dto.Username, id);
+
+            return Ok(new BettingPoolUserAssignmentResponse
+            {
+                Success = true,
+                Message = "Usuario creado y asignado exitosamente",
+                User = new BettingPoolUserDto
+                {
+                    UserId = user.UserId,
+                    Username = user.Username,
+                    FirstName = user.FullName,
+                    Email = user.Email,
+                    IsActive = user.IsActive
+                }
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error adding user to betting pool {Id}", id);
+            return StatusCode(500, new BettingPoolUserAssignmentResponse
+            {
+                Success = false,
+                Message = "Error al crear el usuario"
+            });
+        }
+    }
+
+    /// <summary>
+    /// Remove a user from a betting pool (soft delete the association)
+    /// </summary>
+    [HttpDelete("{id}/users/{userId}")]
+    public async Task<ActionResult<BettingPoolUserAssignmentResponse>> RemoveUserFromBettingPool(int id, int userId)
+    {
+        try
+        {
+            // Find the user-betting pool association
+            var userBettingPool = await _context.UserBettingPools
+                .Include(ubp => ubp.User)
+                .FirstOrDefaultAsync(ubp => ubp.BettingPoolId == id && ubp.UserId == userId);
+
+            if (userBettingPool == null)
+            {
+                return NotFound(new BettingPoolUserAssignmentResponse
+                {
+                    Success = false,
+                    Message = "El usuario no está asignado a esta banca"
+                });
+            }
+
+            // Soft delete the association
+            userBettingPool.IsActive = false;
+            userBettingPool.UpdatedAt = DateTime.UtcNow;
+
+            // Also deactivate the user if it's a POS user
+            var user = userBettingPool.User;
+            if (user != null)
+            {
+                user.IsActive = false;
+                user.UpdatedAt = DateTime.UtcNow;
+            }
+
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Removed user {UserId} from betting pool {BettingPoolId}", userId, id);
+
+            return Ok(new BettingPoolUserAssignmentResponse
+            {
+                Success = true,
+                Message = "Usuario eliminado de la banca exitosamente"
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error removing user {UserId} from betting pool {Id}", userId, id);
+            return StatusCode(500, new BettingPoolUserAssignmentResponse
+            {
+                Success = false,
+                Message = "Error al eliminar el usuario de la banca"
+            });
         }
     }
 

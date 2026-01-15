@@ -57,7 +57,7 @@ interface BettingPool {
   zoneName?: string;
   zone?: { id?: number; name?: string };
   zoneId?: number;
-  userCodes?: string[];
+  users?: string[];
   isActive?: boolean;
   active?: boolean;
   fallPercentage?: number;
@@ -351,7 +351,7 @@ const BettingPoolAccess: React.FC = () => {
                   <TableRow key={pool.bettingPoolId || pool.id} hover>
                     <TableCell>{pool.bettingPoolId || pool.id}</TableCell>
                     <TableCell>
-                      {pool.userCodes?.join(', ') || pool.reference || '-'}
+                      {pool.users?.length ? pool.users.join(', ') : '-'}
                     </TableCell>
                     <TableCell>{pool.bettingPoolName || pool.name}</TableCell>
                     <TableCell>{pool.reference || '-'}</TableCell>

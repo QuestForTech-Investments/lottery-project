@@ -10,6 +10,12 @@ import type { ApiErrorLike } from '../utils/apiErrorHandler'
 interface AuthResponse {
   token?: string
   expiresAt?: string
+  username?: string
+  email?: string
+  fullName?: string
+  role?: string
+  bettingPoolId?: number
+  bettingPoolName?: string
   user?: Record<string, unknown>
 }
 

@@ -17,7 +17,7 @@ public class BettingPoolListDto
     public string? Location { get; set; }
     public string? Phone { get; set; }
     public string? Reference { get; set; }
-    public string? Username { get; set; }
+    public List<string> Users { get; set; } = new();
     public bool IsActive { get; set; }
     public DateTime? CreatedAt { get; set; }
 }
@@ -526,4 +526,41 @@ public class MassUpdateResponseDto
     public List<int> UpdatedPoolIds { get; set; } = new();
     public string Message { get; set; } = string.Empty;
     public List<string>? Errors { get; set; }
+}
+
+// =============================================================================
+// Betting Pool User Management DTOs
+// =============================================================================
+
+/// <summary>
+/// DTO for creating a new POS user and assigning to a betting pool
+/// </summary>
+public class CreateBettingPoolUserDto
+{
+    [Required(ErrorMessage = "El nombre de usuario es requerido")]
+    [StringLength(100, MinimumLength = 3, ErrorMessage = "El nombre de usuario debe tener entre 3 y 100 caracteres")]
+    public string Username { get; set; } = string.Empty;
+
+    [Required(ErrorMessage = "La contraseña es requerida")]
+    [StringLength(255, MinimumLength = 6, ErrorMessage = "La contraseña debe tener entre 6 y 255 caracteres")]
+    public string Password { get; set; } = string.Empty;
+
+    [StringLength(255, ErrorMessage = "El nombre completo no puede exceder 255 caracteres")]
+    public string? FullName { get; set; }
+
+    [EmailAddress(ErrorMessage = "El email no es válido")]
+    public string? Email { get; set; }
+
+    [StringLength(20, ErrorMessage = "El teléfono no puede exceder 20 caracteres")]
+    public string? Phone { get; set; }
+}
+
+/// <summary>
+/// Response for user assignment operation
+/// </summary>
+public class BettingPoolUserAssignmentResponse
+{
+    public bool Success { get; set; }
+    public string Message { get; set; } = string.Empty;
+    public BettingPoolUserDto? User { get; set; }
 }

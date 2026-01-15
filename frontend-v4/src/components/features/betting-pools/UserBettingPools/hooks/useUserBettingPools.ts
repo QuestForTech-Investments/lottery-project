@@ -2,20 +2,20 @@ import { useState, useEffect, useMemo, useCallback, type ChangeEvent, type Mouse
 import type { SelectChangeEvent } from '@mui/material';
 import api from '@services/api';
 
-interface BettingPoolFromApi {
-  bettingPoolId: number;
-  bettingPoolCode: string;
-  bettingPoolName: string;
-  zoneId: number;
-  zoneName: string | null;
-  username: string | null;
-  reference: string | null;
+interface PosUserFromApi {
+  userId: number;
+  username: string;
+  fullName: string | null;
+  email: string | null;
+  phone: string | null;
   isActive: boolean;
-}
-
-interface ZoneFromApi {
-  zoneId: number;
-  zoneName: string;
+  lastLoginAt: string | null;
+  createdAt: string | null;
+  bettingPoolId: number | null;
+  bettingPoolName: string | null;
+  bettingPoolCode: string | null;
+  zoneId: number | null;
+  zoneName: string | null;
 }
 
 interface User {
@@ -25,7 +25,7 @@ interface User {
   reference: string;
   requiresPasswordChange: boolean;
   zone: string;
-  userId?: number;
+  userId: number;
 }
 
 interface UseUserBettingPoolsReturn {
@@ -71,43 +71,40 @@ const useUserBettingPools = (): UseUserBettingPoolsReturn => {
   const [selectedUsername, setSelectedUsername] = useState<string>('');
 
   /**
-   * Fetch betting pools and zones from API
+   * Fetch POS users from API
    */
   const fetchData = useCallback(async () => {
     setLoading(true);
     setError(null);
 
     try {
-      // Fetch betting pools - get all with large page size
-      const bettingPoolsResponse = await api.get<{
-        items: BettingPoolFromApi[];
+      // Fetch POS users - get all with large page size
+      const posUsersResponse = await api.get<{
+        items: PosUserFromApi[];
         totalCount: number;
-      }>('/betting-pools?pageSize=1000');
+      }>('/users/pos?pageSize=1000');
 
-      // Fetch zones
-      const zonesResponse = await api.get<ZoneFromApi[]>('/zones');
-
-      // Transform betting pools to users format
-      // Show all betting pools - use username if available, otherwise bettingPoolCode
-      const bettingPools = bettingPoolsResponse?.items || [];
-      const transformedUsers: User[] = bettingPools
-        .filter(bp => bp.isActive) // Only show active betting pools
-        .map(bp => ({
-          id: bp.username || bp.bettingPoolCode,
-          bettingPoolId: bp.bettingPoolId,
-          bettingPool: bp.bettingPoolName,
-          reference: bp.reference || '',
-          requiresPasswordChange: false, // TODO: Add this field to API if needed
-          zone: bp.zoneName || 'Sin zona',
+      // Transform POS users to display format
+      const posUsers = posUsersResponse?.items || [];
+      const transformedUsers: User[] = posUsers
+        .filter(user => user.isActive && user.bettingPoolId) // Only show active users with a betting pool
+        .map(user => ({
+          id: user.username,
+          userId: user.userId,
+          bettingPoolId: user.bettingPoolId!,
+          bettingPool: user.bettingPoolName || '',
+          reference: user.bettingPoolCode || '',
+          requiresPasswordChange: false,
+          zone: user.zoneName || 'Sin zona',
         }));
 
       setAllUsers(transformedUsers);
 
-      // Extract unique zones from betting pools
+      // Extract unique zones from POS users
       const uniqueZones = Array.from(
         new Set(
-          bettingPools
-            .map(bp => bp.zoneName)
+          posUsers
+            .map(user => user.zoneName)
             .filter((z): z is string => z !== null && z !== undefined)
         )
       ).sort();
@@ -118,7 +115,7 @@ const useUserBettingPools = (): UseUserBettingPoolsReturn => {
       setSelectedZones(uniqueZones);
 
     } catch (err) {
-      console.error('Error fetching betting pool users:', err);
+      console.error('Error fetching POS users:', err);
       setError('Error al cargar los usuarios de bancas');
     } finally {
       setLoading(false);

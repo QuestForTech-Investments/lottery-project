@@ -13,6 +13,8 @@ public class LoginResponseDto
     public string? Email { get; set; }
     public string? FullName { get; set; }
     public string? Role { get; set; }
+    public int? BettingPoolId { get; set; }
+    public string? BettingPoolName { get; set; }
     public DateTime ExpiresAt { get; set; }
 }
 
