@@ -96,11 +96,11 @@ IF EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK_lotteries_countries')
 IF EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK__lottery_g__game___4F2895A9')
     ALTER TABLE [lottery_game_compatibility] DROP CONSTRAINT [FK__lottery_g__game___4F2895A9];
 IF EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK__lottery_g__lotte__4E347170')
+    ALTER TABLE [lottery_game_compatibility] DROP CONSTRAINT [FK__lottery_g__lotte__4E347170];
 IF EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK_lottery_bet_type_compatibility_lottery')
     ALTER TABLE [lottery_bet_type_compatibility] DROP CONSTRAINT [FK_lottery_bet_type_compatibility_lottery];
 IF EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK_lottery_bet_type_compatibility_bet_type')
     ALTER TABLE [lottery_bet_type_compatibility] DROP CONSTRAINT [FK_lottery_bet_type_compatibility_bet_type];
-    ALTER TABLE [lottery_game_compatibility] DROP CONSTRAINT [FK__lottery_g__lotte__4E347170];
 IF EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK_lottery_bet_type_compatibility_lottery')
     ALTER TABLE [lottery_bet_type_compatibility] DROP CONSTRAINT [FK_lottery_bet_type_compatibility_lottery];
 IF EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK_lottery_bet_type_compatibility_bet_type')

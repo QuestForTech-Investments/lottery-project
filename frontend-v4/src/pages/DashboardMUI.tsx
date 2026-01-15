@@ -24,7 +24,7 @@ import {
   Assessment as AssessmentIcon,
 } from '@mui/icons-material';
 import useDashboard from './hooks/useDashboard';
-import CollectionsPaymentsWidget from '../components/features/dashboard/CollectionsPaymentsWidget';
+import CollectionsPaymentsWidget from '@components/features/dashboard/CollectionsPaymentsWidget';
 
 /**
  * DashboardMUI Component

@@ -47,7 +47,7 @@ public class LotteriesController : ControllerBase
         var (items, totalCount) = await _lotteryRepository.GetPagedLotteriesOptimizedAsync(
             pageNumber,
             pageSize,
-            filter: l => l.IsActive
+            filter: l => l.IsActive && l.Colour != null
         );
 
         var response = new PagedResponse<LotteryDto>

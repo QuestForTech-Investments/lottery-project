@@ -1,5 +1,16 @@
 {
+  "scripts": {
+    "docker:build": "docker build -t lottery-api ./api",
+    "docker:run": "docker run -p 8080:8080 lottery-api",
+    "docker:start": "npm run docker:build && npm run docker:run",
+    "run:api": "cd ./api/src/LotteryApi && dotnet run --urls \"http://0.0.0.0:5000\"",
+    "run:frontend": "cd ./frontend-v4 && npm run dev",
+    "run:all": "concurrently \"npm run run:api\" \"npm run run:frontend\""
+  },
   "dependencies": {
     "playwright": "^1.56.1"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
   }
 }
