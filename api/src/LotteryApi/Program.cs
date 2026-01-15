@@ -86,7 +86,7 @@ builder.Services.AddScoped<IPermissionRepository, PermissionRepository>();
 // Register Services
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ILoginSessionService, LoginSessionService>();
-builder.Services.AddSingleton<ICacheService, RedisCacheService>();
+builder.Services.AddSingleton<ICacheService, MemoryCacheService>();
 
 // Register External Results Services (lottery results fetching and ticket processing)
 builder.Services.AddExternalResultsServices(builder.Configuration);
