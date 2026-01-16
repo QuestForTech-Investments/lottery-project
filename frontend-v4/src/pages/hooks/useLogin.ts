@@ -66,12 +66,12 @@ const useLogin = () => {
 
     // Validate username
     if (!username.trim()) {
-      newErrors.username = 'El campo Usuario es obligatorio';
+      newErrors.username = 'Username is required';
     }
 
     // Validate password
     if (!password.trim()) {
-      newErrors.password = 'El campo Contraseña es obligatorio';
+      newErrors.password = 'Password is required';
     }
 
     setErrors(newErrors);
@@ -102,11 +102,38 @@ const useLogin = () => {
 
       logger.success('LOGIN_SUCCESS', `User ${username} logged in successfully`, {
         token: response.token ? 'Token received' : 'No token',
+        role: response.role,
+        bettingPoolId: response.bettingPoolId,
+        bettingPoolName: response.bettingPoolName,
         expiresAt: response.expiresAt
       });
 
-      // Navigate to dashboard after successful login
-      navigate('/dashboard');
+      // Store betting pool info for POS users
+      if (response.bettingPoolId) {
+        localStorage.setItem('bettingPoolId', response.bettingPoolId.toString());
+        localStorage.setItem('bettingPoolName', response.bettingPoolName || '');
+      }
+
+      // Set cookie on parent domain for cross-subdomain auth
+      // This allows POS subdomain to read the same token
+      if (response.token) {
+        const isProduction = window.location.hostname.includes('lottobook.net');
+        const cookieDomain = isProduction ? '; domain=.lottobook.net' : '';
+        const secure = isProduction ? '; secure' : '';
+        document.cookie = `authToken=${response.token}; path=/${cookieDomain}${secure}; SameSite=Lax`;
+      }
+
+      // Redirect based on user role
+      if (response.role === 'POS') {
+        // POS users go to POS site
+        const posUrl = window.location.hostname.includes('lottobook.net')
+          ? 'http://70.35.199.64:5175/'
+          : 'http://localhost:5173'; // Local dev POS URL
+        window.location.href = posUrl;
+      } else {
+        // Admin and other roles stay on admin dashboard
+        navigate('/dashboard');
+      }
     } catch (err) {
       const error = err as ApiError;
       logger.error('LOGIN_FAILED', `Login failed for user ${username}`, {
@@ -118,17 +145,17 @@ const useLogin = () => {
       if (error.response?.status === 401) {
         setErrors(prev => ({
           ...prev,
-          general: 'Usuario o contraseña incorrectos'
+          general: 'Invalid username or password'
         }));
       } else if (error.response?.status === 0) {
         setErrors(prev => ({
           ...prev,
-          general: 'No se pudo conectar con el servidor. Verifica tu conexión.'
+          general: 'Could not connect to server. Please check your connection.'
         }));
       } else {
         setErrors(prev => ({
           ...prev,
-          general: error.message || 'Error al iniciar sesión. Intenta nuevamente.'
+          general: error.message || 'Login failed. Please try again.'
         }));
       }
     } finally {

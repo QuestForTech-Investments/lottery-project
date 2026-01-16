@@ -49,6 +49,9 @@ public class AuthService : IAuthService
 
         var token = GenerateJwtToken(user.UserId, user.Username, user.Role?.RoleName);
 
+        // Get user's assigned betting pool (if any)
+        var userBettingPool = user.UserBettingPools?.FirstOrDefault(ubp => ubp.IsActive);
+
         return new LoginResponseDto
         {
             Token = token,
@@ -56,6 +59,8 @@ public class AuthService : IAuthService
             Email = user.Email,
             FullName = user.FullName,
             Role = user.Role?.RoleName,
+            BettingPoolId = userBettingPool?.BettingPoolId,
+            BettingPoolName = userBettingPool?.BettingPool?.BettingPoolName,
             ExpiresAt = DateTime.UtcNow.AddHours(12)
         };
     }

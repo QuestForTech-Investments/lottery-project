@@ -101,3 +101,25 @@ public class AdminResetPasswordDto
 {
     public string NewPassword { get; set; } = string.Empty;
 }
+
+/// <summary>
+/// DTO for POS user with betting pool information
+/// </summary>
+public class PosUserDto
+{
+    public int UserId { get; set; }
+    public string Username { get; set; } = string.Empty;
+    public string? FullName { get; set; }
+    public string? Email { get; set; }
+    public string? Phone { get; set; }
+    public bool IsActive { get; set; }
+    public DateTime? LastLoginAt { get; set; }
+    public DateTime? CreatedAt { get; set; }
+
+    // Betting Pool info
+    public int? BettingPoolId { get; set; }
+    public string? BettingPoolName { get; set; }
+    public string? BettingPoolCode { get; set; }
+    public int? ZoneId { get; set; }
+    public string? ZoneName { get; set; }
+}

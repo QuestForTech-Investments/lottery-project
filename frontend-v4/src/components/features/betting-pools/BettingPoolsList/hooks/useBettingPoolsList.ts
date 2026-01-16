@@ -95,7 +95,7 @@ const useBettingPoolsList = (): UseBettingPoolsListReturn => {
           bettingPoolCode?: string;
           bettingPoolName?: string;
           reference?: string;
-          username?: string;
+          users?: string[];
           isActive: boolean;
           zoneName?: string;
           zoneId: number;
@@ -134,7 +134,7 @@ const useBettingPoolsList = (): UseBettingPoolsListReturn => {
           number: number,
           name: bettingPool.bettingPoolName || '',
           reference: bettingPool.reference || '',
-          users: bettingPool.username ? [bettingPool.username] : [],
+          users: bettingPool.users || [],
           isActive: bettingPool.isActive,
           // Use zoneName directly from API response instead of looking up from map
           zone: bettingPool.zoneName || 'Sin zona',

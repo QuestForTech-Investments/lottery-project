@@ -32,7 +32,7 @@ public class UsersController : ControllerBase
 
     /// <summary>
     /// Get all administrator users with pagination and filters.
-    /// Excludes betting pool users (banca users).
+    /// Excludes POS users (banca users) by default.
     /// </summary>
     [HttpGet]
     [ProducesResponseType(typeof(PagedResponse<UserDto>), StatusCodes.Status200OK)]
@@ -41,19 +41,18 @@ public class UsersController : ControllerBase
         [FromQuery] int pageSize = 20,
         [FromQuery] string? search = null,
         [FromQuery] int? roleId = null,
-        [FromQuery] int? zoneId = null)
+        [FromQuery] int? zoneId = null,
+        [FromQuery] bool includePosUsers = false)
     {
-        // Get all betting pool usernames to exclude them
-        var bettingPoolUsernames = await _context.BettingPools
-            .Where(bp => bp.Username != null)
-            .Select(bp => bp.Username!)
-            .ToListAsync();
-
         var query = _context.Users
             .Where(u => u.IsActive)
-            // Exclude betting pool users (banca users)
-            .Where(u => !bettingPoolUsernames.Contains(u.Username))
             .AsQueryable();
+
+        // Exclude POS users by default (unless includePosUsers=true)
+        if (!includePosUsers)
+        {
+            query = query.Where(u => u.Role == null || u.Role.RoleName != "POS");
+        }
 
         // Apply filters
         if (!string.IsNullOrEmpty(search))
@@ -99,6 +98,86 @@ public class UsersController : ControllerBase
             .ToListAsync();
 
         var response = new PagedResponse<UserDto>
+        {
+            Items = dtos,
+            PageNumber = page,
+            PageSize = pageSize,
+            TotalCount = totalCount
+        };
+
+        return Ok(response);
+    }
+
+    /// <summary>
+    /// Get all POS users (banca users) with their assigned betting pool
+    /// </summary>
+    [HttpGet("pos")]
+    [ProducesResponseType(typeof(PagedResponse<PosUserDto>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetPosUsers(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        [FromQuery] string? search = null,
+        [FromQuery] int? bettingPoolId = null,
+        [FromQuery] int? zoneId = null)
+    {
+        var query = _context.Users
+            .Include(u => u.Role)
+            .Include(u => u.UserBettingPools)
+                .ThenInclude(ubp => ubp.BettingPool)
+                    .ThenInclude(bp => bp!.Zone)
+            .Where(u => u.IsActive && u.Role != null && u.Role.RoleName == "POS")
+            .AsQueryable();
+
+        // Apply filters
+        if (!string.IsNullOrEmpty(search))
+        {
+            query = query.Where(u =>
+                u.Username.Contains(search) ||
+                (u.FullName != null && u.FullName.Contains(search)) ||
+                u.UserBettingPools.Any(ubp => ubp.BettingPool != null && ubp.BettingPool.BettingPoolName.Contains(search)));
+        }
+
+        if (bettingPoolId.HasValue)
+        {
+            query = query.Where(u => u.UserBettingPools.Any(ubp => ubp.BettingPoolId == bettingPoolId.Value));
+        }
+
+        if (zoneId.HasValue)
+        {
+            query = query.Where(u => u.UserBettingPools.Any(ubp =>
+                ubp.BettingPool != null && ubp.BettingPool.ZoneId == zoneId.Value));
+        }
+
+        var totalCount = await query.CountAsync();
+
+        var users = await query
+            .OrderBy(u => u.Username)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        var dtos = users.Select(u =>
+        {
+            var userBettingPool = u.UserBettingPools.FirstOrDefault(ubp => ubp.IsActive);
+            return new PosUserDto
+            {
+                UserId = u.UserId,
+                Username = u.Username,
+                FullName = u.FullName,
+                Email = u.Email,
+                Phone = u.Phone,
+                IsActive = u.IsActive,
+                LastLoginAt = u.LastLoginAt,
+                CreatedAt = u.CreatedAt,
+                BettingPoolId = userBettingPool?.BettingPoolId,
+                BettingPoolName = userBettingPool?.BettingPool?.BettingPoolName,
+                BettingPoolCode = userBettingPool?.BettingPool?.BettingPoolCode,
+                ZoneId = userBettingPool?.BettingPool?.ZoneId,
+                ZoneName = userBettingPool?.BettingPool?.Zone?.ZoneName
+            };
+        }).ToList();
+
+        var response = new PagedResponse<PosUserDto>
         {
             Items = dtos,
             PageNumber = page,
@@ -223,23 +302,33 @@ public class UsersController : ControllerBase
     }
 
     /// <summary>
-    /// Search users
+    /// Search users (excludes POS users by default)
     /// </summary>
     [HttpGet("search")]
     [ProducesResponseType(typeof(IEnumerable<UserDto>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> Search([FromQuery] string query)
+    public async Task<IActionResult> Search(
+        [FromQuery] string query,
+        [FromQuery] bool includePosUsers = false)
     {
         if (string.IsNullOrWhiteSpace(query))
         {
             return Ok(new List<UserDto>());
         }
 
+        var baseQuery = _context.Users.Where(u => u.IsActive);
+
+        // Exclude POS users by default
+        if (!includePosUsers)
+        {
+            baseQuery = baseQuery.Where(u => u.Role == null || u.Role.RoleName != "POS");
+        }
+
         // ✅ OPTIMIZED: Direct projection to DTO (no N+1 problem)
-        var dtos = await _context.Users
-            .Where(u => u.IsActive &&
-                (u.Username.Contains(query) ||
-                 (u.FullName != null && u.FullName.Contains(query)) ||
-                 (u.Email != null && u.Email.Contains(query))))
+        var dtos = await baseQuery
+            .Where(u =>
+                u.Username.Contains(query) ||
+                (u.FullName != null && u.FullName.Contains(query)) ||
+                (u.Email != null && u.Email.Contains(query)))
             .OrderBy(u => u.Username)
             .Take(20)
             .Select(u => new UserDto
@@ -681,6 +770,7 @@ public class UsersController : ControllerBase
         user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
         user.UpdatedAt = DateTime.UtcNow;
         await _userRepository.UpdateAsync(user);
+        await _context.SaveChangesAsync();
 
         return NoContent();
     }
@@ -710,6 +800,7 @@ public class UsersController : ControllerBase
         user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
         user.UpdatedAt = DateTime.UtcNow;
         await _userRepository.UpdateAsync(user);
+        await _context.SaveChangesAsync();
 
         _logger.LogInformation("Admin reset password for user {UserId} ({Username})", userId, user.Username);
 

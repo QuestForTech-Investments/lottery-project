@@ -14,6 +14,8 @@ public class UserRepository : GenericRepository<User>, IUserRepository
     {
         return await _dbSet
             .Include(u => u.Role)
+            .Include(u => u.UserBettingPools)
+                .ThenInclude(ubp => ubp.BettingPool)
             .FirstOrDefaultAsync(u => u.Username == username && u.IsActive);
     }
 
