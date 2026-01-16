@@ -64,6 +64,12 @@ public class LotteriesController : ControllerBase
         return Ok(response);
     }
 
+    [HttpGet("{id}/is-dominican")]
+    public async Task<bool> IsDominican(int id)
+    {
+        return _context.Lotteries.Find(id)!.CountryId == _context.Countries.Where(c => c.CountryName == "Dominican Republic" || c.CountryName == "República Dominicana").First().CountryId;
+    }
+
     /// <summary>
     /// Get lottery by ID (optimized with caching and SQL projection)
     /// </summary>

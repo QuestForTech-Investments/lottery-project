@@ -17,6 +17,8 @@ public class BettingPoolDrawDto
     public int? LotteryId { get; set; }
     public string? LotteryName { get; set; }
     public string? CountryName { get; set; }
+    public string? LotteryImage { get; set; }
+    public string? Color { get; set; }
 
     // Configuration
     public bool IsActive { get; set; }
