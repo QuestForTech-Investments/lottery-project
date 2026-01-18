@@ -159,6 +159,7 @@ public class BettingPoolDrawsController : ControllerBase
                     ? enabled
                     : new List<GameTypeDto>(),
                 LotteryImage = bpd.Draw!.Lottery!.ImageUrl,
+                IsDominican = bpd.Draw!.Lottery!.Country!.CountryName == "República Dominicana" || bpd.Draw?.Lottery!.Country!.CountryName == "Dominican Republic",
                 Color = bpd.Draw!.Lottery!.Colour
             }).ToList();
 

@@ -24,6 +24,8 @@ public class BettingPoolDrawDto
     public bool IsActive { get; set; }
     public int? AnticipatedClosingMinutes { get; set; }
 
+    public bool? IsDominican { get; set; }
+
     // Game types enabled for this draw in this betting pool
     public List<GameTypeDto> EnabledGameTypes { get; set; } = new();
 
