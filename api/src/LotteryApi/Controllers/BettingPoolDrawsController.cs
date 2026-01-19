@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using LotteryApi.Data;
 using LotteryApi.Models;
 using LotteryApi.DTOs;
+using System.Diagnostics;
 
 namespace LotteryApi.Controllers;
 
@@ -28,7 +29,7 @@ public class BettingPoolDrawsController : ControllerBase
     /// Returns draw names, lottery names, and available game types
     /// </summary>
     [HttpGet]
-    public async Task<ActionResult<List<BettingPoolDrawDto>>> GetDraws(int bettingPoolId)
+    public async Task<ActionResult<List<BettingPoolDrawDto>>> GetDraws(int bettingPoolId, [FromQuery] bool playableOnly = false)
     {
         try
         {
@@ -48,6 +49,8 @@ public class BettingPoolDrawsController : ControllerBase
                 .Include(bpd => bpd.Draw)
                     .ThenInclude(d => d!.Lottery)
                         .ThenInclude(l => l!.Country)
+                .Include(bpd => bpd.Draw)
+                    .ThenInclude(d => d!.WeeklySchedules)
                 .AsSplitQuery()
                 .OrderBy(bpd => bpd.Draw!.DrawName)
                 .ToListAsync();
@@ -56,6 +59,15 @@ public class BettingPoolDrawsController : ControllerBase
             {
                 return Ok(new List<BettingPoolDrawDto>());
             }
+
+            if (playableOnly)
+                bettingPoolDraws = bettingPoolDraws.FindAll(bpd => bpd.Draw!.WeeklySchedules.Where(ws =>
+                    {
+                        var TimeStamp = DateTime.Now.TimeOfDay;
+
+                        return ws.DayOfWeek == (byte)DateTime.Now.DayOfWeek && ws.StartTime <= TimeStamp && ws.EndTime >= TimeStamp;
+                    }).Any()
+                );
 
             // Get all draw IDs
             var drawIds = bettingPoolDraws.Select(bpd => bpd.DrawId).ToHashSet();
@@ -129,7 +141,12 @@ public class BettingPoolDrawsController : ControllerBase
                 BettingPoolId = bpd.BettingPoolId,
                 DrawId = bpd.DrawId,
                 DrawName = bpd.Draw?.DrawName,
-                DrawTime = bpd.Draw?.DrawTime,
+                DrawTime = bpd.Draw!.WeeklySchedules!.Where(ws =>
+                {
+                    var TimeStamp = DateTime.Now.TimeOfDay;
+
+                    return ws.DayOfWeek == (byte)DateTime.Now.DayOfWeek && ws.StartTime <= TimeStamp && ws.EndTime >= TimeStamp;
+                })!.First()!.EndTime,
                 LotteryId = bpd.Draw?.LotteryId,
                 LotteryName = bpd.Draw?.Lottery?.LotteryName,
                 CountryName = bpd.Draw?.Lottery?.Country?.CountryName,
@@ -140,7 +157,10 @@ public class BettingPoolDrawsController : ControllerBase
                     : new List<GameTypeDto>(),
                 EnabledGameTypes = enabledGameTypesByDraw.TryGetValue(bpd.DrawId, out var enabled)
                     ? enabled
-                    : new List<GameTypeDto>()
+                    : new List<GameTypeDto>(),
+                LotteryImage = bpd.Draw!.Lottery!.ImageUrl,
+                IsDominican = bpd.Draw!.Lottery!.Country!.CountryName == "República Dominicana" || bpd.Draw?.Lottery!.Country!.CountryName == "Dominican Republic",
+                Color = bpd.Draw!.Lottery!.Colour
             }).ToList();
 
             _logger.LogInformation("Retrieved {Count} draws for betting pool {BettingPoolId}",

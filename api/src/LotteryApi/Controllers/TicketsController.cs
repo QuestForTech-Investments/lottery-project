@@ -23,6 +23,112 @@ public class TicketsController : ControllerBase
         _logger = logger;
     }
 
+    [HttpGet]
+    public async Task<ActionResult<TicketDetailDto[]>> GetTickets(int bettingPoolId)
+    {
+        _logger.LogInformation("Getting tickets for bettingPoolId {BettingPoolId}", bettingPoolId);
+
+        var tickets = await _context.Tickets
+            .AsNoTracking()
+            .Where(t => t.BettingPoolId == bettingPoolId)
+            .Select(t => new TicketDetailDto
+            {
+                TicketId = t.TicketId,
+                TicketCode = t.TicketCode,
+                Barcode = t.Barcode,
+                BettingPoolId = t.BettingPoolId,
+                BettingPoolName = t.BettingPool!.BettingPoolName,
+                BettingPoolCode = t.BettingPool!.BettingPoolCode,
+                UserId = t.UserId,
+                UserName = t.User!.FullName,
+                TerminalId = t.TerminalId,
+                IpAddress = t.IpAddress,
+                CreatedAt = t.CreatedAt,
+                GlobalMultiplier = t.GlobalMultiplier,
+                GlobalDiscount = t.GlobalDiscount,
+                CurrencyCode = t.CurrencyCode,
+                TotalLines = t.TotalLines,
+                TotalBetAmount = t.TotalBetAmount,
+                TotalDiscount = t.TotalDiscount,
+                TotalSubtotal = t.TotalSubtotal,
+                TotalWithMultiplier = t.TotalWithMultiplier,
+                TotalCommission = t.TotalCommission,
+                TotalNet = t.TotalNet,
+                GrandTotal = t.GrandTotal,
+                TotalPrize = t.TotalPrize,
+                WinningLines = t.WinningLines,
+                Status = t.Status,
+                TicketState = t.TicketState,
+                IsCancelled = t.IsCancelled,
+                CancelledAt = t.CancelledAt,
+                CancelledBy = t.CancelledBy,
+                CancellationReason = t.CancellationReason,
+                IsPaid = t.IsPaid,
+                PaidAt = t.PaidAt,
+                PaidBy = t.PaidBy,
+                PaymentMethod = t.PaymentMethod,
+                PaymentReference = t.PaymentReference,
+                CustomerId = t.CustomerId,
+                CustomerName = t.CustomerName,
+                CustomerPhone = t.CustomerPhone,
+                CustomerEmail = t.CustomerEmail,
+                CustomerIdNumber = t.CustomerIdNumber,
+                LotteryIds = t.LotteryIds,
+                TotalLotteries = t.TotalLotteries,
+                EarliestDrawTime = t.EarliestDrawTime,
+                LatestDrawTime = t.LatestDrawTime,
+                UpdatedAt = t.UpdatedAt,
+                UpdatedBy = t.UpdatedBy,
+                PrintCount = t.PrintCount,
+                LastPrintedAt = t.LastPrintedAt,
+                Notes = t.Notes,
+                SpecialFlags = t.SpecialFlags,
+                Lines = t.TicketLines.Select(l => new TicketLineDto
+                {
+                    LineId = l.LineId,
+                    TicketId = l.TicketId,
+                    LineNumber = l.LineNumber,
+                    LotteryId = l.Draw!.LotteryId,
+                    LotteryName = l.Draw!.Lottery!.LotteryName,
+                    DrawId = l.DrawId,
+                    DrawName = l.Draw!.DrawName,
+                    DrawDate = l.DrawDate,
+                    DrawTime = l.DrawTime,
+                    BetNumber = l.BetNumber,
+                    BetTypeId = l.BetTypeId,
+                    BetTypeCode = l.BetTypeCode,
+                    BetTypeName = l.BetType!.GameName,
+                    Position = l.Position,
+                    BetAmount = l.BetAmount,
+                    Multiplier = l.Multiplier,
+                    DiscountPercentage = l.DiscountPercentage,
+                    DiscountAmount = l.DiscountAmount,
+                    Subtotal = l.Subtotal,
+                    TotalWithMultiplier = l.TotalWithMultiplier,
+                    CommissionPercentage = l.CommissionPercentage,
+                    CommissionAmount = l.CommissionAmount,
+                    NetAmount = l.NetAmount,
+                    PrizeMultiplier = l.PrizeMultiplier,
+                    PrizeAmount = l.PrizeAmount,
+                    IsWinner = l.IsWinner,
+                    WinningPosition = l.WinningPosition,
+                    ResultNumber = l.ResultNumber,
+                    ResultCheckedAt = l.ResultCheckedAt,
+                    LineStatus = l.LineStatus,
+                    ExceedsLimit = l.ExceedsLimit,
+                    IsLuckyPick = l.IsLuckyPick,
+                    IsHotNumber = l.IsHotNumber,
+                    Notes = l.Notes
+                }).ToList()
+            })
+            .ToArrayAsync();
+
+        _logger.LogInformation("Retrieved {Count} tickets for bettingPoolId {BettingPoolId}",
+            tickets.Length, bettingPoolId);
+
+        return Ok(tickets);
+    }
+
     /// <summary>
     /// GET /api/tickets/params/create?category={1|2}
     /// Get parameters needed to create a ticket (draws, bet types, limits, current betting pool, stats)
