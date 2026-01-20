@@ -151,14 +151,25 @@ public class SalesReportsController : ControllerBase
                     && t.CreatedAt <= endDate)
                 .ToListAsync();
 
+            decimal totalSold = tickets.Sum(t => t.GrandTotal);
+            decimal totalNet = tickets.Sum(t => t.TotalNet);
+            decimal totalPrizes = tickets.Sum(t => t.TotalPrize);
+
             var summary = new SalesSummaryDto
             {
-                TotalSold = tickets.Sum(t => t.GrandTotal),
-                TotalPrizes = tickets.Sum(t => t.TotalPrize),
-                TotalCommissions = tickets.Sum(t => t.TotalCommission)
+                TotalSold = totalSold,
+                TotalPrizes = totalPrizes,
+                TotalCommissions = tickets.Sum(t => t.TotalCommission),
+                TotalNet = totalNet,
+                Balance = 0,
+                Credits = 0,
+                BenefitPercentage = 0
             };
 
             summary.TotalNet = summary.TotalSold - summary.TotalCommissions - summary.TotalPrizes;
+
+            if (totalSold > 0) summary.BenefitPercentage = (summary.TotalNet/ summary.TotalSold) * 100;
+            _logger.LogInformation($"TOTAL NET: {totalNet}\nTOTAL SOLD: {totalSold}\nBENEFIT PERCENTAGE: {summary.BenefitPercentage}");
 
             _logger.LogInformation(
                 "Daily summary for {Date}: Sold={TotalSold}, Prizes={TotalPrizes}, Commissions={TotalCommissions}, Net={TotalNet}",
