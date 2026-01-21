@@ -1,5 +1,6 @@
 using System.Text;
 using System.IO.Compression;
+using System.IdentityModel.Tokens.Jwt;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.ResponseCompression;
@@ -51,6 +52,9 @@ builder.Services.AddDbContext<LotteryDbContext>(options =>
 var jwtKey = builder.Configuration["Jwt:Key"] ?? throw new InvalidOperationException("JWT Key is not configured");
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "LotteryApi";
 var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "LotteryApi";
+
+// Disable automatic claim type mapping to keep original JWT claim names
+JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
 
 builder.Services.AddAuthentication(options =>
 {
@@ -168,9 +172,24 @@ builder.Services.AddCors(options =>
         });
 
         // SignalR requires credentials, so we need specific origins
+        // Generate origins for ports 3000, 4001, and 5100-5200 range
+        var devOrigins = new List<string>
+        {
+            "http://localhost:3000",
+            "http://localhost:4001",
+            "http://127.0.0.1:3000",
+            "http://127.0.0.1:4001"
+        };
+        // Add ports 5100-5200 for Vite dev servers
+        for (int port = 5100; port <= 5200; port++)
+        {
+            devOrigins.Add($"http://localhost:{port}");
+            devOrigins.Add($"http://127.0.0.1:{port}");
+        }
+
         options.AddPolicy("SignalRPolicy", policy =>
         {
-            policy.WithOrigins("http://localhost:4001", "http://localhost:3000", "http://127.0.0.1:4001")
+            policy.WithOrigins(devOrigins.ToArray())
                   .AllowAnyMethod()
                   .AllowAnyHeader()
                   .AllowCredentials();

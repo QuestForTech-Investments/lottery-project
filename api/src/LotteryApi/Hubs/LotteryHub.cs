@@ -23,13 +23,13 @@ public class LotteryHub : Hub<ILotteryHubClient>
     /// </summary>
     public override async Task OnConnectedAsync()
     {
-        var userId = Context.User?.FindFirst("sub")?.Value
-            ?? Context.User?.FindFirst("userId")?.Value;
+        // Claims use original JWT names (mapping disabled in Program.cs)
+        var userId = Context.User?.FindFirst("userId")?.Value;
+        var username = Context.User?.FindFirst("username")?.Value;
         var bettingPoolId = Context.User?.FindFirst("bettingPoolId")?.Value;
-
         _logger.LogInformation(
-            "Client connected: ConnectionId={ConnectionId}, UserId={UserId}, BettingPoolId={BettingPoolId}",
-            Context.ConnectionId, userId, bettingPoolId);
+            "Client connected: ConnectionId={ConnectionId}, UserId={UserId}, Username={Username}, BettingPoolId={BettingPoolId}",
+            Context.ConnectionId, userId, username, bettingPoolId);
 
         // Join user-specific group
         if (!string.IsNullOrEmpty(userId))
@@ -153,4 +153,59 @@ public class LotteryHub : Hub<ILotteryHubClient>
     {
         await Clients.Caller.Pong(DateTime.UtcNow);
     }
+
+    /// <summary>
+    /// Request play limit availability for specific draws.
+    /// Client sends: {"target": "playLimitUpdate", "arguments": [{"play": "n"}, {"draws": ["drawId"] }] }
+    /// </summary>
+    /// <param name="playRequest">Object containing the play number</param>
+    /// <param name="drawsRequest">Object containing the draw IDs</param>
+    public async Task PlayLimitUpdate(PlayLimitUpdatePlayParam playRequest, PlayLimitUpdateDrawsParam drawsRequest)
+    {
+        var userId = Context.User?.FindFirst("sub")?.Value
+            ?? Context.User?.FindFirst("userId")?.Value;
+        var bettingPoolId = Context.User?.FindFirst("bettingPoolId")?.Value;
+
+        _logger.LogInformation(
+            "PlayLimitUpdate requested: ConnectionId={ConnectionId}, UserId={UserId}, Play={Play}, Draws={Draws}",
+            Context.ConnectionId, userId, playRequest.Play, string.Join(",", drawsRequest.Draws));
+
+        // TODO: Add your calculation logic here to get availability for each draw
+        // For now, returning placeholder response
+        var response = new PlayLimitAvailabilityResponse
+        {
+            Play = playRequest.Play,
+            DrawsAvailability = drawsRequest.Draws.Select(drawId => new DrawAvailability
+            {
+                DrawId = drawId,
+                DrawName = $"Draw {drawId}", // TODO: Get actual draw name
+                AvailableAmount = 0,          // TODO: Calculate actual availability
+                LimitAmount = 0,              // TODO: Get actual limit
+                CurrentAmount = 0,            // TODO: Get current amount bet
+                PercentageUsed = 0,           // TODO: Calculate percentage
+                IsBlocked = false             // TODO: Determine if blocked
+            }).ToList()
+        };
+
+        // Send response only to the caller
+        await Clients.Caller.PlayLimitAvailability(response);
+    }
+}
+
+// ==================== PLAY LIMIT UPDATE PARAMETER CLASSES ====================
+
+/// <summary>
+/// Parameter class for play in PlayLimitUpdate.
+/// </summary>
+public class PlayLimitUpdatePlayParam
+{
+    public string Play { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// Parameter class for draws in PlayLimitUpdate.
+/// </summary>
+public class PlayLimitUpdateDrawsParam
+{
+    public List<int> Draws { get; set; } = new();
 }

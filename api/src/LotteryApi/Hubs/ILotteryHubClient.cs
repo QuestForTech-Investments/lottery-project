@@ -102,6 +102,13 @@ public interface ILotteryHubClient
     /// Generic notification for extensibility.
     /// </summary>
     Task Notify(GenericNotification notification);
+
+    // ==================== PLAY LIMIT AVAILABILITY ====================
+
+    /// <summary>
+    /// Response with play availability across requested draws.
+    /// </summary>
+    Task PlayLimitAvailability(PlayLimitAvailabilityResponse response);
 }
 
 // ==================== NOTIFICATION DTOs ====================
@@ -319,4 +326,43 @@ public class GenericNotification : BaseNotification
     {
         Type = "Generic";
     }
+}
+
+// ==================== PLAY LIMIT AVAILABILITY DTOs ====================
+
+/// <summary>
+/// Request to check play limit availability.
+/// </summary>
+public class PlayLimitUpdateRequest
+{
+    public string Play { get; set; } = string.Empty;
+    public List<int> Draws { get; set; } = new();
+}
+
+/// <summary>
+/// Response with play availability across draws.
+/// </summary>
+public class PlayLimitAvailabilityResponse : BaseNotification
+{
+    public string Play { get; set; } = string.Empty;
+    public List<DrawAvailability> DrawsAvailability { get; set; } = new();
+
+    public PlayLimitAvailabilityResponse()
+    {
+        Type = "PlayLimitAvailability";
+    }
+}
+
+/// <summary>
+/// Availability info for a specific draw.
+/// </summary>
+public class DrawAvailability
+{
+    public int DrawId { get; set; }
+    public string DrawName { get; set; } = string.Empty;
+    public decimal AvailableAmount { get; set; }
+    public decimal LimitAmount { get; set; }
+    public decimal CurrentAmount { get; set; }
+    public decimal PercentageUsed { get; set; }
+    public bool IsBlocked { get; set; }
 }

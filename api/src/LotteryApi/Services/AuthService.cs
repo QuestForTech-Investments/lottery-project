@@ -47,10 +47,11 @@ public class AuthService : IAuthService
             await LogLoginSessionAsync(user, sessionContext);
         }
 
-        var token = GenerateJwtToken(user.UserId, user.Username, user.Role?.RoleName);
-
         // Get user's assigned betting pool (if any)
         var userBettingPool = user.UserBettingPools?.FirstOrDefault(ubp => ubp.IsActive);
+        _logger.LogInformation("FUCKING BETTING POOL {a}", userBettingPool?.BettingPoolId);
+
+        var token = GenerateJwtToken(user.UserId, user.Username, user.Role?.RoleName, userBettingPool?.BettingPoolId);
 
         return new LoginResponseDto
         {
@@ -145,7 +146,7 @@ public class AuthService : IAuthService
         };
     }
 
-    public string GenerateJwtToken(int userId, string username, string? role)
+    public string GenerateJwtToken(int userId, string username, string? role, int? bettingPoolId = null)
     {
         var jwtKey = _configuration["Jwt:Key"] ?? throw new InvalidOperationException("JWT Key not configured");
         var jwtIssuer = _configuration["Jwt:Issuer"] ?? "LotteryApi";
@@ -154,16 +155,25 @@ public class AuthService : IAuthService
         var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
         var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
 
+        _logger.LogInformation("FUCKING USER ID: {a}", userId.ToString());
+
         var claims = new List<Claim>
         {
             new Claim(JwtRegisteredClaimNames.Sub, userId.ToString()),
             new Claim(JwtRegisteredClaimNames.UniqueName, username),
+            new Claim("userId", userId.ToString()),
+            new Claim("username", username),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
 
         if (!string.IsNullOrEmpty(role))
         {
             claims.Add(new Claim(ClaimTypes.Role, role));
+        }
+
+        if (bettingPoolId.HasValue)
+        {
+            claims.Add(new Claim("bettingPoolId", bettingPoolId.Value.ToString()));
         }
 
         var token = new JwtSecurityToken(
