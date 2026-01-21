@@ -118,16 +118,30 @@ const useLogin = () => {
       // This allows POS subdomain to read the same token
       if (response.token) {
         const isProduction = window.location.hostname.includes('lottobook.net');
-        const cookieDomain = isProduction ? '; domain=.lottobook.net' : '';
-        const secure = isProduction ? '; secure' : '';
-        document.cookie = `authToken=${response.token}; path=/${cookieDomain}${secure}; SameSite=Lax`;
+        const expiresInSeconds = 86400; // 24 hours
+        const expires = new Date(Date.now() + expiresInSeconds * 1000).toUTCString();
+
+        if (isProduction) {
+          // Production: set cookie on parent domain so all subdomains can access it
+          document.cookie = `lottery_auth_token=${response.token}; domain=.lottobook.net; path=/; expires=${expires}; secure; samesite=lax`;
+        } else {
+          // Development: set cookie without domain restriction
+          document.cookie = `lottery_auth_token=${response.token}; path=/; expires=${expires}; samesite=lax`;
+        }
       }
 
-      // Redirect based on user role
-      if (response.role === 'POS') {
+      // Check for redirect parameter (e.g., from POS app)
+      const params = new URLSearchParams(window.location.search);
+      const redirectUrl = params.get('redirect');
+
+      // Redirect based on user role or redirect parameter
+      if (redirectUrl && redirectUrl.startsWith('https://pos.lottobook.net')) {
+        // Redirect back to POS if coming from there
+        window.location.href = redirectUrl;
+      } else if (response.role === 'POS') {
         // POS users go to POS site
         const posUrl = window.location.hostname.includes('lottobook.net')
-          ? 'http://70.35.199.64:5175/'
+          ? 'https://pos.lottobook.net'
           : 'http://localhost:5173'; // Local dev POS URL
         window.location.href = posUrl;
       } else {
