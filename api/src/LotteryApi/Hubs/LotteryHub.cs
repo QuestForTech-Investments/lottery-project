@@ -1,5 +1,9 @@
+using LotteryApi.Data;
+using LotteryApi.DTOs;
+using LotteryApi.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
 
 namespace LotteryApi.Hubs;
 
@@ -11,10 +15,12 @@ namespace LotteryApi.Hubs;
 public class LotteryHub : Hub<ILotteryHubClient>
 {
     private readonly ILogger<LotteryHub> _logger;
+    private readonly LotteryDbContext _context;
 
-    public LotteryHub(ILogger<LotteryHub> logger)
+    public LotteryHub(ILogger<LotteryHub> logger, LotteryDbContext context)
     {
         _logger = logger;
+        _context = context;
     }
 
     /// <summary>
@@ -156,7 +162,7 @@ public class LotteryHub : Hub<ILotteryHubClient>
 
     /// <summary>
     /// Request play limit availability for specific draws.
-    /// Client sends: {"target": "playLimitUpdate", "arguments": [{"play": "n"}, {"draws": ["drawId"] }] }
+    /// Client sends: {"target": "PlayLimitUpdate", "arguments": [{"play": "n"}, {"draws": [drawId] }] }
     /// </summary>
     /// <param name="playRequest">Object containing the play number</param>
     /// <param name="drawsRequest">Object containing the draw IDs</param>
@@ -164,27 +170,102 @@ public class LotteryHub : Hub<ILotteryHubClient>
     {
         var userId = Context.User?.FindFirst("sub")?.Value
             ?? Context.User?.FindFirst("userId")?.Value;
-        var bettingPoolId = Context.User?.FindFirst("bettingPoolId")?.Value;
+        var bettingPoolIdStr = Context.User?.FindFirst("bettingPoolId")?.Value;
+
+        if (string.IsNullOrEmpty(bettingPoolIdStr) || !int.TryParse(bettingPoolIdStr, out var bettingPoolId))
+        {
+            _logger.LogWarning("PlayLimitUpdate: No valid bettingPoolId found for user {UserId}", userId);
+            return;
+        }
 
         _logger.LogInformation(
             "PlayLimitUpdate requested: ConnectionId={ConnectionId}, UserId={UserId}, Play={Play}, Draws={Draws}",
             Context.ConnectionId, userId, playRequest.Play, string.Join(",", drawsRequest.Draws));
 
-        // TODO: Add your calculation logic here to get availability for each draw
-        // For now, returning placeholder response
+        // Convert play number to pattern (e.g., "123" -> "###", "12" -> "##")
+        var playNumber = playRequest.Play.Trim();
+        var playPattern = new string('#', playNumber.Length);
+        var today = DateOnly.FromDateTime(DateTime.Today);
+
+        var drawsAvailability = new List<DrawAvailability>();
+
+        foreach (var drawId in drawsRequest.Draws)
+        {
+            // Get the draw with its limit rules
+            var draw = await _context.Draws
+                .Where(d => d.DrawId == drawId
+                    && d.BettingPoolDraws!.Any(bpd => bpd.BettingPoolId == bettingPoolId))
+                .FirstOrDefaultAsync();
+
+            if (draw == null)
+            {
+                continue;
+            }
+
+            // Find the applicable limit rule for this play pattern
+            // Priority: specific number > pattern > global (null pattern)
+            var limitRule = await _context.LimitRules
+                .Where(lr => lr.IsActive
+                    && (lr.DrawId == drawId || lr.DrawId == null)
+                    && (lr.BetNumberPattern == playNumber || lr.BetNumberPattern == playPattern || lr.BetNumberPattern == null)
+                    && (lr.EffectiveFrom == null || lr.EffectiveFrom <= DateTime.Now)
+                    && (lr.EffectiveTo == null || lr.EffectiveTo >= DateTime.Now))
+                .OrderByDescending(lr => lr.BetNumberPattern == playNumber ? 3 : lr.BetNumberPattern == playPattern ? 2 : 1)
+                .ThenByDescending(lr => lr.DrawId != null ? 1 : 0)
+                .ThenByDescending(lr => lr.Priority ?? 0)
+                .FirstOrDefaultAsync();
+
+            if (limitRule == null)
+            {
+                // No limit rule found, unlimited availability
+                drawsAvailability.Add(new DrawAvailability
+                {
+                    DrawId = drawId,
+                    DrawName = draw.DrawName,
+                    AvailableAmount = -1, // -1 indicates unlimited
+                    LimitAmount = 0,
+                    CurrentAmount = 0,
+                    PercentageUsed = 0,
+                    IsBlocked = false
+                });
+                continue;
+            }
+
+            // Get current consumption for this play number
+            var consumption = await _context.LimitConsumptions
+                .Where(lc => lc.DrawId == drawId
+                    && lc.DrawDate == today
+                    && lc.BetNumber == playNumber
+                    && (lc.BettingPoolId == bettingPoolId || lc.BettingPoolId == null))
+                .FirstOrDefaultAsync();
+
+            // Determine the applicable limit based on the limit rule
+            var maxLimit = limitRule.MaxBetPerNumber
+                ?? limitRule.MaxBetPerBettingPool
+                ?? limitRule.MaxBetGlobal
+                ?? 0;
+
+            var currentAmount = consumption?.CurrentAmount ?? 0;
+            var availableAmount = maxLimit > 0 ? maxLimit - currentAmount : 0;
+            var percentageUsed = maxLimit > 0 ? (currentAmount / maxLimit) * 100 : 0;
+            var isBlocked = consumption?.IsAtLimit ?? false || (maxLimit > 0 && currentAmount >= maxLimit);
+
+            drawsAvailability.Add(new DrawAvailability
+            {
+                DrawId = drawId,
+                DrawName = draw.DrawName,
+                AvailableAmount = Math.Max(0, availableAmount),
+                LimitAmount = maxLimit,
+                CurrentAmount = currentAmount,
+                PercentageUsed = Math.Round(percentageUsed, 2),
+                IsBlocked = isBlocked
+            });
+        }
+
         var response = new PlayLimitAvailabilityResponse
         {
             Play = playRequest.Play,
-            DrawsAvailability = drawsRequest.Draws.Select(drawId => new DrawAvailability
-            {
-                DrawId = drawId,
-                DrawName = $"Draw {drawId}", // TODO: Get actual draw name
-                AvailableAmount = 0,          // TODO: Calculate actual availability
-                LimitAmount = 0,              // TODO: Get actual limit
-                CurrentAmount = 0,            // TODO: Get current amount bet
-                PercentageUsed = 0,           // TODO: Calculate percentage
-                IsBlocked = false             // TODO: Determine if blocked
-            }).ToList()
+            DrawsAvailability = drawsAvailability
         };
 
         // Send response only to the caller

@@ -60,4 +60,6 @@ public class Draw
     public virtual ICollection<BettingPoolDraw> BettingPoolDraws { get; set; } = new List<BettingPoolDraw>();
     public virtual ICollection<TicketLine> TicketLines { get; set; } = new List<TicketLine>();
     public virtual ICollection<DrawWeeklySchedule> WeeklySchedules { get; set; } = new List<DrawWeeklySchedule>();
+    public virtual ICollection<LimitRule> LimitRules { get; set; } = new List<LimitRule>();
+    public virtual ICollection<LimitConsumption> LimitConsumptions { get; set; } = new List<LimitConsumption>();
 }

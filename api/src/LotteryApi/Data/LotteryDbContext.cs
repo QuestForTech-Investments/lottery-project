@@ -71,6 +71,10 @@ public class LotteryDbContext : DbContext
     // Login Sessions (Audit)
     public DbSet<LoginSession> LoginSessions { get; set; }
 
+    // Limits
+    public DbSet<LimitRule> LimitRules { get; set; }
+    public DbSet<LimitConsumption> LimitConsumptions { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -337,6 +341,41 @@ public class LotteryDbContext : DbContext
             .HasOne(gt => gt.Category)
             .WithMany(gc => gc.GameTypes)
             .HasForeignKey(gt => gt.CategoryId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // LimitRule -> Draw
+        modelBuilder.Entity<LimitRule>()
+            .HasOne(lr => lr.Draw)
+            .WithMany(d => d.LimitRules)
+            .HasForeignKey(lr => lr.DrawId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // LimitRule -> GameType
+        modelBuilder.Entity<LimitRule>()
+            .HasOne(lr => lr.GameType)
+            .WithMany()
+            .HasForeignKey(lr => lr.GameTypeId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // LimitConsumption -> LimitRule
+        modelBuilder.Entity<LimitConsumption>()
+            .HasOne(lc => lc.LimitRule)
+            .WithMany(lr => lr.LimitConsumptions)
+            .HasForeignKey(lc => lc.LimitRuleId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // LimitConsumption -> Draw
+        modelBuilder.Entity<LimitConsumption>()
+            .HasOne(lc => lc.Draw)
+            .WithMany(d => d.LimitConsumptions)
+            .HasForeignKey(lc => lc.DrawId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // LimitConsumption -> BettingPool
+        modelBuilder.Entity<LimitConsumption>()
+            .HasOne(lc => lc.BettingPool)
+            .WithMany()
+            .HasForeignKey(lc => lc.BettingPoolId)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }
