@@ -1,5 +1,6 @@
 using System.Text;
 using System.IO.Compression;
+using System.IdentityModel.Tokens.Jwt;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.ResponseCompression;
@@ -11,6 +12,7 @@ using AspNetCoreRateLimit;
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using LotteryApi.Data;
+using LotteryApi.Hubs;
 using LotteryApi.Middleware;
 using LotteryApi.Repositories;
 using LotteryApi.Services;
@@ -51,6 +53,9 @@ var jwtKey = builder.Configuration["Jwt:Key"] ?? throw new InvalidOperationExcep
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "LotteryApi";
 var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "LotteryApi";
 
+// Disable automatic claim type mapping to keep original JWT claim names
+JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
+
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -68,6 +73,24 @@ builder.Services.AddAuthentication(options =>
         ValidAudience = jwtAudience,
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
         ClockSkew = TimeSpan.Zero
+    };
+
+    // Configure JWT authentication for SignalR
+    options.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            // Read token from query string for SignalR connections
+            var accessToken = context.Request.Query["access_token"];
+
+            // If the request is for our hub...
+            var path = context.HttpContext.Request.Path;
+            if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
+            {
+                context.Token = accessToken;
+            }
+            return Task.CompletedTask;
+        }
     };
 });
 
@@ -87,12 +110,22 @@ builder.Services.AddScoped<IPermissionRepository, PermissionRepository>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ILoginSessionService, LoginSessionService>();
 builder.Services.AddSingleton<ICacheService, MemoryCacheService>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
 
 // Register External Results Services (lottery results fetching and ticket processing)
 builder.Services.AddExternalResultsServices(builder.Configuration);
 
 // Register Memory Cache for performance
 builder.Services.AddMemoryCache();
+
+// Configure SignalR
+builder.Services.AddSignalR(options =>
+{
+    options.EnableDetailedErrors = builder.Environment.IsDevelopment();
+    options.KeepAliveInterval = TimeSpan.FromSeconds(15);
+    options.ClientTimeoutInterval = TimeSpan.FromSeconds(30);
+    options.MaximumReceiveMessageSize = 32 * 1024; // 32 KB
+});
 
 // Configure Response Compression
 builder.Services.AddResponseCompression(options =>
@@ -137,6 +170,30 @@ builder.Services.AddCors(options =>
                   .AllowAnyMethod()
                   .AllowAnyHeader();
         });
+
+        // SignalR requires credentials, so we need specific origins
+        // Generate origins for ports 3000, 4001, and 5100-5200 range
+        var devOrigins = new List<string>
+        {
+            "http://localhost:3000",
+            "http://localhost:4001",
+            "http://127.0.0.1:3000",
+            "http://127.0.0.1:4001"
+        };
+        // Add ports 5100-5200 for Vite dev servers
+        for (int port = 5100; port <= 5200; port++)
+        {
+            devOrigins.Add($"http://localhost:{port}");
+            devOrigins.Add($"http://127.0.0.1:{port}");
+        }
+
+        options.AddPolicy("SignalRPolicy", policy =>
+        {
+            policy.WithOrigins(devOrigins.ToArray())
+                  .AllowAnyMethod()
+                  .AllowAnyHeader()
+                  .AllowCredentials();
+        });
     }
     else
     {
@@ -150,6 +207,15 @@ builder.Services.AddCors(options =>
                   .AllowAnyMethod()
                   .AllowAnyHeader()
                   .AllowCredentials();  // Permite cookies y auth headers
+        });
+
+        // SignalR policy for production (same as ProdPolicy but explicit)
+        options.AddPolicy("SignalRPolicy", policy =>
+        {
+            policy.WithOrigins(allowedOrigins)
+                  .AllowAnyMethod()
+                  .AllowAnyHeader()
+                  .AllowCredentials();
         });
     }
 
@@ -324,6 +390,10 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+// Map SignalR hubs
+app.MapHub<LotteryHub>("/hubs/lottery")
+    .RequireCors("SignalRPolicy");
 
 // Health check endpoint
 app.MapGet("/health", () => Results.Ok(new

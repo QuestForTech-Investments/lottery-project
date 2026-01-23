@@ -547,6 +547,15 @@ public class TicketsController : ControllerBase
                 totalNet += line.NetAmount;
 
                 ticket.TicketLines.Add(line);
+
+                // Update limit consumption for this line
+                await UpdateLimitConsumption(
+                    lineDto.DrawId,
+                    todayBusiness,
+                    lineDto.BetNumber,
+                    dto.BettingPoolId,
+                    line.NetAmount,
+                    now);
             }
 
             // 9. Set ticket totals
@@ -1422,5 +1431,95 @@ public class TicketsController : ControllerBase
             _logger.LogError(ex, "Error resetting commissions");
             return StatusCode(500, new { message = "Error al resetear las comisiones" });
         }
+    }
+
+    /// <summary>
+    /// Update or create limit consumption record for a bet
+    /// </summary>
+    /// <param name="drawId">Draw ID</param>
+    /// <param name="drawDate">Draw date</param>
+    /// <param name="betNumber">Bet number</param>
+    /// <param name="bettingPoolId">Betting pool ID</param>
+    /// <param name="betAmount">Amount to add to consumption</param>
+    /// <param name="timestamp">Current timestamp</param>
+    private async Task UpdateLimitConsumption(
+        int drawId,
+        DateTime drawDate,
+        string betNumber,
+        int bettingPoolId,
+        decimal betAmount,
+        DateTime timestamp)
+    {
+        var today = DateOnly.FromDateTime(drawDate);
+        var playPattern = new string('#', betNumber.Length);
+
+        // Find the applicable limit rule for this bet
+        var limitRule = await _context.LimitRules
+            .Where(lr => lr.IsActive
+                && (lr.DrawId == drawId || lr.DrawId == null)
+                && (lr.BetNumberPattern == betNumber || lr.BetNumberPattern == playPattern || lr.BetNumberPattern == null)
+                && (lr.EffectiveFrom == null || lr.EffectiveFrom <= timestamp)
+                && (lr.EffectiveTo == null || lr.EffectiveTo >= timestamp))
+            .OrderByDescending(lr => lr.BetNumberPattern == betNumber ? 3 : lr.BetNumberPattern == playPattern ? 2 : 1)
+            .ThenByDescending(lr => lr.DrawId != null ? 1 : 0)
+            .ThenByDescending(lr => lr.Priority ?? 0)
+            .FirstOrDefaultAsync();
+
+        if (limitRule == null)
+        {
+            // No limit rule applies, no consumption tracking needed
+            _logger.LogInformation("NO LIMIT FOUND");
+            return;
+        }
+
+        // Find existing consumption record
+        var consumption = await _context.LimitConsumptions
+            .Where(lc => lc.LimitRuleId == limitRule.LimitRuleId
+                && lc.DrawId == drawId
+                && lc.DrawDate == today
+                && lc.BetNumber == betNumber
+                && lc.BettingPoolId == bettingPoolId)
+            .FirstOrDefaultAsync();
+
+        // Determine the max limit for this rule
+        var maxLimit = limitRule.MaxBetPerNumber
+            ?? limitRule.MaxBetPerBettingPool
+            ?? limitRule.MaxBetGlobal
+            ?? 0;
+
+        if (consumption == null)
+        {
+            // Create new consumption record
+            consumption = new LimitConsumption
+            {
+                LimitRuleId = limitRule.LimitRuleId,
+                DrawId = drawId,
+                DrawDate = today,
+                BetNumber = betNumber,
+                BettingPoolId = bettingPoolId,
+                CurrentAmount = betAmount,
+                BetCount = 1,
+                LastBetAt = timestamp,
+                IsNearLimit = maxLimit > 0 && betAmount >= (maxLimit * 0.8m),
+                IsAtLimit = maxLimit > 0 && betAmount >= maxLimit,
+                CreatedAt = timestamp,
+                UpdatedAt = timestamp
+            };
+            _context.LimitConsumptions.Add(consumption);
+        }
+        else
+        {
+            // Update existing consumption record
+            consumption.CurrentAmount += betAmount;
+            consumption.BetCount += 1;
+            consumption.LastBetAt = timestamp;
+            consumption.IsNearLimit = maxLimit > 0 && consumption.CurrentAmount >= (maxLimit * 0.8m);
+            consumption.IsAtLimit = maxLimit > 0 && consumption.CurrentAmount >= maxLimit;
+            consumption.UpdatedAt = timestamp;
+        }
+
+        _logger.LogDebug(
+            "Updated limit consumption: DrawId={DrawId}, BetNumber={BetNumber}, BettingPoolId={BettingPoolId}, CurrentAmount={CurrentAmount}, IsAtLimit={IsAtLimit}",
+            drawId, betNumber, bettingPoolId, consumption.CurrentAmount, consumption.IsAtLimit);
     }
 }

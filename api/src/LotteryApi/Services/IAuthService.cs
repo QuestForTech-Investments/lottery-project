@@ -6,7 +6,7 @@ public interface IAuthService
 {
     Task<LoginResponseDto?> LoginAsync(LoginDto loginDto, LoginSessionContext? sessionContext = null);
     Task<LoginResponseDto?> RegisterAsync(RegisterDto registerDto);
-    string GenerateJwtToken(int userId, string username, string? role);
+    string GenerateJwtToken(int userId, string username, string? role, int? bettingPoolId = null);
 }
 
 /// <summary>

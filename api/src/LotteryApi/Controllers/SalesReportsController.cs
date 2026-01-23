@@ -168,8 +168,7 @@ public class SalesReportsController : ControllerBase
 
             summary.TotalNet = summary.TotalSold - summary.TotalCommissions - summary.TotalPrizes;
 
-            if (totalSold > 0) summary.BenefitPercentage = (summary.TotalNet/ summary.TotalSold) * 100;
-            _logger.LogInformation($"TOTAL NET: {totalNet}\nTOTAL SOLD: {totalSold}\nBENEFIT PERCENTAGE: {summary.BenefitPercentage}");
+            if (totalSold > 0) summary.BenefitPercentage = (summary.TotalNet / summary.TotalSold) * 100;
 
             _logger.LogInformation(
                 "Daily summary for {Date}: Sold={TotalSold}, Prizes={TotalPrizes}, Commissions={TotalCommissions}, Net={TotalNet}",
