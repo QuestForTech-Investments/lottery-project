@@ -1,11 +1,13 @@
+using Azure.Core.Serialization;
+using LotteryApi.Data;
+using LotteryApi.DTOs;
+using LotteryApi.Helpers;
+using LotteryApi.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using LotteryApi.Data;
-using LotteryApi.DTOs;
-using LotteryApi.Models;
-using LotteryApi.Helpers;
-using System.Text;
+using System;
+using System.Text.Json;
 
 namespace LotteryApi.Controllers;
 
@@ -424,6 +426,8 @@ public class TicketsController : ControllerBase
             var validCombinations = new HashSet<(int DrawId, int GameTypeId)>(
                 drawGameCompatibilities.Select(dgc => (dgc.DrawId, dgc.GameTypeId)));
 
+            List<object> invalidBets = new List<object>();
+
             foreach (var line in dto.Lines)
             {
                 var draw = draws.FirstOrDefault(d => d.DrawId == line.DrawId);
@@ -439,10 +443,14 @@ public class TicketsController : ControllerBase
                     betTypesDict.TryGetValue(line.BetTypeId, out var betType);
                     var betTypeName = betType?.GameName ?? $"ID {line.BetTypeId}";
 
-                    return UnprocessableEntity(new
-                    {
-                        message = $"Error de ticket: la jugada '{betTypeName}' es inválida para la lotería '{draw.Lottery?.LotteryName ?? draw.DrawName}'"
-                    });
+                    var lineError = JsonSerializer.Deserialize<Dictionary<string, object>>(
+                        JsonSerializer.Serialize(line)
+                    );
+
+                    lineError!["errorType"] = "invalid-for-lottery";
+
+                    invalidBets.Add(lineError);
+                    continue;
                 }
 
                 // TEMPORARY: Commented for testing purposes
@@ -546,17 +554,35 @@ public class TicketsController : ControllerBase
                 totalCommission += line.CommissionAmount;
                 totalNet += line.NetAmount;
 
-                ticket.TicketLines.Add(line);
+                if (await CheckIfPlayIsOnLimits(line.DrawId, dto.BettingPoolId, line.BetNumber, line.BetAmount))
+                {
+                    ticket.TicketLines.Add(line);
 
-                // Update limit consumption for this line
-                await UpdateLimitConsumption(
-                    lineDto.DrawId,
-                    todayBusiness,
-                    lineDto.BetNumber,
-                    dto.BettingPoolId,
-                    line.NetAmount,
-                    now);
+                    // Update limit consumption for this line
+                    await UpdateLimitConsumption(
+                        lineDto.DrawId,
+                        todayBusiness,
+                        lineDto.BetNumber,
+                        dto.BettingPoolId,
+                        line.NetAmount,
+                        now);
+                } else
+                {
+                    line.ExceedsLimit = true;
+
+                    var lineError = JsonSerializer.Deserialize<Dictionary<string, object>>(
+                        JsonSerializer.Serialize(line)
+                    );
+
+                    lineError!["errorType"] = "exceeds-limit";
+                    invalidBets.Add(lineError);
+                }
             }
+
+            if (invalidBets.Count > 0) return BadRequest(new {
+                code = "ticket/invalid-bets-exceed-limits",
+                invalidBets = invalidBets.ToArray(),
+            });
 
             // 9. Set ticket totals
             ticket.TotalLines = dto.Lines.Count;
@@ -1521,5 +1547,59 @@ public class TicketsController : ControllerBase
         _logger.LogDebug(
             "Updated limit consumption: DrawId={DrawId}, BetNumber={BetNumber}, BettingPoolId={BettingPoolId}, CurrentAmount={CurrentAmount}, IsAtLimit={IsAtLimit}",
             drawId, betNumber, bettingPoolId, consumption.CurrentAmount, consumption.IsAtLimit);
+    }
+
+    private async Task<bool> CheckIfPlayIsOnLimits(int drawId, int bettingPool, string betNumber, decimal bet)
+    {
+        var timestamp = DateTime.Today;
+        var playPattern = new string('#', betNumber.Length);
+
+        // Find the applicable limit rule for this bet
+        var limitRule = await _context.LimitRules
+            .Where(lr => lr.IsActive
+                && (lr.DrawId == drawId || lr.DrawId == null)
+                && (lr.BetNumberPattern == betNumber || lr.BetNumberPattern == playPattern || lr.BetNumberPattern == null)
+                && (lr.EffectiveFrom == null || lr.EffectiveFrom <= timestamp)
+                && (lr.EffectiveTo == null || lr.EffectiveTo >= timestamp))
+            .OrderByDescending(lr => lr.BetNumberPattern == betNumber ? 3 : lr.BetNumberPattern == playPattern ? 2 : 1)
+            .ThenByDescending(lr => lr.DrawId != null ? 1 : 0)
+            .ThenByDescending(lr => lr.Priority ?? 0)
+            .FirstOrDefaultAsync();
+
+        if (limitRule == null)
+        {
+            // No limit rule applies, no consumption tracking needed
+            _logger.LogInformation("NO LIMIT FOUND");
+            return false;
+        }
+
+        // Find existing consumption record
+        var consumption = await _context.LimitConsumptions
+            .Where(lc => lc.LimitRuleId == limitRule.LimitRuleId
+                && lc.DrawId == drawId
+                && lc.DrawDate == DateOnly.FromDateTime(timestamp)
+                && lc.BetNumber == betNumber
+                && lc.BettingPoolId == bettingPool || lc.BettingPoolId == null)
+            .FirstOrDefaultAsync();
+
+        var limit = (decimal?)-1;
+
+        if (limitRule!.MaxBetPerNumber.HasValue)
+            limit = limitRule.MaxBetPerNumber;
+        else if (limitRule!.MaxBetPerBettingPool.HasValue)
+            limit = limitRule.MaxBetPerBettingPool;
+        else if (limitRule!.MaxBetPerTicket.HasValue)
+            limit = limitRule.MaxBetPerTicket;
+
+        bool isAtLimit = false;
+        decimal currentAmount = 0;
+        if (consumption != null)
+        {
+            isAtLimit = consumption.IsAtLimit;
+            currentAmount = consumption.CurrentAmount;
+        }
+        _logger.LogInformation($"LIMIT FOUND: d{drawId}, l{limit}, b{bet}, bn{betNumber}, bp{bettingPool}, il{isAtLimit}, ca{currentAmount}, t{DateOnly.FromDateTime(timestamp)}");
+
+        return limit == -1 || (!isAtLimit && currentAmount + bet <= limit);
     }
 }
