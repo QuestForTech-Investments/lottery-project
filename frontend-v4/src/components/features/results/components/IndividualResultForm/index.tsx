@@ -72,7 +72,27 @@ export const IndividualResultForm: FC<IndividualResultFormProps> = memo(({
     field: keyof IndividualResultFormType,
     value: string
   ) => {
+    // Get the max length for this field
+    const fieldConfig = allFields.find((f) => f.field === field);
+    const maxLength = fieldConfig?.maxLen || 2;
+
+    // Call parent handler
     onFieldChange(field, value, editableFieldsList);
+
+    // Auto-advance to next field when max length is reached
+    if (value.length >= maxLength) {
+      const currentIndex = editableFieldsList.indexOf(field);
+      if (currentIndex !== -1 && currentIndex < editableFieldsList.length - 1) {
+        const nextField = editableFieldsList[currentIndex + 1];
+        const nextInput = inputRefs.current[nextField];
+        if (nextInput) {
+          setTimeout(() => {
+            nextInput.focus();
+            nextInput.select();
+          }, 10);
+        }
+      }
+    }
   };
 
   return (
