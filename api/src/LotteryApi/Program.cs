@@ -163,14 +163,6 @@ builder.Services.AddCors(options =>
 {
     if (builder.Environment.IsDevelopment())
     {
-        // Development: Permisivo para facilitar desarrollo local
-        options.AddPolicy("DefaultPolicy", policy =>
-        {
-            policy.AllowAnyOrigin()
-                  .AllowAnyMethod()
-                  .AllowAnyHeader();
-        });
-
         // SignalR requires credentials, so we need specific origins
         // Generate origins for ports 3000, 4001, and 5100-5200 range
         var devOrigins = new List<string>
@@ -186,6 +178,15 @@ builder.Services.AddCors(options =>
             devOrigins.Add($"http://localhost:{port}");
             devOrigins.Add($"http://127.0.0.1:{port}");
         }
+
+        // Development: Permisivo para facilitar desarrollo local
+        options.AddPolicy("DefaultPolicy", policy =>
+        {
+            policy.WithOrigins(devOrigins.ToArray())
+                  .AllowAnyMethod()
+                  .AllowAnyHeader()
+                  .AllowCredentials();
+        });
 
         options.AddPolicy("SignalRPolicy", policy =>
         {
