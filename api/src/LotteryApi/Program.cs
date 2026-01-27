@@ -164,7 +164,7 @@ builder.Services.AddCors(options =>
     if (builder.Environment.IsDevelopment())
     {
         // Development: Permisivo para facilitar desarrollo local
-        options.AddPolicy("DevPolicy", policy =>
+        options.AddPolicy("DefaultPolicy", policy =>
         {
             policy.AllowAnyOrigin()
                   .AllowAnyMethod()
@@ -205,7 +205,7 @@ builder.Services.AddCors(options =>
                 "https://lottobook.net"
             };
 
-        options.AddPolicy("ProdPolicy", policy =>
+        options.AddPolicy("DefaultPolicy", policy =>
         {
             policy.WithOrigins(allowedOrigins)
                   .AllowAnyMethod()
@@ -222,14 +222,6 @@ builder.Services.AddCors(options =>
                   .AllowCredentials();
         });
     }
-
-    // Política de fallback compatible con código legacy
-    options.AddPolicy("AllowAll", policy =>
-    {
-        policy.AllowAnyOrigin()
-              .AllowAnyMethod()
-              .AllowAnyHeader();
-    });
 });
 
 // Configure API Versioning
@@ -380,7 +372,7 @@ app.UseSwaggerUI(c =>
 });
 
 // CORS must be first to handle preflight OPTIONS requests
-app.UseCors("AllowAll");
+app.UseCors("DefaultPolicy");
 
 // Use custom error handling middleware
 app.UseMiddleware<ErrorHandlingMiddleware>();
