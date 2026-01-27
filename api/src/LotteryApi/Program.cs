@@ -199,12 +199,11 @@ builder.Services.AddCors(options =>
     else
     {
         // Production: Restrictivo para seguridad
-        var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>()
-            ?? new[] {
-                "https://lotto-app.azurewebsites.net",
-                "https://pos.lottobook.net",
-                "https://lottobook.net"
-            };
+        var allowedOrigins = new[] {
+            "https://lotto-app.azurewebsites.net",
+            "https://pos.lottobook.net",
+            "https://lottobook.net"
+        };
 
         options.AddPolicy("DefaultPolicy", policy =>
         {
