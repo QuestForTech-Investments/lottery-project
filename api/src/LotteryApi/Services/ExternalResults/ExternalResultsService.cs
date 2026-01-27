@@ -612,17 +612,20 @@ public class ExternalResultsService : IExternalResultsService
             // Box/Combinado - any permutation of 2 digits matches (check all positions)
             "BOX" or "COMBINADO" or "COMB" => GetCombinadoPosition(betNumber, num1, num2, num3),
 
-            // Pale - 4 digit bet (AABB) matches first two positions in any order
-            "PALE" or "PALÉ" or "FIRST2" => CheckPaleMatch(betNumber, num1, num2) ? 1 : 0,
+            // Palé - 4 digit bet matches two positions (different prizes based on which positions)
+            // DisplayOrder 1/2 = 1ra+2da or 1ra+3ra (1000x), DisplayOrder 4 = 2da+3ra (100x)
+            "PALE" or "PALÉ" or "FIRST2" => GetPalePosition(betNumber, num1, num2, num3),
 
-            // Tripleta - 6 digit bet matches all three positions exactly
-            "TRIPLETA" or "FIRST3" =>
-                (betNumber == winningNumber || betNumber == (num1 + num2 + num3)) ? 1 : 0,
+            // Tripleta - 6 digit bet, prizes for 3 matches (20000x) or 2 matches (100x)
+            "TRIPLETA" or "FIRST3" => GetTripletaPosition(betNumber, num1, num2, num3),
 
             // Pulito - last digit of bet matches last digit of any position
             "PULITO" or "LAST1" => GetPulitoPosition(betNumber, num1, num2, num3),
 
-            // Super Palé - matches positions 1 and 3
+            // Super Palé - matches positions 1 and 3 of SAME draw
+            // NOTE: According to lottery rules, Super Palé should be between TWO different lotteries.
+            // Current implementation checks positions 1 and 3 of the same draw.
+            // TODO: Implement cross-lottery Super Palé in future version.
             "SUPER_PALE" or "SUPER PALÉ" or "SUPER_PALÉ" => CheckSuperPaleMatch(betNumber, num1, num3) ? 1 : 0,
 
             // Default - check all positions
@@ -662,6 +665,88 @@ public class ExternalResultsService : IExternalResultsService
         if (!string.IsNullOrEmpty(num2) && num2.EndsWith(betNumber)) return 2;
         if (!string.IsNullOrEmpty(num3) && num3.EndsWith(betNumber)) return 3;
         return 0;
+    }
+
+    /// <summary>
+    /// Returns the DisplayOrder for Palé bets based on which positions match.
+    /// Palé prizes vary based on the combination:
+    /// - 1ra + 2da = DisplayOrder 2 (PRIMER_PAGO, 1000x-1100x)
+    /// - 1ra + 3ra = DisplayOrder 3 (SEGUNDO_PAGO, 1000x-1100x)
+    /// - 2da + 3ra = DisplayOrder 4 (TERCER_PAGO, 100x) - MUCH LOWER PRIZE
+    /// </summary>
+    private int GetPalePosition(string betNumber, string num1, string num2, string num3)
+    {
+        if (betNumber.Length != 4)
+            return 0;
+
+        var betFirst = betNumber.Substring(0, 2);
+        var betSecond = betNumber.Substring(2, 2);
+
+        // Check which numbers from the result match the bet (any order)
+        var hasNum1 = (betFirst == num1 || betSecond == num1);
+        var hasNum2 = (betFirst == num2 || betSecond == num2);
+        var hasNum3 = (betFirst == num3 || betSecond == num3);
+
+        // 1ra + 2da = DisplayOrder 2 (premio mayor ~1000x)
+        if (hasNum1 && hasNum2)
+        {
+            _logger.LogInformation("Palé match: 1ra+2da ({0}+{1}), DisplayOrder 2", num1, num2);
+            return 2;
+        }
+
+        // 1ra + 3ra = DisplayOrder 3 (premio mayor ~1000x)
+        if (hasNum1 && hasNum3)
+        {
+            _logger.LogInformation("Palé match: 1ra+3ra ({0}+{1}), DisplayOrder 3", num1, num3);
+            return 3;
+        }
+
+        // 2da + 3ra = DisplayOrder 4 (premio menor ~100x)
+        if (hasNum2 && hasNum3)
+        {
+            _logger.LogInformation("Palé match: 2da+3ra ({0}+{1}), DisplayOrder 4 (premio menor)", num2, num3);
+            return 4;
+        }
+
+        return 0; // No match
+    }
+
+    /// <summary>
+    /// Returns the DisplayOrder for Tripleta bets.
+    /// - 3 aciertos = DisplayOrder 1 (premio completo ~20000x)
+    /// - 2 aciertos = DisplayOrder 2 (premio parcial ~100x)
+    /// </summary>
+    private int GetTripletaPosition(string betNumber, string num1, string num2, string num3)
+    {
+        if (betNumber.Length != 6)
+            return 0;
+
+        // Extract the 3 numbers from the bet (format: AABBCC)
+        var betNums = new[]
+        {
+            betNumber.Substring(0, 2),
+            betNumber.Substring(2, 2),
+            betNumber.Substring(4, 2)
+        };
+
+        var winNums = new[] { num1, num2, num3 };
+
+        // Count how many bet numbers appear in the winning numbers (any order)
+        var matchCount = betNums.Count(b => winNums.Contains(b));
+
+        if (matchCount == 3)
+        {
+            _logger.LogInformation("Tripleta: 3 aciertos, DisplayOrder 1 (premio completo)");
+            return 1; // Premio completo
+        }
+
+        if (matchCount == 2)
+        {
+            _logger.LogInformation("Tripleta: 2 de 3 aciertos, DisplayOrder 2 (premio parcial)");
+            return 2; // Premio parcial
+        }
+
+        return 0; // No ganó
     }
 
     /// <summary>
