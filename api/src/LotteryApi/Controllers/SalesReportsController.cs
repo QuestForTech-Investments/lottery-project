@@ -184,6 +184,109 @@ public class SalesReportsController : ControllerBase
     }
 
     /// <summary>
+    /// Get daily sales summaries for a date range (used for "Ventas por fecha" report)
+    /// Returns an array with one entry per day in the range
+    /// </summary>
+    /// <param name="startDate">Start date of the range</param>
+    /// <param name="endDate">End date of the range</param>
+    /// <param name="zoneIds">Optional comma-separated zone IDs to filter by</param>
+    /// <param name="bettingPoolIds">Optional comma-separated betting pool IDs to filter by</param>
+    /// <returns>List of daily sales summaries</returns>
+    [HttpGet("daily-summary-range")]
+    public async Task<ActionResult<List<DailySalesSummaryDto>>> GetDailySalesSummaryRange(
+        [FromQuery] DateTime startDate,
+        [FromQuery] DateTime endDate,
+        [FromQuery] string? zoneIds = null,
+        [FromQuery] string? bettingPoolIds = null)
+    {
+        try
+        {
+            _logger.LogInformation(
+                "Getting daily sales summary range from {StartDate} to {EndDate}, ZoneIds: {ZoneIds}, BettingPoolIds: {BettingPoolIds}",
+                startDate, endDate, zoneIds, bettingPoolIds);
+
+            // Parse filter IDs
+            var zoneIdList = string.IsNullOrEmpty(zoneIds)
+                ? null
+                : zoneIds.Split(',').Select(int.Parse).ToList();
+            var bettingPoolIdList = string.IsNullOrEmpty(bettingPoolIds)
+                ? null
+                : bettingPoolIds.Split(',').Select(int.Parse).ToList();
+
+            // Ensure dates are in correct order
+            if (startDate > endDate)
+            {
+                (startDate, endDate) = (endDate, startDate);
+            }
+
+            // Get all tickets in the date range
+            var rangeStart = startDate.Date;
+            var rangeEnd = endDate.Date.AddDays(1).AddTicks(-1);
+
+            var query = _context.Tickets
+                .Include(t => t.BettingPool)
+                .Where(t => !t.IsCancelled
+                    && t.CreatedAt >= rangeStart
+                    && t.CreatedAt <= rangeEnd);
+
+            // Apply filters
+            if (zoneIdList != null && zoneIdList.Count > 0)
+            {
+                query = query.Where(t => t.BettingPool != null && zoneIdList.Contains(t.BettingPool.ZoneId));
+            }
+
+            if (bettingPoolIdList != null && bettingPoolIdList.Count > 0)
+            {
+                query = query.Where(t => bettingPoolIdList.Contains(t.BettingPoolId));
+            }
+
+            var tickets = await query.ToListAsync();
+
+            // Group by date and calculate summaries
+            var dailySummaries = new List<DailySalesSummaryDto>();
+            var currentDate = startDate.Date;
+
+            while (currentDate <= endDate.Date)
+            {
+                var dayStart = currentDate;
+                var dayEnd = currentDate.AddDays(1).AddTicks(-1);
+
+                var dayTickets = tickets.Where(t => t.CreatedAt >= dayStart && t.CreatedAt <= dayEnd).ToList();
+
+                var totalSold = dayTickets.Sum(t => t.GrandTotal);
+                var totalPrizes = dayTickets.Sum(t => t.TotalPrize);
+                var totalCommissions = dayTickets.Sum(t => t.TotalCommission);
+                var totalDiscounts = dayTickets.Sum(t => t.TotalDiscount);
+                var totalNet = totalSold - totalCommissions - totalPrizes;
+
+                dailySummaries.Add(new DailySalesSummaryDto
+                {
+                    Date = currentDate,
+                    TotalSold = totalSold,
+                    TotalPrizes = totalPrizes,
+                    TotalCommissions = totalCommissions,
+                    TotalDiscounts = totalDiscounts,
+                    Fall = 0, // TODO: Calculate based on business rules
+                    TotalNet = totalNet
+                });
+
+                currentDate = currentDate.AddDays(1);
+            }
+
+            _logger.LogInformation(
+                "Returning {Count} daily summaries from {StartDate} to {EndDate}",
+                dailySummaries.Count, startDate, endDate);
+
+            return Ok(dailySummaries);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting daily sales summary range");
+            return StatusCode(500, new { message = "Error al obtener el resumen de ventas por fecha" });
+        }
+    }
+
+    /// <summary>
     /// Get sales by betting pool for a specific date range (simplified version without draw filtering)
     /// </summary>
     /// <param name="startDate">Start date</param>

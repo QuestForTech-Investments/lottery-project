@@ -7,6 +7,8 @@ import api from '@services/api';
 interface Banca {
   id: number;
   bettingPoolId?: number;
+  bettingPoolCode?: string;
+  bettingPoolName?: string;
   codigo: string;
   code?: string;
   nombre: string;
@@ -86,8 +88,8 @@ const SalesByDate = (): React.ReactElement => {
           : (bancasResponse as Banca[] || []);
         const normalizedBancas = bancasArray.map((b: Banca) => ({
           id: b.bettingPoolId || b.id,
-          codigo: b.code || b.codigo || '',
-          nombre: b.name || b.nombre || ''
+          codigo: b.bettingPoolCode || b.code || b.codigo || '',
+          nombre: b.bettingPoolName || b.name || b.nombre || ''
         }));
         setBancasList(normalizedBancas);
       } catch (error) {
@@ -104,7 +106,7 @@ const SalesByDate = (): React.ReactElement => {
       const zoneIds = zonas.map(z => z.id).join(',');
       const bancaIds = bancas.map(b => b.id).join(',');
       const response = await api.get<DailySalesDto[]>(
-        `/reports/sales/daily-summary?startDate=${fechaInicial}&endDate=${fechaFinal}${zoneIds ? `&zoneIds=${zoneIds}` : ''}${bancaIds ? `&bettingPoolIds=${bancaIds}` : ''}`
+        `/reports/sales/daily-summary-range?startDate=${fechaInicial}&endDate=${fechaFinal}${zoneIds ? `&zoneIds=${zoneIds}` : ''}${bancaIds ? `&bettingPoolIds=${bancaIds}` : ''}`
       );
 
       const mapped: SalesData[] = (response || []).map(item => ({
