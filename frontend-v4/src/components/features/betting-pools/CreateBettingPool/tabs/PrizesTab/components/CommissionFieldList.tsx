@@ -175,8 +175,8 @@ const CommissionFieldList: React.FC<CommissionFieldListProps> = memo(({
             onChange={handleGeneralFieldChange}
             placeholder="0"
             sx={{
-              flex: 1,
-              '& .MuiOutlinedInput-input': { py: 0.75, px: 1, fontSize: '0.9rem' },
+              width: 80,
+              '& .MuiOutlinedInput-input': { py: 0.5, px: 1, fontSize: '0.85rem' },
             }}
           />
         </Box>
