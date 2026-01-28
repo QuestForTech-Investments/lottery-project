@@ -102,7 +102,7 @@ const UserBettingPoolsContent: React.FC = () => {
    * Handle edit user click
    */
   const handleEditUserClick = (userId: number) => {
-    navigate(`/users/${userId}/edit`);
+    navigate(`/users/edit/${userId}`);
   };
 
   return (
