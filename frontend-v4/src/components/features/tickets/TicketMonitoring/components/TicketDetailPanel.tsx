@@ -137,10 +137,10 @@ const PANEL_STYLES = {
     borderBottom: '1px solid #ccc',
   },
   tableHeaderCell: {
-    fontSize: '10px',
+    fontSize: '14px',
     fontWeight: 400,
     color: 'rgb(37, 36, 34)',
-    padding: '1px 4px',
+    padding: '2px 4px',
     textAlign: 'center' as const,
     flex: 1,
   },
@@ -149,9 +149,9 @@ const PANEL_STYLES = {
     alignItems: 'center',
   },
   tableCell: {
-    fontSize: '10px',
+    fontSize: '14px',
     color: 'rgb(37, 36, 34)',
-    padding: '1px 4px',
+    padding: '2px 4px',
     textAlign: 'center' as const,
     flex: 1,
   },
@@ -325,7 +325,7 @@ const PlayRow: FC<PlayRowProps> = memo(({ line, index, isWinner, isPending, onEd
       <Typography sx={PANEL_STYLES.tableCell}>{line.betTypeName || '-'}</Typography>
       <Typography sx={PANEL_STYLES.tableCell}>{formatCurrency(line.betAmount)}</Typography>
       <Box sx={{ ...PANEL_STYLES.tableCell, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
-        <Typography component="span">
+        <Typography component="span" sx={{ fontSize: 'inherit' }}>
           {line.prizeAmount > 0 ? formatCurrency(line.prizeAmount) : '-'}
         </Typography>
         <IconButton
