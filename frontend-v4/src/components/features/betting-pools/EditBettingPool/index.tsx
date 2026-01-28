@@ -420,26 +420,28 @@ const EditBettingPoolMUI: React.FC = () => {
             </Collapse>
           </Box>
 
-          {/* Action Buttons */}
-          <Box sx={{ p: 3, borderTop: 1, borderColor: 'divider', display: 'flex', gap: 2, justifyContent: 'center' }}>
-            <Button
-              variant="outlined"
-              startIcon={<ArrowBackIcon />}
-              onClick={() => navigate('/bettingPools/list')}
-              disabled={loading}
-            >
-              Cancelar
-            </Button>
-            <Button
-              type="submit"
-              variant="contained"
-              startIcon={loading ? <CircularProgress size={20} /> : <SaveIcon />}
-              disabled={loading}
-              sx={{ minWidth: 200 }}
-            >
-              {loading ? 'Guardando...' : 'Guardar Cambios'}
-            </Button>
-          </Box>
+          {/* Action Buttons - hidden on Premios & Comisiones tab (has its own ACTUALIZAR button) */}
+          {activeTab !== 3 && (
+            <Box sx={{ p: 3, borderTop: 1, borderColor: 'divider', display: 'flex', gap: 2, justifyContent: 'center' }}>
+              <Button
+                variant="outlined"
+                startIcon={<ArrowBackIcon />}
+                onClick={() => navigate('/bettingPools/list')}
+                disabled={loading}
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                variant="contained"
+                startIcon={loading ? <CircularProgress size={20} /> : <SaveIcon />}
+                disabled={loading}
+                sx={{ minWidth: 200 }}
+              >
+                {loading ? 'Guardando...' : 'Guardar Cambios'}
+              </Button>
+            </Box>
+          )}
         </form>
       </Paper>
 
