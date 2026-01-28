@@ -111,7 +111,7 @@ export const IndividualResultForm: FC<IndividualResultFormProps> = memo(({
             sx={{ width: 200, bgcolor: '#fff' }}
           />
         </Box>
-        <Box sx={{ flex: 1 }}>
+        <Box sx={{ minWidth: 250, maxWidth: 350 }}>
           <Typography variant="body2" sx={{ mb: 0.5, color: '#666', fontSize: '12px' }}>
             Sorteo
           </Typography>
