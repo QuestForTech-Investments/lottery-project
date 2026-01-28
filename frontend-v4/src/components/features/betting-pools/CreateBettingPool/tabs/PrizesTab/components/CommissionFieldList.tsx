@@ -158,35 +158,6 @@ const CommissionFieldList: React.FC<CommissionFieldListProps> = memo(({
         </FormControl>
       )}
 
-      {/* "General" field - standalone row at top */}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1.5 }}>
-        <Typography
-          variant="body2"
-          sx={{
-            textAlign: 'right',
-            minWidth: 90,
-            fontSize: '0.8rem',
-            fontWeight: 'bold',
-            color: 'text.secondary',
-          }}
-        >
-          General
-        </Typography>
-        <TextField
-          size="small"
-          type="text"
-          value={getGeneralTopValue()}
-          onChange={handleGeneralFieldChange}
-          placeholder="0"
-          sx={{
-            width: 70,
-            minWidth: 70,
-            '& .MuiOutlinedInput-root': { height: 31 },
-            '& .MuiOutlinedInput-input': { py: '4px', px: '8px', fontSize: '0.8rem' },
-          }}
-        />
-      </Box>
-
       {/* Responsive grid matching original Bootstrap: col-4 / col-sm-3 / col-lg-3 / col-xl-2 */}
       <Box sx={{
         display: 'grid',
@@ -198,6 +169,35 @@ const CommissionFieldList: React.FC<CommissionFieldListProps> = memo(({
         gap: 0.75,
         rowGap: 1,
       }}>
+        {/* "General" field as first grid item */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          <Typography
+            variant="body2"
+            sx={{
+              textAlign: 'right',
+              flex: 1,
+              fontSize: '0.8rem',
+              fontWeight: 'bold',
+              color: 'text.secondary',
+            }}
+          >
+            General
+          </Typography>
+          <TextField
+            size="small"
+            type="text"
+            value={getGeneralTopValue()}
+            onChange={handleGeneralFieldChange}
+            placeholder="0"
+            sx={{
+              width: 70,
+              minWidth: 70,
+              '& .MuiOutlinedInput-root': { height: 31 },
+              '& .MuiOutlinedInput-input': { py: '4px', px: '8px', fontSize: '0.8rem' },
+            }}
+          />
+        </Box>
+
         {/* Individual bet type fields */}
         {showPerPlayList && betTypes.map((betType) => (
           <Box
