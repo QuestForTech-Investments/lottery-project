@@ -158,13 +158,13 @@ const CommissionFieldList: React.FC<CommissionFieldListProps> = memo(({
         </FormControl>
       )}
 
-      {/* Field list */}
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+      {/* Field list - 5 columns grid */}
+      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 1 }}>
         {/* "General" field at top */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 0.5, width: 220 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 0.5 }}>
           <Typography
             variant="body2"
-            sx={{ minWidth: 120, fontSize: '0.82rem', fontWeight: 'bold' }}
+            sx={{ flex: 1, fontSize: '0.82rem', fontWeight: 'bold' }}
           >
             General
           </Typography>
@@ -175,7 +175,7 @@ const CommissionFieldList: React.FC<CommissionFieldListProps> = memo(({
             onChange={handleGeneralFieldChange}
             placeholder="0"
             sx={{
-              width: 80,
+              width: 70,
               '& .MuiOutlinedInput-input': { py: 0.5, px: 1, fontSize: '0.85rem' },
             }}
           />
@@ -185,11 +185,11 @@ const CommissionFieldList: React.FC<CommissionFieldListProps> = memo(({
         {showPerPlayList && betTypes.map((betType) => (
           <Box
             key={betType.betTypeId}
-            sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 0.5, width: 220 }}
+            sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 0.5 }}
           >
             <Typography
               variant="body2"
-              sx={{ minWidth: 120, fontSize: '0.82rem' }}
+              sx={{ flex: 1, fontSize: '0.82rem' }}
             >
               {betType.betTypeName}
             </Typography>
@@ -201,7 +201,7 @@ const CommissionFieldList: React.FC<CommissionFieldListProps> = memo(({
               onChange={handleInputChange(betType.betTypeCode)}
               placeholder="0"
               sx={{
-                width: 80,
+                width: 70,
                 '& .MuiOutlinedInput-input': { py: 0.5, px: 1, fontSize: '0.85rem' },
               }}
             />
