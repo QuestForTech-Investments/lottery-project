@@ -176,6 +176,8 @@ public class ResultsController : ControllerBase
         // Reload with Draw navigation property
         await _context.Entry(result).Reference(r => r.Draw).LoadAsync();
 
+        UpdateWinningLines(result);
+
         _logger.LogInformation("Created result {ResultId} for draw {DrawId}", result.ResultId, dto.DrawId);
 
         return Ok(MapToDto(result));
@@ -217,6 +219,7 @@ public class ResultsController : ControllerBase
         result.UpdatedBy = userId;
 
         await _context.SaveChangesAsync();
+        UpdateWinningLines(result);
 
         _logger.LogInformation("Updated result {ResultId}", id);
 
@@ -893,5 +896,26 @@ public class ResultsController : ControllerBase
             Singulaccion2 = singulaccion2,
             Singulaccion3 = singulaccion3
         };
+    }
+
+    private void UpdateWinningLines(Result result)
+    {
+        var tickets = _context.Tickets
+            .Where(t =>
+                t.CreatedAt.Date == DateTime.Today.Date
+                && t.TicketLines
+                    .Any(tl => tl.DrawId == result.DrawId && result.WinningNumber.Contains(tl.BetNumber))
+                && !t.IsCancelled
+            )
+            .Include(t => t.TicketLines)
+            .ToArray();
+
+        foreach (var ticket in tickets)
+        {
+            foreach (var line in ticket.TicketLines)
+            {
+                
+            }
+        }
     }
 }
