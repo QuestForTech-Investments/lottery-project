@@ -156,27 +156,29 @@ const PlayTypePrizes = (): React.ReactElement => {
             <Table size="small">
               <TableHead sx={{ backgroundColor: '#e3e3e3' }}>
                 <TableRow>
-                  {['Tipo de jugada', 'Ventas', 'Premios', 'Neto', '% Ganancia'].map(h => (
-                    <TableCell key={h} sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.75rem' }}>{h}</TableCell>
-                  ))}
+                  <TableCell sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.75rem' }}>Tipo de jugada</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.75rem' }}>Ventas</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.75rem' }}>Premios</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.75rem' }}>Neto</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.75rem' }}>% Ganancia</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {data.map((d, i) => (
                   <TableRow key={i} sx={{ '&:hover': { backgroundColor: 'action.hover' } }}>
                     <TableCell>{d.tipoJugada}</TableCell>
-                    <TableCell>{formatCurrency(d.ventas)}</TableCell>
-                    <TableCell>{formatCurrency(d.premios)}</TableCell>
-                    <TableCell sx={{ color: d.neto >= 0 ? 'success.main' : 'error.main' }}>{formatCurrency(d.neto)}</TableCell>
-                    <TableCell sx={{ color: d.neto >= 0 ? 'success.main' : 'error.main' }}>{d.porcentaje}</TableCell>
+                    <TableCell align="right">{formatCurrency(d.ventas)}</TableCell>
+                    <TableCell align="right">{formatCurrency(d.premios)}</TableCell>
+                    <TableCell align="right" sx={{ color: d.neto >= 0 ? 'success.main' : 'error.main' }}>{formatCurrency(d.neto)}</TableCell>
+                    <TableCell align="right" sx={{ color: d.neto >= 0 ? 'success.main' : 'error.main' }}>{d.porcentaje}</TableCell>
                   </TableRow>
                 ))}
                 <TableRow sx={{ backgroundColor: '#f5f7fa', '& td': { fontWeight: 600 } }}>
                   <TableCell>Totales</TableCell>
-                  <TableCell>{formatCurrency(totalVentas)}</TableCell>
-                  <TableCell>{formatCurrency(totalPremios)}</TableCell>
-                  <TableCell sx={{ color: totalNeto >= 0 ? 'success.main' : 'error.main' }}>{formatCurrency(totalNeto)}</TableCell>
-                  <TableCell>{totalVentas > 0 ? ((totalNeto / totalVentas) * 100).toFixed(1) : '0.0'}%</TableCell>
+                  <TableCell align="right">{formatCurrency(totalVentas)}</TableCell>
+                  <TableCell align="right">{formatCurrency(totalPremios)}</TableCell>
+                  <TableCell align="right" sx={{ color: totalNeto >= 0 ? 'success.main' : 'error.main' }}>{formatCurrency(totalNeto)}</TableCell>
+                  <TableCell align="right">{totalVentas > 0 ? ((totalNeto / totalVentas) * 100).toFixed(1) : '0.0'}%</TableCell>
                 </TableRow>
               </TableBody>
             </Table>

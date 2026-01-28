@@ -152,9 +152,12 @@ const BettingPoolSales = (): React.ReactElement => {
           <Table size="small">
             <TableHead sx={{ backgroundColor: '#e3e3e3' }}>
               <TableRow>
-                {['Código', 'Nombre', 'Ventas', 'Comisiones', 'Premios', 'Neto'].map(h => (
-                  <TableCell key={h} sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.75rem' }}>{h}</TableCell>
-                ))}
+                <TableCell sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.75rem' }}>Código</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.75rem' }}>Nombre</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.75rem' }}>Ventas</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.75rem' }}>Comisiones</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.75rem' }}>Premios</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.75rem' }}>Neto</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -162,19 +165,19 @@ const BettingPoolSales = (): React.ReactElement => {
                 <TableRow key={i} sx={{ '&:hover': { backgroundColor: 'action.hover' } }}>
                   <TableCell>{d.codigo}</TableCell>
                   <TableCell>{d.nombre}</TableCell>
-                  <TableCell>{formatCurrency(d.ventas)}</TableCell>
-                  <TableCell>{formatCurrency(d.comisiones)}</TableCell>
-                  <TableCell>{formatCurrency(d.premios)}</TableCell>
-                  <TableCell sx={{ color: d.neto >= 0 ? 'success.main' : 'error.main' }}>{formatCurrency(d.neto)}</TableCell>
+                  <TableCell align="right">{formatCurrency(d.ventas)}</TableCell>
+                  <TableCell align="right">{formatCurrency(d.comisiones)}</TableCell>
+                  <TableCell align="right">{formatCurrency(d.premios)}</TableCell>
+                  <TableCell align="right" sx={{ color: d.neto >= 0 ? 'success.main' : 'error.main' }}>{formatCurrency(d.neto)}</TableCell>
                 </TableRow>
               ))}
               <TableRow sx={{ backgroundColor: '#f5f7fa', '& td': { fontWeight: 600 } }}>
                 <TableCell>Totales</TableCell>
                 <TableCell>-</TableCell>
-                <TableCell>{formatCurrency(totals.ventas)}</TableCell>
-                <TableCell>{formatCurrency(totals.comisiones)}</TableCell>
-                <TableCell>{formatCurrency(totals.premios)}</TableCell>
-                <TableCell sx={{ color: totals.neto >= 0 ? 'success.main' : 'error.main' }}>{formatCurrency(totals.neto)}</TableCell>
+                <TableCell align="right">{formatCurrency(totals.ventas)}</TableCell>
+                <TableCell align="right">{formatCurrency(totals.comisiones)}</TableCell>
+                <TableCell align="right">{formatCurrency(totals.premios)}</TableCell>
+                <TableCell align="right" sx={{ color: totals.neto >= 0 ? 'success.main' : 'error.main' }}>{formatCurrency(totals.neto)}</TableCell>
               </TableRow>
             </TableBody>
           </Table>

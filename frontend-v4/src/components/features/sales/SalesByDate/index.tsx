@@ -232,9 +232,13 @@ const SalesByDate = (): React.ReactElement => {
           <Table size="small">
             <TableHead sx={{ backgroundColor: '#e3e3e3' }}>
               <TableRow>
-                {['Fecha', 'Venta', 'Premios', 'Comisiones', 'Descuentos', 'Caída', 'Neto'].map(h => (
-                  <TableCell key={h} sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.75rem' }}>{h}</TableCell>
-                ))}
+                <TableCell sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.75rem' }}>Fecha</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.75rem' }}>Venta</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.75rem' }}>Premios</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.75rem' }}>Comisiones</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.75rem' }}>Descuentos</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.75rem' }}>Caída</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.75rem' }}>Neto</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -249,22 +253,22 @@ const SalesByDate = (): React.ReactElement => {
                   {data.map((d, i) => (
                     <TableRow key={i} sx={{ '&:hover': { backgroundColor: 'action.hover' } }}>
                       <TableCell>{d.fecha}</TableCell>
-                      <TableCell>{formatCurrency(d.venta)}</TableCell>
-                      <TableCell>{formatCurrency(d.premios)}</TableCell>
-                      <TableCell>{formatCurrency(d.comisiones)}</TableCell>
-                      <TableCell>{formatCurrency(d.descuentos)}</TableCell>
-                      <TableCell>{formatCurrency(d.caida)}</TableCell>
-                      <TableCell sx={{ color: d.neto >= 0 ? 'success.main' : 'error.main' }}>{formatCurrency(d.neto)}</TableCell>
+                      <TableCell align="right">{formatCurrency(d.venta)}</TableCell>
+                      <TableCell align="right">{formatCurrency(d.premios)}</TableCell>
+                      <TableCell align="right">{formatCurrency(d.comisiones)}</TableCell>
+                      <TableCell align="right">{formatCurrency(d.descuentos)}</TableCell>
+                      <TableCell align="right">{formatCurrency(d.caida)}</TableCell>
+                      <TableCell align="right" sx={{ color: d.neto >= 0 ? 'success.main' : 'error.main' }}>{formatCurrency(d.neto)}</TableCell>
                     </TableRow>
                   ))}
                   <TableRow sx={{ backgroundColor: '#f5f7fa', '& td': { fontWeight: 600 } }}>
                     <TableCell>Totales</TableCell>
-                    <TableCell>{formatCurrency(totals.venta)}</TableCell>
-                    <TableCell>{formatCurrency(totals.premios)}</TableCell>
-                    <TableCell>{formatCurrency(totals.comisiones)}</TableCell>
-                    <TableCell>{formatCurrency(totals.descuentos)}</TableCell>
-                    <TableCell>{formatCurrency(totals.caida)}</TableCell>
-                    <TableCell sx={{ color: totals.neto >= 0 ? 'success.main' : 'error.main' }}>{formatCurrency(totals.neto)}</TableCell>
+                    <TableCell align="right">{formatCurrency(totals.venta)}</TableCell>
+                    <TableCell align="right">{formatCurrency(totals.premios)}</TableCell>
+                    <TableCell align="right">{formatCurrency(totals.comisiones)}</TableCell>
+                    <TableCell align="right">{formatCurrency(totals.descuentos)}</TableCell>
+                    <TableCell align="right">{formatCurrency(totals.caida)}</TableCell>
+                    <TableCell align="right" sx={{ color: totals.neto >= 0 ? 'success.main' : 'error.main' }}>{formatCurrency(totals.neto)}</TableCell>
                   </TableRow>
                 </>
               )}
