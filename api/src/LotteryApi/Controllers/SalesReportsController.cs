@@ -641,6 +641,7 @@ public class SalesReportsController : ControllerBase
                     BettingPoolId = bp.BettingPoolId,
                     BettingPoolName = bp.BettingPoolName ?? "",
                     BettingPoolCode = bp.BettingPoolCode ?? "",
+                    Reference = bp.Reference,
                     ZoneId = bp.ZoneId,
                     ZoneName = bp.Zone?.ZoneName ?? "",
                     DrawSales = drawSales,

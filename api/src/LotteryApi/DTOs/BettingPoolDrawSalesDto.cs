@@ -9,6 +9,7 @@ public class BettingPoolDrawSalesDto
     public int BettingPoolId { get; set; }
     public string BettingPoolName { get; set; } = string.Empty;
     public string BettingPoolCode { get; set; } = string.Empty;
+    public string? Reference { get; set; }
     public int ZoneId { get; set; }
     public string ZoneName { get; set; } = string.Empty;
     public List<DrawSalesDetailDto> DrawSales { get; set; } = new();

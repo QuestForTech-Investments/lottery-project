@@ -116,7 +116,7 @@ export const useHistoricalSales = (): UseHistoricalSalesReturn => {
       );
 
       const mapped: BancaData[] = (response || []).map(item => ({
-        ref: item.bettingPoolName,
+        ref: item.reference || '',
         codigo: item.bettingPoolCode,
         tickets: 0,
         venta: item.totalSold,

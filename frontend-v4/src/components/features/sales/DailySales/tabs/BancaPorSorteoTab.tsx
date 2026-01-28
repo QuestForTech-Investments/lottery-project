@@ -47,6 +47,7 @@ interface BettingPoolDrawSales {
   bettingPoolId: number;
   bettingPoolName: string;
   bettingPoolCode: string;
+  reference?: string;
   zoneId: number;
   zoneName: string;
   drawSales: DrawSalesDetail[];
@@ -347,7 +348,7 @@ const BancaPorSorteoTab = ({ selectedDate, setSelectedDate, zones, selectedZones
                 <>
                   {filteredData.map((pool) => (
                     <TableRow key={pool.bettingPoolId} hover>
-                      <TableCell>{pool.bettingPoolCode}</TableCell>
+                      <TableCell>{pool.reference || ''}</TableCell>
                       <TableCell>{pool.bettingPoolName}</TableCell>
                       <TableCell align="right">{formatCurrency(pool.totalSold)}</TableCell>
                       <TableCell align="right">{formatCurrency(pool.totalPrizes)}</TableCell>

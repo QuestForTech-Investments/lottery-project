@@ -89,6 +89,7 @@ export interface BettingPoolSalesDto {
   bettingPoolId: number;
   bettingPoolName: string;
   bettingPoolCode: string;
+  reference?: string;
   totalSold: number;
   totalPrizes: number;
   totalCommissions: number;
