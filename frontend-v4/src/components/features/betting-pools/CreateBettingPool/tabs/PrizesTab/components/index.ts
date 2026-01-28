@@ -5,4 +5,5 @@
  */
 
 export { default as BetTypeFieldGrid } from './BetTypeFieldGrid';
+export { default as CommissionFieldList } from './CommissionFieldList';
 export { default as DrawTabSelector } from './DrawTabSelector';

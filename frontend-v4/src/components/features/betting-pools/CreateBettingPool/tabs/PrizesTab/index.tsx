@@ -13,7 +13,6 @@ import {
   Box,
   CircularProgress,
   Alert,
-  Chip,
   Tabs,
   Tab,
   Snackbar,
@@ -37,7 +36,7 @@ import {
   BET_TYPE_ORDER,
   getAllowedBetTypesForDraw,
 } from './constants';
-import { BetTypeFieldGrid, DrawTabSelector } from './components';
+import { BetTypeFieldGrid, CommissionFieldList, DrawTabSelector } from './components';
 
 /**
  * PrizesTab Component with Sub-tabs and Draw Tabs
@@ -343,26 +342,33 @@ const PrizesTab: React.FC<PrizesTabProps> = ({
         onDrawSelect={setActiveDraw}
       />
 
-      {/* Info Chips */}
-      <Box sx={{ mb: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-        <Chip label={`${filteredBetTypes.length} tipos de juegos`} color="success" size="small" />
-        <Chip label={`Sorteo: ${draws.find(l => l.id === activeDraw)?.name || 'General'}`} color="primary" size="small" />
-        <Chip label={activeSubTab === 0 ? 'Premios' : activeSubTab === 1 ? 'Comisiones' : 'Comisiones 2'} color="secondary" size="small" />
-      </Box>
-
       {/* Sub-tab Content */}
       <Box>
-        <BetTypeFieldGrid
-          betTypes={filteredBetTypes}
-          activeDraw={activeDraw}
-          formData={formData}
-          generalValues={generalValues}
-          fieldType={activeSubTab === 0 ? 'prize' : activeSubTab === 1 ? 'commission' : 'commission2'}
-          onFieldChange={handleFieldChange}
-          bettingPoolId={bettingPoolId}
-          saving={saving}
-          onSave={onSavePrizeConfig ? handleSave : undefined}
-        />
+        {activeSubTab === 0 ? (
+          <BetTypeFieldGrid
+            betTypes={filteredBetTypes}
+            activeDraw={activeDraw}
+            formData={formData}
+            generalValues={generalValues}
+            fieldType="prize"
+            onFieldChange={handleFieldChange}
+            bettingPoolId={bettingPoolId}
+            saving={saving}
+            onSave={onSavePrizeConfig ? handleSave : undefined}
+          />
+        ) : (
+          <CommissionFieldList
+            betTypes={filteredBetTypes}
+            activeDraw={activeDraw}
+            formData={formData}
+            generalValues={generalValues}
+            fieldType={activeSubTab === 1 ? 'commission' : 'commission2'}
+            onFieldChange={handleFieldChange}
+            bettingPoolId={bettingPoolId}
+            saving={saving}
+            onSave={onSavePrizeConfig ? handleSave : undefined}
+          />
+        )}
       </Box>
 
       {/* Info box */}
