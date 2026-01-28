@@ -158,13 +158,31 @@ const CommissionFieldList: React.FC<CommissionFieldListProps> = memo(({
         </FormControl>
       )}
 
-      {/* Field list - 3 columns grid matching original app */}
-      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1, rowGap: 1.5 }}>
+      {/* Responsive grid matching original Bootstrap: col-4 / col-sm-3 / col-lg-3 / col-xl-2 */}
+      <Box sx={{
+        display: 'grid',
+        gridTemplateColumns: {
+          xs: 'repeat(3, 1fr)',
+          sm: 'repeat(4, 1fr)',
+          lg: 'repeat(6, 1fr)',
+        },
+        gap: 0.75,
+        rowGap: 1,
+      }}>
         {/* "General" field at top */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
           <Typography
             variant="body2"
-            sx={{ textAlign: 'right', minWidth: 80, fontSize: '0.85rem', fontWeight: 'bold', color: 'text.secondary' }}
+            sx={{
+              textAlign: 'right',
+              flex: 1,
+              fontSize: '0.8rem',
+              fontWeight: 'bold',
+              color: 'text.secondary',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
           >
             General
           </Typography>
@@ -175,8 +193,10 @@ const CommissionFieldList: React.FC<CommissionFieldListProps> = memo(({
             onChange={handleGeneralFieldChange}
             placeholder="0"
             sx={{
-              width: 80,
-              '& .MuiOutlinedInput-input': { py: 0.5, px: 1, fontSize: '0.85rem' },
+              width: 70,
+              minWidth: 70,
+              '& .MuiOutlinedInput-root': { height: 31 },
+              '& .MuiOutlinedInput-input': { py: '4px', px: '8px', fontSize: '0.8rem' },
             }}
           />
         </Box>
@@ -185,11 +205,19 @@ const CommissionFieldList: React.FC<CommissionFieldListProps> = memo(({
         {showPerPlayList && betTypes.map((betType) => (
           <Box
             key={betType.betTypeId}
-            sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+            sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}
           >
             <Typography
               variant="body2"
-              sx={{ textAlign: 'right', minWidth: 80, fontSize: '0.85rem', color: 'text.secondary' }}
+              sx={{
+                textAlign: 'right',
+                flex: 1,
+                fontSize: '0.8rem',
+                color: 'text.secondary',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
             >
               {betType.betTypeName}
             </Typography>
@@ -201,8 +229,10 @@ const CommissionFieldList: React.FC<CommissionFieldListProps> = memo(({
               onChange={handleInputChange(betType.betTypeCode)}
               placeholder="0"
               sx={{
-                flex: 1,
-                '& .MuiOutlinedInput-input': { py: 0.75, px: 1, fontSize: '0.9rem' },
+                width: 70,
+                minWidth: 70,
+                '& .MuiOutlinedInput-root': { height: 31 },
+                '& .MuiOutlinedInput-input': { py: '4px', px: '8px', fontSize: '0.8rem' },
               }}
             />
           </Box>
