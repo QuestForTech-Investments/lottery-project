@@ -202,7 +202,8 @@ builder.Services.AddCors(options =>
         var allowedOrigins = new[] {
             "https://lotto-app.azurewebsites.net",
             "https://pos.lottobook.net",
-            "https://lottobook.net"
+            "https://lottobook.net",
+            "https://proud-coast-0a06d9c1e.4.azurestaticapps.net"
         };
 
         options.AddPolicy("DefaultPolicy", policy =>
