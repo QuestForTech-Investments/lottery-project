@@ -220,7 +220,7 @@ const BetTypeFieldGrid: React.FC<BetTypeFieldGridProps> = memo(({
                             color="text.secondary"
                             sx={{ display: 'block', mb: 0.5, fontSize: '0.75rem' }}
                           >
-                            {fieldName}
+                            {fieldName.includes(' - ') ? fieldName.split(' - ').slice(1).join(' - ') : fieldName}
                           </Typography>
                           <TextField
                             fullWidth
