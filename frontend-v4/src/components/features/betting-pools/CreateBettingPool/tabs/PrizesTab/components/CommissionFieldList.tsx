@@ -158,13 +158,13 @@ const CommissionFieldList: React.FC<CommissionFieldListProps> = memo(({
         </FormControl>
       )}
 
-      {/* Field list - 5 columns grid */}
-      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 1 }}>
+      {/* Field list - 3 columns grid matching original app */}
+      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1, rowGap: 1.5 }}>
         {/* "General" field at top */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 0.5 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <Typography
             variant="body2"
-            sx={{ flex: 1, fontSize: '0.82rem', fontWeight: 'bold' }}
+            sx={{ textAlign: 'right', minWidth: 80, fontSize: '0.85rem', fontWeight: 'bold', color: 'text.secondary' }}
           >
             General
           </Typography>
@@ -175,8 +175,8 @@ const CommissionFieldList: React.FC<CommissionFieldListProps> = memo(({
             onChange={handleGeneralFieldChange}
             placeholder="0"
             sx={{
-              width: 50,
-              '& .MuiOutlinedInput-input': { py: 0.5, px: 1, fontSize: '0.85rem' },
+              flex: 1,
+              '& .MuiOutlinedInput-input': { py: 0.75, px: 1, fontSize: '0.9rem' },
             }}
           />
         </Box>
@@ -185,11 +185,11 @@ const CommissionFieldList: React.FC<CommissionFieldListProps> = memo(({
         {showPerPlayList && betTypes.map((betType) => (
           <Box
             key={betType.betTypeId}
-            sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 0.5 }}
+            sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
           >
             <Typography
               variant="body2"
-              sx={{ flex: 1, fontSize: '0.82rem' }}
+              sx={{ textAlign: 'right', minWidth: 80, fontSize: '0.85rem', color: 'text.secondary' }}
             >
               {betType.betTypeName}
             </Typography>
@@ -201,8 +201,8 @@ const CommissionFieldList: React.FC<CommissionFieldListProps> = memo(({
               onChange={handleInputChange(betType.betTypeCode)}
               placeholder="0"
               sx={{
-                width: 50,
-                '& .MuiOutlinedInput-input': { py: 0.5, px: 1, fontSize: '0.85rem' },
+                flex: 1,
+                '& .MuiOutlinedInput-input': { py: 0.75, px: 1, fontSize: '0.9rem' },
               }}
             />
           </Box>
