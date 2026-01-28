@@ -75,7 +75,7 @@ const DailySales = (): React.ReactElement => {
 
       const mappedData: SalesRow[] = (response || []).map((item) => ({
         id: item.bettingPoolId,
-        ref: item.bettingPoolName,
+        ref: item.reference || '',
         code: item.bettingPoolCode,
         p: item.pendingCount || 0,
         l: item.loserCount || 0,

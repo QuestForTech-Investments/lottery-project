@@ -66,6 +66,7 @@ export interface BettingPoolSalesDto {
   bettingPoolId: number;
   bettingPoolName: string;
   bettingPoolCode: string;
+  reference?: string;
   zoneId: number;
   zoneName: string;
   totalSold: number;
