@@ -125,7 +125,7 @@ public class BettingPoolPrizesCommissionsController : ControllerBase
     /// <summary>
     /// Create a new prize/commission for a betting pool
     /// </summary>
-    [HttpPost]
+    [HttpPost("prizes-commissions")]
     public async Task<ActionResult<BettingPoolPrizesCommissionDto>> CreatePrizeCommission(
         int bettingPoolId,
         [FromBody] CreateBettingPoolPrizesCommissionDto dto)
