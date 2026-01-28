@@ -75,7 +75,7 @@ const CreateTicket: React.FC = () => {
       totalCommission += commission;
     });
 
-    const grandTotal = totalBet - totalCommission - (totalBet * (discount / 100));
+    const grandTotal = totalBet - (totalBet * (discount / 100));
 
     return {
       totalBet: totalBet.toFixed(2),

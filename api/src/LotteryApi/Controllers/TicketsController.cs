@@ -602,7 +602,7 @@ public class TicketsController : ControllerBase
             ticket.TotalWithMultiplier = totalWithMultiplier;
             ticket.TotalCommission = totalCommission;
             ticket.TotalNet = totalNet;
-            ticket.GrandTotal = totalNet;
+            ticket.GrandTotal = totalWithMultiplier;
             ticket.LotteryIds = string.Join(",", lotteryIds);
             ticket.TotalLotteries = lotteryIds.Count;
             ticket.EarliestDrawTime = earliestDrawTime;
