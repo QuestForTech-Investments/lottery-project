@@ -1,421 +1,277 @@
-import { useState, type FormEvent, type MouseEvent } from 'react'
+import { useState, useEffect } from 'react';
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  TextField,
+  Alert,
+  Box,
+  IconButton,
+  Typography,
+  CircularProgress,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+} from '@mui/material';
+import {
+  Close as CloseIcon,
+  Check as CheckIcon,
+  Clear as ClearIcon,
+} from '@mui/icons-material';
+import * as userService from '@/services/userService';
+import * as authService from '@/services/authService';
+import { handleApiError } from '@/utils';
+import * as logger from '@/utils/logger';
 
 interface ChangePasswordModalProps {
-  isOpen: boolean
-  onClose: () => void
+  isOpen: boolean;
+  onClose: () => void;
 }
 
-interface PasswordErrors {
-  password: string
-  confirmation: string
+interface PasswordValidation {
+  minLength: boolean;
+  hasLetter: boolean;
+  hasNumber: boolean;
+  hasSpecial: boolean;
 }
 
+/**
+ * ChangePasswordModal Component
+ * Modal for logged-in user to change their own password
+ * Requires current password verification
+ */
 export default function ChangePasswordModal({ isOpen, onClose }: ChangePasswordModalProps) {
-  const [password, setPassword] = useState('')
-  const [passwordConfirmation, setPasswordConfirmation] = useState('')
-  const [errors, setErrors] = useState<PasswordErrors>({ password: '', confirmation: '' })
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+  const [validation, setValidation] = useState<PasswordValidation>({
+    minLength: false,
+    hasLetter: false,
+    hasNumber: false,
+    hasSpecial: false,
+  });
 
-  const validatePassword = (pwd: string): string => {
-    if (!pwd) return 'El campo Contraseña es obligatorio'
-    if (pwd.length < 8) return 'Mínimo 8 caracteres'
-    if (!/[a-zA-Z]/.test(pwd)) return 'Debe contener al menos una letra'
-    if (!/\d/.test(pwd)) return 'Debe contener al menos un número'
-    if (!/[!@#$%^&*(),.?":{}|<>]/.test(pwd)) return 'Debe contener al menos un carácter especial'
-    return ''
-  }
+  // Validate password requirements in real-time
+  useEffect(() => {
+    setValidation({
+      minLength: newPassword.length >= 8,
+      hasLetter: /[a-zA-Z]/.test(newPassword),
+      hasNumber: /\d/.test(newPassword),
+      hasSpecial: /[!@#$%^&*(),.?":{}|<>]/.test(newPassword),
+    });
+  }, [newPassword]);
 
-  const processSubmission = () => {
-    const passwordError = validatePassword(password)
-    const confirmError = password !== passwordConfirmation ? 'Las contraseñas no coinciden' : ''
+  const isPasswordValid = Object.values(validation).every(Boolean);
+  const passwordsMatch = newPassword === confirmPassword && confirmPassword.length > 0;
+  const canSubmit = currentPassword.length > 0 && isPasswordValid && passwordsMatch && !isLoading;
 
-    setErrors({
-      password: passwordError,
-      confirmation: confirmError,
-    })
-
-    if (!passwordError && !confirmError) {
-      alert('Contraseña cambiada exitosamente')
-      handleClose()
+  const handleSubmit = async () => {
+    // Get current user
+    const currentUser = authService.getCurrentUser();
+    if (!currentUser?.id) {
+      setError('No se pudo obtener el usuario actual. Por favor, inicie sesión nuevamente.');
+      return;
     }
-  }
 
-  const handleSubmit = (event?: FormEvent<HTMLFormElement>) => {
-    event?.preventDefault()
-    processSubmission()
-  }
+    setIsLoading(true);
+    setError(null);
 
-  const handleConfirmHover = (event: MouseEvent<HTMLButtonElement>, color: string) => {
-    event.currentTarget.style.backgroundColor = color
-  }
+    try {
+      logger.info('CHANGE_PASSWORD', `Changing password for user ID: ${currentUser.id}`);
+
+      await userService.changePassword(currentUser.id, {
+        currentPassword,
+        newPassword,
+      });
+
+      logger.success('CHANGE_PASSWORD', 'Password changed successfully');
+      setSuccess(true);
+
+      // Close modal after 2 seconds
+      setTimeout(() => {
+        handleClose();
+      }, 2000);
+    } catch (err) {
+      const error = err as Error;
+      logger.error('CHANGE_PASSWORD', 'Failed to change password', { error: error.message });
+
+      // Check for specific error messages
+      const errorMessage = handleApiError(err);
+      if (errorMessage.toLowerCase().includes('incorrect') || errorMessage.toLowerCase().includes('current')) {
+        setError('La contraseña actual es incorrecta');
+      } else {
+        setError(errorMessage);
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleClose = () => {
-    setPassword('')
-    setPasswordConfirmation('')
-    setErrors({ password: '', confirmation: '' })
-    onClose()
-  }
+    setCurrentPassword('');
+    setNewPassword('');
+    setConfirmPassword('');
+    setError(null);
+    setSuccess(false);
+    setIsLoading(false);
+    onClose();
+  };
 
-  if (!isOpen) return null
+  const ValidationItem = ({ valid, text }: { valid: boolean; text: string }) => (
+    <ListItem dense sx={{ py: 0 }}>
+      <ListItemIcon sx={{ minWidth: 28 }}>
+        {valid ? (
+          <CheckIcon fontSize="small" color="success" />
+        ) : (
+          <ClearIcon fontSize="small" color="error" />
+        )}
+      </ListItemIcon>
+      <ListItemText
+        primary={text}
+        primaryTypographyProps={{
+          variant: 'caption',
+          color: valid ? 'success.main' : 'text.secondary',
+        }}
+      />
+    </ListItem>
+  );
 
   return (
-    <div 
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.3)',
-        display: 'flex',
-        alignItems: 'flex-start',
-        justifyContent: 'center',
-        padding: '60px 0',
-        overflow: 'auto',
-        zIndex: 1050,
-        fontFamily: 'Montserrat, "Helvetica Neue", Arial, sans-serif'
-      }}
-        onClick={(e) => {
-          if (e.target === e.currentTarget) handleClose()
-        }}
+    <Dialog
+      open={isOpen}
+      onClose={handleClose}
+      maxWidth="sm"
+      fullWidth
+      aria-labelledby="change-password-modal-title"
     >
-      <div
-        style={{
-          backgroundColor: 'white',
-          borderRadius: '10px',
-          width: '100%',
-          maxWidth: '500px',
-          boxShadow: '0 0 15px rgba(0, 0, 0, 0.15), 0 0 1px 1px rgba(0, 0, 0, 0.1)',
-          margin: '28px 16px',
-          display: 'flex',
-          flexDirection: 'column'
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'flex-start',
-            padding: '16px',
-            borderBottom: '1px solid rgb(221, 221, 221)',
-            borderRadius: '4.8px 4.8px 0 0'
-          }}
-        >
-          <h5
-            style={{
-              margin: 0,
-              fontSize: '21.98px',
-              fontWeight: '400',
-              lineHeight: '32.97px',
-              color: 'rgb(44, 44, 44)'
-            }}
-          >
+      <DialogTitle id="change-password-modal-title">
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Typography variant="h6" component="span">
             Cambiar contraseña
-          </h5>
-          <button
+          </Typography>
+          <IconButton
+            edge="end"
+            color="inherit"
             onClick={handleClose}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              fontSize: '24px',
-              fontWeight: '700',
-              lineHeight: '24px',
-              opacity: 0.5,
-              cursor: 'pointer',
-              padding: '16px',
-              margin: '-16px -16px -16px 0',
-              textShadow: '0 1px 0 rgb(255, 255, 255)',
-              color: 'rgb(0, 0, 0)'
-            }}
-            onMouseEnter={(e) => {
-              const target = e.currentTarget
-              target.style.opacity = '0.8'
-            }}
-            onMouseLeave={(e) => {
-              const target = e.currentTarget
-              target.style.opacity = '0.5'
-            }}
+            aria-label="cerrar"
+            disabled={isLoading}
           >
-            ×
-          </button>
-        </div>
+            <CloseIcon />
+          </IconButton>
+        </Box>
+      </DialogTitle>
 
-        <form
-          onSubmit={handleSubmit}
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            flex: '1 1 auto',
-          }}
+      <DialogContent dividers>
+        {/* Success Message */}
+        {success && (
+          <Alert severity="success" sx={{ mb: 2 }}>
+            <Typography variant="body2" fontWeight="bold">
+              ¡Contraseña cambiada exitosamente!
+            </Typography>
+            <Typography variant="caption" display="block" sx={{ mt: 0.5 }}>
+              Esta ventana se cerrará automáticamente.
+            </Typography>
+          </Alert>
+        )}
+
+        {/* Error Message */}
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
+            {error}
+          </Alert>
+        )}
+
+        {!success && (
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+            {/* Current Password */}
+            <TextField
+              label="Contraseña actual"
+              type="password"
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+              fullWidth
+              required
+              disabled={isLoading}
+              autoComplete="current-password"
+              error={!!error && error.includes('actual')}
+            />
+
+            {/* New Password */}
+            <TextField
+              label="Nueva contraseña"
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              fullWidth
+              required
+              disabled={isLoading}
+              autoComplete="new-password"
+              error={newPassword.length > 0 && !isPasswordValid}
+            />
+
+            {/* Password Requirements */}
+            <Box sx={{ bgcolor: 'grey.50', borderRadius: 1, p: 1 }}>
+              <Typography variant="caption" color="text.secondary" fontWeight="bold">
+                Requisitos de contraseña:
+              </Typography>
+              <List dense disablePadding>
+                <ValidationItem valid={validation.minLength} text="Mínimo 8 caracteres" />
+                <ValidationItem valid={validation.hasLetter} text="Al menos una letra" />
+                <ValidationItem valid={validation.hasNumber} text="Al menos un número" />
+                <ValidationItem valid={validation.hasSpecial} text="Al menos un carácter especial (!@#$%^&*)" />
+              </List>
+            </Box>
+
+            {/* Confirm Password */}
+            <TextField
+              label="Confirmar nueva contraseña"
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              fullWidth
+              required
+              disabled={isLoading}
+              autoComplete="new-password"
+              error={confirmPassword.length > 0 && !passwordsMatch}
+              helperText={
+                confirmPassword.length > 0 && !passwordsMatch
+                  ? 'Las contraseñas no coinciden'
+                  : ''
+              }
+            />
+          </Box>
+        )}
+      </DialogContent>
+
+      <DialogActions sx={{ px: 3, py: 2 }}>
+        <Button
+          onClick={handleClose}
+          disabled={isLoading}
+          color="inherit"
         >
-          {/* Body */}
-          <div
-            style={{
-              padding: '16px',
-              flex: '1 1 auto',
+          {success ? 'Cerrar' : 'Cancelar'}
+        </Button>
+        {!success && (
+          <Button
+            onClick={handleSubmit}
+            disabled={!canSubmit}
+            variant="contained"
+            sx={{
+              bgcolor: '#51cbce',
+              '&:hover': { bgcolor: '#45b8bb' },
             }}
+            startIcon={isLoading ? <CircularProgress size={20} color="inherit" /> : null}
           >
-            {/* Campo Contraseña */}
-            <fieldset
-              style={{
-                border: 'none',
-                padding: 0,
-                margin: '0 0 10px',
-                position: 'relative'
-              }}
-            >
-              <legend
-                style={{
-                  display: 'block',
-                  width: '100%',
-                  maxWidth: '100%',
-                  padding: '0 0 7px',
-                  margin: 0,
-                  fontSize: '14px',
-                  fontWeight: '400',
-                  lineHeight: '21px',
-                  color: 'rgb(0, 0, 0)'
-                }}
-              >
-                Contraseña
-              </legend>
-              <div style={{ position: 'relative', display: 'inline-block', width: '100%' }}>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => {
-                    setPassword(e.target.value);
-                    if (e.target.value) {
-                      setErrors(prev => ({ ...prev, password: validatePassword(e.target.value) }));
-                    }
-                  }}
-                  autoComplete="new-password"
-                  style={{
-                    display: 'block',
-                    width: '100%',
-                    padding: '10px',
-                    paddingRight: errors.password ? '35px' : '10px',
-                    fontSize: '14px',
-                    fontWeight: '400',
-                    lineHeight: '1.5',
-                    color: 'rgb(102, 97, 91)',
-                    backgroundColor: 'rgb(255, 255, 255)',
-                    border: errors.password ? '1px solid rgb(220, 53, 69)' : '1px solid rgb(221, 221, 221)',
-                    borderRadius: '4px',
-                    transition: 'color 0.3s ease-in-out, border-color 0.3s ease-in-out, background-color 0.3s ease-in-out',
-                    fontFamily: 'inherit',
-                    boxSizing: 'border-box',
-                    height: '40px'
-                  }}
-                  onFocus={(e) => !errors.password && (e.target.style.borderColor = 'rgb(81, 203, 206)')}
-                  onBlur={(e) => !errors.password && (e.target.style.borderColor = 'rgb(221, 221, 221)')}
-                />
-                {errors.password && (
-                  <i 
-                    className="fas fa-times" 
-                    style={{
-                      position: 'absolute',
-                      right: '12px',
-                      top: '12px',
-                      color: 'rgb(220, 53, 69)',
-                      fontSize: '16px',
-                      pointerEvents: 'none',
-                      zIndex: 1
-                    }}
-                  ></i>
-                )}
-                {errors.password && (
-                  <div
-                    style={{
-                      display: 'block',
-                      marginTop: '4px',
-                      fontSize: '11.2px',
-                      color: 'rgb(220, 53, 69)',
-                      fontWeight: '400',
-                      lineHeight: '16.8px'
-                    }}
-                  >
-                    {errors.password}
-                  </div>
-                )}
-                <small
-                  style={{
-                    display: 'block',
-                    marginTop: '4px',
-                    fontSize: '11.9994px',
-                    color: 'rgb(108, 117, 125)',
-                    fontWeight: '400',
-                    lineHeight: '17.9991px'
-                  }}
-                >
-                  <div>Requisitos de contraseña</div>
-                  <ul
-                    style={{
-                      margin: '0 0 16px',
-                      padding: '0 0 0 40px',
-                      listStyle: 'disc outside'
-                    }}
-                  >
-                    <li>Mínimo 8 caracteres</li>
-                    <li>Mínimo una letra</li>
-                    <li>Mínimo un número</li>
-                    <li>Mínimo un caracter especial</li>
-                  </ul>
-                </small>
-              </div>
-            </fieldset>
-
-            {/* Campo Confirmación */}
-            <fieldset
-              style={{
-                border: 'none',
-                padding: 0,
-                margin: '0 0 10px',
-                position: 'relative'
-              }}
-            >
-              <legend
-                style={{
-                  display: 'block',
-                  width: '100%',
-                  maxWidth: '100%',
-                  padding: '0 0 7px',
-                  margin: 0,
-                  fontSize: '14px',
-                  fontWeight: '400',
-                  lineHeight: '21px',
-                  color: 'rgb(0, 0, 0)'
-                }}
-              >
-                Confirmación
-              </legend>
-              <div style={{ position: 'relative', display: 'inline-block', width: '100%' }}>
-                <input
-                  type="password"
-                  value={passwordConfirmation}
-                  onChange={(e) => {
-                    setPasswordConfirmation(e.target.value);
-                    if (e.target.value && password) {
-                      setErrors(prev => ({
-                        ...prev,
-                        confirmation: e.target.value !== password ? 'Las contraseñas no coinciden' : ''
-                      }));
-                    }
-                  }}
-                  autoComplete="new-password"
-                  style={{
-                    display: 'block',
-                    width: '100%',
-                    padding: '10px',
-                    paddingRight: errors.confirmation ? '35px' : '10px',
-                    fontSize: '14px',
-                    fontWeight: '400',
-                    lineHeight: '1.5',
-                    color: 'rgb(102, 97, 91)',
-                    backgroundColor: 'rgb(255, 255, 255)',
-                    border: errors.confirmation ? '1px solid rgb(220, 53, 69)' : '1px solid rgb(221, 221, 221)',
-                    borderRadius: '4px',
-                    transition: 'color 0.3s ease-in-out, border-color 0.3s ease-in-out, background-color 0.3s ease-in-out',
-                    fontFamily: 'inherit',
-                    boxSizing: 'border-box',
-                    height: '40px'
-                  }}
-                  onFocus={(e) => !errors.confirmation && (e.target.style.borderColor = 'rgb(81, 203, 206)')}
-                  onBlur={(e) => !errors.confirmation && (e.target.style.borderColor = 'rgb(221, 221, 221)')}
-                />
-                {errors.confirmation && (
-                  <i 
-                    className="fas fa-times" 
-                    style={{
-                      position: 'absolute',
-                      right: '12px',
-                      top: '12px',
-                      color: 'rgb(220, 53, 69)',
-                      fontSize: '16px',
-                      pointerEvents: 'none',
-                      zIndex: 1
-                    }}
-                  ></i>
-                )}
-                {errors.confirmation && (
-                  <div
-                    style={{
-                      display: 'block',
-                      marginTop: '4px',
-                      fontSize: '11.2px',
-                      color: 'rgb(220, 53, 69)',
-                      fontWeight: '400',
-                      lineHeight: '16.8px'
-                    }}
-                  >
-                    {errors.confirmation}
-                  </div>
-                )}
-              </div>
-            </fieldset>
-          </div>
-
-          {/* Footer */}
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'flex-end',
-              alignItems: 'center',
-              padding: '16px',
-              borderTop: '1px solid rgb(221, 221, 221)',
-              borderRadius: '0 0 4.8px 4.8px',
-              gap: '8px',
-            }}
-          >
-            <button
-              type="button"
-              onClick={handleClose}
-              style={{
-                padding: '11px 22px',
-                fontSize: '11.9994px',
-                fontWeight: '600',
-                lineHeight: '16.1992px',
-                textAlign: 'center',
-                textTransform: 'uppercase',
-                color: 'rgb(255, 255, 255)',
-                backgroundColor: 'rgb(102, 97, 91)',
-                border: 'none',
-                borderRadius: '3px',
-                cursor: 'pointer',
-                transition: '0.15s linear',
-                fontFamily: 'inherit',
-              }}
-              onMouseEnter={(e) => handleConfirmHover(e, 'rgb(82, 77, 71)')}
-              onMouseLeave={(e) => handleConfirmHover(e, 'rgb(102, 97, 91)')}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              style={{
-                padding: '11px 22px',
-                fontSize: '11.9994px',
-                fontWeight: '600',
-                lineHeight: '16.1992px',
-                textAlign: 'center',
-                textTransform: 'uppercase',
-                color: 'rgb(255, 255, 255)',
-                backgroundColor: 'rgb(81, 203, 206)',
-                border: 'none',
-                borderRadius: '3px',
-                cursor: 'pointer',
-                transition: '0.15s linear',
-                fontFamily: 'inherit',
-              }}
-              onMouseEnter={(e) => handleConfirmHover(e, 'rgb(61, 183, 186)')}
-              onMouseLeave={(e) => handleConfirmHover(e, 'rgb(81, 203, 206)')}
-            >
-              OK
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  )
+            {isLoading ? 'Cambiando...' : 'Cambiar contraseña'}
+          </Button>
+        )}
+      </DialogActions>
+    </Dialog>
+  );
 }
