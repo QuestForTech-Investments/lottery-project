@@ -670,10 +670,281 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
         });
       });
 
-      return prizeFormData;
+      // 🆕 Also load commission values from prizes-commissions endpoint
+      const commissionFormData = await loadCommissionValues(bettingPoolId);
+
+      return { ...prizeFormData, ...commissionFormData };
     } catch (error) {
       console.error('Error loading prize values:', error);
       return {};
+    }
+  };
+
+  /**
+   * 🆕 Load commission values from the prizes-commissions endpoint
+   * Maps backend column names to frontend formData keys
+   */
+  const loadCommissionValues = async (bettingPoolId: string): Promise<Record<string, string | number>> => {
+    try {
+      const response = await fetch(`${API_BASE}/betting-pools/${bettingPoolId}/prizes-commissions`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        return {};
+      }
+
+      const commissions = await response.json();
+      if (!Array.isArray(commissions) || commissions.length === 0) {
+        return {};
+      }
+
+      const commissionFormData: Record<string, string | number> = {};
+
+      // Map backend GameType to frontend betTypeCode
+      const gameTypeMap: Record<string, string> = {
+        'DIRECTO': 'DIRECTO',
+        'PALE': 'PALÉ',
+        'TRIPLETA': 'TRIPLETA',
+        'CASH3_STRAIGHT': 'CASH3_STRAIGHT',
+        'CASH3_BOX': 'CASH3_BOX',
+        'PLAY4_STRAIGHT': 'PLAY4 STRAIGHT',
+        'PLAY4_BOX': 'PLAY4 BOX',
+        'SUPER_PALE': 'SUPER_PALE',
+        'BOLITA_1': 'BOLITA 1',
+        'BOLITA_2': 'BOLITA 2',
+        'SINGULACION_1': 'SINGULACIÓN 1',
+        'SINGULACION_2': 'SINGULACIÓN 2',
+        'SINGULACION_3': 'SINGULACIÓN 3',
+        'PICK5_STRAIGHT': 'PICK5 STRAIGHT',
+        'PICK5_BOX': 'PICK5 BOX',
+        'PICK_TWO': 'PICK TWO',
+        'PICK2': 'PICK2',
+        'CASH3_FRONT_STRAIGHT': 'CASH3 FRONT STRAIGHT',
+        'CASH3_FRONT_BOX': 'CASH3_FRONT_BOX',
+        'CASH3_BACK_STRAIGHT': 'CASH3_BACK_STRAIGHT',
+        'CASH3_BACK_BOX': 'CASH3 BACK BOX',
+        'PICK_TWO_FRONT': 'PICK TWO FRONT',
+        'PICK_TWO_BACK': 'PICK TWO BACK',
+        'PICK_TWO_MIDDLE': 'PICK TWO MIDDLE',
+        'SINGULACION': 'SINGULACION',
+        'PANAMA': 'PANAMA',
+      };
+
+      // Process each commission record
+      commissions.forEach((record: {
+        gameType: string;
+        lotteryId: number | null;
+        commissionDiscount1: number | null;
+        commissionDiscount2: number | null;
+        commissionDiscount3: number | null;
+        commissionDiscount4: number | null;
+        commission2Discount1: number | null;
+        commission2Discount2: number | null;
+        commission2Discount3: number | null;
+        commission2Discount4: number | null;
+      }) => {
+        // Map GameType to betTypeCode
+        const betTypeCode = gameTypeMap[record.gameType] || record.gameType;
+
+        // Determine prefix: general for lotteryId=null, or draw_XX for specific lottery
+        const prefix = record.lotteryId === null ? 'general' : `draw_${record.lotteryId}`;
+
+        // Map commission fields (Comisiones tab)
+        if (record.commissionDiscount1 !== null && record.commissionDiscount1 !== 0) {
+          commissionFormData[`${prefix}_COMMISSION_${betTypeCode}_COMMISSION_DISCOUNT_1`] = record.commissionDiscount1;
+        }
+        if (record.commissionDiscount2 !== null && record.commissionDiscount2 !== 0) {
+          commissionFormData[`${prefix}_COMMISSION_${betTypeCode}_COMMISSION_DISCOUNT_2`] = record.commissionDiscount2;
+        }
+        if (record.commissionDiscount3 !== null && record.commissionDiscount3 !== 0) {
+          commissionFormData[`${prefix}_COMMISSION_${betTypeCode}_COMMISSION_DISCOUNT_3`] = record.commissionDiscount3;
+        }
+        if (record.commissionDiscount4 !== null && record.commissionDiscount4 !== 0) {
+          commissionFormData[`${prefix}_COMMISSION_${betTypeCode}_COMMISSION_DISCOUNT_4`] = record.commissionDiscount4;
+        }
+
+        // Map commission 2 fields (Comisiones 2 tab)
+        if (record.commission2Discount1 !== null && record.commission2Discount1 !== 0) {
+          commissionFormData[`${prefix}_COMMISSION2_${betTypeCode}_COMMISSION_2_DISCOUNT_1`] = record.commission2Discount1;
+        }
+        if (record.commission2Discount2 !== null && record.commission2Discount2 !== 0) {
+          commissionFormData[`${prefix}_COMMISSION2_${betTypeCode}_COMMISSION_2_DISCOUNT_2`] = record.commission2Discount2;
+        }
+        if (record.commission2Discount3 !== null && record.commission2Discount3 !== 0) {
+          commissionFormData[`${prefix}_COMMISSION2_${betTypeCode}_COMMISSION_2_DISCOUNT_3`] = record.commission2Discount3;
+        }
+        if (record.commission2Discount4 !== null && record.commission2Discount4 !== 0) {
+          commissionFormData[`${prefix}_COMMISSION2_${betTypeCode}_COMMISSION_2_DISCOUNT_4`] = record.commission2Discount4;
+        }
+      });
+
+      return commissionFormData;
+    } catch (error) {
+      console.error('Error loading commission values:', error);
+      return {};
+    }
+  };
+
+  /**
+   * 🆕 Save commission configurations to the prizes-commissions endpoint
+   * Extracts commission fields from formData and saves them via API
+   */
+  const saveCommissionConfigurations = async (
+    bettingPoolId: string | undefined,
+    currentFormData: FormData | Record<string, string | number | boolean | number[] | AutoExpense[] | null>,
+    initialData: FormData | null = null
+  ): Promise<void> => {
+    if (!bettingPoolId) return;
+
+    try {
+      // Reverse map: frontend betTypeCode -> backend GameType
+      const betTypeToGameType: Record<string, string> = {
+        'DIRECTO': 'DIRECTO',
+        'PALÉ': 'PALE',
+        'TRIPLETA': 'TRIPLETA',
+        'CASH3_STRAIGHT': 'CASH3_STRAIGHT',
+        'CASH3_BOX': 'CASH3_BOX',
+        'PLAY4 STRAIGHT': 'PLAY4_STRAIGHT',
+        'PLAY4 BOX': 'PLAY4_BOX',
+        'SUPER_PALE': 'SUPER_PALE',
+        'BOLITA 1': 'BOLITA_1',
+        'BOLITA 2': 'BOLITA_2',
+        'SINGULACIÓN 1': 'SINGULACION_1',
+        'SINGULACIÓN 2': 'SINGULACION_2',
+        'SINGULACIÓN 3': 'SINGULACION_3',
+        'PICK5 STRAIGHT': 'PICK5_STRAIGHT',
+        'PICK5 BOX': 'PICK5_BOX',
+        'PICK TWO': 'PICK_TWO',
+        'PICK2': 'PICK2',
+        'CASH3 FRONT STRAIGHT': 'CASH3_FRONT_STRAIGHT',
+        'CASH3_FRONT_BOX': 'CASH3_FRONT_BOX',
+        'CASH3_BACK_STRAIGHT': 'CASH3_BACK_STRAIGHT',
+        'CASH3 BACK BOX': 'CASH3_BACK_BOX',
+        'PICK TWO FRONT': 'PICK_TWO_FRONT',
+        'PICK TWO BACK': 'PICK_TWO_BACK',
+        'PICK TWO MIDDLE': 'PICK_TWO_MIDDLE',
+        'SINGULACION': 'SINGULACION',
+        'PANAMA': 'PANAMA',
+      };
+
+      // Collect commission changes by gameType
+      const commissionsByGameType: Record<string, {
+        commissionDiscount1?: number;
+        commissionDiscount2?: number;
+        commissionDiscount3?: number;
+        commissionDiscount4?: number;
+        commission2Discount1?: number;
+        commission2Discount2?: number;
+        commission2Discount3?: number;
+        commission2Discount4?: number;
+      }> = {};
+
+      // Regex patterns for commission field keys
+      const commissionPattern = /^general_COMMISSION_(.+)_COMMISSION_DISCOUNT_(\d)$/;
+      const commission2Pattern = /^general_COMMISSION2_(.+)_COMMISSION_2_DISCOUNT_(\d)$/;
+
+      // Process all formData keys to find commission fields
+      Object.keys(currentFormData).forEach(key => {
+        const value = currentFormData[key];
+        if (value === '' || value === null || value === undefined) return;
+
+        // Check if value has changed
+        const initialValue = initialData?.[key as keyof FormData];
+        if (initialData && initialValue !== undefined && String(initialValue) === String(value)) {
+          return; // No change, skip
+        }
+
+        // Match commission field pattern
+        const commissionMatch = key.match(commissionPattern);
+        if (commissionMatch) {
+          const betTypeCode = commissionMatch[1];
+          const discountNum = commissionMatch[2];
+          const gameType = betTypeToGameType[betTypeCode] || betTypeCode;
+
+          if (!commissionsByGameType[gameType]) {
+            commissionsByGameType[gameType] = {};
+          }
+
+          const fieldName = `commissionDiscount${discountNum}` as keyof typeof commissionsByGameType[typeof gameType];
+          commissionsByGameType[gameType][fieldName] = parseFloat(String(value));
+          return;
+        }
+
+        // Match commission 2 field pattern
+        const commission2Match = key.match(commission2Pattern);
+        if (commission2Match) {
+          const betTypeCode = commission2Match[1];
+          const discountNum = commission2Match[2];
+          const gameType = betTypeToGameType[betTypeCode] || betTypeCode;
+
+          if (!commissionsByGameType[gameType]) {
+            commissionsByGameType[gameType] = {};
+          }
+
+          const fieldName = `commission2Discount${discountNum}` as keyof typeof commissionsByGameType[typeof gameType];
+          commissionsByGameType[gameType][fieldName] = parseFloat(String(value));
+          return;
+        }
+      });
+
+      // If no commission changes, return early
+      if (Object.keys(commissionsByGameType).length === 0) {
+        return;
+      }
+
+      // Save each gameType's commissions
+      for (const [gameType, commissions] of Object.entries(commissionsByGameType)) {
+        // First, check if a record already exists for this gameType
+        const existingResponse = await fetch(`${API_BASE}/betting-pools/${bettingPoolId}/prizes-commissions`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        let existingRecords: Array<{ prizeCommissionId: number; gameType: string }> = [];
+        if (existingResponse.ok) {
+          existingRecords = await existingResponse.json();
+        }
+
+        const existingRecord = existingRecords.find(r => r.gameType === gameType);
+
+        if (existingRecord) {
+          // Update existing record
+          await fetch(`${API_BASE}/betting-pools/${bettingPoolId}/${existingRecord.prizeCommissionId}`, {
+            method: 'PUT',
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              gameType,
+              ...commissions
+            })
+          });
+        } else {
+          // Create new record
+          await fetch(`${API_BASE}/betting-pools/${bettingPoolId}/prizes-commissions`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              gameType,
+              isActive: true,
+              ...commissions
+            })
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error saving commission configurations:', error);
+      throw error;
     }
   };
 
@@ -887,6 +1158,16 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
         } catch (prizeError) {
           console.error('Error saving prize configurations:', prizeError);
           // Don't fail the whole operation if prizes fail to save
+        }
+
+        // ========================================
+        // 4.5️⃣ SAVE COMMISSION CONFIGURATIONS
+        // ========================================
+        try {
+          await saveCommissionConfigurations(id, formData, initialFormData);
+        } catch (commissionError) {
+          console.error('Error saving commission configurations:', commissionError);
+          // Don't fail the whole operation if commissions fail to save
         }
 
         // ========================================
