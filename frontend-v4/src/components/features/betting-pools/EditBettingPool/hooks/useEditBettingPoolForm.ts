@@ -1295,6 +1295,12 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
       // Pass allowDrawSpecific=true to allow saving draw-specific fields
       const result = await savePrizeConfigurations(id, filteredFormData, initialFormData, true);
 
+      // 🔥 FIX: Also save commission configurations when saving "general" tab
+      // Commissions are currently only stored at the general level
+      if (drawId === 'general') {
+        await saveCommissionConfigurations(id, filteredFormData, initialFormData);
+      }
+
       if (result.success) {
       }
 
