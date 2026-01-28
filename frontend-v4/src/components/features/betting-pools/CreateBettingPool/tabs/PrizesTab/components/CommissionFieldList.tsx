@@ -175,7 +175,7 @@ const CommissionFieldList: React.FC<CommissionFieldListProps> = memo(({
             onChange={handleGeneralFieldChange}
             placeholder="0"
             sx={{
-              width: 70,
+              width: 50,
               '& .MuiOutlinedInput-input': { py: 0.5, px: 1, fontSize: '0.85rem' },
             }}
           />
@@ -201,7 +201,7 @@ const CommissionFieldList: React.FC<CommissionFieldListProps> = memo(({
               onChange={handleInputChange(betType.betTypeCode)}
               placeholder="0"
               sx={{
-                width: 70,
+                width: 50,
                 '& .MuiOutlinedInput-input': { py: 0.5, px: 1, fontSize: '0.85rem' },
               }}
             />
