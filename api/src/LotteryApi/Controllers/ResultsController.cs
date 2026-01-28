@@ -155,7 +155,20 @@ public class ResultsController : ControllerBase
 
             _logger.LogInformation("Updated result {ResultId} for draw {DrawId}", existingResult.ResultId, dto.DrawId);
 
-            return Ok(MapToDto(existingResult));
+            // Automatically check for winners when result is updated
+            var (ticketsProcessed, winnersFound) = await _externalResultsService.ProcessTicketsForDrawAsync(
+                dto.DrawId, dto.ResultDate);
+
+            _logger.LogInformation("Processed {TicketsProcessed} tickets for draw {DrawId}, found {WinnersFound} winners",
+                ticketsProcessed, dto.DrawId, winnersFound);
+
+            var resultDto = MapToDto(existingResult);
+            return Ok(new
+            {
+                result = resultDto,
+                ticketsProcessed,
+                winnersFound
+            });
         }
 
         // Create new result
@@ -178,7 +191,20 @@ public class ResultsController : ControllerBase
 
         _logger.LogInformation("Created result {ResultId} for draw {DrawId}", result.ResultId, dto.DrawId);
 
-        return Ok(MapToDto(result));
+        // Automatically check for winners when new result is created
+        var (newTicketsProcessed, newWinnersFound) = await _externalResultsService.ProcessTicketsForDrawAsync(
+            dto.DrawId, dto.ResultDate);
+
+        _logger.LogInformation("Processed {TicketsProcessed} tickets for draw {DrawId}, found {WinnersFound} winners",
+            newTicketsProcessed, dto.DrawId, newWinnersFound);
+
+        var newResultDto = MapToDto(result);
+        return Ok(new
+        {
+            result = newResultDto,
+            ticketsProcessed = newTicketsProcessed,
+            winnersFound = newWinnersFound
+        });
     }
 
     /// <summary>
@@ -220,7 +246,20 @@ public class ResultsController : ControllerBase
 
         _logger.LogInformation("Updated result {ResultId}", id);
 
-        return Ok(MapToDto(result));
+        // Automatically check for winners when result is updated
+        var (ticketsProcessed, winnersFound) = await _externalResultsService.ProcessTicketsForDrawAsync(
+            dto.DrawId, dto.ResultDate);
+
+        _logger.LogInformation("Processed {TicketsProcessed} tickets for draw {DrawId}, found {WinnersFound} winners",
+            ticketsProcessed, dto.DrawId, winnersFound);
+
+        var resultDto = MapToDto(result);
+        return Ok(new
+        {
+            result = resultDto,
+            ticketsProcessed,
+            winnersFound
+        });
     }
 
     /// <summary>
@@ -516,6 +555,46 @@ public class ResultsController : ControllerBase
     }
 
     /// <summary>
+    /// Reprocess pending tickets that have results available.
+    /// Use this to update tickets that were created after results were published.
+    /// </summary>
+    [HttpPost("reprocess-tickets")]
+    [ProducesResponseType(typeof(ReprocessTicketsResponse), StatusCodes.Status200OK)]
+    public async Task<IActionResult> ReprocessPendingTickets(
+        [FromQuery] DateTime? startDate,
+        [FromQuery] DateTime? endDate)
+    {
+        _logger.LogInformation("Reprocess tickets requested from {Start} to {End}",
+            startDate?.ToString("yyyy-MM-dd") ?? "7 days ago",
+            endDate?.ToString("yyyy-MM-dd") ?? "today");
+
+        try
+        {
+            var (ticketsProcessed, winnersFound, ticketsUpdated) =
+                await _externalResultsService.ReprocessPendingTicketsAsync(startDate, endDate);
+
+            return Ok(new ReprocessTicketsResponse
+            {
+                Success = true,
+                Message = $"Processed {ticketsProcessed} lines, found {winnersFound} winners, updated {ticketsUpdated} tickets",
+                LinesProcessed = ticketsProcessed,
+                WinnersFound = winnersFound,
+                TicketsUpdated = ticketsUpdated,
+                ProcessedAt = DateTime.UtcNow
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error reprocessing tickets");
+            return Ok(new ReprocessTicketsResponse
+            {
+                Success = false,
+                Message = $"Error: {ex.Message}"
+            });
+        }
+    }
+
+    /// <summary>
     /// Sync results from external source (scraped data from original app)
     /// </summary>
     [HttpPost("sync")]
@@ -639,12 +718,49 @@ public class ResultsController : ControllerBase
 
         await _context.SaveChangesAsync();
 
+        // Automatically check for winners for all synced results
+        var totalTicketsProcessed = 0;
+        var totalWinnersFound = 0;
+
+        // Get unique draw IDs that were updated or created
+        var processedDrawIds = response.Details
+            .Where(d => d.Status == "updated" || d.Status == "created")
+            .Select(d => GetDrawIdByName(d.DrawName))
+            .Where(id => id.HasValue)
+            .Select(id => id!.Value)
+            .Distinct()
+            .ToList();
+
+        foreach (var drawId in processedDrawIds)
+        {
+            var (ticketsProcessed, winnersFound) = await _externalResultsService.ProcessTicketsForDrawAsync(
+                drawId, request.Date);
+            totalTicketsProcessed += ticketsProcessed;
+            totalWinnersFound += winnersFound;
+        }
+
+        _logger.LogInformation("Processed {TicketsProcessed} tickets across {DrawCount} draws, found {WinnersFound} winners",
+            totalTicketsProcessed, processedDrawIds.Count, totalWinnersFound);
+
         response.Success = response.Errors.Count == 0;
-        response.Message = $"Sync completed: {response.Updated} updated, {response.Created} created, {response.Skipped} skipped";
+        response.Message = $"Sync completed: {response.Updated} updated, {response.Created} created, {response.Skipped} skipped, {totalWinnersFound} winners found";
+        response.TicketsProcessed = totalTicketsProcessed;
+        response.WinnersFound = totalWinnersFound;
 
         _logger.LogInformation("Sync completed: {Message}", response.Message);
 
         return Ok(response);
+    }
+
+    /// <summary>
+    /// Get draw ID by name for winner processing
+    /// </summary>
+    private int? GetDrawIdByName(string drawName)
+    {
+        return _context.Draws
+            .Where(d => d.DrawName == drawName && d.IsActive == true)
+            .Select(d => (int?)d.DrawId)
+            .FirstOrDefault();
     }
 
     /// <summary>

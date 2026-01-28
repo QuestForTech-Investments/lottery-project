@@ -140,6 +140,8 @@ public class SyncResultsResponseDto
     public int Updated { get; set; }
     public int Created { get; set; }
     public int Skipped { get; set; }
+    public int TicketsProcessed { get; set; }
+    public int WinnersFound { get; set; }
     public List<string> Errors { get; set; } = new();
     public List<SyncResultDetailDto> Details { get; set; } = new();
 }
@@ -154,4 +156,17 @@ public class SyncResultDetailDto
     public string? OldValue { get; set; }
     public string? NewValue { get; set; }
     public string? Error { get; set; }
+}
+
+/// <summary>
+/// Response DTO for reprocessing pending tickets
+/// </summary>
+public class ReprocessTicketsResponse
+{
+    public bool Success { get; set; }
+    public string Message { get; set; } = string.Empty;
+    public int LinesProcessed { get; set; }
+    public int WinnersFound { get; set; }
+    public int TicketsUpdated { get; set; }
+    public DateTime ProcessedAt { get; set; }
 }

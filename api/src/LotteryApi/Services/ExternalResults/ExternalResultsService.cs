@@ -32,9 +32,22 @@ public interface IExternalResultsService
     Task<(int linesUpdated, decimal totalPrize)> RecalculatePrizesAsync(DateTime date, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Process tickets for a specific draw to find winners.
+    /// Called automatically when results are published.
+    /// </summary>
+    Task<(int ticketsProcessed, int winnersFound)> ProcessTicketsForDrawAsync(int drawId, DateTime date, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Get draw mappings configuration
     /// </summary>
     List<DrawMapping> GetDrawMappings();
+
+    /// <summary>
+    /// Reprocess all pending tickets that have results available.
+    /// Useful for tickets created after results were published.
+    /// </summary>
+    Task<(int ticketsProcessed, int winnersFound, int ticketsUpdated)> ReprocessPendingTicketsAsync(
+        DateTime? startDate = null, DateTime? endDate = null, CancellationToken cancellationToken = default);
 }
 
 public class ExternalResultsService : IExternalResultsService
@@ -465,8 +478,8 @@ public class ExternalResultsService : IExternalResultsService
         return (ticketsProcessed, winnersFound);
     }
 
-    private async Task<(int ticketsProcessed, int winnersFound)> ProcessTicketsForDrawAsync(
-        int drawId, DateTime date, CancellationToken cancellationToken)
+    public async Task<(int ticketsProcessed, int winnersFound)> ProcessTicketsForDrawAsync(
+        int drawId, DateTime date, CancellationToken cancellationToken = default)
     {
         var ticketsProcessed = 0;
         var winnersFound = 0;
@@ -860,6 +873,109 @@ public class ExternalResultsService : IExternalResultsService
             line.BetAmount, multiplier, line.BetAmount * multiplier, line.BetTypeCode, winningPosition);
 
         return line.BetAmount * multiplier;
+    }
+
+    /// <summary>
+    /// Reprocess all pending tickets that have results available.
+    /// This method finds all ticket lines with status "pending" that have a matching result
+    /// and processes them to determine winners/losers.
+    /// </summary>
+    public async Task<(int ticketsProcessed, int winnersFound, int ticketsUpdated)> ReprocessPendingTicketsAsync(
+        DateTime? startDate = null, DateTime? endDate = null, CancellationToken cancellationToken = default)
+    {
+        var ticketsProcessed = 0;
+        var winnersFound = 0;
+        var affectedTicketIds = new HashSet<long>();
+
+        // Default to last 7 days if no dates specified
+        var start = startDate ?? DateTime.UtcNow.AddDays(-7).Date;
+        var end = endDate ?? DateTime.UtcNow.Date;
+
+        _logger.LogInformation("Reprocessing pending tickets from {Start} to {End}",
+            start.ToString("yyyy-MM-dd"), end.ToString("yyyy-MM-dd"));
+
+        // Get all results in the date range
+        var results = await _context.Results
+            .Where(r => r.ResultDate.Date >= start && r.ResultDate.Date <= end)
+            .ToDictionaryAsync(r => (r.DrawId, r.ResultDate.Date), r => r, cancellationToken);
+
+        if (!results.Any())
+        {
+            _logger.LogInformation("No results found in date range");
+            return (0, 0, 0);
+        }
+
+        _logger.LogInformation("Found {Count} results to check against", results.Count);
+
+        // Get all pending ticket lines in the date range
+        var pendingLines = await _context.Set<TicketLine>()
+            .Include(tl => tl.Ticket)
+            .Include(tl => tl.BetType)
+            .Where(tl =>
+                tl.DrawDate.Date >= start &&
+                tl.DrawDate.Date <= end &&
+                tl.LineStatus == "pending" &&
+                !tl.Ticket!.IsCancelled)
+            .ToListAsync(cancellationToken);
+
+        _logger.LogInformation("Found {Count} pending ticket lines to process", pendingLines.Count);
+
+        foreach (var line in pendingLines)
+        {
+            // Check if there's a result for this draw and date
+            var key = (line.DrawId, line.DrawDate.Date);
+            if (!results.TryGetValue(key, out var result))
+                continue;
+
+            ticketsProcessed++;
+
+            // Check if this line is a winner
+            var winningPosition = GetWinningPosition(line, result);
+
+            line.ResultNumber = result.WinningNumber;
+            line.ResultCheckedAt = DateTime.UtcNow;
+
+            if (winningPosition > 0)
+            {
+                line.IsWinner = true;
+                line.LineStatus = "winner";
+                line.WinningPosition = winningPosition;
+                winnersFound++;
+
+                // Calculate prize
+                line.PrizeAmount = await CalculatePrizeAsync(line, winningPosition);
+
+                if (line.Ticket != null)
+                {
+                    line.Ticket.WinningLines++;
+                    line.Ticket.TotalPrize += line.PrizeAmount;
+                    affectedTicketIds.Add(line.TicketId);
+                }
+
+                _logger.LogInformation(
+                    "Winner found! Ticket {TicketId} Line {LineId}: bet {BetNumber} matches position {Position} in result {Result}, Prize: {Prize}",
+                    line.TicketId, line.LineId, line.BetNumber, winningPosition, result.WinningNumber, line.PrizeAmount);
+            }
+            else
+            {
+                line.LineStatus = "loser";
+                affectedTicketIds.Add(line.TicketId);
+            }
+        }
+
+        // Update TicketState for all affected tickets
+        if (affectedTicketIds.Any())
+        {
+            await UpdateTicketStatesAsync(affectedTicketIds, cancellationToken);
+        }
+
+        await _context.SaveChangesAsync(cancellationToken);
+
+        _logger.LogInformation(
+            "Reprocessing complete: {Processed} lines processed, {Winners} winners found, {Tickets} tickets updated",
+            ticketsProcessed, winnersFound, affectedTicketIds.Count);
+
+        return (ticketsProcessed, winnersFound, affectedTicketIds.Count);
     }
 }
 
