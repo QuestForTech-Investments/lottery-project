@@ -3,6 +3,7 @@ using LotteryApi.Data;
 using LotteryApi.DTOs;
 using LotteryApi.Helpers;
 using LotteryApi.Models;
+using LotteryApi.Services.ExternalResults;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -18,11 +19,16 @@ public class TicketsController : ControllerBase
 {
     private readonly LotteryDbContext _context;
     private readonly ILogger<TicketsController> _logger;
+    private readonly IExternalResultsService _externalResultsService;
 
-    public TicketsController(LotteryDbContext context, ILogger<TicketsController> logger)
+    public TicketsController(
+        LotteryDbContext context,
+        ILogger<TicketsController> logger,
+        IExternalResultsService externalResultsService)
     {
         _context = context;
         _logger = logger;
+        _externalResultsService = externalResultsService;
     }
 
     [HttpGet]
@@ -609,6 +615,52 @@ public class TicketsController : ControllerBase
                 ticket.TicketId,
                 ticket.TotalLines,
                 ticket.GrandTotal);
+
+            // 10.1 Check if any draws already have results and process ticket immediately
+            try
+            {
+                var ticketDrawDates = ticket.TicketLines
+                    .Select(l => (l.DrawId, l.DrawDate.Date))
+                    .Distinct()
+                    .ToList();
+
+                var existingResults = await _context.Results
+                    .Where(r => ticketDrawDates.Select(td => td.DrawId).Contains(r.DrawId))
+                    .ToListAsync();
+
+                if (existingResults.Any())
+                {
+                    _logger.LogInformation(
+                        "Ticket {TicketId} has draws with existing results, processing immediately",
+                        ticket.TicketId);
+
+                    // Process each draw that has results
+                    foreach (var result in existingResults)
+                    {
+                        var (processed, winners) = await _externalResultsService.ProcessTicketsForDrawAsync(
+                            result.DrawId, result.ResultDate);
+
+                        if (winners > 0)
+                        {
+                            _logger.LogInformation(
+                                "Found {Winners} winners for draw {DrawId} in newly created ticket",
+                                winners, result.DrawId);
+                        }
+                    }
+
+                    // Reload ticket to get updated values
+                    await _context.Entry(ticket).ReloadAsync();
+                    foreach (var line in ticket.TicketLines)
+                    {
+                        await _context.Entry(line).ReloadAsync();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log but don't fail ticket creation if result processing fails
+                _logger.LogWarning(ex, "Failed to process existing results for new ticket {TicketId}", ticket.TicketId);
+            }
 
             // 11. Build response DTO directly (no additional DB query)
             var createdTicket = new TicketDetailDto
@@ -1568,9 +1620,9 @@ public class TicketsController : ControllerBase
 
         if (limitRule == null)
         {
-            // No limit rule applies, no consumption tracking needed
-            _logger.LogInformation("NO LIMIT FOUND");
-            return false;
+            // No limit rule applies - allow the bet (no restrictions)
+            _logger.LogInformation("NO LIMIT FOUND - allowing bet");
+            return true;
         }
 
         // Find existing consumption record
