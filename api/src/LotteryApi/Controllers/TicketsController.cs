@@ -497,10 +497,7 @@ public class TicketsController : ControllerBase
                 Status = "pending"
             };
 
-            // 7. Get commission and discount percentages
-            // Commission disabled - set to 0 for all sales
-            // Discount comes from request or defaults to 0
-            var commissionPercentage = 0.00m; // Commissions disabled
+            // 7. Get discount percentage (commission is per-line based on bet type)
             var discountPercentage = dto.GlobalDiscount > 0 ? dto.GlobalDiscount : 0.00m;
 
             // 8. Create ticket lines and calculate totals
@@ -550,7 +547,14 @@ public class TicketsController : ControllerBase
                     LineStatus = "pending"
                 };
 
-                // Calculate line totals
+                // Get commission percentage from betting pool configuration
+                // Currently uses commission_discount_1 only (see GetCommissionPercentageAsync for future expansion)
+                var commissionPercentage = await GetCommissionPercentageAsync(
+                    dto.BettingPoolId,
+                    lineDto.BetTypeId,
+                    draw.LotteryId);
+
+                // Calculate line totals with commission
                 CalculateTicketLine(line, commissionPercentage, discountPercentage);
 
                 totalBetAmount += line.BetAmount;
@@ -1197,6 +1201,86 @@ public class TicketsController : ControllerBase
         line.CommissionPercentage = commissionPercentage;
         line.CommissionAmount = line.TotalWithMultiplier * (commissionPercentage / 100);
         line.NetAmount = line.TotalWithMultiplier - line.CommissionAmount;
+    }
+
+    /// <summary>
+    /// Get commission percentage from betting pool configuration.
+    /// Currently uses commission_discount_1 only.
+    ///
+    /// FUTURE: The system supports 4 levels of commission per bet type:
+    /// - commission_discount_1: Currently used (primary commission)
+    /// - commission_discount_2: Reserved for future use (e.g., volume-based tiers)
+    /// - commission_discount_3: Reserved for future use
+    /// - commission_discount_4: Reserved for future use
+    ///
+    /// Additionally, there's a second set for sub-agents:
+    /// - commission_2_discount_1 to commission_2_discount_4
+    ///
+    /// The bet type code mapping:
+    /// - "DIRECTO" = Direct bet
+    /// - "PALE" = Pale bet
+    /// - "TRIPLETA" = Tripleta bet
+    /// - "CASH3_STRAIGHT", "CASH3_BOX" = USA Cash3
+    /// - "PLAY4_STRAIGHT", "PLAY4_BOX" = USA Play4
+    /// - etc.
+    /// </summary>
+    private async Task<decimal> GetCommissionPercentageAsync(
+        int bettingPoolId,
+        int betTypeId,
+        int? lotteryId)
+    {
+        // Get the bet type code to match against configuration
+        var betType = await _context.GameTypes
+            .AsNoTracking()
+            .FirstOrDefaultAsync(gt => gt.GameTypeId == betTypeId);
+
+        if (betType == null)
+        {
+            _logger.LogWarning("Bet type {BetTypeId} not found, using default commission 0%", betTypeId);
+            return 0.00m;
+        }
+
+        // Look for commission configuration for this betting pool and bet type
+        // Priority: specific lottery config > general config (lottery_id = null)
+        var config = await _context.Set<Models.BettingPoolPrizesCommission>()
+            .AsNoTracking()
+            .Where(c =>
+                c.BettingPoolId == bettingPoolId &&
+                c.GameType == betType.GameTypeCode &&
+                c.IsActive == true)
+            .OrderByDescending(c => c.LotteryId == lotteryId) // Prefer specific lottery match
+            .ThenByDescending(c => c.LotteryId.HasValue) // Then any specific lottery
+            .FirstOrDefaultAsync();
+
+        if (config != null)
+        {
+            // Currently using only commission_discount_1
+            // FUTURE: Implement logic to determine which level to use based on:
+            // - Volume of sales
+            // - Time of day
+            // - Special promotions
+            // - etc.
+            var commission = config.CommissionDiscount1 ?? 0.00m;
+
+            _logger.LogDebug(
+                "Commission for pool {PoolId}, bet type {BetType}: {Commission}%",
+                bettingPoolId, betType.GameTypeCode, commission);
+
+            return commission;
+
+            // FUTURE: Example of using different commission levels
+            // if (salesVolume > 10000) return config.CommissionDiscount4 ?? config.CommissionDiscount1 ?? 0m;
+            // if (salesVolume > 5000) return config.CommissionDiscount3 ?? config.CommissionDiscount1 ?? 0m;
+            // if (salesVolume > 1000) return config.CommissionDiscount2 ?? config.CommissionDiscount1 ?? 0m;
+            // return config.CommissionDiscount1 ?? 0m;
+        }
+
+        // No configuration found, return 0 (no commission)
+        _logger.LogDebug(
+            "No commission config found for pool {PoolId}, bet type {BetType}, using 0%",
+            bettingPoolId, betType.GameTypeCode);
+
+        return 0.00m;
     }
 
     /// <summary>
