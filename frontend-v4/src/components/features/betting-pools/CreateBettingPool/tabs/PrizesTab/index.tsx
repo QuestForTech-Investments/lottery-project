@@ -369,9 +369,10 @@ const PrizesTab: React.FC<PrizesTabProps> = ({
       <Box sx={{ mt: 3 }}>
         <Alert severity="info">
           <Typography variant="body2">
-            <strong>Nota:</strong> El tab "General" contiene valores by default que se copian automaticmente
-            al seleccionar un sorteo específico por primera vez. Puedes modificar los valores de cada sorteo
-            de forma independiente en cada sub-tab (Premios, Comisiones, Comisiones 2).
+            <strong>Nota:</strong> Los valores del tab "General" se propagan automáticamente a todos los sorteos.
+            Si deseas configurar un valor diferente para un sorteo específico, selecciona ese sorteo y haz clic
+            en "ACTUALIZAR" para guardar solo ese sorteo (esto creará un override que no se verá afectado por
+            cambios futuros en "General").
           </Typography>
         </Alert>
       </Box>

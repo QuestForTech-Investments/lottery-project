@@ -365,11 +365,16 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
    *     { prizeTypeId: 15, fieldCode: "DIRECTO_PRIMER_PAGO", value: 80 }
    *   ]
    * }
+   *
+   * @param allowDrawSpecific - If true, allows saving draw-specific fields (draw_XX_*).
+   *                            Set to true when called from savePrizeConfigForSingleDraw().
+   *                            Default is false (only saves general_* fields).
    */
   const savePrizeConfigurations = async (
     bettingPoolId: string | undefined,
     currentFormData: FormData | Record<string, string | number | boolean | number[] | AutoExpense[] | null>,
-    initialData: FormData | null = null
+    initialData: FormData | null = null,
+    allowDrawSpecific: boolean = false
   ): Promise<SavePrizeResult> => {
     const startTime = performance.now();
 
@@ -394,6 +399,8 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
 
       // ⚡ OPTIMIZED: More efficient filtering + DIRTY TRACKING
       // Group fields by lottery ID
+      // 🔥 IMPORTANT: Only save "general_*" fields in main form submit
+      // Draw-specific fields (draw_XX_*) are saved via "ACTUALIZAR" button only
 
       let debugCount = 0;
       Object.keys(currentFormData).forEach(key => {
@@ -413,18 +420,26 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
         // ✅ FIX: Remove lottery prefix if present
         const parts = key.split('_');
 
-        // Check for "general_" prefix
+        // Check for "general_" prefix - ONLY process general fields in main save
         if (parts[0] === 'general' && parts.length >= 4) {
           lotteryId = 'general';
           cleanKey = parts.slice(1).join('_'); // Remove "general_"
         }
-        // Check for "draw_XX_" prefix (new format from PrizesTab)
+        // Draw-specific fields (draw_XX_*) - only process if allowDrawSpecific is true
         else if (parts[0] === 'draw' && parts.length >= 5) {
+          if (!allowDrawSpecific) {
+            // Skip - draw-specific configs are saved separately via savePrizeConfigForSingleDraw()
+            return;
+          }
           lotteryId = `${parts[0]}_${parts[1]}`; // "draw_43"
           cleanKey = parts.slice(2).join('_'); // Remove "draw_XX_"
         }
-        // Check for "lottery_XX_" prefix (legacy format)
+        // Lottery-specific fields (lottery_XX_*) - legacy format, only process if allowDrawSpecific
         else if (parts[0] === 'lottery' && parts.length >= 5) {
+          if (!allowDrawSpecific) {
+            // Skip - lottery-specific configs are saved separately
+            return;
+          }
           lotteryId = `${parts[0]}_${parts[1]}`; // "lottery_43"
           cleanKey = parts.slice(2).join('_'); // Remove "lottery_XX_"
         }
@@ -996,7 +1011,8 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
 
       // Call the existing savePrizeConfigurations function
       // but with filtered data containing only this draw's fields
-      const result = await savePrizeConfigurations(id, filteredFormData, initialFormData);
+      // Pass allowDrawSpecific=true to allow saving draw-specific fields
+      const result = await savePrizeConfigurations(id, filteredFormData, initialFormData, true);
 
       if (result.success) {
       }
