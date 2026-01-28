@@ -634,7 +634,7 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
     try {
 
       // Get merged prize data (defaults + custom values)
-      const prizeData = await getMergedPrizeData(bettingPoolId as unknown as null) as PrizeData | null;
+      const prizeData = await getMergedPrizeData(bettingPoolId) as PrizeData | null;
 
       if (!prizeData || !prizeData.betTypes) {
         return {};
