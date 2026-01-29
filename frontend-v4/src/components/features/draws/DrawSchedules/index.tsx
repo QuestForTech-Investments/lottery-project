@@ -269,7 +269,7 @@ const DrawSchedules = (): React.ReactElement => {
                     fullWidth
                     onClick={() => toggleLotteryExpansion(lottery.lotteryId)}
                     sx={{
-                      bgcolor: '#51cbce',
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                       color: 'white',
                       textTransform: 'uppercase',
                       fontSize: '13px',
@@ -277,7 +277,7 @@ const DrawSchedules = (): React.ReactElement => {
                       py: 1.2,
                       borderRadius: 1,
                       '&:hover': {
-                        bgcolor: '#45b8bb'
+                        background: 'linear-gradient(135deg, #5568d3 0%, #63408a 100%)'
                       }
                     }}
                   >
