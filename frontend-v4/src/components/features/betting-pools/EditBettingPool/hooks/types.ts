@@ -105,6 +105,7 @@ export interface Zone {
 export interface Draw {
   drawId: number;
   drawName: string;
+  abbreviation?: string;
   lotteryId?: number;
 }
 

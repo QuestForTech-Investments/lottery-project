@@ -18,12 +18,29 @@ interface WeeklySchedule {
   [key: string]: DaySchedule;
 }
 
-interface DrawSchedule {
+interface DrawScheduleAPI {
   drawId: number;
   drawName: string;
+  abbreviation?: string;
   lotteryId: number;
   lotteryName: string;
   timezone?: string;
+  displayColor?: string;
+  logoUrl?: string;
+  useWeeklySchedule?: boolean;
+  weeklySchedule?: WeeklySchedule;
+}
+
+interface DrawSchedule {
+  drawId: number;
+  drawName: string;
+  abbreviation?: string;
+  lotteryId: number;
+  lotteryName: string;
+  timezone?: string;
+  color?: string;
+  logoUrl?: string;
+  useWeeklySchedule?: boolean;
   weeklySchedule?: WeeklySchedule;
 }
 
@@ -58,7 +75,22 @@ export const getDrawSchedules = async (lotteryId: number | string | null = null)
       ? `/draws/schedules?lotteryId=${lotteryId}`
       : '/draws/schedules';
 
-    const data = await api.get(endpoint) as DrawSchedule[];
+    const apiData = await api.get(endpoint) as DrawScheduleAPI[];
+
+    // Map displayColor to color for frontend compatibility
+    const data: DrawSchedule[] = apiData.map(draw => ({
+      drawId: draw.drawId,
+      drawName: draw.drawName,
+      abbreviation: draw.abbreviation,
+      lotteryId: draw.lotteryId,
+      lotteryName: draw.lotteryName,
+      timezone: draw.timezone,
+      color: draw.displayColor,
+      logoUrl: draw.logoUrl,
+      useWeeklySchedule: draw.useWeeklySchedule,
+      weeklySchedule: draw.weeklySchedule
+    }));
+
     return { success: true, data };
   } catch (error) {
     console.error('[ERROR] [DRAW SCHEDULE] Error getting draw schedules:', error);

@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using LotteryApi.Data;
 using LotteryApi.DTOs;
 using LotteryApi.Models;
+using LotteryApi.Services;
 
 namespace LotteryApi.Controllers;
 
@@ -14,11 +15,15 @@ public class ZonesController : ControllerBase
 {
     private readonly LotteryDbContext _context;
     private readonly ILogger<ZonesController> _logger;
+    private readonly ICacheService _cache;
+    private const string ZONES_CACHE_KEY = "zones:all";
+    private static readonly TimeSpan ZONES_CACHE_TTL = TimeSpan.FromMinutes(30);
 
-    public ZonesController(LotteryDbContext context, ILogger<ZonesController> logger)
+    public ZonesController(LotteryDbContext context, ILogger<ZonesController> logger, ICacheService cache)
     {
         _context = context;
         _logger = logger;
+        _cache = cache;
     }
 
     /// <summary>
@@ -34,6 +39,17 @@ public class ZonesController : ControllerBase
     {
         try
         {
+            // Build cache key based on parameters
+            var cacheKey = $"zones:p{page}:ps{pageSize}:s{search ?? ""}:c{countryId}:a{isActive}";
+
+            // Try to get from cache
+            var cached = await _cache.GetAsync<PagedResponse<ZoneDto>>(cacheKey);
+            if (cached != null)
+            {
+                _logger.LogDebug("Zones retrieved from cache: {CacheKey}", cacheKey);
+                return Ok(cached);
+            }
+
             var query = _context.Zones
                 .Include(z => z.Country)
                 .AsQueryable();
@@ -74,13 +90,18 @@ public class ZonesController : ControllerBase
                 })
                 .ToListAsync();
 
-            return Ok(new PagedResponse<ZoneDto>
+            var result = new PagedResponse<ZoneDto>
             {
                 Items = zones,
                 PageNumber = page,
                 PageSize = pageSize,
                 TotalCount = totalCount
-            });
+            };
+
+            // Store in cache
+            await _cache.SetAsync(cacheKey, result, ZONES_CACHE_TTL);
+
+            return Ok(result);
         }
         catch (Exception ex)
         {
@@ -164,6 +185,9 @@ public class ZonesController : ControllerBase
             _context.Zones.Add(zone);
             await _context.SaveChangesAsync();
 
+            // Invalidate zones cache
+            await _cache.RemoveByPrefixAsync("zones:");
+
             var zoneDto = await _context.Zones
                 .Where(z => z.ZoneId == zone.ZoneId)
                 .Include(z => z.Country)
@@ -230,6 +254,9 @@ public class ZonesController : ControllerBase
 
             await _context.SaveChangesAsync();
 
+            // Invalidate zones cache
+            await _cache.RemoveByPrefixAsync("zones:");
+
             var zoneDto = await _context.Zones
                 .Where(z => z.ZoneId == id)
                 .Include(z => z.Country)
@@ -275,6 +302,9 @@ public class ZonesController : ControllerBase
             zone.UpdatedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
+
+            // Invalidate zones cache
+            await _cache.RemoveByPrefixAsync("zones:");
 
             return Ok(new { message = $"Zone '{zone.ZoneName}' deactivated successfully" });
         }

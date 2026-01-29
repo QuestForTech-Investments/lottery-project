@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using LotteryApi.Data;
 using LotteryApi.DTOs;
+using LotteryApi.Services;
 
 namespace LotteryApi.Controllers;
 
@@ -11,13 +12,20 @@ public class BetTypesController : ControllerBase
 {
     private readonly LotteryDbContext _context;
     private readonly ILogger<BetTypesController> _logger;
+    private readonly ICacheService _cache;
+    private const string BET_TYPES_CACHE_KEY = "bet-types:all";
+    private const string BET_TYPES_WITH_FIELDS_CACHE_KEY = "bet-types:with-fields";
+    private const string PRIZE_FIELDS_CACHE_KEY = "prize-fields:all";
+    private static readonly TimeSpan BET_TYPES_CACHE_TTL = TimeSpan.FromHours(1); // Bet types change rarely
 
     public BetTypesController(
         LotteryDbContext context,
-        ILogger<BetTypesController> logger)
+        ILogger<BetTypesController> logger,
+        ICacheService cache)
     {
         _context = context;
         _logger = logger;
+        _cache = cache;
     }
 
     /// <summary>
@@ -29,6 +37,13 @@ public class BetTypesController : ControllerBase
     {
         try
         {
+            var cached = await _cache.GetAsync<List<BetTypeDto>>(BET_TYPES_CACHE_KEY);
+            if (cached != null)
+            {
+                _logger.LogDebug("Cache hit for {CacheKey}", BET_TYPES_CACHE_KEY);
+                return Ok(cached);
+            }
+
             var betTypes = await _context.BetTypes
                 .Where(bt => bt.IsActive)
                 .OrderBy(bt => bt.BetTypeName)
@@ -41,6 +56,9 @@ public class BetTypesController : ControllerBase
                     PrizeTypesCount = bt.PrizeTypes.Count(pf => pf.IsActive)
                 })
                 .ToListAsync();
+
+            await _cache.SetAsync(BET_TYPES_CACHE_KEY, betTypes, BET_TYPES_CACHE_TTL);
+            _logger.LogDebug("Cached {CacheKey}", BET_TYPES_CACHE_KEY);
 
             return Ok(betTypes);
         }
@@ -57,6 +75,7 @@ public class BetTypesController : ControllerBase
     /// This eliminates the need for N+1 queries (26+ separate calls reduced to 1)
     /// Sorts bet types by BetTypeId and prize fields by DisplayOrder for consistent UI rendering
     /// Performance: Single database query with eager loading (~50-100ms vs ~425ms for sequential calls)
+    /// Now with Redis caching for even faster response times
     /// IMPORTANT: Must be defined BEFORE the {id} route to prevent route ambiguity
     /// </summary>
     [HttpGet("bet-types/with-fields")]
@@ -64,6 +83,13 @@ public class BetTypesController : ControllerBase
     {
         try
         {
+            var cached = await _cache.GetAsync<List<BetTypeWithFieldsDto>>(BET_TYPES_WITH_FIELDS_CACHE_KEY);
+            if (cached != null)
+            {
+                _logger.LogDebug("Cache hit for {CacheKey}", BET_TYPES_WITH_FIELDS_CACHE_KEY);
+                return Ok(cached);
+            }
+
             _logger.LogInformation("Fetching all bet types with prize fields (optimized single-call endpoint)");
 
             // Single database query with eager loading - prevents N+1 query problem
@@ -96,7 +122,8 @@ public class BetTypesController : ControllerBase
                     .ToList()
             }).ToList();
 
-            _logger.LogInformation("Successfully fetched {Count} bet types with prize fields", result.Count);
+            await _cache.SetAsync(BET_TYPES_WITH_FIELDS_CACHE_KEY, result, BET_TYPES_CACHE_TTL);
+            _logger.LogInformation("Successfully fetched and cached {Count} bet types with prize fields", result.Count);
             return Ok(result);
         }
         catch (Exception ex)
@@ -115,6 +142,14 @@ public class BetTypesController : ControllerBase
     {
         try
         {
+            var cacheKey = $"bet-types:{id}";
+            var cached = await _cache.GetAsync<BetTypeWithFieldsDto>(cacheKey);
+            if (cached != null)
+            {
+                _logger.LogDebug("Cache hit for {CacheKey}", cacheKey);
+                return Ok(cached);
+            }
+
             var betType = await _context.BetTypes
                 .Where(bt => bt.BetTypeId == id && bt.IsActive)
                 .Include(bt => bt.PrizeTypes.Where(pf => pf.IsActive))
@@ -147,6 +182,9 @@ public class BetTypesController : ControllerBase
                     .ToList()
             };
 
+            await _cache.SetAsync(cacheKey, result, BET_TYPES_CACHE_TTL);
+            _logger.LogDebug("Cached {CacheKey}", cacheKey);
+
             return Ok(result);
         }
         catch (Exception ex)
@@ -165,6 +203,13 @@ public class BetTypesController : ControllerBase
     {
         try
         {
+            var cached = await _cache.GetAsync<List<BetTypeWithFieldsDto>>(PRIZE_FIELDS_CACHE_KEY);
+            if (cached != null)
+            {
+                _logger.LogDebug("Cache hit for {CacheKey}", PRIZE_FIELDS_CACHE_KEY);
+                return Ok(cached);
+            }
+
             var betTypes = await _context.BetTypes
                 .Where(bt => bt.IsActive)
                 .Include(bt => bt.PrizeTypes.Where(pf => pf.IsActive))
@@ -192,6 +237,9 @@ public class BetTypesController : ControllerBase
                     })
                     .ToList()
             }).ToList();
+
+            await _cache.SetAsync(PRIZE_FIELDS_CACHE_KEY, result, BET_TYPES_CACHE_TTL);
+            _logger.LogDebug("Cached {CacheKey}", PRIZE_FIELDS_CACHE_KEY);
 
             return Ok(result);
         }
