@@ -15,11 +15,6 @@ import {
   Paper,
   CircularProgress,
   Divider,
-  FormControl,
-  FormLabel,
-  Radio,
-  RadioGroup,
-  FormControlLabel,
 } from '@mui/material';
 import type { PrizesTabProps } from '../types';
 
@@ -44,7 +39,6 @@ const PrizesTab: FC<PrizesTabProps> = memo(({
       >
         <Tab label="Premios" />
         <Tab label="Comisiones" />
-        <Tab label="Comisiones 2" />
       </Tabs>
 
       {loadingBetTypes ? (
@@ -143,32 +137,6 @@ const PrizesTab: FC<PrizesTabProps> = memo(({
                   />
                 </Box>
               ))}
-            </Box>
-          )}
-
-          {/* Comisiones 2 Sub-tab */}
-          {prizesSubTab === 2 && (
-            <Box sx={{ p: 2 }}>
-              <FormControl component="fieldset">
-                <FormLabel component="legend" sx={{ fontWeight: 500, mb: 1 }}>
-                  Tipo de comisión
-                </FormLabel>
-                <RadioGroup
-                  value={formData.commissionType || ''}
-                  onChange={(e) => onCommissionTypeChange(e.target.value)}
-                >
-                  <FormControlLabel
-                    value="general"
-                    control={<Radio />}
-                    label="General"
-                  />
-                  <FormControlLabel
-                    value="por_jugada"
-                    control={<Radio />}
-                    label="Por jugada"
-                  />
-                </RadioGroup>
-              </FormControl>
             </Box>
           )}
         </>

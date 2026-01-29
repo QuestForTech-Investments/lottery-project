@@ -153,12 +153,6 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
           });
           setDraws(sortedDraws);
 
-          console.log('[DEBUG] [DEBUG] First 3 all draws structure:', sortedDraws.slice(0, 3).map(d => ({
-            drawId: d.drawId,
-            lotteryId: d.lotteryId,
-            drawName: d.drawName
-          })));
-
           // Format draws for PrizesTab (with 'General' tab)
           const formattedForPrizes = sortedDraws.map(draw => ({
             id: `draw_${draw.drawId}`,
@@ -217,12 +211,6 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
               // Extract enabled draws (active draws)
               const enabledDraws = drawsResponse.data.filter(d => d.isActive);
               const enabledDrawIds = enabledDraws.map(d => d.drawId);
-
-              console.log('[DEBUG] [DEBUG] enabledDraws:', enabledDraws.map(d => ({
-                drawId: d.drawId,
-                drawName: d.drawName,
-                lotteryId: d.lotteryId
-              })));
 
               // Extract draws with anticipated closing
               const drawsWithClosing = drawsResponse.data
@@ -960,33 +948,34 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
 
         if (existingRecord) {
           // Update existing record
-          await fetch(`${API_BASE}/betting-pools/${bettingPoolId}/${existingRecord.prizeCommissionId}`, {
+          const updateBody = { gameType, lotteryId, ...commissions };
+          const putResp = await fetch(`${API_BASE}/betting-pools/${bettingPoolId}/${existingRecord.prizeCommissionId}`, {
             method: 'PUT',
             headers: {
               'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
               'Content-Type': 'application/json'
             },
-            body: JSON.stringify({
-              gameType,
-              lotteryId,
-              ...commissions
-            })
+            body: JSON.stringify(updateBody)
           });
+          if (!putResp.ok) {
+            const errText = await putResp.text();
+            console.error(`[COMMISSION SAVE] PUT error body:`, errText);
+          }
         } else {
           // Create new record
-          await fetch(`${API_BASE}/betting-pools/${bettingPoolId}/prizes-commissions`, {
+          const createBody = { gameType, lotteryId, isActive: true, ...commissions };
+          const postResp = await fetch(`${API_BASE}/betting-pools/${bettingPoolId}/prizes-commissions`, {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
               'Content-Type': 'application/json'
             },
-            body: JSON.stringify({
-              gameType,
-              lotteryId,
-              isActive: true,
-              ...commissions
-            })
+            body: JSON.stringify(createBody)
           });
+          if (!postResp.ok) {
+            const errText = await postResp.text();
+            console.error(`[COMMISSION SAVE] POST error body:`, errText);
+          }
         }
       }
     } catch (error) {
@@ -1220,19 +1209,6 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
         // ========================================
         // 5️⃣ SAVE SCHEDULES IF CHANGED
         // ========================================
-        console.log('[DEBUG] [HOOK] Current formData schedules:', {
-          domingoInicio: formData.domingoInicio,
-          domingoFin: formData.domingoFin,
-          lunesInicio: formData.lunesInicio,
-          lunesFin: formData.lunesFin
-        });
-        console.log('[DEBUG] [HOOK] Initial formData schedules:', {
-          domingoInicio: initialFormData?.domingoInicio,
-          domingoFin: initialFormData?.domingoFin,
-          lunesInicio: initialFormData?.lunesInicio,
-          lunesFin: initialFormData?.lunesFin
-        });
-
         const scheduleChanged = hasScheduleDataChanged();
 
         if (scheduleChanged) {

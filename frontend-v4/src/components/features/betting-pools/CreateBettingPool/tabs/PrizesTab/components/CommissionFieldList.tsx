@@ -114,6 +114,7 @@ const CommissionFieldList: React.FC<CommissionFieldListProps> = memo(({
 
   /**
    * Handle "General" field at top - propagates value to all bet types
+   * When on General tab, also clears any draw-specific overrides
    */
   const handleGeneralFieldChange = (event: ChangeEvent<HTMLInputElement>): void => {
     const value = event.target.value;
@@ -122,10 +123,26 @@ const CommissionFieldList: React.FC<CommissionFieldListProps> = memo(({
       return;
     }
 
+    // Update fields for current activeDraw
     betTypes.forEach((betType) => {
       const key = getFieldKey(betType.betTypeCode);
       onFieldChange(key, value);
     });
+
+    // When on General tab, also clear any draw-specific overrides
+    // so the new General value takes effect everywhere
+    if (activeDraw === 'general') {
+      // Find all draw-specific keys in formData and update them
+      Object.keys(formData).forEach((existingKey) => {
+        // Match draw-specific commission keys: draw_XX_COMMISSION_BETTYPE_COMMISSION_DISCOUNT_1
+        const drawKeyPattern = new RegExp(`^draw_\\d+_${prefix}_(.+)_${fieldCode}$`);
+        const match = existingKey.match(drawKeyPattern);
+        if (match) {
+          // Update this draw-specific key with the new value
+          onFieldChange(existingKey, value);
+        }
+      });
+    }
   };
 
   /**

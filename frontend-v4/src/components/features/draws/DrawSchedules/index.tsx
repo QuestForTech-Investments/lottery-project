@@ -148,10 +148,11 @@ const DrawSchedules = (): React.ReactElement => {
     const draw = getDrawState(drawId);
     if (!draw) return;
 
-    // Create updated weekly schedule
-    const currentDaySchedule = draw.weeklySchedule[dayKey] || { startTime: '00:00:00', endTime: '00:00:00', enabled: false };
+    // Create updated weekly schedule - ensure weeklySchedule exists
+    const weeklySchedule = draw.weeklySchedule || {};
+    const currentDaySchedule = weeklySchedule[dayKey] || { startTime: '00:00:00', endTime: '00:00:00', enabled: false };
     const updatedSchedule: WeeklySchedule = {
-      ...draw.weeklySchedule,
+      ...weeklySchedule,
       [dayKey]: {
         ...currentDaySchedule,
         [field]: convertTo24Hour(value),
@@ -175,8 +176,9 @@ const DrawSchedules = (): React.ReactElement => {
     const draw = getDrawState(drawId);
     if (!draw) return;
 
+    const weeklySchedule = draw.weeklySchedule || {};
     const updatedSchedule: WeeklySchedule = {
-      ...draw.weeklySchedule,
+      ...weeklySchedule,
       [dayKey]: {
         startTime: '00:00:00',
         endTime: '00:00:00',

@@ -330,7 +330,6 @@ const PrizesTab: React.FC<PrizesTabProps> = ({
         >
           <Tab label="Premios" />
           <Tab label="Comisiones" />
-          <Tab label="Comisiones 2" />
         </Tabs>
       </Box>
 
@@ -362,7 +361,7 @@ const PrizesTab: React.FC<PrizesTabProps> = ({
             activeDraw={activeDraw}
             formData={formData}
             generalValues={generalValues}
-            fieldType={activeSubTab === 1 ? 'commission' : 'commission2'}
+            fieldType="commission"
             onFieldChange={handleFieldChange}
             bettingPoolId={bettingPoolId}
             saving={saving}
