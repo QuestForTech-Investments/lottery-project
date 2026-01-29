@@ -436,21 +436,31 @@ public class ResultsController : ControllerBase
                         d.WeeklySchedules.Any(s => s.DayOfWeek == dayOfWeekByte && s.IsActive));
 
         // OPTIMIZED: Filter by time in SQL for "today" queries
+        // Use WeeklySchedule.EndTime when available, otherwise fall back to DrawTime
         if (isToday)
         {
-            drawsQuery = drawsQuery.Where(d => d.DrawTime <= currentTime);
+            drawsQuery = drawsQuery.Where(d =>
+                // For draws with weekly schedule, use the EndTime of today's schedule
+                (d.UseWeeklySchedule == true &&
+                 d.WeeklySchedules.Any(s => s.DayOfWeek == dayOfWeekByte && s.IsActive && s.EndTime <= currentTime)) ||
+                // For draws without weekly schedule, use DrawTime
+                (d.UseWeeklySchedule != true && d.DrawTime <= currentTime));
         }
 
         // OPTIMIZED: Use projection (Select) before materializing to avoid loading full entities
         var filteredDraws = await drawsQuery
-            .OrderBy(d => d.DrawTime)
+            .OrderBy(d => d.UseWeeklySchedule == true
+                ? d.WeeklySchedules.Where(s => s.DayOfWeek == dayOfWeekByte && s.IsActive).Select(s => s.EndTime).FirstOrDefault()
+                : d.DrawTime)
             .ThenBy(d => d.DrawName)
             .Select(d => new
             {
                 d.DrawId,
                 d.DrawName,
                 d.Abbreviation,
-                DrawTime = d.DrawTime.ToString(@"hh\:mm\:ss"),
+                DrawTime = d.UseWeeklySchedule == true
+                    ? d.WeeklySchedules.Where(s => s.DayOfWeek == dayOfWeekByte && s.IsActive).Select(s => s.EndTime).FirstOrDefault().ToString()
+                    : d.DrawTime.ToString(@"hh\:mm\:ss"),
                 Color = d.DisplayColor ?? "#37b9f9"
             })
             .ToListAsync();
