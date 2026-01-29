@@ -83,7 +83,8 @@ const Results = (): React.ReactElement => {
 
   // Filter state for table
   const [drawFilter, setDrawFilter] = useState<string>('');
-  const [statusFilter, setStatusFilter] = useState<StatusFilterType>('all');
+  // Default to 'pending' (sin resultado) to show draws that need results
+  const [statusFilter, setStatusFilter] = useState<StatusFilterType>('pending');
 
   // State for view details modal
   const [viewDetailsRow, setViewDetailsRow] = useState<DrawResultRow | null>(null);
@@ -148,7 +149,7 @@ const Results = (): React.ReactElement => {
         const drawColor = (draw as { color?: string }).color || '#37b9f9';
         return {
           drawId: draw.drawId,
-          drawName: draw.drawName,
+          drawName: draw.drawName || draw.abbreviation || `Draw ${draw.drawId}`,
           abbreviation: draw.abbreviation,
           color: drawColor,
           resultId: result?.resultId || null,
