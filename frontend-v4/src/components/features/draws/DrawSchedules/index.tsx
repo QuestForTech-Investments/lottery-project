@@ -11,13 +11,13 @@ import {
   Alert,
   CircularProgress,
   Snackbar,
-  Divider
+  Paper
 } from '@mui/material';
 import type { AlertColor } from '@mui/material/Alert';
 import {
   Delete as DeleteIcon,
   ArrowForward as ArrowForwardIcon,
-  Schedule as ScheduleIcon
+  Add as AddIcon
 } from '@mui/icons-material';
 import {
   getDrawSchedules,
@@ -245,28 +245,26 @@ const DrawSchedules = (): React.ReactElement => {
       <Card>
         <CardContent sx={{ p: 4 }}>
           {/* Header */}
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 4, gap: 2 }}>
-            <ScheduleIcon sx={{ fontSize: 32, color: '#51cbce' }} />
-            <Typography
-              variant="h4"
-              sx={{
-                fontSize: '24px',
-                fontWeight: 500,
-                color: '#2c2c2c'
-              }}
-            >
-              Horarios de sorteos
-            </Typography>
-          </Box>
+          <Typography
+            variant="h5"
+            sx={{
+              textAlign: 'center',
+              mb: 4,
+              fontWeight: 500,
+              color: '#2c2c2c'
+            }}
+          >
+            Horarios de sorteos
+          </Typography>
 
-          {/* Lottery Buttons */}
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          {/* Lottery Accordion Buttons */}
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
             {lotteries.map(lottery => {
               const isExpanded = expandedLotteryIds.has(lottery.lotteryId);
 
               return (
                 <Box key={lottery.lotteryId}>
-                  {/* Lottery Button */}
+                  {/* Lottery Accordion Button */}
                   <Button
                     fullWidth
                     onClick={() => toggleLotteryExpansion(lottery.lotteryId)}
@@ -274,9 +272,10 @@ const DrawSchedules = (): React.ReactElement => {
                       bgcolor: '#51cbce',
                       color: 'white',
                       textTransform: 'uppercase',
-                      fontSize: '14px',
+                      fontSize: '13px',
                       fontWeight: 500,
-                      py: 1.5,
+                      py: 1.2,
+                      borderRadius: 1,
                       '&:hover': {
                         bgcolor: '#45b8bb'
                       }
@@ -285,167 +284,219 @@ const DrawSchedules = (): React.ReactElement => {
                     {lottery.lotteryName} ({lottery.timezone})
                   </Button>
 
-                  {/* Expanded Draw Sections */}
+                  {/* Expanded Section with Draw Cards */}
                   <Collapse in={isExpanded}>
-                    <Box sx={{ bgcolor: '#fafafa', p: 3, mt: 2, borderRadius: 1 }}>
-                      {lottery.draws.map((draw, drawIndex) => {
-                        const currentDraw = getDrawState(draw.drawId);
-                        const schedule = currentDraw?.weeklySchedule || {};
+                    <Box sx={{ bgcolor: '#fafafa', p: 3, mt: 1, borderRadius: 1 }}>
+                      {/* Draw Cards Grid - 3 per row */}
+                      <Box sx={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+                        gap: 3
+                      }}>
+                        {lottery.draws.map((draw) => {
+                          const currentDraw = getDrawState(draw.drawId);
+                          const schedule = currentDraw?.weeklySchedule || {};
 
-                        return (
-                          <Box key={draw.drawId} sx={{ mb: drawIndex < lottery.draws.length - 1 ? 4 : 0 }}>
-                            {/* Draw Header: Logo + Info */}
-                            <Box sx={{ display: 'flex', gap: 3, mb: 2 }}>
-                              {/* Logo */}
-                              <Box
-                                sx={{
-                                  width: 150,
-                                  height: 150,
-                                  bgcolor: 'white',
-                                  border: '1px solid #ddd',
-                                  borderRadius: 1,
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  overflow: 'hidden'
-                                }}
-                              >
-                                {draw.logoUrl ? (
-                                  <img
-                                    src={draw.logoUrl}
-                                    alt={`${draw.drawName} logo`}
-                                    style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
-                                  />
-                                ) : (
-                                  <Typography sx={{ color: '#999', fontSize: '12px' }}>
-                                    Sin logo
-                                  </Typography>
-                                )}
-                              </Box>
-
-                              {/* Name, Abbreviation, Color */}
-                              <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                                <Box>
-                                  <Typography sx={{ fontSize: '12px', color: '#666', mb: 0.5 }}>
-                                    Nombre
-                                  </Typography>
-                                  <TextField
-                                    value={draw.drawName}
-                                    disabled
-                                    fullWidth
-                                    size="small"
-                                    sx={{
-                                      '& .MuiInputBase-input': {
-                                        bgcolor: '#e9ecef',
-                                        color: '#495057'
-                                      }
-                                    }}
-                                  />
+                          return (
+                            <Paper
+                              key={draw.drawId}
+                              elevation={0}
+                              sx={{
+                                p: 2,
+                                border: '1px solid #e0e0e0',
+                                borderRadius: 1,
+                                bgcolor: 'white'
+                              }}
+                            >
+                              {/* Draw Card Header */}
+                              <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+                                {/* Plus Icon */}
+                                <Box
+                                  sx={{
+                                    width: 40,
+                                    height: 40,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    color: '#999',
+                                    cursor: 'pointer'
+                                  }}
+                                >
+                                  <AddIcon />
                                 </Box>
 
-                                <Box>
-                                  <Typography sx={{ fontSize: '12px', color: '#666', mb: 0.5 }}>
-                                    Abreviación
-                                  </Typography>
-                                  <TextField
-                                    value={draw.abbreviation || ''}
-                                    disabled
-                                    fullWidth
-                                    size="small"
-                                    sx={{
-                                      '& .MuiInputBase-input': {
-                                        bgcolor: '#e9ecef',
-                                        color: '#495057'
-                                      }
-                                    }}
-                                  />
-                                </Box>
-
-                                <Box>
-                                  <Typography sx={{ fontSize: '12px', color: '#666', mb: 0.5 }}>
-                                    Color
-                                  </Typography>
-                                  <Box
-                                    sx={{
-                                      width: 40,
-                                      height: 40,
-                                      bgcolor: draw.color || '#51cbce',
-                                      border: '1px solid #ddd',
-                                      borderRadius: 1,
-                                      cursor: 'pointer'
-                                    }}
-                                    title={draw.color || '#51cbce'}
-                                  />
-                                </Box>
-                              </Box>
-                            </Box>
-
-                            <Divider sx={{ my: 2 }} />
-
-                            {/* Day Schedules */}
-                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                              {DAY_KEYS.map((dayKey, dayIndex) => {
-                                const daySchedule = schedule[dayKey] || { startTime: '00:00:00', endTime: '00:00:00', enabled: false };
-                                // Only convert times when enabled to avoid unnecessary conversions
-                                const startTime12 = daySchedule.enabled ? convertTo12Hour(daySchedule.startTime) : '';
-                                const endTime12 = daySchedule.enabled ? convertTo12Hour(daySchedule.endTime) : '';
-
-                                return (
-                                  <Box
-                                    key={dayKey}
-                                    sx={{
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      gap: 2
-                                    }}
-                                  >
-                                    {/* Day Label */}
-                                    <Typography sx={{ width: 90, fontSize: '14px', fontWeight: 500 }}>
-                                      {DAYS_ES[dayIndex]}:
+                                {/* Name, Abbreviation, Color */}
+                                <Box sx={{ flex: 1 }}>
+                                  <Box sx={{ mb: 1.5 }}>
+                                    <Typography sx={{ fontSize: '11px', color: '#666', mb: 0.5 }}>
+                                      Nombre
                                     </Typography>
-
-                                    {/* Start Time */}
                                     <TextField
-                                      value={startTime12}
-                                      onChange={(e) => handleTimeChange(draw.drawId, dayKey, 'startTime', e.target.value)}
-                                      placeholder="12:00 AM"
+                                      value={draw.drawName}
+                                      disabled
+                                      fullWidth
                                       size="small"
-                                      sx={{ width: 100 }}
-                                    />
-
-                                    {/* Arrow Icon */}
-                                    <ArrowForwardIcon sx={{ color: '#999', fontSize: 16 }} />
-
-                                    {/* End Time */}
-                                    <TextField
-                                      value={endTime12}
-                                      onChange={(e) => handleTimeChange(draw.drawId, dayKey, 'endTime', e.target.value)}
-                                      placeholder="11:59 PM"
-                                      size="small"
-                                      sx={{ width: 100 }}
-                                    />
-
-                                    {/* Delete Button */}
-                                    <IconButton
-                                      size="small"
-                                      onClick={() => handleDeleteDay(draw.drawId, dayKey)}
-                                      disabled={!daySchedule.enabled}
                                       sx={{
-                                        color: daySchedule.enabled ? '#dc3545' : '#ccc',
-                                        '&:hover': {
-                                          bgcolor: daySchedule.enabled ? 'rgba(220, 53, 69, 0.1)' : 'transparent'
+                                        '& .MuiInputBase-input': {
+                                          bgcolor: '#fff',
+                                          color: '#495057',
+                                          fontSize: '13px',
+                                          py: 0.8
+                                        },
+                                        '& .MuiOutlinedInput-root': {
+                                          '& fieldset': { borderColor: '#ddd' }
                                         }
                                       }}
-                                    >
-                                      <DeleteIcon fontSize="small" />
-                                    </IconButton>
+                                    />
                                   </Box>
-                                );
-                              })}
-                            </Box>
-                          </Box>
-                        );
-                      })}
+
+                                  <Box sx={{ mb: 1.5 }}>
+                                    <Typography sx={{ fontSize: '11px', color: '#666', mb: 0.5 }}>
+                                      Abreviación
+                                    </Typography>
+                                    <TextField
+                                      value={draw.abbreviation || ''}
+                                      disabled
+                                      fullWidth
+                                      size="small"
+                                      sx={{
+                                        '& .MuiInputBase-input': {
+                                          bgcolor: '#fff',
+                                          color: '#495057',
+                                          fontSize: '13px',
+                                          py: 0.8
+                                        },
+                                        '& .MuiOutlinedInput-root': {
+                                          '& fieldset': { borderColor: '#ddd' }
+                                        }
+                                      }}
+                                    />
+                                  </Box>
+
+                                  <Box>
+                                    <Typography sx={{ fontSize: '11px', color: '#666', mb: 0.5 }}>
+                                      Color
+                                    </Typography>
+                                    <Box
+                                      sx={{
+                                        width: 32,
+                                        height: 32,
+                                        bgcolor: draw.color || '#f0e68c',
+                                        border: '1px solid #ddd',
+                                        borderRadius: 0.5,
+                                        cursor: 'pointer'
+                                      }}
+                                      title={draw.color || '#f0e68c'}
+                                    />
+                                  </Box>
+                                </Box>
+                              </Box>
+
+                              {/* Day Schedules */}
+                              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                                {DAY_KEYS.map((dayKey, dayIndex) => {
+                                  const daySchedule = schedule[dayKey] || { startTime: '00:00:00', endTime: '00:00:00', enabled: false };
+                                  const startTime12 = daySchedule.enabled ? convertTo12Hour(daySchedule.startTime) : '';
+                                  const endTime12 = daySchedule.enabled ? convertTo12Hour(daySchedule.endTime) : '';
+
+                                  return (
+                                    <Box
+                                      key={dayKey}
+                                      sx={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 0.5
+                                      }}
+                                    >
+                                      {/* Day Label */}
+                                      <Typography sx={{
+                                        width: 70,
+                                        fontSize: '12px',
+                                        fontWeight: 500,
+                                        color: '#333'
+                                      }}>
+                                        {DAYS_ES[dayIndex]}
+                                      </Typography>
+
+                                      {/* Start Time */}
+                                      <TextField
+                                        value={startTime12}
+                                        onChange={(e) => handleTimeChange(draw.drawId, dayKey, 'startTime', e.target.value)}
+                                        placeholder="12:00 AM"
+                                        size="small"
+                                        sx={{
+                                          width: 85,
+                                          '& .MuiInputBase-input': {
+                                            fontSize: '11px',
+                                            py: 0.5,
+                                            px: 1
+                                          }
+                                        }}
+                                      />
+
+                                      {/* Arrow */}
+                                      <ArrowForwardIcon sx={{ color: '#999', fontSize: 14 }} />
+
+                                      {/* End Time */}
+                                      <TextField
+                                        value={endTime12}
+                                        onChange={(e) => handleTimeChange(draw.drawId, dayKey, 'endTime', e.target.value)}
+                                        placeholder="11:59 PM"
+                                        size="small"
+                                        sx={{
+                                          width: 85,
+                                          '& .MuiInputBase-input': {
+                                            fontSize: '11px',
+                                            py: 0.5,
+                                            px: 1
+                                          }
+                                        }}
+                                      />
+
+                                      {/* Delete Button */}
+                                      <IconButton
+                                        size="small"
+                                        onClick={() => handleDeleteDay(draw.drawId, dayKey)}
+                                        disabled={!daySchedule.enabled}
+                                        sx={{
+                                          p: 0.3,
+                                          color: daySchedule.enabled ? '#dc3545' : '#ccc',
+                                          '&:hover': {
+                                            bgcolor: daySchedule.enabled ? 'rgba(220, 53, 69, 0.1)' : 'transparent'
+                                          }
+                                        }}
+                                      >
+                                        <DeleteIcon sx={{ fontSize: 16 }} />
+                                      </IconButton>
+                                    </Box>
+                                  );
+                                })}
+                              </Box>
+                            </Paper>
+                          );
+                        })}
+                      </Box>
+
+                      {/* Actualizar Button inside expanded section */}
+                      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
+                        <Button
+                          variant="contained"
+                          onClick={handleSaveAll}
+                          disabled={saving}
+                          sx={{
+                            bgcolor: '#51cbce',
+                            '&:hover': { bgcolor: '#45b8bb' },
+                            color: 'white',
+                            fontSize: '13px',
+                            textTransform: 'uppercase',
+                            px: 4,
+                            py: 1,
+                            fontWeight: 500
+                          }}
+                        >
+                          {saving ? <CircularProgress size={20} sx={{ color: 'white' }} /> : 'Actualizar'}
+                        </Button>
+                      </Box>
                     </Box>
                   </Collapse>
                 </Box>
@@ -457,30 +508,6 @@ const DrawSchedules = (): React.ReactElement => {
             <Alert severity="info">
               No hay sorteos configurados
             </Alert>
-          )}
-
-          {/* Update Button */}
-          {modifiedDraws.size > 0 && (
-            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
-              <Button
-                variant="contained"
-                size="large"
-                onClick={handleSaveAll}
-                disabled={saving}
-                sx={{
-                  bgcolor: '#51cbce',
-                  '&:hover': { bgcolor: '#45b8bb' },
-                  color: 'white',
-                  fontSize: '16px',
-                  textTransform: 'uppercase',
-                  px: 6,
-                  py: 1.5,
-                  fontWeight: 500
-                }}
-              >
-                {saving ? <CircularProgress size={24} sx={{ color: 'white' }} /> : 'ACTUALIZAR'}
-              </Button>
-            </Box>
           )}
         </CardContent>
       </Card>
