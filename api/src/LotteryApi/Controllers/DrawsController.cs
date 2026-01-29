@@ -73,6 +73,14 @@ public class DrawsController : ControllerBase
     {
         try
         {
+            var cacheKey = $"draws:schedules:{lotteryId ?? 0}";
+            var cached = await _cache.GetAsync<List<DrawScheduleDto>>(cacheKey);
+            if (cached != null)
+            {
+                _logger.LogDebug("Cache hit for {CacheKey}", cacheKey);
+                return Ok(cached);
+            }
+
             var query = _context.Draws
                 .Where(d => d.IsActive)
                 .OrderBy(d => d.LotteryId)
@@ -118,6 +126,9 @@ public class DrawsController : ControllerBase
                 UseWeeklySchedule = d.UseWeeklySchedule,
                 WeeklySchedule = d.UseWeeklySchedule ? ConvertToWeeklyScheduleDto(d.WeeklySchedules) : null
             }).ToList();
+
+            await _cache.SetAsync(cacheKey, result, CacheKeys.DrawExpiration);
+            _logger.LogDebug("Cached {CacheKey}", cacheKey);
 
             return Ok(result);
         }
@@ -243,6 +254,15 @@ public class DrawsController : ControllerBase
     [ProducesResponseType(typeof(IEnumerable<DrawDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetByCountry(int countryId)
     {
+        var cacheKey = $"draws:country{countryId}";
+        var cached = await _cache.GetAsync<IEnumerable<DrawDto>>(cacheKey);
+
+        if (cached != null)
+        {
+            _logger.LogDebug("Cache hit for {CacheKey}", cacheKey);
+            return Ok(cached);
+        }
+
         var draws = await _drawRepository.GetDrawsByCountryAsync(countryId);
 
         var dtos = draws.Select(d => new DrawDto
@@ -257,7 +277,10 @@ public class DrawsController : ControllerBase
             IsActive = d.IsActive,
             LotteryName = d.Lottery?.LotteryName,
             CountryName = d.Lottery?.Country?.CountryName
-        });
+        }).ToList();
+
+        await _cache.SetAsync(cacheKey, dtos, CacheKeys.DrawExpiration);
+        _logger.LogDebug("Cached {CacheKey}", cacheKey);
 
         return Ok(dtos);
     }
@@ -283,6 +306,10 @@ public class DrawsController : ControllerBase
         };
 
         await _drawRepository.AddAsync(draw);
+
+        // Invalidate cache
+        await _cache.RemoveByPrefixAsync("draws:");
+        _logger.LogInformation("Draw {DrawId} created and cache invalidated", draw.DrawId);
 
         var resultDto = new DrawDto
         {
@@ -337,6 +364,18 @@ public class DrawsController : ControllerBase
     }
 
     /// <summary>
+    /// Clear draws cache to force reload from database
+    /// </summary>
+    [HttpPost("cache/clear")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> ClearCache()
+    {
+        await _cache.RemoveByPrefixAsync("draws:");
+        _logger.LogInformation("Draws cache cleared manually");
+        return Ok(new { message = "Cache de sorteos limpiado correctamente" });
+    }
+
+    /// <summary>
     /// Delete a draw
     /// </summary>
     [HttpDelete("{id}")]
@@ -352,6 +391,11 @@ public class DrawsController : ControllerBase
         }
 
         await _drawRepository.DeleteAsync(draw);
+
+        // Invalidate cache
+        await _cache.RemoveAsync(string.Format(CacheKeys.DrawById, id));
+        await _cache.RemoveByPrefixAsync("draws:");
+        _logger.LogInformation("Draw {DrawId} deleted and cache invalidated", id);
 
         return NoContent();
     }
