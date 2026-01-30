@@ -1240,16 +1240,16 @@ public class TicketsController : ControllerBase
             return 0.00m;
         }
 
-        // Look for commission configuration for this betting pool and bet type
-        // Priority: specific lottery config > general config (lottery_id = null)
+        // Look for commission configuration for this betting pool, bet type, and EXACT lottery
+        // IMPORTANT: Only use config for the exact lottery - NO fallback to general config
+        // Each lottery must have its own commission configuration
         var config = await _context.Set<Models.BettingPoolPrizesCommission>()
             .AsNoTracking()
             .Where(c =>
                 c.BettingPoolId == bettingPoolId &&
                 c.GameType == betType.GameTypeCode &&
-                c.IsActive == true)
-            .OrderByDescending(c => c.LotteryId == lotteryId) // Prefer specific lottery match
-            .ThenByDescending(c => c.LotteryId.HasValue) // Then any specific lottery
+                c.IsActive == true &&
+                c.LotteryId == lotteryId) // EXACT lottery match only, no fallback
             .FirstOrDefaultAsync();
 
         if (config != null)
