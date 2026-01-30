@@ -339,9 +339,10 @@ const DrawSchedules = (): React.ReactElement => {
                                       sx={{
                                         '& .MuiInputBase-input': {
                                           bgcolor: '#fff',
-                                          color: '#495057',
                                           fontSize: '13px',
-                                          py: 0.8
+                                          py: 0.8,
+                                          WebkitTextFillColor: '#333 !important',
+                                          color: '#333 !important'
                                         },
                                         '& .MuiOutlinedInput-root': {
                                           '& fieldset': { borderColor: '#ddd' }
@@ -362,9 +363,10 @@ const DrawSchedules = (): React.ReactElement => {
                                       sx={{
                                         '& .MuiInputBase-input': {
                                           bgcolor: '#fff',
-                                          color: '#495057',
                                           fontSize: '13px',
-                                          py: 0.8
+                                          py: 0.8,
+                                          WebkitTextFillColor: '#333 !important',
+                                          color: '#333 !important'
                                         },
                                         '& .MuiOutlinedInput-root': {
                                           '& fieldset': { borderColor: '#ddd' }
