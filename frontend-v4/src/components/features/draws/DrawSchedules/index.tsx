@@ -272,7 +272,7 @@ const DrawSchedules = (): React.ReactElement => {
                       background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                       color: 'white',
                       textTransform: 'uppercase',
-                      fontSize: '13px',
+                      fontSize: '15px',
                       fontWeight: 500,
                       py: 1.2,
                       borderRadius: 1,
@@ -328,7 +328,7 @@ const DrawSchedules = (): React.ReactElement => {
                                 {/* Name, Abbreviation, Color */}
                                 <Box sx={{ flex: 1 }}>
                                   <Box sx={{ mb: 1.5 }}>
-                                    <Typography sx={{ fontSize: '11px', color: '#666', mb: 0.5 }}>
+                                    <Typography sx={{ fontSize: '13px', color: '#666', mb: 0.5 }}>
                                       Nombre
                                     </Typography>
                                     <TextField
@@ -339,7 +339,7 @@ const DrawSchedules = (): React.ReactElement => {
                                       sx={{
                                         '& .MuiInputBase-input': {
                                           bgcolor: '#fff',
-                                          fontSize: '13px',
+                                          fontSize: '15px',
                                           py: 0.8,
                                           WebkitTextFillColor: '#333 !important',
                                           color: '#333 !important'
@@ -352,7 +352,7 @@ const DrawSchedules = (): React.ReactElement => {
                                   </Box>
 
                                   <Box sx={{ mb: 1.5 }}>
-                                    <Typography sx={{ fontSize: '11px', color: '#666', mb: 0.5 }}>
+                                    <Typography sx={{ fontSize: '13px', color: '#666', mb: 0.5 }}>
                                       Abreviación
                                     </Typography>
                                     <TextField
@@ -363,7 +363,7 @@ const DrawSchedules = (): React.ReactElement => {
                                       sx={{
                                         '& .MuiInputBase-input': {
                                           bgcolor: '#fff',
-                                          fontSize: '13px',
+                                          fontSize: '15px',
                                           py: 0.8,
                                           WebkitTextFillColor: '#333 !important',
                                           color: '#333 !important'
@@ -376,13 +376,13 @@ const DrawSchedules = (): React.ReactElement => {
                                   </Box>
 
                                   <Box>
-                                    <Typography sx={{ fontSize: '11px', color: '#666', mb: 0.5 }}>
+                                    <Typography sx={{ fontSize: '13px', color: '#666', mb: 0.5 }}>
                                       Color
                                     </Typography>
                                     <Box
                                       sx={{
-                                        width: 32,
-                                        height: 32,
+                                        width: 34,
+                                        height: 34,
                                         bgcolor: draw.color || '#f0e68c',
                                         border: '1px solid #ddd',
                                         borderRadius: 0.5,
@@ -412,8 +412,8 @@ const DrawSchedules = (): React.ReactElement => {
                                     >
                                       {/* Day Label */}
                                       <Typography sx={{
-                                        width: 70,
-                                        fontSize: '12px',
+                                        width: 75,
+                                        fontSize: '14px',
                                         fontWeight: 500,
                                         color: '#333'
                                       }}>
@@ -427,9 +427,9 @@ const DrawSchedules = (): React.ReactElement => {
                                         placeholder="12:00 AM"
                                         size="small"
                                         sx={{
-                                          width: 85,
+                                          width: 90,
                                           '& .MuiInputBase-input': {
-                                            fontSize: '11px',
+                                            fontSize: '13px',
                                             py: 0.5,
                                             px: 1
                                           }
@@ -437,7 +437,7 @@ const DrawSchedules = (): React.ReactElement => {
                                       />
 
                                       {/* Arrow */}
-                                      <ArrowForwardIcon sx={{ color: '#999', fontSize: 14 }} />
+                                      <ArrowForwardIcon sx={{ color: '#999', fontSize: 16 }} />
 
                                       {/* End Time */}
                                       <TextField
@@ -446,9 +446,9 @@ const DrawSchedules = (): React.ReactElement => {
                                         placeholder="11:59 PM"
                                         size="small"
                                         sx={{
-                                          width: 85,
+                                          width: 90,
                                           '& .MuiInputBase-input': {
-                                            fontSize: '11px',
+                                            fontSize: '13px',
                                             py: 0.5,
                                             px: 1
                                           }
@@ -468,7 +468,7 @@ const DrawSchedules = (): React.ReactElement => {
                                           }
                                         }}
                                       >
-                                        <DeleteIcon sx={{ fontSize: 16 }} />
+                                        <DeleteIcon sx={{ fontSize: 18 }} />
                                       </IconButton>
                                     </Box>
                                   );
@@ -489,7 +489,7 @@ const DrawSchedules = (): React.ReactElement => {
                             bgcolor: '#51cbce',
                             '&:hover': { bgcolor: '#45b8bb' },
                             color: 'white',
-                            fontSize: '13px',
+                            fontSize: '15px',
                             textTransform: 'uppercase',
                             px: 4,
                             py: 1,
