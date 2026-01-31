@@ -29,9 +29,16 @@ const FiltersSection: FC<FiltersSectionProps> = memo(({
   onGroupChange,
 }) => {
   return (
-    <Box sx={{ display: 'flex', gap: 2, mb: 2, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+    <Box sx={{
+      display: 'flex',
+      gap: 2,
+      mb: 2,
+      flexWrap: 'wrap',
+      alignItems: 'flex-end',
+      flexDirection: { xs: 'column', sm: 'row' },
+    }}>
       {/* Date Filter */}
-      <Box>
+      <Box sx={{ width: { xs: '100%', sm: 'auto' } }}>
         <Typography variant="caption" sx={{ color: 'text.secondary', mb: 0.5, display: 'block' }}>
           Fecha
         </Typography>
@@ -40,17 +47,17 @@ const FiltersSection: FC<FiltersSectionProps> = memo(({
           size="small"
           value={selectedDate}
           onChange={(e) => onDateChange(e.target.value)}
-          sx={{ width: 200, ...COMPACT_INPUT_STYLE }}
+          sx={{ width: { xs: '100%', sm: 200 }, ...COMPACT_INPUT_STYLE }}
           InputLabelProps={{ shrink: true }}
         />
       </Box>
 
       {/* Zones Filter */}
-      <Box>
+      <Box sx={{ width: { xs: '100%', sm: 'auto' } }}>
         <Typography variant="caption" sx={{ color: 'text.secondary', mb: 0.5, display: 'block' }}>
           Zonas
         </Typography>
-        <FormControl sx={{ minWidth: 200, ...COMPACT_SELECT_STYLE }} size="small">
+        <FormControl sx={{ width: { xs: '100%', sm: 200 }, minWidth: { sm: 200 }, ...COMPACT_SELECT_STYLE }} size="small">
           <Select
             multiple
             value={selectedZones}
@@ -78,11 +85,11 @@ const FiltersSection: FC<FiltersSectionProps> = memo(({
       </Box>
 
       {/* Group Filter */}
-      <Box>
+      <Box sx={{ width: { xs: '100%', sm: 'auto' } }}>
         <Typography variant="caption" sx={{ color: 'text.secondary', mb: 0.5, display: 'block' }}>
           Grupo
         </Typography>
-        <FormControl sx={{ minWidth: 150, ...COMPACT_SELECT_STYLE }} size="small">
+        <FormControl sx={{ width: { xs: '100%', sm: 150 }, minWidth: { sm: 150 }, ...COMPACT_SELECT_STYLE }} size="small">
           <Select
             value={selectedGroup}
             onChange={(e) => onGroupChange(e.target.value)}

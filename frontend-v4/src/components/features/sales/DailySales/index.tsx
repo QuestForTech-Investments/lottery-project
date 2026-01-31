@@ -251,9 +251,16 @@ const DailySales = (): React.ReactElement => {
   return (
     <Box sx={{ p: 1, pt: 0 }}>
       {/* Main Tabs */}
-      <Tabs value={mainTab} onChange={(_, v) => setMainTab(v)} sx={{ mb: 1 }}>
+      <Tabs
+        value={mainTab}
+        onChange={(_, v) => setMainTab(v)}
+        variant="scrollable"
+        scrollButtons="auto"
+        allowScrollButtonsMobile
+        sx={{ mb: 1 }}
+      >
         {MAIN_TABS.map((tab, index) => (
-          <Tab key={index} label={tab} />
+          <Tab key={index} label={tab} sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }} />
         ))}
       </Tabs>
 
@@ -319,7 +326,7 @@ const DailySales = (): React.ReactElement => {
             {subTab === 0 && (
               <>
                 {/* Quick Filter */}
-                <Box sx={{ mb: 2, textAlign: 'right' }}>
+                <Box sx={{ mb: 2, textAlign: { xs: 'left', sm: 'right' } }}>
                   <TextField
                     size="small"
                     placeholder="Filtro rapido"
@@ -332,7 +339,7 @@ const DailySales = (): React.ReactElement => {
                         </InputAdornment>
                       ),
                     }}
-                    sx={{ width: 300 }}
+                    sx={{ width: { xs: '100%', sm: 300 } }}
                   />
                 </Box>
 
