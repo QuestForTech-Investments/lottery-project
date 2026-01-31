@@ -174,8 +174,8 @@ const ExternalAgentsMonitoring: React.FC = () => {
             <Button variant="contained" sx={{ px: 6, py: 1, borderRadius: '30px', textTransform: 'uppercase' }}>Filtrar</Button>
           </Box>
 
-          <Box sx={{ mb: 2 }}>
-            <Typography variant="caption" sx={{ color: 'text.secondary', mb: 1, display: 'block' }}>Filtrar</Typography>
+          <Box sx={{ mb: 2, textAlign: 'center' }}>
+            <Typography variant="subtitle1" sx={{ color: 'text.secondary', mb: 1.5, display: 'block', textAlign: 'center', fontWeight: 500 }}>Filtrar</Typography>
             <ToggleButtonGroup exclusive value={filtroEstado} onChange={(e, v) => v && setFiltroEstado(v)} size="small">
               <ToggleButton value="todos">TODOS ({counts.todos})</ToggleButton>
               <ToggleButton value="ganadores">GANADORES ({counts.ganadores})</ToggleButton>

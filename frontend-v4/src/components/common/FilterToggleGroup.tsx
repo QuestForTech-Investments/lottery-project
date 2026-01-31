@@ -46,7 +46,7 @@ export const FilterToggleGroup: FC<FilterToggleGroupProps> = memo(({
   return (
     <Box>
       {label && (
-        <Typography variant="caption" sx={{ color: 'text.secondary', mb: 1, display: 'block' }}>
+        <Typography variant="subtitle1" sx={{ color: 'text.secondary', mb: 1.5, display: 'block', textAlign: 'center', fontWeight: 500 }}>
           {label}
         </Typography>
       )}

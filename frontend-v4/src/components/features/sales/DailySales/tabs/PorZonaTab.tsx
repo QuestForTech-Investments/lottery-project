@@ -270,8 +270,8 @@ const PorZonaTab = ({ selectedDate, setSelectedDate, zones, selectedZones, handl
           }}>{formatCurrency(summary.totalSold)}</Box>
         </Typography>
 
-        <Box sx={{ mb: 2 }}>
-          <Typography variant="caption" sx={{ color: 'text.secondary', mb: 1, display: 'block' }}>
+        <Box sx={{ mb: 2, textAlign: 'center' }}>
+          <Typography variant="subtitle1" sx={{ color: 'text.secondary', mb: 1.5, display: 'block', textAlign: 'center', fontWeight: 500 }}>
             Filtros
           </Typography>
           <ToggleButtonGroup

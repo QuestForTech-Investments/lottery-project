@@ -12,7 +12,7 @@ import type { FilterTogglesProps } from '../types';
 const FilterToggles: FC<FilterTogglesProps> = memo(({ filterType, onFilterChange }) => {
   return (
     <Box sx={{ mb: 2 }}>
-      <Typography variant="caption" sx={{ color: 'text.secondary', mb: 1, display: 'block', textAlign: 'center' }}>
+      <Typography variant="subtitle1" sx={{ color: 'text.secondary', mb: 1.5, display: 'block', textAlign: 'center', fontWeight: 500 }}>
         Filtros
       </Typography>
       <ToggleButtonGroup
