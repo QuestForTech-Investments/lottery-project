@@ -64,16 +64,24 @@ const LoginMUI = () => {
         sx={{
           position: 'relative',
           zIndex: 1,
-          backgroundImage: `url(${cardBackgroundImage})`,
+          // Mobile: white background with dark border like original
+          // Desktop: image background
+          backgroundImage: { xs: 'none', sm: `url(${cardBackgroundImage})` },
+          backgroundColor: { xs: 'rgba(255, 255, 255, 0.97)', sm: 'transparent' },
           backgroundSize: 'cover',
           backgroundPosition: 'center',
-          borderRadius: { xs: '20px', sm: '28px' },
-          px: { xs: 3, sm: 5 },
-          py: { xs: 4, sm: 5 },
+          borderRadius: { xs: '16px', sm: '28px' },
+          // Mobile: dark blue border like original app
+          border: { xs: '3px solid #2d3748', sm: 'none' },
+          px: { xs: 2.5, sm: 5 },
+          py: { xs: 3, sm: 5 },
           width: '100%',
-          maxWidth: 400,
+          maxWidth: { xs: 340, sm: 400 },
           textAlign: 'center',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1)',
+          boxShadow: {
+            xs: '0 10px 40px rgba(0, 0, 0, 0.3)',
+            sm: '0 25px 50px -12px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1)'
+          },
           my: 'auto',
           maxHeight: { xs: 'calc(100vh - 32px)', sm: 'calc(100vh - 48px)' },
           overflowY: 'auto',
@@ -97,9 +105,9 @@ const LoginMUI = () => {
           src={logoImage}
           alt="Lottobook"
           sx={{
-            width: { xs: 180, sm: 241 },
-            height: { xs: 180, sm: 241 },
-            mb: 2,
+            width: { xs: 140, sm: 241 },
+            height: { xs: 140, sm: 241 },
+            mb: { xs: 1.5, sm: 2 },
             mx: 'auto',
             objectFit: 'contain',
             filter: 'drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15))',
@@ -114,7 +122,7 @@ const LoginMUI = () => {
           }}
         />
 
-        {/* Welcome Text */}
+        {/* Welcome Text - Hidden on mobile like original app */}
         <Typography
           variant="h6"
           sx={{
@@ -123,6 +131,7 @@ const LoginMUI = () => {
             mb: 0.5,
             fontSize: { xs: '1.1rem', sm: '1.25rem' },
             letterSpacing: '-0.02em',
+            display: { xs: 'none', sm: 'block' },
           }}
         >
           Welcome
@@ -131,8 +140,9 @@ const LoginMUI = () => {
           variant="body2"
           sx={{
             color: '#64748b',
-            mb: 3,
+            mb: { xs: 2, sm: 3 },
             fontSize: { xs: '0.85rem', sm: '0.9rem' },
+            display: { xs: 'none', sm: 'block' },
           }}
         >
           Enter your credentials to continue
@@ -168,7 +178,7 @@ const LoginMUI = () => {
           <TextField
             fullWidth
             id="username"
-            placeholder="Username"
+            placeholder="Usuario"
             value={username}
             onChange={handleUsernameChange}
             error={!!errors.username}
@@ -176,7 +186,7 @@ const LoginMUI = () => {
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <PersonIcon sx={{ color: '#94a3b8', fontSize: '1.3rem' }} />
+                  <PersonIcon sx={{ color: '#94a3b8', fontSize: { xs: '1.1rem', sm: '1.3rem' } }} />
                 </InputAdornment>
               ),
               endAdornment: errors.username && (
@@ -185,8 +195,9 @@ const LoginMUI = () => {
                 </InputAdornment>
               ),
               sx: {
-                backgroundColor: '#f8fafc',
-                borderRadius: '14px',
+                backgroundColor: { xs: '#fff', sm: '#f8fafc' },
+                // More rounded on mobile like original app
+                borderRadius: { xs: '25px', sm: '14px' },
                 px: 1,
                 transition: 'all 0.2s ease',
                 '&:hover': {
@@ -197,8 +208,8 @@ const LoginMUI = () => {
                   boxShadow: '0 0 0 3px rgba(59, 130, 246, 0.1)',
                 },
                 '& input': {
-                  py: 1.5,
-                  fontSize: '0.95rem',
+                  py: { xs: 1.2, sm: 1.5 },
+                  fontSize: { xs: '0.9rem', sm: '0.95rem' },
                 },
                 '& input::placeholder': {
                   color: '#94a3b8',
@@ -215,7 +226,7 @@ const LoginMUI = () => {
             sx={{
               '& .MuiOutlinedInput-root': {
                 '& fieldset': {
-                  borderColor: '#e2e8f0',
+                  borderColor: { xs: '#cbd5e1', sm: '#e2e8f0' },
                   borderWidth: '1.5px',
                   transition: 'border-color 0.2s ease',
                 },
@@ -235,7 +246,7 @@ const LoginMUI = () => {
             fullWidth
             id="password"
             type="password"
-            placeholder="Password"
+            placeholder="Contrasena"
             value={password}
             onChange={handlePasswordChange}
             error={!!errors.password}
@@ -243,7 +254,7 @@ const LoginMUI = () => {
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <LockIcon sx={{ color: '#94a3b8', fontSize: '1.3rem' }} />
+                  <LockIcon sx={{ color: '#94a3b8', fontSize: { xs: '1.1rem', sm: '1.3rem' } }} />
                 </InputAdornment>
               ),
               endAdornment: errors.password && (
@@ -252,8 +263,9 @@ const LoginMUI = () => {
                 </InputAdornment>
               ),
               sx: {
-                backgroundColor: '#f8fafc',
-                borderRadius: '14px',
+                backgroundColor: { xs: '#fff', sm: '#f8fafc' },
+                // More rounded on mobile like original app
+                borderRadius: { xs: '25px', sm: '14px' },
                 px: 1,
                 transition: 'all 0.2s ease',
                 '&:hover': {
@@ -264,8 +276,8 @@ const LoginMUI = () => {
                   boxShadow: '0 0 0 3px rgba(59, 130, 246, 0.1)',
                 },
                 '& input': {
-                  py: 1.5,
-                  fontSize: '0.95rem',
+                  py: { xs: 1.2, sm: 1.5 },
+                  fontSize: { xs: '0.9rem', sm: '0.95rem' },
                 },
                 '& input::placeholder': {
                   color: '#94a3b8',
@@ -282,7 +294,7 @@ const LoginMUI = () => {
             sx={{
               '& .MuiOutlinedInput-root': {
                 '& fieldset': {
-                  borderColor: '#e2e8f0',
+                  borderColor: { xs: '#cbd5e1', sm: '#e2e8f0' },
                   borderWidth: '1.5px',
                   transition: 'border-color 0.2s ease',
                 },
@@ -297,7 +309,7 @@ const LoginMUI = () => {
             }}
           />
 
-          {/* Submit Button */}
+          {/* Submit Button - Teal on mobile like original, red on desktop */}
           <Button
             id="log-in"
             type="submit"
@@ -312,21 +324,35 @@ const LoginMUI = () => {
               )
             }
             sx={{
-              mt: 1,
-              py: 1.6,
+              mt: { xs: 1.5, sm: 1 },
+              py: { xs: 1.3, sm: 1.6 },
               px: 4,
-              borderRadius: '14px',
-              fontSize: '0.95rem',
+              // More rounded on mobile like original app
+              borderRadius: { xs: '25px', sm: '14px' },
+              fontSize: { xs: '0.9rem', sm: '0.95rem' },
               fontWeight: 600,
-              textTransform: 'none',
-              letterSpacing: '0.01em',
-              background: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em',
+              // Teal on mobile (like original), red on desktop
+              background: {
+                xs: 'linear-gradient(135deg, #319795 0%, #2c7a7b 100%)',
+                sm: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)'
+              },
               color: 'white',
-              boxShadow: '0 4px 14px rgba(220, 38, 38, 0.4)',
+              boxShadow: {
+                xs: '0 4px 14px rgba(49, 151, 149, 0.4)',
+                sm: '0 4px 14px rgba(220, 38, 38, 0.4)'
+              },
               transition: 'all 0.25s ease',
               '&:hover': {
-                background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
-                boxShadow: '0 6px 20px rgba(220, 38, 38, 0.5)',
+                background: {
+                  xs: 'linear-gradient(135deg, #38b2ac 0%, #319795 100%)',
+                  sm: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'
+                },
+                boxShadow: {
+                  xs: '0 6px 20px rgba(49, 151, 149, 0.5)',
+                  sm: '0 6px 20px rgba(220, 38, 38, 0.5)'
+                },
                 transform: 'translateY(-1px)',
               },
               '&:active': {
@@ -339,7 +365,7 @@ const LoginMUI = () => {
               },
             }}
           >
-            {isLoading ? 'Signing in...' : 'Sign In'}
+            {isLoading ? 'Iniciando...' : 'Iniciar Sesion'}
           </Button>
         </Box>
       </Paper>
