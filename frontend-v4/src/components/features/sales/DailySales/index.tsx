@@ -309,10 +309,29 @@ const DailySales = (): React.ReactElement => {
                     }}>{formatCurrency(totals.sales)}</Box>
                   </Typography>
 
-                  <FilterToggles
-                    filterType={filterType}
-                    onFilterChange={setFilterType}
-                  />
+                  {/* Filter controls - single left-aligned container */}
+                  <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2, mb: 3 }}>
+                    <FilterToggles
+                      filterType={filterType}
+                      onFilterChange={setFilterType}
+                    />
+
+                    {/* Quick Filter */}
+                    <TextField
+                      size="small"
+                      placeholder="Filtro rapido"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      InputProps={{
+                        endAdornment: (
+                          <InputAdornment position="end">
+                            <SearchIcon />
+                          </InputAdornment>
+                        ),
+                      }}
+                      sx={{ width: { xs: '100%', sm: 300 } }}
+                    />
+                  </Box>
                 </>
               )}
 
@@ -325,23 +344,6 @@ const DailySales = (): React.ReactElement => {
             {/* Bancas Tab Content */}
             {subTab === 0 && (
               <>
-                {/* Quick Filter */}
-                <Box sx={{ mb: 2, textAlign: { xs: 'left', sm: 'right' } }}>
-                  <TextField
-                    size="small"
-                    placeholder="Filtro rapido"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    InputProps={{
-                      endAdornment: (
-                        <InputAdornment position="end">
-                          <SearchIcon />
-                        </InputAdornment>
-                      ),
-                    }}
-                    sx={{ width: { xs: '100%', sm: 300 } }}
-                  />
-                </Box>
 
                 {/* Sales Table */}
                 <SalesTable

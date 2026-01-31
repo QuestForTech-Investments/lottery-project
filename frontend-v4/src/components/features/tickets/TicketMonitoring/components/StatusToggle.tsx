@@ -10,10 +10,10 @@ import type { StatusToggleProps } from '../types';
 
 const StatusToggle: FC<StatusToggleProps> = memo(({ filtroEstado, counts, onFilterChange }) => {
   return (
-    <Box sx={{ mb: 2, textAlign: 'center' }}>
+    <Box sx={{ mb: 2, display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
       <Typography
         variant="subtitle1"
-        sx={{ color: 'text.secondary', mb: 1.5, display: 'block', textAlign: 'center', fontWeight: 500 }}
+        sx={{ color: 'text.secondary', mb: 1.5, fontWeight: 500 }}
       >
         Filtrar
       </Typography>
