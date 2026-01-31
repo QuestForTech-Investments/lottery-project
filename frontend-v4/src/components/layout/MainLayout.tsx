@@ -1,5 +1,5 @@
 import { useState, Suspense, type ReactNode } from 'react'
-import { Box, CircularProgress } from '@mui/material'
+import { Box, CircularProgress, useMediaQuery, useTheme } from '@mui/material'
 import Sidebar from './Sidebar'
 import Header from './Header'
 
@@ -23,18 +23,28 @@ interface MainLayoutProps {
 }
 
 export default function MainLayout({ children }: MainLayoutProps) {
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
+
   // sidebarPinned = false: modo automático (se expande/contrae con hover, contenido fijo en 60px)
   // sidebarPinned = true: modo fijo (sidebar expandido, contenido desplazado a 280px)
   const [sidebarPinned, setSidebarPinned] = useState(false)
   const [sidebarHovered, setSidebarHovered] = useState(false)
+  // Mobile sidebar open state
+  const [mobileOpen, setMobileOpen] = useState(false)
 
   // Alternar entre modo automático y modo fijo
   const toggleSidebarPin = () => {
-    setSidebarPinned((prev) => !prev)
+    if (isMobile) {
+      setMobileOpen((prev) => !prev)
+    } else {
+      setSidebarPinned((prev) => !prev)
+    }
   }
 
   // En modo fijo: contenido a 280px. En modo automático: contenido fijo a 91px
-  const contentMarginLeft = sidebarPinned ? 280 : 91
+  // En móvil: sin margen (sidebar oculto)
+  const contentMarginLeft = isMobile ? 0 : (sidebarPinned ? 280 : 91)
 
   return (
     <Box sx={{ height: '100vh' }}>
@@ -43,12 +53,16 @@ export default function MainLayout({ children }: MainLayoutProps) {
         hovered={sidebarHovered}
         onToggleCollapse={toggleSidebarPin}
         onHoverChange={setSidebarHovered}
+        isMobile={isMobile}
+        mobileOpen={mobileOpen}
+        onMobileClose={() => setMobileOpen(false)}
       />
 
       <Header
         sidebarCollapsed={!sidebarPinned}
         sidebarHovered={sidebarHovered}
         onToggleSidebar={toggleSidebarPin}
+        isMobile={isMobile}
       />
 
       <Box
@@ -56,9 +70,10 @@ export default function MainLayout({ children }: MainLayoutProps) {
         sx={{
           marginLeft: `${contentMarginLeft}px`,
           marginTop: '64px',
-          padding: 2,
+          padding: { xs: 1.5, sm: 2 },
           backgroundColor: '#f4f3ef',
           minHeight: 'calc(100vh - 64px)',
+          transition: 'margin-left 0.25s cubic-bezier(0.4, 0.0, 0.2, 1)',
         }}
       >
         <Suspense fallback={<ContentLoadingFallback />}>{children}</Suspense>

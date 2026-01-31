@@ -25,9 +25,12 @@ interface SidebarProps {
   hovered: boolean;
   onToggleCollapse: () => void;
   onHoverChange: (hovered: boolean) => void;
+  isMobile?: boolean;
+  mobileOpen?: boolean;
+  onMobileClose?: () => void;
 }
 
-function Sidebar({ collapsed, hovered, onHoverChange }: SidebarProps) {
+function Sidebar({ collapsed, hovered, onHoverChange, isMobile = false, mobileOpen = false, onMobileClose }: SidebarProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useTranslation();
@@ -42,14 +45,22 @@ function Sidebar({ collapsed, hovered, onHoverChange }: SidebarProps) {
       }));
     } else if (item.path) {
       navigate(item.path);
+      // Close mobile drawer after navigation
+      if (isMobile && onMobileClose) {
+        onMobileClose();
+      }
     }
-  }, [navigate]);
+  }, [navigate, isMobile, onMobileClose]);
 
   const handleSubmenuClick = useCallback((subitem: MenuItem) => {
     if (subitem.path) {
       navigate(subitem.path);
+      // Close mobile drawer after navigation
+      if (isMobile && onMobileClose) {
+        onMobileClose();
+      }
     }
-  }, [navigate]);
+  }, [navigate, isMobile, onMobileClose]);
 
   const isActive = useCallback((item: MenuItem): boolean => {
     if (item.path) {
@@ -95,7 +106,214 @@ function Sidebar({ collapsed, hovered, onHoverChange }: SidebarProps) {
     : 280;
 
   // Show contenido expandido si NO está colapsado O si está colapsado pero con hover
-  const showExpandedContent = !collapsed || hovered;
+  // On mobile, always show expanded content
+  const showExpandedContent = isMobile || !collapsed || hovered;
+
+  // On mobile, don't render the permanent drawer
+  if (isMobile) {
+    return (
+      <Drawer
+        variant="temporary"
+        open={mobileOpen}
+        onClose={onMobileClose}
+        ModalProps={{
+          keepMounted: true, // Better open performance on mobile
+        }}
+        sx={{
+          '& .MuiDrawer-paper': {
+            width: 280,
+            boxSizing: 'border-box',
+            overflowX: 'hidden',
+            overflowY: 'auto',
+            WebkitFontSmoothing: 'antialiased',
+            textRendering: 'optimizeLegibility',
+          },
+        }}
+      >
+        {/* Logo Section */}
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            padding: '14px 20px',
+            height: '64px',
+            minHeight: '64px',
+            maxHeight: '64px',
+            borderBottom: '1px solid rgba(148, 163, 184, 0.2)',
+            boxSizing: 'border-box',
+            justifyContent: 'flex-start'
+          }}
+        >
+          <Box
+            sx={{
+              width: 36,
+              height: 36,
+              borderRadius: '50%',
+              background: 'linear-gradient(135deg, #319795 0%, #2c7a7b 100%)',
+              color: 'white',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '18px',
+              fontWeight: 'bold',
+              marginRight: 2,
+              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.3)',
+            }}
+          >
+            L
+          </Box>
+          <Typography
+            variant="h6"
+            sx={{
+              fontSize: '1rem',
+              fontWeight: 400,
+              textTransform: 'uppercase',
+              color: '#fff',
+              fontFamily: '"Montserrat","Helvetica Neue",Arial,sans-serif',
+              WebkitFontSmoothing: 'antialiased',
+              textRendering: 'optimizeLegibility',
+            }}
+          >
+            LOTTERY
+          </Typography>
+        </Box>
+
+        {/* Menu Items */}
+        <List sx={{ padding: 0, paddingTop: '20px' }}>
+          {MENU_ITEMS.map((item) => {
+            const Icon = item.icon;
+            const active = isActive(item);
+            const isExpanded = expandedMenus[item.id];
+            const isHovered = hoveredItem === item.id;
+
+            return (
+              <React.Fragment key={item.id}>
+                <ListItem disablePadding>
+                  <ListItemButton
+                    onClick={() => handleMenuClick(item)}
+                    onMouseEnter={() => handleItemHover(item.id)}
+                    onMouseLeave={() => handleItemHover(null)}
+                    sx={{
+                      minHeight: 16,
+                      py: 0.3,
+                      margin: '1px 8px',
+                      borderRadius: '8px',
+                      transition: 'all 0.3s ease',
+                      position: 'relative',
+                      '&:hover': {
+                        backgroundColor: 'rgba(49, 151, 149, 0.15)',
+                        transform: 'translateX(4px)'
+                      },
+                    }}
+                  >
+                    <ListItemIcon
+                      sx={{
+                        minWidth: 40,
+                        color: active ? '#38b2ac' : (isHovered ? '#ffffff' : '#ffffff'),
+                        transition: 'all 0.3s ease-in-out'
+                      }}
+                    >
+                      {Icon && <Icon sx={{ fontSize: 24 }} />}
+                    </ListItemIcon>
+                    <ListItemText
+                      primary={getMenuLabel(item)}
+                      sx={{
+                        '& .MuiListItemText-primary': {
+                          fontSize: '11.5px',
+                          fontWeight: 600,
+                          textTransform: 'uppercase',
+                          color: active ? '#38b2ac' : (isHovered ? '#ffffff' : '#ffffff'),
+                          fontFamily: '"Montserrat","Helvetica Neue",Arial,sans-serif',
+                          WebkitFontSmoothing: 'antialiased',
+                          textRendering: 'optimizeLegibility',
+                          lineHeight: '1px',
+                          whiteSpace: 'nowrap',
+                        }
+                      }}
+                    />
+                    {item.submenu && (
+                      <Box sx={{
+                        color: active ? '#38b2ac' : (isHovered ? '#ffffff' : '#ffffff'),
+                        transition: 'all 0.3s ease-in-out'
+                      }}>
+                        {isExpanded ? <ExpandLess /> : <ExpandMore />}
+                      </Box>
+                    )}
+                  </ListItemButton>
+                </ListItem>
+
+                {/* Submenu */}
+                {item.submenu && (
+                  <Collapse in={isExpanded} timeout="auto" unmountOnExit>
+                    <List component="div" disablePadding>
+                      {item.submenu.map((subitem) => {
+                        const subActive = isSubActive(subitem);
+                        const isSubHovered = hoveredItem === subitem.id;
+                        return (
+                          <ListItem key={subitem.id} disablePadding>
+                            <ListItemButton
+                              onClick={() => handleSubmenuClick(subitem)}
+                              onMouseEnter={() => handleItemHover(subitem.id)}
+                              onMouseLeave={() => handleItemHover(null)}
+                              sx={{
+                                pl: 4,
+                                minHeight: 16,
+                                py: 0.2,
+                                margin: '1px 8px 1px 12px',
+                                borderRadius: '8px',
+                                transition: 'all 0.3s ease',
+                                position: 'relative',
+                                '&:hover': {
+                                  backgroundColor: 'rgba(49, 151, 149, 0.1)',
+                                  transform: 'translateX(4px)'
+                                },
+                              }}
+                            >
+                              {subitem.shortcut && (
+                                <Typography
+                                  sx={{
+                                    color: subActive ? '#38b2ac' : (isSubHovered ? '#ffffff' : '#ffffff'),
+                                    fontSize: '10.5px',
+                                    fontWeight: (subActive || isSubHovered) ? 'bold' : 'normal',
+                                    marginRight: 1,
+                                    textTransform: 'uppercase',
+                                    minWidth: '20px',
+                                    textAlign: 'center',
+                                    transition: 'all 0.3s ease-in-out'
+                                  }}
+                                >
+                                  {subitem.shortcut}
+                                </Typography>
+                              )}
+                              <ListItemText
+                                primary={subitem.label}
+                                sx={{
+                                  '& .MuiListItemText-primary': {
+                                    fontSize: '10.5px',
+                                    fontWeight: 600,
+                                    color: subActive ? '#38b2ac' : (isSubHovered ? '#ffffff' : '#ffffff'),
+                                    fontFamily: '"Montserrat","Helvetica Neue",Arial,sans-serif',
+                                    WebkitFontSmoothing: 'antialiased',
+                                    textRendering: 'optimizeLegibility',
+                                    lineHeight: '1px',
+                                    whiteSpace: 'nowrap',
+                                  }
+                                }}
+                              />
+                            </ListItemButton>
+                          </ListItem>
+                        );
+                      })}
+                    </List>
+                  </Collapse>
+                )}
+              </React.Fragment>
+            );
+          })}
+        </List>
+      </Drawer>
+    );
+  }
 
   return (
     <Drawer
