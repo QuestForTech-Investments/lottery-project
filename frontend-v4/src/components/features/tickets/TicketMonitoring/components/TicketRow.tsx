@@ -35,9 +35,9 @@ const TicketRow: FC<TicketRowProps> = memo(({ ticket, isSelected, onRowClick, on
     <TableRow
       sx={{
         cursor: 'pointer',
-        backgroundColor: isSelected ? 'rgba(81, 203, 206, 0.15)' : 'inherit',
-        borderLeft: isSelected ? '3px solid #51cbce' : '3px solid transparent',
-        '&:hover': { backgroundColor: isSelected ? 'rgba(81, 203, 206, 0.25)' : 'action.hover' },
+        backgroundColor: isSelected ? 'rgba(139, 92, 246, 0.12)' : 'inherit',
+        borderLeft: isSelected ? '3px solid #8b5cf6' : '3px solid transparent',
+        '&:hover': { backgroundColor: isSelected ? 'rgba(139, 92, 246, 0.18)' : 'action.hover' },
       }}
       onClick={handleRowClick}
     >

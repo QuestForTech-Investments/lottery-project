@@ -280,9 +280,9 @@ const PrizeEditModal: FC<PrizeEditModalProps> = memo(({
         <Button
           onClick={handleSave}
           sx={{
-            bgcolor: '#51cbce',
+            bgcolor: '#8b5cf6',
             color: '#fff',
-            '&:hover': { bgcolor: '#45b8bb' },
+            '&:hover': { bgcolor: '#7c3aed' },
             textTransform: 'uppercase',
           }}
         >

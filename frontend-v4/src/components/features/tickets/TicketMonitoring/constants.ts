@@ -114,9 +114,9 @@ export const STYLES = {
   filtersRow: { display: 'flex', gap: 2, mb: 1, flexWrap: 'wrap', alignItems: 'flex-end' },
   filterLabel: { color: 'text.secondary', mb: 0.5, display: 'block' },
   totalsContainer: { display: 'flex', justifyContent: 'center', mb: 0, mt: '-4px' },
-  totalsPanel: { px: 4, py: 0.5, backgroundColor: '#e8f4f8', textAlign: 'center' as const, width: 'fit-content' },
+  totalsPanel: { px: 4, py: 0.5, backgroundColor: '#ede9fe', textAlign: 'center' as const, width: 'fit-content' },
   totalsText: {
-    color: 'rgb(43, 134, 169)',
+    color: '#6d28d9',
     fontSize: '28px',
     fontWeight: 400,
     lineHeight: '30px',
