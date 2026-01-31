@@ -136,8 +136,8 @@ const ZoneSales = (): React.ReactElement => {
               onClick={handleSearch}
               disabled={loading}
               sx={{
-                bgcolor: '#51cbce',
-                '&:hover': { bgcolor: '#45b8bb' },
+                bgcolor: '#8b5cf6',
+                '&:hover': { bgcolor: '#7c3aed' },
                 borderRadius: '30px',
                 px: 4,
                 textTransform: 'uppercase',

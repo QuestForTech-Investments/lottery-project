@@ -429,8 +429,8 @@ const UsersTab: React.FC<UsersTabProps> = ({ formData, handleChange, bettingPool
           startIcon={<AddIcon />}
           onClick={handleOpenDialog}
           sx={{
-            bgcolor: '#51cbce',
-            '&:hover': { bgcolor: '#45b8bb' },
+            bgcolor: '#8b5cf6',
+            '&:hover': { bgcolor: '#7c3aed' },
           }}
         >
           Añadir usuario
@@ -580,8 +580,8 @@ const UsersTab: React.FC<UsersTabProps> = ({ formData, handleChange, bettingPool
             disabled={loading}
             startIcon={loading ? <CircularProgress size={16} /> : null}
             sx={{
-              bgcolor: '#51cbce',
-              '&:hover': { bgcolor: '#45b8bb' },
+              bgcolor: '#8b5cf6',
+              '&:hover': { bgcolor: '#7c3aed' },
             }}
           >
             {loading ? 'Creando...' : 'Añadir usuario'}
@@ -664,8 +664,8 @@ const UsersTab: React.FC<UsersTabProps> = ({ formData, handleChange, bettingPool
             disabled={changingPassword}
             startIcon={changingPassword ? <CircularProgress size={16} /> : <KeyIcon />}
             sx={{
-              bgcolor: '#51cbce',
-              '&:hover': { bgcolor: '#45b8bb' },
+              bgcolor: '#8b5cf6',
+              '&:hover': { bgcolor: '#7c3aed' },
             }}
           >
             {changingPassword ? 'Cambiando...' : 'Cambiar contraseña'}

@@ -273,8 +273,8 @@ const BetTypeFieldGrid: React.FC<BetTypeFieldGridProps> = memo(({
             onClick={onSave}
             disabled={saving}
             sx={{
-              bgcolor: '#51cbce',
-              '&:hover': { bgcolor: '#45b8bb' },
+              bgcolor: '#8b5cf6',
+              '&:hover': { bgcolor: '#7c3aed' },
               color: 'white',
               textTransform: 'none',
               px: 4,

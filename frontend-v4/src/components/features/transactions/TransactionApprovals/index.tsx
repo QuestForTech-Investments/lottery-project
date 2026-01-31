@@ -151,7 +151,7 @@ const TransactionApprovals = (): React.ReactElement => {
               variant="contained"
               onClick={() => setShowFilters(!showFilters)}
               endIcon={showFilters ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-              sx={{ bgcolor: '#51cbce', '&:hover': { bgcolor: '#45b5b8' }, fontWeight: 600, textTransform: 'uppercase', px: 4 }}
+              sx={{ bgcolor: '#8b5cf6', '&:hover': { bgcolor: '#45b5b8' }, fontWeight: 600, textTransform: 'uppercase', px: 4 }}
             >
               FILTROS
             </Button>
@@ -216,7 +216,7 @@ const TransactionApprovals = (): React.ReactElement => {
                 </Grid>
               </Grid>
               <Box sx={{ textAlign: 'center', mt: 3 }}>
-                <Button variant="contained" onClick={handleFilter} sx={{ bgcolor: '#51cbce', '&:hover': { bgcolor: '#45b5b8' }, fontWeight: 600, textTransform: 'uppercase', px: 4 }}>
+                <Button variant="contained" onClick={handleFilter} sx={{ bgcolor: '#8b5cf6', '&:hover': { bgcolor: '#45b5b8' }, fontWeight: 600, textTransform: 'uppercase', px: 4 }}>
                   Filtrar
                 </Button>
               </Box>

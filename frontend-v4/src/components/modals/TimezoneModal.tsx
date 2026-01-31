@@ -139,14 +139,14 @@ export default function TimezoneModal({ isOpen, onClose }: TimezoneModalProps) {
             mb: 3,
             '& .MuiOutlinedInput-root': {
               '&:hover fieldset': {
-                borderColor: '#51cbce',
+                borderColor: '#8b5cf6',
               },
               '&.Mui-focused fieldset': {
-                borderColor: '#51cbce',
+                borderColor: '#8b5cf6',
               },
             },
             '& .MuiInputLabel-root.Mui-focused': {
-              color: '#51cbce',
+              color: '#8b5cf6',
             },
           }}
           isOptionEqualToValue={(option, value) => option.value === value.value}
@@ -188,12 +188,12 @@ export default function TimezoneModal({ isOpen, onClose }: TimezoneModalProps) {
           onClick={handleSave}
           variant="contained"
           sx={{
-            bgcolor: '#51cbce',
+            bgcolor: '#8b5cf6',
             color: 'white',
             textTransform: 'none',
             fontWeight: 600,
             '&:hover': {
-              bgcolor: '#45b8bb',
+              bgcolor: '#7c3aed',
             },
           }}
         >

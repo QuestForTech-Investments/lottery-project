@@ -142,7 +142,7 @@ const BetInputRow: React.FC<BetInputRowProps> = memo(({
       <IconButton
         onClick={onAddBet}
         disabled={!betNumber || !amount || !selectedDraw}
-        sx={{ bgcolor: '#51cbce', color: 'white', '&:hover': { bgcolor: '#45b8bb' } }}
+        sx={{ bgcolor: '#8b5cf6', color: 'white', '&:hover': { bgcolor: '#7c3aed' } }}
         title="Agregar jugada (o presione Enter)"
       >
         ➕

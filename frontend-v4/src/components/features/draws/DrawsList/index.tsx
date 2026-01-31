@@ -286,7 +286,7 @@ const DrawsList = (): React.ReactElement => {
   if (loading) {
     return (
       <Box sx={{ p: 3, bgcolor: '#f5f5f5', minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-        <CircularProgress sx={{ color: '#51cbce' }} />
+        <CircularProgress sx={{ color: '#8b5cf6' }} />
         <Typography sx={{ ml: 2, color: '#666' }}>Cargando sorteos...</Typography>
       </Box>
     );
@@ -402,7 +402,7 @@ const DrawsList = (): React.ReactElement => {
                         <IconButton
                           size="medium"
                           onClick={() => handleEdit(draw.id)}
-                          sx={{ color: '#51cbce' }}
+                          sx={{ color: '#8b5cf6' }}
                         >
                           <EditIcon />
                         </IconButton>
@@ -517,8 +517,8 @@ const DrawsList = (): React.ReactElement => {
             variant="contained"
             disabled={saving}
             sx={{
-              bgcolor: '#51cbce',
-              '&:hover': { bgcolor: '#45b8bb' },
+              bgcolor: '#8b5cf6',
+              '&:hover': { bgcolor: '#7c3aed' },
               '&:disabled': { bgcolor: '#ccc' }
             }}
           >

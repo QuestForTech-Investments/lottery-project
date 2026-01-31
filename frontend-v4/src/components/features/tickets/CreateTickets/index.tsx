@@ -359,11 +359,11 @@ const ActionButtonsRow = memo<ActionButtonsRowProps>(({ totalBets, onDuplicate, 
       disabled={totalBets === 0}
       sx={{
         px: 4, py: 1.5,
-        bgcolor: totalBets === 0 ? '#ccc' : '#51cbce',
+        bgcolor: totalBets === 0 ? '#ccc' : '#8b5cf6',
         color: 'white', border: 'none', borderRadius: '4px',
         fontSize: '14px', fontWeight: 'bold',
         cursor: totalBets === 0 ? 'not-allowed' : 'pointer',
-        '&:hover': { bgcolor: totalBets === 0 ? '#ccc' : '#45b8bb' },
+        '&:hover': { bgcolor: totalBets === 0 ? '#ccc' : '#7c3aed' },
       }}
     >
       CREAR TICKET

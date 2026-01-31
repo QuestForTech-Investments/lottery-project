@@ -263,8 +263,8 @@ export default function ChangePasswordModal({ isOpen, onClose }: ChangePasswordM
             disabled={!canSubmit}
             variant="contained"
             sx={{
-              bgcolor: '#51cbce',
-              '&:hover': { bgcolor: '#45b8bb' },
+              bgcolor: '#8b5cf6',
+              '&:hover': { bgcolor: '#7c3aed' },
             }}
             startIcon={isLoading ? <CircularProgress size={20} color="inherit" /> : null}
           >

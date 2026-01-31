@@ -200,9 +200,9 @@ const TransactionsList = (): React.ReactElement => {
             </Box>
 
             <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-              <Button variant="contained" onClick={handleFilter} sx={{ backgroundColor: '#51cbce', '&:hover': { backgroundColor: '#45b5b8' } }}>FILTRAR</Button>
-              <Button variant="contained" startIcon={<FileDownloadIcon />} onClick={handleExportCSV} sx={{ backgroundColor: '#51cbce', '&:hover': { backgroundColor: '#45b5b8' } }}>CSV</Button>
-              <Button variant="contained" startIcon={<PdfIcon />} onClick={handleExportPDF} sx={{ backgroundColor: '#51cbce', '&:hover': { backgroundColor: '#45b5b8' } }}>PDF</Button>
+              <Button variant="contained" onClick={handleFilter} sx={{ backgroundColor: '#8b5cf6', '&:hover': { backgroundColor: '#45b5b8' } }}>FILTRAR</Button>
+              <Button variant="contained" startIcon={<FileDownloadIcon />} onClick={handleExportCSV} sx={{ backgroundColor: '#8b5cf6', '&:hover': { backgroundColor: '#45b5b8' } }}>CSV</Button>
+              <Button variant="contained" startIcon={<PdfIcon />} onClick={handleExportPDF} sx={{ backgroundColor: '#8b5cf6', '&:hover': { backgroundColor: '#45b5b8' } }}>PDF</Button>
             </Box>
           </Box>
 

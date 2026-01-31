@@ -145,11 +145,11 @@ const ExpenseCategories = (): React.ReactElement => {
                 fontWeight: 500
               },
               '& .Mui-selected': {
-                color: '#51cbce',
+                color: '#8b5cf6',
                 fontWeight: 600
               },
               '& .MuiTabs-indicator': {
-                backgroundColor: '#51cbce'
+                backgroundColor: '#8b5cf6'
               }
             }}
           >
@@ -227,7 +227,7 @@ const ExpenseCategories = (): React.ReactElement => {
                       <TableCell align="center">
                         <IconButton
                           size="small"
-                          sx={{ color: '#51cbce' }}
+                          sx={{ color: '#8b5cf6' }}
                           title="Editar"
                         >
                           <EditIcon fontSize="small" />
@@ -261,7 +261,7 @@ const ExpenseCategories = (): React.ReactElement => {
             <Button
               variant="contained"
               sx={{
-                bgcolor: '#51cbce',
+                bgcolor: '#8b5cf6',
                 '&:hover': { bgcolor: '#45b5b8' },
                 fontWeight: 600,
                 textTransform: 'uppercase',

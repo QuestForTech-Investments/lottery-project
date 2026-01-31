@@ -150,8 +150,8 @@ const F8Monitor = (): React.ReactElement => {
               variant="contained"
               onClick={handleRefresh}
               sx={{
-                bgcolor: '#51cbce',
-                '&:hover': { bgcolor: '#45b8bb' },
+                bgcolor: '#8b5cf6',
+                '&:hover': { bgcolor: '#7c3aed' },
                 color: 'white',
                 textTransform: 'none',
                 fontSize: '14px',

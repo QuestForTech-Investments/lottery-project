@@ -285,7 +285,7 @@ const HelpModal: React.FC<HelpModalProps> = ({ open, onClose }) => {
       </DialogContent>
 
       <DialogActions sx={{ px: 3, py: 2 }}>
-        <Button onClick={onClose} variant="contained" sx={{ bgcolor: '#51cbce', '&:hover': { bgcolor: '#45b8bb' } }}>
+        <Button onClick={onClose} variant="contained" sx={{ bgcolor: '#8b5cf6', '&:hover': { bgcolor: '#7c3aed' } }}>
           Cerrar
         </Button>
       </DialogActions>

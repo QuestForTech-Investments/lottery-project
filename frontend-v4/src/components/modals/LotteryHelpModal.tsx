@@ -200,7 +200,7 @@ export default function LotteryHelpModal({ isOpen, onClose }: LotteryHelpModalPr
     }
   ];
 
-  const primaryColor = '#51cbce'
+  const primaryColor = '#8b5cf6'
 
   const handleTabChange = (_event: SyntheticEvent, newValue: number): void => {
     setActiveTab(newValue)
@@ -358,7 +358,7 @@ export default function LotteryHelpModal({ isOpen, onClose }: LotteryHelpModalPr
             py: 0.625,
             fontWeight: 600,
             '&:hover': {
-              bgcolor: '#45b8bb'
+              bgcolor: '#7c3aed'
             }
           }}
         >

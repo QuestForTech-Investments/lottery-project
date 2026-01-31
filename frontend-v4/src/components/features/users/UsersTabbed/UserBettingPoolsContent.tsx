@@ -206,7 +206,7 @@ const UserBettingPoolsContent: React.FC = () => {
                       component="button"
                       variant="body2"
                       onClick={() => handleEditBettingPoolClick(user.bettingPoolId)}
-                      sx={{ color: '#51cbce', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
+                      sx={{ color: '#8b5cf6', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
                     >
                       {user.bettingPool}
                     </Link>
@@ -216,7 +216,7 @@ const UserBettingPoolsContent: React.FC = () => {
                       component="button"
                       variant="body2"
                       onClick={() => handleEditBettingPoolClick(user.bettingPoolId)}
-                      sx={{ color: '#51cbce', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
+                      sx={{ color: '#8b5cf6', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
                     >
                       {user.bettingPoolId}
                     </Link>

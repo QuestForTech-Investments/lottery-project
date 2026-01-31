@@ -20,9 +20,9 @@ export const BET_TYPES: BetType[] = [
 
 // Column header colors
 export const COLUMN_COLORS = {
-  directo: { headerColor: '#51cbce', headerBgColor: '#e0f2f1' },
+  directo: { headerColor: '#8b5cf6', headerBgColor: '#ede9fe' },
   pale: { headerColor: '#3d9970', headerBgColor: '#e8f5e9' },
-  cash3: { headerColor: '#51cbce', headerBgColor: '#e0f2f1' },
+  cash3: { headerColor: '#8b5cf6', headerBgColor: '#ede9fe' },
   play4: { headerColor: '#3d9970', headerBgColor: '#e8f5e9' },
 } as const;
 

@@ -26,8 +26,8 @@ import {
 import { formatCurrency } from '@/utils/formatCurrency';
 
 // Primary color from design system
-const PRIMARY_COLOR = '#51cbce';
-const PRIMARY_HOVER = '#45b8bb';
+const PRIMARY_COLOR = '#8b5cf6';
+const PRIMARY_HOVER = '#7c3aed';
 
 // Map DrawParam to component-friendly format
 interface Draw {

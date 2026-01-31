@@ -32,10 +32,10 @@ export const secondaryButtonStyles: SxProps<Theme> = {
 
 // Turquoise button styles (app primary color)
 export const turquoiseButtonStyles: SxProps<Theme> = {
-  bgcolor: '#51cbce',
+  bgcolor: '#8b5cf6',
   color: 'white',
   '&:hover': {
-    bgcolor: '#45b8bb',
+    bgcolor: '#7c3aed',
   },
 }
 

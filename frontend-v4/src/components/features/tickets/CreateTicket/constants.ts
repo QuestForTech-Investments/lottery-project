@@ -5,8 +5,8 @@
  */
 
 // Primary color
-export const PRIMARY_COLOR = '#51cbce';
-export const PRIMARY_HOVER = '#45b8bb';
+export const PRIMARY_COLOR = '#8b5cf6';
+export const PRIMARY_HOVER = '#7c3aed';
 
 // Button styles
 export const ADD_LINE_BUTTON_STYLE = {

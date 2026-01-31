@@ -193,8 +193,8 @@ const SalesByDate = (): React.ReactElement => {
               disabled={loading}
               startIcon={loading ? <CircularProgress size={20} color="inherit" /> : null}
               sx={{
-                bgcolor: '#51cbce',
-                '&:hover': { bgcolor: '#45b8bb' },
+                bgcolor: '#8b5cf6',
+                '&:hover': { bgcolor: '#7c3aed' },
                 px: 4,
                 borderRadius: '30px',
                 textTransform: 'uppercase',
@@ -204,8 +204,8 @@ const SalesByDate = (): React.ReactElement => {
               Ver ventas
             </Button>
             <Button variant="contained" startIcon={<PictureAsPdf />} sx={{
-              bgcolor: '#51cbce',
-              '&:hover': { bgcolor: '#45b8bb' },
+              bgcolor: '#8b5cf6',
+              '&:hover': { bgcolor: '#7c3aed' },
               borderRadius: '30px',
               textTransform: 'uppercase',
               color: 'white'

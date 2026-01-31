@@ -262,7 +262,7 @@ const BettingPoolBalances = (): React.ReactElement => {
             startIcon={<RefreshIcon />}
             onClick={handleRefresh}
             sx={{
-              backgroundColor: '#51cbce',
+              backgroundColor: '#8b5cf6',
               '&:hover': { backgroundColor: '#3fb5b8' },
               textTransform: 'uppercase',
               fontWeight: 600
@@ -275,7 +275,7 @@ const BettingPoolBalances = (): React.ReactElement => {
             startIcon={<PrintIcon />}
             onClick={handlePrint}
             sx={{
-              backgroundColor: '#51cbce',
+              backgroundColor: '#8b5cf6',
               '&:hover': { backgroundColor: '#3fb5b8' },
               textTransform: 'uppercase',
               fontWeight: 600
@@ -288,7 +288,7 @@ const BettingPoolBalances = (): React.ReactElement => {
             startIcon={<PdfIcon />}
             onClick={handleExportPdf}
             sx={{
-              backgroundColor: '#51cbce',
+              backgroundColor: '#8b5cf6',
               '&:hover': { backgroundColor: '#3fb5b8' },
               textTransform: 'uppercase',
               fontWeight: 600

@@ -329,7 +329,7 @@ const CreateTransactionModal = ({ open, onClose }: CreateTransactionModalProps):
           onClick={handleSubmit}
           variant="contained"
           sx={{
-            backgroundColor: '#51cbce',
+            backgroundColor: '#8b5cf6',
             '&:hover': { backgroundColor: '#3fb5b8' },
             fontSize: '13px',
             textTransform: 'uppercase',

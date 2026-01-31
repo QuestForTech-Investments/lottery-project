@@ -128,8 +128,8 @@ const TicketPrinter: React.FC<TicketPrinterProps> = ({ ticketData, onAfterPrint,
           startIcon={<PrinterIcon size={20} />}
           onClick={handlePrint}
           sx={{
-            bgcolor: '#51cbce',
-            '&:hover': { bgcolor: '#45b8bb' },
+            bgcolor: '#8b5cf6',
+            '&:hover': { bgcolor: '#7c3aed' },
             marginRight: 2
           }}
         >
@@ -202,7 +202,7 @@ const TicketPrinter: React.FC<TicketPrinterProps> = ({ ticketData, onAfterPrint,
           </div>
           <div>
             <strong>Total:</strong>{' '}
-            <span style={{ fontWeight: 'bold', color: '#51cbce' }}>
+            <span style={{ fontWeight: 'bold', color: '#8b5cf6' }}>
               ${ticketData.grandTotal.toFixed(2)}
             </span>
           </div>

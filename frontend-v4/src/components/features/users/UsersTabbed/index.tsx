@@ -85,10 +85,10 @@ const UsersTabbedMUI: React.FC = () => {
                 py: 2,
               },
               '& .Mui-selected': {
-                color: '#51cbce',
+                color: '#8b5cf6',
               },
               '& .MuiTabs-indicator': {
-                backgroundColor: '#51cbce',
+                backgroundColor: '#8b5cf6',
               },
             }}
           >

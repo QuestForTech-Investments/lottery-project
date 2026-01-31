@@ -170,14 +170,14 @@ const AccountableEntities = (): React.ReactElement => {
           <Tabs
             value={activeTab}
             onChange={handleTabChange}
-            TabIndicatorProps={{ style: { backgroundColor: '#51cbce' } }}
+            TabIndicatorProps={{ style: { backgroundColor: '#8b5cf6' } }}
             sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}
           >
-            <Tab label="Bancas" sx={{ fontSize: '14px', color: activeTab === 0 ? '#51cbce' : '#999' }} />
-            <Tab label="Empleados" sx={{ fontSize: '14px', color: activeTab === 1 ? '#51cbce' : '#999' }} />
-            <Tab label="Bancos" sx={{ fontSize: '14px', color: activeTab === 2 ? '#51cbce' : '#999' }} />
-            <Tab label="Zonas" sx={{ fontSize: '14px', color: activeTab === 3 ? '#51cbce' : '#999' }} />
-            <Tab label="Otros" sx={{ fontSize: '14px', color: activeTab === 4 ? '#51cbce' : '#999' }} />
+            <Tab label="Bancas" sx={{ fontSize: '14px', color: activeTab === 0 ? '#8b5cf6' : '#999' }} />
+            <Tab label="Empleados" sx={{ fontSize: '14px', color: activeTab === 1 ? '#8b5cf6' : '#999' }} />
+            <Tab label="Bancos" sx={{ fontSize: '14px', color: activeTab === 2 ? '#8b5cf6' : '#999' }} />
+            <Tab label="Zonas" sx={{ fontSize: '14px', color: activeTab === 3 ? '#8b5cf6' : '#999' }} />
+            <Tab label="Otros" sx={{ fontSize: '14px', color: activeTab === 4 ? '#8b5cf6' : '#999' }} />
           </Tabs>
 
           {/* Tab Content */}
@@ -255,7 +255,7 @@ const AccountableEntities = (): React.ReactElement => {
                           <IconButton
                             size="small"
                             onClick={() => handleEdit(item.id)}
-                            sx={{ color: '#51cbce' }}
+                            sx={{ color: '#8b5cf6' }}
                           >
                             <EditIcon fontSize="small" />
                           </IconButton>

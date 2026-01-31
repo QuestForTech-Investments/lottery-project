@@ -203,7 +203,7 @@ const CollectionsPaymentsList = (): React.ReactElement => {
             variant="contained"
             onClick={handleFilter}
             sx={{
-              backgroundColor: '#51cbce',
+              backgroundColor: '#8b5cf6',
               '&:hover': { backgroundColor: '#3fb5b8' },
               textTransform: 'uppercase',
               fontWeight: 600
@@ -306,7 +306,7 @@ const CollectionsPaymentsList = (): React.ReactElement => {
             variant="contained"
             onClick={handleCreate}
             sx={{
-              backgroundColor: '#51cbce',
+              backgroundColor: '#8b5cf6',
               '&:hover': { backgroundColor: '#3fb5b8' },
               textTransform: 'uppercase',
               fontWeight: 600,

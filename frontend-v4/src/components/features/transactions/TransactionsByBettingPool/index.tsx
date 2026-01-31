@@ -137,7 +137,7 @@ const TransactionsByBettingPool = (): React.ReactElement => {
           <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
             <Button
               variant="contained" onClick={handleViewSales}
-              sx={{ backgroundColor: '#51cbce', '&:hover': { backgroundColor: '#3fb5b8' }, fontSize: '14px', fontWeight: 500, textTransform: 'uppercase', px: 6, py: 1.5, minWidth: '200px' }}
+              sx={{ backgroundColor: '#8b5cf6', '&:hover': { backgroundColor: '#3fb5b8' }, fontSize: '14px', fontWeight: 500, textTransform: 'uppercase', px: 6, py: 1.5, minWidth: '200px' }}
             >
               Ver Ventas
             </Button>
@@ -176,7 +176,7 @@ const TransactionsByBettingPool = (): React.ReactElement => {
                       <TableCell>
                         <Chip
                           label={transaction.tipo} size="small"
-                          sx={{ backgroundColor: transaction.tipo === 'Venta' ? '#28a745' : '#51cbce', color: 'white', fontSize: '11px', height: '24px' }}
+                          sx={{ backgroundColor: transaction.tipo === 'Venta' ? '#28a745' : '#8b5cf6', color: 'white', fontSize: '11px', height: '24px' }}
                         />
                       </TableCell>
                       <TableCell sx={{ fontSize: '13px' }}>{transaction.descripcion}</TableCell>
@@ -201,7 +201,7 @@ const TransactionsByBettingPool = (): React.ReactElement => {
               <Grid item xs={12} md={4}>
                 <Paper elevation={0} sx={{ bgcolor: '#e1f5fe', p: 2, textAlign: 'center' }}>
                   <Typography variant="caption" sx={{ fontSize: '12px', color: '#666', display: 'block', mb: 0.5 }}>Total Cobros</Typography>
-                  <Typography variant="h5" sx={{ fontSize: '20px', fontWeight: 600, color: '#51cbce' }}>${results.totales.cobros.toFixed(2)}</Typography>
+                  <Typography variant="h5" sx={{ fontSize: '20px', fontWeight: 600, color: '#8b5cf6' }}>${results.totales.cobros.toFixed(2)}</Typography>
                 </Paper>
               </Grid>
               <Grid item xs={12} md={4}>

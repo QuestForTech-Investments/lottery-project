@@ -86,7 +86,7 @@ export default defineConfig({
     },
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:5000',
+        target: 'https://lottery-api-prod.azurewebsites.net',
         changeOrigin: true,
         secure: false,
         rewrite: (proxyPath: string) => proxyPath.replace(/^\/api/, '/api'),

@@ -247,8 +247,8 @@ const ManageExcesses = (): React.ReactElement => {
               variant="contained"
               onClick={handleClearAll}
               sx={{
-                bgcolor: '#51cbce',
-                '&:hover': { bgcolor: '#45b8bb' },
+                bgcolor: '#8b5cf6',
+                '&:hover': { bgcolor: '#7c3aed' },
                 color: 'white',
                 fontSize: '14px',
                 fontFamily: 'Montserrat, sans-serif',
@@ -295,8 +295,8 @@ const ManageExcesses = (): React.ReactElement => {
               variant="contained"
               onClick={handleCreate}
               sx={{
-                bgcolor: '#51cbce',
-                '&:hover': { bgcolor: '#45b8bb' },
+                bgcolor: '#8b5cf6',
+                '&:hover': { bgcolor: '#7c3aed' },
                 color: 'white',
                 fontSize: '14px',
                 fontFamily: 'Montserrat, sans-serif',

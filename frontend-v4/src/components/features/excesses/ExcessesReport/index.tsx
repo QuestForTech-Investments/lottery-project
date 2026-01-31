@@ -236,8 +236,8 @@ const ExcessesReport = (): React.ReactElement => {
               variant="contained"
               onClick={handleRefresh}
               sx={{
-                bgcolor: '#51cbce',
-                '&:hover': { bgcolor: '#45b8bb' },
+                bgcolor: '#8b5cf6',
+                '&:hover': { bgcolor: '#7c3aed' },
                 color: 'white',
                 fontSize: '14px',
                 fontFamily: 'Montserrat, sans-serif',
@@ -260,7 +260,7 @@ const ExcessesReport = (): React.ReactElement => {
               onChange={(e) => setQuickFilter(e.target.value)}
               sx={{ width: 300 }}
               InputProps={{
-                endAdornment: <SearchIcon sx={{ color: '#51cbce' }} />,
+                endAdornment: <SearchIcon sx={{ color: '#8b5cf6' }} />,
                 sx: { fontSize: '14px' }
               }}
             />

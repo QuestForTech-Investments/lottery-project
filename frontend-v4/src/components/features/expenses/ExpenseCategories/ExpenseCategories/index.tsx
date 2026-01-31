@@ -145,13 +145,13 @@ const ExpenseCategories = (): React.ReactElement => {
             sx={{
               mb: 2,
               '& .MuiTab-root': {
-                color: '#51cbce',
+                color: '#8b5cf6',
                 '&.Mui-selected': {
-                  color: '#51cbce'
+                  color: '#8b5cf6'
                 }
               },
               '& .MuiTabs-indicator': {
-                backgroundColor: '#51cbce'
+                backgroundColor: '#8b5cf6'
               }
             }}
           >
@@ -211,7 +211,7 @@ const ExpenseCategories = (): React.ReactElement => {
                         <IconButton
                           size="small"
                           onClick={() => handleEdit(category)}
-                          sx={{ color: '#51cbce', mr: 1 }}
+                          sx={{ color: '#8b5cf6', mr: 1 }}
                           title="Editar"
                         >
                           <EditIcon fontSize="small" />
@@ -240,7 +240,7 @@ const ExpenseCategories = (): React.ReactElement => {
               variant="contained"
               onClick={handleCreate}
               sx={{
-                backgroundColor: '#51cbce',
+                backgroundColor: '#8b5cf6',
                 '&:hover': { backgroundColor: '#45b5b8' },
                 color: 'white',
                 px: 3,

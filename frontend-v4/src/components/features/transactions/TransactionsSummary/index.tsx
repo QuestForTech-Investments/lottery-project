@@ -140,13 +140,13 @@ const TransactionsSummary = (): React.ReactElement => {
               {zones.map((zone) => <MenuItem key={zone} value={zone}>{zone}</MenuItem>)}
             </Select>
           </FormControl>
-          <Button variant="contained" startIcon={<FilterListIcon />} onClick={handleFilter} sx={{ bgcolor: '#51cbce', '&:hover': { bgcolor: '#3fa7aa' } }}>Filtrar</Button>
+          <Button variant="contained" startIcon={<FilterListIcon />} onClick={handleFilter} sx={{ bgcolor: '#8b5cf6', '&:hover': { bgcolor: '#3fa7aa' } }}>Filtrar</Button>
         </Box>
       </Paper>
 
       <Box sx={{ mb: 3, display: 'flex', gap: 1, alignItems: 'center' }}>
         <TextField placeholder="Filtro rápido" value={quickFilter} onChange={(e: ChangeEvent<HTMLInputElement>) => setQuickFilter(e.target.value)} size="small" sx={{ maxWidth: 300 }} />
-        <IconButton sx={{ bgcolor: '#51cbce', color: 'white', '&:hover': { bgcolor: '#3fa7aa' } }}><SearchIcon /></IconButton>
+        <IconButton sx={{ bgcolor: '#8b5cf6', color: 'white', '&:hover': { bgcolor: '#3fa7aa' } }}><SearchIcon /></IconButton>
       </Box>
 
       <TableContainer component={Paper} sx={{ mb: 5 }}>

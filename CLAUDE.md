@@ -105,6 +105,29 @@ lottery-project/
 
 ---
 
+## 🌐 INFRAESTRUCTURA DE PRODUCCIÓN (AZURE)
+
+### ⚠️ IMPORTANTE - MEMORIZAR ESTO
+
+**TODA la infraestructura de producción está en Azure:**
+
+| Componente | Ubicación |
+|------------|-----------|
+| **Frontend** | Azure Static Web Apps → **https://lottobook.net** |
+| **API Backend** | Azure |
+| **Base de datos** | Azure SQL Server |
+
+### URLs del Sistema
+
+| Entorno | URL | Descripción |
+|---------|-----|-------------|
+| **🚀 Producción** | **https://lottobook.net** | Frontend desplegado en Azure |
+| **📱 App Original** | https://la-numbers.apk.lol | Vue.js (referencia/scraping) |
+| **💻 Local Frontend** | http://localhost:4001 | Desarrollo local |
+| **💻 Local API** | http://localhost:5000 | Desarrollo local |
+
+---
+
 ## 📂 ESTRUCTURA DEL FRONTEND
 
 ```
@@ -426,5 +449,5 @@ curl -H "Authorization: Bearer $TOKEN" http://localhost:5000/api/draws
 
 ---
 
-**Última actualización:** 2026-01-08
-**Versión:** 4.0
+**Última actualización:** 2026-01-28
+**Versión:** 4.1

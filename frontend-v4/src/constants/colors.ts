@@ -4,12 +4,12 @@
  */
 
 export const colors = {
-  // Brand colors (turquoise theme from original app)
+  // Brand colors (purple theme)
   brand: {
-    primary: '#51cbce',
-    primaryHover: '#45b8bb',
-    primaryLight: '#7dd9db',
-    primaryDark: '#3ba8ab',
+    primary: '#8b5cf6',
+    primaryHover: '#7c3aed',
+    primaryLight: '#a78bfa',
+    primaryDark: '#6d28d9',
   },
 
   // Status colors
@@ -45,7 +45,7 @@ export const colors = {
   table: {
     headerBg: '#f5f5f5',
     rowHover: 'rgba(0, 0, 0, 0.04)',
-    rowSelected: 'rgba(81, 203, 206, 0.08)',
+    rowSelected: 'rgba(139, 92, 246, 0.08)',
   },
 } as const;
 

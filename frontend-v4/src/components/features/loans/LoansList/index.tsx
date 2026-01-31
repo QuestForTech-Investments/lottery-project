@@ -266,8 +266,8 @@ const LoansList = (): React.ReactElement => {
               onChange={(e, newValue) => setActiveTab(newValue)}
               sx={{
                 '& .MuiTab-root': { fontSize: '14px' },
-                '& .Mui-selected': { color: '#51cbce' },
-                '& .MuiTabs-indicator': { backgroundColor: '#51cbce' }
+                '& .Mui-selected': { color: '#8b5cf6' },
+                '& .MuiTabs-indicator': { backgroundColor: '#8b5cf6' }
               }}
             >
               <Tab label="Bancas" />
@@ -360,7 +360,7 @@ const LoansList = (): React.ReactElement => {
                           size="small"
                           component={Link}
                           to={`/loans/edit/${loan.id}`}
-                          sx={{ color: '#51cbce', textDecoration: 'none' }}
+                          sx={{ color: '#8b5cf6', textDecoration: 'none' }}
                           title="Editar"
                         >
                           <EditIcon fontSize="small" />
@@ -395,7 +395,7 @@ const LoansList = (): React.ReactElement => {
 
       {/* Payment Dialog */}
       <Dialog open={showPaymentModal} onClose={handleClosePaymentModal} maxWidth="sm" fullWidth>
-        <DialogTitle sx={{ backgroundColor: '#51cbce', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <DialogTitle sx={{ backgroundColor: '#8b5cf6', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           Pagar préstamo
           <IconButton
             edge="end"
@@ -440,8 +440,8 @@ const LoansList = (): React.ReactElement => {
               type="submit"
               variant="contained"
               sx={{
-                bgcolor: '#51cbce',
-                '&:hover': { bgcolor: '#45b8bb' },
+                bgcolor: '#8b5cf6',
+                '&:hover': { bgcolor: '#7c3aed' },
                 color: 'white',
                 textTransform: 'none'
               }}

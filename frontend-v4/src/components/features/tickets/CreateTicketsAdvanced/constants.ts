@@ -12,8 +12,8 @@ export const SECTION_NAMES: readonly SectionName[] = [
 ] as const;
 
 export const COLORS = {
-  primary: '#51cbce',
-  primaryHover: '#45b8bb',
+  primary: '#8b5cf6',
+  primaryHover: '#7c3aed',
   success: '#28a745',
   danger: '#dc3545',
   secondary: '#6c757d',

@@ -125,7 +125,7 @@ export const IndividualResultForm: FC<IndividualResultFormProps> = memo(({
                 .filter((draw) => !draw.hasResult || draw.drawId === form.selectedDrawId)
                 .map((draw) => (
                   <MenuItem key={draw.drawId} value={draw.drawId}>
-                    {draw.drawName}
+                    {draw.drawName || draw.abbreviation || `Draw ${draw.drawId}`}
                   </MenuItem>
                 ))}
             </Select>
@@ -169,7 +169,7 @@ export const IndividualResultForm: FC<IndividualResultFormProps> = memo(({
                 alignItems: 'center',
               }}
             >
-              {selectedDraw?.drawName}
+              {selectedDraw?.drawName || selectedDraw?.abbreviation || ''}
             </Box>
             {visibleFields.map((f, idx) => (
               <Box

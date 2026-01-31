@@ -235,7 +235,7 @@ const DrawSchedules = (): React.ReactElement => {
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', bgcolor: '#f5f5f5' }}>
-        <CircularProgress sx={{ color: '#51cbce' }} />
+        <CircularProgress sx={{ color: '#8b5cf6' }} />
       </Box>
     );
   }
@@ -486,8 +486,8 @@ const DrawSchedules = (): React.ReactElement => {
                           onClick={handleSaveAll}
                           disabled={saving}
                           sx={{
-                            bgcolor: '#51cbce',
-                            '&:hover': { bgcolor: '#45b8bb' },
+                            bgcolor: '#8b5cf6',
+                            '&:hover': { bgcolor: '#7c3aed' },
                             color: 'white',
                             fontSize: '15px',
                             textTransform: 'uppercase',

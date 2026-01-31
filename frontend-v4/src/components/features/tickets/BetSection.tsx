@@ -43,13 +43,13 @@ const BetSection: React.FC<BetSectionProps> = ({ title, lines, total, onDeleteAl
           alignItems: 'center',
           bgcolor: '#f8f9fa',
           padding: 1.5,
-          borderBottom: '2px solid #51cbce'
+          borderBottom: '2px solid #8b5cf6'
         }}
       >
         <Typography variant="h6" sx={{ fontWeight: 'bold', fontSize: '14px' }}>
           {title}
         </Typography>
-        <Typography variant="h6" sx={{ fontWeight: 'bold', fontSize: '14px', color: '#51cbce' }}>
+        <Typography variant="h6" sx={{ fontWeight: 'bold', fontSize: '14px', color: '#8b5cf6' }}>
           TOTAL: ${total.toFixed(2)}
         </Typography>
       </Box>

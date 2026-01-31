@@ -55,7 +55,7 @@ const DrawsGrid: React.FC<DrawsGridProps> = memo(({
     >
       {loadingDraws ? (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <CircularProgress size={20} sx={{ color: '#51cbce' }} />
+          <CircularProgress size={20} sx={{ color: '#8b5cf6' }} />
           <Typography sx={{ fontSize: '12px', color: '#666' }}>Cargando sorteos...</Typography>
         </Box>
       ) : filteredDraws.length === 0 ? (

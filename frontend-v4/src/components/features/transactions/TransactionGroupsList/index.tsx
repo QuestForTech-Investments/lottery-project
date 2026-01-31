@@ -120,14 +120,14 @@ const TransactionGroupsList = (): React.ReactElement => {
               />
             </Grid>
             <Grid item xs={12} md={4} sx={{ display: 'flex', alignItems: 'flex-end' }}>
-              <Button fullWidth variant="contained" onClick={handleFilter} sx={{ bgcolor: '#51cbce', '&:hover': { bgcolor: '#45b5b8' }, fontWeight: 600, textTransform: 'uppercase' }}>
+              <Button fullWidth variant="contained" onClick={handleFilter} sx={{ bgcolor: '#8b5cf6', '&:hover': { bgcolor: '#45b5b8' }, fontWeight: 600, textTransform: 'uppercase' }}>
                 Filtrar
               </Button>
             </Grid>
           </Grid>
 
           <Box sx={{ textAlign: 'center', mb: 3 }}>
-            <Button variant="contained" sx={{ bgcolor: '#51cbce', '&:hover': { bgcolor: '#45b5b8' }, fontWeight: 600, textTransform: 'uppercase', px: 4 }}>
+            <Button variant="contained" sx={{ bgcolor: '#8b5cf6', '&:hover': { bgcolor: '#45b5b8' }, fontWeight: 600, textTransform: 'uppercase', px: 4 }}>
               Crear
             </Button>
           </Box>
@@ -181,7 +181,7 @@ const TransactionGroupsList = (): React.ReactElement => {
           </Typography>
 
           <Box sx={{ textAlign: 'center', mt: 3 }}>
-            <Button variant="contained" sx={{ bgcolor: '#51cbce', '&:hover': { bgcolor: '#45b5b8' }, fontWeight: 600, textTransform: 'uppercase', px: 4 }}>
+            <Button variant="contained" sx={{ bgcolor: '#8b5cf6', '&:hover': { bgcolor: '#45b5b8' }, fontWeight: 600, textTransform: 'uppercase', px: 4 }}>
               Crear
             </Button>
           </Box>
