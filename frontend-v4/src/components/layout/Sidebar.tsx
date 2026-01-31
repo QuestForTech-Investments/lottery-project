@@ -652,5 +652,8 @@ function Sidebar({ collapsed, hovered, onHoverChange, isMobile = false, mobileOp
 }
 
 export default memo(Sidebar, (prev, next) =>
-  prev.collapsed === next.collapsed && prev.hovered === next.hovered
+  prev.collapsed === next.collapsed &&
+  prev.hovered === next.hovered &&
+  prev.isMobile === next.isMobile &&
+  prev.mobileOpen === next.mobileOpen
 );
