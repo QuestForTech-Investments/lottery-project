@@ -9,16 +9,16 @@ import { Box, Button } from '@mui/material';
 import { BUTTON_PILL_STYLE } from '../constants';
 import type { ActionButtonsProps } from '../types';
 
-// Responsive button style - teal gradient on mobile, default on desktop
+// Responsive button style - purple gradient on mobile, default on desktop
 const responsiveButtonStyle = {
   ...BUTTON_PILL_STYLE,
   width: { xs: '100%', sm: 'auto' },
   py: { xs: 1, sm: 0.5 },
-  // Mobile: teal gradient
+  // Mobile: purple gradient
   '@media (max-width: 599px)': {
-    background: 'linear-gradient(135deg, #319795 0%, #2c7a7b 100%)',
+    background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
     '&:hover': {
-      background: 'linear-gradient(135deg, #38b2ac 0%, #319795 100%)',
+      background: 'linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%)',
     },
   },
 };

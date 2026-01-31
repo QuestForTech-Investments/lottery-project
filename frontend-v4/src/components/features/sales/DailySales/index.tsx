@@ -301,11 +301,11 @@ const DailySales = (): React.ReactElement => {
                 <>
                   <Typography variant="h5" align="center" gutterBottom sx={{ fontWeight: 400, mb: 3, fontSize: '1.7rem' }}>
                     Venta del día Total: <Box component="span" sx={{
-                      backgroundColor: '#e0f7fa',
+                      backgroundColor: '#ede9fe',
                       px: 2,
                       py: 0.5,
                       borderRadius: 1,
-                      color: '#00838f'
+                      color: '#6d28d9'
                     }}>{formatCurrency(totals.sales)}</Box>
                   </Typography>
 

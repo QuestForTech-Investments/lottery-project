@@ -42,11 +42,11 @@ const FilterToggles: FC<FilterTogglesProps> = memo(({ filterType, onFilterChange
               color: '#7c3aed',
             },
             '&.Mui-selected': {
-              background: 'linear-gradient(135deg, #319795 0%, #2c7a7b 100%)',
-              borderColor: '#319795',
+              background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+              borderColor: '#8b5cf6',
               color: '#fff',
               '&:hover': {
-                background: 'linear-gradient(135deg, #38b2ac 0%, #319795 100%)',
+                background: 'linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%)',
               },
             },
           },
