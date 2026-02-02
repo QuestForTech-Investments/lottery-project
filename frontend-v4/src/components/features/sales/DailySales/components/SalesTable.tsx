@@ -42,8 +42,8 @@ const SalesTable: FC<SalesTableProps> = memo(({ data, totals, columns, onCodeCli
             <>
               {data.map((row) => (
                 <TableRow key={row.id} hover>
-                  <TableCell>{row.ref}</TableCell>
-                  <TableCell>
+                  <TableCell sx={{ whiteSpace: 'nowrap' }}>{row.ref}</TableCell>
+                  <TableCell sx={{ whiteSpace: 'nowrap' }}>
                     <Link
                       component="button"
                       variant="body2"
