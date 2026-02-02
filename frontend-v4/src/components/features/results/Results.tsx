@@ -83,8 +83,8 @@ const Results = (): React.ReactElement => {
 
   // Filter state for table
   const [drawFilter, setDrawFilter] = useState<string>('');
-  // Default to 'pending' (sin resultado) to show draws that need results
-  const [statusFilter, setStatusFilter] = useState<StatusFilterType>('pending');
+  // Always show all results - no status filtering
+  const [statusFilter, setStatusFilter] = useState<StatusFilterType>('all');
 
   // State for view details modal
   const [viewDetailsRow, setViewDetailsRow] = useState<DrawResultRow | null>(null);

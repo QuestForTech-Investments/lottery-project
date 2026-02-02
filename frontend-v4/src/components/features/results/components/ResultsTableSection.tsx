@@ -23,7 +23,7 @@ import { Lock as LockIcon } from '@mui/icons-material';
 import type { DrawResultRow, EnabledFields } from '../types';
 import { COLORS } from '../constants';
 import { ResultsTableRow } from './ResultsTable';
-import StatusFilterTabs, { type StatusFilterType } from './StatusFilterTabs';
+import type { StatusFilterType } from './StatusFilterTabs';
 
 interface ResultsTableSectionProps {
   selectedDate: string;
@@ -71,13 +71,6 @@ const ResultsTableSection: FC<ResultsTableSectionProps> = memo(({
       <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: COLORS.primary }}>
         Resultados {selectedDate}
       </Typography>
-
-      {/* Status Filter Tabs */}
-      <StatusFilterTabs
-        statusFilter={statusFilter}
-        filterCounts={filterCounts}
-        onFilterChange={onStatusFilterChange}
-      />
 
       {/* Action buttons and filter */}
       <Box sx={{ display: 'flex', gap: 1, mb: 1, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' }}>
