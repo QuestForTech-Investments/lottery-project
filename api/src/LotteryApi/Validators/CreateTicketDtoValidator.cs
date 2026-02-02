@@ -71,9 +71,7 @@ public class CreateTicketDtoValidator : AbstractValidator<CreateTicketDto>
             .NotEmpty()
             .WithMessage("Debe incluir al menos una línea de apuesta")
             .Must(lines => lines != null && lines.Count > 0)
-            .WithMessage("Debe incluir al menos una línea de apuesta")
-            .Must(lines => lines == null || lines.Count <= 100)
-            .WithMessage("No puede incluir más de 100 líneas por ticket");
+            .WithMessage("Debe incluir al menos una línea de apuesta");
 
         RuleForEach(x => x.Lines)
             .SetValidator(new CreateTicketLineDtoValidator());
