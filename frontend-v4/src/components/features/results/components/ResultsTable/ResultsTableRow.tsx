@@ -102,7 +102,7 @@ const DisplayCell = memo<DisplayCellProps>(({ value, enabled }) => {
       <Typography
         variant="body2"
         sx={{
-          color: enabled ? (hasValue ? '#333' : COLORS.textDisabled) : COLORS.textDisabled,
+          color: hasValue ? '#333' : COLORS.textDisabled,
           fontSize: '13px',
           fontWeight: hasValue ? 600 : 400,
         }}
