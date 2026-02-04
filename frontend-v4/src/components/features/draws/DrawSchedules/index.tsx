@@ -95,15 +95,24 @@ const TimePicker = ({ value, onChange, placeholder = '12:00 AM' }: TimePickerPro
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const [tempHour, setTempHour] = useState<string>('12 AM');
   const [tempMinute, setTempMinute] = useState<string>('00');
+  const [inputValue, setInputValue] = useState<string>(value || '');
   const hourListRef = useRef<HTMLDivElement>(null);
   const minuteListRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const open = Boolean(anchorEl);
 
-  const handleClick = (event: React.MouseEvent<HTMLElement>): void => {
+  // Sync inputValue with value prop
+  useEffect(() => {
+    setInputValue(value || '');
+  }, [value]);
+
+  const handleIconClick = (event: React.MouseEvent<HTMLElement>): void => {
+    event.stopPropagation();
     // Parse current value to set initial selection
-    if (value) {
-      const match = value.match(/^(\d{2}):(\d{2})\s*(AM|PM)$/i);
+    const currentVal = inputValue || value || '';
+    if (currentVal) {
+      const match = currentVal.match(/^(\d{2}):(\d{2})\s*(AM|PM)$/i);
       if (match) {
         const hourNum = match[1];
         const period = match[3].toUpperCase();
@@ -114,7 +123,7 @@ const TimePicker = ({ value, onChange, placeholder = '12:00 AM' }: TimePickerPro
       setTempHour('12 AM');
       setTempMinute('00');
     }
-    setAnchorEl(event.currentTarget);
+    setAnchorEl(containerRef.current);
   };
 
   const handleClose = (): void => {
@@ -128,6 +137,7 @@ const TimePicker = ({ value, onChange, placeholder = '12:00 AM' }: TimePickerPro
     const period = hourParts[1];
     const newValue = `${hourNum}:${tempMinute} ${period}`;
     onChange(newValue);
+    setInputValue(newValue);
     handleClose();
   };
 
@@ -137,6 +147,27 @@ const TimePicker = ({ value, onChange, placeholder = '12:00 AM' }: TimePickerPro
 
   const handleMinuteSelect = (minute: string): void => {
     setTempMinute(minute);
+  };
+
+  // Handle manual input change
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
+    setInputValue(e.target.value);
+  };
+
+  // Handle blur - validate and save
+  const handleInputBlur = (): void => {
+    if (!inputValue) return;
+
+    // Try to parse the input value
+    const match = inputValue.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+    if (match) {
+      const hour = match[1].padStart(2, '0');
+      const minute = match[2];
+      const period = match[3].toUpperCase();
+      const formattedValue = `${hour}:${minute} ${period}`;
+      setInputValue(formattedValue);
+      onChange(formattedValue);
+    }
   };
 
   // Scroll to selected item when popover opens
@@ -158,30 +189,40 @@ const TimePicker = ({ value, onChange, placeholder = '12:00 AM' }: TimePickerPro
   }, [open, tempHour, tempMinute]);
 
   return (
-    <>
+    <Box ref={containerRef} sx={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
       <TextField
-        value={value || ''}
-        onClick={handleClick}
+        value={inputValue}
+        onChange={handleInputChange}
+        onBlur={handleInputBlur}
         placeholder={placeholder}
         size="small"
-        InputProps={{
-          readOnly: true,
-          sx: { cursor: 'pointer' }
-        }}
         sx={{
           width: 110,
           '& .MuiInputBase-input': {
             fontSize: '15px',
             py: 0.75,
-            px: 1,
-            cursor: 'pointer'
+            px: 1
           }
         }}
       />
+      <IconButton
+        size="small"
+        onClick={handleIconClick}
+        sx={{
+          position: 'absolute',
+          right: 2,
+          p: 0.25,
+          color: '#667eea',
+          '&:hover': { bgcolor: 'rgba(102, 126, 234, 0.1)' }
+        }}
+      >
+        <Box sx={{ fontSize: 14, lineHeight: 1 }}>▼</Box>
+      </IconButton>
       <Popover
         open={open}
         anchorEl={anchorEl}
         onClose={handleClose}
+        disableScrollLock
         anchorOrigin={{
           vertical: 'bottom',
           horizontal: 'left',
@@ -193,7 +234,8 @@ const TimePicker = ({ value, onChange, placeholder = '12:00 AM' }: TimePickerPro
         PaperProps={{
           sx: {
             boxShadow: '0 2px 12px rgba(0,0,0,0.15)',
-            borderRadius: 1
+            borderRadius: 1,
+            mt: 0.5
           }
         }}
       >
@@ -297,7 +339,7 @@ const TimePicker = ({ value, onChange, placeholder = '12:00 AM' }: TimePickerPro
           </Box>
         </ClickAwayListener>
       </Popover>
-    </>
+    </Box>
   );
 };
 
