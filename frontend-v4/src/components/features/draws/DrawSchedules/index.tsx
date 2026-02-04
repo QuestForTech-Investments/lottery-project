@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   Box,
   Card,
@@ -11,8 +11,10 @@ import {
   Alert,
   CircularProgress,
   Snackbar,
-  Paper
+  Paper,
+  Menu
 } from '@mui/material';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import type { AlertColor } from '@mui/material/Alert';
 import {
   ArrowForward as ArrowForwardIcon,
@@ -78,7 +80,11 @@ interface ScheduleUpdate {
 const DAYS_ES: string[] = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 const DAY_KEYS: DayKey[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 
-// Simple time input - editable text field
+// Hours and minutes for picker
+const HOURS: string[] = ['12', '01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11'];
+const MINUTES: string[] = ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'];
+const PERIODS: string[] = ['AM', 'PM'];
+
 interface TimeInputProps {
   value: string;
   onChange: (value: string) => void;
@@ -86,22 +92,145 @@ interface TimeInputProps {
 }
 
 const TimeInput = ({ value, onChange, placeholder = '12:00 AM' }: TimeInputProps): React.ReactElement => {
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [selectedHour, setSelectedHour] = useState('12');
+  const [selectedMinute, setSelectedMinute] = useState('00');
+  const [selectedPeriod, setSelectedPeriod] = useState('AM');
+  const containerRef = useRef<HTMLDivElement>(null);
+  const open = Boolean(anchorEl);
+
+  // Parse value when opening picker
+  const handleOpenPicker = (): void => {
+    if (value) {
+      const match = value.match(/^(\d{2}):(\d{2})\s*(AM|PM)$/i);
+      if (match) {
+        setSelectedHour(match[1]);
+        setSelectedMinute(match[2]);
+        setSelectedPeriod(match[3].toUpperCase());
+      }
+    }
+    setAnchorEl(containerRef.current);
+  };
+
+  const handleClose = (): void => {
+    setAnchorEl(null);
+  };
+
+  const handleSelect = (hour: string, minute: string, period: string): void => {
+    const newValue = `${hour}:${minute} ${period}`;
+    onChange(newValue);
+    handleClose();
+  };
+
   return (
-    <TextField
-      value={value || ''}
-      onChange={(e) => onChange(e.target.value)}
-      placeholder={placeholder}
-      size="small"
-      sx={{
-        width: 105,
-        '& .MuiInputBase-input': {
-          fontSize: '15px',
-          py: 0.75,
-          px: 1,
-          textAlign: 'center'
-        }
-      }}
-    />
+    <Box ref={containerRef} sx={{ display: 'inline-flex', alignItems: 'center' }}>
+      <TextField
+        value={value || ''}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        size="small"
+        sx={{
+          width: 95,
+          '& .MuiInputBase-input': {
+            fontSize: '14px',
+            py: 0.6,
+            px: 0.75,
+            textAlign: 'center'
+          }
+        }}
+      />
+      <IconButton
+        size="small"
+        onClick={handleOpenPicker}
+        sx={{ ml: -0.5, p: 0.25, color: '#667eea' }}
+      >
+        <AccessTimeIcon sx={{ fontSize: 16 }} />
+      </IconButton>
+      <Menu
+        anchorEl={anchorEl}
+        open={open}
+        onClose={handleClose}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+        PaperProps={{
+          sx: { mt: 0.5, maxHeight: 250, minWidth: 200 }
+        }}
+      >
+        <Box sx={{ display: 'flex', p: 1, gap: 0.5 }}>
+          {/* Hours */}
+          <Box sx={{ flex: 1, maxHeight: 180, overflowY: 'auto' }}>
+            <Typography sx={{ fontSize: '11px', color: '#666', textAlign: 'center', mb: 0.5 }}>Hora</Typography>
+            {HOURS.map(h => (
+              <Box
+                key={h}
+                onClick={() => setSelectedHour(h)}
+                sx={{
+                  py: 0.5, px: 1, fontSize: '13px', cursor: 'pointer', textAlign: 'center',
+                  bgcolor: selectedHour === h ? '#667eea' : 'transparent',
+                  color: selectedHour === h ? 'white' : '#333',
+                  borderRadius: 0.5,
+                  '&:hover': { bgcolor: selectedHour === h ? '#667eea' : '#f0f0f0' }
+                }}
+              >
+                {h}
+              </Box>
+            ))}
+          </Box>
+          {/* Minutes */}
+          <Box sx={{ flex: 1, maxHeight: 180, overflowY: 'auto' }}>
+            <Typography sx={{ fontSize: '11px', color: '#666', textAlign: 'center', mb: 0.5 }}>Min</Typography>
+            {MINUTES.map(m => (
+              <Box
+                key={m}
+                onClick={() => setSelectedMinute(m)}
+                sx={{
+                  py: 0.5, px: 1, fontSize: '13px', cursor: 'pointer', textAlign: 'center',
+                  bgcolor: selectedMinute === m ? '#667eea' : 'transparent',
+                  color: selectedMinute === m ? 'white' : '#333',
+                  borderRadius: 0.5,
+                  '&:hover': { bgcolor: selectedMinute === m ? '#667eea' : '#f0f0f0' }
+                }}
+              >
+                {m}
+              </Box>
+            ))}
+          </Box>
+          {/* AM/PM */}
+          <Box sx={{ flex: 1 }}>
+            <Typography sx={{ fontSize: '11px', color: '#666', textAlign: 'center', mb: 0.5 }}>AM/PM</Typography>
+            {PERIODS.map(p => (
+              <Box
+                key={p}
+                onClick={() => setSelectedPeriod(p)}
+                sx={{
+                  py: 0.5, px: 1, fontSize: '13px', cursor: 'pointer', textAlign: 'center',
+                  bgcolor: selectedPeriod === p ? '#667eea' : 'transparent',
+                  color: selectedPeriod === p ? 'white' : '#333',
+                  borderRadius: 0.5,
+                  '&:hover': { bgcolor: selectedPeriod === p ? '#667eea' : '#f0f0f0' }
+                }}
+              >
+                {p}
+              </Box>
+            ))}
+          </Box>
+        </Box>
+        {/* Confirm button */}
+        <Box sx={{ p: 1, pt: 0 }}>
+          <Button
+            fullWidth
+            size="small"
+            onClick={() => handleSelect(selectedHour, selectedMinute, selectedPeriod)}
+            sx={{
+              bgcolor: '#667eea', color: 'white', textTransform: 'none', fontSize: '13px',
+              '&:hover': { bgcolor: '#5a6fd6' }
+            }}
+          >
+            Confirmar
+          </Button>
+        </Box>
+      </Menu>
+    </Box>
   );
 };
 
