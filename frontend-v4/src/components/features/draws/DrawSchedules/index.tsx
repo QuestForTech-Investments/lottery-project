@@ -169,9 +169,9 @@ const TimePicker = ({ value, onChange, placeholder = '12:00 AM' }: TimePickerPro
           sx: { cursor: 'pointer' }
         }}
         sx={{
-          width: 105,
+          width: 110,
           '& .MuiInputBase-input': {
-            fontSize: '13px',
+            fontSize: '15px',
             py: 0.75,
             px: 1,
             cursor: 'pointer'
@@ -220,12 +220,12 @@ const TimePicker = ({ value, onChange, placeholder = '12:00 AM' }: TimePickerPro
                     sx={{
                       py: 0.75,
                       px: 1.5,
-                      fontSize: '13px',
+                      fontSize: '15px',
                       cursor: 'pointer',
-                      bgcolor: tempHour === hour ? '#51cbce' : 'transparent',
+                      bgcolor: tempHour === hour ? '#667eea' : 'transparent',
                       color: tempHour === hour ? 'white' : '#333',
                       '&:hover': {
-                        bgcolor: tempHour === hour ? '#51cbce' : '#f5f5f5'
+                        bgcolor: tempHour === hour ? '#667eea' : '#f5f5f5'
                       }
                     }}
                   >
@@ -251,12 +251,12 @@ const TimePicker = ({ value, onChange, placeholder = '12:00 AM' }: TimePickerPro
                     sx={{
                       py: 0.75,
                       px: 1.5,
-                      fontSize: '13px',
+                      fontSize: '15px',
                       cursor: 'pointer',
-                      bgcolor: tempMinute === minute ? '#51cbce' : 'transparent',
+                      bgcolor: tempMinute === minute ? '#667eea' : 'transparent',
                       color: tempMinute === minute ? 'white' : '#333',
                       '&:hover': {
-                        bgcolor: tempMinute === minute ? '#51cbce' : '#f5f5f5'
+                        bgcolor: tempMinute === minute ? '#667eea' : '#f5f5f5'
                       }
                     }}
                   >
@@ -272,7 +272,7 @@ const TimePicker = ({ value, onChange, placeholder = '12:00 AM' }: TimePickerPro
                 onClick={handleClose}
                 sx={{
                   textTransform: 'lowercase',
-                  color: '#51cbce',
+                  color: '#667eea',
                   fontSize: '12px',
                   minWidth: 'auto',
                   '&:hover': { bgcolor: 'transparent', textDecoration: 'underline' }
@@ -285,7 +285,7 @@ const TimePicker = ({ value, onChange, placeholder = '12:00 AM' }: TimePickerPro
                 onClick={handleConfirm}
                 sx={{
                   textTransform: 'lowercase',
-                  color: '#51cbce',
+                  color: '#667eea',
                   fontSize: '12px',
                   minWidth: 'auto',
                   '&:hover': { bgcolor: 'transparent', textDecoration: 'underline' }
@@ -491,7 +491,7 @@ const DrawSchedules = (): React.ReactElement => {
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', bgcolor: '#f5f5f5' }}>
-        <CircularProgress sx={{ color: '#51cbce' }} />
+        <CircularProgress sx={{ color: '#667eea' }} />
       </Box>
     );
   }
@@ -525,7 +525,7 @@ const DrawSchedules = (): React.ReactElement => {
                     fullWidth
                     onClick={() => toggleLotteryExpansion(lottery.lotteryId)}
                     sx={{
-                      bgcolor: '#51cbce',
+                      bgcolor: '#667eea',
                       color: 'white',
                       textTransform: 'uppercase',
                       fontSize: '14px',
@@ -533,7 +533,7 @@ const DrawSchedules = (): React.ReactElement => {
                       py: 1.2,
                       borderRadius: 1,
                       '&:hover': {
-                        bgcolor: '#45b8bb'
+                        bgcolor: '#5a6fd6'
                       }
                     }}
                   >
@@ -584,7 +584,7 @@ const DrawSchedules = (): React.ReactElement => {
                                 {/* Name, Abbreviation, Color */}
                                 <Box sx={{ flex: 1 }}>
                                   <Box sx={{ mb: 1.5 }}>
-                                    <Typography sx={{ fontSize: '13px', color: '#666', mb: 0.5 }}>
+                                    <Typography sx={{ fontSize: '15px', color: '#666', mb: 0.5 }}>
                                       Nombre
                                     </Typography>
                                     <TextField
@@ -595,7 +595,7 @@ const DrawSchedules = (): React.ReactElement => {
                                       sx={{
                                         '& .MuiInputBase-input': {
                                           bgcolor: '#fff',
-                                          fontSize: '15px',
+                                          fontSize: '17px',
                                           py: 0.8,
                                           WebkitTextFillColor: '#333 !important',
                                           color: '#333 !important'
@@ -608,7 +608,7 @@ const DrawSchedules = (): React.ReactElement => {
                                   </Box>
 
                                   <Box sx={{ mb: 1.5 }}>
-                                    <Typography sx={{ fontSize: '13px', color: '#666', mb: 0.5 }}>
+                                    <Typography sx={{ fontSize: '15px', color: '#666', mb: 0.5 }}>
                                       Abreviación
                                     </Typography>
                                     <TextField
@@ -619,7 +619,7 @@ const DrawSchedules = (): React.ReactElement => {
                                       sx={{
                                         '& .MuiInputBase-input': {
                                           bgcolor: '#fff',
-                                          fontSize: '15px',
+                                          fontSize: '17px',
                                           py: 0.8,
                                           WebkitTextFillColor: '#333 !important',
                                           color: '#333 !important'
@@ -632,7 +632,7 @@ const DrawSchedules = (): React.ReactElement => {
                                   </Box>
 
                                   <Box>
-                                    <Typography sx={{ fontSize: '13px', color: '#666', mb: 0.5 }}>
+                                    <Typography sx={{ fontSize: '15px', color: '#666', mb: 0.5 }}>
                                       Color
                                     </Typography>
                                     <Box
@@ -668,8 +668,8 @@ const DrawSchedules = (): React.ReactElement => {
                                     >
                                       {/* Day Label */}
                                       <Typography sx={{
-                                        width: 70,
-                                        fontSize: '13px',
+                                        width: 75,
+                                        fontSize: '15px',
                                         fontWeight: 500,
                                         color: '#333'
                                       }}>
@@ -684,7 +684,7 @@ const DrawSchedules = (): React.ReactElement => {
                                       />
 
                                       {/* Arrow */}
-                                      <ArrowForwardIcon sx={{ color: '#51cbce', fontSize: 18, mx: 0.5 }} />
+                                      <ArrowForwardIcon sx={{ color: '#667eea', fontSize: 18, mx: 0.5 }} />
 
                                       {/* End Time - Time Picker */}
                                       <TimePicker
@@ -729,8 +729,8 @@ const DrawSchedules = (): React.ReactElement => {
                           onClick={handleSaveAll}
                           disabled={saving}
                           sx={{
-                            bgcolor: '#51cbce',
-                            '&:hover': { bgcolor: '#45b8bb' },
+                            bgcolor: '#667eea',
+                            '&:hover': { bgcolor: '#5a6fd6' },
                             color: 'white',
                             fontSize: '14px',
                             textTransform: 'uppercase',
