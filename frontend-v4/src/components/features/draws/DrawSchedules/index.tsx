@@ -517,7 +517,7 @@ const DrawSchedules = (): React.ReactElement => {
                                 {/* Name, Abbreviation, Color */}
                                 <Box sx={{ flex: 1 }}>
                                   <Box sx={{ mb: 1.5 }}>
-                                    <Typography sx={{ fontSize: '15px', color: '#666', mb: 0.5 }}>
+                                    <Typography sx={{ fontSize: '13px', color: '#666', mb: 0.5 }}>
                                       Nombre
                                     </Typography>
                                     <TextField
@@ -528,7 +528,7 @@ const DrawSchedules = (): React.ReactElement => {
                                       sx={{
                                         '& .MuiInputBase-input': {
                                           bgcolor: '#fff',
-                                          fontSize: '17px',
+                                          fontSize: '15px',
                                           py: 0.8,
                                           WebkitTextFillColor: '#333 !important',
                                           color: '#333 !important'
@@ -541,7 +541,7 @@ const DrawSchedules = (): React.ReactElement => {
                                   </Box>
 
                                   <Box sx={{ mb: 1.5 }}>
-                                    <Typography sx={{ fontSize: '15px', color: '#666', mb: 0.5 }}>
+                                    <Typography sx={{ fontSize: '13px', color: '#666', mb: 0.5 }}>
                                       Abreviación
                                     </Typography>
                                     <TextField
@@ -552,7 +552,7 @@ const DrawSchedules = (): React.ReactElement => {
                                       sx={{
                                         '& .MuiInputBase-input': {
                                           bgcolor: '#fff',
-                                          fontSize: '17px',
+                                          fontSize: '15px',
                                           py: 0.8,
                                           WebkitTextFillColor: '#333 !important',
                                           color: '#333 !important'
@@ -565,7 +565,7 @@ const DrawSchedules = (): React.ReactElement => {
                                   </Box>
 
                                   <Box>
-                                    <Typography sx={{ fontSize: '15px', color: '#666', mb: 0.5 }}>
+                                    <Typography sx={{ fontSize: '13px', color: '#666', mb: 0.5 }}>
                                       Color
                                     </Typography>
                                     <Box
@@ -601,8 +601,8 @@ const DrawSchedules = (): React.ReactElement => {
                                     >
                                       {/* Day Label */}
                                       <Typography sx={{
-                                        width: 75,
-                                        fontSize: '15px',
+                                        width: 70,
+                                        fontSize: '13px',
                                         fontWeight: 500,
                                         color: '#333'
                                       }}>
