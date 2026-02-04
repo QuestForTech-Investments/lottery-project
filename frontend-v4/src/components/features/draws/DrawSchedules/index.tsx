@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Box,
   Card,
@@ -11,9 +11,7 @@ import {
   Alert,
   CircularProgress,
   Snackbar,
-  Paper,
-  Popover,
-  ClickAwayListener
+  Paper
 } from '@mui/material';
 import type { AlertColor } from '@mui/material/Alert';
 import {
@@ -80,266 +78,30 @@ interface ScheduleUpdate {
 const DAYS_ES: string[] = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 const DAY_KEYS: DayKey[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 
-// Generate hours for time picker (12-hour format)
-const HOURS_12: string[] = ['12 AM', '01 AM', '02 AM', '03 AM', '04 AM', '05 AM', '06 AM', '07 AM', '08 AM', '09 AM', '10 AM', '11 AM',
-  '12 PM', '01 PM', '02 PM', '03 PM', '04 PM', '05 PM', '06 PM', '07 PM', '08 PM', '09 PM', '10 PM', '11 PM'];
-const MINUTES: string[] = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0'));
-
-interface TimePickerProps {
-  value: string; // Format: "HH:MM AM/PM"
+// Simple time input - editable text field
+interface TimeInputProps {
+  value: string;
   onChange: (value: string) => void;
   placeholder?: string;
 }
 
-const TimePicker = ({ value, onChange, placeholder = '12:00 AM' }: TimePickerProps): React.ReactElement => {
-  const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
-  const [tempHour, setTempHour] = useState<string>('12 AM');
-  const [tempMinute, setTempMinute] = useState<string>('00');
-  const [inputValue, setInputValue] = useState<string>(value || '');
-  const hourListRef = useRef<HTMLDivElement>(null);
-  const minuteListRef = useRef<HTMLDivElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  const open = Boolean(anchorEl);
-
-  // Sync inputValue with value prop
-  useEffect(() => {
-    setInputValue(value || '');
-  }, [value]);
-
-  const handleIconClick = (event: React.MouseEvent<HTMLElement>): void => {
-    event.stopPropagation();
-    // Parse current value to set initial selection
-    const currentVal = inputValue || value || '';
-    if (currentVal) {
-      const match = currentVal.match(/^(\d{2}):(\d{2})\s*(AM|PM)$/i);
-      if (match) {
-        const hourNum = match[1];
-        const period = match[3].toUpperCase();
-        setTempHour(`${hourNum} ${period}`);
-        setTempMinute(match[2]);
-      }
-    } else {
-      setTempHour('12 AM');
-      setTempMinute('00');
-    }
-    setAnchorEl(containerRef.current);
-  };
-
-  const handleClose = (): void => {
-    setAnchorEl(null);
-  };
-
-  const handleConfirm = (): void => {
-    // Combine hour and minute into final value
-    const hourParts = tempHour.split(' ');
-    const hourNum = hourParts[0];
-    const period = hourParts[1];
-    const newValue = `${hourNum}:${tempMinute} ${period}`;
-    onChange(newValue);
-    setInputValue(newValue);
-    handleClose();
-  };
-
-  const handleHourSelect = (hour: string): void => {
-    setTempHour(hour);
-  };
-
-  const handleMinuteSelect = (minute: string): void => {
-    setTempMinute(minute);
-  };
-
-  // Handle manual input change
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
-    setInputValue(e.target.value);
-  };
-
-  // Handle blur - validate and save
-  const handleInputBlur = (): void => {
-    if (!inputValue) return;
-
-    // Try to parse the input value
-    const match = inputValue.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
-    if (match) {
-      const hour = match[1].padStart(2, '0');
-      const minute = match[2];
-      const period = match[3].toUpperCase();
-      const formattedValue = `${hour}:${minute} ${period}`;
-      setInputValue(formattedValue);
-      onChange(formattedValue);
-    }
-  };
-
-  // Scroll to selected item when popover opens
-  useEffect(() => {
-    if (open && hourListRef.current) {
-      const selectedHourIndex = HOURS_12.indexOf(tempHour);
-      if (selectedHourIndex >= 0) {
-        const itemHeight = 32;
-        hourListRef.current.scrollTop = selectedHourIndex * itemHeight - 64;
-      }
-    }
-    if (open && minuteListRef.current) {
-      const selectedMinuteIndex = MINUTES.indexOf(tempMinute);
-      if (selectedMinuteIndex >= 0) {
-        const itemHeight = 32;
-        minuteListRef.current.scrollTop = selectedMinuteIndex * itemHeight - 64;
-      }
-    }
-  }, [open, tempHour, tempMinute]);
-
+const TimeInput = ({ value, onChange, placeholder = '12:00 AM' }: TimeInputProps): React.ReactElement => {
   return (
-    <Box ref={containerRef} sx={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
-      <TextField
-        value={inputValue}
-        onChange={handleInputChange}
-        onBlur={handleInputBlur}
-        placeholder={placeholder}
-        size="small"
-        sx={{
-          width: 110,
-          '& .MuiInputBase-input': {
-            fontSize: '15px',
-            py: 0.75,
-            px: 1
-          }
-        }}
-      />
-      <IconButton
-        size="small"
-        onClick={handleIconClick}
-        sx={{
-          position: 'absolute',
-          right: 2,
-          p: 0.25,
-          color: '#667eea',
-          '&:hover': { bgcolor: 'rgba(102, 126, 234, 0.1)' }
-        }}
-      >
-        <Box sx={{ fontSize: 14, lineHeight: 1 }}>▼</Box>
-      </IconButton>
-      <Popover
-        open={open}
-        anchorEl={anchorEl}
-        onClose={handleClose}
-        disableScrollLock
-        anchorOrigin={{
-          vertical: 'bottom',
-          horizontal: 'left',
-        }}
-        transformOrigin={{
-          vertical: 'top',
-          horizontal: 'left',
-        }}
-        PaperProps={{
-          sx: {
-            boxShadow: '0 2px 12px rgba(0,0,0,0.15)',
-            borderRadius: 1,
-            mt: 0.5
-          }
-        }}
-      >
-        <ClickAwayListener onClickAway={handleClose}>
-          <Box sx={{ width: 180 }}>
-            {/* Time columns */}
-            <Box sx={{ display: 'flex', borderBottom: '1px solid #e0e0e0' }}>
-              {/* Hours column */}
-              <Box
-                ref={hourListRef}
-                sx={{
-                  flex: 1,
-                  maxHeight: 200,
-                  overflowY: 'auto',
-                  borderRight: '1px solid #e0e0e0',
-                  '&::-webkit-scrollbar': { width: 6 },
-                  '&::-webkit-scrollbar-thumb': { bgcolor: '#ccc', borderRadius: 3 }
-                }}
-              >
-                {HOURS_12.map(hour => (
-                  <Box
-                    key={hour}
-                    onClick={() => handleHourSelect(hour)}
-                    sx={{
-                      py: 0.75,
-                      px: 1.5,
-                      fontSize: '15px',
-                      cursor: 'pointer',
-                      bgcolor: tempHour === hour ? '#667eea' : 'transparent',
-                      color: tempHour === hour ? 'white' : '#333',
-                      '&:hover': {
-                        bgcolor: tempHour === hour ? '#667eea' : '#f5f5f5'
-                      }
-                    }}
-                  >
-                    {hour}
-                  </Box>
-                ))}
-              </Box>
-              {/* Minutes column */}
-              <Box
-                ref={minuteListRef}
-                sx={{
-                  flex: 1,
-                  maxHeight: 200,
-                  overflowY: 'auto',
-                  '&::-webkit-scrollbar': { width: 6 },
-                  '&::-webkit-scrollbar-thumb': { bgcolor: '#ccc', borderRadius: 3 }
-                }}
-              >
-                {MINUTES.map(minute => (
-                  <Box
-                    key={minute}
-                    onClick={() => handleMinuteSelect(minute)}
-                    sx={{
-                      py: 0.75,
-                      px: 1.5,
-                      fontSize: '15px',
-                      cursor: 'pointer',
-                      bgcolor: tempMinute === minute ? '#667eea' : 'transparent',
-                      color: tempMinute === minute ? 'white' : '#333',
-                      '&:hover': {
-                        bgcolor: tempMinute === minute ? '#667eea' : '#f5f5f5'
-                      }
-                    }}
-                  >
-                    {minute}
-                  </Box>
-                ))}
-              </Box>
-            </Box>
-            {/* Confirm/Cancel buttons */}
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', p: 1 }}>
-              <Button
-                size="small"
-                onClick={handleClose}
-                sx={{
-                  textTransform: 'lowercase',
-                  color: '#667eea',
-                  fontSize: '12px',
-                  minWidth: 'auto',
-                  '&:hover': { bgcolor: 'transparent', textDecoration: 'underline' }
-                }}
-              >
-                cancelar
-              </Button>
-              <Button
-                size="small"
-                onClick={handleConfirm}
-                sx={{
-                  textTransform: 'lowercase',
-                  color: '#667eea',
-                  fontSize: '12px',
-                  minWidth: 'auto',
-                  '&:hover': { bgcolor: 'transparent', textDecoration: 'underline' }
-                }}
-              >
-                confirmar
-              </Button>
-            </Box>
-          </Box>
-        </ClickAwayListener>
-      </Popover>
-    </Box>
+    <TextField
+      value={value || ''}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
+      size="small"
+      sx={{
+        width: 105,
+        '& .MuiInputBase-input': {
+          fontSize: '15px',
+          py: 0.75,
+          px: 1,
+          textAlign: 'center'
+        }
+      }}
+    />
   );
 };
 
@@ -719,7 +481,7 @@ const DrawSchedules = (): React.ReactElement => {
                                       </Typography>
 
                                       {/* Start Time - Time Picker */}
-                                      <TimePicker
+                                      <TimeInput
                                         value={startTime12}
                                         onChange={(value) => handleTimeChange(draw.drawId, dayKey, 'startTime', value)}
                                         placeholder="12:00 AM"
@@ -729,7 +491,7 @@ const DrawSchedules = (): React.ReactElement => {
                                       <ArrowForwardIcon sx={{ color: '#667eea', fontSize: 18, mx: 0.5 }} />
 
                                       {/* End Time - Time Picker */}
-                                      <TimePicker
+                                      <TimeInput
                                         value={endTime12}
                                         onChange={(value) => handleTimeChange(draw.drawId, dayKey, 'endTime', value)}
                                         placeholder="11:59 PM"
