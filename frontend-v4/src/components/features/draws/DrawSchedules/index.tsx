@@ -11,7 +11,9 @@ import {
   Alert,
   CircularProgress,
   Snackbar,
-  Paper
+  Paper,
+  Popper,
+  ClickAwayListener
 } from '@mui/material';
 import type { AlertColor } from '@mui/material/Alert';
 import {
@@ -27,7 +29,18 @@ import {
   convertTo24Hour
 } from '../../../../services/drawScheduleService';
 
-// Time input component that validates on blur
+// Generate hours for 12-hour format
+const HOURS_12: string[] = [
+  '12 AM', '01 AM', '02 AM', '03 AM', '04 AM', '05 AM',
+  '06 AM', '07 AM', '08 AM', '09 AM', '10 AM', '11 AM',
+  '12 PM', '01 PM', '02 PM', '03 PM', '04 PM', '05 PM',
+  '06 PM', '07 PM', '08 PM', '09 PM', '10 PM', '11 PM'
+];
+
+// Generate minutes 00-59
+const MINUTES: string[] = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0'));
+
+// Time input component with dropdown picker
 interface TimeInputProps {
   value: string; // 12-hour format "HH:MM AM" or "HH:MM PM"
   onChange: (value: string) => void;
@@ -36,12 +49,54 @@ interface TimeInputProps {
 
 const TimeInput: React.FC<TimeInputProps> = ({ value, onChange, placeholder = '12:00 AM' }) => {
   const [localValue, setLocalValue] = useState(value);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [selectedHour, setSelectedHour] = useState('12 AM');
+  const [selectedMinute, setSelectedMinute] = useState('00');
   const inputRef = useRef<HTMLInputElement>(null);
+  const anchorRef = useRef<HTMLDivElement>(null);
+  const hourColumnRef = useRef<HTMLDivElement>(null);
+  const minuteColumnRef = useRef<HTMLDivElement>(null);
 
   // Sync local value when prop changes (from external source)
   useEffect(() => {
     setLocalValue(value);
   }, [value]);
+
+  // Parse current value to set picker selection when opening
+  useEffect(() => {
+    if (pickerOpen && value) {
+      const match = value.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+      if (match) {
+        const hour = match[1].padStart(2, '0');
+        const minute = match[2];
+        const period = match[3].toUpperCase();
+        setSelectedHour(`${hour} ${period}`);
+        setSelectedMinute(minute);
+      }
+    }
+  }, [pickerOpen, value]);
+
+  // Scroll to selected values when picker opens
+  useEffect(() => {
+    if (pickerOpen) {
+      setTimeout(() => {
+        // Scroll hour column
+        if (hourColumnRef.current) {
+          const hourIndex = HOURS_12.findIndex(h => h === selectedHour);
+          if (hourIndex >= 0) {
+            hourColumnRef.current.scrollTop = hourIndex * 32;
+          }
+        }
+        // Scroll minute column
+        if (minuteColumnRef.current) {
+          const minuteIndex = MINUTES.findIndex(m => m === selectedMinute);
+          if (minuteIndex >= 0) {
+            minuteColumnRef.current.scrollTop = minuteIndex * 32;
+          }
+        }
+      }, 50);
+    }
+  }, [pickerOpen, selectedHour, selectedMinute]);
 
   // Validate and format time string
   const parseAndValidateTime = (input: string): string | null => {
@@ -72,6 +127,9 @@ const TimeInput: React.FC<TimeInputProps> = ({ value, onChange, placeholder = '1
   };
 
   const handleBlur = () => {
+    // Don't validate on blur if picker is open
+    if (pickerOpen) return;
+
     const validated = parseAndValidateTime(localValue);
     if (validated) {
       setLocalValue(validated);
@@ -89,27 +147,170 @@ const TimeInput: React.FC<TimeInputProps> = ({ value, onChange, placeholder = '1
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       inputRef.current?.blur();
+      setPickerOpen(false);
+    } else if (e.key === 'Escape') {
+      setPickerOpen(false);
     }
   };
 
+  const handleInputClick = () => {
+    setPickerOpen(true);
+  };
+
+  const handleClickAway = () => {
+    setPickerOpen(false);
+  };
+
+  const handleTimeSelect = (hour: string, minute: string) => {
+    // Parse hour to extract just the number
+    const hourParts = hour.split(' ');
+    const hourNum = hourParts[0];
+    const period = hourParts[1];
+    const newValue = `${hourNum}:${minute} ${period}`;
+    setLocalValue(newValue);
+    onChange(newValue);
+    setPickerOpen(false);
+  };
+
   return (
-    <TextField
-      inputRef={inputRef}
-      value={localValue}
-      onChange={handleChange}
-      onBlur={handleBlur}
-      onKeyDown={handleKeyDown}
-      placeholder={placeholder}
-      size="small"
-      sx={{
-        width: 100,
-        '& .MuiInputBase-input': {
-          fontSize: '13px',
-          py: 0.5,
-          px: 1
-        }
-      }}
-    />
+    <ClickAwayListener onClickAway={handleClickAway}>
+      <Box ref={anchorRef} sx={{ position: 'relative' }}>
+        <TextField
+          inputRef={inputRef}
+          value={localValue}
+          onChange={handleChange}
+          onBlur={handleBlur}
+          onKeyDown={handleKeyDown}
+          onClick={handleInputClick}
+          placeholder={placeholder}
+          size="small"
+          sx={{
+            width: 100,
+            '& .MuiInputBase-input': {
+              fontSize: '13px',
+              py: 0.5,
+              px: 1,
+              cursor: 'text'
+            }
+          }}
+        />
+        <Popper
+          open={pickerOpen}
+          anchorEl={anchorRef.current}
+          placement="bottom-start"
+          style={{ zIndex: 1300 }}
+          modifiers={[
+            {
+              name: 'offset',
+              options: {
+                offset: [0, 4],
+              },
+            },
+          ]}
+        >
+          <Paper
+            elevation={3}
+            sx={{
+              p: 1,
+              bgcolor: 'white',
+              border: '1px solid #e0e0e0',
+              borderRadius: 1
+            }}
+          >
+            {/* Time picker columns */}
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              {/* Hours column */}
+              <Box
+                ref={hourColumnRef}
+                sx={{
+                  width: 70,
+                  height: 160,
+                  overflowY: 'auto',
+                  border: '1px solid #e0e0e0',
+                  borderRadius: 0.5,
+                  '&::-webkit-scrollbar': {
+                    width: 4,
+                  },
+                  '&::-webkit-scrollbar-thumb': {
+                    bgcolor: '#ccc',
+                    borderRadius: 2,
+                  }
+                }}
+              >
+                {HOURS_12.map((hour) => (
+                  <Box
+                    key={hour}
+                    onClick={() => {
+                      setSelectedHour(hour);
+                      handleTimeSelect(hour, selectedMinute);
+                    }}
+                    sx={{
+                      height: 32,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '13px',
+                      cursor: 'pointer',
+                      bgcolor: selectedHour === hour ? '#51cbce' : 'transparent',
+                      color: selectedHour === hour ? 'white' : '#333',
+                      '&:hover': {
+                        bgcolor: selectedHour === hour ? '#51cbce' : '#f0f0f0'
+                      }
+                    }}
+                  >
+                    {hour}
+                  </Box>
+                ))}
+              </Box>
+
+              {/* Minutes column */}
+              <Box
+                ref={minuteColumnRef}
+                sx={{
+                  width: 50,
+                  height: 160,
+                  overflowY: 'auto',
+                  border: '1px solid #e0e0e0',
+                  borderRadius: 0.5,
+                  '&::-webkit-scrollbar': {
+                    width: 4,
+                  },
+                  '&::-webkit-scrollbar-thumb': {
+                    bgcolor: '#ccc',
+                    borderRadius: 2,
+                  }
+                }}
+              >
+                {MINUTES.map((minute) => (
+                  <Box
+                    key={minute}
+                    onClick={() => {
+                      setSelectedMinute(minute);
+                      handleTimeSelect(selectedHour, minute);
+                    }}
+                    sx={{
+                      height: 32,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '13px',
+                      cursor: 'pointer',
+                      bgcolor: selectedMinute === minute ? '#51cbce' : 'transparent',
+                      color: selectedMinute === minute ? 'white' : '#333',
+                      '&:hover': {
+                        bgcolor: selectedMinute === minute ? '#51cbce' : '#f0f0f0'
+                      }
+                    }}
+                  >
+                    {minute}
+                  </Box>
+                ))}
+              </Box>
+            </Box>
+          </Paper>
+        </Popper>
+      </Box>
+    </ClickAwayListener>
   );
 };
 
