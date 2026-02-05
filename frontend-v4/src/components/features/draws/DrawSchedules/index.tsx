@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Box,
   Card,
@@ -11,15 +11,13 @@ import {
   Alert,
   CircularProgress,
   Snackbar,
-  Paper,
-  Menu
+  Paper
 } from '@mui/material';
-import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import type { AlertColor } from '@mui/material/Alert';
 import {
+  Delete as DeleteIcon,
   ArrowForward as ArrowForwardIcon,
-  Add as AddIcon,
-  ContentCopy as CopyIcon
+  Add as AddIcon
 } from '@mui/icons-material';
 import {
   getDrawSchedules,
@@ -79,160 +77,6 @@ interface ScheduleUpdate {
 
 const DAYS_ES: string[] = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 const DAY_KEYS: DayKey[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
-
-// Hours and minutes for picker
-const HOURS: string[] = ['12', '01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11'];
-const MINUTES: string[] = ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'];
-const PERIODS: string[] = ['AM', 'PM'];
-
-interface TimeInputProps {
-  value: string;
-  onChange: (value: string) => void;
-  placeholder?: string;
-}
-
-const TimeInput = ({ value, onChange, placeholder = '12:00 AM' }: TimeInputProps): React.ReactElement => {
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [selectedHour, setSelectedHour] = useState('12');
-  const [selectedMinute, setSelectedMinute] = useState('00');
-  const [selectedPeriod, setSelectedPeriod] = useState('AM');
-  const containerRef = useRef<HTMLDivElement>(null);
-  const open = Boolean(anchorEl);
-
-  // Parse value when opening picker
-  const handleOpenPicker = (): void => {
-    if (value) {
-      const match = value.match(/^(\d{2}):(\d{2})\s*(AM|PM)$/i);
-      if (match) {
-        setSelectedHour(match[1]);
-        setSelectedMinute(match[2]);
-        setSelectedPeriod(match[3].toUpperCase());
-      }
-    }
-    setAnchorEl(containerRef.current);
-  };
-
-  const handleClose = (): void => {
-    setAnchorEl(null);
-  };
-
-  const handleSelect = (hour: string, minute: string, period: string): void => {
-    const newValue = `${hour}:${minute} ${period}`;
-    onChange(newValue);
-    handleClose();
-  };
-
-  return (
-    <Box ref={containerRef} sx={{ display: 'inline-flex', alignItems: 'center' }}>
-      <TextField
-        value={value || ''}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        size="small"
-        sx={{
-          width: 95,
-          '& .MuiInputBase-input': {
-            fontSize: '14px',
-            py: 0.6,
-            px: 0.75,
-            textAlign: 'center'
-          }
-        }}
-      />
-      <IconButton
-        size="small"
-        onClick={handleOpenPicker}
-        sx={{ ml: -0.5, p: 0.25, color: '#667eea' }}
-      >
-        <AccessTimeIcon sx={{ fontSize: 16 }} />
-      </IconButton>
-      <Menu
-        anchorEl={anchorEl}
-        open={open}
-        onClose={handleClose}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-        transformOrigin={{ vertical: 'top', horizontal: 'left' }}
-        PaperProps={{
-          sx: { mt: 0.5, maxHeight: 250, minWidth: 200 }
-        }}
-      >
-        <Box sx={{ display: 'flex', p: 1, gap: 0.5 }}>
-          {/* Hours */}
-          <Box sx={{ flex: 1, maxHeight: 180, overflowY: 'auto' }}>
-            <Typography sx={{ fontSize: '11px', color: '#666', textAlign: 'center', mb: 0.5 }}>Hora</Typography>
-            {HOURS.map(h => (
-              <Box
-                key={h}
-                onClick={() => setSelectedHour(h)}
-                sx={{
-                  py: 0.5, px: 1, fontSize: '13px', cursor: 'pointer', textAlign: 'center',
-                  bgcolor: selectedHour === h ? '#667eea' : 'transparent',
-                  color: selectedHour === h ? 'white' : '#333',
-                  borderRadius: 0.5,
-                  '&:hover': { bgcolor: selectedHour === h ? '#667eea' : '#f0f0f0' }
-                }}
-              >
-                {h}
-              </Box>
-            ))}
-          </Box>
-          {/* Minutes */}
-          <Box sx={{ flex: 1, maxHeight: 180, overflowY: 'auto' }}>
-            <Typography sx={{ fontSize: '11px', color: '#666', textAlign: 'center', mb: 0.5 }}>Min</Typography>
-            {MINUTES.map(m => (
-              <Box
-                key={m}
-                onClick={() => setSelectedMinute(m)}
-                sx={{
-                  py: 0.5, px: 1, fontSize: '13px', cursor: 'pointer', textAlign: 'center',
-                  bgcolor: selectedMinute === m ? '#667eea' : 'transparent',
-                  color: selectedMinute === m ? 'white' : '#333',
-                  borderRadius: 0.5,
-                  '&:hover': { bgcolor: selectedMinute === m ? '#667eea' : '#f0f0f0' }
-                }}
-              >
-                {m}
-              </Box>
-            ))}
-          </Box>
-          {/* AM/PM */}
-          <Box sx={{ flex: 1 }}>
-            <Typography sx={{ fontSize: '11px', color: '#666', textAlign: 'center', mb: 0.5 }}>AM/PM</Typography>
-            {PERIODS.map(p => (
-              <Box
-                key={p}
-                onClick={() => setSelectedPeriod(p)}
-                sx={{
-                  py: 0.5, px: 1, fontSize: '13px', cursor: 'pointer', textAlign: 'center',
-                  bgcolor: selectedPeriod === p ? '#667eea' : 'transparent',
-                  color: selectedPeriod === p ? 'white' : '#333',
-                  borderRadius: 0.5,
-                  '&:hover': { bgcolor: selectedPeriod === p ? '#667eea' : '#f0f0f0' }
-                }}
-              >
-                {p}
-              </Box>
-            ))}
-          </Box>
-        </Box>
-        {/* Confirm button */}
-        <Box sx={{ p: 1, pt: 0 }}>
-          <Button
-            fullWidth
-            size="small"
-            onClick={() => handleSelect(selectedHour, selectedMinute, selectedPeriod)}
-            sx={{
-              bgcolor: '#667eea', color: 'white', textTransform: 'none', fontSize: '13px',
-              '&:hover': { bgcolor: '#5a6fd6' }
-            }}
-          >
-            Confirmar
-          </Button>
-        </Box>
-      </Menu>
-    </Box>
-  );
-};
 
 const DrawSchedules = (): React.ReactElement => {
   const [lotteries, setLotteries] = useState<Lottery[]>([]);
@@ -352,39 +196,6 @@ const DrawSchedules = (): React.ReactElement => {
     });
   }, [getDrawState]);
 
-  // Copy schedule from one day to all other days
-  const handleCopyToAllDays = useCallback((drawId: number, sourceDayKey: DayKey): void => {
-    const draw = getDrawState(drawId);
-    if (!draw) return;
-
-    const weeklySchedule = draw.weeklySchedule || {};
-    const sourceSchedule = weeklySchedule[sourceDayKey];
-
-    if (!sourceSchedule || !sourceSchedule.enabled) return;
-
-    // Create new schedule with source day's times copied to all days
-    const updatedSchedule: WeeklySchedule = {};
-    DAY_KEYS.forEach(dayKey => {
-      updatedSchedule[dayKey] = {
-        startTime: sourceSchedule.startTime,
-        endTime: sourceSchedule.endTime,
-        enabled: true
-      };
-    });
-
-    setModifiedDraws(prev => {
-      const newMap = new Map(prev);
-      newMap.set(drawId, {
-        ...draw,
-        useWeeklySchedule: true,
-        weeklySchedule: updatedSchedule
-      });
-      return newMap;
-    });
-
-    showSnackbar('Horario copiado a todos los días', 'success');
-  }, [getDrawState, showSnackbar]);
-
   const handleSaveAll = useCallback(async (): Promise<void> => {
     try {
       setSaving(true);
@@ -424,7 +235,7 @@ const DrawSchedules = (): React.ReactElement => {
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', bgcolor: '#f5f5f5' }}>
-        <CircularProgress sx={{ color: '#667eea' }} />
+        <CircularProgress sx={{ color: '#8b5cf6' }} />
       </Box>
     );
   }
@@ -458,15 +269,15 @@ const DrawSchedules = (): React.ReactElement => {
                     fullWidth
                     onClick={() => toggleLotteryExpansion(lottery.lotteryId)}
                     sx={{
-                      bgcolor: '#667eea',
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                       color: 'white',
                       textTransform: 'uppercase',
-                      fontSize: '14px',
+                      fontSize: '15px',
                       fontWeight: 500,
                       py: 1.2,
                       borderRadius: 1,
                       '&:hover': {
-                        bgcolor: '#5a6fd6'
+                        background: 'linear-gradient(135deg, #5568d3 0%, #63408a 100%)'
                       }
                     }}
                   >
@@ -601,50 +412,63 @@ const DrawSchedules = (): React.ReactElement => {
                                     >
                                       {/* Day Label */}
                                       <Typography sx={{
-                                        width: 70,
-                                        fontSize: '13px',
+                                        width: 75,
+                                        fontSize: '14px',
                                         fontWeight: 500,
                                         color: '#333'
                                       }}>
                                         {DAYS_ES[dayIndex]}
                                       </Typography>
 
-                                      {/* Start Time - Time Picker */}
-                                      <TimeInput
+                                      {/* Start Time */}
+                                      <TextField
                                         value={startTime12}
-                                        onChange={(value) => handleTimeChange(draw.drawId, dayKey, 'startTime', value)}
+                                        onChange={(e) => handleTimeChange(draw.drawId, dayKey, 'startTime', e.target.value)}
                                         placeholder="12:00 AM"
+                                        size="small"
+                                        sx={{
+                                          width: 90,
+                                          '& .MuiInputBase-input': {
+                                            fontSize: '13px',
+                                            py: 0.5,
+                                            px: 1
+                                          }
+                                        }}
                                       />
 
                                       {/* Arrow */}
-                                      <ArrowForwardIcon sx={{ color: '#667eea', fontSize: 18, mx: 0.5 }} />
+                                      <ArrowForwardIcon sx={{ color: '#999', fontSize: 16 }} />
 
-                                      {/* End Time - Time Picker */}
-                                      <TimeInput
+                                      {/* End Time */}
+                                      <TextField
                                         value={endTime12}
-                                        onChange={(value) => handleTimeChange(draw.drawId, dayKey, 'endTime', value)}
+                                        onChange={(e) => handleTimeChange(draw.drawId, dayKey, 'endTime', e.target.value)}
                                         placeholder="11:59 PM"
+                                        size="small"
+                                        sx={{
+                                          width: 90,
+                                          '& .MuiInputBase-input': {
+                                            fontSize: '13px',
+                                            py: 0.5,
+                                            px: 1
+                                          }
+                                        }}
                                       />
 
-                                      {/* Copy to All Days Button */}
+                                      {/* Delete Button */}
                                       <IconButton
                                         size="small"
-                                        onClick={() => handleCopyToAllDays(draw.drawId, dayKey)}
+                                        onClick={() => handleDeleteDay(draw.drawId, dayKey)}
                                         disabled={!daySchedule.enabled}
-                                        title="Copiar a todos los días"
                                         sx={{
-                                          p: 0.5,
-                                          ml: 0.5,
-                                          color: daySchedule.enabled ? '#666' : '#ccc',
-                                          border: daySchedule.enabled ? '1px solid #ddd' : 'none',
-                                          borderRadius: '50%',
-                                          bgcolor: daySchedule.enabled ? '#f5f5f5' : 'transparent',
+                                          p: 0.3,
+                                          color: daySchedule.enabled ? '#dc3545' : '#ccc',
                                           '&:hover': {
-                                            bgcolor: daySchedule.enabled ? '#e8e8e8' : 'transparent'
+                                            bgcolor: daySchedule.enabled ? 'rgba(220, 53, 69, 0.1)' : 'transparent'
                                           }
                                         }}
                                       >
-                                        <CopyIcon sx={{ fontSize: 14 }} />
+                                        <DeleteIcon sx={{ fontSize: 18 }} />
                                       </IconButton>
                                     </Box>
                                   );
@@ -662,10 +486,10 @@ const DrawSchedules = (): React.ReactElement => {
                           onClick={handleSaveAll}
                           disabled={saving}
                           sx={{
-                            bgcolor: '#667eea',
-                            '&:hover': { bgcolor: '#5a6fd6' },
+                            bgcolor: '#8b5cf6',
+                            '&:hover': { bgcolor: '#7c3aed' },
                             color: 'white',
-                            fontSize: '14px',
+                            fontSize: '15px',
                             textTransform: 'uppercase',
                             px: 4,
                             py: 1,
