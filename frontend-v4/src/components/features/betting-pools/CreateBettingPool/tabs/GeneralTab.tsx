@@ -53,6 +53,10 @@ interface GeneralTabProps {
 const GeneralTab: React.FC<GeneralTabProps> = ({ formData, errors, zones, loadingZones, handleChange, isEditMode = false }) => {
   return (
     <Box sx={{ p: 2 }}>
+      {/* Hidden fields to trap browser autocomplete */}
+      <input type="text" name="fake_username" style={{ display: 'none' }} autoComplete="username" />
+      <input type="password" name="fake_password" style={{ display: 'none' }} autoComplete="current-password" />
+
       <Grid container spacing={2}>
         {/* Row 1: Nombre | Número */}
         <Grid item xs={12} md={6}>
