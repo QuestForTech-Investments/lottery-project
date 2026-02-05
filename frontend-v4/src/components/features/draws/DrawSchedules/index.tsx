@@ -181,9 +181,11 @@ const DrawSchedules = (): React.ReactElement => {
     setSnackbar({ open: true, message, severity });
   }, []);
 
-  const loadDrawSchedules = useCallback(async (): Promise<void> => {
+  const loadDrawSchedules = useCallback(async (showLoadingState = true): Promise<void> => {
     try {
-      setLoading(true);
+      if (showLoadingState) {
+        setLoading(true);
+      }
       const { data } = await getDrawSchedules();
       const grouped = groupDrawsByLottery(data) as Lottery[];
       setLotteries(grouped);
@@ -191,7 +193,9 @@ const DrawSchedules = (): React.ReactElement => {
       console.error('[ERROR] [DRAW SCHEDULES] Error loading:', error);
       showSnackbar('Error al cargar horarios de sorteos', 'error');
     } finally {
-      setLoading(false);
+      if (showLoadingState) {
+        setLoading(false);
+      }
     }
   }, [showSnackbar]);
 
@@ -364,9 +368,9 @@ const DrawSchedules = (): React.ReactElement => {
 
       showSnackbar('Horarios actualizados correctamente', 'success');
 
-      // Clear modified draws and reload
+      // Clear modified draws and reload (without showing loading spinner)
       setModifiedDraws(new Map());
-      await loadDrawSchedules();
+      await loadDrawSchedules(false);
 
     } catch (error) {
       console.error('[ERROR] [DRAW SCHEDULES] Error saving:', error);
