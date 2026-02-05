@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   Box,
   Card,
@@ -26,6 +26,92 @@ import {
   convertTo12Hour,
   convertTo24Hour
 } from '../../../../services/drawScheduleService';
+
+// Time input component that validates on blur
+interface TimeInputProps {
+  value: string; // 12-hour format "HH:MM AM" or "HH:MM PM"
+  onChange: (value: string) => void;
+  placeholder?: string;
+}
+
+const TimeInput: React.FC<TimeInputProps> = ({ value, onChange, placeholder = '12:00 AM' }) => {
+  const [localValue, setLocalValue] = useState(value);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Sync local value when prop changes (from external source)
+  useEffect(() => {
+    setLocalValue(value);
+  }, [value]);
+
+  // Validate and format time string
+  const parseAndValidateTime = (input: string): string | null => {
+    if (!input || input.trim() === '') return null;
+
+    const cleaned = input.trim().toUpperCase();
+
+    // Pattern: HH:MM AM/PM (with flexible spacing)
+    const match = cleaned.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/);
+    if (!match) return null;
+
+    const hours = parseInt(match[1], 10);
+    const minutes = parseInt(match[2], 10);
+    const period = match[3];
+
+    // Validate hours (1-12) and minutes (0-59)
+    if (hours < 1 || hours > 12 || minutes < 0 || minutes > 59) {
+      return null;
+    }
+
+    // Format consistently: HH:MM AM/PM
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')} ${period}`;
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    setLocalValue(newValue);
+  };
+
+  const handleBlur = () => {
+    const validated = parseAndValidateTime(localValue);
+    if (validated) {
+      setLocalValue(validated);
+      onChange(validated);
+    } else if (localValue.trim() === '') {
+      // Allow clearing the field
+      setLocalValue('');
+      onChange('');
+    } else {
+      // Invalid input - revert to original value
+      setLocalValue(value);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      inputRef.current?.blur();
+    }
+  };
+
+  return (
+    <TextField
+      inputRef={inputRef}
+      value={localValue}
+      onChange={handleChange}
+      onBlur={handleBlur}
+      onKeyDown={handleKeyDown}
+      placeholder={placeholder}
+      size="small"
+      sx={{
+        width: 100,
+        '& .MuiInputBase-input': {
+          fontSize: '13px',
+          py: 0.5,
+          px: 1
+        }
+      }}
+    />
+  );
+};
 
 type DayKey = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
 
@@ -151,11 +237,37 @@ const DrawSchedules = (): React.ReactElement => {
     // Create updated weekly schedule - ensure weeklySchedule exists
     const weeklySchedule = draw.weeklySchedule || {};
     const currentDaySchedule = weeklySchedule[dayKey] || { startTime: '00:00:00', endTime: '00:00:00', enabled: false };
+
+    // If value is empty, disable the day
+    if (!value || value.trim() === '') {
+      const updatedSchedule: WeeklySchedule = {
+        ...weeklySchedule,
+        [dayKey]: {
+          startTime: '00:00:00',
+          endTime: '00:00:00',
+          enabled: false
+        }
+      };
+
+      setModifiedDraws(prev => {
+        const newMap = new Map(prev);
+        newMap.set(drawId, {
+          ...draw,
+          weeklySchedule: updatedSchedule
+        });
+        return newMap;
+      });
+      return;
+    }
+
+    // Convert valid 12-hour time to 24-hour format
+    const time24 = convertTo24Hour(value);
+
     const updatedSchedule: WeeklySchedule = {
       ...weeklySchedule,
       [dayKey]: {
         ...currentDaySchedule,
-        [field]: convertTo24Hour(value),
+        [field]: time24,
         enabled: true
       }
     };
@@ -421,38 +533,20 @@ const DrawSchedules = (): React.ReactElement => {
                                       </Typography>
 
                                       {/* Start Time */}
-                                      <TextField
+                                      <TimeInput
                                         value={startTime12}
-                                        onChange={(e) => handleTimeChange(draw.drawId, dayKey, 'startTime', e.target.value)}
+                                        onChange={(value) => handleTimeChange(draw.drawId, dayKey, 'startTime', value)}
                                         placeholder="12:00 AM"
-                                        size="small"
-                                        sx={{
-                                          width: 90,
-                                          '& .MuiInputBase-input': {
-                                            fontSize: '13px',
-                                            py: 0.5,
-                                            px: 1
-                                          }
-                                        }}
                                       />
 
                                       {/* Arrow */}
                                       <ArrowForwardIcon sx={{ color: '#999', fontSize: 16 }} />
 
                                       {/* End Time */}
-                                      <TextField
+                                      <TimeInput
                                         value={endTime12}
-                                        onChange={(e) => handleTimeChange(draw.drawId, dayKey, 'endTime', e.target.value)}
+                                        onChange={(value) => handleTimeChange(draw.drawId, dayKey, 'endTime', value)}
                                         placeholder="11:59 PM"
-                                        size="small"
-                                        sx={{
-                                          width: 90,
-                                          '& .MuiInputBase-input': {
-                                            fontSize: '13px',
-                                            py: 0.5,
-                                            px: 1
-                                          }
-                                        }}
                                       />
 
                                       {/* Delete Button */}
