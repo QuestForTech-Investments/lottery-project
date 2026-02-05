@@ -254,12 +254,27 @@ public class BettingPoolsController : ControllerBase
                 return Conflict(new { message = "El código de banca ya existe" });
             }
 
-            // Hash password if provided
-            string? hashedPassword = null;
-            if (!string.IsNullOrWhiteSpace(dto.Password))
+            // Validate username and password are required
+            if (string.IsNullOrWhiteSpace(dto.Username))
             {
-                hashedPassword = BCrypt.Net.BCrypt.HashPassword(dto.Password);
+                return BadRequest(new { message = "El nombre de usuario es requerido" });
             }
+
+            if (string.IsNullOrWhiteSpace(dto.Password))
+            {
+                return BadRequest(new { message = "La contraseña es requerida" });
+            }
+
+            // Check if username already exists
+            var userExists = await _context.Users
+                .AnyAsync(u => u.Username.ToLower() == dto.Username.ToLower());
+            if (userExists)
+            {
+                return Conflict(new { message = "Ya existe un usuario con ese nombre" });
+            }
+
+            // Hash password
+            string hashedPassword = BCrypt.Net.BCrypt.HashPassword(dto.Password);
 
             // Create betting pool
             var bettingPool = new BettingPool
@@ -307,6 +322,52 @@ public class BettingPoolsController : ControllerBase
             // Load relationships for response
             await _context.Entry(bettingPool).Reference(bp => bp.Zone).LoadAsync();
             await _context.Entry(bettingPool).Reference(bp => bp.Bank).LoadAsync();
+
+            // If username and password provided, create POS user and associate with betting pool
+            if (!string.IsNullOrWhiteSpace(dto.Username) && !string.IsNullOrWhiteSpace(dto.Password))
+            {
+                // Check if username already exists
+                var existingUser = await _context.Users
+                    .FirstOrDefaultAsync(u => u.Username.ToLower() == dto.Username.ToLower());
+
+                if (existingUser == null)
+                {
+                    // Get the POS role
+                    var posRole = await _context.Roles.FirstOrDefaultAsync(r => r.RoleName == "POS");
+                    if (posRole != null)
+                    {
+                        // Create the user
+                        var user = new User
+                        {
+                            Username = dto.Username,
+                            PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
+                            FullName = dto.BettingPoolName,
+                            Email = $"{dto.Username}@pos.local",
+                            RoleId = posRole.RoleId,
+                            IsActive = true,
+                            CreatedAt = DateTime.UtcNow
+                        };
+
+                        _context.Users.Add(user);
+                        await _context.SaveChangesAsync();
+
+                        // Create the user-betting pool association
+                        var userBettingPool = new UserBettingPool
+                        {
+                            UserId = user.UserId,
+                            BettingPoolId = bettingPool.BettingPoolId,
+                            IsActive = true,
+                            CreatedAt = DateTime.UtcNow
+                        };
+
+                        _context.UserBettingPools.Add(userBettingPool);
+                        await _context.SaveChangesAsync();
+
+                        _logger.LogInformation("Created POS user {Username} for new betting pool {BettingPoolId}",
+                            dto.Username, bettingPool.BettingPoolId);
+                    }
+                }
+            }
 
             var result = new BettingPoolDetailDto
             {
@@ -921,12 +982,27 @@ public class BettingPoolsController : ControllerBase
                 return Conflict(new { message = "El código de banca ya existe" });
             }
 
-            // Hash password if provided
-            string? hashedPassword = null;
-            if (!string.IsNullOrWhiteSpace(dto.Password))
+            // Validate username and password are required
+            if (string.IsNullOrWhiteSpace(dto.Username))
             {
-                hashedPassword = BCrypt.Net.BCrypt.HashPassword(dto.Password);
+                return BadRequest(new { message = "El nombre de usuario es requerido" });
             }
+
+            if (string.IsNullOrWhiteSpace(dto.Password))
+            {
+                return BadRequest(new { message = "La contraseña es requerida" });
+            }
+
+            // Check if username already exists
+            var userExists = await _context.Users
+                .AnyAsync(u => u.Username.ToLower() == dto.Username.ToLower());
+            if (userExists)
+            {
+                return Conflict(new { message = "Ya existe un usuario con ese nombre" });
+            }
+
+            // Hash password
+            string hashedPassword = BCrypt.Net.BCrypt.HashPassword(dto.Password);
 
             // Create betting pool
             var bettingPool = new BettingPool
@@ -968,6 +1044,52 @@ public class BettingPoolsController : ControllerBase
 
                 bettingPool.BettingPoolCode = $"LB-{(maxNumber + 1):D4}";
                 await _context.SaveChangesAsync();
+            }
+
+            // If username and password provided, create POS user and associate with betting pool
+            if (!string.IsNullOrWhiteSpace(dto.Username) && !string.IsNullOrWhiteSpace(dto.Password))
+            {
+                // Check if username already exists
+                var existingUser = await _context.Users
+                    .FirstOrDefaultAsync(u => u.Username.ToLower() == dto.Username.ToLower());
+
+                if (existingUser == null)
+                {
+                    // Get the POS role
+                    var posRole = await _context.Roles.FirstOrDefaultAsync(r => r.RoleName == "POS");
+                    if (posRole != null)
+                    {
+                        // Create the user
+                        var user = new User
+                        {
+                            Username = dto.Username,
+                            PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
+                            FullName = dto.BettingPoolName,
+                            Email = $"{dto.Username}@pos.local",
+                            RoleId = posRole.RoleId,
+                            IsActive = true,
+                            CreatedAt = DateTime.UtcNow
+                        };
+
+                        _context.Users.Add(user);
+                        await _context.SaveChangesAsync();
+
+                        // Create the user-betting pool association
+                        var userBettingPool = new UserBettingPool
+                        {
+                            UserId = user.UserId,
+                            BettingPoolId = bettingPool.BettingPoolId,
+                            IsActive = true,
+                            CreatedAt = DateTime.UtcNow
+                        };
+
+                        _context.UserBettingPools.Add(userBettingPool);
+                        await _context.SaveChangesAsync();
+
+                        _logger.LogInformation("Created POS user {Username} for new betting pool {BettingPoolId}",
+                            dto.Username, bettingPool.BettingPoolId);
+                    }
+                }
             }
 
             // Create configuration if provided
