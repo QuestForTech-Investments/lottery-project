@@ -1291,7 +1291,7 @@ public class TicketsController : ControllerBase
 
     /// <summary>
     /// Generate unique ticket code (format: XX-{BANCACODE}-{SEQUENCE:D9}, ~22 characters)
-    /// XX = Random 2-letter prefix, Example: EA-LAN-517-000000001
+    /// XX = Random 2-letter prefix, Example: EA-LB-0039-000000001
     /// </summary>
     private async Task<string> GenerateTicketCode(string bancaCode)
     {

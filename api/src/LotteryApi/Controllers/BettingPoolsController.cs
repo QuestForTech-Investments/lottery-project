@@ -179,23 +179,34 @@ public class BettingPoolsController : ControllerBase
     }
 
     /// <summary>
-    /// Get next available betting pool code (format: LAN-XXXX)
+    /// Get next available betting pool code (format: LB-XXXX)
     /// </summary>
     [HttpGet("next-code")]
     public async Task<ActionResult<NextBettingPoolCodeDto>> GetNextCode()
     {
         try
         {
-            // Get the highest betting pool ID to generate next code
-            var lastBettingPool = await _context.BettingPools
-                .OrderByDescending(bp => bp.BettingPoolId)
-                .FirstOrDefaultAsync();
+            // Get all betting pool codes that start with "LB-" and extract the highest number
+            var lbCodes = await _context.BettingPools
+                .Where(bp => bp.BettingPoolCode.StartsWith("LB-"))
+                .Select(bp => bp.BettingPoolCode)
+                .ToListAsync();
 
-            // Next ID will be lastId + 1, or 1 if no betting pools exist
-            int nextId = lastBettingPool != null ? lastBettingPool.BettingPoolId + 1 : 1;
+            int maxNumber = 0;
+            foreach (var code in lbCodes)
+            {
+                // Extract number from code (e.g., "LB-0013" -> 13)
+                if (code.Length > 3 && int.TryParse(code.Substring(3), out int num))
+                {
+                    if (num > maxNumber) maxNumber = num;
+                }
+            }
 
-            // Generate code with format LAN-XXXX (e.g., LAN-0001, LAN-0002, etc.)
-            string nextCode = $"LAN-{nextId:D4}";
+            // Next number is max + 1
+            int nextNumber = maxNumber + 1;
+
+            // Generate code with format LB-XXXX (e.g., LB-0001, LB-0014, etc.)
+            string nextCode = $"LB-{nextNumber:D4}";
 
             return Ok(new NextBettingPoolCodeDto
             {
@@ -271,11 +282,25 @@ public class BettingPoolsController : ControllerBase
             _context.BettingPools.Add(bettingPool);
             await _context.SaveChangesAsync();
 
-            // After saving, update the code with the actual ID if it doesn't match format
-            // This ensures the code follows LAN-XXXX format using the database auto-generated ID
-            if (!dto.BettingPoolCode.StartsWith("LAN-"))
+            // After saving, update the code if it doesn't match LB-XXXX format
+            // Generate next sequential code based on existing LB- codes
+            if (!dto.BettingPoolCode.StartsWith("LB-"))
             {
-                bettingPool.BettingPoolCode = $"LAN-{bettingPool.BettingPoolId:D4}";
+                var lbCodes = await _context.BettingPools
+                    .Where(bp => bp.BettingPoolCode.StartsWith("LB-"))
+                    .Select(bp => bp.BettingPoolCode)
+                    .ToListAsync();
+
+                int maxNumber = 0;
+                foreach (var code in lbCodes)
+                {
+                    if (code.Length > 3 && int.TryParse(code.Substring(3), out int num))
+                    {
+                        if (num > maxNumber) maxNumber = num;
+                    }
+                }
+
+                bettingPool.BettingPoolCode = $"LB-{(maxNumber + 1):D4}";
                 await _context.SaveChangesAsync();
             }
 
@@ -924,10 +949,24 @@ public class BettingPoolsController : ControllerBase
             _context.BettingPools.Add(bettingPool);
             await _context.SaveChangesAsync();
 
-            // Update code if needed
-            if (!dto.BettingPoolCode.StartsWith("LAN-"))
+            // Update code if needed - generate next sequential LB- code
+            if (!dto.BettingPoolCode.StartsWith("LB-"))
             {
-                bettingPool.BettingPoolCode = $"LAN-{bettingPool.BettingPoolId:D4}";
+                var lbCodes = await _context.BettingPools
+                    .Where(bp => bp.BettingPoolCode.StartsWith("LB-"))
+                    .Select(bp => bp.BettingPoolCode)
+                    .ToListAsync();
+
+                int maxNumber = 0;
+                foreach (var code in lbCodes)
+                {
+                    if (code.Length > 3 && int.TryParse(code.Substring(3), out int num))
+                    {
+                        if (num > maxNumber) maxNumber = num;
+                    }
+                }
+
+                bettingPool.BettingPoolCode = $"LB-{(maxNumber + 1):D4}";
                 await _context.SaveChangesAsync();
             }
 
