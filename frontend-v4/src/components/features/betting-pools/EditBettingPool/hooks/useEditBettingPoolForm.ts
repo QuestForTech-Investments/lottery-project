@@ -1322,6 +1322,13 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
       await saveCommissionConfigurations(id, filteredFormData, initialFormData, drawId);
 
       if (result.success) {
+        // Show success message and navigate to betting pools list
+        setSuccessMessage('✅ Configuración de premios actualizada exitosamente');
+
+        // Navigate to betting pools list after a short delay
+        setTimeout(() => {
+          navigate('/betting-pools/list');
+        }, 500);
       }
 
       return result;
