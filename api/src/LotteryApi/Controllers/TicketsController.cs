@@ -1240,39 +1240,45 @@ public class TicketsController : ControllerBase
             return 0.00m;
         }
 
-        // Look for commission configuration for this betting pool, bet type, and EXACT lottery
-        // IMPORTANT: Only use config for the exact lottery - NO fallback to general config
-        // Each lottery must have its own commission configuration
+        // Step 1: Look for lottery-specific commission configuration
         var config = await _context.Set<Models.BettingPoolPrizesCommission>()
             .AsNoTracking()
             .Where(c =>
                 c.BettingPoolId == bettingPoolId &&
                 c.GameType == betType.GameTypeCode &&
                 c.IsActive == true &&
-                c.LotteryId == lotteryId) // EXACT lottery match only, no fallback
+                c.LotteryId == lotteryId)
             .FirstOrDefaultAsync();
+
+        // Step 2: If no lottery-specific config, fallback to general config (lotteryId=null)
+        if (config == null && lotteryId != null)
+        {
+            config = await _context.Set<Models.BettingPoolPrizesCommission>()
+                .AsNoTracking()
+                .Where(c =>
+                    c.BettingPoolId == bettingPoolId &&
+                    c.GameType == betType.GameTypeCode &&
+                    c.IsActive == true &&
+                    c.LotteryId == null)
+                .FirstOrDefaultAsync();
+
+            if (config != null)
+            {
+                _logger.LogDebug(
+                    "Using general commission for pool {PoolId}, bet type {BetType}: {Commission}%",
+                    bettingPoolId, betType.GameTypeCode, config.CommissionDiscount1);
+            }
+        }
 
         if (config != null)
         {
-            // Currently using only commission_discount_1
-            // FUTURE: Implement logic to determine which level to use based on:
-            // - Volume of sales
-            // - Time of day
-            // - Special promotions
-            // - etc.
             var commission = config.CommissionDiscount1 ?? 0.00m;
 
             _logger.LogDebug(
-                "Commission for pool {PoolId}, bet type {BetType}: {Commission}%",
-                bettingPoolId, betType.GameTypeCode, commission);
+                "Commission for pool {PoolId}, bet type {BetType}, lottery {LotteryId}: {Commission}%",
+                bettingPoolId, betType.GameTypeCode, lotteryId, commission);
 
             return commission;
-
-            // FUTURE: Example of using different commission levels
-            // if (salesVolume > 10000) return config.CommissionDiscount4 ?? config.CommissionDiscount1 ?? 0m;
-            // if (salesVolume > 5000) return config.CommissionDiscount3 ?? config.CommissionDiscount1 ?? 0m;
-            // if (salesVolume > 1000) return config.CommissionDiscount2 ?? config.CommissionDiscount1 ?? 0m;
-            // return config.CommissionDiscount1 ?? 0m;
         }
 
         // No configuration found, return 0 (no commission)
