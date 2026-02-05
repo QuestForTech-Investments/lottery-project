@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Card,
@@ -166,7 +165,6 @@ const DAYS_ES: string[] = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes',
 const DAY_KEYS: DayKey[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 
 const DrawSchedules = (): React.ReactElement => {
-  const navigate = useNavigate();
   const [lotteries, setLotteries] = useState<Lottery[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [expandedLotteryIds, setExpandedLotteryIds] = useState<Set<number>>(new Set());
@@ -378,10 +376,9 @@ const DrawSchedules = (): React.ReactElement => {
 
       showSnackbar('Horarios actualizados correctamente', 'success');
 
-      // Navigate to betting pools list after successful save
-      setTimeout(() => {
-        navigate('/betting-pools/list');
-      }, 500);
+      // Clear modified draws and reload (without showing loading spinner)
+      setModifiedDraws(new Map());
+      await loadDrawSchedules(false);
 
     } catch (error) {
       console.error('[ERROR] [DRAW SCHEDULES] Error saving:', error);
@@ -389,7 +386,7 @@ const DrawSchedules = (): React.ReactElement => {
     } finally {
       setSaving(false);
     }
-  }, [modifiedDraws, showSnackbar, validateSchedules, navigate]);
+  }, [modifiedDraws, showSnackbar, loadDrawSchedules, validateSchedules]);
 
   const handleCloseSnackbar = useCallback((): void => {
     setSnackbar(prev => ({ ...prev, open: false }));
