@@ -15,7 +15,7 @@ import {
 } from '@mui/material';
 import type { AlertColor } from '@mui/material/Alert';
 import {
-  Delete as DeleteIcon,
+  ContentCopy as ContentCopyIcon,
   ArrowForward as ArrowForwardIcon,
   Add as AddIcon
 } from '@mui/icons-material';
@@ -288,29 +288,37 @@ const DrawSchedules = (): React.ReactElement => {
     });
   }, [getDrawState]);
 
-  const handleDeleteDay = useCallback((drawId: number, dayKey: DayKey): void => {
+  const handleCopyToAllDays = useCallback((drawId: number, sourceDayKey: DayKey): void => {
     const draw = getDrawState(drawId);
     if (!draw) return;
 
     const weeklySchedule = draw.weeklySchedule || {};
-    const updatedSchedule: WeeklySchedule = {
-      ...weeklySchedule,
-      [dayKey]: {
-        startTime: '00:00:00',
-        endTime: '00:00:00',
-        enabled: false
-      }
-    };
+    const sourceSchedule = weeklySchedule[sourceDayKey];
+
+    if (!sourceSchedule || !sourceSchedule.enabled) return;
+
+    // Copy the source day's times to all other days
+    const updatedSchedule: WeeklySchedule = { ...weeklySchedule };
+    DAY_KEYS.forEach(dayKey => {
+      updatedSchedule[dayKey] = {
+        startTime: sourceSchedule.startTime,
+        endTime: sourceSchedule.endTime,
+        enabled: true
+      };
+    });
 
     setModifiedDraws(prev => {
       const newMap = new Map(prev);
       newMap.set(drawId, {
         ...draw,
+        useWeeklySchedule: true,
         weeklySchedule: updatedSchedule
       });
       return newMap;
     });
-  }, [getDrawState]);
+
+    showSnackbar('Horario copiado a todos los días', 'success');
+  }, [getDrawState, showSnackbar]);
 
   // Validate schedules before saving
   const validateSchedules = useCallback((): string | null => {
@@ -589,20 +597,21 @@ const DrawSchedules = (): React.ReactElement => {
                                         placeholder="11:59 PM"
                                       />
 
-                                      {/* Delete Button */}
+                                      {/* Copy to All Days Button */}
                                       <IconButton
                                         size="small"
-                                        onClick={() => handleDeleteDay(draw.drawId, dayKey)}
+                                        onClick={() => handleCopyToAllDays(draw.drawId, dayKey)}
                                         disabled={!daySchedule.enabled}
+                                        title="Copiar a todos los días"
                                         sx={{
                                           p: 0.3,
-                                          color: daySchedule.enabled ? '#dc3545' : '#ccc',
+                                          color: daySchedule.enabled ? '#667eea' : '#ccc',
                                           '&:hover': {
-                                            bgcolor: daySchedule.enabled ? 'rgba(220, 53, 69, 0.1)' : 'transparent'
+                                            bgcolor: daySchedule.enabled ? 'rgba(102, 126, 234, 0.1)' : 'transparent'
                                           }
                                         }}
                                       >
-                                        <DeleteIcon sx={{ fontSize: 18 }} />
+                                        <ContentCopyIcon sx={{ fontSize: 18 }} />
                                       </IconButton>
                                     </Box>
                                   );
