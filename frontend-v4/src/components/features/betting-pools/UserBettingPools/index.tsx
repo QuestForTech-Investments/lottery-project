@@ -313,6 +313,7 @@ const UserBancasMUI: React.FC = () => {
               onChange={(e) => setNewPassword(e.target.value)}
               helperText="Mínimo 6 caracteres, al menos una letra y un número"
               sx={{ mb: 2 }}
+              autoComplete="new-password"
             />
             <TextField
               fullWidth
@@ -326,6 +327,7 @@ const UserBancasMUI: React.FC = () => {
                   ? 'Las contraseñas no coinciden'
                   : ''
               }
+              autoComplete="new-password"
             />
           </Box>
         </DialogContent>

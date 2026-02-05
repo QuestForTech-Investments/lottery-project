@@ -276,6 +276,7 @@ const UserBettingPoolsContent: React.FC = () => {
               onChange={(e) => setNewPassword(e.target.value)}
               helperText="Mínimo 6 caracteres"
               sx={{ mb: 2 }}
+              autoComplete="new-password"
             />
             <TextField
               fullWidth
@@ -289,6 +290,7 @@ const UserBettingPoolsContent: React.FC = () => {
                   ? 'Las contraseñas no coinciden'
                   : ''
               }
+              autoComplete="new-password"
             />
           </Box>
         </DialogContent>

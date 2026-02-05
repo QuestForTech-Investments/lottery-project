@@ -177,7 +177,7 @@ const CreateUserMUI = () => {
                   helperText={errors.username || 'Mínimo 3 caracteres'}
                   disabled={loading}
                   autoFocus
-                  autoComplete="username"
+                  autoComplete="off"
                   placeholder="Ingrese el nombre de usuario"
                 />
               </Grid>

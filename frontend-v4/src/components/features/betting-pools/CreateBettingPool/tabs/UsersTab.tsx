@@ -530,6 +530,7 @@ const UsersTab: React.FC<UsersTabProps> = ({ formData, handleChange, bettingPool
               onChange={handleNewUserChange}
               autoFocus
               helperText="Mínimo 3 caracteres"
+              autoComplete="off"
             />
 
             <TextField
@@ -557,6 +558,7 @@ const UsersTab: React.FC<UsersTabProps> = ({ formData, handleChange, bettingPool
               value={newUser.password}
               onChange={handleNewUserChange}
               helperText="Mínimo 6 caracteres, al menos una letra y un número"
+              autoComplete="new-password"
             />
 
             <TextField
@@ -567,6 +569,7 @@ const UsersTab: React.FC<UsersTabProps> = ({ formData, handleChange, bettingPool
               value={newUser.confirmPassword}
               onChange={handleNewUserChange}
               helperText="Repita la contraseña para confirmar"
+              autoComplete="new-password"
             />
           </Box>
         </DialogContent>
@@ -641,6 +644,7 @@ const UsersTab: React.FC<UsersTabProps> = ({ formData, handleChange, bettingPool
               onChange={handlePasswordFormChange}
               autoFocus
               helperText="Mínimo 6 caracteres, al menos una letra y un número"
+              autoComplete="new-password"
             />
 
             <TextField
@@ -651,6 +655,7 @@ const UsersTab: React.FC<UsersTabProps> = ({ formData, handleChange, bettingPool
               value={passwordForm.confirmPassword}
               onChange={handlePasswordFormChange}
               helperText="Repita la contraseña para confirmar"
+              autoComplete="new-password"
             />
           </Box>
         </DialogContent>
