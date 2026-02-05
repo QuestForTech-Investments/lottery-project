@@ -45,7 +45,7 @@ import {
  * Custom hook for managing edit betting pool form with ALL 168 fields
  */
 const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
-  const _navigate = useNavigate();
+  const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
 
   // Form state - uses INITIAL_FORM_DATA from initialState.ts
@@ -1275,13 +1275,13 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
         const endTime = performance.now();
         const saveTime = (endTime - startTime).toFixed(2);
 
-        // Show success message and stay on form
+        // Show success message and navigate to betting pools list
         setSuccessMessage('✅ Banca actualizada exitosamente');
 
-        // Auto-clear success message after 5 seconds
+        // Navigate to betting pools list after a short delay
         setTimeout(() => {
-          setSuccessMessage('');
-        }, 5000);
+          navigate('/betting-pools/list');
+        }, 500);
       }
     } catch (error) {
       console.error('[ERROR] Error updating betting pool:', error);
