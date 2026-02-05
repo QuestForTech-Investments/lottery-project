@@ -308,6 +308,35 @@ const DrawSchedules = (): React.ReactElement => {
     });
   }, [getDrawState]);
 
+  // Validate schedules before saving
+  const validateSchedules = useCallback((): string | null => {
+    const dayNames: Record<string, string> = {
+      monday: 'Lunes',
+      tuesday: 'Martes',
+      wednesday: 'Miércoles',
+      thursday: 'Jueves',
+      friday: 'Viernes',
+      saturday: 'Sábado',
+      sunday: 'Domingo'
+    };
+
+    for (const draw of modifiedDraws.values()) {
+      const schedule = draw.weeklySchedule;
+      if (!schedule) continue;
+
+      for (const dayKey of DAY_KEYS) {
+        const daySchedule = schedule[dayKey];
+        if (daySchedule && daySchedule.enabled) {
+          // Compare times as strings (HH:MM:SS format)
+          if (daySchedule.startTime >= daySchedule.endTime) {
+            return `${draw.drawName} - ${dayNames[dayKey]}: La hora de fin debe ser mayor que la hora de inicio`;
+          }
+        }
+      }
+    }
+    return null;
+  }, [modifiedDraws]);
+
   const handleSaveAll = useCallback(async (): Promise<void> => {
     try {
       setSaving(true);
@@ -321,6 +350,13 @@ const DrawSchedules = (): React.ReactElement => {
 
       if (schedules.length === 0) {
         showSnackbar('No hay cambios para guardar', 'info');
+        return;
+      }
+
+      // Validate before sending
+      const validationError = validateSchedules();
+      if (validationError) {
+        showSnackbar(validationError, 'error');
         return;
       }
 
@@ -338,7 +374,7 @@ const DrawSchedules = (): React.ReactElement => {
     } finally {
       setSaving(false);
     }
-  }, [modifiedDraws, showSnackbar, loadDrawSchedules]);
+  }, [modifiedDraws, showSnackbar, loadDrawSchedules, validateSchedules]);
 
   const handleCloseSnackbar = useCallback((): void => {
     setSnackbar(prev => ({ ...prev, open: false }));
