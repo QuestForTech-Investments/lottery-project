@@ -102,6 +102,7 @@ const GeneralTab: React.FC<GeneralTabProps> = ({ formData, errors, zones, loadin
                 onChange={handleChange}
                 error={!!errors.username}
                 helperText={errors.username}
+                autoComplete="off"
               />
             </Grid>
             <Grid item xs={12} md={6}>
@@ -155,6 +156,7 @@ const GeneralTab: React.FC<GeneralTabProps> = ({ formData, errors, zones, loadin
                 onChange={handleChange}
                 error={!!errors.password}
                 helperText={errors.password}
+                autoComplete="new-password"
               />
             </Grid>
             <Grid item xs={12} md={6}>
@@ -221,6 +223,7 @@ const GeneralTab: React.FC<GeneralTabProps> = ({ formData, errors, zones, loadin
                 onChange={handleChange}
                 error={!!errors.confirmPassword}
                 helperText={errors.confirmPassword}
+                autoComplete="new-password"
               />
             </Grid>
             <Grid item xs={12} md={6}>
