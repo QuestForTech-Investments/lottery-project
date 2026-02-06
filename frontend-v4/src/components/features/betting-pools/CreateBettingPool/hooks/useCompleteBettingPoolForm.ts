@@ -941,6 +941,130 @@ const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
   };
 
   /**
+   * Save commission configurations for a betting pool
+   * Extracts commission fields from formData and saves them to prizes-commissions endpoint
+   * @param bettingPoolId - ID of the created betting pool
+   * @param formData - Form data with commission values
+   */
+  const saveCommissionConfigurations = async (bettingPoolId: number, formData: FormData): Promise<{ success: boolean; error?: string }> => {
+    const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
+
+    try {
+      // Reverse map: frontend betTypeCode -> backend GameType
+      const betTypeToGameType: Record<string, string> = {
+        'DIRECTO': 'DIRECTO',
+        'PALÉ': 'PALE',
+        'TRIPLETA': 'TRIPLETA',
+        'CASH3_STRAIGHT': 'CASH3_STRAIGHT',
+        'CASH3_BOX': 'CASH3_BOX',
+        'PLAY4 STRAIGHT': 'PLAY4_STRAIGHT',
+        'PLAY4 BOX': 'PLAY4_BOX',
+        'SUPER_PALE': 'SUPER_PALE',
+        'BOLITA 1': 'BOLITA_1',
+        'BOLITA 2': 'BOLITA_2',
+        'SINGULACIÓN 1': 'SINGULACION_1',
+        'SINGULACIÓN 2': 'SINGULACION_2',
+        'SINGULACIÓN 3': 'SINGULACION_3',
+        'PICK5 STRAIGHT': 'PICK5_STRAIGHT',
+        'PICK5 BOX': 'PICK5_BOX',
+        'PICK TWO': 'PICK_TWO',
+        'PICK2': 'PICK2',
+        'CASH3 FRONT STRAIGHT': 'CASH3_FRONT_STRAIGHT',
+        'CASH3_FRONT_BOX': 'CASH3_FRONT_BOX',
+        'CASH3_BACK_STRAIGHT': 'CASH3_BACK_STRAIGHT',
+        'CASH3 BACK BOX': 'CASH3_BACK_BOX',
+        'PICK TWO FRONT': 'PICK_TWO_FRONT',
+        'PICK TWO BACK': 'PICK_TWO_BACK',
+        'PICK TWO MIDDLE': 'PICK_TWO_MIDDLE',
+        'SINGULACION': 'SINGULACION',
+        'PANAMA': 'PANAMA',
+      };
+
+      // Collect commission changes by gameType (only for general/lotteryId=null)
+      const commissionsByGameType: Record<string, {
+        commissionDiscount1?: number;
+        commissionDiscount2?: number;
+        commissionDiscount3?: number;
+        commissionDiscount4?: number;
+        commission2Discount1?: number;
+        commission2Discount2?: number;
+        commission2Discount3?: number;
+        commission2Discount4?: number;
+      }> = {};
+
+      // Regex patterns to match commission fields (general_ prefix only for create)
+      const commissionPattern = /^general_COMMISSION_(.+)_COMMISSION_DISCOUNT_(\d)$/;
+      const commission2Pattern = /^general_COMMISSION2_(.+)_COMMISSION_2_DISCOUNT_(\d)$/;
+
+      // Process all formData keys to find commission fields
+      Object.keys(formData).forEach(key => {
+        const value = formData[key];
+        if (value === '' || value === null || value === undefined) return;
+
+        // Match commission field pattern
+        const commissionMatch = key.match(commissionPattern);
+        if (commissionMatch) {
+          const betTypeCode = commissionMatch[1];
+          const discountNum = commissionMatch[2];
+          const gameType = betTypeToGameType[betTypeCode] || betTypeCode;
+
+          if (!commissionsByGameType[gameType]) {
+            commissionsByGameType[gameType] = {};
+          }
+
+          const fieldName = `commissionDiscount${discountNum}` as keyof typeof commissionsByGameType[typeof gameType];
+          commissionsByGameType[gameType][fieldName] = parseFloat(String(value));
+          return;
+        }
+
+        // Match commission 2 field pattern
+        const commission2Match = key.match(commission2Pattern);
+        if (commission2Match) {
+          const betTypeCode = commission2Match[1];
+          const discountNum = commission2Match[2];
+          const gameType = betTypeToGameType[betTypeCode] || betTypeCode;
+
+          if (!commissionsByGameType[gameType]) {
+            commissionsByGameType[gameType] = {};
+          }
+
+          const fieldName = `commission2Discount${discountNum}` as keyof typeof commissionsByGameType[typeof gameType];
+          commissionsByGameType[gameType][fieldName] = parseFloat(String(value));
+          return;
+        }
+      });
+
+      // If no commission changes, return early
+      if (Object.keys(commissionsByGameType).length === 0) {
+        return { success: true };
+      }
+
+      // Save each gameType's commissions (as new records since this is create)
+      for (const [gameType, commissions] of Object.entries(commissionsByGameType)) {
+        // Create new record (lotteryId=null for general commissions)
+        const createBody = { gameType, lotteryId: null, isActive: true, ...commissions };
+        const postResp = await fetch(`${API_BASE}/betting-pools/${bettingPoolId}/prizes-commissions`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(createBody)
+        });
+        if (!postResp.ok) {
+          const errText = await postResp.text();
+          console.error(`[COMMISSION SAVE] POST error body:`, errText);
+        }
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('Error saving commission configurations:', error);
+      return { success: false, error: (error as Error).message };
+    }
+  };
+
+  /**
    * Save schedule configurations for a betting pool
    * @param bettingPoolId - ID of the created betting pool
    * @param formData - Form data with schedule values
@@ -1061,6 +1185,19 @@ const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
           } catch (prizeError) {
             console.error('Error saving prize configurations:', prizeError);
             // Don't fail the whole operation if prizes fail to save
+            // The betting pool was created successfully
+          }
+
+          // Save commission configurations
+          try {
+            const commissionResult = await saveCommissionConfigurations(createdBettingPoolId, formData);
+
+            if (!commissionResult.success) {
+              console.warn(`[WARN] Failed to save commission configurations: ${commissionResult.error}`);
+            }
+          } catch (commissionError) {
+            console.error('Error saving commission configurations:', commissionError);
+            // Don't fail the whole operation if commissions fail to save
             // The betting pool was created successfully
           }
 
