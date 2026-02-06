@@ -237,14 +237,32 @@ Directo, Pale, Tripleta, Cash3 Straight, Cash3 Box, Play4 Straight, Play4 Box, S
 ---
 
 ## Resultado
-**Estado:** 🟡 Implementación completada - Pendiente testing
-**Progreso:** 32/35 tareas (91%)
+**Estado:** ✅ COMPLETADO
+**Progreso:** 35/35 tareas (100%)
 
-### Pendiente
-1. Crear migration SQL para nuevas columnas (o dejar que EF maneje)
-2. Crear AutomaticLimitsController y HotNumbersController en backend
-3. Probar integración completa (API + Frontend)
-4. Validación de límites en CreateTicket
+### Completado
+1. ✅ Migration SQL para nuevas columnas
+2. ✅ AutomaticLimitsController y HotNumbersController creados
+3. ✅ Integración API + Frontend funcionando
+4. ✅ **UI Clonada de app original usando Playwright MCP**
+
+### UI Clonada (2026-02-06)
+
+**Proceso utilizado:**
+1. Navegación a app original con Playwright MCP
+2. Captura de screenshots de referencia
+3. Extracción de estilos CSS con `browser_run_code`
+4. Adaptación a sistema de diseño (#51cbce primary)
+5. Implementación en componentes MUI con sx props
+
+**Componentes actualizados:**
+- `LimitsList/index.tsx` - 3 filtros simples + botón turquesa
+- `CreateLimit/index.tsx` - Chips seleccionables para sorteos/días
+- `HotNumbers/index.tsx` - Grid con iconos de fuego 🔥
+
+**Commit:** `661fce2 UI: Clone limits module design to match original app`
+
+Ver guía completa: `gsd/guides/ui-cloning-guide.md`
 
 ---
 
