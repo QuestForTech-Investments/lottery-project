@@ -85,7 +85,7 @@ const TimeInput: React.FC<TimeInputProps> = memo(({ value, onChange, placeholder
           sx: {
             width: 115,
             '& .MuiInputBase-input': {
-              fontSize: '12px',
+              fontSize: '11px',
               py: 0.4,
               px: 0.5
             },
