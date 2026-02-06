@@ -145,6 +145,7 @@ const MUITimeInput: React.FC<TimeInputProps> = memo(({ value, onChange, placehol
       onChange={handleChange}
       views={['hours', 'minutes']}
       ampm={true}
+      minutesStep={1}
       slots={{
         openPickerIcon: ArrowDropDownIcon
       }}
