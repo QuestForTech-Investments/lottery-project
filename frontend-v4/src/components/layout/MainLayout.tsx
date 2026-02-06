@@ -2,6 +2,7 @@ import { useState, Suspense, type ReactNode } from 'react'
 import { Box, CircularProgress, useMediaQuery, useTheme } from '@mui/material'
 import Sidebar from './Sidebar'
 import Header from './Header'
+import useSessionTimeout from '../../hooks/useSessionTimeout'
 
 // Minimal loading indicator for content area only
 const ContentLoadingFallback = () => (
@@ -25,6 +26,9 @@ interface MainLayoutProps {
 export default function MainLayout({ children }: MainLayoutProps) {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
+
+  // Session timeout: logout after 15 minutes of inactivity
+  useSessionTimeout({ timeoutMs: 15 * 60 * 1000 })
 
   // sidebarPinned = false: modo automático (se expande/contrae con hover, contenido fijo en 60px)
   // sidebarPinned = true: modo fijo (sidebar expandido, contenido desplazado a 280px)
