@@ -1,12 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
-  Card,
-  CardContent,
   Typography,
   Tabs,
   Tab,
-  Checkbox,
   Button,
   Table,
   TableHead,
@@ -28,8 +25,7 @@ import {
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
-import SaveIcon from '@mui/icons-material/Save';
-import RefreshIcon from '@mui/icons-material/Refresh';
+import LocalFireDepartmentIcon from '@mui/icons-material/LocalFireDepartment';
 import hotNumberService, { handleHotNumberError } from '@/services/hotNumberService';
 import limitService from '@/services/limitService';
 import type {
@@ -43,6 +39,107 @@ interface SnackbarState {
   message: string;
   severity: 'success' | 'error' | 'warning' | 'info';
 }
+
+// Styles matching the original app exactly
+const styles = {
+  container: {
+    p: 3,
+    bgcolor: '#f4f3ef',
+    minHeight: '100vh'
+  },
+  card: {
+    bgcolor: 'white',
+    borderRadius: '12px',
+    boxShadow: 'rgba(0, 0, 0, 0.15) 0px 6px 10px -4px'
+  },
+  // Number cell - unselected (turquoise border)
+  numberCell: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 0.5,
+    padding: '11px 10px',
+    border: '2px solid #51cbce',
+    borderRadius: '3px',
+    backgroundColor: 'transparent',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+    minWidth: '70px',
+    '&:hover': {
+      backgroundColor: 'rgba(81, 203, 206, 0.1)'
+    }
+  },
+  // Number cell - selected (yellow/orange background)
+  numberCellSelected: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 0.5,
+    padding: '11px 10px',
+    border: '2px solid #fbc658',
+    borderRadius: '3px',
+    backgroundColor: '#fbc658',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+    minWidth: '70px',
+    '&:hover': {
+      backgroundColor: '#f5b741'
+    }
+  },
+  // Fire icon - inactive (gray)
+  fireIconInactive: {
+    color: '#9a9a9a',
+    fontSize: '16px'
+  },
+  // Fire icon - active (red/orange)
+  fireIconActive: {
+    color: '#ff6b35',
+    fontSize: '16px'
+  },
+  // Number text
+  numberText: {
+    fontSize: '14px',
+    fontWeight: 600,
+    color: '#66615b'
+  },
+  numberTextSelected: {
+    fontSize: '14px',
+    fontWeight: 600,
+    color: 'white'
+  },
+  // Tab styles
+  tabs: {
+    bgcolor: '#f5f5f5',
+    '& .MuiTab-root': {
+      fontSize: '14px',
+      textTransform: 'none',
+      minHeight: '48px'
+    },
+    '& .Mui-selected': {
+      color: '#495057',
+      bgcolor: 'white'
+    }
+  },
+  // Save button
+  saveButton: {
+    bgcolor: '#51cbce',
+    color: 'white',
+    borderRadius: '30px',
+    padding: '11px 40px',
+    fontSize: '12px',
+    fontWeight: 600,
+    textTransform: 'uppercase' as const,
+    boxShadow: 'none',
+    '&:hover': {
+      bgcolor: '#45b8bb',
+      boxShadow: 'none'
+    },
+    '&:disabled': {
+      bgcolor: '#ccc',
+      color: 'white'
+    }
+  }
+};
 
 const HotNumbers = (): React.ReactElement => {
   // Tab state
@@ -154,45 +251,6 @@ const HotNumbers = (): React.ReactElement => {
     }
   };
 
-  // Clear all selections
-  const handleClearSelection = () => {
-    setSelectedNumbers([]);
-  };
-
-  // Select all numbers
-  const handleSelectAll = () => {
-    setSelectedNumbers(numbers);
-  };
-
-  // Refresh data
-  const handleRefresh = async () => {
-    setLoading(true);
-    try {
-      const [numbersData, limitsData] = await Promise.all([
-        hotNumberService.getHotNumbers(),
-        hotNumberService.getHotNumberLimits()
-      ]);
-
-      const selected = numbersData.selectedNumbers || [];
-      setSelectedNumbers(selected);
-      setInitialNumbers(selected);
-      setHotNumberLimits(limitsData || []);
-      setSnackbar({
-        open: true,
-        message: 'Datos actualizados',
-        severity: 'info'
-      });
-    } catch (err) {
-      setSnackbar({
-        open: true,
-        message: handleHotNumberError(err, 'actualizar datos'),
-        severity: 'error'
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
   // Handle new limit form changes
   const handleLimitFieldChange = (field: keyof Omit<HotNumberLimit, 'id'>, value: number | number[]) => {
     setNewLimit(prev => ({
@@ -203,7 +261,6 @@ const HotNumbers = (): React.ReactElement => {
 
   // Save new limit
   const handleSaveLimit = async () => {
-    // Validate
     if (newLimit.drawIds.length === 0) {
       setSnackbar({
         open: true,
@@ -245,7 +302,7 @@ const HotNumbers = (): React.ReactElement => {
 
   // Delete limit
   const handleDeleteLimit = async (id: number) => {
-    if (!window.confirm('¿Eliminar este limite?')) return;
+    if (!window.confirm('Eliminar este limite?')) return;
 
     setDeletingLimitId(id);
     try {
@@ -284,71 +341,30 @@ const HotNumbers = (): React.ReactElement => {
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
-        <CircularProgress sx={{ color: '#6366f1' }} />
+        <CircularProgress sx={{ color: '#51cbce' }} />
       </Box>
     );
   }
 
   return (
-    <Box sx={{ p: 3, bgcolor: '#f5f5f5', minHeight: '100vh' }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4" sx={{ fontSize: '24px', fontWeight: 500, color: '#2c2c2c' }}>
-          Numeros calientes
-        </Typography>
-        <Tooltip title="Actualizar datos">
-          <IconButton onClick={handleRefresh} disabled={loading}>
-            <RefreshIcon />
-          </IconButton>
-        </Tooltip>
-      </Box>
-
-      <Card>
+    <Box sx={styles.container}>
+      <Box sx={styles.card}>
+        {/* Tabs - like original */}
         <Tabs
           value={activeTab}
           onChange={(_, newValue) => setActiveTab(newValue)}
-          sx={{
-            borderBottom: 2,
-            borderColor: '#6366f1',
-            '& .MuiTab-root': { fontSize: '14px' },
-            '& .Mui-selected': { color: '#6366f1' }
-          }}
-          TabIndicatorProps={{ style: { backgroundColor: '#6366f1' } }}
+          sx={styles.tabs}
         >
           <Tab label="Numeros calientes" />
           <Tab label="Limites" />
         </Tabs>
 
-        <CardContent sx={{ p: 4 }}>
-          {/* Tab 1: Hot Numbers Grid */}
+        <Box sx={{ p: 3 }}>
+          {/* Tab 1: Hot Numbers Grid - exactly like original */}
           {activeTab === 0 && (
             <Box>
-              {/* Action buttons */}
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
-                <Box sx={{ display: 'flex', gap: 1 }}>
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    onClick={handleSelectAll}
-                    sx={{ textTransform: 'none' }}
-                  >
-                    Seleccionar todos
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    onClick={handleClearSelection}
-                    sx={{ textTransform: 'none' }}
-                  >
-                    Limpiar seleccion
-                  </Button>
-                </Box>
-                <Typography variant="body2" sx={{ color: '#666' }}>
-                  {selectedNumbers.length} numeros seleccionados
-                </Typography>
-              </Box>
-
-              {/* Numbers grid 10x10 */}
-              <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(10, 1fr)', gap: 1, mb: 3 }}>
+              {/* Numbers grid - flex wrap like original */}
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 3 }}>
                 {numbers.map(num => {
                   const isSelected = selectedNumbers.includes(num);
                   const displayNum = String(num).padStart(2, '0');
@@ -357,35 +373,17 @@ const HotNumbers = (): React.ReactElement => {
                     <Box
                       key={num}
                       onClick={() => handleNumberClick(num)}
-                      sx={{
-                        textAlign: 'center',
-                        p: 1.5,
-                        border: '1px solid #ddd',
-                        borderRadius: '4px',
-                        bgcolor: isSelected ? '#6366f1' : 'white',
-                        color: isSelected ? 'white' : '#333',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease',
-                        '&:hover': {
-                          bgcolor: isSelected ? '#5558d3' : '#f0f0f0',
-                          transform: 'scale(1.05)'
-                        }
-                      }}
+                      sx={isSelected ? styles.numberCellSelected : styles.numberCell}
                     >
-                      <Checkbox
-                        checked={isSelected}
-                        onChange={() => {}}
-                        size="small"
-                        sx={{
-                          p: 0,
-                          mr: 0.5,
-                          color: isSelected ? 'white' : '#6366f1',
-                          '&.Mui-checked': { color: 'white' }
-                        }}
-                      />
-                      <Typography component="span" sx={{ fontSize: '14px', fontWeight: 500 }}>
+                      <Typography
+                        component="span"
+                        sx={isSelected ? styles.numberTextSelected : styles.numberText}
+                      >
                         {displayNum}
                       </Typography>
+                      <LocalFireDepartmentIcon
+                        sx={isSelected ? styles.fireIconActive : styles.fireIconInactive}
+                      />
                     </Box>
                   );
                 })}
@@ -397,19 +395,10 @@ const HotNumbers = (): React.ReactElement => {
                   variant="contained"
                   onClick={handleSaveNumbers}
                   disabled={savingNumbers || !hasNumbersChanged()}
-                  startIcon={savingNumbers ? <CircularProgress size={20} color="inherit" /> : <SaveIcon />}
-                  sx={{
-                    bgcolor: '#6366f1',
-                    color: 'white',
-                    '&:hover': { bgcolor: '#5558d3' },
-                    '&:disabled': { bgcolor: '#ccc' },
-                    fontSize: '14px',
-                    px: 5,
-                    py: 1.5,
-                    textTransform: 'none'
-                  }}
+                  disableElevation
+                  sx={styles.saveButton}
                 >
-                  {savingNumbers ? 'Guardando...' : 'GUARDAR'}
+                  {savingNumbers ? 'Guardando...' : 'Guardar'}
                 </Button>
               </Box>
             </Box>
@@ -536,14 +525,14 @@ const HotNumbers = (): React.ReactElement => {
               <Table sx={{ mb: 3 }}>
                 <TableHead>
                   <TableRow sx={{ bgcolor: '#e3e3e3' }}>
-                    <TableCell sx={{ fontSize: '12px', fontWeight: 600 }}>Sorteos</TableCell>
-                    <TableCell sx={{ fontSize: '12px', fontWeight: 600 }} align="right">Directo</TableCell>
-                    <TableCell sx={{ fontSize: '12px', fontWeight: 600 }} align="right">Pale 1 caliente</TableCell>
-                    <TableCell sx={{ fontSize: '12px', fontWeight: 600 }} align="right">Pale 2 caliente</TableCell>
-                    <TableCell sx={{ fontSize: '12px', fontWeight: 600 }} align="right">Tripleta 1 caliente</TableCell>
-                    <TableCell sx={{ fontSize: '12px', fontWeight: 600 }} align="right">Tripleta 2 caliente</TableCell>
-                    <TableCell sx={{ fontSize: '12px', fontWeight: 600 }} align="right">Tripleta 3 caliente</TableCell>
-                    <TableCell sx={{ fontSize: '12px', fontWeight: 600 }} align="center">Acciones</TableCell>
+                    <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878' }}>Sorteos</TableCell>
+                    <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878' }} align="right">Directo</TableCell>
+                    <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878' }} align="right">Pale 1 caliente</TableCell>
+                    <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878' }} align="right">Pale 2 caliente</TableCell>
+                    <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878' }} align="right">Tripleta 1</TableCell>
+                    <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878' }} align="right">Tripleta 2</TableCell>
+                    <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878' }} align="right">Tripleta 3</TableCell>
+                    <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878' }} align="center">Acciones</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -613,8 +602,8 @@ const HotNumbers = (): React.ReactElement => {
               </Table>
             </Box>
           )}
-        </CardContent>
-      </Card>
+        </Box>
+      </Box>
 
       {/* Snackbar for notifications */}
       <Snackbar

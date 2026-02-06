@@ -2,23 +2,19 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
-  Card,
-  CardContent,
   Typography,
   FormControl,
-  InputLabel,
   Select,
   MenuItem,
   TextField,
   Button,
-  Checkbox,
-  FormControlLabel,
   Divider,
   CircularProgress,
   Snackbar,
   Alert,
   AlertColor,
-  Autocomplete
+  Autocomplete,
+  SelectChangeEvent
 } from '@mui/material';
 import limitService, { handleLimitError } from '@/services/limitService';
 import {
@@ -41,6 +37,167 @@ interface SnackbarState {
   message: string;
   severity: AlertColor;
 }
+
+// Styles using our app's design system colors
+const styles = {
+  container: {
+    p: 3,
+    bgcolor: '#f5f5f5',
+    minHeight: '100vh'
+  },
+  title: {
+    textAlign: 'center',
+    mb: 3,
+    fontSize: '28px',
+    fontWeight: 400,
+    color: '#2c2c2c',
+    fontFamily: 'Montserrat, "Helvetica Neue", Arial, sans-serif'
+  },
+  card: {
+    bgcolor: 'white',
+    borderRadius: '12px',
+    boxShadow: 'rgba(0, 0, 0, 0.15) 0px 6px 10px -4px',
+    p: 3
+  },
+  columnHeader: {
+    fontSize: '14px',
+    fontWeight: 700,
+    color: '#252422',
+    textTransform: 'uppercase' as const,
+    mb: 2
+  },
+  label: {
+    color: '#9a9a9a',
+    fontSize: '12px',
+    fontWeight: 400,
+    mb: 0.5,
+    display: 'block'
+  },
+  select: {
+    height: '40px',
+    fontSize: '14px',
+    '& .MuiOutlinedInput-notchedOutline': {
+      borderColor: '#ddd'
+    },
+    '&:hover .MuiOutlinedInput-notchedOutline': {
+      borderColor: '#ccc'
+    },
+    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+      borderColor: '#51cbce'
+    }
+  },
+  // Chip/badge for sorteos and days - exactly like original
+  chip: {
+    display: 'inline-block',
+    padding: '4px 10px',
+    borderRadius: '4px',
+    fontSize: '14px',
+    fontWeight: 600,
+    cursor: 'pointer',
+    margin: '2px',
+    transition: 'all 0.2s ease',
+    border: '1px solid #ddd',
+    backgroundColor: 'white',
+    color: '#9a9a9a',
+    '&:hover': {
+      borderColor: '#51cbce',
+      color: '#51cbce'
+    }
+  },
+  chipSelected: {
+    display: 'inline-block',
+    padding: '4px 10px',
+    borderRadius: '4px',
+    fontSize: '14px',
+    fontWeight: 600,
+    cursor: 'pointer',
+    margin: '2px',
+    transition: 'all 0.2s ease',
+    border: '1px solid #51cbce',
+    backgroundColor: '#51cbce',
+    color: 'white'
+  },
+  // Day chip - orange/coral color like original
+  dayChip: {
+    display: 'inline-block',
+    padding: '3px 8px',
+    borderRadius: '4px',
+    fontSize: '12px',
+    fontWeight: 600,
+    cursor: 'pointer',
+    margin: '3px',
+    transition: 'all 0.2s ease',
+    border: '1px solid #ddd',
+    backgroundColor: 'white',
+    color: '#9a9a9a'
+  },
+  dayChipSelected: {
+    display: 'inline-block',
+    padding: '3px 8px',
+    borderRadius: '4px',
+    fontSize: '12px',
+    fontWeight: 600,
+    cursor: 'pointer',
+    margin: '3px',
+    transition: 'all 0.2s ease',
+    border: 'none',
+    backgroundColor: '#ef8157', // Orange/coral like original
+    color: 'white'
+  },
+  selectAllButton: {
+    bgcolor: 'transparent',
+    color: '#51cbce',
+    borderRadius: '30px',
+    padding: '5px 23px',
+    fontSize: '12px',
+    fontWeight: 400,
+    border: '1px solid #51cbce',
+    textTransform: 'none' as const,
+    '&:hover': {
+      bgcolor: 'rgba(81, 203, 206, 0.1)',
+      border: '1px solid #51cbce'
+    }
+  },
+  createButton: {
+    bgcolor: '#51cbce',
+    color: 'white',
+    borderRadius: '30px',
+    padding: '11px 40px',
+    fontSize: '12px',
+    fontWeight: 600,
+    textTransform: 'uppercase' as const,
+    boxShadow: 'none',
+    '&:hover': {
+      bgcolor: '#45b8bb',
+      boxShadow: 'none'
+    },
+    '&:disabled': {
+      bgcolor: '#ccc',
+      color: 'white'
+    }
+  },
+  amountField: {
+    display: 'flex',
+    alignItems: 'center',
+    mb: 1.5
+  },
+  amountLabel: {
+    color: '#66615b',
+    fontSize: '14px',
+    fontWeight: 400,
+    minWidth: '150px'
+  },
+  amountInput: {
+    '& .MuiOutlinedInput-root': {
+      borderRadius: '5px',
+      fontSize: '14px',
+      height: '36px'
+    },
+    '& .MuiOutlinedInput-notchedOutline': {
+      borderColor: '#ddd'
+    }
+  }
+};
 
 const CreateLimit = (): React.ReactElement => {
   const navigate = useNavigate();
@@ -163,25 +320,21 @@ const CreateLimit = (): React.ReactElement => {
       return false;
     }
 
-    // Check if betting pool is required
     if (requiresBettingPool(limitType) && !selectedBettingPool) {
       setError('Debe seleccionar una banca para este tipo de limite');
       return false;
     }
 
-    // Check if zone is required
     if (requiresZone(limitType) && !selectedZone) {
       setError('Debe seleccionar una zona para este tipo de limite');
       return false;
     }
 
-    // Check if number pattern is required
     if (requiresNumberPattern(limitType) && !betNumberPattern.trim()) {
       setError('Debe ingresar un patron de numero para este tipo de limite');
       return false;
     }
 
-    // Check that at least one amount is configured
     const hasAmount = Object.values(amounts).some(v => v && parseFloat(v) > 0);
     if (!hasAmount) {
       setError('Debe configurar al menos un monto');
@@ -199,7 +352,6 @@ const CreateLimit = (): React.ReactElement => {
     setSubmitting(true);
 
     try {
-      // Build amounts object with only non-zero values
       const amountsPayload: BetTypeAmounts = {};
       Object.entries(amounts).forEach(([key, value]) => {
         if (value && parseFloat(value) > 0) {
@@ -226,7 +378,6 @@ const CreateLimit = (): React.ReactElement => {
         severity: 'success'
       });
 
-      // Redirect after showing success message
       setTimeout(() => navigate('/limits/list'), 1500);
     } catch (err) {
       const errorMsg = handleLimitError(err, 'crear limite');
@@ -245,18 +396,17 @@ const CreateLimit = (): React.ReactElement => {
     setSnackbar(prev => ({ ...prev, open: false }));
   };
 
-  // Show loading spinner while loading params
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
-        <CircularProgress />
+        <CircularProgress sx={{ color: '#51cbce' }} />
       </Box>
     );
   }
 
   return (
-    <Box sx={{ p: 3, bgcolor: '#f5f5f5', minHeight: '100vh' }}>
-      <Typography variant="h4" sx={{ textAlign: 'center', mb: 3, fontSize: '24px', fontWeight: 500, color: '#2c2c2c' }}>
+    <Box sx={styles.container}>
+      <Typography sx={styles.title}>
         Crear limites
       </Typography>
 
@@ -266,227 +416,212 @@ const CreateLimit = (): React.ReactElement => {
         </Alert>
       )}
 
-      <Card>
-        <CardContent sx={{ p: 4 }}>
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
-            {/* Left Column - LIMITES */}
-            <Box>
-              <Typography variant="h6" sx={{ fontSize: '16px', fontWeight: 600, color: '#2c2c2c', mb: 2, borderBottom: '2px solid #6366f1', pb: 1 }}>
-                LIMITES
-              </Typography>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
+        {/* Left Column - LÍMITES */}
+        <Box sx={styles.card}>
+          <Typography sx={styles.columnHeader}>
+            Limites
+          </Typography>
+          <Divider sx={{ mb: 2 }} />
 
-              <FormControl fullWidth sx={{ mb: 2 }}>
-                <InputLabel sx={{ fontSize: '12px' }}>Tipo de Limite *</InputLabel>
+          {/* Tipo de Límite */}
+          <Box sx={{ mb: 2 }}>
+            <Typography component="label" sx={styles.label}>
+              Tipo de Limite
+            </Typography>
+            <FormControl fullWidth size="small">
+              <Select
+                value={limitType}
+                onChange={(e: SelectChangeEvent) => {
+                  setLimitType(e.target.value);
+                  setSelectedBettingPool(null);
+                  setSelectedZone(null);
+                  setBetNumberPattern('');
+                }}
+                displayEmpty
+                sx={styles.select}
+              >
+                <MenuItem value="">
+                  <em style={{ color: '#9a9a9a' }}>Seleccione</em>
+                </MenuItem>
+                {Object.entries(LimitTypeLabels).map(([value, label]) => (
+                  <MenuItem key={value} value={value}>{label}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
+
+          {/* Betting Pool selector (conditional) */}
+          {requiresBettingPool(limitType) && params && (
+            <Box sx={{ mb: 2 }}>
+              <Typography component="label" sx={styles.label}>
+                Banca
+              </Typography>
+              <Autocomplete
+                options={params.bettingPools}
+                getOptionLabel={(option) => option.label}
+                value={params.bettingPools.find(bp => bp.value === selectedBettingPool) || null}
+                onChange={(_, newValue) => setSelectedBettingPool(newValue?.value || null)}
+                renderInput={(inputParams) => (
+                  <TextField
+                    {...inputParams}
+                    placeholder="Buscar banca..."
+                    size="small"
+                  />
+                )}
+                size="small"
+              />
+            </Box>
+          )}
+
+          {/* Zone selector (conditional) */}
+          {requiresZone(limitType) && params && (
+            <Box sx={{ mb: 2 }}>
+              <Typography component="label" sx={styles.label}>
+                Zona
+              </Typography>
+              <FormControl fullWidth size="small">
                 <Select
-                  value={limitType}
-                  onChange={(e) => {
-                    setLimitType(e.target.value);
-                    // Reset related fields when type changes
-                    setSelectedBettingPool(null);
-                    setSelectedZone(null);
-                    setBetNumberPattern('');
-                  }}
-                  label="Tipo de Limite *"
-                  sx={{ fontSize: '14px' }}
+                  value={selectedZone || ''}
+                  onChange={(e: SelectChangeEvent<number | string>) => setSelectedZone(e.target.value as number)}
+                  displayEmpty
+                  sx={styles.select}
                 >
-                  <MenuItem value=""><em>Seleccione</em></MenuItem>
-                  {Object.entries(LimitTypeLabels).map(([value, label]) => (
-                    <MenuItem key={value} value={value} sx={{ fontSize: '14px' }}>{label}</MenuItem>
+                  <MenuItem value="">
+                    <em style={{ color: '#9a9a9a' }}>Seleccione</em>
+                  </MenuItem>
+                  {params.zones.map(zone => (
+                    <MenuItem key={zone.value} value={zone.value}>{zone.label}</MenuItem>
                   ))}
                 </Select>
               </FormControl>
-
-              {/* Betting Pool selector (conditional) */}
-              {requiresBettingPool(limitType) && params && (
-                <Autocomplete
-                  options={params.bettingPools}
-                  getOptionLabel={(option) => option.label}
-                  value={params.bettingPools.find(bp => bp.value === selectedBettingPool) || null}
-                  onChange={(_, newValue) => setSelectedBettingPool(newValue?.value || null)}
-                  renderInput={(inputParams) => (
-                    <TextField
-                      {...inputParams}
-                      label="Banca *"
-                      placeholder="Buscar banca..."
-                      InputLabelProps={{ sx: { fontSize: '12px' } }}
-                    />
-                  )}
-                  sx={{ mb: 2 }}
-                  size="small"
-                />
-              )}
-
-              {/* Zone selector (conditional) */}
-              {requiresZone(limitType) && params && (
-                <FormControl fullWidth sx={{ mb: 2 }}>
-                  <InputLabel sx={{ fontSize: '12px' }}>Zona *</InputLabel>
-                  <Select
-                    value={selectedZone || ''}
-                    onChange={(e) => setSelectedZone(e.target.value as number)}
-                    label="Zona *"
-                    sx={{ fontSize: '14px' }}
-                  >
-                    <MenuItem value=""><em>Seleccione</em></MenuItem>
-                    {params.zones.map(zone => (
-                      <MenuItem key={zone.value} value={zone.value} sx={{ fontSize: '14px' }}>
-                        {zone.label}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              )}
-
-              {/* Number pattern (conditional) */}
-              {requiresNumberPattern(limitType) && (
-                <TextField
-                  label="Patron de Numero *"
-                  fullWidth
-                  value={betNumberPattern}
-                  onChange={(e) => setBetNumberPattern(e.target.value)}
-                  placeholder="Ej: 12, 123, 1234"
-                  InputLabelProps={{ sx: { fontSize: '12px' } }}
-                  sx={{ mb: 2 }}
-                />
-              )}
-
-              <TextField
-                type="date"
-                label="Fecha de expiracion"
-                fullWidth
-                value={expirationDate}
-                onChange={(e) => setExpirationDate(e.target.value)}
-                InputLabelProps={{ shrink: true, sx: { fontSize: '12px' } }}
-                sx={{ mb: 2 }}
-                helperText="Opcional - dejar vacio para limite permanente"
-              />
-
-              <Box>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                  <Typography sx={{ fontSize: '12px', color: '#787878' }}>
-                    Sorteos *
-                  </Typography>
-                  <Button
-                    size="small"
-                    onClick={handleSelectAllDraws}
-                    sx={{ fontSize: '11px', bgcolor: '#6366f1', color: 'white', '&:hover': { bgcolor: '#5568d3' }, textTransform: 'none' }}
-                  >
-                    {params && selectedDraws.length === params.draws.length ? 'Deseleccionar todos' : 'Seleccionar todos'}
-                  </Button>
-                </Box>
-                <Box sx={{ maxHeight: '300px', overflowY: 'auto', border: '1px solid #ddd', p: 1, borderRadius: '4px', bgcolor: 'white' }}>
-                  {params?.draws.map(draw => (
-                    <FormControlLabel
-                      key={draw.value}
-                      control={
-                        <Checkbox
-                          checked={selectedDraws.includes(draw.value)}
-                          onChange={() => handleDrawToggle(draw.value)}
-                          size="small"
-                        />
-                      }
-                      label={draw.label}
-                      sx={{ display: 'block', mb: 0.5, '& .MuiFormControlLabel-label': { fontSize: '13px' } }}
-                    />
-                  ))}
-                  {(!params || params.draws.length === 0) && (
-                    <Typography sx={{ fontSize: '13px', color: '#999', textAlign: 'center', py: 2 }}>
-                      No hay sorteos disponibles
-                    </Typography>
-                  )}
-                </Box>
-                <Typography sx={{ fontSize: '11px', color: '#999', mt: 0.5 }}>
-                  {selectedDraws.length} seleccionado(s)
-                </Typography>
-              </Box>
             </Box>
+          )}
 
-            {/* Right Column - MONTO */}
-            <Box>
-              <Typography variant="h6" sx={{ fontSize: '16px', fontWeight: 600, color: '#2c2c2c', mb: 2, borderBottom: '2px solid #6366f1', pb: 1 }}>
-                MONTO
+          {/* Number pattern (conditional) */}
+          {requiresNumberPattern(limitType) && (
+            <Box sx={{ mb: 2 }}>
+              <Typography component="label" sx={styles.label}>
+                Patron de Numero
               </Typography>
-
-              <Box sx={{ maxHeight: '500px', overflowY: 'auto', pr: 1 }}>
-                {BetTypes.map(({ key, label }) => (
-                  <TextField
-                    key={key}
-                    type="number"
-                    label={label}
-                    fullWidth
-                    value={amounts[key]}
-                    onChange={(e) => handleAmountChange(key, e.target.value)}
-                    placeholder="0.00"
-                    InputLabelProps={{ sx: { fontSize: '12px' } }}
-                    InputProps={{ sx: { fontSize: '14px', textAlign: 'right' } }}
-                    sx={{ mb: 2 }}
-                    inputProps={{ min: 0, step: 0.01 }}
-                  />
-                ))}
-              </Box>
+              <TextField
+                fullWidth
+                size="small"
+                value={betNumberPattern}
+                onChange={(e) => setBetNumberPattern(e.target.value)}
+                placeholder="Ej: 12, 123, 1234"
+              />
             </Box>
+          )}
+
+          {/* Fecha de expiración */}
+          <Box sx={{ mb: 2 }}>
+            <Typography component="label" sx={styles.label}>
+              Fecha de expiracion
+            </Typography>
+            <TextField
+              type="date"
+              fullWidth
+              size="small"
+              value={expirationDate}
+              onChange={(e) => setExpirationDate(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+            />
           </Box>
 
-          <Divider sx={{ my: 3 }} />
+          {/* Sorteos - as chips like original */}
+          <Box sx={{ mb: 2 }}>
+            <Typography component="label" sx={styles.label}>
+              Sorteos
+            </Typography>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 1 }}>
+              {params?.draws.map(draw => (
+                <Box
+                  key={draw.value}
+                  onClick={() => handleDrawToggle(draw.value)}
+                  sx={selectedDraws.includes(draw.value) ? styles.chipSelected : styles.chip}
+                >
+                  {draw.label}
+                </Box>
+              ))}
+            </Box>
+            <Button
+              variant="outlined"
+              onClick={handleSelectAllDraws}
+              sx={styles.selectAllButton}
+            >
+              {params && selectedDraws.length === params.draws.length ? 'Deseleccionar todos' : 'Seleccionar todos'}
+            </Button>
+          </Box>
+        </Box>
 
-          {/* Days of Week Section */}
-          <Box>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-              <Typography variant="h6" sx={{ fontSize: '16px', fontWeight: 600, color: '#2c2c2c' }}>
-                DIA DE SEMANA *
+        {/* Right Column - MONTO */}
+        <Box>
+          <Box sx={styles.card}>
+            <Typography sx={styles.columnHeader}>
+              Monto
+            </Typography>
+
+            <Box sx={{ maxHeight: '400px', overflowY: 'auto' }}>
+              {BetTypes.map(({ key, label }) => (
+                <Box key={key} sx={styles.amountField}>
+                  <Typography sx={styles.amountLabel}>
+                    {label}
+                  </Typography>
+                  <TextField
+                    type="number"
+                    size="small"
+                    value={amounts[key]}
+                    onChange={(e) => handleAmountChange(key, e.target.value)}
+                    sx={{ ...styles.amountInput, flex: 1 }}
+                    inputProps={{ min: 0, step: 0.01 }}
+                  />
+                </Box>
+              ))}
+            </Box>
+
+            <Divider sx={{ my: 2 }} />
+
+            {/* Día de semana - as chips like original */}
+            <Box sx={{ mb: 2 }}>
+              <Typography component="label" sx={styles.label}>
+                Dia de semana
               </Typography>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 1 }}>
+                {DaysOfWeek.map(day => (
+                  <Box
+                    key={day.value}
+                    onClick={() => handleDayToggle(day.value)}
+                    sx={selectedDays.includes(day.value) ? styles.dayChipSelected : styles.dayChip}
+                  >
+                    {day.label}
+                  </Box>
+                ))}
+              </Box>
               <Button
-                size="small"
+                variant="outlined"
                 onClick={handleSelectAllDays}
-                sx={{ fontSize: '11px', bgcolor: '#6366f1', color: 'white', '&:hover': { bgcolor: '#5568d3' }, textTransform: 'none' }}
+                sx={styles.selectAllButton}
               >
                 {selectedDays.length === DaysOfWeek.length ? 'Deseleccionar todos' : 'Seleccionar todos'}
               </Button>
             </Box>
-
-            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-              {DaysOfWeek.map(day => (
-                <FormControlLabel
-                  key={day.value}
-                  control={
-                    <Checkbox
-                      checked={selectedDays.includes(day.value)}
-                      onChange={() => handleDayToggle(day.value)}
-                      size="small"
-                    />
-                  }
-                  label={day.label}
-                  sx={{ '& .MuiFormControlLabel-label': { fontSize: '13px' } }}
-                />
-              ))}
-            </Box>
-            <Typography sx={{ fontSize: '11px', color: '#999', mt: 1 }}>
-              {selectedDays.length} dia(s) seleccionado(s)
-            </Typography>
           </Box>
 
           {/* Create Button */}
-          <Box sx={{ textAlign: 'center', mt: 4 }}>
+          <Box sx={{ textAlign: 'center', mt: 3 }}>
             <Button
               variant="contained"
               onClick={handleSubmit}
               disabled={submitting}
-              startIcon={submitting ? <CircularProgress size={20} color="inherit" /> : null}
-              sx={{
-                bgcolor: '#6366f1',
-                color: 'white',
-                fontSize: '14px',
-                px: 5,
-                py: 1.5,
-                '&:hover': { bgcolor: '#5568d3' },
-                '&:disabled': { bgcolor: '#9ca3af', color: 'white' },
-                textTransform: 'none'
-              }}
+              disableElevation
+              sx={styles.createButton}
             >
-              {submitting ? 'Creando...' : 'CREAR'}
+              {submitting ? 'Creando...' : 'Crear'}
             </Button>
           </Box>
-        </CardContent>
-      </Card>
+        </Box>
+      </Box>
 
       {/* Snackbar for feedback */}
       <Snackbar
