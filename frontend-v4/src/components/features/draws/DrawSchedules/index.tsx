@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, memo } from 'react';
 import {
   Box,
   Card,
@@ -17,7 +17,8 @@ import type { AlertColor } from '@mui/material/Alert';
 import {
   ContentCopy as ContentCopyIcon,
   ArrowForward as ArrowForwardIcon,
-  Add as AddIcon
+  Add as AddIcon,
+  ArrowDropDown as ArrowDropDownIcon
 } from '@mui/icons-material';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
@@ -38,19 +39,19 @@ interface TimeInputProps {
   placeholder?: string;
 }
 
-const TimeInput: React.FC<TimeInputProps> = ({ value, onChange, placeholder = '12:00 AM' }) => {
-  // Convert 12-hour string to dayjs object
-  const parseTime = (timeStr: string): Dayjs | null => {
-    if (!timeStr || timeStr.trim() === '') return null;
+// Memoized TimeInput to prevent re-renders
+const TimeInput: React.FC<TimeInputProps> = memo(({ value, onChange, placeholder = '12:00 AM' }) => {
+  // Convert 12-hour string to dayjs object - memoized
+  const timeValue = useMemo((): Dayjs | null => {
+    if (!value || value.trim() === '') return null;
 
-    const match = timeStr.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+    const match = value.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
     if (!match) return null;
 
     let hours = parseInt(match[1], 10);
     const minutes = parseInt(match[2], 10);
     const period = match[3].toUpperCase();
 
-    // Convert to 24-hour format for dayjs
     if (period === 'AM' && hours === 12) {
       hours = 0;
     } else if (period === 'PM' && hours !== 12) {
@@ -58,46 +59,50 @@ const TimeInput: React.FC<TimeInputProps> = ({ value, onChange, placeholder = '1
     }
 
     return dayjs().hour(hours).minute(minutes).second(0);
-  };
+  }, [value]);
 
-  // Convert dayjs object to 12-hour string
-  const formatTime = (time: Dayjs | null): string => {
-    if (!time) return '';
-    return time.format('hh:mm A');
-  };
-
-  const handleChange = (newValue: Dayjs | null) => {
+  const handleChange = useCallback((newValue: Dayjs | null) => {
     if (newValue && newValue.isValid()) {
-      const formatted = formatTime(newValue);
-      onChange(formatted);
+      onChange(newValue.format('hh:mm A'));
     } else {
       onChange('');
     }
-  };
+  }, [onChange]);
 
   return (
     <TimePicker
-      value={parseTime(value)}
+      value={timeValue}
       onChange={handleChange}
       views={['hours', 'minutes']}
       ampm={true}
+      slots={{
+        openPickerIcon: ArrowDropDownIcon
+      }}
       slotProps={{
         textField: {
           size: 'small',
           placeholder: placeholder,
           sx: {
-            width: 135,
+            width: 115,
             '& .MuiInputBase-input': {
               fontSize: '12px',
               py: 0.4,
-              px: 0.5,
-              pr: 0
+              px: 0.5
             },
             '& .MuiInputAdornment-root': {
               ml: 0
             },
             '& .MuiIconButton-root': {
-              p: 0.25
+              p: 0,
+              mr: -0.5
+            }
+          }
+        },
+        openPickerButton: {
+          sx: {
+            p: 0,
+            '& .MuiSvgIcon-root': {
+              fontSize: 18
             }
           }
         },
@@ -108,15 +113,15 @@ const TimeInput: React.FC<TimeInputProps> = ({ value, onChange, placeholder = '1
               minWidth: 'auto'
             },
             '& .MuiTimeClock-root': {
-              width: 220,
-              height: 220
+              width: 200,
+              height: 200
             },
             '& .MuiClock-root': {
-              margin: '8px'
+              margin: '4px'
             },
             '& .MuiClock-clock': {
-              width: 180,
-              height: 180,
+              width: 160,
+              height: 160,
               bgcolor: '#f5f5f5'
             },
             '& .MuiClock-pin': {
@@ -136,25 +141,24 @@ const TimeInput: React.FC<TimeInputProps> = ({ value, onChange, placeholder = '1
               '& .MuiIconButton-root': {
                 color: '#8b5cf6'
               }
-            },
-            '& .MuiDialogActions-root': {
-              p: 1
             }
           }
         },
         actionBar: {
           actions: ['accept', 'cancel'],
           sx: {
+            p: 0.5,
             '& .MuiButton-root': {
-              fontSize: '12px',
-              minWidth: 60
+              fontSize: '11px',
+              minWidth: 50,
+              py: 0.25
             }
           }
         }
       }}
     />
   );
-};
+});
 
 type DayKey = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
 
