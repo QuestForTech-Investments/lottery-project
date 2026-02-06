@@ -154,25 +154,26 @@ const MUITimeInput: React.FC<TimeInputProps> = memo(({ value, onChange, placehol
           size: 'small',
           placeholder: placeholder,
           sx: {
-            width: 120,
+            width: 130,
             '& .MuiInputBase-input': {
               fontSize: '13px',
               py: 0.5,
-              px: 1
+              px: 1,
+              pr: 0
             },
             '& .MuiInputAdornment-root': {
               ml: 0
             },
             '& .MuiIconButton-root': {
-              p: 0.25
+              p: 0
             }
           }
         },
         openPickerButton: {
           sx: {
-            p: 0.25,
+            p: 0,
             '& .MuiSvgIcon-root': {
-              fontSize: 20
+              fontSize: 18
             }
           }
         },
