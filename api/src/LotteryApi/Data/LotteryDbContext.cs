@@ -76,6 +76,14 @@ public class LotteryDbContext : DbContext
     public DbSet<LimitRule> LimitRules { get; set; }
     public DbSet<LimitConsumption> LimitConsumptions { get; set; }
 
+    // Automatic Limits Configuration
+    public DbSet<AutomaticLimitConfig> AutomaticLimitConfigs { get; set; }
+    public DbSet<RandomBlockConfig> RandomBlockConfigs { get; set; }
+
+    // Hot Numbers
+    public DbSet<HotNumber> HotNumbers { get; set; }
+    public DbSet<HotNumberLimit> HotNumberLimits { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -174,6 +182,13 @@ public class LotteryDbContext : DbContext
 
         modelBuilder.Entity<Result>()
             .HasIndex(r => r.DrawId);
+
+        // Hot Numbers indexes
+        modelBuilder.Entity<HotNumber>()
+            .HasIndex(hn => new { hn.Number, hn.IsActive });
+
+        modelBuilder.Entity<HotNumberLimit>()
+            .HasIndex(hnl => hnl.IsActive);
     }
 
     private void ConfigureUniqueConstraints(ModelBuilder modelBuilder)
@@ -225,6 +240,11 @@ public class LotteryDbContext : DbContext
 
         modelBuilder.Entity<BettingPoolDrawGameType>()
             .HasIndex(bpdgt => new { bpdgt.BettingPoolId, bpdgt.DrawId, bpdgt.GameTypeId })
+            .IsUnique();
+
+        // Hot Numbers - unique number (can only have one entry per number)
+        modelBuilder.Entity<HotNumber>()
+            .HasIndex(hn => hn.Number)
             .IsUnique();
     }
 
