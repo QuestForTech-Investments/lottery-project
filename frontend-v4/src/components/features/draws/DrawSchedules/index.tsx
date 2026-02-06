@@ -153,26 +153,25 @@ const MUITimeInput: React.FC<TimeInputProps> = memo(({ value, onChange, placehol
           size: 'small',
           placeholder: placeholder,
           sx: {
-            width: 115,
+            width: 120,
             '& .MuiInputBase-input': {
-              fontSize: '11px',
-              py: 0.4,
-              px: 0.5
+              fontSize: '13px',
+              py: 0.5,
+              px: 1
             },
             '& .MuiInputAdornment-root': {
               ml: 0
             },
             '& .MuiIconButton-root': {
-              p: 0,
-              mr: -0.5
+              p: 0.25
             }
           }
         },
         openPickerButton: {
           sx: {
-            p: 0,
+            p: 0.25,
             '& .MuiSvgIcon-root': {
-              fontSize: 18
+              fontSize: 20
             }
           }
         },
@@ -231,7 +230,8 @@ const MUITimeInput: React.FC<TimeInputProps> = memo(({ value, onChange, placehol
 });
 
 // Use SimpleTimeInput for better performance
-const TimeInput = SimpleTimeInput;
+// Use MUITimeInput for visual picker with dropdown button
+const TimeInput = MUITimeInput;
 
 type DayKey = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
 
