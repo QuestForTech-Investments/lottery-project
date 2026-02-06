@@ -49,7 +49,6 @@ public class AuthService : IAuthService
 
         // Get user's assigned betting pool (if any)
         var userBettingPool = user.UserBettingPools?.FirstOrDefault(ubp => ubp.IsActive);
-        _logger.LogInformation("FUCKING BETTING POOL {a}", userBettingPool?.BettingPoolId);
 
         var token = GenerateJwtToken(user.UserId, user.Username, user.Role?.RoleName, userBettingPool?.BettingPoolId);
 
@@ -154,8 +153,6 @@ public class AuthService : IAuthService
 
         var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
         var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
-
-        _logger.LogInformation("FUCKING USER ID: {a}", userId.ToString());
 
         var claims = new List<Claim>
         {
