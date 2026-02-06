@@ -251,10 +251,10 @@ const TimeInput: React.FC<TimeInputProps> = ({ value, onChange, placeholder = '1
                       justifyContent: 'center',
                       fontSize: '13px',
                       cursor: 'pointer',
-                      bgcolor: selectedHour === hour ? '#51cbce' : 'transparent',
+                      bgcolor: selectedHour === hour ? '#8b5cf6' : 'transparent',
                       color: selectedHour === hour ? 'white' : '#333',
                       '&:hover': {
-                        bgcolor: selectedHour === hour ? '#51cbce' : '#f0f0f0'
+                        bgcolor: selectedHour === hour ? '#8b5cf6' : '#f0f0f0'
                       }
                     }}
                   >
@@ -295,10 +295,10 @@ const TimeInput: React.FC<TimeInputProps> = ({ value, onChange, placeholder = '1
                       justifyContent: 'center',
                       fontSize: '13px',
                       cursor: 'pointer',
-                      bgcolor: selectedMinute === minute ? '#51cbce' : 'transparent',
+                      bgcolor: selectedMinute === minute ? '#8b5cf6' : 'transparent',
                       color: selectedMinute === minute ? 'white' : '#333',
                       '&:hover': {
-                        bgcolor: selectedMinute === minute ? '#51cbce' : '#f0f0f0'
+                        bgcolor: selectedMinute === minute ? '#8b5cf6' : '#f0f0f0'
                       }
                     }}
                   >
