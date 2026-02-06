@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using LotteryApi.Models.Enums;
 
 namespace LotteryApi.Models;
 
@@ -14,11 +15,26 @@ public class LimitRule
     [Column("rule_name")]
     public string? RuleName { get; set; }
 
+    [Column("limit_type")]
+    public LimitType LimitType { get; set; } = LimitType.GeneralForGroup;
+
+    [Column("lottery_id")]
+    public int? LotteryId { get; set; }
+
     [Column("draw_id")]
     public int? DrawId { get; set; }
 
     [Column("game_type_id")]
     public int? GameTypeId { get; set; }
+
+    [Column("zone_id")]
+    public int? ZoneId { get; set; }
+
+    [Column("group_id")]
+    public int? GroupId { get; set; }
+
+    [Column("betting_pool_id")]
+    public int? BettingPoolId { get; set; }
 
     [MaxLength(50)]
     [Column("bet_number_pattern")]
@@ -42,6 +58,13 @@ public class LimitRule
     [Column("priority")]
     public int? Priority { get; set; }
 
+    /// <summary>
+    /// Bitmask for days of week: 1=Mon, 2=Tue, 4=Wed, 8=Thu, 16=Fri, 32=Sat, 64=Sun
+    /// Null means all days
+    /// </summary>
+    [Column("days_of_week")]
+    public int? DaysOfWeek { get; set; }
+
     [Column("effective_from")]
     public DateTime? EffectiveFrom { get; set; }
 
@@ -61,11 +84,20 @@ public class LimitRule
     public int? UpdatedBy { get; set; }
 
     // Navigation properties
+    [ForeignKey("LotteryId")]
+    public virtual Lottery? Lottery { get; set; }
+
     [ForeignKey("DrawId")]
     public virtual Draw? Draw { get; set; }
 
     [ForeignKey("GameTypeId")]
     public virtual GameType? GameType { get; set; }
+
+    [ForeignKey("ZoneId")]
+    public virtual Zone? Zone { get; set; }
+
+    [ForeignKey("BettingPoolId")]
+    public virtual BettingPool? BettingPool { get; set; }
 
     public virtual ICollection<LimitConsumption> LimitConsumptions { get; set; } = new List<LimitConsumption>();
 }

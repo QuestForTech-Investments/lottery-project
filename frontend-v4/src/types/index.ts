@@ -8,3 +8,6 @@ export * from './common';
 
 // User types
 export * from './user';
+
+// Limit types
+export * from './limits';

@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using LotteryApi.Models;
+using LotteryApi.Models.Enums;
 
 namespace LotteryApi.Data;
 
@@ -343,19 +344,44 @@ public class LotteryDbContext : DbContext
             .HasForeignKey(gt => gt.CategoryId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        // LimitRule -> Draw
-        modelBuilder.Entity<LimitRule>()
-            .HasOne(lr => lr.Draw)
-            .WithMany(d => d.LimitRules)
-            .HasForeignKey(lr => lr.DrawId)
-            .OnDelete(DeleteBehavior.Restrict);
+        // LimitRule configuration
+        modelBuilder.Entity<LimitRule>(entity =>
+        {
+            // Configure LimitType enum conversion
+            entity.Property(e => e.LimitType)
+                .HasConversion<int>()
+                .HasDefaultValue(LimitType.GeneralForGroup);
 
-        // LimitRule -> GameType
-        modelBuilder.Entity<LimitRule>()
-            .HasOne(lr => lr.GameType)
-            .WithMany()
-            .HasForeignKey(lr => lr.GameTypeId)
-            .OnDelete(DeleteBehavior.Restrict);
+            // LimitRule -> Lottery
+            entity.HasOne(lr => lr.Lottery)
+                .WithMany()
+                .HasForeignKey(lr => lr.LotteryId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // LimitRule -> Draw
+            entity.HasOne(lr => lr.Draw)
+                .WithMany(d => d.LimitRules)
+                .HasForeignKey(lr => lr.DrawId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // LimitRule -> GameType
+            entity.HasOne(lr => lr.GameType)
+                .WithMany()
+                .HasForeignKey(lr => lr.GameTypeId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // LimitRule -> Zone
+            entity.HasOne(lr => lr.Zone)
+                .WithMany()
+                .HasForeignKey(lr => lr.ZoneId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // LimitRule -> BettingPool
+            entity.HasOne(lr => lr.BettingPool)
+                .WithMany()
+                .HasForeignKey(lr => lr.BettingPoolId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
 
         // LimitConsumption -> LimitRule
         modelBuilder.Entity<LimitConsumption>()
