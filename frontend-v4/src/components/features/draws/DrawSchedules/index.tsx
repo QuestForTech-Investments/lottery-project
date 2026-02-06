@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo, memo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, memo, useRef } from 'react';
 import {
   Box,
   Card,
@@ -219,6 +219,19 @@ const DrawSchedules = (): React.ReactElement => {
   const [saving, setSaving] = useState<boolean>(false);
   const [snackbar, setSnackbar] = useState<SnackbarState>({ open: false, message: '', severity: 'success' });
 
+  // Refs to hold latest state for stable callbacks
+  const lotteriesRef = useRef<Lottery[]>(lotteries);
+  const modifiedDrawsRef = useRef<Map<number, Draw>>(modifiedDraws);
+
+  // Keep refs in sync with state
+  useEffect(() => {
+    lotteriesRef.current = lotteries;
+  }, [lotteries]);
+
+  useEffect(() => {
+    modifiedDrawsRef.current = modifiedDraws;
+  }, [modifiedDraws]);
+
   // eslint-disable-next-line react-hooks/exhaustive-deps -- Only run once on mount
   useEffect(() => {
     loadDrawSchedules();
@@ -280,9 +293,26 @@ const DrawSchedules = (): React.ReactElement => {
     return drawStateCache.get(drawId) || null;
   }, [drawStateCache]);
 
+  // Stable callback that reads from refs - doesn't change on every render
   const handleTimeChange = useCallback((drawId: number, dayKey: DayKey, field: 'startTime' | 'endTime', value: string): void => {
-    // Get the draw's current state (from modified or original)
-    const draw = getDrawState(drawId);
+    // Get draw from refs to avoid dependency on changing state
+    const currentLotteries = lotteriesRef.current;
+    const currentModified = modifiedDrawsRef.current;
+
+    // Find draw in modified or original
+    let draw: Draw | undefined;
+    if (currentModified.has(drawId)) {
+      draw = currentModified.get(drawId);
+    } else {
+      for (const lottery of currentLotteries) {
+        const found = lottery.draws.find(d => d.drawId === drawId);
+        if (found) {
+          draw = found;
+          break;
+        }
+      }
+    }
+
     if (!draw) return;
 
     // Create updated weekly schedule - ensure weeklySchedule exists
@@ -303,7 +333,7 @@ const DrawSchedules = (): React.ReactElement => {
       setModifiedDraws(prev => {
         const newMap = new Map(prev);
         newMap.set(drawId, {
-          ...draw,
+          ...draw!,
           weeklySchedule: updatedSchedule
         });
         return newMap;
@@ -327,16 +357,32 @@ const DrawSchedules = (): React.ReactElement => {
     setModifiedDraws(prev => {
       const newMap = new Map(prev);
       newMap.set(drawId, {
-        ...draw,
+        ...draw!,
         useWeeklySchedule: true,
         weeklySchedule: updatedSchedule
       });
       return newMap;
     });
-  }, [getDrawState]);
+  }, []); // Empty dependencies - callback never changes
 
   const handleCopyToAllDays = useCallback((drawId: number, sourceDayKey: DayKey): void => {
-    const draw = getDrawState(drawId);
+    // Get draw from refs to avoid dependency on changing state
+    const currentLotteries = lotteriesRef.current;
+    const currentModified = modifiedDrawsRef.current;
+
+    let draw: Draw | undefined;
+    if (currentModified.has(drawId)) {
+      draw = currentModified.get(drawId);
+    } else {
+      for (const lottery of currentLotteries) {
+        const found = lottery.draws.find(d => d.drawId === drawId);
+        if (found) {
+          draw = found;
+          break;
+        }
+      }
+    }
+
     if (!draw) return;
 
     const weeklySchedule = draw.weeklySchedule || {};
@@ -357,7 +403,7 @@ const DrawSchedules = (): React.ReactElement => {
     setModifiedDraws(prev => {
       const newMap = new Map(prev);
       newMap.set(drawId, {
-        ...draw,
+        ...draw!,
         useWeeklySchedule: true,
         weeklySchedule: updatedSchedule
       });
@@ -365,7 +411,7 @@ const DrawSchedules = (): React.ReactElement => {
     });
 
     showSnackbar('Horario copiado a todos los días', 'success');
-  }, [getDrawState, showSnackbar]);
+  }, [showSnackbar]);
 
   // Validate schedules before saving
   const validateSchedules = useCallback((): string | null => {
