@@ -703,7 +703,7 @@ const DrawSchedules = (): React.ReactElement => {
                         {/* Draw Cards Grid - 3 per row */}
                         <Box sx={{
                           display: 'grid',
-                          gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+                          gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))',
                           gap: 3
                         }}>
                           {lottery.draws.map((draw) => {
