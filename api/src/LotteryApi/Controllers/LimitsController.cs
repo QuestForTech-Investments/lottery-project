@@ -889,9 +889,17 @@ public class LimitsController : ControllerBase
 
     private LimitRule CreateLimitRuleFromDto(CreateLimitDto dto, int? daysOfWeek, int? drawId)
     {
+        // Generate default name if not provided
+        var ruleName = dto.RuleName;
+        if (string.IsNullOrWhiteSpace(ruleName))
+        {
+            var limitTypeName = LimitTypeNames.GetValueOrDefault((LimitType)dto.LimitType, "Límite");
+            ruleName = $"{limitTypeName} - {DateTime.UtcNow:yyyyMMddHHmmss}";
+        }
+
         return new LimitRule
         {
-            RuleName = dto.RuleName,
+            RuleName = ruleName,
             LimitType = (LimitType)dto.LimitType,
             LotteryId = dto.LotteryId,
             DrawId = drawId,
