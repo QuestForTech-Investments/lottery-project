@@ -79,23 +79,45 @@ const TimeInput: React.FC<TimeInputProps> = ({ value, onChange, placeholder = '1
     <TimePicker
       value={parseTime(value)}
       onChange={handleChange}
+      views={['hours', 'minutes']}
+      ampm={true}
       slotProps={{
         textField: {
           size: 'small',
           placeholder: placeholder,
           sx: {
-            width: 120,
+            width: 135,
             '& .MuiInputBase-input': {
-              fontSize: '13px',
-              py: 0.5,
-              px: 1
+              fontSize: '12px',
+              py: 0.4,
+              px: 0.5,
+              pr: 0
+            },
+            '& .MuiInputAdornment-root': {
+              ml: 0
+            },
+            '& .MuiIconButton-root': {
+              p: 0.25
             }
           }
         },
         popper: {
           sx: {
             '& .MuiPickersLayout-root': {
-              bgcolor: 'white'
+              bgcolor: 'white',
+              minWidth: 'auto'
+            },
+            '& .MuiTimeClock-root': {
+              width: 220,
+              height: 220
+            },
+            '& .MuiClock-root': {
+              margin: '8px'
+            },
+            '& .MuiClock-clock': {
+              width: 180,
+              height: 180,
+              bgcolor: '#f5f5f5'
             },
             '& .MuiClock-pin': {
               bgcolor: '#8b5cf6'
@@ -107,17 +129,25 @@ const TimeInput: React.FC<TimeInputProps> = ({ value, onChange, placeholder = '1
               bgcolor: '#8b5cf6',
               borderColor: '#8b5cf6'
             },
-            '& .MuiClock-clock': {
-              bgcolor: '#f5f5f5'
-            },
-            '& .Mui-selected': {
-              bgcolor: '#8b5cf6 !important'
-            },
-            '& .MuiPickersDay-root.Mui-selected': {
+            '& .MuiClockNumber-root.Mui-selected': {
               bgcolor: '#8b5cf6'
             },
-            '& .MuiButtonBase-root.MuiPickersDay-root.Mui-selected': {
-              bgcolor: '#8b5cf6'
+            '& .MuiPickersArrowSwitcher-root': {
+              '& .MuiIconButton-root': {
+                color: '#8b5cf6'
+              }
+            },
+            '& .MuiDialogActions-root': {
+              p: 1
+            }
+          }
+        },
+        actionBar: {
+          actions: ['accept', 'cancel'],
+          sx: {
+            '& .MuiButton-root': {
+              fontSize: '12px',
+              minWidth: 60
             }
           }
         }
