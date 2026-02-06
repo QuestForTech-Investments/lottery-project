@@ -39,8 +39,78 @@ interface TimeInputProps {
   placeholder?: string;
 }
 
-// Memoized TimeInput to prevent re-renders
-const TimeInput: React.FC<TimeInputProps> = memo(({ value, onChange, placeholder = '12:00 AM' }) => {
+// Simple time input - NO MUI TimePicker, just plain text input with mask
+// This is much faster than MUI TimePicker which has heavy re-render overhead
+const SimpleTimeInput: React.FC<TimeInputProps> = memo(({ value, onChange, placeholder = '12:00 AM' }) => {
+  // Local state for immediate responsiveness
+  const [localValue, setLocalValue] = useState(value);
+
+  // Sync with parent only when value prop changes from outside
+  useEffect(() => {
+    setLocalValue(value);
+  }, [value]);
+
+  const handleBlur = useCallback(() => {
+    // Validate and normalize on blur
+    if (!localValue || localValue.trim() === '') {
+      onChange('');
+      return;
+    }
+
+    // Try to parse and normalize
+    const match = localValue.match(/^(\d{1,2}):?(\d{2})?\s*(AM|PM|A|P)?$/i);
+    if (match) {
+      let hours = parseInt(match[1], 10);
+      const minutes = parseInt(match[2] || '00', 10);
+      let period = (match[3] || 'AM').toUpperCase();
+      if (period === 'A') period = 'AM';
+      if (period === 'P') period = 'PM';
+
+      // Normalize hours
+      if (hours > 12) {
+        hours = hours - 12;
+        period = 'PM';
+      }
+      if (hours === 0) hours = 12;
+
+      const normalized = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')} ${period}`;
+      setLocalValue(normalized);
+      onChange(normalized);
+    } else {
+      // Invalid format - reset
+      setLocalValue(value);
+    }
+  }, [localValue, onChange, value]);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleBlur();
+    }
+  }, [handleBlur]);
+
+  return (
+    <TextField
+      value={localValue}
+      onChange={(e) => setLocalValue(e.target.value)}
+      onBlur={handleBlur}
+      onKeyDown={handleKeyDown}
+      placeholder={placeholder}
+      size="small"
+      sx={{
+        width: 90,
+        '& .MuiInputBase-input': {
+          fontSize: '12px',
+          py: 0.6,
+          px: 1,
+          textAlign: 'center'
+        }
+      }}
+    />
+  );
+});
+
+// MUI TimePicker version - slower but with visual picker
+const MUITimeInput: React.FC<TimeInputProps> = memo(({ value, onChange, placeholder = '12:00 AM' }) => {
   // Convert 12-hour string to dayjs object - memoized
   const timeValue = useMemo((): Dayjs | null => {
     if (!value || value.trim() === '') return null;
@@ -160,7 +230,96 @@ const TimeInput: React.FC<TimeInputProps> = memo(({ value, onChange, placeholder
   );
 });
 
+// Use SimpleTimeInput for better performance
+const TimeInput = SimpleTimeInput;
+
 type DayKey = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
+
+// Memoized Day Schedule Row - prevents re-render cascade
+interface DayScheduleRowProps {
+  drawId: number;
+  dayKey: DayKey;
+  dayIndex: number;
+  startTime: string;
+  endTime: string;
+  enabled: boolean;
+  onTimeChange: (drawId: number, dayKey: DayKey, field: 'startTime' | 'endTime', value: string) => void;
+  onCopyToAllDays: (drawId: number, dayKey: DayKey) => void;
+}
+
+const DAYS_ES_ROW: string[] = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+
+const DayScheduleRow: React.FC<DayScheduleRowProps> = memo(({
+  drawId,
+  dayKey,
+  dayIndex,
+  startTime,
+  endTime,
+  enabled,
+  onTimeChange,
+  onCopyToAllDays
+}) => {
+  // Create stable callbacks for this specific row
+  const handleStartChange = useCallback((value: string) => {
+    onTimeChange(drawId, dayKey, 'startTime', value);
+  }, [drawId, dayKey, onTimeChange]);
+
+  const handleEndChange = useCallback((value: string) => {
+    onTimeChange(drawId, dayKey, 'endTime', value);
+  }, [drawId, dayKey, onTimeChange]);
+
+  const handleCopy = useCallback(() => {
+    onCopyToAllDays(drawId, dayKey);
+  }, [drawId, dayKey, onCopyToAllDays]);
+
+  return (
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+      {/* Day Label */}
+      <Typography sx={{
+        width: 75,
+        fontSize: '14px',
+        fontWeight: 500,
+        color: '#333'
+      }}>
+        {DAYS_ES_ROW[dayIndex]}
+      </Typography>
+
+      {/* Start Time */}
+      <TimeInput
+        value={startTime}
+        onChange={handleStartChange}
+        placeholder="12:00 AM"
+      />
+
+      {/* Arrow */}
+      <ArrowForwardIcon sx={{ color: '#999', fontSize: 16 }} />
+
+      {/* End Time */}
+      <TimeInput
+        value={endTime}
+        onChange={handleEndChange}
+        placeholder="11:59 PM"
+      />
+
+      {/* Copy to All Days Button */}
+      <IconButton
+        size="small"
+        onClick={handleCopy}
+        disabled={!enabled}
+        title="Copiar a todos los días"
+        sx={{
+          p: 0.3,
+          color: enabled ? '#667eea' : '#ccc',
+          '&:hover': {
+            bgcolor: enabled ? 'rgba(102, 126, 234, 0.1)' : 'transparent'
+          }
+        }}
+      >
+        <ContentCopyIcon sx={{ fontSize: 18 }} />
+      </IconButton>
+    </Box>
+  );
+});
 
 interface DaySchedule {
   startTime: string;
@@ -648,7 +807,7 @@ const DrawSchedules = (): React.ReactElement => {
                                   </Box>
                                 </Box>
 
-                                {/* Day Schedules */}
+                                {/* Day Schedules - Using memoized DayScheduleRow */}
                                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
                                   {DAY_KEYS.map((dayKey, dayIndex) => {
                                     const daySchedule = schedule[dayKey] || { startTime: '00:00:00', endTime: '00:00:00', enabled: false };
@@ -656,58 +815,17 @@ const DrawSchedules = (): React.ReactElement => {
                                     const endTime12 = daySchedule.enabled ? convertTo12Hour(daySchedule.endTime) : '';
 
                                     return (
-                                      <Box
+                                      <DayScheduleRow
                                         key={dayKey}
-                                        sx={{
-                                          display: 'flex',
-                                          alignItems: 'center',
-                                          gap: 0.5
-                                        }}
-                                      >
-                                        {/* Day Label */}
-                                        <Typography sx={{
-                                          width: 75,
-                                          fontSize: '14px',
-                                          fontWeight: 500,
-                                          color: '#333'
-                                        }}>
-                                          {DAYS_ES[dayIndex]}
-                                        </Typography>
-
-                                        {/* Start Time */}
-                                        <TimeInput
-                                          value={startTime12}
-                                          onChange={(value) => handleTimeChange(draw.drawId, dayKey, 'startTime', value)}
-                                          placeholder="12:00 AM"
-                                        />
-
-                                        {/* Arrow */}
-                                        <ArrowForwardIcon sx={{ color: '#999', fontSize: 16 }} />
-
-                                        {/* End Time */}
-                                        <TimeInput
-                                          value={endTime12}
-                                          onChange={(value) => handleTimeChange(draw.drawId, dayKey, 'endTime', value)}
-                                          placeholder="11:59 PM"
-                                        />
-
-                                        {/* Copy to All Days Button */}
-                                        <IconButton
-                                          size="small"
-                                          onClick={() => handleCopyToAllDays(draw.drawId, dayKey)}
-                                          disabled={!daySchedule.enabled}
-                                          title="Copiar a todos los días"
-                                          sx={{
-                                            p: 0.3,
-                                            color: daySchedule.enabled ? '#667eea' : '#ccc',
-                                            '&:hover': {
-                                              bgcolor: daySchedule.enabled ? 'rgba(102, 126, 234, 0.1)' : 'transparent'
-                                            }
-                                          }}
-                                        >
-                                          <ContentCopyIcon sx={{ fontSize: 18 }} />
-                                        </IconButton>
-                                      </Box>
+                                        drawId={draw.drawId}
+                                        dayKey={dayKey}
+                                        dayIndex={dayIndex}
+                                        startTime={startTime12}
+                                        endTime={endTime12}
+                                        enabled={daySchedule.enabled}
+                                        onTimeChange={handleTimeChange}
+                                        onCopyToAllDays={handleCopyToAllDays}
+                                      />
                                     );
                                   })}
                                 </Box>
