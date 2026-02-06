@@ -400,10 +400,12 @@ const BancasListMUI: React.FC = () => {
                 onPageChange={handleChangePage}
                 rowsPerPage={rowsPerPage}
                 onRowsPerPageChange={handleChangeRowsPerPage}
-                rowsPerPageOptions={[5, 10, 20, 50, 100]}
+                rowsPerPageOptions={[10, 25, 50, 100, 200, { value: -1, label: 'Todos' }]}
                 labelRowsPerPage="Filas por página:"
                 labelDisplayedRows={({ from, to, count }) =>
-                  `${from}-${to} de ${count !== -1 ? count : `más de ${to}`}`
+                  rowsPerPage === -1
+                    ? `${count} registros`
+                    : `${from}-${to} de ${count !== -1 ? count : `más de ${to}`}`
                 }
               />
             )}

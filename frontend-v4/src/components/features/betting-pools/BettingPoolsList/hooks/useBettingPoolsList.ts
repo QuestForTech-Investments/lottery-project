@@ -62,7 +62,7 @@ const useBettingPoolsList = (): UseBettingPoolsListReturn => {
 
   // Pagination state
   const [page, setPage] = useState<number>(0);
-  const [rowsPerPage, setRowsPerPage] = useState<number>(10);
+  const [rowsPerPage, setRowsPerPage] = useState<number>(50);
 
   // Sorting state
   const [orderBy, setOrderBy] = useState<string>('number');
@@ -235,6 +235,10 @@ const useBettingPoolsList = (): UseBettingPoolsListReturn => {
    * Paginate betting pools
    */
   const paginatedBettingPools = useMemo((): TransformedBettingPool[] => {
+    // If rowsPerPage is -1, show all records
+    if (rowsPerPage === -1) {
+      return sortedBettingPools;
+    }
     const start = page * rowsPerPage;
     const end = start + rowsPerPage;
     return sortedBettingPools.slice(start, end);
