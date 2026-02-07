@@ -426,7 +426,7 @@ const EditBettingPoolMUI: React.FC = () => {
               <Button
                 variant="outlined"
                 startIcon={<ArrowBackIcon />}
-                onClick={() => navigate('/bettingPools/list')}
+                onClick={() => navigate('/betting-pools/list')}
                 disabled={loading}
               >
                 Cancelar

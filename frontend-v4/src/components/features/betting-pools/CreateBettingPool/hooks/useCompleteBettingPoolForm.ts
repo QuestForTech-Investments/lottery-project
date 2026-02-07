@@ -407,7 +407,7 @@ const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
 
     // Only regenerate if we're on the create betting pool page
     // This detects navigation back to the page
-    if (location.pathname === '/bettingPools/create') {
+    if (location.pathname === '/betting-pools/new') {
       regenerateBranchCode();
     }
   }, [location.pathname]);

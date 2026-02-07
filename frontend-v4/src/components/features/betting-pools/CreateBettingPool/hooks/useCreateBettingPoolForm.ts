@@ -270,7 +270,7 @@ const useCreateBettingPoolForm = (): UseCreateBettingPoolFormReturn => {
 
         // Redirect after 2 seconds
         setTimeout(() => {
-          navigate('/bettingPools/list');
+          navigate('/betting-pools/list');
         }, 2000);
       }
     } catch (error) {
