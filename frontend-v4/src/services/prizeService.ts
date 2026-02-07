@@ -199,10 +199,12 @@ export const savePrizeConfig = async (bettingPoolId: number | string, prizeConfi
       : { prizeConfigs: [prizeConfig] };
 
 
+    const token = localStorage.getItem('authToken');
     const response = await fetch(`${API_BASE}/betting-pools/${bettingPoolId}/prize-config`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
       },
       body: JSON.stringify(body)
     });
@@ -233,6 +235,15 @@ export const getMergedPrizeData = async (bettingPoolId: number | string | null =
       customConfigs = await getBettingPoolPrizeConfigs(bettingPoolId);
     }
 
+    // Build prizeTypeId -> betTypeCode map from betTypes (uses actual betTypeCode with accents)
+    const prizeTypeIdToBetTypeCode: Record<number, string> = {};
+    betTypes.forEach(bt => {
+      const code = bt.betTypeCode || '';
+      (bt.prizeFields || bt.prizeTypes || []).forEach(pf => {
+        prizeTypeIdToBetTypeCode[pf.prizeTypeId] = code;
+      });
+    });
+
     // Build a map of custom values by field code for quick lookup
     const customMap: Record<string, number> = {};
     customConfigs.forEach(config => {
@@ -240,9 +251,9 @@ export const getMergedPrizeData = async (bettingPoolId: number | string | null =
       const value = config.customValue !== undefined ? config.customValue : config.value;
 
       if (config.fieldCode && value !== undefined && value !== null) {
-        // Extract betTypeCode from fieldCode (first part before underscore)
-        const parts = config.fieldCode.split('_');
-        const betTypeCode = parts[0];
+        // Use actual betTypeCode from bet types (handles accents like PALÉ correctly)
+        const betTypeCode = prizeTypeIdToBetTypeCode[config.prizeTypeId ?? 0] ||
+                            config.fieldCode.split('_')[0];
 
         // Build the key in the same format as formData: BETTYPE_FIELDCODE
         const customKey = `${betTypeCode}_${config.fieldCode}`;
