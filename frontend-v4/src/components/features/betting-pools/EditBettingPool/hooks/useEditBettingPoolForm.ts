@@ -1498,6 +1498,22 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
     }
   };
 
+  // Auto-apply template when selectedTemplateId changes (live preview)
+  useEffect(() => {
+    if (selectedTemplateId) {
+      applyTemplate();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedTemplateId]);
+
+  // Auto-apply template when templateFields change (live preview of selected fields)
+  useEffect(() => {
+    if (selectedTemplateId) {
+      applyTemplate();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [templateFields]);
+
   return {
     formData,
     loading,

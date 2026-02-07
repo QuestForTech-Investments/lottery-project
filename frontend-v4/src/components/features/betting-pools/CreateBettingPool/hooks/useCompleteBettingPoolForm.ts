@@ -634,7 +634,7 @@ const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
 
       // Process Draw Schedules
       if (templateFields.drawSchedules && schedulesResult.status === 'fulfilled') {
-        const schedulesData = schedulesResult.value as unknown as { success: boolean; data?: Array<{ dayOfWeek: number; openTime: string; closeTime: string }> };
+        const schedulesData = schedulesResult.value as unknown as { success: boolean; data?: Array<{ dayOfWeek: number; openingTime: string | null; closingTime: string | null }> };
         if (schedulesData.success && schedulesData.data) {
           const dayMap: Record<number, string> = {
             0: 'domingo',
@@ -649,8 +649,8 @@ const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
           schedulesData.data.forEach(schedule => {
             const dayName = dayMap[schedule.dayOfWeek];
             if (dayName) {
-              (updates as Record<string, string | boolean | number | number[] | AutoExpense[] | null>)[`${dayName}Inicio`] = schedule.openTime || '12:00 AM';
-              (updates as Record<string, string | boolean | number | number[] | AutoExpense[] | null>)[`${dayName}Fin`] = schedule.closeTime || '11:59 PM';
+              (updates as Record<string, string | boolean | number | number[] | AutoExpense[] | null>)[`${dayName}Inicio`] = schedule.openingTime || '12:00 AM';
+              (updates as Record<string, string | boolean | number | number[] | AutoExpense[] | null>)[`${dayName}Fin`] = schedule.closingTime || '11:59 PM';
             }
           });
         }
@@ -723,6 +723,22 @@ const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
       setLoadingTemplateData(false);
     }
   };
+
+  // Auto-apply template when selectedTemplateId changes (live preview)
+  useEffect(() => {
+    if (selectedTemplateId) {
+      applyTemplate();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedTemplateId]);
+
+  // Auto-apply template when templateFields change (live preview of selected fields)
+  useEffect(() => {
+    if (selectedTemplateId) {
+      applyTemplate();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [templateFields]);
 
   /**
    * Validate form
