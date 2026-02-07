@@ -122,11 +122,48 @@ await api.post('/items/batch', { items: batchItems });
 2. **Procesar en memoria:** Iterar sin llamadas DB intermedias
 3. **SaveChangesAsync() al final:** EF Core optimiza las operaciones en batch
 4. **DTOs específicos:** No reutilizar DTOs de operaciones individuales
+5. **⭐ Herencia > Propagación:** Si el backend soporta herencia/fallback, no propagar en frontend
 
 ### ❌ Errores a Evitar
 1. **No cargar existentes:** Cada item hace su propia query → N+1 problem
 2. **SaveChangesAsync() por item:** Pierde la optimización de batch
 3. **No actualizar lista local:** Error 400 al intentar POST duplicado
+4. **Propagar todos los valores:** Aunque uses batch, 3920 items sigue siendo lento
+
+### 🔥 Caso Real: Herencia vs Propagación
+
+**Problema encontrado (2026-02-07):**
+- Batch de premios seguía lento (~30s) aunque solo hacía 1 request
+- Razón: Enviaba ~3920 items (70 draws × 14 bet types × 4 fields)
+
+**Solución:**
+```typescript
+// ❌ ANTES: Propagar valores en frontend y guardar todos
+if (drawId === 'general') {
+  Object.keys(formData).forEach(key => {
+    if (key.startsWith('general_') || key.startsWith('draw_')) { // 3920 items
+      filteredFormData[key] = formData[key];
+    }
+  });
+}
+
+// ✅ DESPUÉS: Solo guardar general, draws heredan del backend
+if (drawId === 'general') {
+  Object.keys(formData).forEach(key => {
+    if (key.startsWith('general_')) { // ~56 items
+      filteredFormData[key] = formData[key];
+    }
+  });
+}
+```
+
+**Backend con herencia:**
+```csharp
+// Endpoint: GET /prize-config/resolved
+// Prioridad: draw_specific → banca_default → system_default
+```
+
+**Resultado:** 30 segundos → 2 segundos
 
 ### Problema del Error 400 (POST duplicado)
 

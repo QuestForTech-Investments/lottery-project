@@ -10,44 +10,55 @@
 
 ## Último Commit
 ```
-⚡ Maximum optimization: Batch save for prizes and commissions
+Perf: Optimize prize save - only save General, draws inherit
 ```
 **Fecha:** 2026-02-07
-**Estado:** ✅ Desplegado y verificado en producción
+**Estado:** ✅ Desplegado
 
 ---
 
 ## Cambios de Hoy (2026-02-07)
 
-### ⚡ Maximum Optimization - Batch Save ✅ COMPLETADO
-**Problema:** Guardar premios/comisiones desde tab General tomaba 90+ segundos (200+ requests secuenciales)
+### ⚡ Prize Save - Herencia en vez de Propagación ✅ COMPLETADO
+**Problema:** Aunque batch reducía requests, premios aún tardaba ~30s porque enviaba ~3920 items (70 draws × 14 bet types × 4 fields)
 
-**Solución:**
-1. **Backend:** Nuevos endpoints batch:
-   - `POST /betting-pools/{id}/prizes-commissions/batch` - Comisiones en lote
-   - `POST /betting-pools/{id}/draws/prize-config/batch` - Premios por sorteo en lote
+**Solución (0700c0e):**
+1. **Solo guardar `general_*`:** Cuando guardas desde General, solo se envían ~56 items (valores generales)
+2. **Herencia en carga:** Frontend ahora usa `/prize-config/resolved` que tiene fallback:
+   - `draw_specific` → `banca_default` → `system_default`
+3. **Los draws heredan automáticamente** del valor general de la banca
 
-2. **Frontend:** Modificado `useEditBettingPoolForm.ts`:
-   - `saveCommissionConfigurations` - 1 request en vez de 200+ secuenciales
-   - `savePrizeConfigurations` - 2 requests (general + batch draws) en vez de 70+
+**Archivos modificados:**
+- `useEditBettingPoolForm.ts`:
+  - `savePrizeConfigForSingleDraw`: Solo incluye `general_*` al guardar desde General
+  - `loadDrawSpecificValues`: Usa endpoint `/resolved` con herencia
+
+**Resultado esperado:**
+- Antes: ~30 segundos, ~3920 items
+- Después: ~2 segundos, ~56 items
+
+---
+
+### ⚡ Batch Save - Comisiones y Crear Banca ✅ COMPLETADO
+**Commits:** 8660d24, eb6e028
+
+**Cambios:**
+- `CreateBettingPool`: Ahora usa batch para comisiones Y premios por sorteo
+- `EditBettingPool`: Comisiones usan batch (ya funcionaba rápido)
+
+---
+
+### ⚡ Batch Endpoints Backend ✅ COMPLETADO
+**Problema original:** Guardar tomaba 90+ segundos (200+ requests secuenciales)
+
+**Endpoints creados:**
+- `POST /betting-pools/{id}/prizes-commissions/batch` - Comisiones en lote
+- `POST /betting-pools/{id}/draws/prize-config/batch` - Premios por sorteo en lote
 
 **Archivos Backend:**
-- `api/src/LotteryApi/Controllers/BettingPoolPrizesCommissionsController.cs` - +95 líneas
-- `api/src/LotteryApi/Controllers/DrawPrizeConfigController.cs` - +115 líneas
-- `api/src/LotteryApi/DTOs/BettingPoolDto.cs` - +35 líneas (BatchCommissionItemDto, etc.)
-- `api/src/LotteryApi/DTOs/DrawPrizeConfigDto.cs` - +45 líneas (BatchDrawPrizeConfigRequest, etc.)
-
-**Archivos Frontend:**
-- `frontend-v4/.../EditBettingPool/hooks/useEditBettingPoolForm.ts` - saveCommissionConfigurations y savePrizeConfigurations optimizados
-
-**Resultado Real (verificado en producción):**
-- Antes: 90+ segundos, 200+ requests, rate limit (429)
-- Después: ~14 segundos, 2-3 requests ✅
-
-**Verificación con Playwright (2026-02-07 03:10):**
-- ✅ Login → Bancas → Lottobook 01 → Premios & Comisiones → Comisiones
-- ✅ Cambió General 25→30, click ACTUALIZAR
-- ✅ Guardado completó y redirigió a lista (14 segundos)
+- `BettingPoolPrizesCommissionsController.cs` - +95 líneas
+- `DrawPrizeConfigController.cs` - +115 líneas
+- DTOs: BatchCommissionItemDto, BatchDrawPrizeConfigRequest, etc.
 
 ---
 
@@ -171,6 +182,14 @@ Actualización de state.md con cambios de OliverJPR (e33eca4).
 ### ✅ Workflow de Testing
 1. **Siempre se puede probar en producción:** Commit + push = auto-deploy a Azure
 2. **Playwright MCP:** Ideal para verificar cambios en producción sin abrir navegador
+
+### ⚡ Herencia > Propagación
+**Problema:** Batch seguía lento porque enviaba 3920 items (valores propagados a 70 draws)
+
+**Solución:**
+1. Solo guardar valores "General" (~56 items)
+2. Backend con herencia: `draw_specific` → `banca_default` → `system_default`
+3. Frontend usa endpoint `/resolved` para cargar con fallback
 3. **Ver `gsd/guides/deploy-workflow.md`:** Documentación del proceso
 
 ### ✅ Patrón Batch Save
@@ -195,4 +214,4 @@ Actualización de state.md con cambios de OliverJPR (e33eca4).
 
 ---
 
-**Fecha de última actualización:** 2026-02-07 03:15
+**Fecha de última actualización:** 2026-02-07 04:00
