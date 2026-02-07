@@ -54,7 +54,7 @@ import AutoExpensesTab from '@components/features/betting-pools/CreateBettingPoo
 const EditBettingPoolMUI: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams(); // Get bettingPoolId from URL
-  const [templateSectionOpen, setTemplateSectionOpen] = React.useState(false);
+  const [templateSectionOpen, setTemplateSectionOpen] = React.useState(true);
 
   const {
     formData,

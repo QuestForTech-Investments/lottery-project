@@ -70,7 +70,8 @@
       "Bash(/opt/mssql-tools18/bin/sqlcmd:*)",
       "Bash(cat:*)",
       "mcp__playwright__browser_run_code",
-      "Bash(done)"
+      "Bash(done)",
+      "Bash(npx tsc:*)"
     ]
   }
 }

@@ -37,6 +37,18 @@ Perf: Optimize prize save - only save General, draws inherit
 - Antes: ~30 segundos, ~3920 items
 - Después: ~2 segundos, ~56 items
 
+**🧪 Test Exhaustivo en Producción (2026-02-07 03:36):**
+
+| Test | Operación | Tiempo | Persistencia |
+|------|-----------|--------|--------------|
+| Premios | Directo Primer Pago 77→78 | ~1.5s | ✅ Verificado |
+| Comisiones | Directo 20→21→20 | Rápido | ✅ Verificado |
+
+- ✅ Valores persisten después de reload
+- ✅ Redirect automático a lista de bancas
+- ✅ Sin errores 400/429
+- ✅ Valores restaurados a originales
+
 ---
 
 ### ⚡ Batch Save - Comisiones y Crear Banca ✅ COMPLETADO
@@ -214,4 +226,4 @@ Actualización de state.md con cambios de OliverJPR (e33eca4).
 
 ---
 
-**Fecha de última actualización:** 2026-02-07 04:00
+**Fecha de última actualización:** 2026-02-07 03:37

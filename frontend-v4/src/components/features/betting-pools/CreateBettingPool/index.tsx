@@ -42,7 +42,7 @@ import AutoExpensesTab from './tabs/AutoExpensesTab';
  */
 const CreateBettingPoolMUI: React.FC = () => {
   const navigate = useNavigate();
-  const [templateSectionOpen, setTemplateSectionOpen] = React.useState(false);
+  const [templateSectionOpen, setTemplateSectionOpen] = React.useState(true);
 
   const {
     formData,
