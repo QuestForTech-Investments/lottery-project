@@ -9,6 +9,7 @@ import {
   Typography,
   CircularProgress,
   Alert,
+  Snackbar,
   FormControl,
   InputLabel,
   Select,
@@ -22,6 +23,7 @@ import {
 import {
   Save as SaveIcon,
   ArrowBack as ArrowBackIcon,
+  CheckCircle as CheckCircleIcon,
   ContentCopy as ContentCopyIcon,
   ExpandMore as ExpandMoreIcon,
   ExpandLess as ExpandLessIcon,
@@ -50,12 +52,14 @@ const CreateBettingPoolMUI: React.FC = () => {
     loadingZones,
     errors,
     success,
+    successMessage,
     zones,
     activeTab,
     handleChange,
     handleTabChange,
     handleSubmit,
     copyScheduleToAll: _copyScheduleToAll,
+    clearSuccessMessage,
     // Template copy functionality
     templateBettingPools,
     loadingTemplates,
@@ -386,6 +390,30 @@ const CreateBettingPoolMUI: React.FC = () => {
           </Typography>
         </Alert>
       </Box>
+
+      {/* Success Snackbar */}
+      <Snackbar
+        open={!!successMessage}
+        autoHideDuration={3000}
+        onClose={clearSuccessMessage}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={clearSuccessMessage}
+          severity="success"
+          variant="filled"
+          icon={<CheckCircleIcon />}
+          sx={{
+            width: '100%',
+            fontSize: '1rem',
+            '& .MuiAlert-message': {
+              fontSize: '1rem'
+            }
+          }}
+        >
+          {successMessage}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

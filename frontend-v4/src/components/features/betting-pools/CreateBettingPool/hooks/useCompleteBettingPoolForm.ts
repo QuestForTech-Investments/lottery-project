@@ -139,12 +139,14 @@ interface UseCompleteBettingPoolFormReturn {
   loadingZones: boolean;
   errors: FormErrors;
   success: boolean;
+  successMessage: string;
   zones: Zone[];
   activeTab: number;
   handleChange: (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void;
   handleTabChange: (event: SyntheticEvent, newValue: number) => void;
   handleSubmit: (e: React.FormEvent) => Promise<void>;
   copyScheduleToAll: (day: string) => void;
+  clearSuccessMessage: () => void;
   // Template copy functionality
   templateBettingPools: TemplateBettingPool[];
   loadingTemplates: boolean;
@@ -364,6 +366,7 @@ const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
   const [loadingZones, setLoadingZones] = useState<boolean>(true);
   const [errors, setErrors] = useState<FormErrors>({});
   const [success, setSuccess] = useState<boolean>(false);
+  const [successMessage, setSuccessMessage] = useState<string>('');
   const [zones, setZones] = useState<Zone[]>([]);
   const [activeTab, setActiveTab] = useState<number>(0);
 
@@ -591,43 +594,52 @@ const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
       // Build updates object based on selected fields
       const updates: Partial<FormData> = {};
 
-      // Process Configuration fields
+      // Process Configuration fields (maps use English API values matching EditBettingPool/hooks/utils.ts)
       if (templateFields.configuration && configResult.status === 'fulfilled') {
         const configData = (configResult.value as { success: boolean; data?: BettingPoolConfigData })?.data;
         if (configData) {
-          // Map config values
+          // Map config values - API returns English values (MONTHLY, COLLECTION, SELLER, etc.)
           if (configData.config) {
-            const fallTypeMap: Record<string, string> = { 'OFF': '1', 'COBRO': '2', 'DIARIA': '3', 'MENSUAL': '4', 'SEMANAL': '5' };
-            const printModeMap: Record<string, string> = { 'DRIVER': '1', 'GENERICO': '2' };
-            const discountProviderMap: Record<string, string> = { 'GRUPO': '1', 'RIFERO': '2' };
-            const discountModeMap: Record<string, string> = { 'OFF': '1', 'EFECTIVO': '2', 'TICKET_GRATIS': '3' };
+            const fallTypeMap: Record<string, string> = {
+              'OFF': '1', 'COLLECTION': '2', 'DAILY': '3', 'MONTHLY': '4',
+              'WEEKLY': '5', 'WEEKLY_ACCUMULATED': '5', 'WEEKLY_NO_ACCUMULATED': '6'
+            };
+            const discountProviderMap: Record<string, string> = { 'GROUP': '1', 'SELLER': '2' };
+            const discountModeMap: Record<string, string> = { 'OFF': '1', 'CASH': '2', 'FREE_TICKET': '3' };
+            const printModeMap: Record<string, string> = { 'DRIVER': '1', 'GENERIC': '2' };
+            const paymentModeMap: Record<string, string> = { 'BANCA': '1', 'ZONA': '2', 'ZONE': '2', 'GRUPO': '3', 'GROUP': '3' };
 
             updates.fallType = fallTypeMap[configData.config.fallType || 'OFF'] || '1';
-            updates.printerType = printModeMap[configData.printConfig?.printMode || 'DRIVER'] || '1';
-            updates.discountProvider = discountProviderMap[configData.discountConfig?.discountProvider || 'RIFERO'] || '2';
+            updates.discountProvider = discountProviderMap[configData.discountConfig?.discountProvider || 'SELLER'] || '2';
             updates.discountMode = discountModeMap[configData.discountConfig?.discountMode || 'OFF'] || '1';
+            updates.printerType = printModeMap[configData.printConfig?.printMode || 'DRIVER'] || '1';
+            if (configData.config.paymentMode) {
+              updates.limitPreference = paymentModeMap[configData.config.paymentMode] || null;
+            }
 
-            updates.deactivationBalance = configData.config.deactivationBalance?.toString() || '';
-            updates.dailySaleLimit = configData.config.dailySaleLimit?.toString() || '';
-            updates.todayBalanceLimit = configData.config.dailyBalanceLimit?.toString() || '';
-            updates.temporaryAdditionalBalance = configData.config.temporaryAdditionalBalance?.toString() || '';
+            updates.deactivationBalance = String(configData.config.deactivationBalance ?? '');
+            updates.dailySaleLimit = String(configData.config.dailySaleLimit ?? '');
+            updates.todayBalanceLimit = String(configData.config.dailyBalanceLimit ?? '');
+            updates.temporaryAdditionalBalance = String(configData.config.temporaryAdditionalBalance ?? '');
             updates.enableTemporaryBalance = configData.config.enableTemporaryBalance || false;
             updates.winningTicketsControl = configData.config.controlWinningTickets || false;
-            updates.allowPassPot = configData.config.allowJackpot !== false;
-            updates.minutesToCancelTicket = configData.config.cancelMinutes?.toString() || '30';
-            updates.ticketsToCancelPerDay = configData.config.dailyCancelTickets?.toString() || '';
-            updates.maximumCancelTicketAmount = configData.config.maxCancelAmount?.toString() || '';
-            updates.maxTicketAmount = configData.config.maxTicketAmount?.toString() || '';
-            updates.dailyPhoneRechargeLimit = configData.config.maxDailyRecharge?.toString() || '';
-            updates.enableRecharges = configData.config.enableRecharges !== false;
-            updates.allowPasswordChange = configData.config.allowPasswordChange !== false;
+            updates.allowJackpot = configData.config.allowJackpot !== undefined ? configData.config.allowJackpot : true;
+            updates.minutesToCancelTicket = String(configData.config.cancelMinutes ?? 30);
+            updates.ticketsToCancelPerDay = String(configData.config.dailyCancelTickets ?? '');
+            updates.maximumCancelTicketAmount = String(configData.config.maxCancelAmount ?? '');
+            updates.maxTicketAmount = String(configData.config.maxTicketAmount ?? '');
+            updates.dailyPhoneRechargeLimit = String(configData.config.maxDailyRecharge ?? '');
+            updates.enableRecharges = configData.config.enableRecharges !== undefined ? configData.config.enableRecharges : true;
+            updates.allowPasswordChange = configData.config.allowPasswordChange !== undefined ? configData.config.allowPasswordChange : true;
+            updates.allowFutureSales = configData.config.allowFutureSales !== undefined ? configData.config.allowFutureSales : true;
+            updates.maxFutureDays = String(configData.config.maxFutureDays ?? 7);
           }
 
           // Print config
           if (configData.printConfig) {
-            updates.printTickets = configData.printConfig.printEnabled !== false;
-            updates.printTicketCopy = configData.printConfig.printTicketCopy !== false;
-            updates.printRechargeReceipt = configData.printConfig.printRechargeReceipt !== false;
+            updates.printEnabled = configData.printConfig.printEnabled !== undefined ? configData.printConfig.printEnabled : true;
+            updates.printTicketCopy = configData.printConfig.printTicketCopy !== undefined ? configData.printConfig.printTicketCopy : true;
+            updates.printRechargeReceipt = configData.printConfig.printRechargeReceipt !== undefined ? configData.printConfig.printRechargeReceipt : true;
             updates.smsOnly = configData.printConfig.smsOnly || false;
           }
         }
@@ -642,8 +654,8 @@ const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
           updates.footerText2 = configData.footer.footerLine2 || '';
           updates.footerText3 = configData.footer.footerLine3 || '';
           updates.footerText4 = configData.footer.footerLine4 || '';
-          updates.showBranchInfo = configData.footer.showBranchInfo !== false;
-          updates.showDateTime = configData.footer.showDateTime !== false;
+          updates.showBranchInfo = configData.footer.showBranchInfo !== undefined ? configData.footer.showBranchInfo : true;
+          updates.showDateTime = configData.footer.showDateTime !== undefined ? configData.footer.showDateTime : true;
         }
       }
 
@@ -807,6 +819,11 @@ const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
 
       // Clear any previous errors on successful apply
       setErrors({});
+
+      setSuccessMessage('Plantilla aplicada correctamente');
+      setTimeout(() => {
+        setSuccessMessage('');
+      }, 3000);
 
     } catch (error) {
       console.error('Error applying template:', error);
@@ -1275,11 +1292,11 @@ const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
     setErrors({});
 
     try {
-      // Map form values to API format
-      const fallTypeMap: Record<string, string> = { '1': 'OFF', '2': 'COBRO', '3': 'DIARIA', '4': 'MENSUAL', '5': 'SEMANAL' };
-      const printModeMap: Record<string, string> = { '1': 'DRIVER', '2': 'GENERICO' };
-      const discountProviderMap: Record<string, string> = { '1': 'GRUPO', '2': 'RIFERO' };
-      const discountModeMap: Record<string, string> = { '1': 'OFF', '2': 'EFECTIVO', '3': 'TICKET_GRATIS' };
+      // Map form values to API format (English values matching backend)
+      const fallTypeMap: Record<string, string> = { '1': 'OFF', '2': 'COLLECTION', '3': 'DAILY', '4': 'MONTHLY', '5': 'WEEKLY', '6': 'WEEKLY_NO_ACCUMULATED' };
+      const printModeMap: Record<string, string> = { '1': 'DRIVER', '2': 'GENERIC' };
+      const discountProviderMap: Record<string, string> = { '1': 'GROUP', '2': 'SELLER' };
+      const discountModeMap: Record<string, string> = { '1': 'OFF', '2': 'CASH', '3': 'FREE_TICKET' };
 
       const bettingPoolData = {
         bettingPoolName: formData.bettingPoolName,
@@ -1294,7 +1311,7 @@ const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
         // Configuration mapped to API
         fallType: fallTypeMap[formData.fallType] || 'OFF',
         printMode: printModeMap[formData.printerType] || 'DRIVER',
-        discountProvider: discountProviderMap[formData.discountProvider] || 'RIFERO',
+        discountProvider: discountProviderMap[formData.discountProvider] || 'SELLER',
         discountMode: discountModeMap[formData.discountMode] || 'OFF',
 
         deactivationBalance: formData.deactivationBalance ? parseFloat(formData.deactivationBalance) : null,
@@ -1302,9 +1319,9 @@ const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
         dailyBalanceLimit: formData.todayBalanceLimit ? parseFloat(formData.todayBalanceLimit) : null,
         temporaryAdditionalBalance: formData.temporaryAdditionalBalance ? parseFloat(formData.temporaryAdditionalBalance) : null,
 
-        controlWinningTickets: formData.winningTicketsControl,
-        allowJackpot: formData.allowPassPot,
-        printEnabled: formData.printTickets,
+        controlWinningTickets: formData.controlWinningTickets ?? formData.winningTicketsControl,
+        allowJackpot: formData.allowJackpot ?? formData.allowPassPot,
+        printEnabled: formData.printEnabled ?? formData.printTickets,
         printTicketCopy: formData.printTicketCopy,
 
         // Future sales configuration
@@ -1458,12 +1475,14 @@ const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
     loadingZones,
     errors,
     success,
+    successMessage,
     zones,
     activeTab,
     handleChange,
     handleTabChange,
     handleSubmit,
     copyScheduleToAll,
+    clearSuccessMessage: () => setSuccessMessage(''),
     // Template copy functionality
     templateBettingPools,
     loadingTemplates,
