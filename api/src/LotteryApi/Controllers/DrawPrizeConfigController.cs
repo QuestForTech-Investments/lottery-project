@@ -294,33 +294,14 @@ public class DrawPrizeConfigController : ControllerBase
                 return NotFound(new { message = $"Sorteo con ID {drawId} no encontrado" });
             }
 
-            // Obtener los bet_type_ids compatibles con la lotería de este sorteo
-            // Esto filtra según lottery_game_compatibility
-            var compatibleBetTypeIds = await _context.LotteryGameCompatibilities
-                .Where(lgc => lgc.LotteryId == draw.LotteryId && lgc.IsActive)
-                .Join(
-                    _context.GameTypes,
-                    lgc => lgc.GameTypeId,
-                    gt => gt.GameTypeId,
-                    (lgc, gt) => gt.GameTypeCode
-                )
-                .Join(
-                    _context.BetTypes.Where(bt => bt.IsActive),
-                    gameTypeCode => gameTypeCode,
-                    bt => bt.BetTypeCode,
-                    (gameTypeCode, bt) => bt.BetTypeId
-                )
-                .Distinct()
+            // Get all active prize types (filtering by lottery compatibility is done on frontend)
+            var allPrizeTypes = await _context.PrizeTypes
+                .Where(pf => pf.IsActive)
                 .ToListAsync();
 
             _logger.LogInformation(
-                "Found {Count} compatible bet types for lottery {LotteryId} (draw {DrawId})",
-                compatibleBetTypeIds.Count, draw.LotteryId, drawId);
-
-            // Obtener solo los prize fields compatibles con la lotería de este sorteo
-            var allPrizeTypes = await _context.PrizeTypes
-                .Where(pf => pf.IsActive && compatibleBetTypeIds.Contains(pf.BetTypeId))
-                .ToListAsync();
+                "Found {Count} prize types for resolved config (draw {DrawId})",
+                allPrizeTypes.Count, drawId);
 
             // Obtener configuraciones específicas del sorteo
             var drawConfigs = await _context.DrawPrizeConfigs
