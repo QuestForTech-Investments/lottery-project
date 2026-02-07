@@ -4,44 +4,64 @@
 **Fase 4: Límites y Control** - ✅ COMPLETADA (incluyendo UI Clone)
 
 ## Progreso General
-- **Módulos completados:** 11/23 (48%)
+- **Módulos completados:** 12/23 (52%)
 - **Módulos parciales:** 2/23 (9%)
-- **Módulos pendientes:** 10/23 (43%)
+- **Módulos pendientes:** 9/23 (39%)
 
 ## Último Commit
 ```
-661fce2 UI: Clone limits module design to match original app
+e33eca4 Support future sales & draw-date reporting
 ```
-**Fecha:** 2026-02-06
-**Estado:** ✅ Pusheado a GitHub - Deploy automático en curso
+**Fecha:** 2026-02-07
+**Autor:** OliverJPR
+**Estado:** ✅ En producción
+
+## Cambios Recientes
+
+### e33eca4 - Ventas Futuras (2026-02-07)
+
+**Nueva funcionalidad:** Las bancas pueden vender tickets para sorteos futuros.
+
+#### Backend (.NET)
+| Archivo | Cambios |
+|---------|---------|
+| `TicketsController.cs` | Acepta `TicketDate` opcional, valida reglas ventas futuras, ventana cancelación 5 min |
+| `SalesReportsController.cs` | Reportes filtran por `DrawDate` (fecha sorteo vs fecha creación) |
+| `BettingPoolsController.cs` | Config ventas futuras |
+| `BettingPoolDrawsController.cs` | Incluye `Draw.Abbreviation` y `WeeklyScheduleDto` |
+| `BettingPoolConfig.cs` | +`AllowFutureSales`, `MaxFutureDays` |
+| `TicketDto.cs` | +`TicketDate` |
+
+#### Frontend (React)
+| Archivo | Cambios |
+|---------|---------|
+| `CreateBettingPool/ConfigurationTab.tsx` | UI para habilitar ventas futuras |
+| `EditBettingPool/hooks/*` | Soporte edición config |
+
+#### Base de Datos
+- `add_future_sales_config.sql` - Nueva migración
+
+---
 
 ## Fase 4 - Límites y Control (COMPLETADA)
 
-### Backend (.NET) - ✅ 100% Implementado
+### Backend (.NET) - ✅ 100%
 - `LimitType` enum con 10 tipos de límites
-- `LimitRule.cs` actualizado con nuevas propiedades
 - `LimitsController.cs` con 8 endpoints
 - `AutomaticLimitsController.cs` con 6 endpoints
 - `HotNumbersController.cs` con 8 endpoints
-- Migraciones SQL aplicadas
 
-### Frontend (React) - ✅ 100% Implementado + UI Clonado
+### Frontend (React) - ✅ 100% + UI Clonado
 - 5 componentes conectados a API
 - **UI clonada de la app original usando Playwright MCP**:
-  - ✅ LimitsList - 3 filtros simples + botón turquesa "REFRESCAR"
-  - ✅ CreateLimit - Chips seleccionables para sorteos y días
+  - ✅ LimitsList - 3 filtros simples + botón turquesa
+  - ✅ CreateLimit - Chips seleccionables
   - ✅ HotNumbers - Grid 00-99 con iconos de fuego 🔥
-  - ✅ AutomaticLimits - Sin cambios (ya era similar)
 
-### Proceso de Clonación UI (Playwright MCP)
+### Guía de Clonación UI
 Ver: `gsd/guides/ui-cloning-guide.md`
 
-## Problemas Resueltos
-1. ✅ RuleName NOT NULL - Generación automática
-2. ✅ Columnas faltantes en DB - Migración SQL
-3. ✅ AutomaticLimitsController 404 - Controller creado
-4. ✅ HotNumbersController 404 - Controller creado
-5. ✅ UI no coincidía con original - Clonado con Playwright
+---
 
 ## Próxima Fase
 **Fase 5: Resultados y Sincronización**
@@ -63,4 +83,4 @@ Ver: `gsd/guides/ui-cloning-guide.md`
 
 ---
 
-**Fecha de última actualización:** 2026-02-06 17:35
+**Fecha de última actualización:** 2026-02-07 17:40
