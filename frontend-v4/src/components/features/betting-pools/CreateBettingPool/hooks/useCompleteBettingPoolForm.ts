@@ -1054,22 +1054,26 @@ const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
         return { success: true };
       }
 
-      // Save each gameType's commissions (as new records since this is create)
-      for (const [gameType, commissions] of Object.entries(commissionsByGameType)) {
-        // Create new record (lotteryId=null for general commissions)
-        const createBody = { gameType, lotteryId: null, isActive: true, ...commissions };
-        const postResp = await fetch(`${API_BASE}/betting-pools/${bettingPoolId}/prizes-commissions`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(createBody)
-        });
-        if (!postResp.ok) {
-          const errText = await postResp.text();
-          console.error(`[COMMISSION SAVE] POST error body:`, errText);
-        }
+      // ⚡ OPTIMIZED: Send ALL commissions in ONE batch request (instead of N sequential requests)
+      const batchItems = Object.entries(commissionsByGameType).map(([gameType, commissions]) => ({
+        gameType,
+        lotteryId: null,  // general commissions for new betting pool
+        ...commissions
+      }));
+
+      const batchResp = await fetch(`${API_BASE}/betting-pools/${bettingPoolId}/prizes-commissions/batch`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ items: batchItems })
+      });
+
+      if (!batchResp.ok) {
+        const errText = await batchResp.text();
+        console.error(`[COMMISSION SAVE] Batch POST error:`, errText);
+        return { success: false, error: errText };
       }
 
       return { success: true };
