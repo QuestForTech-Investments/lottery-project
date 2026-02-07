@@ -99,6 +99,7 @@ interface BetType {
   prizeFields?: Array<{
     fieldCode: string;
     prizeTypeId: number;
+    defaultValue?: number;
   }>;
 }
 
@@ -577,13 +578,14 @@ const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
         return resp.json();
       };
 
-      const [basicDataResult, configResult, schedulesResult, drawsResult, prizesResult, commissionsResult] = await Promise.allSettled([
+      const [basicDataResult, configResult, schedulesResult, drawsResult, prizesResult, commissionsResult, betTypesResult] = await Promise.allSettled([
         getBettingPoolById(selectedTemplateId),
         getBettingPoolConfig(selectedTemplateId),
         getBettingPoolSchedules(selectedTemplateId),
         getBettingPoolDraws(selectedTemplateId),
         getBettingPoolPrizeConfigs(selectedTemplateId),
         fetchCommissions(),
+        getAllBetTypesWithFields(),
       ]);
 
       // Build updates object based on selected fields
@@ -693,22 +695,46 @@ const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
       }
 
       // Process Prizes & Commissions
-      if (templateFields.prizesAndCommissions && prizesResult.status === 'fulfilled') {
-        const prizesData = prizesResult.value as Array<{ prizeTypeId: number; fieldCode: string; customValue: number }>;
-        if (prizesData && Array.isArray(prizesData)) {
-          // Map prize configs to form fields
-          // fieldCode format: DIRECTO_PRIMER_PAGO, PALE_TODOS_SECUENCIA, etc.
+      if (templateFields.prizesAndCommissions) {
+        const prizesData = prizesResult.status === 'fulfilled'
+          ? prizesResult.value as Array<{ prizeTypeId: number; fieldCode: string; customValue: number }>
+          : [];
+
+        // Build prizeTypeId -> betTypeCode map from bet types
+        const betTypesData = betTypesResult.status === 'fulfilled'
+          ? betTypesResult.value as BetType[]
+          : [];
+        const prizeTypeToCode: Record<number, string> = {};
+        if (betTypesData && Array.isArray(betTypesData)) {
+          betTypesData.forEach(bt => {
+            const code = bt.betTypeCode || '';
+            (bt.prizeFields || []).forEach(pf => {
+              prizeTypeToCode[pf.prizeTypeId] = code;
+            });
+          });
+        }
+
+        if (Array.isArray(prizesData) && prizesData.length > 0) {
+          // Pool has explicit prize configs - use them
           prizesData.forEach(prize => {
             if (prize.fieldCode && prize.customValue !== undefined) {
-              // fieldCode format from API: "DIRECTO_PRIMER_PAGO", "PALE_TODOS_SECUENCIA"
-              // Grid key format: general_{betTypeCode}_{fieldCode} = "general_DIRECTO_DIRECTO_PRIMER_PAGO"
-              const parts = prize.fieldCode.split('_');
-              if (parts.length >= 2) {
-                const betTypeCode = parts[0]; // e.g., DIRECTO, PALE, TRIPLETA
+              const betTypeCode = prizeTypeToCode[prize.prizeTypeId];
+              if (betTypeCode) {
                 const fieldKey = `general_${betTypeCode}_${prize.fieldCode}`;
                 (updates as Record<string, string | boolean | number | number[] | AutoExpense[] | null>)[fieldKey] = prize.customValue;
               }
             }
+          });
+        } else if (Array.isArray(betTypesData) && betTypesData.length > 0) {
+          // Pool has no explicit configs - use system defaults from bet types
+          betTypesData.forEach(bt => {
+            const code = bt.betTypeCode || '';
+            (bt.prizeFields || []).forEach(pf => {
+              if (pf.fieldCode && pf.defaultValue !== undefined) {
+                const fieldKey = `general_${code}_${pf.fieldCode}`;
+                (updates as Record<string, string | boolean | number | number[] | AutoExpense[] | null>)[fieldKey] = pf.defaultValue;
+              }
+            });
           });
         }
       }

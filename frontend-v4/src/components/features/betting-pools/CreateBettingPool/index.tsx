@@ -340,7 +340,7 @@ const CreateBettingPoolMUI: React.FC = () => {
                       whiteSpace: 'nowrap',
                     }}
                   >
-                    {loadingTemplateData ? 'Copiando...' : 'Aplicar plantilla'}
+                    {loadingTemplateData ? 'Copiando...' : 'Copiar'}
                   </Button>
                 </Box>
               </Box>

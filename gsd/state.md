@@ -10,7 +10,7 @@
 
 ## Último Commit
 ```
-Perf: Optimize prize save - only save General, draws inherit
+Fix: Template copy prize key format to match BetTypeFieldGrid
 ```
 **Fecha:** 2026-02-07
 **Estado:** ✅ Desplegado
@@ -18,6 +18,35 @@ Perf: Optimize prize save - only save General, draws inherit
 ---
 
 ## Cambios de Hoy (2026-02-07)
+
+### ✅ Template Copy - Live Preview COMPLETADO
+
+**Objetivo:** Cuando seleccionas una banca de la plantilla, los datos se copian automáticamente al formulario (sin necesidad de hacer clic en "Aplicar plantilla"). El guardado real solo ocurre al hacer clic en "Crear Banca".
+
+**Funcionalidad completada:**
+1. ✅ Template section expandida por defecto
+2. ✅ Mensaje de timeout de sesión eliminado del login
+3. ✅ Auto-apply cuando cambia el dropdown (useEffect)
+4. ✅ Auto-apply cuando cambian los checkboxes (useEffect)
+
+**Bug root cause:** `applyTemplate()` called `setSuccessMessage()` which doesn't exist in the hook scope → ReferenceError caught by catch block → displayed "Error al copiar datos de la plantilla"
+
+**Fixes aplicados (commits):**
+| Commit | Descripción |
+|--------|-------------|
+| `ea344de` | Fix prize processing: `value`→`customValue`, parse `betTypeCode` from `fieldCode` |
+| `5585a3b` | Add detailed error logging to identify exact failure point |
+| `638c22e` | Fix: Remove undefined setSuccessMessage call → replaced with setErrors({}) |
+| `ed4032c` | Fix: Prize key format mismatch → template now uses `general_{betTypeCode}_{fieldCode}` matching grid |
+
+**Verificado en local y producción (Playwright):**
+- ✅ **Crear Banca** (local): Seleccionar template → auto-apply sin error
+- ✅ **Editar Banca** (local): Seleccionar template → "✅ Plantilla aplicada correctamente"
+- ✅ **Producción**: Configuración copiada, 69/69 sorteos copiados, sin errores en consola
+- ✅ Edit nunca tuvo el bug (ya tenía `setSuccessMessage` definido)
+- ✅ **Premios visibles** (local): Directo Primer Pago=78, Dobles=56, Pick2=80 (valores de plantilla)
+
+---
 
 ### ⚡ Prize Save - Herencia en vez de Propagación ✅ COMPLETADO
 **Problema:** Aunque batch reducía requests, premios aún tardaba ~30s porque enviaba ~3920 items (70 draws × 14 bet types × 4 fields)
@@ -226,4 +255,4 @@ Actualización de state.md con cambios de OliverJPR (e33eca4).
 
 ---
 
-**Fecha de última actualización:** 2026-02-07 03:37
+**Fecha de última actualización:** 2026-02-07 04:30

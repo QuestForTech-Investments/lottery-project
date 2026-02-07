@@ -29,6 +29,7 @@ cd frontend-v4 && npm run dev  # Puerto 4001
 - ❌ NO crear rutas sin conectarlas al menú (`menuItems.ts`)
 - ❌ NO modificar formularios sin revisar otros primero
 - ✅ Código en inglés, UI visible al usuario en español
+- ✅ Screenshots de Playwright siempre en `captures/` (desde la raíz del proyecto)
 
 ### 🚨 REGLA DE IDIOMA (MUY IMPORTANTE)
 
