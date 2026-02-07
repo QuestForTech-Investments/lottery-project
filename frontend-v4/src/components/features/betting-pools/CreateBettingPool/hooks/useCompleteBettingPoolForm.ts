@@ -422,6 +422,17 @@ const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
       const zonesResponse = await getActiveZones() as { success: boolean; data?: Zone[] };
       if (zonesResponse.success && zonesResponse.data) {
         setZones(zonesResponse.data);
+
+        // Set default zone automatically
+        // First try to find zone named "Default", otherwise use the first zone
+        const defaultZone = zonesResponse.data.find(z => {
+          const zoneName = (z.name || (z as unknown as { zoneName: string }).zoneName || '').toLowerCase();
+          return zoneName === 'default' || zoneName === 'zona default' || zoneName === 'zona por defecto';
+        }) || zonesResponse.data[0];
+
+        if (defaultZone) {
+          setFormData(prev => ({ ...prev, zoneId: String(defaultZone.zoneId) }));
+        }
       }
 
       // Load next betting pool code
