@@ -10,16 +10,16 @@
 
 ## Último Commit
 ```
-Pendiente - ⚡ Maximum optimization: Batch save for prizes and commissions
+⚡ Maximum optimization: Batch save for prizes and commissions
 ```
 **Fecha:** 2026-02-07
-**Estado:** ⏳ Listo para desplegar
+**Estado:** ✅ Desplegado y verificado en producción
 
 ---
 
 ## Cambios de Hoy (2026-02-07)
 
-### ⚡ Maximum Optimization - Batch Save (Pendiente commit)
+### ⚡ Maximum Optimization - Batch Save ✅ COMPLETADO
 **Problema:** Guardar premios/comisiones desde tab General tomaba 90+ segundos (200+ requests secuenciales)
 
 **Solución:**
@@ -40,9 +40,14 @@ Pendiente - ⚡ Maximum optimization: Batch save for prizes and commissions
 **Archivos Frontend:**
 - `frontend-v4/.../EditBettingPool/hooks/useEditBettingPoolForm.ts` - saveCommissionConfigurations y savePrizeConfigurations optimizados
 
-**Mejora de rendimiento esperada:**
-- Antes: 90+ segundos, 200+ requests
-- Después: < 5 segundos, 2-3 requests
+**Resultado Real (verificado en producción):**
+- Antes: 90+ segundos, 200+ requests, rate limit (429)
+- Después: ~14 segundos, 2-3 requests ✅
+
+**Verificación con Playwright (2026-02-07 03:10):**
+- ✅ Login → Bancas → Lottobook 01 → Premios & Comisiones → Comisiones
+- ✅ Cambió General 25→30, click ACTUALIZAR
+- ✅ Guardado completó y redirigió a lista (14 segundos)
 
 ---
 
@@ -161,4 +166,33 @@ Actualización de state.md con cambios de OliverJPR (e33eca4).
 
 ---
 
-**Fecha de última actualización:** 2026-02-07 02:29
+## Lecciones Aprendidas (2026-02-07)
+
+### ✅ Workflow de Testing
+1. **Siempre se puede probar en producción:** Commit + push = auto-deploy a Azure
+2. **Playwright MCP:** Ideal para verificar cambios en producción sin abrir navegador
+3. **Ver `gsd/guides/deploy-workflow.md`:** Documentación del proceso
+
+### ✅ Patrón Batch Save
+1. **Problema identificado:** Guardado lento = muchos requests HTTP
+2. **Solución:** Endpoints batch que procesan N items en 1 request
+3. **Ver `gsd/guides/batch-save-pattern.md`:** Guía completa del patrón
+
+### ❌ Errores Comunes a Evitar
+1. **Error 400 al guardar:** Ocurre cuando POST duplica un registro
+   - **Fix:** Actualizar lista de `existingRecords` después de cada POST
+2. **Rate limit 429:** Demasiados requests en poco tiempo
+   - **Fix:** Usar endpoints batch
+3. **Propagación no funcionaba:** El tab General no propagaba a sorteos
+   - **Fix:** Iterar por TODOS los draws disponibles
+
+### 📁 Guías Creadas
+| Guía | Descripción |
+|------|-------------|
+| `gsd/guides/deploy-workflow.md` | Proceso de deploy automático |
+| `gsd/guides/batch-save-pattern.md` | Patrón para guardado en lote |
+| `gsd/guides/ui-cloning-guide.md` | Clonar UI con Playwright |
+
+---
+
+**Fecha de última actualización:** 2026-02-07 03:15

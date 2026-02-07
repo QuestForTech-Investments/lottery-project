@@ -33,6 +33,35 @@ git push
 3. **Probar en producción** usando Playwright MCP o navegador
 4. **Si hay errores**, fix y repetir
 
+### Testing con Playwright MCP (Preferido)
+
+Claude puede probar directamente en producción sin abrir navegador manual:
+
+```
+1. browser_navigate → https://lottobook.net
+2. browser_snapshot → Ver estado actual
+3. browser_click → Interactuar (login, botones, etc.)
+4. browser_fill_form → Llenar formularios
+5. browser_take_screenshot → Capturar evidencia
+```
+
+**Ventajas:**
+- No requiere abrir navegador manualmente
+- Claude ve exactamente lo que el usuario vería
+- Puede automatizar flujos complejos (login → navegar → editar → guardar)
+- Screenshots como evidencia de que funciona
+
+**Ejemplo de flujo de testing:**
+```
+1. Login con admin/Admin123456
+2. Navegar a BANCAS → Lista
+3. Click en "Editar" de una banca
+4. Ir a tab "Premios & Comisiones"
+5. Cambiar un valor
+6. Click "ACTUALIZAR"
+7. Verificar que guardó (redirect o mensaje)
+```
+
 ## Verificar Deploy
 
 ### Ver logs de GitHub Actions
