@@ -104,6 +104,7 @@ const CommissionFieldList: React.FC<CommissionFieldListProps> = memo(({
 
   /**
    * Handle input change for a single bet type
+   * When on General tab, also propagates to ALL draws
    */
   const handleInputChange = (betTypeCode: string) => (event: ChangeEvent<HTMLInputElement>): void => {
     const key = getFieldKey(betTypeCode);
@@ -111,12 +112,30 @@ const CommissionFieldList: React.FC<CommissionFieldListProps> = memo(({
 
     if (value === '') {
       onFieldChange(key, '');
+      // Also propagate empty to all draws when on General tab
+      if (activeDraw === 'general' && draws.length > 0) {
+        draws.forEach((draw) => {
+          if (draw.id !== 'general' && draw.id.startsWith('draw_')) {
+            const drawKey = `${draw.id}_${prefix}_${betTypeCode}_${fieldCode}`;
+            onFieldChange(drawKey, '');
+          }
+        });
+      }
       return;
     }
 
     const numberRegex = /^-?\d*\.?\d*$/;
     if (numberRegex.test(value)) {
       onFieldChange(key, value);
+      // Also propagate to all draws when on General tab
+      if (activeDraw === 'general' && draws.length > 0) {
+        draws.forEach((draw) => {
+          if (draw.id !== 'general' && draw.id.startsWith('draw_')) {
+            const drawKey = `${draw.id}_${prefix}_${betTypeCode}_${fieldCode}`;
+            onFieldChange(drawKey, value);
+          }
+        });
+      }
     }
   };
 
