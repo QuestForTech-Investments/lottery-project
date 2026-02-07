@@ -1,5 +1,4 @@
 import { memo, type SyntheticEvent } from 'react';
-import { useLocation } from 'react-router-dom';
 import {
   Box,
   Paper,
@@ -16,7 +15,6 @@ import {
   Error as ErrorIcon,
   Person as PersonIcon,
   Lock as LockIcon,
-  Warning as WarningIcon,
 } from '@mui/icons-material';
 import backgroundImage from '@/assets/images/login-background.jpg';
 import logoImage from '@/assets/images/lottobook-logo.png';
@@ -24,19 +22,11 @@ import logoImage from '@/assets/images/lottobook-logo.png';
 const cardBackgroundImage = '/images/bannerlotto-02.jpg';
 import useLogin from './hooks/useLogin';
 
-interface LocationState {
-  message?: string;
-}
-
 /**
  * LoginMUI Component
  * Casual & Elegant Lottery Login
  */
 const LoginMUI = () => {
-  const location = useLocation();
-  const locationState = location.state as LocationState | null;
-  const sessionMessage = locationState?.message;
-
   const {
     username,
     password,
@@ -157,23 +147,6 @@ const LoginMUI = () => {
         >
           Enter your credentials to continue
         </Typography>
-
-        {/* Session Timeout Alert */}
-        {sessionMessage && (
-          <Alert
-            severity="warning"
-            icon={<WarningIcon />}
-            sx={{
-              mb: 2,
-              borderRadius: '12px',
-              '& .MuiAlert-icon': {
-                alignItems: 'center',
-              },
-            }}
-          >
-            {sessionMessage}
-          </Alert>
-        )}
 
         {/* Error Alert */}
         {errors.general && (
