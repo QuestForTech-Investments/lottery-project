@@ -10,178 +10,99 @@
 
 ## Último Commit
 ```
-Fix: Template copy prize key format to match BetTypeFieldGrid
+Fix: Auto-reload on stale chunk errors after deploy (c559739)
 ```
 **Fecha:** 2026-02-07
 **Estado:** ✅ Desplegado
 
 ---
 
-## Cambios de Hoy (2026-02-07)
+## Cambios de Hoy (2026-02-07) - Sesión 2
 
-### ✅ Template Copy - Live Preview COMPLETADO
+### ✅ Template Copy Config - Create Mode (c327860)
+**Problema:** Al copiar plantilla en "Crear Banca", los campos de configuración no coincidían con la banca origen. Ejemplo: banca con caída MENSUAL mostraba "OFF".
 
-**Objetivo:** Cuando seleccionas una banca de la plantilla, los datos se copian automáticamente al formulario (sin necesidad de hacer clic en "Aplicar plantilla"). El guardado real solo ocurre al hacer clic en "Crear Banca".
+**Root causes (3 bugs):**
+1. **Mapeos en español vs API en inglés:** Create usaba `MENSUAL`, `COBRO`, `RIFERO`, `GENERICO`, `EFECTIVO`, `TICKET_GRATIS`. El API retorna `MONTHLY`, `COLLECTION`, `SELLER`, `GENERIC`, `CASH`, `FREE_TICKET`.
+2. **Nombres de campo incorrectos:** `ConfigurationTab.tsx` lee `allowJackpot` y `printEnabled`, pero el hook seteaba `allowPassPot` y `printTickets`.
+3. **handleSubmit leía campos viejos:** `formData.allowPassPot` y `formData.printTickets` en vez de los correctos.
 
-**Funcionalidad completada:**
-1. ✅ Template section expandida por defecto
-2. ✅ Mensaje de timeout de sesión eliminado del login
-3. ✅ Auto-apply cuando cambia el dropdown (useEffect)
-4. ✅ Auto-apply cuando cambian los checkboxes (useEffect)
+**Fix:**
+- Mapeos cambiados a inglés (matching `EditBettingPool/hooks/utils.ts`)
+- Field names corregidos: `allowPassPot`→`allowJackpot`, `printTickets`→`printEnabled`
+- handleSubmit usa `??` fallback para compatibilidad
+- Agregado `paymentModeMap` para modo de pago
+- Agregado soporte para `allowFutureSales` y `maxFutureDays`
 
-**Bug root cause:** `applyTemplate()` called `setSuccessMessage()` which doesn't exist in the hook scope → ReferenceError caught by catch block → displayed "Error al copiar datos de la plantilla"
-
-**Fixes aplicados (commits):**
-| Commit | Descripción |
-|--------|-------------|
-| `ea344de` | Fix prize processing: `value`→`customValue`, parse `betTypeCode` from `fieldCode` |
-| `5585a3b` | Add detailed error logging to identify exact failure point |
-| `638c22e` | Fix: Remove undefined setSuccessMessage call → replaced with setErrors({}) |
-| `ed4032c` | Fix: Prize key format mismatch → template now uses `general_{betTypeCode}_{fieldCode}` matching grid |
-
-**Verificado en local y producción (Playwright):**
-- ✅ **Crear Banca** (local): Seleccionar template → auto-apply sin error
-- ✅ **Editar Banca** (local): Seleccionar template → "✅ Plantilla aplicada correctamente"
-- ✅ **Producción**: Configuración copiada, 69/69 sorteos copiados, sin errores en consola
-- ✅ Edit nunca tuvo el bug (ya tenía `setSuccessMessage` definido)
-- ✅ **Premios visibles** (local): Directo Primer Pago=78, Dobles=56, Pick2=80 (valores de plantilla)
-
----
-
-### ⚡ Prize Save - Herencia en vez de Propagación ✅ COMPLETADO
-**Problema:** Aunque batch reducía requests, premios aún tardaba ~30s porque enviaba ~3920 items (70 draws × 14 bet types × 4 fields)
-
-**Solución (0700c0e):**
-1. **Solo guardar `general_*`:** Cuando guardas desde General, solo se envían ~56 items (valores generales)
-2. **Herencia en carga:** Frontend ahora usa `/prize-config/resolved` que tiene fallback:
-   - `draw_specific` → `banca_default` → `system_default`
-3. **Los draws heredan automáticamente** del valor general de la banca
-
-**Archivos modificados:**
-- `useEditBettingPoolForm.ts`:
-  - `savePrizeConfigForSingleDraw`: Solo incluye `general_*` al guardar desde General
-  - `loadDrawSpecificValues`: Usa endpoint `/resolved` con herencia
-
-**Resultado esperado:**
-- Antes: ~30 segundos, ~3920 items
-- Después: ~2 segundos, ~56 items
-
-**🧪 Test Exhaustivo en Producción (2026-02-07 03:36):**
-
-| Test | Operación | Tiempo | Persistencia |
-|------|-----------|--------|--------------|
-| Premios | Directo Primer Pago 77→78 | ~1.5s | ✅ Verificado |
-| Comisiones | Directo 20→21→20 | Rápido | ✅ Verificado |
-
-- ✅ Valores persisten después de reload
-- ✅ Redirect automático a lista de bancas
-- ✅ Sin errores 400/429
-- ✅ Valores restaurados a originales
-
----
-
-### ⚡ Batch Save - Comisiones y Crear Banca ✅ COMPLETADO
-**Commits:** 8660d24, eb6e028
-
-**Cambios:**
-- `CreateBettingPool`: Ahora usa batch para comisiones Y premios por sorteo
-- `EditBettingPool`: Comisiones usan batch (ya funcionaba rápido)
-
----
-
-### ⚡ Batch Endpoints Backend ✅ COMPLETADO
-**Problema original:** Guardar tomaba 90+ segundos (200+ requests secuenciales)
-
-**Endpoints creados:**
-- `POST /betting-pools/{id}/prizes-commissions/batch` - Comisiones en lote
-- `POST /betting-pools/{id}/draws/prize-config/batch` - Premios por sorteo en lote
-
-**Archivos Backend:**
-- `BettingPoolPrizesCommissionsController.cs` - +95 líneas
-- `DrawPrizeConfigController.cs` - +115 líneas
-- DTOs: BatchCommissionItemDto, BatchDrawPrizeConfigRequest, etc.
-
----
-
-### Cambios anteriores de hoy
-
-### 8234c10 - General SIEMPRE pisa overrides
-**Spec:** Cuando General cambia, propaga a TODOS los sorteos sin excepción.
-Los "overrides" son temporales hasta la próxima propagación desde General.
-
-**Cambio:**
-- Eliminada la protección que preservaba valores existentes en formData al cargar desde DB
-- Ahora los valores de DB se cargan, pero la propagación de General los sobrescribe
-
-**Archivo:**
-- `PrizesTab/index.tsx` - useEffect ya no protege valores existentes
-
-**Verificación con Playwright (2026-02-07 02:28):**
-- ✅ Cambiar campo "General" (25→33) propaga a todos los tipos de apuesta
-- ✅ Propagación llega a sorteo LA PRIMERA (33)
-- ✅ Propagación llega a sorteo TEXAS MORNING (33)
-- ✅ Valores restaurados a 25
-
-### 367d0cc - Fix error 400 al guardar comisiones desde General
-**Problema:** Al guardar desde tab General, múltiples draws comparten el mismo `lotteryId`.
-Después de crear un registro por POST, el siguiente draw con el mismo `lotteryId` fallaba con 400
-porque `existingRecords` fue cargado antes de crear el primer registro.
-
-**Solución:**
-- Después de un POST exitoso, agregar el nuevo registro a `existingRecords`
-- Esto permite que los siguientes draws encuentren el registro y usen PUT en lugar de POST
-
-**Archivos:**
-- `EditBettingPool/hooks/useEditBettingPoolForm.ts` - `saveCommissionsForPrefix` ahora actualiza `existingRecords`
-
-**Verificación:**
-- Probado en producción con Playwright MCP
-- Sin errores 400 al guardar ✅
-- Nota: El guardado es lento (~70 draws) y puede generar 429 (rate limit) si hay muchos requests
-
-### 853fba3 - Fix propagación comisiones individuales
-**Problema:** Al cambiar un tipo de apuesta individual (ej: Tripleta=30) en tab General, no se propagaba a los sorteos específicos.
-**Solución:**
-- Modificar `handleInputChange` para también propagar cuando `activeDraw === 'general'`
-- Ahora itera por TODOS los draws disponibles igual que `handleGeneralFieldChange`
-
-**Archivos:**
-- `PrizesTab/components/CommissionFieldList.tsx` - `handleInputChange` ahora propaga a todos los draws
-
-**Verificación:**
-- Probado en producción con Playwright MCP
-- Set Tripleta=88 en General → Verificado en LA PRIMERA (88) y NEW YORK DAY (88) ✅
-
-### 079dc4c - Fix propagación campo "General" (comisiones)
-**Problema:** El campo "General" (arriba) no propagaba a todos los sorteos.
-**Solución:**
-- Pasar lista de `draws` a `CommissionFieldList`
-- `handleGeneralFieldChange` ahora itera por TODOS los draws disponibles
-
-**Archivos:**
-- `PrizesTab/components/CommissionFieldList.tsx` - Nueva prop `draws`, lógica de propagación
-- `PrizesTab/index.tsx` - Pasa `draws` al componente
-
-### 92533cd - Zona default en crear banca
-**Cambio:** Al crear una banca, la zona "Default" se selecciona automáticamente.
 **Archivo:** `CreateBettingPool/hooks/useCompleteBettingPoolForm.ts`
 
-### 328951e - Documentación GSD ventas futuras
-Actualización de state.md con cambios de OliverJPR (e33eca4).
+**Verificado con Playwright (local):**
+- ✅ Tipo de Caída = MENSUAL (no OFF)
+- ✅ Permitir Pasar Bote = checked
+- ✅ Imprimir = checked
+- ✅ Modo de Pago = BANCA
+- ✅ Proveedor de Descuento = RIFERO
+- ✅ Modo de Descuento = OFF
 
-### e33eca4 - Ventas Futuras (OliverJPR)
-**Nueva funcionalidad:** Las bancas pueden vender tickets para sorteos futuros.
+---
 
-| Backend | Cambios |
-|---------|---------|
-| `TicketsController.cs` | `TicketDate` opcional, validación ventas futuras |
-| `SalesReportsController.cs` | Reportes por `DrawDate` |
-| `BettingPoolConfig.cs` | +`AllowFutureSales`, `MaxFutureDays` |
+### ✅ Success Message en Create Mode (c327860)
+**Problema:** Edit mostraba "Plantilla aplicada correctamente" pero Create no mostraba nada.
 
-| Frontend | Cambios |
-|----------|---------|
-| `CreateBettingPool/ConfigurationTab.tsx` | UI ventas futuras |
-| `EditBettingPool/hooks/*` | Soporte edición |
+**Fix:**
+- Agregado `successMessage` state + `clearSuccessMessage` al hook
+- Agregado Snackbar + Alert al componente `CreateBettingPool/index.tsx`
+- Ahora muestra "Plantilla aplicada correctamente" igual que Edit
+
+---
+
+### ✅ Rutas camelCase → kebab-case (217256a)
+**Problema:** 4 archivos usaban `/bettingPools/list` (camelCase) pero App.tsx define `/betting-pools/list` (kebab-case). Causaba navegación rota.
+
+**Archivos corregidos:**
+| Archivo | Ruta vieja | Ruta nueva |
+|---------|-----------|------------|
+| `CreateBettingPool/index.tsx` | `/bettingPools/list` | `/betting-pools/list` |
+| `EditBettingPool/index.tsx` | `/bettingPools/list` | `/betting-pools/list` |
+| `useCreateBettingPoolForm.ts` | `/bettingPools/list` | `/betting-pools/list` |
+| `useCompleteBettingPoolForm.ts` | `/bettingPools/create` | `/betting-pools/new` |
+
+---
+
+### ✅ Auto-reload en chunk errors post-deploy (c559739)
+**Problema:** Después de un deploy, los archivos JS cambian de nombre (hash). Usuarios con la app abierta ven: `TypeError: Failed to fetch dynamically imported module: .../DashboardMUI.B6_25tHj.js`
+
+**Fix:** `ErrorBoundary.componentDidCatch` detecta este error específico y recarga la página automáticamente (1 vez, con guard de 10s para evitar loops).
+
+**Archivo:** `components/common/ErrorBoundary.tsx`
+
+---
+
+## Cambios de Hoy (2026-02-07) - Sesión 1
+
+### ✅ Prize Load/Save Fix - Edit Mode (2a11567)
+**Problema:** Premios no persistían en Edit. Cambiar Palé de 1200→1000 y guardar mostraba 1200 al recargar.
+
+**Root cause:** Key mismatch por acentos en `getMergedPrizeData` (prizeService.ts):
+- `betTypeCode` del API: `PALÉ` (con acento)
+- `fieldCode.split('_')[0]`: `PALE` (sin acento)
+
+**Fix:** Usar `prizeTypeId → betTypeCode` map del API (con acentos reales).
+
+---
+
+### ✅ Template Copy - Live Preview (287958f, ed4032c, 638c22e, f28abff)
+- Auto-apply al seleccionar template o cambiar checkboxes
+- Fix setSuccessMessage undefined en Create
+- Fix prize key format
+- Fix comisiones incluidas en template copy
+
+---
+
+### ✅ Performance - Herencia + Batch (0700c0e, 8660d24, eb6e028)
+- Solo guardar valores "General" (~56 items vs ~3920)
+- Backend con herencia: `draw_specific` → `banca_default` → `system_default`
+- Endpoints batch para comisiones y premios
 
 ---
 
@@ -194,7 +115,6 @@ Actualización de state.md con cambios de OliverJPR (e33eca4).
 
 ### Frontend (React) - ✅ 100% + UI Clonado
 - UI clonada de app original usando Playwright MCP
-- Ver guía: `gsd/guides/ui-cloning-guide.md`
 
 ---
 
@@ -220,33 +140,16 @@ Actualización de state.md con cambios de OliverJPR (e33eca4).
 
 ## Lecciones Aprendidas (2026-02-07)
 
-### ✅ Workflow de Testing
-1. **Siempre se puede probar en producción:** Commit + push = auto-deploy a Azure
-2. **Playwright MCP:** Ideal para verificar cambios en producción sin abrir navegador
-
-### ⚡ Herencia > Propagación
-**Problema:** Batch seguía lento porque enviaba 3920 items (valores propagados a 70 draws)
-
-**Solución:**
-1. Solo guardar valores "General" (~56 items)
-2. Backend con herencia: `draw_specific` → `banca_default` → `system_default`
-3. Frontend usa endpoint `/resolved` para cargar con fallback
-3. **Ver `gsd/guides/deploy-workflow.md`:** Documentación del proceso
-
-### ✅ Patrón Batch Save
-1. **Problema identificado:** Guardado lento = muchos requests HTTP
-2. **Solución:** Endpoints batch que procesan N items en 1 request
-3. **Ver `gsd/guides/batch-save-pattern.md`:** Guía completa del patrón
-
 ### ❌ Errores Comunes a Evitar
-1. **Error 400 al guardar:** Ocurre cuando POST duplica un registro
-   - **Fix:** Actualizar lista de `existingRecords` después de cada POST
-2. **Rate limit 429:** Demasiados requests en poco tiempo
-   - **Fix:** Usar endpoints batch
-3. **Propagación no funcionaba:** El tab General no propagaba a sorteos
-   - **Fix:** Iterar por TODOS los draws disponibles
+1. **Mapeos español vs inglés:** El API de .NET retorna enums en INGLÉS (`MONTHLY`, `SELLER`, `COLLECTION`). Los mapeos en frontend deben usar inglés, no español.
+2. **Field name mismatch:** Si `ConfigurationTab` lee `formData.allowJackpot`, el hook debe setear `updates.allowJackpot`, NO `updates.allowPassPot`. Siempre verificar qué nombre usa el componente UI.
+3. **Rutas kebab-case:** App.tsx usa `/betting-pools/list` (kebab-case). Nunca usar camelCase en `navigate()`.
+4. **Chunk errors post-deploy:** SPAs con code-splitting necesitan auto-reload cuando los chunks cambian de hash.
+5. **Key mismatch por acentos:** `betTypeCode` tiene acentos (`PALÉ`) pero `fieldCode` no (`PALE_*`). Nunca extraer betTypeCode de fieldCode.
+6. **Auth token en raw fetch:** `prizeService.ts` usa `fetch()` no `apiFetch()` → necesita token manual.
+7. **Playwright paralelo:** Dos agents Playwright comparten el mismo browser → causa "redirects" falsos. Siempre testear secuencialmente.
 
-### 📁 Guías Creadas
+### 📁 Guías
 | Guía | Descripción |
 |------|-------------|
 | `gsd/guides/deploy-workflow.md` | Proceso de deploy automático |
@@ -255,4 +158,4 @@ Actualización de state.md con cambios de OliverJPR (e33eca4).
 
 ---
 
-**Fecha de última actualización:** 2026-02-07 04:30
+**Fecha de última actualización:** 2026-02-07 23:00

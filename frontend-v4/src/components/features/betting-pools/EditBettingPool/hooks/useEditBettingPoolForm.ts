@@ -1275,8 +1275,9 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
       const result = await savePrizeConfigurations(id, filteredFormData, initialFormData, true);
 
       // Save commission configurations for any tab (general or draw-specific)
-      // When saving from general, also save commissions for all draws
-      await saveCommissionConfigurations(id, filteredFormData, initialFormData, drawId);
+      // When saving from general, pass full formData so draw_* commission keys are found
+      const commissionData = drawId === 'general' ? formData : filteredFormData;
+      await saveCommissionConfigurations(id, commissionData, initialFormData, drawId);
 
       if (result.success) {
         // Show success message and navigate to betting pools list
