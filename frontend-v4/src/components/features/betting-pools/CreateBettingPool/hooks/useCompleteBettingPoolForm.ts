@@ -892,49 +892,83 @@ const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
       let totalSaved = 0;
       let totalFailed = 0;
       const warnings: string[] = [];
+      const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
 
-      // Process each draw
+      // ⚡ OPTIMIZED: Collect all configs first, then send in batch
+      const generalPrizeConfigs: Array<{ prizeTypeId: number; fieldCode: string; value: number }> = [];
+      const drawSpecificConfigs: Array<{ drawId: number; prizeConfigs: Array<{ prizeTypeId: number; fieldCode: string; value: number }> }> = [];
+
+      // Process each draw and collect configs
       for (const [drawId, betTypesForDraw] of Object.entries(prizesByDrawAndBetType)) {
-        if (drawId === 'general') {
-          // Save GENERAL configurations (supported)
+        const prizeConfigs: Array<{ prizeTypeId: number; fieldCode: string; value: number }> = [];
 
-          // Build the API request format
-          const prizeConfigs: Array<{ prizeTypeId: number; fieldCode: string; value: number }> = [];
+        for (const [betTypeCode, fields] of Object.entries(betTypesForDraw)) {
+          for (const [fieldCode, value] of Object.entries(fields)) {
+            const fullKey = `${betTypeCode}_${fieldCode}`;
+            const prizeTypeId = prizeTypeMap[fullKey];
 
-          for (const [betTypeCode, fields] of Object.entries(betTypesForDraw)) {
-            for (const [fieldCode, value] of Object.entries(fields)) {
-              const fullKey = `${betTypeCode}_${fieldCode}`;
-              const prizeTypeId = prizeTypeMap[fullKey];
-
-              if (!prizeTypeId) {
-                console.warn(`[WARN] Prize type not found for key: ${fullKey}`);
-                totalFailed++;
-                continue;
-              }
-
-              prizeConfigs.push({
-                prizeTypeId,
-                fieldCode,
-                value: parseFloat(String(value))
-              });
+            if (!prizeTypeId) {
+              console.warn(`[WARN] Prize type not found for key: ${fullKey}`);
+              totalFailed++;
+              continue;
             }
-          }
 
-          if (prizeConfigs.length > 0) {
-            try {
-              const response = await savePrizeConfig(bettingPoolId, prizeConfigs);
-              totalSaved += prizeConfigs.length;
-            } catch (error) {
-              console.error('[ERROR] Error saving general configurations:', error);
-              totalFailed += prizeConfigs.length;
-            }
+            prizeConfigs.push({
+              prizeTypeId,
+              fieldCode,
+              value: parseFloat(String(value))
+            });
           }
-        } else {
-          // Draw-specific configurations (NOT YET SUPPORTED by backend)
-          // The frontend allows configuration, but backend API doesn't support draw-specific prizes yet
-          const fieldCount = Object.values(betTypesForDraw).reduce((sum, fields) => sum + Object.keys(fields).length, 0);
-          console.warn(`[WARN] Draw-specific configurations are not yet supported by backend: ${drawId} (${fieldCount} fields)`);
-          warnings.push(`${fieldCount} configuraciones para ${drawId} no fueron guardadas (backend no soporta premios por sorteo aún)`);
+        }
+
+        if (prizeConfigs.length > 0) {
+          if (drawId === 'general') {
+            generalPrizeConfigs.push(...prizeConfigs);
+          } else {
+            drawSpecificConfigs.push({
+              drawId: parseInt(drawId, 10),
+              prizeConfigs
+            });
+          }
+        }
+      }
+
+      // Save general configurations (single request)
+      if (generalPrizeConfigs.length > 0) {
+        try {
+          await savePrizeConfig(bettingPoolId, generalPrizeConfigs);
+          totalSaved += generalPrizeConfigs.length;
+        } catch (error) {
+          console.error('[ERROR] Error saving general configurations:', error);
+          totalFailed += generalPrizeConfigs.length;
+        }
+      }
+
+      // ⚡ OPTIMIZED: Save all draw-specific configurations in ONE batch request
+      if (drawSpecificConfigs.length > 0) {
+        try {
+          const batchResp = await fetch(`${API_BASE}/betting-pools/${bettingPoolId}/draws/prize-config/batch`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ drawConfigs: drawSpecificConfigs })
+          });
+
+          if (batchResp.ok) {
+            const totalDrawConfigs = drawSpecificConfigs.reduce((sum, dc) => sum + dc.prizeConfigs.length, 0);
+            totalSaved += totalDrawConfigs;
+          } else {
+            const errText = await batchResp.text();
+            console.error('[ERROR] Batch save draw prizes failed:', errText);
+            const totalDrawConfigs = drawSpecificConfigs.reduce((sum, dc) => sum + dc.prizeConfigs.length, 0);
+            totalFailed += totalDrawConfigs;
+          }
+        } catch (error) {
+          console.error('[ERROR] Error saving draw-specific configurations:', error);
+          const totalDrawConfigs = drawSpecificConfigs.reduce((sum, dc) => sum + dc.prizeConfigs.length, 0);
+          totalFailed += totalDrawConfigs;
         }
       }
 
