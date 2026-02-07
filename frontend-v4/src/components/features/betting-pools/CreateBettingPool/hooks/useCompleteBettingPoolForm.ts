@@ -687,13 +687,12 @@ const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
           // fieldCode format: DIRECTO_PRIMER_PAGO, PALE_TODOS_SECUENCIA, etc.
           prizesData.forEach(prize => {
             if (prize.fieldCode && prize.customValue !== undefined) {
-              // Parse fieldCode to extract betTypeCode and field
-              // Format: BETTYPE_FIELD or BETTYPE_MODIFIER_FIELD
+              // fieldCode format from API: "DIRECTO_PRIMER_PAGO", "PALE_TODOS_SECUENCIA"
+              // Grid key format: general_{betTypeCode}_{fieldCode} = "general_DIRECTO_DIRECTO_PRIMER_PAGO"
               const parts = prize.fieldCode.split('_');
               if (parts.length >= 2) {
                 const betTypeCode = parts[0]; // e.g., DIRECTO, PALE, TRIPLETA
-                const fieldPart = parts.slice(1).join('_'); // e.g., PRIMER_PAGO, TODOS_SECUENCIA
-                const fieldKey = `general_${betTypeCode}_${fieldPart}`;
+                const fieldKey = `general_${betTypeCode}_${prize.fieldCode}`;
                 (updates as Record<string, string | boolean | number | number[] | AutoExpense[] | null>)[fieldKey] = prize.customValue;
               }
             }

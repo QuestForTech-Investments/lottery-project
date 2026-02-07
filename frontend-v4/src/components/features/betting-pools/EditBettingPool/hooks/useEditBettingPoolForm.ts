@@ -1445,12 +1445,12 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
               // fieldCode format: DIRECTO_PRIMER_PAGO, PALE_TODOS_SECUENCIA, etc.
               prizeConfigs.forEach(config => {
                 if (config.fieldCode && config.customValue !== undefined) {
-                  // Parse fieldCode to extract betTypeCode and field
+                  // fieldCode format from API: "DIRECTO_PRIMER_PAGO", "PALE_TODOS_SECUENCIA"
+                  // Grid key format: general_{betTypeCode}_{fieldCode} = "general_DIRECTO_DIRECTO_PRIMER_PAGO"
                   const parts = config.fieldCode.split('_');
                   if (parts.length >= 2) {
                     const betTypeCode = parts[0]; // e.g., DIRECTO, PALE, TRIPLETA
-                    const fieldPart = parts.slice(1).join('_'); // e.g., PRIMER_PAGO, TODOS_SECUENCIA
-                    const key = `general_${betTypeCode}_${fieldPart}`;
+                    const key = `general_${betTypeCode}_${config.fieldCode}`;
                     (updates as Record<string, unknown>)[key] = config.customValue;
                   }
                 }
