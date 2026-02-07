@@ -12,6 +12,12 @@ import { Save as SaveIcon } from '@mui/icons-material';
 import type { BetType, PrizeField, PrizesFormData, GeneralValues, CommissionField } from '../types';
 import { COMMISSION_FIELDS, COMMISSION_2_FIELDS } from '../constants';
 
+interface Draw {
+  id: string;
+  name: string;
+  drawId?: number;
+}
+
 interface BetTypeFieldGridProps {
   betTypes: BetType[];
   activeDraw: string;
@@ -22,6 +28,7 @@ interface BetTypeFieldGridProps {
   bettingPoolId?: number | null;
   saving?: boolean;
   onSave?: () => void;
+  draws?: Draw[];
 }
 
 /**
@@ -40,6 +47,7 @@ const BetTypeFieldGrid: React.FC<BetTypeFieldGridProps> = memo(({
   bettingPoolId,
   saving = false,
   onSave,
+  draws = [],
 }) => {
   /**
    * Generate field key based on field type
@@ -52,6 +60,20 @@ const BetTypeFieldGrid: React.FC<BetTypeFieldGridProps> = memo(({
         return `${activeDraw}_COMMISSION2_${betTypeCode}_${fieldCode}`;
       default:
         return `${activeDraw}_${betTypeCode}_${fieldCode}`;
+    }
+  };
+
+  /**
+   * Generate field key for a specific draw (used for propagation)
+   */
+  const getFieldKeyForDraw = (drawId: string, betTypeCode: string, fieldCode: string): string => {
+    switch (fieldType) {
+      case 'commission':
+        return `${drawId}_COMMISSION_${betTypeCode}_${fieldCode}`;
+      case 'commission2':
+        return `${drawId}_COMMISSION2_${betTypeCode}_${fieldCode}`;
+      default:
+        return `${drawId}_${betTypeCode}_${fieldCode}`;
     }
   };
 
@@ -109,6 +131,7 @@ const BetTypeFieldGrid: React.FC<BetTypeFieldGridProps> = memo(({
 
   /**
    * Handle field input change
+   * When on General tab, propagates to ALL draws
    */
   const handleInputChange = (betTypeCode: string, fieldCode: string) => (event: ChangeEvent<HTMLInputElement>): void => {
     const fieldKey = getFieldKey(betTypeCode, fieldCode);
@@ -117,6 +140,15 @@ const BetTypeFieldGrid: React.FC<BetTypeFieldGridProps> = memo(({
     // Allow empty value
     if (value === '') {
       onFieldChange(fieldKey, '');
+      // Also propagate empty to all draws when on General tab
+      if (activeDraw === 'general' && draws.length > 0) {
+        draws.forEach((draw) => {
+          if (draw.id !== 'general' && draw.id.startsWith('draw_')) {
+            const drawKey = getFieldKeyForDraw(draw.id, betTypeCode, fieldCode);
+            onFieldChange(drawKey, '');
+          }
+        });
+      }
       return;
     }
 
@@ -124,6 +156,15 @@ const BetTypeFieldGrid: React.FC<BetTypeFieldGridProps> = memo(({
     const numberRegex = /^-?\d*\.?\d*$/;
     if (numberRegex.test(value)) {
       onFieldChange(fieldKey, value);
+      // Also propagate to all draws when on General tab
+      if (activeDraw === 'general' && draws.length > 0) {
+        draws.forEach((draw) => {
+          if (draw.id !== 'general' && draw.id.startsWith('draw_')) {
+            const drawKey = getFieldKeyForDraw(draw.id, betTypeCode, fieldCode);
+            onFieldChange(drawKey, value);
+          }
+        });
+      }
     }
   };
 

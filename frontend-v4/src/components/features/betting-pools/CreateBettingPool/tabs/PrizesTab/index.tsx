@@ -357,6 +357,7 @@ const PrizesTab: React.FC<PrizesTabProps> = ({
             bettingPoolId={bettingPoolId}
             saving={saving}
             onSave={onSavePrizeConfig ? handleSave : undefined}
+            draws={draws}
           />
         ) : (
           <CommissionFieldList
