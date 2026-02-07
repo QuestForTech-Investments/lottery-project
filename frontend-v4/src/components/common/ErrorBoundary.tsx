@@ -52,6 +52,19 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
    * Log error details for debugging
    */
   override componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    // Auto-reload on chunk load failures (happens after a new deploy changes file hashes)
+    if (
+      error.message?.includes('Failed to fetch dynamically imported module') ||
+      error.message?.includes('Importing a module script failed')
+    ) {
+      const lastReload = sessionStorage.getItem('chunk-reload');
+      if (!lastReload || Date.now() - Number(lastReload) > 10000) {
+        sessionStorage.setItem('chunk-reload', String(Date.now()));
+        window.location.reload();
+        return;
+      }
+    }
+
     // Log to console
     console.error('[ERROR] ErrorBoundary caught an error:', error, errorInfo)
 
@@ -68,11 +81,6 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
       errorInfo,
       errorCount: this.state.errorCount + 1,
     })
-
-    // Optional: Send to external error tracking service (Sentry, LogRocket, etc.)
-    // if (window.Sentry) {
-    //   window.Sentry.captureException(error, { contexts: { react: { componentStack: errorInfo.componentStack } } });
-    // }
   }
 
   /**
