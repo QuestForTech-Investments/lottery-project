@@ -844,85 +844,6 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
         'PANAMA': 'PANAMA',
       };
 
-      // Collect commission changes by gameType
-      const commissionsByGameType: Record<string, {
-        commissionDiscount1?: number;
-        commissionDiscount2?: number;
-        commissionDiscount3?: number;
-        commissionDiscount4?: number;
-        commission2Discount1?: number;
-        commission2Discount2?: number;
-        commission2Discount3?: number;
-        commission2Discount4?: number;
-      }> = {};
-
-      // Dynamic regex patterns based on drawId (general or draw_XX)
-      const keyPrefix = drawId === 'general' ? 'general' : drawId;
-      const escapedPrefix = keyPrefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const commissionPattern = new RegExp(`^${escapedPrefix}_COMMISSION_(.+)_COMMISSION_DISCOUNT_(\\d)$`);
-      const commission2Pattern = new RegExp(`^${escapedPrefix}_COMMISSION2_(.+)_COMMISSION_2_DISCOUNT_(\\d)$`);
-
-      // Process all formData keys to find commission fields
-      Object.keys(currentFormData).forEach(key => {
-        const value = currentFormData[key];
-        if (value === '' || value === null || value === undefined) return;
-
-        // Check if value has changed
-        const initialValue = initialData?.[key as keyof FormData];
-        if (initialData && initialValue !== undefined && String(initialValue) === String(value)) {
-          return; // No change, skip
-        }
-
-        // Match commission field pattern
-        const commissionMatch = key.match(commissionPattern);
-        if (commissionMatch) {
-          const betTypeCode = commissionMatch[1];
-          const discountNum = commissionMatch[2];
-          const gameType = betTypeToGameType[betTypeCode] || betTypeCode;
-
-          if (!commissionsByGameType[gameType]) {
-            commissionsByGameType[gameType] = {};
-          }
-
-          const fieldName = `commissionDiscount${discountNum}` as keyof typeof commissionsByGameType[typeof gameType];
-          commissionsByGameType[gameType][fieldName] = parseFloat(String(value));
-          return;
-        }
-
-        // Match commission 2 field pattern
-        const commission2Match = key.match(commission2Pattern);
-        if (commission2Match) {
-          const betTypeCode = commission2Match[1];
-          const discountNum = commission2Match[2];
-          const gameType = betTypeToGameType[betTypeCode] || betTypeCode;
-
-          if (!commissionsByGameType[gameType]) {
-            commissionsByGameType[gameType] = {};
-          }
-
-          const fieldName = `commission2Discount${discountNum}` as keyof typeof commissionsByGameType[typeof gameType];
-          commissionsByGameType[gameType][fieldName] = parseFloat(String(value));
-          return;
-        }
-      });
-
-      // If no commission changes, return early
-      if (Object.keys(commissionsByGameType).length === 0) {
-        return;
-      }
-
-      // Determine lotteryId for draw-specific saves
-      let lotteryId: number | null = null;
-      if (drawId !== 'general' && drawId.startsWith('draw_')) {
-        const drawIdNum = parseInt(drawId.split('_')[1]);
-        const draw = draws.find(d => d.drawId === drawIdNum);
-        lotteryId = draw?.lotteryId ?? null;
-        if (lotteryId === null) {
-          console.warn(`[COMMISSION SAVE] Could not find lotteryId for ${drawId}, skipping`);
-          return;
-        }
-      }
-
       // Fetch existing records once (avoid repeated API calls in loop)
       const existingResponse = await fetch(`${API_BASE}/betting-pools/${bettingPoolId}/prizes-commissions`, {
         headers: {
@@ -936,48 +857,110 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
         existingRecords = await existingResponse.json();
       }
 
-      // Save each gameType's commissions
-      for (const [gameType, commissions] of Object.entries(commissionsByGameType)) {
-        // Match by gameType AND lotteryId
-        const existingRecord = existingRecords.find(r =>
-          r.gameType === gameType &&
-          (lotteryId === null
-            ? (r.lotteryId === null || r.lotteryId === undefined)
-            : r.lotteryId === lotteryId)
-        );
+      // Helper function to save commissions for a specific prefix
+      const saveCommissionsForPrefix = async (
+        keyPrefix: string,
+        targetLotteryId: number | null
+      ): Promise<void> => {
+        const commissions: Record<string, {
+          commissionDiscount1?: number;
+          commission2Discount1?: number;
+        }> = {};
 
-        if (existingRecord) {
-          // Update existing record
-          const updateBody = { gameType, lotteryId, ...commissions };
-          const putResp = await fetch(`${API_BASE}/betting-pools/${bettingPoolId}/${existingRecord.prizeCommissionId}`, {
-            method: 'PUT',
-            headers: {
-              'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(updateBody)
-          });
-          if (!putResp.ok) {
-            const errText = await putResp.text();
-            console.error(`[COMMISSION SAVE] PUT error body:`, errText);
+        const escapedPrefix = keyPrefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const commissionPattern = new RegExp(`^${escapedPrefix}_COMMISSION_(.+)_COMMISSION_DISCOUNT_(\\d)$`);
+        const commission2Pattern = new RegExp(`^${escapedPrefix}_COMMISSION2_(.+)_COMMISSION_2_DISCOUNT_(\\d)$`);
+
+        Object.keys(currentFormData).forEach(key => {
+          const value = currentFormData[key];
+          if (value === '' || value === null || value === undefined) return;
+
+          const commissionMatch = key.match(commissionPattern);
+          if (commissionMatch) {
+            const betTypeCode = commissionMatch[1];
+            const discountNum = commissionMatch[2];
+            const gameType = betTypeToGameType[betTypeCode] || betTypeCode;
+            if (!commissions[gameType]) commissions[gameType] = {};
+            const fieldName = `commissionDiscount${discountNum}` as keyof typeof commissions[typeof gameType];
+            (commissions[gameType] as Record<string, number>)[fieldName] = parseFloat(String(value));
+            return;
           }
-        } else {
-          // Create new record
-          const createBody = { gameType, lotteryId, isActive: true, ...commissions };
-          const postResp = await fetch(`${API_BASE}/betting-pools/${bettingPoolId}/prizes-commissions`, {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(createBody)
-          });
-          if (!postResp.ok) {
-            const errText = await postResp.text();
-            console.error(`[COMMISSION SAVE] POST error body:`, errText);
+
+          const commission2Match = key.match(commission2Pattern);
+          if (commission2Match) {
+            const betTypeCode = commission2Match[1];
+            const discountNum = commission2Match[2];
+            const gameType = betTypeToGameType[betTypeCode] || betTypeCode;
+            if (!commissions[gameType]) commissions[gameType] = {};
+            const fieldName = `commission2Discount${discountNum}` as keyof typeof commissions[typeof gameType];
+            (commissions[gameType] as Record<string, number>)[fieldName] = parseFloat(String(value));
+            return;
+          }
+        });
+
+        // Save each gameType's commissions
+        for (const [gameType, commissionData] of Object.entries(commissions)) {
+          const existingRecord = existingRecords.find(r =>
+            r.gameType === gameType &&
+            (targetLotteryId === null
+              ? (r.lotteryId === null || r.lotteryId === undefined)
+              : r.lotteryId === targetLotteryId)
+          );
+
+          if (existingRecord) {
+            const updateBody = { gameType, lotteryId: targetLotteryId, ...commissionData };
+            await fetch(`${API_BASE}/betting-pools/${bettingPoolId}/${existingRecord.prizeCommissionId}`, {
+              method: 'PUT',
+              headers: {
+                'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify(updateBody)
+            });
+          } else {
+            const createBody = { gameType, lotteryId: targetLotteryId, isActive: true, ...commissionData };
+            await fetch(`${API_BASE}/betting-pools/${bettingPoolId}/prizes-commissions`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify(createBody)
+            });
           }
         }
+      };
+
+      // When saving from General tab, save BOTH general AND all draw-specific commissions
+      if (drawId === 'general') {
+        // Save general commissions (lotteryId = null)
+        await saveCommissionsForPrefix('general', null);
+
+        // Extract all unique draw prefixes and save each
+        const drawPrefixes = new Set<string>();
+        Object.keys(currentFormData).forEach(key => {
+          const match = key.match(/^(draw_\d+)_COMMISSION/);
+          if (match) drawPrefixes.add(match[1]);
+        });
+
+        for (const drawPrefix of drawPrefixes) {
+          const drawIdNum = parseInt(drawPrefix.split('_')[1]);
+          const draw = draws.find(d => d.drawId === drawIdNum);
+          const lotteryId = draw?.lotteryId ?? null;
+          if (lotteryId !== null) {
+            await saveCommissionsForPrefix(drawPrefix, lotteryId);
+          }
+        }
+      } else if (drawId.startsWith('draw_')) {
+        // For specific draw, only save that draw's commissions
+        const drawIdNum = parseInt(drawId.split('_')[1]);
+        const draw = draws.find(d => d.drawId === drawIdNum);
+        const lotteryId = draw?.lotteryId ?? null;
+        if (lotteryId !== null) {
+          await saveCommissionsForPrefix(drawId, lotteryId);
+        }
       }
+
     } catch (error) {
       console.error('Error saving commission configurations:', error);
       throw error;
@@ -1301,19 +1284,33 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
   /**
    * 🔥 NEW: Save prize config for a single draw only (for ACTUALIZAR button)
    * @param {string} drawId - The draw ID (e.g., "general" or "draw_43")
+   *
+   * When saving from "general" tab, this will save to ALL draws
+   * (propagating the general values to every sorteo)
    */
   const savePrizeConfigForSingleDraw = async (drawId: string): Promise<SavePrizeResult> => {
 
     try {
       // Filter formData to only include fields for this specific draw
       const filteredFormData: Record<string, string | number | boolean | number[] | AutoExpense[] | null> = {};
-      const prefix = drawId === 'general' ? 'general_' : `${drawId}_`;
 
-      Object.keys(formData).forEach(key => {
-        if (key.startsWith(prefix)) {
-          filteredFormData[key] = formData[key as keyof FormData];
-        }
-      });
+      if (drawId === 'general') {
+        // When saving from General tab, include BOTH general_* AND all draw_* fields
+        // This ensures the propagated values are saved to all draws
+        Object.keys(formData).forEach(key => {
+          if (key.startsWith('general_') || key.startsWith('draw_')) {
+            filteredFormData[key] = formData[key as keyof FormData];
+          }
+        });
+      } else {
+        // For specific draw, only include that draw's fields
+        const prefix = `${drawId}_`;
+        Object.keys(formData).forEach(key => {
+          if (key.startsWith(prefix)) {
+            filteredFormData[key] = formData[key as keyof FormData];
+          }
+        });
+      }
 
 
       // Call the existing savePrizeConfigurations function
@@ -1322,6 +1319,7 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
       const result = await savePrizeConfigurations(id, filteredFormData, initialFormData, true);
 
       // Save commission configurations for any tab (general or draw-specific)
+      // When saving from general, also save commissions for all draws
       await saveCommissionConfigurations(id, filteredFormData, initialFormData, drawId);
 
       if (result.success) {

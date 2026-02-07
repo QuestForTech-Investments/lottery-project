@@ -140,6 +140,7 @@ const PrizesTab: React.FC<PrizesTabProps> = ({
   }, [activeDraw, draws.length]);
 
   // Load draw-specific values when switching to a draw tab
+  // BUT: Don't overwrite values that were propagated from General tab
   useEffect(() => {
     if (bettingPoolId && loadDrawSpecificValues && activeDraw !== 'general' && activeDraw.startsWith('draw_')) {
       const drawId = parseInt(activeDraw.split('_')[1]);
@@ -147,9 +148,14 @@ const PrizesTab: React.FC<PrizesTabProps> = ({
         .then(drawValues => {
           if (Object.keys(drawValues).length > 0) {
             Object.keys(drawValues).forEach(key => {
-              handleChange({
-                target: { name: key, value: drawValues[key] }
-              });
+              // Only load from DB if there's no value already in formData
+              // This preserves propagated values from General tab
+              const existingValue = formData[key];
+              if (existingValue === undefined || existingValue === null || existingValue === '') {
+                handleChange({
+                  target: { name: key, value: drawValues[key] }
+                });
+              }
             });
           }
         })
