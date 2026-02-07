@@ -10,7 +10,7 @@
 
 ## Último Commit
 ```
-853fba3 Fix: Propagate individual commission changes from General tab to all draws
+367d0cc Fix: Add newly created commission records to existingRecords array
 ```
 **Fecha:** 2026-02-07
 **Estado:** ✅ En producción (verificado con Playwright)
@@ -18,6 +18,23 @@
 ---
 
 ## Cambios de Hoy (2026-02-07)
+
+### 367d0cc - Fix error 400 al guardar comisiones desde General
+**Problema:** Al guardar desde tab General, múltiples draws comparten el mismo `lotteryId`.
+Después de crear un registro por POST, el siguiente draw con el mismo `lotteryId` fallaba con 400
+porque `existingRecords` fue cargado antes de crear el primer registro.
+
+**Solución:**
+- Después de un POST exitoso, agregar el nuevo registro a `existingRecords`
+- Esto permite que los siguientes draws encuentren el registro y usen PUT en lugar de POST
+
+**Archivos:**
+- `EditBettingPool/hooks/useEditBettingPoolForm.ts` - `saveCommissionsForPrefix` ahora actualiza `existingRecords`
+
+**Verificación:**
+- Probado en producción con Playwright MCP
+- Sin errores 400 al guardar ✅
+- Nota: El guardado es lento (~70 draws) y puede generar 429 (rate limit) si hay muchos requests
 
 ### 853fba3 - Fix propagación comisiones individuales
 **Problema:** Al cambiar un tipo de apuesta individual (ej: Tripleta=30) en tab General, no se propagaba a los sorteos específicos.
@@ -98,4 +115,4 @@ Actualización de state.md con cambios de OliverJPR (e33eca4).
 
 ---
 
-**Fecha de última actualización:** 2026-02-07 01:52
+**Fecha de última actualización:** 2026-02-07 02:17
