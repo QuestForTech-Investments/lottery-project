@@ -62,8 +62,8 @@ public class SalesReportsController : ControllerBase
                     BettingPool = bp,
                     Tickets = bp.Tickets
                         .Where(t => !t.IsCancelled
-                            && t.CreatedAt >= filter.StartDate
-                            && t.CreatedAt <= adjustedEndDate)
+                            && t.TicketLines.Any(tl => tl.DrawDate.Date >= filter.StartDate.Date
+                                && tl.DrawDate.Date <= filter.EndDate.Date))
                         .Where(t => filter.DrawIds == null || filter.DrawIds.Count == 0
                             || t.TicketLines.Any(tl => filter.DrawIds.Contains(tl.DrawId)))
                         .ToList()
@@ -145,11 +145,11 @@ public class SalesReportsController : ControllerBase
 
             _logger.LogInformation("Getting daily sales summary for {Date}", targetDate);
 
-            // Get all tickets for the day (not cancelled)
+            // Get all tickets for the day (not cancelled) - filter by DrawDate
             var tickets = await _context.Tickets
+                .Include(t => t.TicketLines)
                 .Where(t => !t.IsCancelled
-                    && t.CreatedAt >= startDate
-                    && t.CreatedAt <= endDate)
+                    && t.TicketLines.Any(tl => tl.DrawDate.Date == targetDate.Date))
                 .ToListAsync();
 
             decimal totalSold = tickets.Sum(t => t.GrandTotal);
@@ -417,7 +417,7 @@ public class SalesReportsController : ControllerBase
                 .Include(tl => tl.Draw)
                     .ThenInclude(d => d!.Lottery)
                 .Where(tl => tl.Ticket != null && !tl.Ticket.IsCancelled)
-                .Where(tl => tl.Ticket!.CreatedAt >= startDate && tl.Ticket.CreatedAt <= endDate);
+                .Where(tl => tl.DrawDate.Date >= startDate.Date && tl.DrawDate.Date <= endDate.Date);
 
             if (zoneIdList != null && zoneIdList.Count > 0)
             {
@@ -520,7 +520,7 @@ public class SalesReportsController : ControllerBase
                     .Include(t => t.BettingPool)
                     .Include(t => t.TicketLines)
                     .Where(t => !t.IsCancelled)
-                    .Where(t => t.CreatedAt >= startDate && t.CreatedAt <= endDate)
+                    .Where(t => t.TicketLines.Any(tl => tl.DrawDate.Date >= startDate.Date && tl.DrawDate.Date <= endDate.Date))
                     .Where(t => t.BettingPool != null && t.BettingPool.ZoneId == zone.ZoneId)
                     .ToListAsync();
 
@@ -613,7 +613,7 @@ public class SalesReportsController : ControllerBase
                         .ThenInclude(d => d!.Lottery)
                     .Where(tl => tl.Ticket != null && !tl.Ticket.IsCancelled)
                     .Where(tl => tl.Ticket!.BettingPoolId == bp.BettingPoolId)
-                    .Where(tl => tl.Ticket!.CreatedAt >= startDate && tl.Ticket.CreatedAt <= endDate)
+                    .Where(tl => tl.DrawDate.Date >= startDate.Date && tl.DrawDate.Date <= endDate.Date)
                     .ToListAsync();
 
                 if (!lines.Any()) continue;
@@ -658,7 +658,7 @@ public class SalesReportsController : ControllerBase
                 .Include(tl => tl.Draw)
                     .ThenInclude(d => d!.Lottery)
                 .Where(tl => tl.Ticket != null && !tl.Ticket.IsCancelled)
-                .Where(tl => tl.Ticket!.CreatedAt >= startDate && tl.Ticket.CreatedAt <= endDate)
+                .Where(tl => tl.DrawDate.Date >= startDate.Date && tl.DrawDate.Date <= endDate.Date)
                 .Where(tl => zoneIdList == null || zoneIdList.Count == 0 ||
                     (tl.Ticket!.BettingPool != null && zoneIdList.Contains(tl.Ticket.BettingPool.ZoneId)))
                 .ToListAsync();
@@ -741,7 +741,7 @@ public class SalesReportsController : ControllerBase
                 .Include(tl => tl.Ticket)
                 .Include(tl => tl.BetType)
                 .Where(tl => tl.Ticket != null && !tl.Ticket.IsCancelled)
-                .Where(tl => tl.Ticket!.CreatedAt >= startDate && tl.Ticket.CreatedAt <= endDate);
+                .Where(tl => tl.DrawDate.Date >= startDate.Date && tl.DrawDate.Date <= endDate.Date);
 
             if (drawId.HasValue)
             {
@@ -850,7 +850,7 @@ public class SalesReportsController : ControllerBase
                     .ThenInclude(d => d!.Lottery)
                 .Include(tl => tl.BetType)
                 .Where(tl => tl.Ticket != null && !tl.Ticket.IsCancelled)
-                .Where(tl => tl.Ticket!.CreatedAt >= startDate && tl.Ticket.CreatedAt <= endDate);
+                .Where(tl => tl.DrawDate.Date >= startDate.Date && tl.DrawDate.Date <= endDate.Date);
 
             if (drawId.HasValue)
             {

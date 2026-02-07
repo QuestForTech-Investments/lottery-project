@@ -53,6 +53,9 @@ export interface FormData {
   dailyPhoneRechargeLimit: string;
   limitPreference: string | null;
   creditLimit: string;
+  // Future sales
+  allowFutureSales: boolean;
+  maxFutureDays: string;
   // Footers
   autoFooter: boolean;
   footerText1: string;
@@ -216,6 +219,8 @@ export interface ConfigResponse {
     maxTicketAmount?: number;
     maxDailyRecharge?: number;
     paymentMode?: string;  // ✅ NEW: Payment mode (BANCA, ZONA, GRUPO)
+    allowFutureSales?: boolean;
+    maxFutureDays?: number;
   };
   discountConfig?: {
     discountProvider?: string;

@@ -70,6 +70,12 @@ public class BettingPoolConfig
     [Column("payment_mode")]
     public string PaymentMode { get; set; } = "BANCA";
 
+    [Column("allow_future_sales")]
+    public bool AllowFutureSales { get; set; } = true;
+
+    [Column("max_future_days")]
+    public int MaxFutureDays { get; set; } = 7;
+
     [Column("created_at")]
     public DateTime? CreatedAt { get; set; }
 

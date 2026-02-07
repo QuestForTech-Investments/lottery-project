@@ -167,6 +167,8 @@ public class BettingPoolConfigDto
     public decimal? MaxTicketAmount { get; set; }
     public decimal? MaxDailyRecharge { get; set; }
     public string PaymentMode { get; set; } = "BANCA";
+    public bool AllowFutureSales { get; set; } = true;
+    public int MaxFutureDays { get; set; } = 7;
 }
 
 /// <summary>

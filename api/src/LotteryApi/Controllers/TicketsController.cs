@@ -32,13 +32,24 @@ public class TicketsController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<TicketDetailDto[]>> GetTickets(int bettingPoolId)
+    public async Task<ActionResult<TicketDetailDto[]>> GetTickets(
+        [FromQuery] int bettingPoolId,
+        [FromQuery] DateTime? date = null)
     {
-        _logger.LogInformation("Getting tickets for bettingPoolId {BettingPoolId}", bettingPoolId);
+        _logger.LogInformation("Getting tickets for bettingPoolId {BettingPoolId}, date {Date}", bettingPoolId, date);
 
-        var tickets = await _context.Tickets
+        var query = _context.Tickets
             .AsNoTracking()
-            .Where(t => t.BettingPoolId == bettingPoolId)
+            .Where(t => t.BettingPoolId == bettingPoolId);
+
+        // Filter by date (DrawDate - the date the ticket is FOR)
+        if (date.HasValue)
+        {
+            var filterDate = date.Value.Date;
+            query = query.Where(t => t.TicketLines.Any(tl => tl.DrawDate.Date == filterDate));
+        }
+
+        var tickets = await query
             .Select(t => new TicketDetailDto
             {
                 TicketId = t.TicketId,
@@ -394,6 +405,39 @@ public class TicketsController : ControllerBase
                 return UnprocessableEntity(new { message = "La banca no está activa" });
             }
 
+            // 1.5 Validate ticket date for future sales
+            var todayBusiness = DateTimeHelper.TodayInBusinessTimezone();
+            var ticketDate = dto.TicketDate?.Date ?? todayBusiness;
+
+            // Future sales validation (only if ticketDate is provided and is in the future)
+            if (dto.TicketDate.HasValue)
+            {
+                if (ticketDate < todayBusiness)
+                {
+                    return BadRequest(new { message = "No se puede crear tickets para fechas pasadas" });
+                }
+
+                if (ticketDate > todayBusiness)
+                {
+                    // Fetch betting pool config to check future sales settings
+                    var bpConfig = await _context.BettingPoolConfigs
+                        .FirstOrDefaultAsync(c => c.BettingPoolId == dto.BettingPoolId);
+
+                    var allowFutureSales = bpConfig?.AllowFutureSales ?? true;
+                    var maxFutureDays = bpConfig?.MaxFutureDays ?? 7;
+
+                    if (!allowFutureSales)
+                    {
+                        return BadRequest(new { message = "Esta banca no permite ventas futuras" });
+                    }
+
+                    if (ticketDate > todayBusiness.AddDays(maxFutureDays))
+                    {
+                        return BadRequest(new { message = $"No se puede crear tickets para más de {maxFutureDays} días en el futuro" });
+                    }
+                }
+            }
+
             // 2. Validate user is active
             var user = await _context.Users.FirstOrDefaultAsync(u => u.UserId == dto.UserId);
             if (user == null)
@@ -408,7 +452,6 @@ public class TicketsController : ControllerBase
 
             // 3. Validate cutoff times for all draws
             var now = DateTime.UtcNow;
-            var todayBusiness = DateTimeHelper.TodayInBusinessTimezone();
             var drawIds = dto.Lines.Select(l => l.DrawId).Distinct().ToList();
             var betTypeIds = dto.Lines.Select(l => l.BetTypeId).Distinct().ToList();
 
@@ -515,7 +558,7 @@ public class TicketsController : ControllerBase
             foreach (var lineDto in dto.Lines)
             {
                 var draw = draws.First(d => d.DrawId == lineDto.DrawId);
-                var drawDateTime = todayBusiness.Add(draw.DrawTime);
+                var drawDateTime = ticketDate.Add(draw.DrawTime);
 
                 if (!earliestDrawTime.HasValue || drawDateTime < earliestDrawTime)
                     earliestDrawTime = drawDateTime;
@@ -532,7 +575,7 @@ public class TicketsController : ControllerBase
                     LineNumber = lineNumber++,
                     // LotteryId se obtiene de Draw.LotteryId, no duplicar
                     DrawId = lineDto.DrawId,
-                    DrawDate = todayBusiness,
+                    DrawDate = ticketDate,
                     DrawTime = draw.DrawTime,
                     BetNumber = lineDto.BetNumber,
                     BetTypeId = lineDto.BetTypeId,
@@ -571,7 +614,7 @@ public class TicketsController : ControllerBase
                     // Update limit consumption for this line
                     await UpdateLimitConsumption(
                         lineDto.DrawId,
-                        todayBusiness,
+                        ticketDate,
                         lineDto.BetNumber,
                         dto.BettingPoolId,
                         line.NetAmount,
@@ -825,11 +868,10 @@ public class TicketsController : ControllerBase
                 var localStartOfDay = new DateTime(filter.Date.Value.Year, filter.Date.Value.Month, filter.Date.Value.Day, 0, 0, 0, DateTimeKind.Unspecified);
                 var localEndOfDay = localStartOfDay.AddDays(1);
 
-                // Convert to UTC for database comparison
-                var utcStart = TimeZoneInfo.ConvertTimeToUtc(localStartOfDay, lotteryTimeZone);
-                var utcEnd = TimeZoneInfo.ConvertTimeToUtc(localEndOfDay, lotteryTimeZone);
-
-                query = query.Where(t => t.CreatedAt >= utcStart && t.CreatedAt < utcEnd);
+                // Filter by DrawDate (the date the ticket is FOR, not when it was created)
+                // A ticket appears on a date if ANY of its lines have that DrawDate
+                var filterDate = filter.Date.Value.Date;
+                query = query.Where(t => t.TicketLines.Any(tl => tl.DrawDate.Date == filterDate));
             }
 
             if (filter.BettingPoolId.HasValue)
@@ -1026,23 +1068,23 @@ public class TicketsController : ControllerBase
 
             if (ticket == null)
             {
-                return NotFound(new { message = "Ticket no encontrado" });
+                return NotFound(new { code = "TICKET_NOT_FOUND" });
             }
 
             // 2. Validate ticket not already cancelled
             if (ticket.IsCancelled)
             {
-                return UnprocessableEntity(new { message = "El ticket ya está cancelado" });
+                return UnprocessableEntity(new { code = "TICKET_ALREADY_CANCELLED" });
             }
 
             // 3. Validate ticket not already paid
             if (ticket.IsPaid)
             {
-                return UnprocessableEntity(new { message = "No se puede cancelar un ticket ya pagado" });
+                return UnprocessableEntity(new { code = "TICKET_ALREADY_PAID" });
             }
 
-            // 4. Validate cancellation time window (default 30 minutes)
-            var cancelMinutes = 30; // TODO: Get from config
+            // 4. Validate cancellation time window (5 minutes)
+            var cancelMinutes = 5;
             var now = DateTime.UtcNow;
             var timeSinceCreation = now - ticket.CreatedAt;
 
@@ -1050,7 +1092,8 @@ public class TicketsController : ControllerBase
             {
                 return UnprocessableEntity(new
                 {
-                    message = $"El tiempo de cancelación ({cancelMinutes} minutos) ha expirado"
+                    code = "CANCELLATION_TIME_EXPIRED",
+                    maxMinutes = cancelMinutes
                 });
             }
 
@@ -1058,7 +1101,7 @@ public class TicketsController : ControllerBase
             var user = await _context.Users.FindAsync(dto.CancelledBy);
             if (user == null)
             {
-                return NotFound(new { message = "El usuario que cancela no existe" });
+                return NotFound(new { code = "USER_NOT_FOUND" });
             }
 
             // 6. Cancel ticket

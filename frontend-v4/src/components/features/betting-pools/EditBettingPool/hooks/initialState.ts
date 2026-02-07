@@ -48,6 +48,10 @@ export const INITIAL_FORM_DATA: FormData = {
   limitPreference: null,
   creditLimit: '',
 
+  // Future sales
+  allowFutureSales: true,
+  maxFutureDays: '7',
+
   // Footers
   autoFooter: false,
   footerText1: '',

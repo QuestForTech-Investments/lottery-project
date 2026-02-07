@@ -38,6 +38,8 @@ interface ConfigFormData {
   discountProvider: string;
   discountMode: string;
   limitPreference: string | null;
+  allowFutureSales: boolean;
+  maxFutureDays: string;
   [key: string]: string | boolean | null;
 }
 
@@ -459,6 +461,41 @@ const ConfigurationTab: React.FC<ConfigTabProps> = ({ formData, handleChange }) 
             </RadioGroup>
           </FormControl>
         </Grid>
+
+        {/* Future Sales Settings */}
+        <Grid item xs={12}>
+          <Typography variant="subtitle1" gutterBottom sx={{ mt: 2, fontWeight: 'bold' }}>
+            Ventas Futuras
+          </Typography>
+          <Divider sx={{ mb: 2 }} />
+        </Grid>
+
+        <Grid item xs={12} md={6}>
+          <FormControlLabel
+            control={
+              <Switch
+                checked={formData.allowFutureSales}
+                onChange={handleChange}
+                name="allowFutureSales"
+              />
+            }
+            label="Permitir Ventas Futuras"
+          />
+        </Grid>
+
+        <Grid item xs={12} md={6}>
+          <TextField
+            fullWidth
+            type="number"
+            label="Días Máximos de Venta Futura"
+            name="maxFutureDays"
+            value={formData.maxFutureDays}
+            onChange={handleChange}
+            inputProps={{ min: "1", max: "7" }}
+            disabled={!formData.allowFutureSales}
+            helperText="Cantidad de días en el futuro que se pueden vender tickets (1-7)"
+          />
+        </Grid>
       </Grid>
     </Box>
   );
@@ -482,7 +519,7 @@ const arePropsEqual = (prevProps: ConfigTabProps, nextProps: ConfigTabProps): bo
     'smsOnly', 'minutesToCancelTicket', 'ticketsToCancelPerDay', 'enableRecharges',
     'printRechargeReceipt', 'allowPasswordChange', 'printerType', 'discountProvider',
     'discountMode', 'maximumCancelTicketAmount', 'maxTicketAmount',
-    'dailyPhoneRechargeLimit', 'limitPreference'
+    'dailyPhoneRechargeLimit', 'limitPreference', 'allowFutureSales', 'maxFutureDays'
   ];
 
   for (const field of configFields) {

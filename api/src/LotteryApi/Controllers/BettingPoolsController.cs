@@ -785,7 +785,9 @@ public class BettingPoolsController : ControllerBase
                     MaxCancelAmount = bettingPool.Config.MaxCancelAmount,
                     MaxTicketAmount = bettingPool.Config.MaxTicketAmount,
                     MaxDailyRecharge = bettingPool.Config.MaxDailyRecharge,
-                    PaymentMode = bettingPool.Config.PaymentMode
+                    PaymentMode = bettingPool.Config.PaymentMode,
+                    AllowFutureSales = bettingPool.Config.AllowFutureSales,
+                    MaxFutureDays = bettingPool.Config.MaxFutureDays
                 } : null,
                 DiscountConfig = bettingPool.DiscountConfig != null ? new BettingPoolDiscountConfigDto
                 {
@@ -873,6 +875,8 @@ public class BettingPoolsController : ControllerBase
                 bettingPool.Config.MaxTicketAmount = dto.Config.MaxTicketAmount;
                 bettingPool.Config.MaxDailyRecharge = dto.Config.MaxDailyRecharge;
                 bettingPool.Config.PaymentMode = dto.Config.PaymentMode;
+                bettingPool.Config.AllowFutureSales = dto.Config.AllowFutureSales;
+                bettingPool.Config.MaxFutureDays = dto.Config.MaxFutureDays;
                 bettingPool.Config.UpdatedAt = DateTime.UtcNow;
             }
 
@@ -1115,6 +1119,8 @@ public class BettingPoolsController : ControllerBase
                     MaxTicketAmount = dto.Config.MaxTicketAmount,
                     MaxDailyRecharge = dto.Config.MaxDailyRecharge,
                     PaymentMode = dto.Config.PaymentMode,
+                    AllowFutureSales = dto.Config.AllowFutureSales,
+                    MaxFutureDays = dto.Config.MaxFutureDays,
                     CreatedAt = DateTime.UtcNow
                 };
                 _context.BettingPoolConfigs.Add(config);

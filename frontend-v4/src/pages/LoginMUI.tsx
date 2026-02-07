@@ -392,7 +392,7 @@ const LoginMUI = () => {
               },
             }}
           >
-            {isLoading ? 'Iniciando...' : 'Iniciar Sesion'}
+            {isLoading ? 'Signing In...' : 'Sign In'}
           </Button>
         </Box>
       </Paper>

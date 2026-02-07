@@ -11,6 +11,7 @@ public class BettingPoolDrawDto
 
     // Draw information
     public string? DrawName { get; set; }
+    public string? Abbreviation { get; set; }
     public TimeSpan? DrawTime { get; set; }
 
     // Lottery information (parent of draw)
@@ -31,6 +32,9 @@ public class BettingPoolDrawDto
 
     // All available game types for this draw
     public List<GameTypeDto> AvailableGameTypes { get; set; } = new();
+
+    // Weekly schedule for this draw
+    public WeeklyScheduleDto? WeeklySchedule { get; set; }
 }
 
 /// <summary>

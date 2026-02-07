@@ -92,7 +92,11 @@ export const mapConfigToFormData = (configResponse: ConfigResponse): Partial<For
     showDateTime: footer.showDateTime !== undefined ? footer.showDateTime : true,
 
     // ✅ NEW: Payment mode / limit preference
-    limitPreference: config.paymentMode ? PAYMENT_MODE_REVERSE_MAP[config.paymentMode] || null : null
+    limitPreference: config.paymentMode ? PAYMENT_MODE_REVERSE_MAP[config.paymentMode] || null : null,
+
+    // ✅ NEW: Future sales configuration
+    allowFutureSales: config.allowFutureSales !== undefined ? config.allowFutureSales : true,
+    maxFutureDays: String(config.maxFutureDays ?? 7)
   };
 };
 

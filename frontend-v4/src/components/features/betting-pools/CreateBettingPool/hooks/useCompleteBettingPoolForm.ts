@@ -51,6 +51,8 @@ interface FormData {
   maxTicketAmount: string;
   dailyPhoneRechargeLimit: string;
   limitPreference: string | null;
+  allowFutureSales: boolean;
+  maxFutureDays: string;
   autoFooter: boolean;
   footerText1: string;
   footerText2: string;
@@ -194,6 +196,8 @@ const getInitialFormData = (branchCode = ''): FormData => ({
   maxTicketAmount: '',
   dailyPhoneRechargeLimit: '',
   limitPreference: null,
+  allowFutureSales: true,
+  maxFutureDays: '7',
 
   // Pies de página
   autoFooter: false,
@@ -1139,6 +1143,10 @@ const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
         allowJackpot: formData.allowPassPot,
         printEnabled: formData.printTickets,
         printTicketCopy: formData.printTicketCopy,
+
+        // Future sales configuration
+        allowFutureSales: formData.allowFutureSales !== undefined ? formData.allowFutureSales : true,
+        maxFutureDays: formData.maxFutureDays ? parseInt(formData.maxFutureDays) : 7,
 
         // Note: Other fields (prizes, schedules, etc.) would need additional API endpoints
         // For now, only essential fields are sent

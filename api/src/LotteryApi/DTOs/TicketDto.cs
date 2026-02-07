@@ -39,6 +39,12 @@ public class CreateTicketDto
     [Required(ErrorMessage = "El ID de usuario es requerido")]
     public int UserId { get; set; }
 
+    /// <summary>
+    /// Date for the ticket. Defaults to today if not provided.
+    /// Can be up to MaxFutureDays in the future (configured per betting pool).
+    /// </summary>
+    public DateTime? TicketDate { get; set; }
+
     [Required(ErrorMessage = "Debe incluir al menos una línea de apuesta")]
     [MinLength(1, ErrorMessage = "Debe incluir al menos una línea de apuesta")]
     public List<CreateTicketLineDto> Lines { get; set; } = new();

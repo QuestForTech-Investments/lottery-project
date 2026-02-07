@@ -141,6 +141,7 @@ public class BettingPoolDrawsController : ControllerBase
                 BettingPoolId = bpd.BettingPoolId,
                 DrawId = bpd.DrawId,
                 DrawName = bpd.Draw?.DrawName,
+                Abbreviation = bpd.Draw?.Abbreviation,
                 DrawTime = bpd.Draw?.WeeklySchedules?
                     .Where(ws => ws.DayOfWeek == (byte)DateTime.Now.DayOfWeek &&
                                  ws.StartTime <= DateTime.Now.TimeOfDay &&
@@ -159,7 +160,8 @@ public class BettingPoolDrawsController : ControllerBase
                     : new List<GameTypeDto>(),
                 LotteryImage = bpd.Draw!.Lottery!.ImageUrl,
                 IsDominican = bpd.Draw!.Lottery!.Country!.CountryName == "República Dominicana" || bpd.Draw?.Lottery!.Country!.CountryName == "Dominican Republic",
-                Color = bpd.Draw!.Lottery!.Colour
+                Color = bpd.Draw!.Lottery!.Colour,
+                WeeklySchedule = ConvertToWeeklyScheduleDto(bpd.Draw?.WeeklySchedules?.ToList())
             }).ToList();
 
             _logger.LogInformation("Retrieved {Count} draws for betting pool {BettingPoolId}",
@@ -243,6 +245,7 @@ public class BettingPoolDrawsController : ControllerBase
                 BettingPoolId = bettingPoolDraw.BettingPoolId,
                 DrawId = bettingPoolDraw.DrawId,
                 DrawName = bettingPoolDraw.Draw?.DrawName,
+                Abbreviation = bettingPoolDraw.Draw?.Abbreviation,
                 DrawTime = bettingPoolDraw.Draw?.DrawTime,
                 LotteryId = bettingPoolDraw.Draw?.LotteryId,
                 LotteryName = bettingPoolDraw.Draw?.Lottery?.LotteryName,
@@ -772,6 +775,7 @@ public class BettingPoolDrawsController : ControllerBase
             BettingPoolId = bettingPoolDraw.BettingPoolId,
             DrawId = bettingPoolDraw.DrawId,
             DrawName = bettingPoolDraw.Draw?.DrawName,
+            Abbreviation = bettingPoolDraw.Draw?.Abbreviation,
             DrawTime = bettingPoolDraw.Draw?.DrawTime,
             LotteryId = bettingPoolDraw.Draw?.LotteryId,
             LotteryName = bettingPoolDraw.Draw?.Lottery?.LotteryName,
@@ -781,5 +785,39 @@ public class BettingPoolDrawsController : ControllerBase
             AvailableGameTypes = availableGameTypes,
             EnabledGameTypes = enabledGameTypes
         };
+    }
+
+    /// <summary>
+    /// Convert DrawWeeklySchedule list to WeeklyScheduleDto
+    /// </summary>
+    private static WeeklyScheduleDto? ConvertToWeeklyScheduleDto(List<DrawWeeklySchedule>? schedules)
+    {
+        if (schedules == null || schedules.Count == 0)
+            return null;
+
+        var dto = new WeeklyScheduleDto();
+
+        foreach (var schedule in schedules.Where(s => s.IsActive && s.DeletedAt == null))
+        {
+            var daySchedule = new DayScheduleDto
+            {
+                StartTime = schedule.StartTime,
+                EndTime = schedule.EndTime,
+                Enabled = schedule.IsActive
+            };
+
+            switch (schedule.DayOfWeek)
+            {
+                case 1: dto.Monday = daySchedule; break;
+                case 2: dto.Tuesday = daySchedule; break;
+                case 3: dto.Wednesday = daySchedule; break;
+                case 4: dto.Thursday = daySchedule; break;
+                case 5: dto.Friday = daySchedule; break;
+                case 6: dto.Saturday = daySchedule; break;
+                case 0: dto.Sunday = daySchedule; break;
+            }
+        }
+
+        return dto;
     }
 }

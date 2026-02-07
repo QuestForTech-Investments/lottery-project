@@ -69,7 +69,8 @@
       "mcp__playwright__browser_network_requests",
       "Bash(/opt/mssql-tools18/bin/sqlcmd:*)",
       "Bash(cat:*)",
-      "mcp__playwright__browser_run_code"
+      "mcp__playwright__browser_run_code",
+      "Bash(done)"
     ]
   }
 }
