@@ -1438,12 +1438,24 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
           }
 
           // Process prizes
-          if (dataType === 'prizes' && response.success && response.data) {
-            const prizeConfigs = response.data as Array<{ betTypeCode: string; fieldCode: string; value: number }>;
-            prizeConfigs.forEach(config => {
-              const key = `general_${config.betTypeCode}_${config.fieldCode}`;
-              (updates as Record<string, unknown>)[key] = config.value;
-            });
+          // Note: getBettingPoolPrizeConfigs returns array directly, not wrapped in { success, data }
+          if (dataType === 'prizes') {
+            const prizeConfigs = result.value as Array<{ prizeTypeId: number; fieldCode: string; customValue: number }>;
+            if (prizeConfigs && Array.isArray(prizeConfigs)) {
+              // fieldCode format: DIRECTO_PRIMER_PAGO, PALE_TODOS_SECUENCIA, etc.
+              prizeConfigs.forEach(config => {
+                if (config.fieldCode && config.customValue !== undefined) {
+                  // Parse fieldCode to extract betTypeCode and field
+                  const parts = config.fieldCode.split('_');
+                  if (parts.length >= 2) {
+                    const betTypeCode = parts[0]; // e.g., DIRECTO, PALE, TRIPLETA
+                    const fieldPart = parts.slice(1).join('_'); // e.g., PRIMER_PAGO, TODOS_SECUENCIA
+                    const key = `general_${betTypeCode}_${fieldPart}`;
+                    (updates as Record<string, unknown>)[key] = config.customValue;
+                  }
+                }
+              });
+            }
           }
 
           // Process schedules

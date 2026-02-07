@@ -681,13 +681,21 @@ const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
 
       // Process Prizes & Commissions
       if (templateFields.prizesAndCommissions && prizesResult.status === 'fulfilled') {
-        const prizesData = prizesResult.value as Array<{ prizeTypeId: number; fieldCode: string; value: number; betTypeCode?: string }>;
+        const prizesData = prizesResult.value as Array<{ prizeTypeId: number; fieldCode: string; customValue: number }>;
         if (prizesData && Array.isArray(prizesData)) {
           // Map prize configs to form fields
+          // fieldCode format: DIRECTO_PRIMER_PAGO, PALE_TODOS_SECUENCIA, etc.
           prizesData.forEach(prize => {
-            if (prize.betTypeCode && prize.fieldCode) {
-              const fieldKey = `general_${prize.betTypeCode}_${prize.fieldCode}`;
-              (updates as Record<string, string | boolean | number | number[] | AutoExpense[] | null>)[fieldKey] = prize.value;
+            if (prize.fieldCode && prize.customValue !== undefined) {
+              // Parse fieldCode to extract betTypeCode and field
+              // Format: BETTYPE_FIELD or BETTYPE_MODIFIER_FIELD
+              const parts = prize.fieldCode.split('_');
+              if (parts.length >= 2) {
+                const betTypeCode = parts[0]; // e.g., DIRECTO, PALE, TRIPLETA
+                const fieldPart = parts.slice(1).join('_'); // e.g., PRIMER_PAGO, TODOS_SECUENCIA
+                const fieldKey = `general_${betTypeCode}_${fieldPart}`;
+                (updates as Record<string, string | boolean | number | number[] | AutoExpense[] | null>)[fieldKey] = prize.customValue;
+              }
             }
           });
         }
