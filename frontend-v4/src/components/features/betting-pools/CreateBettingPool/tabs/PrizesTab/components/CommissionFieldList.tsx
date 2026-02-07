@@ -13,6 +13,12 @@ import {
 import { Save as SaveIcon } from '@mui/icons-material';
 import type { BetType, PrizesFormData, GeneralValues } from '../types';
 
+interface Draw {
+  id: string;
+  name: string;
+  drawId?: number;
+}
+
 interface CommissionFieldListProps {
   betTypes: BetType[];
   activeDraw: string;
@@ -23,6 +29,7 @@ interface CommissionFieldListProps {
   bettingPoolId?: number | null;
   saving?: boolean;
   onSave?: () => void;
+  draws?: Draw[];
 }
 
 /**
@@ -42,6 +49,7 @@ const CommissionFieldList: React.FC<CommissionFieldListProps> = memo(({
   bettingPoolId,
   saving = false,
   onSave,
+  draws = [],
 }) => {
   const [commission2Mode, setCommission2Mode] = useState<'general' | 'perPlay'>('general');
 
@@ -114,7 +122,7 @@ const CommissionFieldList: React.FC<CommissionFieldListProps> = memo(({
 
   /**
    * Handle "General" field at top - propagates value to all bet types
-   * When on General tab, also clears any draw-specific overrides
+   * When on General tab, also propagates to ALL draws (not just existing keys)
    */
   const handleGeneralFieldChange = (event: ChangeEvent<HTMLInputElement>): void => {
     const value = event.target.value;
@@ -129,17 +137,15 @@ const CommissionFieldList: React.FC<CommissionFieldListProps> = memo(({
       onFieldChange(key, value);
     });
 
-    // When on General tab, also clear any draw-specific overrides
-    // so the new General value takes effect everywhere
-    if (activeDraw === 'general') {
-      // Find all draw-specific keys in formData and update them
-      Object.keys(formData).forEach((existingKey) => {
-        // Match draw-specific commission keys: draw_XX_COMMISSION_BETTYPE_COMMISSION_DISCOUNT_1
-        const drawKeyPattern = new RegExp(`^draw_\\d+_${prefix}_(.+)_${fieldCode}$`);
-        const match = existingKey.match(drawKeyPattern);
-        if (match) {
-          // Update this draw-specific key with the new value
-          onFieldChange(existingKey, value);
+    // When on General tab, propagate to ALL draws
+    if (activeDraw === 'general' && draws.length > 0) {
+      // Propagate to all draws (not just existing keys in formData)
+      draws.forEach((draw) => {
+        if (draw.id !== 'general' && draw.id.startsWith('draw_')) {
+          betTypes.forEach((betType) => {
+            const drawKey = `${draw.id}_${prefix}_${betType.betTypeCode}_${fieldCode}`;
+            onFieldChange(drawKey, value);
+          });
         }
       });
     }
