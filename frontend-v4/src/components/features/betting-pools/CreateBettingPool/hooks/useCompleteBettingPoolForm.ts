@@ -714,6 +714,7 @@ const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
         ...updates,
       } as FormData));
 
+      setSuccessMessage('✅ Plantilla aplicada correctamente');
 
     } catch (error) {
       console.error('Error applying template:', error);
