@@ -1,0 +1,18 @@
+- generic [ref=e8]:
+  - generic [ref=e15]:
+    - heading "logo" [level=3] [ref=e16]:
+      - img "logo" [ref=e17]
+    - generic [ref=e18]:
+      - group [ref=e19]:
+        - textbox [active] [ref=e22]:
+          - /placeholder: Usuario
+      - group [ref=e23]:
+        - textbox [ref=e26]:
+          - /placeholder: Contraseña
+      - button "Iniciar sesión" [ref=e27] [cursor=pointer]:
+        - img [ref=e28]
+        - text: Iniciar sesión
+  - generic [ref=e30]:
+    - link "Descargar Drivers de printers" [ref=e31] [cursor=pointer]:
+      - /url: https://printers.apk.lol
+    - paragraph [ref=e32]: "Firefox Silent Print: print.always_print_silent"

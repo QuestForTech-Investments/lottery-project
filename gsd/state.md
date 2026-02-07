@@ -10,17 +10,30 @@
 
 ## Último Commit
 ```
-079dc4c fix: Propagate commission changes from General to all draws
+853fba3 Fix: Propagate individual commission changes from General tab to all draws
 ```
 **Fecha:** 2026-02-07
-**Estado:** ✅ En producción
+**Estado:** ✅ En producción (verificado con Playwright)
 
 ---
 
 ## Cambios de Hoy (2026-02-07)
 
-### 079dc4c - Fix propagación comisiones
-**Problema:** Al cambiar comisión en tab "General" (ej: pale=30), no se propagaba a todos los sorteos.
+### 853fba3 - Fix propagación comisiones individuales
+**Problema:** Al cambiar un tipo de apuesta individual (ej: Tripleta=30) en tab General, no se propagaba a los sorteos específicos.
+**Solución:**
+- Modificar `handleInputChange` para también propagar cuando `activeDraw === 'general'`
+- Ahora itera por TODOS los draws disponibles igual que `handleGeneralFieldChange`
+
+**Archivos:**
+- `PrizesTab/components/CommissionFieldList.tsx` - `handleInputChange` ahora propaga a todos los draws
+
+**Verificación:**
+- Probado en producción con Playwright MCP
+- Set Tripleta=88 en General → Verificado en LA PRIMERA (88) y NEW YORK DAY (88) ✅
+
+### 079dc4c - Fix propagación campo "General" (comisiones)
+**Problema:** El campo "General" (arriba) no propagaba a todos los sorteos.
 **Solución:**
 - Pasar lista de `draws` a `CommissionFieldList`
 - `handleGeneralFieldChange` ahora itera por TODOS los draws disponibles
@@ -85,4 +98,4 @@ Actualización de state.md con cambios de OliverJPR (e33eca4).
 
 ---
 
-**Fecha de última actualización:** 2026-02-07 17:55
+**Fecha de última actualización:** 2026-02-07 01:52

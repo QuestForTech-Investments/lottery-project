@@ -919,7 +919,7 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
             });
           } else {
             const createBody = { gameType, lotteryId: targetLotteryId, isActive: true, ...commissionData };
-            await fetch(`${API_BASE}/betting-pools/${bettingPoolId}/prizes-commissions`, {
+            const response = await fetch(`${API_BASE}/betting-pools/${bettingPoolId}/prizes-commissions`, {
               method: 'POST',
               headers: {
                 'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
@@ -927,6 +927,17 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
               },
               body: JSON.stringify(createBody)
             });
+
+            // Add newly created record to existingRecords to prevent duplicate POSTs
+            // for other draws that share the same lotteryId
+            if (response.ok) {
+              const newRecord = await response.json();
+              existingRecords.push({
+                prizeCommissionId: newRecord.prizeCommissionId,
+                gameType: gameType,
+                lotteryId: targetLotteryId
+              });
+            }
           }
         }
       };
