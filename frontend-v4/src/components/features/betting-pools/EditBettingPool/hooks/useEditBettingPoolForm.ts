@@ -1383,6 +1383,20 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
       if (templateFields.prizesAndCommissions) {
         promises.push(getBettingPoolPrizeConfigs(String(selectedTemplateId)));
         dataTypes.push('prizes');
+
+        // Also fetch commissions
+        const fetchCommissions = async () => {
+          const resp = await fetch(`${API_BASE}/betting-pools/${selectedTemplateId}/prizes-commissions`, {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+              'Content-Type': 'application/json'
+            }
+          });
+          if (!resp.ok) return [];
+          return resp.json();
+        };
+        promises.push(fetchCommissions());
+        dataTypes.push('commissions');
       }
 
       // Fetch schedules if selected
@@ -1453,6 +1467,48 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
                     const key = `general_${betTypeCode}_${config.fieldCode}`;
                     (updates as Record<string, unknown>)[key] = config.customValue;
                   }
+                }
+              });
+            }
+          }
+
+          // Process commissions
+          if (dataType === 'commissions') {
+            const commissions = result.value as Array<{
+              gameType: string;
+              lotteryId: number | null;
+              commissionDiscount1: number | null;
+              commissionDiscount2: number | null;
+              commissionDiscount3: number | null;
+              commissionDiscount4: number | null;
+            }>;
+            if (commissions && Array.isArray(commissions)) {
+              const gameTypeMap: Record<string, string> = {
+                'DIRECTO': 'DIRECTO', 'PALE': 'PALÉ', 'TRIPLETA': 'TRIPLETA',
+                'CASH3_STRAIGHT': 'CASH3_STRAIGHT', 'CASH3_BOX': 'CASH3_BOX',
+                'PLAY4_STRAIGHT': 'PLAY4 STRAIGHT', 'PLAY4_BOX': 'PLAY4 BOX',
+                'SUPER_PALE': 'SUPER_PALE', 'BOLITA_1': 'BOLITA 1', 'BOLITA_2': 'BOLITA 2',
+                'SINGULACION_1': 'SINGULACIÓN 1', 'SINGULACION_2': 'SINGULACIÓN 2', 'SINGULACION_3': 'SINGULACIÓN 3',
+                'PICK5_STRAIGHT': 'PICK5 STRAIGHT', 'PICK5_BOX': 'PICK5 BOX',
+                'PICK_TWO': 'PICK TWO', 'PICK2': 'PICK2',
+                'CASH3_FRONT_STRAIGHT': 'CASH3 FRONT STRAIGHT', 'CASH3_FRONT_BOX': 'CASH3_FRONT_BOX',
+                'CASH3_BACK_STRAIGHT': 'CASH3_BACK_STRAIGHT', 'CASH3_BACK_BOX': 'CASH3 BACK BOX',
+                'PICK_TWO_FRONT': 'PICK TWO FRONT', 'PICK_TWO_BACK': 'PICK TWO BACK',
+                'PICK_TWO_MIDDLE': 'PICK TWO MIDDLE', 'SINGULACION': 'SINGULACION', 'PANAMA': 'PANAMA',
+              };
+              commissions.filter(r => r.lotteryId === null).forEach(record => {
+                const betTypeCode = gameTypeMap[record.gameType] || record.gameType;
+                if (record.commissionDiscount1 !== null && record.commissionDiscount1 !== 0) {
+                  (updates as Record<string, unknown>)[`general_COMMISSION_${betTypeCode}_COMMISSION_DISCOUNT_1`] = record.commissionDiscount1;
+                }
+                if (record.commissionDiscount2 !== null && record.commissionDiscount2 !== 0) {
+                  (updates as Record<string, unknown>)[`general_COMMISSION_${betTypeCode}_COMMISSION_DISCOUNT_2`] = record.commissionDiscount2;
+                }
+                if (record.commissionDiscount3 !== null && record.commissionDiscount3 !== 0) {
+                  (updates as Record<string, unknown>)[`general_COMMISSION_${betTypeCode}_COMMISSION_DISCOUNT_3`] = record.commissionDiscount3;
+                }
+                if (record.commissionDiscount4 !== null && record.commissionDiscount4 !== 0) {
+                  (updates as Record<string, unknown>)[`general_COMMISSION_${betTypeCode}_COMMISSION_DISCOUNT_4`] = record.commissionDiscount4;
                 }
               });
             }
