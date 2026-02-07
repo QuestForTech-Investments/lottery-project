@@ -566,3 +566,42 @@ public class BettingPoolUserAssignmentResponse
     public string Message { get; set; } = string.Empty;
     public BettingPoolUserDto? User { get; set; }
 }
+
+// =============================================================================
+// Batch Commission DTOs - For optimized bulk save operations
+// =============================================================================
+
+/// <summary>
+/// DTO for a single commission record in batch operations
+/// </summary>
+public class BatchCommissionItemDto
+{
+    public int? LotteryId { get; set; }
+    public string GameType { get; set; } = string.Empty;
+    public decimal? CommissionDiscount1 { get; set; }
+    public decimal? Commission2Discount1 { get; set; }
+}
+
+/// <summary>
+/// DTO for batch saving multiple commission records at once
+/// </summary>
+public class BatchSaveCommissionsDto
+{
+    /// <summary>
+    /// List of commission items to save (create or update)
+    /// </summary>
+    public List<BatchCommissionItemDto> Items { get; set; } = new();
+}
+
+/// <summary>
+/// Response for batch commission save operation
+/// </summary>
+public class BatchSaveCommissionsResponseDto
+{
+    public bool Success { get; set; }
+    public int CreatedCount { get; set; }
+    public int UpdatedCount { get; set; }
+    public int TotalProcessed { get; set; }
+    public string Message { get; set; } = string.Empty;
+    public List<string>? Errors { get; set; }
+}

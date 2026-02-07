@@ -102,3 +102,48 @@ public class DrawPrizeConfigDto
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
 }
+
+// =============================================================================
+// Batch DTOs - For optimized bulk save operations (70+ draws in 1 request)
+// =============================================================================
+
+/// <summary>
+/// ⚡ OPTIMIZED: Request to save prize configs for multiple draws at once
+/// Reduces 70+ individual API calls to 1 single request
+/// </summary>
+public class BatchDrawPrizeConfigRequest
+{
+    /// <summary>
+    /// List of draws with their prize configurations
+    /// </summary>
+    public List<DrawPrizeConfigBatchItem> DrawConfigs { get; set; } = new();
+}
+
+/// <summary>
+/// Prize configs for a single draw in a batch request
+/// </summary>
+public class DrawPrizeConfigBatchItem
+{
+    /// <summary>
+    /// ID del sorteo
+    /// </summary>
+    public int DrawId { get; set; }
+
+    /// <summary>
+    /// Prize configs for this draw
+    /// </summary>
+    public List<DrawPrizeConfigItemDto> PrizeConfigs { get; set; } = new();
+}
+
+/// <summary>
+/// Response from batch save operation
+/// </summary>
+public class BatchDrawPrizeConfigResponse
+{
+    public bool Success { get; set; }
+    public int TotalDrawsProcessed { get; set; }
+    public int TotalConfigsSaved { get; set; }
+    public int TotalConfigsUpdated { get; set; }
+    public string Message { get; set; } = string.Empty;
+    public List<string>? Errors { get; set; }
+}

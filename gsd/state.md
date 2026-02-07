@@ -10,14 +10,60 @@
 
 ## Último Commit
 ```
-367d0cc Fix: Add newly created commission records to existingRecords array
+Pendiente - ⚡ Maximum optimization: Batch save for prizes and commissions
 ```
 **Fecha:** 2026-02-07
-**Estado:** ✅ En producción (verificado con Playwright)
+**Estado:** ⏳ Listo para desplegar
 
 ---
 
 ## Cambios de Hoy (2026-02-07)
+
+### ⚡ Maximum Optimization - Batch Save (Pendiente commit)
+**Problema:** Guardar premios/comisiones desde tab General tomaba 90+ segundos (200+ requests secuenciales)
+
+**Solución:**
+1. **Backend:** Nuevos endpoints batch:
+   - `POST /betting-pools/{id}/prizes-commissions/batch` - Comisiones en lote
+   - `POST /betting-pools/{id}/draws/prize-config/batch` - Premios por sorteo en lote
+
+2. **Frontend:** Modificado `useEditBettingPoolForm.ts`:
+   - `saveCommissionConfigurations` - 1 request en vez de 200+ secuenciales
+   - `savePrizeConfigurations` - 2 requests (general + batch draws) en vez de 70+
+
+**Archivos Backend:**
+- `api/src/LotteryApi/Controllers/BettingPoolPrizesCommissionsController.cs` - +95 líneas
+- `api/src/LotteryApi/Controllers/DrawPrizeConfigController.cs` - +115 líneas
+- `api/src/LotteryApi/DTOs/BettingPoolDto.cs` - +35 líneas (BatchCommissionItemDto, etc.)
+- `api/src/LotteryApi/DTOs/DrawPrizeConfigDto.cs` - +45 líneas (BatchDrawPrizeConfigRequest, etc.)
+
+**Archivos Frontend:**
+- `frontend-v4/.../EditBettingPool/hooks/useEditBettingPoolForm.ts` - saveCommissionConfigurations y savePrizeConfigurations optimizados
+
+**Mejora de rendimiento esperada:**
+- Antes: 90+ segundos, 200+ requests
+- Después: < 5 segundos, 2-3 requests
+
+---
+
+### Cambios anteriores de hoy
+
+### 8234c10 - General SIEMPRE pisa overrides
+**Spec:** Cuando General cambia, propaga a TODOS los sorteos sin excepción.
+Los "overrides" son temporales hasta la próxima propagación desde General.
+
+**Cambio:**
+- Eliminada la protección que preservaba valores existentes en formData al cargar desde DB
+- Ahora los valores de DB se cargan, pero la propagación de General los sobrescribe
+
+**Archivo:**
+- `PrizesTab/index.tsx` - useEffect ya no protege valores existentes
+
+**Verificación con Playwright (2026-02-07 02:28):**
+- ✅ Cambiar campo "General" (25→33) propaga a todos los tipos de apuesta
+- ✅ Propagación llega a sorteo LA PRIMERA (33)
+- ✅ Propagación llega a sorteo TEXAS MORNING (33)
+- ✅ Valores restaurados a 25
 
 ### 367d0cc - Fix error 400 al guardar comisiones desde General
 **Problema:** Al guardar desde tab General, múltiples draws comparten el mismo `lotteryId`.
@@ -115,4 +161,4 @@ Actualización de state.md con cambios de OliverJPR (e33eca4).
 
 ---
 
-**Fecha de última actualización:** 2026-02-07 02:17
+**Fecha de última actualización:** 2026-02-07 02:29

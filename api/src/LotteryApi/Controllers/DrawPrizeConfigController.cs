@@ -408,6 +408,147 @@ public class DrawPrizeConfigController : ControllerBase
     }
 
     /// <summary>
+    /// ⚡ OPTIMIZED: Batch save prize configs for multiple draws at once
+    /// Accepts all draws in a single request instead of 70+ individual requests
+    /// </summary>
+    /// <param name="bettingPoolId">ID de la banca</param>
+    /// <param name="request">Batch request with draws and their prize configs</param>
+    /// <returns>Resultado de la operación</returns>
+    /// <response code="200">Configuraciones guardadas exitosamente</response>
+    /// <response code="400">Datos inválidos</response>
+    /// <response code="404">Banca no encontrada</response>
+    [HttpPost("{bettingPoolId}/draws/prize-config/batch")]
+    [ProducesResponseType(typeof(BatchDrawPrizeConfigResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<BatchDrawPrizeConfigResponse>> BatchSaveDrawPrizeConfig(
+        int bettingPoolId,
+        [FromBody] BatchDrawPrizeConfigRequest request)
+    {
+        try
+        {
+            // Validate betting pool exists
+            var bettingPoolExists = await _context.BettingPools
+                .AnyAsync(bp => bp.BettingPoolId == bettingPoolId);
+
+            if (!bettingPoolExists)
+            {
+                return NotFound(new { message = $"Banca con ID {bettingPoolId} no encontrada" });
+            }
+
+            if (request.DrawConfigs == null || !request.DrawConfigs.Any())
+            {
+                return Ok(new BatchDrawPrizeConfigResponse
+                {
+                    Success = true,
+                    TotalDrawsProcessed = 0,
+                    TotalConfigsSaved = 0,
+                    TotalConfigsUpdated = 0,
+                    Message = "No items to process"
+                });
+            }
+
+            // Get all drawIds from request
+            var drawIds = request.DrawConfigs.Select(dc => dc.DrawId).Distinct().ToList();
+
+            // Validate all draws exist in one query
+            var validDrawIds = await _context.Draws
+                .Where(d => drawIds.Contains(d.DrawId))
+                .Select(d => d.DrawId)
+                .ToListAsync();
+
+            // Get all prizeTypeIds from request
+            var prizeTypeIds = request.DrawConfigs
+                .SelectMany(dc => dc.PrizeConfigs.Select(pc => pc.PrizeTypeId))
+                .Distinct()
+                .ToList();
+
+            // Validate all prize types exist in one query
+            var validPrizeTypeIds = await _context.PrizeTypes
+                .Where(pt => prizeTypeIds.Contains(pt.PrizeTypeId))
+                .Select(pt => pt.PrizeTypeId)
+                .ToListAsync();
+
+            // Load all existing configs for this betting pool and these draws in one query
+            var existingConfigs = await _context.DrawPrizeConfigs
+                .Where(dpc => dpc.BettingPoolId == bettingPoolId && drawIds.Contains(dpc.DrawId))
+                .ToListAsync();
+
+            // Create a dictionary for fast lookup: (drawId, prizeTypeId) -> config
+            var existingConfigsDict = existingConfigs
+                .ToDictionary(c => (c.DrawId, c.PrizeTypeId));
+
+            int totalSaved = 0;
+            int totalUpdated = 0;
+            int drawsProcessed = 0;
+
+            // Process each draw's configs
+            foreach (var drawConfig in request.DrawConfigs)
+            {
+                if (!validDrawIds.Contains(drawConfig.DrawId))
+                {
+                    _logger.LogWarning("Draw {DrawId} not found, skipping", drawConfig.DrawId);
+                    continue;
+                }
+
+                foreach (var prizeConfig in drawConfig.PrizeConfigs)
+                {
+                    if (!validPrizeTypeIds.Contains(prizeConfig.PrizeTypeId))
+                    {
+                        continue;
+                    }
+
+                    var key = (drawConfig.DrawId, prizeConfig.PrizeTypeId);
+                    if (existingConfigsDict.TryGetValue(key, out var existing))
+                    {
+                        // Update existing
+                        existing.CustomValue = prizeConfig.Value;
+                        existing.UpdatedAt = DateTime.UtcNow;
+                        totalUpdated++;
+                    }
+                    else
+                    {
+                        // Create new
+                        var newConfig = new DrawPrizeConfig
+                        {
+                            BettingPoolId = bettingPoolId,
+                            DrawId = drawConfig.DrawId,
+                            PrizeTypeId = prizeConfig.PrizeTypeId,
+                            CustomValue = prizeConfig.Value,
+                            CreatedAt = DateTime.UtcNow
+                        };
+                        _context.DrawPrizeConfigs.Add(newConfig);
+                        existingConfigsDict[key] = newConfig;
+                        totalSaved++;
+                    }
+                }
+                drawsProcessed++;
+            }
+
+            // Save all changes in one transaction
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation(
+                "⚡ BATCH draw prize config saved for betting pool {BettingPoolId}: {DrawsProcessed} draws, {Saved} new, {Updated} updated",
+                bettingPoolId, drawsProcessed, totalSaved, totalUpdated);
+
+            return Ok(new BatchDrawPrizeConfigResponse
+            {
+                Success = true,
+                TotalDrawsProcessed = drawsProcessed,
+                TotalConfigsSaved = totalSaved,
+                TotalConfigsUpdated = totalUpdated,
+                Message = $"Processed {drawsProcessed} draws: {totalSaved} new, {totalUpdated} updated"
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error in batch save draw prize config for betting pool {BettingPoolId}", bettingPoolId);
+            return StatusCode(500, new { message = $"Error al guardar configuraciones en lote: {ex.Message}" });
+        }
+    }
+
+    /// <summary>
     /// Eliminar configuración de premios de un sorteo específico de una banca
     /// </summary>
     /// <param name="bettingPoolId">ID de la banca</param>

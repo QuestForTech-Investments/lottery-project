@@ -545,6 +545,107 @@ public class BettingPoolPrizesCommissionsController : ControllerBase
         return dto;
     }
 
+    /// <summary>
+    /// Batch save multiple commission records at once (optimized endpoint)
+    /// Creates new records or updates existing ones based on lotteryId + gameType combination
+    /// </summary>
+    [HttpPost("prizes-commissions/batch")]
+    public async Task<ActionResult<BatchSaveCommissionsResponseDto>> BatchSaveCommissions(
+        int bettingPoolId,
+        [FromBody] BatchSaveCommissionsDto dto)
+    {
+        try
+        {
+            var bettingPoolExists = await _context.BettingPools
+                .AnyAsync(bp => bp.BettingPoolId == bettingPoolId);
+
+            if (!bettingPoolExists)
+            {
+                return NotFound(new { message = "Banca no encontrada" });
+            }
+
+            if (dto.Items == null || dto.Items.Count == 0)
+            {
+                return Ok(new BatchSaveCommissionsResponseDto
+                {
+                    Success = true,
+                    Message = "No items to process",
+                    TotalProcessed = 0
+                });
+            }
+
+            // Load all existing records for this betting pool in one query
+            var existingRecords = await _context.BettingPoolPrizesCommissions
+                .Where(pc => pc.BettingPoolId == bettingPoolId)
+                .ToListAsync();
+
+            int createdCount = 0;
+            int updatedCount = 0;
+            var errors = new List<string>();
+
+            foreach (var item in dto.Items)
+            {
+                try
+                {
+                    // Find existing record by lotteryId + gameType
+                    var existing = existingRecords.FirstOrDefault(r =>
+                        r.GameType == item.GameType &&
+                        ((item.LotteryId == null && r.LotteryId == null) ||
+                         (item.LotteryId != null && r.LotteryId == item.LotteryId)));
+
+                    if (existing != null)
+                    {
+                        // Update existing record
+                        if (item.CommissionDiscount1.HasValue)
+                            existing.CommissionDiscount1 = item.CommissionDiscount1.Value;
+                        if (item.Commission2Discount1.HasValue)
+                            existing.Commission2Discount1 = item.Commission2Discount1.Value;
+                        existing.UpdatedAt = DateTime.UtcNow;
+                        updatedCount++;
+                    }
+                    else
+                    {
+                        // Create new record
+                        var newRecord = new BettingPoolPrizesCommission
+                        {
+                            BettingPoolId = bettingPoolId,
+                            LotteryId = item.LotteryId,
+                            GameType = item.GameType,
+                            CommissionDiscount1 = item.CommissionDiscount1,
+                            Commission2Discount1 = item.Commission2Discount1,
+                            IsActive = true,
+                            CreatedAt = DateTime.UtcNow
+                        };
+                        _context.BettingPoolPrizesCommissions.Add(newRecord);
+                        existingRecords.Add(newRecord); // Track for subsequent items with same key
+                        createdCount++;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    errors.Add($"Error processing {item.GameType} (lotteryId={item.LotteryId}): {ex.Message}");
+                }
+            }
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new BatchSaveCommissionsResponseDto
+            {
+                Success = errors.Count == 0,
+                CreatedCount = createdCount,
+                UpdatedCount = updatedCount,
+                TotalProcessed = createdCount + updatedCount,
+                Message = $"Processed {createdCount + updatedCount} items ({createdCount} created, {updatedCount} updated)",
+                Errors = errors.Count > 0 ? errors : null
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error in batch save commissions for betting pool {BettingPoolId}", bettingPoolId);
+            return StatusCode(500, new { message = $"Error al guardar comisiones en lote: {ex.Message}" });
+        }
+    }
+
     private List<BettingPoolPrizesCommission> ConvertFromFlatDto(int bettingPoolId, FlatPrizesConfigDto dto)
     {
         var records = new List<BettingPoolPrizesCommission>();
