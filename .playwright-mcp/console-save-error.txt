@@ -1,2 +1,0 @@
-[ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:4001/api/betting-pools/9/prizes-commissions:0
-[ERROR] [COMMISSION SAVE] POST error body: {"message":"Error al crear premio/comisión: An error occurred while saving the entity changes. See the inner exception for details."} @ http://localhost:4001/src/components/features/betting-pools/EditBettingPool/hooks/useEditBettingPoolForm.ts?t=1769634846920:659
