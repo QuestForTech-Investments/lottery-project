@@ -1583,6 +1583,10 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [templateFields]);
 
+  const handleBatchChange = (updates: Record<string, string | number>): void => {
+    setFormData(prev => ({ ...prev, ...updates }) as FormData);
+  };
+
   return {
     formData,
     loading,
@@ -1598,6 +1602,7 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
     drawValuesCache, // ⚡ PERFORMANCE: Cached draw-specific values by lotteryId
     activeTab,
     handleChange,
+    handleBatchChange,
     handleTabChange,
     handleSubmit,
     copyScheduleToAll,

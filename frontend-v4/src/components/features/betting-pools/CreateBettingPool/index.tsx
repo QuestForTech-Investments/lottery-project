@@ -56,6 +56,7 @@ const CreateBettingPoolMUI: React.FC = () => {
     zones,
     activeTab,
     handleChange,
+    handleBatchChange,
     handleTabChange,
     handleSubmit,
     copyScheduleToAll: _copyScheduleToAll,
@@ -154,6 +155,7 @@ const CreateBettingPoolMUI: React.FC = () => {
               <PrizesTab
                 formData={formData as unknown as Parameters<typeof PrizesTab>[0]['formData']}
                 handleChange={handleChange as unknown as Parameters<typeof PrizesTab>[0]['handleChange']}
+                onBatchChange={handleBatchChange}
               />
             )}
 

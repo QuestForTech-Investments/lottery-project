@@ -70,6 +70,7 @@ const EditBettingPoolMUI: React.FC = () => {
     prizesDraws, // ⚡ PERFORMANCE: Formatted draws for PrizesTab (loaded once)
     activeTab,
     handleChange,
+    handleBatchChange,
     handleTabChange,
     handleSubmit,
     copyScheduleToAll: _copyScheduleToAll,
@@ -207,6 +208,7 @@ const EditBettingPoolMUI: React.FC = () => {
                 <PrizesTab
                   formData={formData as unknown as Parameters<typeof PrizesTab>[0]['formData']}
                   handleChange={handleChange as unknown as Parameters<typeof PrizesTab>[0]['handleChange']}
+                  onBatchChange={handleBatchChange}
                   bettingPoolId={id ? parseInt(id) : undefined}
                   draws={prizesDraws as unknown as Parameters<typeof PrizesTab>[0]['draws']}
                   loadingDraws={loadingDraws}

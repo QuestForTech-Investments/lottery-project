@@ -51,6 +51,7 @@ export interface SyntheticEventLike {
 export interface PrizesTabProps {
   formData: PrizesFormData;
   handleChange: (e: SyntheticEventLike) => void;
+  onBatchChange?: (updates: Record<string, string | number>) => void;
   bettingPoolId?: number | null;
   loadDrawSpecificValues?: ((drawId: number, bettingPoolId: number) => Promise<Record<string, string | number>>) | null;
   draws?: Draw[];

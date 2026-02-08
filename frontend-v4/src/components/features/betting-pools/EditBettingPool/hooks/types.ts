@@ -163,6 +163,7 @@ export interface UseEditBettingPoolFormReturn {
   drawValuesCache: DrawValuesCache;
   activeTab: number;
   handleChange: (e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement> | SyntheticEventLike) => void;
+  handleBatchChange: (updates: Record<string, string | number>) => void;
   handleTabChange: (event: SyntheticEvent, newValue: number) => void;
   handleSubmit: (e: React.FormEvent) => Promise<void>;
   copyScheduleToAll: (day: string) => void;

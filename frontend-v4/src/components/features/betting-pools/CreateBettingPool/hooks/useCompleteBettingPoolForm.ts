@@ -143,6 +143,7 @@ interface UseCompleteBettingPoolFormReturn {
   zones: Zone[];
   activeTab: number;
   handleChange: (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void;
+  handleBatchChange: (updates: Record<string, string | number>) => void;
   handleTabChange: (event: SyntheticEvent, newValue: number) => void;
   handleSubmit: (e: React.FormEvent) => Promise<void>;
   copyScheduleToAll: (day: string) => void;
@@ -1469,6 +1470,10 @@ const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
     }
   };
 
+  const handleBatchChange = (updates: Record<string, string | number>): void => {
+    setFormData(prev => ({ ...prev, ...updates }));
+  };
+
   return {
     formData,
     loading,
@@ -1479,6 +1484,7 @@ const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
     zones,
     activeTab,
     handleChange,
+    handleBatchChange,
     handleTabChange,
     handleSubmit,
     copyScheduleToAll,

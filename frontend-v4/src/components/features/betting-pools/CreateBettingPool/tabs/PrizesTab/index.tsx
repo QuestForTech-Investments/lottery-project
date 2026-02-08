@@ -48,6 +48,7 @@ import { BetTypeFieldGrid, CommissionFieldList, DrawTabSelector } from './compon
 const PrizesTab: React.FC<PrizesTabProps> = ({
   formData,
   handleChange,
+  onBatchChange,
   bettingPoolId = null,
   loadDrawSpecificValues = null,
   draws: propDraws = [],
@@ -367,6 +368,7 @@ const PrizesTab: React.FC<PrizesTabProps> = ({
             generalValues={generalValues}
             fieldType="commission"
             onFieldChange={handleFieldChange}
+            onBatchFieldChange={onBatchChange}
             bettingPoolId={bettingPoolId}
             saving={saving}
             onSave={onSavePrizeConfig ? handleSave : undefined}
@@ -419,6 +421,7 @@ const PrizesTab: React.FC<PrizesTabProps> = ({
  */
 const arePropsEqual = (prevProps: PrizesTabProps, nextProps: PrizesTabProps): boolean => {
   if (prevProps.handleChange !== nextProps.handleChange) return false;
+  if (prevProps.onBatchChange !== nextProps.onBatchChange) return false;
   if (prevProps.bettingPoolId !== nextProps.bettingPoolId) return false;
 
   const prevKeys = Object.keys(prevProps.formData || {}).filter(key => key.includes('_'));
