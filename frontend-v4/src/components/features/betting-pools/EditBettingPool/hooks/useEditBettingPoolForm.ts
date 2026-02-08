@@ -1250,11 +1250,10 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
       const filteredFormData: Record<string, string | number | boolean | number[] | AutoExpense[] | null> = {};
 
       if (drawId === 'general') {
-        // ⚡ OPTIMIZED: When saving from General tab, only include general_* fields
-        // Draw-specific values inherit from general at runtime - no need to save 70×14×4 = 3920 items
-        // This reduces save time from ~30s to ~1s
+        // When saving from General tab, include general_* AND all draw_* fields
+        // so propagated values are persisted to every draw
         Object.keys(formData).forEach(key => {
-          if (key.startsWith('general_')) {
+          if (key.startsWith('general_') || key.startsWith('draw_')) {
             filteredFormData[key] = formData[key as keyof FormData];
           }
         });
