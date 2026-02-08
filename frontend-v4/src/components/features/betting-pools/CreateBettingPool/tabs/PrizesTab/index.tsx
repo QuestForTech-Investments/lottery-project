@@ -7,7 +7,7 @@
  * - UI components extracted to ./components/
  */
 
-import React, { useState, useEffect, useMemo, type SyntheticEvent } from 'react';
+import React, { useState, useEffect, useRef, useMemo, type SyntheticEvent } from 'react';
 import {
   Typography,
   Box,
@@ -71,6 +71,9 @@ const PrizesTab: React.FC<PrizesTabProps> = ({
 
   // General values for fallback
   const [generalValues, setGeneralValues] = useState<GeneralValues>({});
+
+  // Track which draws have been loaded from API (only load once per draw)
+  const loadedDrawsRef = useRef<Set<string>>(new Set());
 
   // Use prop draws if provided, otherwise use local draws
   const draws = propDraws.length > 0 ? propDraws : localDraws;
@@ -140,17 +143,17 @@ const PrizesTab: React.FC<PrizesTabProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeDraw, draws.length]);
 
-  // Load draw-specific values when switching to a draw tab
-  // NOTE: General ALWAYS overwrites all draws when propagating.
-  // This useEffect only loads from DB on INITIAL load (before any user changes)
+  // Load draw-specific values only on FIRST visit to each draw tab
+  // Subsequent visits use the values already in formData (including propagated values from General)
   useEffect(() => {
     if (bettingPoolId && loadDrawSpecificValues && activeDraw !== 'general' && activeDraw.startsWith('draw_')) {
+      if (loadedDrawsRef.current.has(activeDraw)) return; // Already loaded
+      loadedDrawsRef.current.add(activeDraw);
       const drawId = parseInt(activeDraw.split('_')[1]);
       loadDrawSpecificValues(drawId, bettingPoolId)
         .then(drawValues => {
           if (Object.keys(drawValues).length > 0) {
             Object.keys(drawValues).forEach(key => {
-              // Always load from DB - General propagation will overwrite if user changes General
               handleChange({
                 target: { name: key, value: drawValues[key] }
               });
