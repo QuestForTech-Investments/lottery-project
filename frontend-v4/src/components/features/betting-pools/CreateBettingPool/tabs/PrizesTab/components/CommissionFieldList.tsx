@@ -1,4 +1,4 @@
-import React, { memo, useState, type ChangeEvent } from 'react';
+import React, { memo, useState, useEffect, type ChangeEvent } from 'react';
 import {
   TextField,
   Typography,
@@ -55,6 +55,11 @@ const CommissionFieldList: React.FC<CommissionFieldListProps> = memo(({
 }) => {
   const [commission2Mode, setCommission2Mode] = useState<'general' | 'perPlay'>('general');
   const [generalTopInput, setGeneralTopInput] = useState<string>('');
+
+  // Reset general top input when switching draw tabs
+  useEffect(() => {
+    setGeneralTopInput('');
+  }, [activeDraw]);
 
   const fieldCode = fieldType === 'commission' ? 'COMMISSION_DISCOUNT_1' : 'COMMISSION_2_DISCOUNT_1';
   const prefix = fieldType === 'commission' ? 'COMMISSION' : 'COMMISSION2';
