@@ -1,4 +1,4 @@
-import React, { memo, useState, type ChangeEvent } from 'react';
+import React, { memo, useState, useRef, useEffect, type ChangeEvent } from 'react';
 import {
   TextField,
   Typography,
@@ -53,6 +53,15 @@ const CommissionFieldList: React.FC<CommissionFieldListProps> = memo(({
 }) => {
   const [commission2Mode, setCommission2Mode] = useState<'general' | 'perPlay'>('general');
   const [generalTopInput, setGeneralTopInput] = useState<string>('');
+  const generalDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const drawDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (generalDebounceRef.current) clearTimeout(generalDebounceRef.current);
+      if (drawDebounceRef.current) clearTimeout(drawDebounceRef.current);
+    };
+  }, []);
 
   const fieldCode = fieldType === 'commission' ? 'COMMISSION_DISCOUNT_1' : 'COMMISSION_2_DISCOUNT_1';
   const prefix = fieldType === 'commission' ? 'COMMISSION' : 'COMMISSION2';
@@ -113,14 +122,17 @@ const CommissionFieldList: React.FC<CommissionFieldListProps> = memo(({
 
     if (value === '') {
       onFieldChange(key, '');
-      // Also propagate empty to all draws when on General tab
+      // Debounce propagation to all draws when on General tab
       if (activeDraw === 'general' && draws.length > 0) {
-        draws.forEach((draw) => {
-          if (draw.id !== 'general' && draw.id.startsWith('draw_')) {
-            const drawKey = `${draw.id}_${prefix}_${betTypeCode}_${fieldCode}`;
-            onFieldChange(drawKey, '');
-          }
-        });
+        if (drawDebounceRef.current) clearTimeout(drawDebounceRef.current);
+        drawDebounceRef.current = setTimeout(() => {
+          draws.forEach((draw) => {
+            if (draw.id !== 'general' && draw.id.startsWith('draw_')) {
+              const drawKey = `${draw.id}_${prefix}_${betTypeCode}_${fieldCode}`;
+              onFieldChange(drawKey, '');
+            }
+          });
+        }, 300);
       }
       return;
     }
@@ -128,14 +140,17 @@ const CommissionFieldList: React.FC<CommissionFieldListProps> = memo(({
     const numberRegex = /^-?\d*\.?\d*$/;
     if (numberRegex.test(value)) {
       onFieldChange(key, value);
-      // Also propagate to all draws when on General tab
+      // Debounce propagation to all draws when on General tab
       if (activeDraw === 'general' && draws.length > 0) {
-        draws.forEach((draw) => {
-          if (draw.id !== 'general' && draw.id.startsWith('draw_')) {
-            const drawKey = `${draw.id}_${prefix}_${betTypeCode}_${fieldCode}`;
-            onFieldChange(drawKey, value);
-          }
-        });
+        if (drawDebounceRef.current) clearTimeout(drawDebounceRef.current);
+        drawDebounceRef.current = setTimeout(() => {
+          draws.forEach((draw) => {
+            if (draw.id !== 'general' && draw.id.startsWith('draw_')) {
+              const drawKey = `${draw.id}_${prefix}_${betTypeCode}_${fieldCode}`;
+              onFieldChange(drawKey, value);
+            }
+          });
+        }, 300);
       }
     }
   };
@@ -151,25 +166,30 @@ const CommissionFieldList: React.FC<CommissionFieldListProps> = memo(({
       return;
     }
 
+    // Update local state immediately for responsive typing
     setGeneralTopInput(value);
 
-    // Update fields for current activeDraw
-    betTypes.forEach((betType) => {
-      const key = getFieldKey(betType.betTypeCode);
-      onFieldChange(key, value);
-    });
-
-    // When on General tab, propagate to ALL draws
-    if (activeDraw === 'general' && draws.length > 0) {
-      draws.forEach((draw) => {
-        if (draw.id !== 'general' && draw.id.startsWith('draw_')) {
-          betTypes.forEach((betType) => {
-            const drawKey = `${draw.id}_${prefix}_${betType.betTypeCode}_${fieldCode}`;
-            onFieldChange(drawKey, value);
-          });
-        }
+    // Debounce ALL propagation (bet types + draws) to avoid ~1768 state updates per keystroke
+    if (generalDebounceRef.current) clearTimeout(generalDebounceRef.current);
+    generalDebounceRef.current = setTimeout(() => {
+      // Update fields for current activeDraw
+      betTypes.forEach((betType) => {
+        const key = getFieldKey(betType.betTypeCode);
+        onFieldChange(key, value);
       });
-    }
+
+      // When on General tab, propagate to ALL draws
+      if (activeDraw === 'general' && draws.length > 0) {
+        draws.forEach((draw) => {
+          if (draw.id !== 'general' && draw.id.startsWith('draw_')) {
+            betTypes.forEach((betType) => {
+              const drawKey = `${draw.id}_${prefix}_${betType.betTypeCode}_${fieldCode}`;
+              onFieldChange(drawKey, value);
+            });
+          }
+        });
+      }
+    }, 300);
   };
 
   const isCommission2 = fieldType === 'commission2';
