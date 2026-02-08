@@ -52,6 +52,7 @@ const CommissionFieldList: React.FC<CommissionFieldListProps> = memo(({
   draws = [],
 }) => {
   const [commission2Mode, setCommission2Mode] = useState<'general' | 'perPlay'>('general');
+  const [generalTopInput, setGeneralTopInput] = useState<string>('');
 
   const fieldCode = fieldType === 'commission' ? 'COMMISSION_DISCOUNT_1' : 'COMMISSION_2_DISCOUNT_1';
   const prefix = fieldType === 'commission' ? 'COMMISSION' : 'COMMISSION2';
@@ -150,6 +151,8 @@ const CommissionFieldList: React.FC<CommissionFieldListProps> = memo(({
       return;
     }
 
+    setGeneralTopInput(value);
+
     // Update fields for current activeDraw
     betTypes.forEach((betType) => {
       const key = getFieldKey(betType.betTypeCode);
@@ -158,7 +161,6 @@ const CommissionFieldList: React.FC<CommissionFieldListProps> = memo(({
 
     // When on General tab, propagate to ALL draws
     if (activeDraw === 'general' && draws.length > 0) {
-      // Propagate to all draws (not just existing keys in formData)
       draws.forEach((draw) => {
         if (draw.id !== 'general' && draw.id.startsWith('draw_')) {
           betTypes.forEach((betType) => {
@@ -168,15 +170,6 @@ const CommissionFieldList: React.FC<CommissionFieldListProps> = memo(({
         }
       });
     }
-  };
-
-  /**
-   * Get the "General" top-level field value.
-   * Always empty - this field is only a tool to set all fields at once,
-   * it should never persist or display a saved value.
-   */
-  const getGeneralTopValue = (): string => {
-    return '';
   };
 
   const isCommission2 = fieldType === 'commission2';
@@ -225,7 +218,7 @@ const CommissionFieldList: React.FC<CommissionFieldListProps> = memo(({
         <TextField
           size="small"
           type="text"
-          value={getGeneralTopValue()}
+          value={generalTopInput}
           onChange={handleGeneralFieldChange}
           placeholder="0"
           sx={{
