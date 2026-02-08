@@ -290,6 +290,7 @@ const TicketMonitoring: FC = () => {
                           sx={{
                             ...STYLES.tableHeaderCell,
                             width: COLUMN_WIDTHS[h] || 'auto',
+                            ...(h === 'Acciones' && { paddingRight: '13px' }),
                           }}
                         >
                           {h}
@@ -305,7 +306,7 @@ const TicketMonitoring: FC = () => {
 
           {/* Right: Ticket Detail Panel */}
           {selectedTicket && (
-            <Box sx={{ flexGrow: 1, position: 'sticky', top: 16, mt: '10px' }}>
+            <Box sx={{ flexGrow: 1, minWidth: 350, position: 'sticky', top: 16, mt: '10px' }}>
               <TicketDetailPanel ticket={selectedTicket} onClose={handleCloseDetail} />
             </Box>
           )}

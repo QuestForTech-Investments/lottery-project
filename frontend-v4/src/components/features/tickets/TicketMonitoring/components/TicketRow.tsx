@@ -35,9 +35,11 @@ const TicketRow: FC<TicketRowProps> = memo(({ ticket, isSelected, onRowClick, on
     <TableRow
       sx={{
         cursor: 'pointer',
+        fontSize: '0.8rem',
         backgroundColor: isSelected ? 'rgba(139, 92, 246, 0.12)' : 'inherit',
         borderLeft: isSelected ? '3px solid #8b5cf6' : '3px solid transparent',
         '&:hover': { backgroundColor: isSelected ? 'rgba(139, 92, 246, 0.18)' : 'action.hover' },
+        '& .MuiTableCell-root': { fontSize: '0.75rem', textAlign: 'center', whiteSpace: 'nowrap' },
       }}
       onClick={handleRowClick}
     >
@@ -51,16 +53,13 @@ const TicketRow: FC<TicketRowProps> = memo(({ ticket, isSelected, onRowClick, on
         {ticket.estado}
       </TableCell>
       <TableCell>
-        <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
-          <IconButton size="small" color="primary" onClick={handlePrintClick} title="Imprimir ticket">
-            <PrintIcon fontSize="small" />
-          </IconButton>
-          <IconButton size="small" color="info" onClick={handleSendClick} title="Enviar ticket">
-            <SendIcon fontSize="small" />
+        <Box sx={{ display: 'flex', gap: 0, justifyContent: 'center' }}>
+          <IconButton size="small" color="primary" onClick={handlePrintClick} title="Imprimir ticket" sx={{ p: 0.25 }}>
+            <PrintIcon sx={{ fontSize: 18 }} />
           </IconButton>
           {ticket.estado !== 'Cancelado' && (
-            <IconButton size="small" color="error" onClick={handleCancelClick} title="Cancelar ticket">
-              <CancelIcon fontSize="small" />
+            <IconButton size="small" color="error" onClick={handleCancelClick} title="Cancelar ticket" sx={{ p: 0.25 }}>
+              <CancelIcon sx={{ fontSize: 18 }} />
             </IconButton>
           )}
         </Box>

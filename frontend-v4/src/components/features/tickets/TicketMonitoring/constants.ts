@@ -123,26 +123,28 @@ export const STYLES = {
     fontFamily: 'Montserrat, "Helvetica Neue", Arial, sans-serif',
   },
   quickSearch: { mb: 0, maxWidth: 200, '& .MuiInputBase-root': { height: 32 } },
-  tableContainer: { maxWidth: 950 },
+  tableContainer: { maxWidth: 796 },
   tableHeader: { backgroundColor: '#e3e3e3' },
   tableHeaderCell: {
     fontWeight: 600,
     backgroundColor: '#e3e3e3',
+    textAlign: 'center' as const,
+    fontSize: '0.75rem',
   },
   loadingCell: { py: 5 },
   emptyCell: { py: 3, color: 'text.secondary' },
 } as const;
 
-// Column widths to match original app layout
+// Column widths - compact to leave room for detail panel
 export const COLUMN_WIDTHS: Record<string, number> = {
-  'Número': 140,
+  'Número': 150,
   'Fecha': 130,
-  'Usuario': 100,
-  'Monto': 90,
-  'Premio': 90,
-  'Fecha de cancelación': 110,
-  'Estado': 80,
-  'Acciones': 90,
+  'Usuario': 50,
+  'Monto': 70,
+  'Premio': 70,
+  'Fecha de cancelación': 100,
+  'Estado': 65,
+  'Acciones': 60,
 };
 
 // ============================================================================

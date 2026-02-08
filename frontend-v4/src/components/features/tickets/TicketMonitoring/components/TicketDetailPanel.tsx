@@ -137,7 +137,7 @@ const PANEL_STYLES = {
     borderBottom: '1px solid #ccc',
   },
   tableHeaderCell: {
-    fontSize: '14px',
+    fontSize: '12px',
     fontWeight: 400,
     color: 'rgb(37, 36, 34)',
     padding: '2px 4px',
@@ -149,7 +149,7 @@ const PANEL_STYLES = {
     alignItems: 'center',
   },
   tableCell: {
-    fontSize: '14px',
+    fontSize: '12px',
     color: 'rgb(37, 36, 34)',
     padding: '2px 4px',
     textAlign: 'center' as const,
@@ -307,6 +307,11 @@ interface PlayRowProps {
   onEditPrize: (betNumber: string) => void;
 }
 
+const formatBetNumber = (num: string): string => {
+  if (num.length <= 2) return num;
+  return num.match(/.{1,2}/g)?.join('-') || num;
+};
+
 const PlayRow: FC<PlayRowProps> = memo(({ line, index, isWinner, isPending, onEditPrize }) => {
   const backgroundColor = useMemo(() => {
     const isEven = index % 2 === 0;
@@ -321,7 +326,7 @@ const PlayRow: FC<PlayRowProps> = memo(({ line, index, isWinner, isPending, onEd
 
   return (
     <Box sx={{ ...PANEL_STYLES.tableRow, backgroundColor }}>
-      <Typography sx={PANEL_STYLES.tableCell}>{line.betNumber}</Typography>
+      <Typography sx={PANEL_STYLES.tableCell}>{formatBetNumber(line.betNumber)}</Typography>
       <Typography sx={PANEL_STYLES.tableCell}>{line.betTypeName || '-'}</Typography>
       <Typography sx={PANEL_STYLES.tableCell}>{formatCurrency(line.betAmount)}</Typography>
       <Box sx={{ ...PANEL_STYLES.tableCell, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
