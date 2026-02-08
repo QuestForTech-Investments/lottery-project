@@ -68,6 +68,7 @@ const DrawTabSelector: React.FC<DrawTabSelectorProps> = memo(({
           gap: 1,
           overflowX: 'auto',
           scrollBehavior: 'smooth',
+          pb: 1.5,
           '&::-webkit-scrollbar': {
             height: 6
           },
