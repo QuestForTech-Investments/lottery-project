@@ -172,13 +172,11 @@ const CommissionFieldList: React.FC<CommissionFieldListProps> = memo(({
 
   /**
    * Get the "General" top-level field value.
-   * If all bet types have the same value, show that; otherwise empty.
+   * Always empty - this field is only a tool to set all fields at once,
+   * it should never persist or display a saved value.
    */
   const getGeneralTopValue = (): string => {
-    if (betTypes.length === 0) return '';
-    const firstVal = String(getFieldValue(betTypes[0].betTypeCode));
-    const allSame = betTypes.every(bt => String(getFieldValue(bt.betTypeCode)) === firstVal);
-    return allSame ? firstVal : '';
+    return '';
   };
 
   const isCommission2 = fieldType === 'commission2';
