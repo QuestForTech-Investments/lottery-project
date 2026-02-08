@@ -290,8 +290,7 @@ const TicketMonitoring: FC = () => {
                           sx={{
                             ...STYLES.tableHeaderCell,
                             width: COLUMN_WIDTHS[h] || 'auto',
-                            ...(h === 'Acciones' && { paddingRight: '13px' }),
-                          }}
+                                                      }}
                         >
                           {h}
                         </TableCell>

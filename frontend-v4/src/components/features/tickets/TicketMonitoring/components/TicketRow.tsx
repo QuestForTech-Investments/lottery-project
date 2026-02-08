@@ -49,10 +49,10 @@ const TicketRow: FC<TicketRowProps> = memo(({ ticket, isSelected, onRowClick, on
       <TableCell>{formatCurrency(ticket.monto)}</TableCell>
       <TableCell>{formatCurrency(ticket.premio)}</TableCell>
       <TableCell>{ticket.fechaCancelacion || '-'}</TableCell>
-      <TableCell sx={{ color: getEstadoColor(ticket.estado) }}>
+      <TableCell sx={{ color: getEstadoColor(ticket.estado), textAlign: 'center', px: 0 }}>
         {ticket.estado}
       </TableCell>
-      <TableCell>
+      <TableCell sx={{ px: 0 }}>
         <Box sx={{ display: 'flex', gap: 0, justifyContent: 'center' }}>
           <IconButton size="small" color="primary" onClick={handlePrintClick} title="Imprimir ticket" sx={{ p: 0.25 }}>
             <PrintIcon sx={{ fontSize: 18 }} />
