@@ -25,6 +25,7 @@ interface BetTypeFieldGridProps {
   generalValues: GeneralValues;
   fieldType: 'prize' | 'commission' | 'commission2';
   onFieldChange: (fieldKey: string, value: string) => void;
+  onBatchFieldChange?: (updates: Record<string, string | number>) => void;
   bettingPoolId?: number | null;
   saving?: boolean;
   onSave?: () => void;
@@ -44,6 +45,7 @@ const BetTypeFieldGrid: React.FC<BetTypeFieldGridProps> = memo(({
   generalValues,
   fieldType,
   onFieldChange,
+  onBatchFieldChange,
   bettingPoolId,
   saving = false,
   onSave,
@@ -130,41 +132,36 @@ const BetTypeFieldGrid: React.FC<BetTypeFieldGridProps> = memo(({
   };
 
   /**
+   * Build batch updates for propagating a value to all draws
+   */
+  const buildDrawPropagation = (betTypeCode: string, fieldCode: string, value: string): Record<string, string> => {
+    const updates: Record<string, string> = {};
+    if (activeDraw === 'general' && draws.length > 0) {
+      draws.forEach((draw) => {
+        if (draw.id !== 'general' && draw.id.startsWith('draw_')) {
+          updates[getFieldKeyForDraw(draw.id, betTypeCode, fieldCode)] = value;
+        }
+      });
+    }
+    return updates;
+  };
+
+  /**
    * Handle field input change
-   * When on General tab, propagates to ALL draws
+   * When on General tab, propagates to ALL draws via batch update
    */
   const handleInputChange = (betTypeCode: string, fieldCode: string) => (event: ChangeEvent<HTMLInputElement>): void => {
     const fieldKey = getFieldKey(betTypeCode, fieldCode);
     const value = event.target.value;
 
-    // Allow empty value
-    if (value === '') {
-      onFieldChange(fieldKey, '');
-      // Also propagate empty to all draws when on General tab
-      if (activeDraw === 'general' && draws.length > 0) {
-        draws.forEach((draw) => {
-          if (draw.id !== 'general' && draw.id.startsWith('draw_')) {
-            const drawKey = getFieldKeyForDraw(draw.id, betTypeCode, fieldCode);
-            onFieldChange(drawKey, '');
-          }
-        });
-      }
-      return;
-    }
+    if (value !== '' && !/^-?\d*\.?\d*$/.test(value)) return;
 
-    // Only allow numbers and one decimal point
-    const numberRegex = /^-?\d*\.?\d*$/;
-    if (numberRegex.test(value)) {
+    const drawUpdates = buildDrawPropagation(betTypeCode, fieldCode, value);
+
+    if (onBatchFieldChange && Object.keys(drawUpdates).length > 0) {
+      onBatchFieldChange({ [fieldKey]: value, ...drawUpdates });
+    } else {
       onFieldChange(fieldKey, value);
-      // Also propagate to all draws when on General tab
-      if (activeDraw === 'general' && draws.length > 0) {
-        draws.forEach((draw) => {
-          if (draw.id !== 'general' && draw.id.startsWith('draw_')) {
-            const drawKey = getFieldKeyForDraw(draw.id, betTypeCode, fieldCode);
-            onFieldChange(drawKey, value);
-          }
-        });
-      }
     }
   };
 

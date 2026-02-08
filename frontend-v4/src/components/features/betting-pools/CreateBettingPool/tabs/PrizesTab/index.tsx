@@ -73,7 +73,19 @@ const PrizesTab: React.FC<PrizesTabProps> = ({
   const [generalValues, setGeneralValues] = useState<GeneralValues>({});
 
   // Track which draws have been loaded from API (only load once per draw)
+  // Also used to prevent API overwrites after batch propagation from General
   const loadedDrawsRef = useRef<Set<string>>(new Set());
+
+  // Wrap onBatchChange to mark propagated draws as "loaded" so API doesn't overwrite them
+  const handleBatchChangeWithTracking = (updates: Record<string, string | number>): void => {
+    Object.keys(updates).forEach(key => {
+      const match = key.match(/^(draw_\d+)_/);
+      if (match) {
+        loadedDrawsRef.current.add(match[1]);
+      }
+    });
+    onBatchChange?.(updates);
+  };
 
   // Use prop draws if provided, otherwise use local draws
   const draws = propDraws.length > 0 ? propDraws : localDraws;
@@ -358,6 +370,7 @@ const PrizesTab: React.FC<PrizesTabProps> = ({
             generalValues={generalValues}
             fieldType="prize"
             onFieldChange={handleFieldChange}
+            onBatchFieldChange={handleBatchChangeWithTracking}
             bettingPoolId={bettingPoolId}
             saving={saving}
             onSave={onSavePrizeConfig ? handleSave : undefined}
@@ -371,7 +384,7 @@ const PrizesTab: React.FC<PrizesTabProps> = ({
             generalValues={generalValues}
             fieldType="commission"
             onFieldChange={handleFieldChange}
-            onBatchFieldChange={onBatchChange}
+            onBatchFieldChange={handleBatchChangeWithTracking}
             bettingPoolId={bettingPoolId}
             saving={saving}
             onSave={onSavePrizeConfig ? handleSave : undefined}
