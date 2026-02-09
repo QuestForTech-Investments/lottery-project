@@ -1259,6 +1259,19 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
         }
       });
 
+      // 🔍 DEBUG: Log draw_* keys to verify UI propagation reached formData
+      const drawKeys = Object.keys(filteredFormData).filter(k => k.startsWith('draw_') && !k.includes('COMMISSION'));
+      const generalKeys = Object.keys(filteredFormData).filter(k => k.startsWith('general_') && !k.includes('COMMISSION'));
+      console.log(`[SAVE] General prize keys: ${generalKeys.length}, Draw prize keys: ${drawKeys.length}`);
+      if (drawKeys.length > 0) {
+        // Show first 3 draw keys as sample
+        drawKeys.slice(0, 3).forEach(k => {
+          console.log(`[SAVE] ${k} = ${filteredFormData[k]} (initial: ${initialFormData?.[k as keyof FormData]})`);
+        });
+      } else {
+        console.warn('[SAVE] ⚠️ NO draw_* prize keys in formData! UI propagation may not have fired.');
+      }
+
       // Call the existing savePrizeConfigurations function
       // Pass allowDrawSpecific=true to save draw-specific fields
       const result = await savePrizeConfigurations(id, filteredFormData, initialFormData, true);
