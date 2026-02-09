@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, type ChangeEvent, type SyntheticEvent } from 'react';
+import { useState, useEffect, useCallback, useRef, type ChangeEvent, type SyntheticEvent } from 'react';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -67,6 +67,9 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
 
   // ⚡ DIRTY TRACKING: Store initial values to detect changes
   const [initialFormData, setInitialFormData] = useState<FormData | null>(null);
+
+  // Map prizeTypeId → betTypeCode for resolving multi-word bet type codes
+  const prizeTypeIdToCodeRef = useRef<Record<number, string>>({});
 
   // ========================================
   // 🆕 TEMPLATE COPY STATE
@@ -437,40 +440,43 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
           cleanKey = key;
         }
 
-        // Now extract betTypeCode and fieldCode from cleanKey
+        // Now extract fieldCode from cleanKey by matching against known fieldCodes
+        // Can't just split on first '_' because betTypeCodes can be multi-word:
+        // e.g., "CASH3_STRAIGHT_CASH3_STRAIGHT_TODOS_SECUENCIA" → fieldCode = "CASH3_STRAIGHT_TODOS_SECUENCIA"
         const cleanParts = cleanKey.split('_');
+        let matchedFieldCode: string | null = null;
         if (cleanParts.length >= 3) {
-          const fieldCode = cleanParts.slice(1).join('_'); // "DIRECTO_PRIMER_PAGO"
+          // Try each possible split point to find a known fieldCode
+          for (let i = 1; i < cleanParts.length - 1; i++) {
+            const candidateFieldCode = cleanParts.slice(i).join('_');
+            if (prizeFieldSet.has(candidateFieldCode)) {
+              matchedFieldCode = candidateFieldCode;
+              break;
+            }
+          }
+        }
 
-          // Check if this fieldCode exists in our bet types
-          if (prizeFieldSet.has(fieldCode)) {
-            const prizeTypeId = fieldCodeToId[fieldCode];
-            const rawValue = currentFormData[key];
-            const currentValue = parseFloat(String(rawValue));
-            const initialValue = initialData?.[key as keyof FormData];
-            const initialValueParsed = parseFloat(String(initialValue ?? ''));
+        if (matchedFieldCode) {
+          const fieldCode = matchedFieldCode;
+          const prizeTypeId = fieldCodeToId[fieldCode];
+          const rawValue = currentFormData[key];
+          const currentValue = parseFloat(String(rawValue));
 
-            // Debug first 3 fields
-            if (debugCount < 3 && key.startsWith('general_')) {
-              debugCount++;
+          // ⚡ DIRTY TRACKING: Only include if value changed
+          const hasChanged = !initialData ||
+                             initialData[key as keyof FormData] === undefined ||
+                             parseFloat(String(initialData[key as keyof FormData])) !== currentValue;
+
+          if (hasChanged && lotteryId) {
+            if (!configsByLottery[lotteryId]) {
+              configsByLottery[lotteryId] = [];
             }
 
-            // ⚡ DIRTY TRACKING: Only include if value changed
-            const hasChanged = !initialData ||
-                               initialData[key as keyof FormData] === undefined ||
-                               parseFloat(String(initialData[key as keyof FormData])) !== currentValue;
-
-            if (hasChanged && lotteryId) {
-              if (!configsByLottery[lotteryId]) {
-                configsByLottery[lotteryId] = [];
-              }
-
-              configsByLottery[lotteryId].push({
-                prizeTypeId: prizeTypeId,
-                fieldCode: fieldCode,
-                value: currentValue
-              });
-            }
+            configsByLottery[lotteryId].push({
+              prizeTypeId: prizeTypeId,
+              fieldCode: fieldCode,
+              value: currentValue
+            });
           }
         }
       });
@@ -592,11 +598,16 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
       const prizeFormData: Record<string, string | number> = {};
       const customMap = (prizeData.customMap || {}) as Record<string, number>;
 
-      // Process each bet type
+      // Process each bet type and build prizeTypeId → betTypeCode map
       (prizeData.betTypes ?? []).forEach((betType: BetType) => {
         if (!betType.prizeFields || betType.prizeFields.length === 0) {
           return;
         }
+
+        // Build prizeTypeId → betTypeCode map for loadDrawSpecificValues
+        betType.prizeFields.forEach(field => {
+          prizeTypeIdToCodeRef.current[field.prizeTypeId] = betType.betTypeCode || '';
+        });
 
         // Process each prize type field
         betType.prizeFields.forEach(field => {
@@ -957,14 +968,14 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
 
       // Build formData with draw_XX_ prefix (matches the save format)
       const drawFormData: Record<string, string | number> = {};
-      (configs as Array<{ fieldCode: string; customValue: string | number }>).forEach(config => {
-        // Extract betTypeCode from fieldCode (first part before underscore)
-        const parts = config.fieldCode.split('_');
-        const betTypeCode = parts[0]; // e.g., "DIRECTO" from "DIRECTO_PRIMER_PAGO"
+      (configs as Array<{ fieldCode: string; customValue: string | number; prizeTypeId: number }>).forEach(config => {
+        // Use prizeTypeId → betTypeCode map for accurate resolution
+        // This handles multi-word betTypeCodes like CASH3_STRAIGHT, SUPER_PALE, etc.
+        const betTypeCode = prizeTypeIdToCodeRef.current[config.prizeTypeId];
+        if (!betTypeCode) return;
 
         // Build key: draw_181_DIRECTO_DIRECTO_PRIMER_PAGO (matches save format)
         const fieldKey = `draw_${drawId}_${betTypeCode}_${config.fieldCode}`;
-        // ✅ FIX: API returns 'customValue', not 'value'
         drawFormData[fieldKey] = config.customValue;
 
       });
