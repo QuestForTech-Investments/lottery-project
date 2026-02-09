@@ -100,6 +100,7 @@ interface BetType {
     fieldCode: string;
     prizeTypeId: number;
     defaultValue?: number;
+    defaultMultiplier?: number;
   }>;
 }
 
@@ -727,8 +728,21 @@ const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
           });
         }
 
+        // Step 1: Always load system defaults from bet types
+        if (Array.isArray(betTypesData) && betTypesData.length > 0) {
+          betTypesData.forEach(bt => {
+            const code = bt.betTypeCode || '';
+            (bt.prizeFields || []).forEach(pf => {
+              if (pf.fieldCode && pf.defaultMultiplier !== undefined) {
+                const fieldKey = `general_${code}_${pf.fieldCode}`;
+                (updates as Record<string, string | boolean | number | number[] | AutoExpense[] | null>)[fieldKey] = pf.defaultMultiplier;
+              }
+            });
+          });
+        }
+
+        // Step 2: Overlay with explicit prize configs (these take priority)
         if (Array.isArray(prizesData) && prizesData.length > 0) {
-          // Pool has explicit prize configs - use them
           prizesData.forEach(prize => {
             if (prize.fieldCode && prize.customValue !== undefined) {
               const betTypeCode = prizeTypeToCode[prize.prizeTypeId];
@@ -737,17 +751,6 @@ const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
                 (updates as Record<string, string | boolean | number | number[] | AutoExpense[] | null>)[fieldKey] = prize.customValue;
               }
             }
-          });
-        } else if (Array.isArray(betTypesData) && betTypesData.length > 0) {
-          // Pool has no explicit configs - use system defaults from bet types
-          betTypesData.forEach(bt => {
-            const code = bt.betTypeCode || '';
-            (bt.prizeFields || []).forEach(pf => {
-              if (pf.fieldCode && pf.defaultValue !== undefined) {
-                const fieldKey = `general_${code}_${pf.fieldCode}`;
-                (updates as Record<string, string | boolean | number | number[] | AutoExpense[] | null>)[fieldKey] = pf.defaultValue;
-              }
-            });
           });
         }
       }
@@ -1161,8 +1164,8 @@ const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
         'PANAMA': 'PANAMA',
       };
 
-      // Collect commission changes by gameType (only for general/lotteryId=null)
-      const commissionsByGameType: Record<string, {
+      // Collect ALL commission items (general + draw-specific) for batch save
+      interface CommissionData {
         commissionDiscount1?: number;
         commissionDiscount2?: number;
         commissionDiscount3?: number;
@@ -1171,61 +1174,83 @@ const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
         commission2Discount2?: number;
         commission2Discount3?: number;
         commission2Discount4?: number;
-      }> = {};
+      }
+      interface BatchItem {
+        lotteryId: number | null;
+        gameType: string;
+        commissionDiscount1?: number;
+        commission2Discount1?: number;
+      }
+      const batchItems: BatchItem[] = [];
 
-      // Regex patterns to match commission fields (general_ prefix only for create)
-      const commissionPattern = /^general_COMMISSION_(.+)_COMMISSION_DISCOUNT_(\d)$/;
-      const commission2Pattern = /^general_COMMISSION2_(.+)_COMMISSION_2_DISCOUNT_(\d)$/;
-
-      // Process all formData keys to find commission fields
-      Object.keys(formData).forEach(key => {
-        const value = formData[key];
-        if (value === '' || value === null || value === undefined) return;
-
-        // Match commission field pattern
-        const commissionMatch = key.match(commissionPattern);
-        if (commissionMatch) {
-          const betTypeCode = commissionMatch[1];
-          const discountNum = commissionMatch[2];
-          const gameType = betTypeToGameType[betTypeCode] || betTypeCode;
-
-          if (!commissionsByGameType[gameType]) {
-            commissionsByGameType[gameType] = {};
-          }
-
-          const fieldName = `commissionDiscount${discountNum}` as keyof typeof commissionsByGameType[typeof gameType];
-          commissionsByGameType[gameType][fieldName] = parseFloat(String(value));
-          return;
-        }
-
-        // Match commission 2 field pattern
-        const commission2Match = key.match(commission2Pattern);
-        if (commission2Match) {
-          const betTypeCode = commission2Match[1];
-          const discountNum = commission2Match[2];
-          const gameType = betTypeToGameType[betTypeCode] || betTypeCode;
-
-          if (!commissionsByGameType[gameType]) {
-            commissionsByGameType[gameType] = {};
-          }
-
-          const fieldName = `commission2Discount${discountNum}` as keyof typeof commissionsByGameType[typeof gameType];
-          commissionsByGameType[gameType][fieldName] = parseFloat(String(value));
-          return;
-        }
-      });
-
-      // If no commission changes, return early
-      if (Object.keys(commissionsByGameType).length === 0) {
-        return { success: true };
+      // Fetch draws to get drawId -> lotteryId mapping
+      const { getAllDraws } = await import('@services/drawService');
+      const drawsResponse = await getAllDraws({ isActive: true, loadAll: true }) as { success: boolean; data?: Array<{ drawId: number; lotteryId?: number }> };
+      const drawIdToLotteryId: Record<number, number> = {};
+      if (drawsResponse.success && drawsResponse.data) {
+        drawsResponse.data.forEach(d => {
+          if (d.lotteryId) drawIdToLotteryId[d.drawId] = d.lotteryId;
+        });
       }
 
-      // ⚡ OPTIMIZED: Send ALL commissions in ONE batch request (instead of N sequential requests)
-      const batchItems = Object.entries(commissionsByGameType).map(([gameType, commissions]) => ({
-        gameType,
-        lotteryId: null,  // general commissions for new betting pool
-        ...commissions
-      }));
+      // Helper to collect commissions for a given key prefix and lotteryId
+      const collectCommissionsForPrefix = (keyPrefix: string, targetLotteryId: number | null): void => {
+        const commissions: Record<string, CommissionData> = {};
+        const escapedPrefix = keyPrefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const commissionPattern = new RegExp(`^${escapedPrefix}_COMMISSION_(.+)_COMMISSION_DISCOUNT_(\\d)$`);
+        const commission2Pattern = new RegExp(`^${escapedPrefix}_COMMISSION2_(.+)_COMMISSION_2_DISCOUNT_(\\d)$`);
+
+        Object.keys(formData).forEach(key => {
+          const value = formData[key];
+          if (value === '' || value === null || value === undefined) return;
+
+          const commissionMatch = key.match(commissionPattern);
+          if (commissionMatch) {
+            const betTypeCode = commissionMatch[1];
+            const discountNum = commissionMatch[2];
+            const gameType = betTypeToGameType[betTypeCode] || betTypeCode;
+            if (!commissions[gameType]) commissions[gameType] = {};
+            (commissions[gameType] as Record<string, number>)[`commissionDiscount${discountNum}`] = parseFloat(String(value));
+            return;
+          }
+
+          const commission2Match = key.match(commission2Pattern);
+          if (commission2Match) {
+            const betTypeCode = commission2Match[1];
+            const discountNum = commission2Match[2];
+            const gameType = betTypeToGameType[betTypeCode] || betTypeCode;
+            if (!commissions[gameType]) commissions[gameType] = {};
+            (commissions[gameType] as Record<string, number>)[`commission2Discount${discountNum}`] = parseFloat(String(value));
+            return;
+          }
+        });
+
+        for (const [gameType, commissionData] of Object.entries(commissions)) {
+          batchItems.push({ lotteryId: targetLotteryId, gameType, ...commissionData });
+        }
+      };
+
+      // Collect general commissions (lotteryId = null)
+      collectCommissionsForPrefix('general', null);
+
+      // Collect draw-specific commissions
+      const drawPrefixes = new Set<string>();
+      Object.keys(formData).forEach(key => {
+        const match = key.match(/^(draw_\d+)_COMMISSION/);
+        if (match) drawPrefixes.add(match[1]);
+      });
+      for (const drawPrefix of drawPrefixes) {
+        const drawIdNum = parseInt(drawPrefix.split('_')[1]);
+        const lotteryId = drawIdToLotteryId[drawIdNum] ?? null;
+        if (lotteryId !== null) {
+          collectCommissionsForPrefix(drawPrefix, lotteryId);
+        }
+      }
+
+      // If no commission changes, return early
+      if (batchItems.length === 0) {
+        return { success: true };
+      }
 
       const batchResp = await fetch(`${API_BASE}/betting-pools/${bettingPoolId}/prizes-commissions/batch`, {
         method: 'POST',

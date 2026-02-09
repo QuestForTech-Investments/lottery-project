@@ -10,14 +10,76 @@
 
 ## Último Commit
 ```
-Fix: prize-config/resolved endpoint 500 error (c576376)
+UI: Center Estado and Acciones cells in ticket monitoring table (c434e82)
 ```
-**Fecha:** 2026-02-07
-**Estado:** ✅ Desplegado (frontend + API)
+**Fecha:** 2026-02-08
+**Estado:** ✅ Desplegado
 
 ---
 
-## Cambios de Hoy (2026-02-07) - Sesión 3
+## Cambios de Hoy (2026-02-08) - Sesión 5: Monitor de Tickets UI
+
+### ✅ Ticket Monitoring Table Redesign (083bac0, c434e82)
+**Cambios:**
+- Tabla más compacta (maxWidth 950→796px) para dar espacio al panel de detalle
+- Columnas redistribuidas con anchos optimizados
+- Fuente reducida a 0.75rem, headers y celdas centrados
+- Botón de enviar eliminado de acciones, iconos más compactos
+- Números de jugada formateados con guiones (2530→25-30)
+- Panel de detalle con minWidth 350px y fuente 12px
+- Usuario "Administrador" renombrado a "admin" en BD
+
+---
+
+## Cambios de Hoy (2026-02-08) - Sesión 4: Premios & Comisiones UX Fixes
+
+### ✅ Batch Update para Comisiones (0707fda)
+**Problema:** Escribir en el input "General" de comisiones era extremadamente lento (~1768 llamadas individuales a setState por keystroke).
+
+**Fix:** Nuevo `handleBatchChange` que hace un solo `setFormData(prev => ({...prev, ...updates}))` con todas las ~1768 actualizaciones. Propagación instantánea.
+
+**Archivos:** `useCompleteBettingPoolForm.ts`, `useEditBettingPoolForm.ts`, `PrizesTab/index.tsx`, `CommissionFieldList.tsx`, `EditBettingPool/index.tsx`, `CreateBettingPool/index.tsx`
+
+### ✅ Reset General Input al cambiar tab (c0764f0)
+**Problema:** El input "General" (bulk-fill) retenía su valor al cambiar de tab de sorteo porque el componente se mantiene montado.
+
+**Fix:** `useEffect` que resetea `generalTopInput` a `''` cuando `activeDraw` cambia.
+
+**Archivo:** `CommissionFieldList.tsx`
+
+### ✅ No sobreescribir valores propagados al cambiar tab (c33dc43)
+**Problema:** `loadDrawSpecificValues` recargaba del API cada vez que se cambiaba de tab de sorteo, sobreescribiendo valores propagados desde General.
+
+**Fix:** `useRef<Set<string>>` para trackear draws ya cargados. Solo carga del API la primera vez que se visita cada draw.
+
+**Archivo:** `PrizesTab/index.tsx`
+
+### ✅ Guardar desde General persiste a todos los sorteos (4cd8c31)
+**Problema:** `savePrizeConfigForSingleDraw('general')` solo incluía `general_*` keys, ignorando `draw_*` keys propagadas.
+
+**Fix:** Incluir `draw_*` keys en el payload cuando se guarda desde General.
+
+**Archivo:** `useEditBettingPoolForm.ts`
+
+### ✅ Premios: misma propagación que comisiones (d7c7f4f)
+**Problema:** BetTypeFieldGrid (premios) usaba llamadas individuales a `onFieldChange` para propagar, y el API sobreescribía valores propagados al cambiar de tab.
+
+**Fix:**
+1. `BetTypeFieldGrid.tsx` - Añadido `onBatchFieldChange` y batch update (igual que CommissionFieldList)
+2. `PrizesTab/index.tsx` - Wrapper `handleBatchChangeWithTracking` que marca draws propagados en `loadedDrawsRef` para que el API no los sobreescriba
+
+### ✅ UI: Scrollbar separado de tabs de sorteos (5af7fcd)
+**Fix:** Añadido `pb: 1.5` al contenedor de draw chips en `DrawTabSelector.tsx`
+
+### ✅ E2E Verificado: Comisiones correctas en tickets
+**Test:** Creado ticket FQ-LB-0007-000000037 en Banca 07 (NEW YORK DAY)
+- Directo $100 → comisión 20% = $20 ✅
+- Palé $100 → comisión 30% = $30 ✅
+- Total $200, comisión $50, neto $150 ✅
+
+---
+
+## Cambios de Ayer (2026-02-07) - Sesión 3
 
 ### ✅ Commission Save Propagation Fix (da7e437)
 **Problema:** Guardar comisiones desde tab "General" solo guardaba `lotteryId: null` (general). Los 67 sorteos individuales NO recibían los nuevos valores.
@@ -137,4 +199,4 @@ Solo guardar General (~56 items vs ~3920). Batch endpoints backend.
 
 ---
 
-**Fecha de última actualización:** 2026-02-08 00:00
+**Fecha de última actualización:** 2026-02-08 09:30

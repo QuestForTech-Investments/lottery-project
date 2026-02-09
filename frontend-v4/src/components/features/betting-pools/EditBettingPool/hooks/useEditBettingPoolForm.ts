@@ -1249,34 +1249,44 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
       // Filter formData to only include fields for this specific draw
       const filteredFormData: Record<string, string | number | boolean | number[] | AutoExpense[] | null> = {};
 
-      if (drawId === 'general') {
-        // When saving from General tab, include general_* AND all draw_* fields
-        // so propagated values are persisted to every draw
-        Object.keys(formData).forEach(key => {
-          if (key.startsWith('general_') || key.startsWith('draw_')) {
-            filteredFormData[key] = formData[key as keyof FormData];
+      // Always save ALL prize/commission fields regardless of which tab is active
+      // Client wants: user can navigate multiple tabs, modify values, and save everything at once
+      Object.keys(formData).forEach(key => {
+        if (key.startsWith('general_') || key.startsWith('draw_')) {
+          filteredFormData[key] = formData[key as keyof FormData];
+        }
+      });
+
+      // 🔥 PROPAGATE: General prize values must overwrite ALL draw-specific values
+      // General is a tool to set values quickly across all draws.
+      // When saving, General values must overwrite any existing draw-specific overrides.
+      const generalPrizeValues: Record<string, unknown> = {};
+      Object.keys(filteredFormData).forEach(key => {
+        // Collect general prize values (skip COMMISSION keys - those are handled separately)
+        if (key.startsWith('general_') && !key.includes('COMMISSION')) {
+          const fieldSuffix = key.substring('general_'.length); // e.g., "DIRECTO_DIRECTO_PRIMER_PAGO"
+          generalPrizeValues[fieldSuffix] = filteredFormData[key];
+        }
+      });
+
+      // Propagate general values to ALL draws
+      if (Object.keys(generalPrizeValues).length > 0 && draws.length > 0) {
+        for (const draw of draws) {
+          for (const [fieldSuffix, value] of Object.entries(generalPrizeValues)) {
+            const drawKey = `draw_${draw.drawId}_${fieldSuffix}`;
+            filteredFormData[drawKey] = value as string | number | boolean | number[] | AutoExpense[] | null;
           }
-        });
-      } else {
-        // For specific draw, only include that draw's fields
-        const prefix = `${drawId}_`;
-        Object.keys(formData).forEach(key => {
-          if (key.startsWith(prefix)) {
-            filteredFormData[key] = formData[key as keyof FormData];
-          }
-        });
+        }
       }
 
-
       // Call the existing savePrizeConfigurations function
-      // but with filtered data containing only this draw's fields
-      // Pass allowDrawSpecific=true to allow saving draw-specific fields
+      // Pass allowDrawSpecific=true to save draw-specific fields
       const result = await savePrizeConfigurations(id, filteredFormData, initialFormData, true);
 
       // Save commission configurations for any tab (general or draw-specific)
       // When saving from general, pass full formData so draw_* commission keys are found
-      const commissionData = drawId === 'general' ? formData : filteredFormData;
-      await saveCommissionConfigurations(id, commissionData, initialFormData, drawId);
+      // Always save all commissions (general + all draws) regardless of active tab
+      await saveCommissionConfigurations(id, formData, initialFormData, 'general');
 
       if (result.success) {
         // Show success message and navigate to betting pools list
@@ -1397,6 +1407,10 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
         };
         promises.push(fetchCommissions());
         dataTypes.push('commissions');
+
+        // Fetch bet types with fields (needed for defaults + prizeTypeId mapping)
+        promises.push(getAllBetTypesWithFields());
+        dataTypes.push('betTypes');
       }
 
       // Fetch schedules if selected
@@ -1415,6 +1429,10 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
 
       // Process results
       const updates: Partial<FormData> = {};
+
+      // Collect prize-related data first (needs both betTypes and prizes to combine)
+      let betTypesData: BetType[] = [];
+      let prizeConfigs: Array<{ prizeTypeId: number; fieldCode: string; customValue: number }> = [];
 
       results.forEach((result, index) => {
         const dataType = dataTypes[index];
@@ -1451,24 +1469,19 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
             }
           }
 
-          // Process prizes
-          // Note: getBettingPoolPrizeConfigs returns array directly, not wrapped in { success, data }
+          // Collect prizes for later processing
           if (dataType === 'prizes') {
-            const prizeConfigs = result.value as Array<{ prizeTypeId: number; fieldCode: string; customValue: number }>;
-            if (prizeConfigs && Array.isArray(prizeConfigs)) {
-              // fieldCode format: DIRECTO_PRIMER_PAGO, PALE_TODOS_SECUENCIA, etc.
-              prizeConfigs.forEach(config => {
-                if (config.fieldCode && config.customValue !== undefined) {
-                  // fieldCode format from API: "DIRECTO_PRIMER_PAGO", "PALE_TODOS_SECUENCIA"
-                  // Grid key format: general_{betTypeCode}_{fieldCode} = "general_DIRECTO_DIRECTO_PRIMER_PAGO"
-                  const parts = config.fieldCode.split('_');
-                  if (parts.length >= 2) {
-                    const betTypeCode = parts[0]; // e.g., DIRECTO, PALE, TRIPLETA
-                    const key = `general_${betTypeCode}_${config.fieldCode}`;
-                    (updates as Record<string, unknown>)[key] = config.customValue;
-                  }
-                }
-              });
+            const configs = result.value as Array<{ prizeTypeId: number; fieldCode: string; customValue: number }>;
+            if (configs && Array.isArray(configs)) {
+              prizeConfigs = configs;
+            }
+          }
+
+          // Collect bet types for later processing
+          if (dataType === 'betTypes') {
+            const btData = result.value as BetType[];
+            if (btData && Array.isArray(btData)) {
+              betTypesData = btData;
             }
           }
 
@@ -1544,6 +1557,42 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
           console.error(`[TEMPLATE] Error loading ${dataType}:`, result.reason);
         }
       });
+
+      // Process prizes: defaults first, then overlay with explicit configs
+      if (betTypesData.length > 0) {
+        // Build prizeTypeId -> betTypeCode map
+        const prizeTypeToCode: Record<number, string> = {};
+        betTypesData.forEach(bt => {
+          const code = bt.betTypeCode || '';
+          (bt.prizeFields || []).forEach(pf => {
+            prizeTypeToCode[pf.prizeTypeId] = code;
+          });
+        });
+
+        // Step 1: Load system defaults from bet types
+        betTypesData.forEach(bt => {
+          const code = bt.betTypeCode || '';
+          (bt.prizeFields || []).forEach(pf => {
+            if (pf.fieldCode && pf.defaultMultiplier !== undefined) {
+              const fieldKey = `general_${code}_${pf.fieldCode}`;
+              (updates as Record<string, unknown>)[fieldKey] = pf.defaultMultiplier;
+            }
+          });
+        });
+
+        // Step 2: Overlay with explicit prize configs (these take priority)
+        if (prizeConfigs.length > 0) {
+          prizeConfigs.forEach(config => {
+            if (config.fieldCode && config.customValue !== undefined) {
+              const betTypeCode = prizeTypeToCode[config.prizeTypeId];
+              if (betTypeCode) {
+                const fieldKey = `general_${betTypeCode}_${config.fieldCode}`;
+                (updates as Record<string, unknown>)[fieldKey] = config.customValue;
+              }
+            }
+          });
+        }
+      }
 
       // Apply all updates to form
       setFormData(prev => ({
