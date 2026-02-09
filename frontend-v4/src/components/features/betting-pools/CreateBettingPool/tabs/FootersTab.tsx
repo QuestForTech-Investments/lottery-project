@@ -67,9 +67,8 @@ const FootersTab: React.FC<FootersTabProps> = ({ formData, handleChange }) => {
             name="footerText1"
             value={formData.footerText1}
             onChange={handleChange}
-            helperText="Primera línea del pie de página"
-            multiline
-            rows={2}
+            inputProps={{ maxLength: 30 }}
+            helperText={`${formData.footerText1.length}/30 caracteres`}
           />
         </Grid>
 
@@ -80,9 +79,8 @@ const FootersTab: React.FC<FootersTabProps> = ({ formData, handleChange }) => {
             name="footerText2"
             value={formData.footerText2}
             onChange={handleChange}
-            helperText="Segunda línea del pie de página"
-            multiline
-            rows={2}
+            inputProps={{ maxLength: 30 }}
+            helperText={`${formData.footerText2.length}/30 caracteres`}
           />
         </Grid>
 
@@ -93,9 +91,8 @@ const FootersTab: React.FC<FootersTabProps> = ({ formData, handleChange }) => {
             name="footerText3"
             value={formData.footerText3}
             onChange={handleChange}
-            helperText="Tercera línea del pie de página"
-            multiline
-            rows={2}
+            inputProps={{ maxLength: 30 }}
+            helperText={`${formData.footerText3.length}/30 caracteres`}
           />
         </Grid>
 
@@ -106,9 +103,8 @@ const FootersTab: React.FC<FootersTabProps> = ({ formData, handleChange }) => {
             name="footerText4"
             value={formData.footerText4}
             onChange={handleChange}
-            helperText="Cuarta línea del pie de página"
-            multiline
-            rows={2}
+            inputProps={{ maxLength: 30 }}
+            helperText={`${formData.footerText4.length}/30 caracteres`}
           />
         </Grid>
 

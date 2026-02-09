@@ -40,6 +40,7 @@ interface ConfigFormData {
   limitPreference: string | null;
   allowFutureSales: boolean;
   maxFutureDays: string;
+  useCentralLogo: boolean;
   [key: string]: string | boolean | null;
 }
 
@@ -245,6 +246,19 @@ const ConfigurationTab: React.FC<ConfigTabProps> = ({ formData, handleChange }) 
               />
             }
             label="Sólo SMS"
+          />
+        </Grid>
+
+        <Grid item xs={12} md={6}>
+          <FormControlLabel
+            control={
+              <Switch
+                checked={formData.useCentralLogo}
+                onChange={handleChange}
+                name="useCentralLogo"
+              />
+            }
+            label="Usar Logo Central"
           />
         </Grid>
 
@@ -519,7 +533,8 @@ const arePropsEqual = (prevProps: ConfigTabProps, nextProps: ConfigTabProps): bo
     'smsOnly', 'minutesToCancelTicket', 'ticketsToCancelPerDay', 'enableRecharges',
     'printRechargeReceipt', 'allowPasswordChange', 'printerType', 'discountProvider',
     'discountMode', 'maximumCancelTicketAmount', 'maxTicketAmount',
-    'dailyPhoneRechargeLimit', 'limitPreference', 'allowFutureSales', 'maxFutureDays'
+    'dailyPhoneRechargeLimit', 'limitPreference', 'allowFutureSales', 'maxFutureDays',
+    'useCentralLogo'
   ];
 
   for (const field of configFields) {

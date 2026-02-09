@@ -52,6 +52,9 @@ export const INITIAL_FORM_DATA: FormData = {
   allowFutureSales: true,
   maxFutureDays: '7',
 
+  // Central logo
+  useCentralLogo: false,
+
   // Footers
   autoFooter: false,
   footerText1: '',

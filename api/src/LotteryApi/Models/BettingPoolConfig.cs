@@ -76,6 +76,9 @@ public class BettingPoolConfig
     [Column("max_future_days")]
     public int MaxFutureDays { get; set; } = 7;
 
+    [Column("use_central_logo")]
+    public bool UseCentralLogo { get; set; } = false;
+
     [Column("created_at")]
     public DateTime? CreatedAt { get; set; }
 

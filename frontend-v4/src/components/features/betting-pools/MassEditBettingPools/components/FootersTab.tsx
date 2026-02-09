@@ -29,6 +29,8 @@ const FootersTab: FC<FootersTabProps> = memo(({ formData, onInputChange }) => {
           size="small"
           fullWidth
           placeholder="Texto del primer pie de página"
+          inputProps={{ maxLength: 30 }}
+          helperText={`${(formData.footer1 || '').length}/30`}
         />
       </Box>
 
@@ -41,6 +43,8 @@ const FootersTab: FC<FootersTabProps> = memo(({ formData, onInputChange }) => {
           size="small"
           fullWidth
           placeholder="Texto del segundo pie de página"
+          inputProps={{ maxLength: 30 }}
+          helperText={`${(formData.footer2 || '').length}/30`}
         />
       </Box>
 
@@ -53,6 +57,8 @@ const FootersTab: FC<FootersTabProps> = memo(({ formData, onInputChange }) => {
           size="small"
           fullWidth
           placeholder="Texto del tercer pie de página"
+          inputProps={{ maxLength: 30 }}
+          helperText={`${(formData.footer3 || '').length}/30`}
         />
       </Box>
 
@@ -65,6 +71,8 @@ const FootersTab: FC<FootersTabProps> = memo(({ formData, onInputChange }) => {
           size="small"
           fullWidth
           placeholder="Texto del cuarto pie de página"
+          inputProps={{ maxLength: 30 }}
+          helperText={`${(formData.footer4 || '').length}/30`}
         />
       </Box>
     </Box>

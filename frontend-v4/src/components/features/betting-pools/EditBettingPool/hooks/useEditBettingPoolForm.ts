@@ -1124,7 +1124,8 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
           paymentMode: formData.limitPreference ? paymentModeMap[formData.limitPreference] : undefined,
           // ✅ NEW: Future sales configuration
           allowFutureSales: formData.allowFutureSales !== undefined ? formData.allowFutureSales : true,
-          maxFutureDays: formData.maxFutureDays ? parseInt(formData.maxFutureDays) : 7
+          maxFutureDays: formData.maxFutureDays ? parseInt(formData.maxFutureDays) : 7,
+          useCentralLogo: formData.useCentralLogo || false
         },
         discountConfig: {
           discountProvider: discountProviderMap[formData.discountProvider] || 'GRUPO',

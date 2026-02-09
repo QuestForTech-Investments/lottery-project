@@ -53,6 +53,8 @@ const FooterTab: FC<FooterTabProps> = memo(({ footerData, onFooterChange }) => (
         value={footerData.primerPie}
         onChange={(e) => onFooterChange('primerPie', e.target.value)}
         size="small"
+        inputProps={{ maxLength: 30 }}
+        helperText={`${(footerData.primerPie || '').length}/30`}
         sx={{ mb: 2 }}
       />
       <TextField
@@ -61,6 +63,8 @@ const FooterTab: FC<FooterTabProps> = memo(({ footerData, onFooterChange }) => (
         value={footerData.segundoPie}
         onChange={(e) => onFooterChange('segundoPie', e.target.value)}
         size="small"
+        inputProps={{ maxLength: 30 }}
+        helperText={`${(footerData.segundoPie || '').length}/30`}
         sx={{ mb: 2 }}
       />
       <TextField
@@ -69,6 +73,8 @@ const FooterTab: FC<FooterTabProps> = memo(({ footerData, onFooterChange }) => (
         value={footerData.tercerPie}
         onChange={(e) => onFooterChange('tercerPie', e.target.value)}
         size="small"
+        inputProps={{ maxLength: 30 }}
+        helperText={`${(footerData.tercerPie || '').length}/30`}
         sx={{ mb: 2 }}
       />
       <TextField
@@ -77,6 +83,8 @@ const FooterTab: FC<FooterTabProps> = memo(({ footerData, onFooterChange }) => (
         value={footerData.cuartoPie}
         onChange={(e) => onFooterChange('cuartoPie', e.target.value)}
         size="small"
+        inputProps={{ maxLength: 30 }}
+        helperText={`${(footerData.cuartoPie || '').length}/30`}
       />
     </Box>
   </Box>

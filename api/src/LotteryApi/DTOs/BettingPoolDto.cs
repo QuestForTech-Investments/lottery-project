@@ -169,6 +169,7 @@ public class BettingPoolConfigDto
     public string PaymentMode { get; set; } = "BANCA";
     public bool AllowFutureSales { get; set; } = true;
     public int MaxFutureDays { get; set; } = 7;
+    public bool UseCentralLogo { get; set; } = false;
 }
 
 /// <summary>

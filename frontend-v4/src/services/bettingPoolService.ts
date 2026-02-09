@@ -84,6 +84,9 @@ export interface BettingPoolConfigData {
     maxTicketAmount?: number | null;
     maxDailyRecharge?: number | null;
     paymentMode?: string;
+    allowFutureSales?: boolean;
+    maxFutureDays?: number;
+    useCentralLogo?: boolean;
   };
   discountConfig?: {
     discountProvider?: string;

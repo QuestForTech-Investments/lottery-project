@@ -96,7 +96,10 @@ export const mapConfigToFormData = (configResponse: ConfigResponse): Partial<For
 
     // ✅ NEW: Future sales configuration
     allowFutureSales: config.allowFutureSales !== undefined ? config.allowFutureSales : true,
-    maxFutureDays: String(config.maxFutureDays ?? 7)
+    maxFutureDays: String(config.maxFutureDays ?? 7),
+
+    // Central logo
+    useCentralLogo: config.useCentralLogo || false
   };
 };
 

@@ -16,19 +16,19 @@ public class BettingPoolFooter
     [Column("auto_footer")]
     public bool AutoFooter { get; set; } = false;
 
-    [MaxLength(500)]
+    [MaxLength(30)]
     [Column("footer_line_1")]
     public string? FooterLine1 { get; set; }
 
-    [MaxLength(500)]
+    [MaxLength(30)]
     [Column("footer_line_2")]
     public string? FooterLine2 { get; set; }
 
-    [MaxLength(500)]
+    [MaxLength(30)]
     [Column("footer_line_3")]
     public string? FooterLine3 { get; set; }
 
-    [MaxLength(500)]
+    [MaxLength(30)]
     [Column("footer_line_4")]
     public string? FooterLine4 { get; set; }
 
