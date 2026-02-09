@@ -880,33 +880,37 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
         }
       };
 
-      // When saving from General tab, collect BOTH general AND all draw-specific commissions
-      if (drawId === 'general') {
-        // Collect general commissions (lotteryId = null)
-        collectCommissionsForPrefix('general', null);
+      // Always save general + all draw-specific commissions (ACTUALIZAR saves everything)
+      // IMPORTANT: Only collect ONE draw per lotteryId to avoid duplicate batch items
+      // (multiple draws can share a lotteryId, e.g., NY DAY + NY NIGHT both = lotteryId 10)
+      collectCommissionsForPrefix('general', null);
 
-        // Extract all unique draw prefixes and collect each
-        const drawPrefixes = new Set<string>();
-        Object.keys(currentFormData).forEach(key => {
-          const match = key.match(/^(draw_\d+)_COMMISSION/);
-          if (match) drawPrefixes.add(match[1]);
-        });
+      const drawPrefixes = new Set<string>();
+      Object.keys(currentFormData).forEach(key => {
+        const match = key.match(/^(draw_\d+)_COMMISSION/);
+        if (match) drawPrefixes.add(match[1]);
+      });
 
-        for (const drawPrefix of drawPrefixes) {
-          const drawIdNum = parseInt(drawPrefix.split('_')[1]);
-          const draw = draws.find(d => d.drawId === drawIdNum);
-          const lotteryId = draw?.lotteryId ?? null;
-          if (lotteryId !== null) {
-            collectCommissionsForPrefix(drawPrefix, lotteryId);
-          }
+      // When saving from a specific draw tab, process that draw FIRST
+      // so its values take priority for its lotteryId
+      const processedLotteryIds = new Set<number>();
+      if (drawId.startsWith('draw_')) {
+        const activeDrawIdNum = parseInt(drawId.split('_')[1]);
+        const activeDraw = draws.find(d => d.drawId === activeDrawIdNum);
+        const activeLotteryId = activeDraw?.lotteryId ?? null;
+        if (activeLotteryId !== null) {
+          processedLotteryIds.add(activeLotteryId);
+          collectCommissionsForPrefix(drawId, activeLotteryId);
         }
-      } else if (drawId.startsWith('draw_')) {
-        // For specific draw, only collect that draw's commissions
-        const drawIdNum = parseInt(drawId.split('_')[1]);
+      }
+
+      for (const drawPrefix of drawPrefixes) {
+        const drawIdNum = parseInt(drawPrefix.split('_')[1]);
         const draw = draws.find(d => d.drawId === drawIdNum);
         const lotteryId = draw?.lotteryId ?? null;
-        if (lotteryId !== null) {
-          collectCommissionsForPrefix(drawId, lotteryId);
+        if (lotteryId !== null && !processedLotteryIds.has(lotteryId)) {
+          processedLotteryIds.add(lotteryId);
+          collectCommissionsForPrefix(drawPrefix, lotteryId);
         }
       }
 
@@ -1274,10 +1278,9 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
       // Pass allowDrawSpecific=true to save draw-specific fields
       const result = await savePrizeConfigurations(id, filteredFormData, initialFormData, true);
 
-      // Save commission configurations for any tab (general or draw-specific)
-      // When saving from general, pass full formData so draw_* commission keys are found
-      // Always save all commissions (general + all draws) regardless of active tab
-      await saveCommissionConfigurations(id, formData, initialFormData, 'general');
+      // Save commission configurations - pass actual drawId so the active draw's
+      // values take priority when multiple draws share a lotteryId
+      await saveCommissionConfigurations(id, formData, initialFormData, drawId);
 
       if (result.success) {
         // Show success message and navigate to betting pools list
