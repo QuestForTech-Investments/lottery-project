@@ -279,7 +279,7 @@ const BetTypeFieldGrid: React.FC<BetTypeFieldGridProps> = memo(({
                             }}
                             sx={{
                               '& .MuiOutlinedInput-root': {
-                                bgcolor: isCustom ? 'rgba(81, 203, 206, 0.08)' : 'white',
+                                bgcolor: 'white',
                               },
                               '& .MuiOutlinedInput-input': {
                                 py: 1,

@@ -212,7 +212,6 @@ const EditBettingPoolMUI: React.FC = () => {
                   bettingPoolId={id ? parseInt(id) : undefined}
                   draws={prizesDraws as unknown as Parameters<typeof PrizesTab>[0]['draws']}
                   loadingDraws={loadingDraws}
-                  loadDrawSpecificValues={loadDrawSpecificValues as unknown as Parameters<typeof PrizesTab>[0]['loadDrawSpecificValues']}
                   onSavePrizeConfig={savePrizeConfigForSingleDraw as unknown as Parameters<typeof PrizesTab>[0]['onSavePrizeConfig']}
                 />
               </>

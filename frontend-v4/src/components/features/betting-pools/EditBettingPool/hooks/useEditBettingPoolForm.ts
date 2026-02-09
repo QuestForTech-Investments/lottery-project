@@ -629,6 +629,33 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
         });
       });
 
+      // 🆕 Load ALL draw-specific prize values in ONE request (like commissions)
+      // Uses /draws/prize-config/all endpoint - single DB query instead of 69 individual calls
+      try {
+        const allDrawConfigsResponse = await fetch(
+          `${API_BASE}/betting-pools/${bettingPoolId}/draws/prize-config/all`,
+          {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+
+        if (allDrawConfigsResponse.ok) {
+          const allDrawConfigs = await allDrawConfigsResponse.json();
+          if (Array.isArray(allDrawConfigs)) {
+            (allDrawConfigs as Array<{ drawId: number; fieldCode: string; customValue: number; prizeTypeId: number }>).forEach(config => {
+              const betTypeCode = prizeTypeIdToCodeRef.current[config.prizeTypeId];
+              if (!betTypeCode) return;
+              prizeFormData[`draw_${config.drawId}_${betTypeCode}_${config.fieldCode}`] = config.customValue;
+            });
+          }
+        }
+      } catch (err) {
+        console.error('[ERROR] Error loading all draw prize configs:', err);
+      }
+
       // 🆕 Also load commission values from prizes-commissions endpoint
       const commissionFormData = await loadCommissionValues(bettingPoolId, drawsList);
 

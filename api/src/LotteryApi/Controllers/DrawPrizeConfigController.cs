@@ -530,6 +530,58 @@ public class DrawPrizeConfigController : ControllerBase
     }
 
     /// <summary>
+    /// ⚡ OPTIMIZED: Get ALL draw-specific prize configs for a betting pool in one query
+    /// Returns only actual overrides (not resolved/inherited values)
+    /// Used by frontend to pre-load all draw prize values at form init
+    /// </summary>
+    [HttpGet("{bettingPoolId}/draws/prize-config/all")]
+    [ProducesResponseType(typeof(List<DrawPrizeConfigDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<List<DrawPrizeConfigDto>>> GetAllDrawPrizeConfigs(int bettingPoolId)
+    {
+        try
+        {
+            var bettingPoolExists = await _context.BettingPools
+                .AnyAsync(bp => bp.BettingPoolId == bettingPoolId);
+
+            if (!bettingPoolExists)
+            {
+                return NotFound(new { message = $"Banca con ID {bettingPoolId} no encontrada" });
+            }
+
+            var configs = await _context.DrawPrizeConfigs
+                .Where(dpc => dpc.BettingPoolId == bettingPoolId)
+                .Include(dpc => dpc.PrizeType)
+                .Include(dpc => dpc.Draw)
+                .Select(dpc => new DrawPrizeConfigDto
+                {
+                    ConfigId = dpc.ConfigId,
+                    BettingPoolId = dpc.BettingPoolId,
+                    DrawId = dpc.DrawId,
+                    DrawName = dpc.Draw != null ? dpc.Draw.DrawName : "",
+                    PrizeTypeId = dpc.PrizeTypeId,
+                    FieldCode = dpc.PrizeType != null ? dpc.PrizeType.FieldCode : "",
+                    CustomValue = dpc.CustomValue,
+                    Source = "draw_specific",
+                    CreatedAt = dpc.CreatedAt,
+                    UpdatedAt = dpc.UpdatedAt
+                })
+                .ToListAsync();
+
+            _logger.LogInformation(
+                "Retrieved {Count} draw prize configs for betting pool {BettingPoolId} (all draws)",
+                configs.Count, bettingPoolId);
+
+            return Ok(configs);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving all draw prize configs for betting pool {BettingPoolId}", bettingPoolId);
+            return StatusCode(500, new { message = "Error interno al obtener configuraciones de premios por sorteo" });
+        }
+    }
+
+    /// <summary>
     /// Eliminar configuración de premios de un sorteo específico de una banca
     /// </summary>
     /// <param name="bettingPoolId">ID de la banca</param>
