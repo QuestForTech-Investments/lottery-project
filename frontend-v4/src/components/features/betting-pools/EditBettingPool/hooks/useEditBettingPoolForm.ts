@@ -1249,35 +1249,15 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
       // Filter formData to only include fields for this specific draw
       const filteredFormData: Record<string, string | number | boolean | number[] | AutoExpense[] | null> = {};
 
-      // Always save ALL prize/commission fields regardless of which tab is active
-      // Client wants: user can navigate multiple tabs, modify values, and save everything at once
+      // Save ALL prize/commission fields as they currently appear in formData
+      // Propagation from General to draws happens at UI level (BetTypeFieldGrid.buildDrawPropagation)
+      // When user types in General, all draw_* keys are already updated in formData
+      // ACTUALIZAR just saves formData as-is
       Object.keys(formData).forEach(key => {
         if (key.startsWith('general_') || key.startsWith('draw_')) {
           filteredFormData[key] = formData[key as keyof FormData];
         }
       });
-
-      // 🔥 PROPAGATE: General prize values must overwrite ALL draw-specific values
-      // General is a tool to set values quickly across all draws.
-      // When saving, General values must overwrite any existing draw-specific overrides.
-      const generalPrizeValues: Record<string, unknown> = {};
-      Object.keys(filteredFormData).forEach(key => {
-        // Collect general prize values (skip COMMISSION keys - those are handled separately)
-        if (key.startsWith('general_') && !key.includes('COMMISSION')) {
-          const fieldSuffix = key.substring('general_'.length); // e.g., "DIRECTO_DIRECTO_PRIMER_PAGO"
-          generalPrizeValues[fieldSuffix] = filteredFormData[key];
-        }
-      });
-
-      // Propagate general values to ALL draws
-      if (Object.keys(generalPrizeValues).length > 0 && draws.length > 0) {
-        for (const draw of draws) {
-          for (const [fieldSuffix, value] of Object.entries(generalPrizeValues)) {
-            const drawKey = `draw_${draw.drawId}_${fieldSuffix}`;
-            filteredFormData[drawKey] = value as string | number | boolean | number[] | AutoExpense[] | null;
-          }
-        }
-      }
 
       // Call the existing savePrizeConfigurations function
       // Pass allowDrawSpecific=true to save draw-specific fields
