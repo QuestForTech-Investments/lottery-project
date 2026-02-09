@@ -249,8 +249,6 @@ const BetTypeFieldGrid: React.FC<BetTypeFieldGridProps> = memo(({
                       const maxValue = isPrizeField ? (field as PrizeField).maxMultiplier : (fieldType === 'prize' ? 10000 : 100);
                       const showSuffix = fieldType !== 'prize';
 
-                      const isCustom = hasCustomValue(betType.betTypeCode, fieldCode);
-
                       return (
                         <Box key={fieldId}>
                           <Typography

@@ -164,12 +164,9 @@ const PrizesTab: React.FC<PrizesTabProps> = ({
       const drawId = parseInt(activeDraw.split('_')[1]);
       loadDrawSpecificValues(drawId, bettingPoolId)
         .then(drawValues => {
-          if (Object.keys(drawValues).length > 0) {
-            Object.keys(drawValues).forEach(key => {
-              handleChange({
-                target: { name: key, value: drawValues[key] }
-              });
-            });
+          if (Object.keys(drawValues).length > 0 && onBatchChange) {
+            // Use batch update for instant UI update (no flash)
+            onBatchChange(drawValues);
           }
         })
         .catch(error => {
