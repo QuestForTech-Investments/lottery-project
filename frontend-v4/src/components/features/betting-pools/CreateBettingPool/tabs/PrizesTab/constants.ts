@@ -58,7 +58,7 @@ export const BET_TYPE_ORDER = [
   'PANAMA',
 ];
 
-// Basic bet types (Dominicans, Nicaragua, Anguila, King Lottery)
+// Basic bet types (Dominicans, Anguila, King Lottery)
 const BASIC_BET_TYPES = ['DIRECTO', 'PALÉ', 'TRIPLETA'];
 
 // USA bet types - includes all Cash3, Play4, Pick5, Bolita, Singulación variants
@@ -73,6 +73,15 @@ const USA_BET_TYPES = [
   'PICK2', 'PICK TWO', 'PICK TWO FRONT', 'PICK TWO BACK', 'PICK TWO MIDDLE'
 ];
 
+// Pick Two only (2-digit draws)
+const PICK_TWO_BET_TYPES = ['PICK TWO'];
+
+// Cash3 6x1 draws (Cash3 variants only)
+const CASH3_6X1_BET_TYPES = [
+  'CASH3_STRAIGHT', 'CASH3_BOX', 'CASH3_FRONT_BOX', 'CASH3_BACK_STRAIGHT',
+  'CASH3 FRONT STRAIGHT', 'CASH3 BACK BOX',
+];
+
 // Super Pale bet types
 const SUPER_PALE_BET_TYPES = ['SUPER_PALE'];
 
@@ -83,11 +92,9 @@ const PANAMA_BET_TYPES = ['DIRECTO', 'PALÉ', 'TRIPLETA', 'PANAMA'];
 const DOMINICAN_DRAWS = [
   'NACIONAL', 'LA PRIMERA', 'LA PRIMERA 8PM', 'GANA MAS',
   'LA SUERTE', 'LA SUERTE 6:00pm', 'LOTEKA', 'LOTEDOM',
-  'LA CHICA', 'REAL', 'QUINIELA PALE',
+  'REAL', 'QUINIELA PALE',
   'L.E. PUERTO RICO 2PM', 'L.E. PUERTO RICO 10PM'
 ];
-
-const NICARAGUA_DRAWS = ['DIARIA 11AM', 'DIARIA 3PM', 'DIARIA 9PM'];
 
 const ANGUILA_DRAWS = ['Anguila 10am', 'Anguila 1pm', 'Anguila 6PM', 'Anguila 9pm'];
 
@@ -95,7 +102,7 @@ const KING_LOTTERY_DRAWS = ['King Lottery AM', 'King Lottery PM'];
 
 const USA_DRAWS = [
   'NEW YORK DAY', 'NEW YORK NIGHT',
-  'FLORIDA AM', 'FLORIDA PM', 'FL PICK2 AM', 'FL PICK2 PM',
+  'FLORIDA AM', 'FLORIDA PM',
   'GEORGIA-MID AM', 'GEORGIA EVENING', 'GEORGIA NIGHT',
   'NEW JERSEY AM', 'NEW JERSEY PM',
   'CONNECTICUT AM', 'CONNECTICUT PM',
@@ -110,7 +117,18 @@ const USA_DRAWS = [
   'MASS AM', 'MASS PM',
   'NORTH CAROLINA AM', 'NORTH CAROLINA PM',
   'DELAWARE AM', 'DELAWARE PM',
-  'NY AM 6x1', 'NY PM 6x1', 'FL AM 6X1', 'FL PM 6X1'
+];
+
+// Pick Two only draws (2-digit)
+const PICK_TWO_DRAWS = [
+  'FL PICK2 AM', 'FL PICK2 PM',
+  'LA CHICA',
+  'DIARIA 11AM', 'DIARIA 3PM', 'DIARIA 9PM',
+];
+
+// Cash3 6x1 draws
+const CASH3_6X1_DRAWS = [
+  'NY AM 6x1', 'NY PM 6x1', 'FL AM 6X1', 'FL PM 6X1',
 ];
 
 const SUPER_PALE_DRAWS = [
@@ -129,10 +147,11 @@ export const getAllowedBetTypesForDraw = (drawName: string): string[] | null => 
   }
 
   if (DOMINICAN_DRAWS.includes(drawName)) return BASIC_BET_TYPES;
-  if (NICARAGUA_DRAWS.includes(drawName)) return BASIC_BET_TYPES;
   if (ANGUILA_DRAWS.includes(drawName)) return BASIC_BET_TYPES;
   if (KING_LOTTERY_DRAWS.includes(drawName)) return BASIC_BET_TYPES;
   if (USA_DRAWS.includes(drawName)) return USA_BET_TYPES;
+  if (PICK_TWO_DRAWS.includes(drawName)) return PICK_TWO_BET_TYPES;
+  if (CASH3_6X1_DRAWS.includes(drawName)) return CASH3_6X1_BET_TYPES;
   if (SUPER_PALE_DRAWS.includes(drawName)) return SUPER_PALE_BET_TYPES;
   if (PANAMA_DRAWS.includes(drawName)) return PANAMA_BET_TYPES;
 

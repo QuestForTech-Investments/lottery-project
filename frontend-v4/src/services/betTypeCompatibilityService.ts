@@ -46,6 +46,18 @@ export const BET_TYPE_CODES = {
     'PICK2'
   ],
 
+  // Pick Two only (2-digit draws like FL PICK2, LA CHICA, DIARIA)
+  PICK_TWO: ['PICK TWO'],
+
+  // Cash3 6x1 draws (Cash3 variants only)
+  CASH3_6X1: [
+    'CASH3 STRAIGHT', 'CASH3_STRAIGHT',
+    'CASH3 BOX', 'CASH3_BOX',
+    'CASH3 FRONT STRAIGHT', 'CASH3_FRONT_BOX',
+    'CASH3 BACK STRAIGHT', 'CASH3_BACK_STRAIGHT',
+    'CASH3 BACK BOX',
+  ],
+
   // Super Pale specific - Note: PALÉ has accent
   // API has both formats
   SUPER_PALE: ['SUPER PALÉ', 'SUPER_PALE'],
@@ -59,21 +71,19 @@ export const BET_TYPE_CODES = {
  * This determines which bet types are available for each draw
  */
 export const DRAW_CATEGORIES = {
-  // Dominican lotteries - only basic bet types
+  // Dominican lotteries - only basic bet types (Directo, Palé, Tripleta)
   DOMINICAN: [
     'LA PRIMERA', 'LA PRIMERA 8PM', 'GANA MAS', 'NACIONAL',
-    'QUINIELA PALE', 'REAL', 'LOTEKA', 'LOTEDOM', 'LA CHICA',
-    'DIARIA 11AM', 'DIARIA 3PM', 'DIARIA 9PM',
+    'QUINIELA PALE', 'REAL', 'LOTEKA', 'LOTEDOM',
     'King Lottery AM', 'King Lottery PM',
     'L.E. PUERTO RICO 2PM', 'L.E. PUERTO RICO 10PM',
     'LA SUERTE', 'LA SUERTE 6:00pm'
   ],
 
-  // USA lotteries - basic + USA bet types
+  // USA lotteries - basic + USA bet types (full set)
   USA: [
     'NEW YORK DAY', 'NEW YORK NIGHT',
     'FLORIDA AM', 'FLORIDA PM',
-    'FL PICK2 AM', 'FL PICK2 PM',
     'GEORGIA-MID AM', 'GEORGIA EVENING', 'GEORGIA NIGHT',
     'NEW JERSEY AM', 'NEW JERSEY PM',
     'CONNECTICUT AM', 'CONNECTICUT PM',
@@ -88,7 +98,18 @@ export const DRAW_CATEGORIES = {
     'MASS AM', 'MASS PM',
     'NORTH CAROLINA AM', 'NORTH CAROLINA PM',
     'DELAWARE AM', 'DELAWARE PM',
-    'NY AM 6x1', 'NY PM 6x1', 'FL AM 6X1', 'FL PM 6X1'
+  ],
+
+  // Pick Two only draws (2-digit draws)
+  PICK_TWO: [
+    'FL PICK2 AM', 'FL PICK2 PM',
+    'LA CHICA',
+    'DIARIA 11AM', 'DIARIA 3PM', 'DIARIA 9PM',
+  ],
+
+  // Cash3 6x1 draws (Cash3 variants only)
+  CASH3_6X1: [
+    'NY AM 6x1', 'NY PM 6x1', 'FL AM 6X1', 'FL PM 6X1',
   ],
 
   // Super Pale draws - only Super Pale bet type
@@ -108,7 +129,7 @@ export const DRAW_CATEGORIES = {
   ]
 } as const;
 
-type DrawCategory = 'DOMINICAN' | 'USA' | 'SUPER_PALE' | 'PANAMA' | 'ANGUILA' | 'GENERAL';
+type DrawCategory = 'DOMINICAN' | 'USA' | 'SUPER_PALE' | 'PANAMA' | 'ANGUILA' | 'PICK_TWO' | 'CASH3_6X1' | 'GENERAL';
 
 /**
  * Get the category for a given draw name
@@ -145,6 +166,12 @@ export function getAllowedBetTypeCodes(drawName: string | null | undefined): str
 
     case 'USA':
       return [...BET_TYPE_CODES.BASIC, ...BET_TYPE_CODES.USA];
+
+    case 'PICK_TWO':
+      return [...BET_TYPE_CODES.PICK_TWO];
+
+    case 'CASH3_6X1':
+      return [...BET_TYPE_CODES.CASH3_6X1];
 
     case 'SUPER_PALE':
       return [...BET_TYPE_CODES.SUPER_PALE];
