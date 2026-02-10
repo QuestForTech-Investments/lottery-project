@@ -440,6 +440,7 @@ public class SalesReportsController : ControllerBase
                     {
                         DrawId = g.Key,
                         DrawName = draw?.Lottery?.LotteryName ?? "Unknown",
+                        Abbreviation = draw?.Abbreviation,
                         LotteryName = draw?.Lottery?.LotteryName,
                         DrawTime = draw?.DrawTime ?? TimeSpan.Zero,
                         DrawColor = draw?.Lottery?.Colour,

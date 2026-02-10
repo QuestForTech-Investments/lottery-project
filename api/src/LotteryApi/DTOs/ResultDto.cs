@@ -8,6 +8,7 @@ public class ResultDto
     public int ResultId { get; set; }
     public int DrawId { get; set; }
     public string DrawName { get; set; } = string.Empty;
+    public string? Abbreviation { get; set; }
     public string WinningNumber { get; set; } = string.Empty;
     public string? AdditionalNumber { get; set; }
     public int? Position { get; set; }

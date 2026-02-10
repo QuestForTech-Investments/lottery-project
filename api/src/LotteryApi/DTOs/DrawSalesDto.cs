@@ -8,6 +8,7 @@ public class DrawSalesDto
 {
     public int DrawId { get; set; }
     public string DrawName { get; set; } = string.Empty;
+    public string? Abbreviation { get; set; }
     public string? LotteryName { get; set; }
     public TimeSpan DrawTime { get; set; }
     public string? DrawColor { get; set; }
