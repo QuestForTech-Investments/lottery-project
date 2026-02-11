@@ -66,7 +66,9 @@ const DrawsGrid: React.FC<DrawsGridProps> = memo(({
             ? selectedDraws.some(s => s.id === draw.id)
             : selectedDraw?.id === draw.id;
           const isClosed = !!draw.closingTime && draw.disabled;
-          const isDisabled = !selectedPool || draw.disabled || loadingAllowedDraws;
+          const noPool = !selectedPool;
+          const isDrawDisabled = draw.disabled || loadingAllowedDraws;
+          const isClickable = !noPool && !isDrawDisabled;
 
           const c = draw.color;
           const isTooLight = !c || (c.length >= 7 && parseInt(c.slice(1, 3), 16) > 240 && parseInt(c.slice(3, 5), 16) > 240 && parseInt(c.slice(5, 7), 16) > 240);
@@ -75,17 +77,17 @@ const DrawsGrid: React.FC<DrawsGridProps> = memo(({
           return (
             <Box
               key={draw.id}
-              onClick={() => !isDisabled && onDrawClick(draw)}
+              onClick={() => isClickable && onDrawClick(draw)}
               sx={{
                 px: 1.5,
                 py: 0.75,
-                bgcolor: isSelected ? '#fff' : isDisabled ? '#555' : drawColor,
-                color: isSelected ? '#333' : isDisabled ? 'rgba(255,255,255,0.85)' : 'white',
+                bgcolor: isSelected ? '#fff' : isDrawDisabled ? '#555' : drawColor,
+                color: isSelected ? '#333' : isDrawDisabled ? 'rgba(255,255,255,0.85)' : 'white',
                 fontSize: '12px',
                 fontWeight: 'bold',
                 borderRadius: '4px',
-                cursor: isDisabled ? 'not-allowed' : 'pointer',
-                opacity: 1,
+                cursor: isClickable ? 'pointer' : 'default',
+                opacity: noPool && !isDrawDisabled ? 0.7 : 1,
                 textTransform: 'uppercase',
                 whiteSpace: 'nowrap',
                 minHeight: '36px',
@@ -96,10 +98,10 @@ const DrawsGrid: React.FC<DrawsGridProps> = memo(({
                 border: isSelected ? '4px solid #000' : '1px solid transparent',
                 boxShadow: isSelected ? '0 3px 8px rgba(0,0,0,0.35)' : 'none',
                 transition: 'all 0.15s ease',
-                pointerEvents: isDisabled ? 'none' : 'auto',
+                pointerEvents: isClickable ? 'auto' : 'none',
                 '&:hover': {
-                  opacity: isDisabled ? 1 : 0.85,
-                  transform: isDisabled ? 'none' : 'translateY(-1px)',
+                  opacity: isClickable ? 0.85 : undefined,
+                  transform: isClickable ? 'translateY(-1px)' : 'none',
                 },
               }}
             >
