@@ -515,25 +515,29 @@ public class TicketsController : ControllerBase
                 // Validate draw is still open for betting (only for today's tickets)
                 if (ticketDate == todayBusiness)
                 {
-                    // Get closing time from weekly schedule or fallback to DrawTime
+                    // Only validate closing if draw has a schedule for today
                     var todaySchedule = draw.WeeklySchedules?
                         .FirstOrDefault(ws => ws.DayOfWeek == currentDayOfWeek && ws.IsActive);
-                    var closingTime = todaySchedule?.EndTime ?? draw.DrawTime;
 
-                    // Subtract AnticipatedClosingMinutes if configured for this pool
-                    bettingPoolDraws.TryGetValue(draw.DrawId, out var anticipatedMinutes);
-                    if (anticipatedMinutes.HasValue && anticipatedMinutes.Value > 0)
+                    if (todaySchedule != null)
                     {
-                        closingTime = closingTime.Subtract(TimeSpan.FromMinutes(anticipatedMinutes.Value));
-                    }
+                        var closingTime = todaySchedule.EndTime;
 
-                    if (currentTime >= closingTime)
-                    {
-                        var closingFormatted = DateTime.Today.Add(closingTime).ToString("hh:mm tt");
-                        return UnprocessableEntity(new
+                        // Subtract AnticipatedClosingMinutes if configured for this pool
+                        bettingPoolDraws.TryGetValue(draw.DrawId, out var anticipatedMinutes);
+                        if (anticipatedMinutes.HasValue && anticipatedMinutes.Value > 0)
                         {
-                            message = $"El sorteo {draw.DrawName} ya cerró las ventas a las {closingFormatted}"
-                        });
+                            closingTime = closingTime.Subtract(TimeSpan.FromMinutes(anticipatedMinutes.Value));
+                        }
+
+                        if (currentTime >= closingTime)
+                        {
+                            var closingFormatted = DateTime.Today.Add(closingTime).ToString("hh:mm tt");
+                            return UnprocessableEntity(new
+                            {
+                                message = $"El sorteo {draw.DrawName} ya cerró las ventas a las {closingFormatted}"
+                            });
+                        }
                     }
                 }
             }

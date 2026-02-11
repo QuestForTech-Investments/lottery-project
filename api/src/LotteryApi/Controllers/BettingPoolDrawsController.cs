@@ -144,10 +144,8 @@ public class BettingPoolDrawsController : ControllerBase
                 DrawName = bpd.Draw?.DrawName,
                 Abbreviation = bpd.Draw?.Abbreviation,
                 DrawTime = bpd.Draw?.WeeklySchedules?
-                    .Where(ws => ws.DayOfWeek == currentDayOfWeek &&
-                                 ws.StartTime <= currentTime &&
-                                 ws.EndTime >= currentTime)
-                    .FirstOrDefault()?.EndTime ?? bpd.Draw?.DrawTime,
+                    .Where(ws => ws.DayOfWeek == currentDayOfWeek && ws.IsActive)
+                    .FirstOrDefault()?.EndTime,
                 LotteryId = bpd.Draw?.LotteryId,
                 LotteryName = bpd.Draw?.Lottery?.LotteryName,
                 CountryName = bpd.Draw?.Lottery?.Country?.CountryName,
