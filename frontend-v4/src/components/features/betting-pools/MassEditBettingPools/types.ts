@@ -71,6 +71,8 @@ export interface FormData {
   footer2: string;
   footer3: string;
   footer4: string;
+  footer5: string;
+  footer6: string;
   generalCommission?: string;
   commissionType?: string;
   activeDraws?: number[];

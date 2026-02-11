@@ -809,7 +809,9 @@ public class BettingPoolsController : ControllerBase
                     FooterLine1 = bettingPool.Footer.FooterLine1,
                     FooterLine2 = bettingPool.Footer.FooterLine2,
                     FooterLine3 = bettingPool.Footer.FooterLine3,
-                    FooterLine4 = bettingPool.Footer.FooterLine4
+                    FooterLine4 = bettingPool.Footer.FooterLine4,
+                    FooterLine5 = bettingPool.Footer.FooterLine5,
+                    FooterLine6 = bettingPool.Footer.FooterLine6
                 } : null
             };
 
@@ -939,6 +941,8 @@ public class BettingPoolsController : ControllerBase
                 bettingPool.Footer.FooterLine2 = dto.Footer.FooterLine2;
                 bettingPool.Footer.FooterLine3 = dto.Footer.FooterLine3;
                 bettingPool.Footer.FooterLine4 = dto.Footer.FooterLine4;
+                bettingPool.Footer.FooterLine5 = dto.Footer.FooterLine5;
+                bettingPool.Footer.FooterLine6 = dto.Footer.FooterLine6;
                 bettingPool.Footer.UpdatedAt = DateTime.UtcNow;
             }
 

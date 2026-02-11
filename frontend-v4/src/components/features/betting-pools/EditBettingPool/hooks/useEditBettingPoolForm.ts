@@ -1156,6 +1156,8 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
           footerLine2: formData.footerText2 || '',
           footerLine3: formData.footerText3 || '',
           footerLine4: formData.footerText4 || '',
+          footerLine5: formData.footerText5 || '',
+          footerLine6: formData.footerText6 || '',
           showBranchInfo: formData.showBranchInfo !== undefined ? formData.showBranchInfo : true,
           showDateTime: formData.showDateTime !== undefined ? formData.showDateTime : true
         }
@@ -1514,6 +1516,8 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
               updates.footerText2 = configData.footer.footerLine2 ?? '';
               updates.footerText3 = configData.footer.footerLine3 ?? '';
               updates.footerText4 = configData.footer.footerLine4 ?? '';
+              updates.footerText5 = configData.footer.footerLine5 ?? '';
+              updates.footerText6 = configData.footer.footerLine6 ?? '';
               updates.showBranchInfo = configData.footer.showBranchInfo ?? true;
               updates.showDateTime = configData.footer.showDateTime ?? true;
             }

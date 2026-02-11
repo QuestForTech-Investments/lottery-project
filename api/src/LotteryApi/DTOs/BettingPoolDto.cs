@@ -473,6 +473,8 @@ public class BettingPoolFooterDto
     public string? FooterLine2 { get; set; }
     public string? FooterLine3 { get; set; }
     public string? FooterLine4 { get; set; }
+    public string? FooterLine5 { get; set; }
+    public string? FooterLine6 { get; set; }
 }
 
 /// <summary>
@@ -485,6 +487,8 @@ public class UpdateBettingPoolFooterDto
     public string? FooterLine2 { get; set; }
     public string? FooterLine3 { get; set; }
     public string? FooterLine4 { get; set; }
+    public string? FooterLine5 { get; set; }
+    public string? FooterLine6 { get; set; }
 }
 
 // =============================================================================

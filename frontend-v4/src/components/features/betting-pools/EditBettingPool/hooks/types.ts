@@ -64,6 +64,8 @@ export interface FormData {
   footerText2: string;
   footerText3: string;
   footerText4: string;
+  footerText5: string;
+  footerText6: string;
   showBranchInfo: boolean;
   showDateTime: boolean;
   // Schedules
@@ -245,6 +247,8 @@ export interface ConfigResponse {
     footerLine2?: string;
     footerLine3?: string;
     footerLine4?: string;
+    footerLine5?: string;
+    footerLine6?: string;
     showBranchInfo?: boolean;
     showDateTime?: boolean;
   };

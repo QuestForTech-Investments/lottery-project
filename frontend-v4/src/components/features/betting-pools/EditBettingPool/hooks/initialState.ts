@@ -61,6 +61,8 @@ export const INITIAL_FORM_DATA: FormData = {
   footerText2: '',
   footerText3: '',
   footerText4: '',
+  footerText5: '',
+  footerText6: '',
   showBranchInfo: true,
   showDateTime: true,
 

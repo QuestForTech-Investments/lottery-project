@@ -75,6 +75,34 @@ const FootersTab: FC<FootersTabProps> = memo(({ formData, onInputChange }) => {
           helperText={`${(formData.footer4 || '').length}/30`}
         />
       </Box>
+
+      {/* Quinto pie de página */}
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 2 }}>
+        <Typography sx={{ minWidth: 200 }}>Quinto pie de página</Typography>
+        <TextField
+          value={formData.footer5}
+          onChange={(e) => onInputChange('footer5', e.target.value)}
+          size="small"
+          fullWidth
+          placeholder="Texto del quinto pie de página"
+          inputProps={{ maxLength: 30 }}
+          helperText={`${(formData.footer5 || '').length}/30`}
+        />
+      </Box>
+
+      {/* Sexto pie de página */}
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 2 }}>
+        <Typography sx={{ minWidth: 200 }}>Sexto pie de página</Typography>
+        <TextField
+          value={formData.footer6}
+          onChange={(e) => onInputChange('footer6', e.target.value)}
+          size="small"
+          fullWidth
+          placeholder="Texto del sexto pie de página"
+          inputProps={{ maxLength: 30 }}
+          helperText={`${(formData.footer6 || '').length}/30`}
+        />
+      </Box>
     </Box>
   );
 });

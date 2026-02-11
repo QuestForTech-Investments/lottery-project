@@ -29,6 +29,8 @@ export const INITIAL_FORM_DATA: FormData = {
   footer2: '',
   footer3: '',
   footer4: '',
+  footer5: '',
+  footer6: '',
 };
 
 export const FALL_TYPE_OPTIONS = [

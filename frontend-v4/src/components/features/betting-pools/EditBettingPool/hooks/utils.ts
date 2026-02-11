@@ -88,6 +88,8 @@ export const mapConfigToFormData = (configResponse: ConfigResponse): Partial<For
     footerText2: footer.footerLine2 || '',
     footerText3: footer.footerLine3 || '',
     footerText4: footer.footerLine4 || '',
+    footerText5: footer.footerLine5 || '',
+    footerText6: footer.footerLine6 || '',
     showBranchInfo: footer.showBranchInfo !== undefined ? footer.showBranchInfo : true,
     showDateTime: footer.showDateTime !== undefined ? footer.showDateTime : true,
 

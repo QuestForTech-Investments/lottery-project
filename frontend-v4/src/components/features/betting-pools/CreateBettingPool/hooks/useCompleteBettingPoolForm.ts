@@ -58,6 +58,8 @@ interface FormData {
   footerText2: string;
   footerText3: string;
   footerText4: string;
+  footerText5: string;
+  footerText6: string;
   showBranchInfo: boolean;
   showDateTime: boolean;
   domingoInicio: string;
@@ -212,6 +214,8 @@ const getInitialFormData = (branchCode = ''): FormData => ({
   footerText2: '',
   footerText3: '',
   footerText4: '',
+  footerText5: '',
+  footerText6: '',
   showBranchInfo: true,
   showDateTime: true,
 
@@ -682,6 +686,8 @@ const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
           updates.footerText2 = configData.footer.footerLine2 || '';
           updates.footerText3 = configData.footer.footerLine3 || '';
           updates.footerText4 = configData.footer.footerLine4 || '';
+          updates.footerText5 = configData.footer.footerLine5 || '';
+          updates.footerText6 = configData.footer.footerLine6 || '';
           updates.showBranchInfo = configData.footer.showBranchInfo !== undefined ? configData.footer.showBranchInfo : true;
           updates.showDateTime = configData.footer.showDateTime !== undefined ? configData.footer.showDateTime : true;
         }

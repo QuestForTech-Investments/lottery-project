@@ -15,6 +15,8 @@ interface FootersFormData {
   footerText2: string;
   footerText3: string;
   footerText4: string;
+  footerText5: string;
+  footerText6: string;
   showBranchInfo: boolean;
   showDateTime: boolean;
   [key: string]: string | boolean;
@@ -108,6 +110,30 @@ const FootersTab: React.FC<FootersTabProps> = ({ formData, handleChange }) => {
           />
         </Grid>
 
+        <Grid item xs={12} md={6}>
+          <TextField
+            fullWidth
+            label="Texto de Pie 5"
+            name="footerText5"
+            value={formData.footerText5}
+            onChange={handleChange}
+            inputProps={{ maxLength: 30 }}
+            helperText={`${formData.footerText5.length}/30 caracteres`}
+          />
+        </Grid>
+
+        <Grid item xs={12} md={6}>
+          <TextField
+            fullWidth
+            label="Texto de Pie 6"
+            name="footerText6"
+            value={formData.footerText6}
+            onChange={handleChange}
+            inputProps={{ maxLength: 30 }}
+            helperText={`${formData.footerText6.length}/30 caracteres`}
+          />
+        </Grid>
+
         <Grid item xs={12}>
           <Divider sx={{ my: 2 }} />
           <Typography variant="subtitle1" gutterBottom>
@@ -156,7 +182,7 @@ const arePropsEqual = (prevProps: FootersTabProps, nextProps: FootersTabProps): 
   }
 
   // Check only the form fields this tab uses
-  const footerFields: (keyof FootersFormData)[] = ['autoFooter', 'footerText1', 'footerText2', 'footerText3', 'footerText4', 'showBranchInfo', 'showDateTime'];
+  const footerFields: (keyof FootersFormData)[] = ['autoFooter', 'footerText1', 'footerText2', 'footerText3', 'footerText4', 'footerText5', 'footerText6', 'showBranchInfo', 'showDateTime'];
 
   for (const field of footerFields) {
     if (prevProps.formData[field] !== nextProps.formData[field]) {
