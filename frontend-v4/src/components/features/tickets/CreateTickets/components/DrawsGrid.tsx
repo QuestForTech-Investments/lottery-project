@@ -68,6 +68,8 @@ const DrawsGrid: React.FC<DrawsGridProps> = memo(({
           const isClosed = !!draw.closingTime && draw.disabled;
           const isDisabled = !selectedPool || draw.disabled || loadingAllowedDraws;
 
+          const drawColor = draw.color && draw.color !== '#FFFFFF' ? draw.color : '#607D8B';
+
           return (
             <Box
               key={draw.id}
@@ -75,7 +77,7 @@ const DrawsGrid: React.FC<DrawsGridProps> = memo(({
               sx={{
                 px: 1.5,
                 py: 0.75,
-                bgcolor: isSelected ? '#fff' : isDisabled ? '#555' : draw.color,
+                bgcolor: isSelected ? '#fff' : isDisabled ? '#555' : drawColor,
                 color: isSelected ? '#333' : isDisabled ? 'rgba(255,255,255,0.85)' : 'white',
                 fontSize: '12px',
                 fontWeight: 'bold',
