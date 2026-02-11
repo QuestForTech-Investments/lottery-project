@@ -83,8 +83,7 @@ public class DrawsController : ControllerBase
 
             var query = _context.Draws
                 .Where(d => d.IsActive)
-                .OrderBy(d => d.LotteryId)
-                .ThenBy(d => d.DrawName)
+                .OrderBy(d => d.DrawName)
                 .AsQueryable();
 
             if (lotteryId.HasValue)

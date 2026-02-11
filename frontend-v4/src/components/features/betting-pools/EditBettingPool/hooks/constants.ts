@@ -67,8 +67,9 @@ export const DRAW_ORDER: readonly string[] = [
   'Anguila 9pm',
   'Anguila 10am',
   'LA CHICA',
+  'LA PRIMERA 7PM',
   'LA PRIMERA 8PM',
   'PANAMA MIERCOLES',
   'PANAMA DOMINGO',
-  'LA SUERTE 6:00pm',
+  'LA SUERTE 6:00PM',
 ];

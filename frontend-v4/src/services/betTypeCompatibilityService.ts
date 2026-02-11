@@ -73,7 +73,7 @@ export const BET_TYPE_CODES = {
 export const DRAW_CATEGORIES = {
   // Dominican lotteries - only basic bet types (Directo, Palé, Tripleta)
   DOMINICAN: [
-    'LA PRIMERA', 'LA PRIMERA 8PM', 'GANA MAS', 'NACIONAL',
+    'LA PRIMERA', 'LA PRIMERA 7PM', 'LA PRIMERA 8PM', 'GANA MAS', 'NACIONAL',
     'QUINIELA PALE', 'REAL', 'LOTEKA', 'LOTEDOM',
     'King Lottery AM', 'King Lottery PM',
     'L.E. PUERTO RICO 2PM', 'L.E. PUERTO RICO 10PM',

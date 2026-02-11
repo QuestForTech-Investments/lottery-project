@@ -23,7 +23,7 @@ export const DRAW_ORDER = [
   'NY AM 6x1', 'NY PM 6x1', 'FL AM 6X1', 'FL PM 6X1',
   'King Lottery AM', 'King Lottery PM', 'L.E. PUERTO RICO 2PM', 'L.E. PUERTO RICO 10PM',
   'DELAWARE AM', 'DELAWARE PM', 'Anguila 1pm', 'Anguila 6PM', 'Anguila 9pm', 'Anguila 10am',
-  'LA CHICA', 'LA PRIMERA 8PM', 'PANAMA MIERCOLES', 'PANAMA DOMINGO', 'LA SUERTE 6:00pm'
+  'LA CHICA', 'LA PRIMERA 7PM', 'LA PRIMERA 8PM', 'PANAMA MIERCOLES', 'PANAMA DOMINGO', 'LA SUERTE 6:00PM'
 ];
 
 /**
@@ -90,7 +90,7 @@ const PANAMA_BET_TYPES = ['DIRECTO', 'PALÉ', 'TRIPLETA', 'PANAMA'];
 
 // Draw categories
 const DOMINICAN_DRAWS = [
-  'NACIONAL', 'LA PRIMERA', 'LA PRIMERA 8PM', 'GANA MAS',
+  'NACIONAL', 'LA PRIMERA', 'LA PRIMERA 7PM', 'LA PRIMERA 8PM', 'GANA MAS',
   'LA SUERTE', 'LA SUERTE 6:00pm', 'LOTEKA', 'LOTEDOM',
   'REAL', 'QUINIELA PALE',
   'L.E. PUERTO RICO 2PM', 'L.E. PUERTO RICO 10PM'
@@ -146,14 +146,17 @@ export const getAllowedBetTypesForDraw = (drawName: string): string[] | null => 
     return null;
   }
 
-  if (DOMINICAN_DRAWS.includes(drawName)) return BASIC_BET_TYPES;
-  if (ANGUILA_DRAWS.includes(drawName)) return BASIC_BET_TYPES;
-  if (KING_LOTTERY_DRAWS.includes(drawName)) return BASIC_BET_TYPES;
-  if (USA_DRAWS.includes(drawName)) return USA_BET_TYPES;
-  if (PICK_TWO_DRAWS.includes(drawName)) return PICK_TWO_BET_TYPES;
-  if (CASH3_6X1_DRAWS.includes(drawName)) return CASH3_6X1_BET_TYPES;
-  if (SUPER_PALE_DRAWS.includes(drawName)) return SUPER_PALE_BET_TYPES;
-  if (PANAMA_DRAWS.includes(drawName)) return PANAMA_BET_TYPES;
+  const name = drawName.toUpperCase().trim();
+  const match = (list: readonly string[]) => list.some(d => d.toUpperCase() === name);
+
+  if (match(DOMINICAN_DRAWS)) return BASIC_BET_TYPES;
+  if (match(ANGUILA_DRAWS)) return BASIC_BET_TYPES;
+  if (match(KING_LOTTERY_DRAWS)) return BASIC_BET_TYPES;
+  if (match(USA_DRAWS)) return USA_BET_TYPES;
+  if (match(PICK_TWO_DRAWS)) return PICK_TWO_BET_TYPES;
+  if (match(CASH3_6X1_DRAWS)) return CASH3_6X1_BET_TYPES;
+  if (match(SUPER_PALE_DRAWS)) return SUPER_PALE_BET_TYPES;
+  if (match(PANAMA_DRAWS)) return PANAMA_BET_TYPES;
 
   return null;
 };
