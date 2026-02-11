@@ -1077,6 +1077,40 @@ public class TicketsController : ControllerBase
     }
 
     /// <summary>
+    /// GET /api/tickets/by-barcode/{barcode}
+    /// Search ticket by barcode
+    /// </summary>
+    /// <param name="barcode">Ticket barcode</param>
+    /// <returns>Ticket detail with lines</returns>
+    [HttpGet("by-barcode/{barcode}")]
+    public async Task<ActionResult<TicketDetailDto>> GetTicketByBarcode(string barcode)
+    {
+        try
+        {
+            _logger.LogInformation("Searching ticket by barcode {Barcode}", barcode);
+
+            var ticketId = await _context.Tickets
+                .AsNoTracking()
+                .Where(t => t.Barcode == barcode)
+                .Select(t => (long?)t.TicketId)
+                .FirstOrDefaultAsync();
+
+            if (ticketId == null)
+            {
+                return NotFound(new { message = "Ticket no encontrado con ese código de barras" });
+            }
+
+            var ticket = await GetTicketById(ticketId.Value);
+            return Ok(ticket);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error searching ticket by barcode {Barcode}", barcode);
+            return StatusCode(500, new { message = "Error al buscar el ticket", error = ex.Message });
+        }
+    }
+
+    /// <summary>
     /// PATCH /api/tickets/{id}/cancel
     /// Cancel a ticket (within cancellation time window)
     /// </summary>
