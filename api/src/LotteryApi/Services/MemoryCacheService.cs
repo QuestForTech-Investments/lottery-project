@@ -178,7 +178,7 @@ public static class CacheKeys
 
     // Cache expiration times
     public static readonly TimeSpan LotteryExpiration = TimeSpan.FromHours(24); // Rarely changes
-    public static readonly TimeSpan DrawExpiration = TimeSpan.FromHours(1);     // Changes daily
+    public static readonly TimeSpan DrawExpiration = TimeSpan.FromMinutes(5);   // Short TTL for admin changes
     public static readonly TimeSpan ZoneExpiration = TimeSpan.FromHours(24);    // Rarely changes
     public static readonly TimeSpan PermissionExpiration = TimeSpan.FromHours(24); // Rarely changes
 }
