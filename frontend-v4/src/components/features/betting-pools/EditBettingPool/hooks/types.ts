@@ -59,6 +59,17 @@ export interface FormData {
   maxFutureDays: string;
   // Central logo
   useCentralLogo: boolean;
+  // Stats panel
+  showStatsPanel: boolean;
+  statCredit: boolean;
+  statSales: boolean;
+  statPercentage: boolean;
+  statPrize: boolean;
+  statNet: boolean;
+  statFinal: boolean;
+  statBalance: boolean;
+  statFall: boolean;
+  statAccumulatedFall: boolean;
   // Footers
   autoFooter: boolean;
   footerText1: string;
@@ -231,6 +242,8 @@ export interface ConfigResponse {
     maxFutureDays?: number;
     futureSalesMode?: string;
     useCentralLogo?: boolean;
+    showStatsPanel?: boolean;
+    statsPanelConfig?: string;
   };
   discountConfig?: {
     discountMode?: string;

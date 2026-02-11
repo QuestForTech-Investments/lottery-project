@@ -54,6 +54,16 @@ interface FormData {
   limitPreference: string | null;
   futureSalesMode: string;
   maxFutureDays: string;
+  showStatsPanel: boolean;
+  statCredit: boolean;
+  statSales: boolean;
+  statPercentage: boolean;
+  statPrize: boolean;
+  statNet: boolean;
+  statFinal: boolean;
+  statBalance: boolean;
+  statFall: boolean;
+  statAccumulatedFall: boolean;
   autoFooter: boolean;
   footerText1: string;
   footerText2: string;
@@ -209,6 +219,18 @@ const getInitialFormData = (branchCode = ''): FormData => ({
   limitPreference: null,
   futureSalesMode: 'OFF',
   maxFutureDays: '7',
+
+  // Stats panel
+  showStatsPanel: true,
+  statCredit: true,
+  statSales: true,
+  statPercentage: true,
+  statPrize: true,
+  statNet: true,
+  statFinal: true,
+  statBalance: true,
+  statFall: true,
+  statAccumulatedFall: true,
 
   // Pies de página
   autoFooter: false,
@@ -660,6 +682,23 @@ const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
             updates.maxFutureDays = String(configData.config.maxFutureDays ?? 7);
             updates.creditLimit = String(configData.config.creditLimit ?? '');
             updates.useCentralLogo = configData.config.useCentralLogo || false;
+
+            // Stats panel
+            updates.showStatsPanel = configData.config.showStatsPanel !== undefined ? configData.config.showStatsPanel : true;
+            if (configData.config.statsPanelConfig) {
+              try {
+                const parsed = JSON.parse(configData.config.statsPanelConfig) as Record<string, boolean>;
+                updates.statCredit = parsed.credit !== undefined ? parsed.credit : true;
+                updates.statSales = parsed.sales !== undefined ? parsed.sales : true;
+                updates.statPercentage = parsed.percentage !== undefined ? parsed.percentage : true;
+                updates.statPrize = parsed.prize !== undefined ? parsed.prize : true;
+                updates.statNet = parsed.net !== undefined ? parsed.net : true;
+                updates.statFinal = parsed.final !== undefined ? parsed.final : true;
+                updates.statBalance = parsed.balance !== undefined ? parsed.balance : true;
+                updates.statFall = parsed.fall !== undefined ? parsed.fall : true;
+                updates.statAccumulatedFall = parsed.accumulatedFall !== undefined ? parsed.accumulatedFall : true;
+              } catch { /* keep defaults */ }
+            }
           }
 
           // Print config
@@ -1448,6 +1487,20 @@ const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
         futureSalesMode: formData.futureSalesMode || 'OFF',
         allowFutureSales: formData.futureSalesMode !== 'OFF',
         maxFutureDays: formData.maxFutureDays ? parseInt(formData.maxFutureDays) : 7,
+
+        // Stats panel configuration
+        showStatsPanel: formData.showStatsPanel !== undefined ? formData.showStatsPanel : true,
+        statsPanelConfig: JSON.stringify({
+          credit: formData.statCredit !== undefined ? formData.statCredit : true,
+          sales: formData.statSales !== undefined ? formData.statSales : true,
+          percentage: formData.statPercentage !== undefined ? formData.statPercentage : true,
+          prize: formData.statPrize !== undefined ? formData.statPrize : true,
+          net: formData.statNet !== undefined ? formData.statNet : true,
+          final: formData.statFinal !== undefined ? formData.statFinal : true,
+          balance: formData.statBalance !== undefined ? formData.statBalance : true,
+          fall: formData.statFall !== undefined ? formData.statFall : true,
+          accumulatedFall: formData.statAccumulatedFall !== undefined ? formData.statAccumulatedFall : true,
+        }),
 
         // Note: Other fields (prizes, schedules, etc.) would need additional API endpoints
         // For now, only essential fields are sent

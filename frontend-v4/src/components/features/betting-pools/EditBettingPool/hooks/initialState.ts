@@ -56,6 +56,18 @@ export const INITIAL_FORM_DATA: FormData = {
   // Central logo
   useCentralLogo: false,
 
+  // Stats panel
+  showStatsPanel: true,
+  statCredit: true,
+  statSales: true,
+  statPercentage: true,
+  statPrize: true,
+  statNet: true,
+  statFinal: true,
+  statBalance: true,
+  statFall: true,
+  statAccumulatedFall: true,
+
   // Footers
   autoFooter: false,
   footerText1: '',

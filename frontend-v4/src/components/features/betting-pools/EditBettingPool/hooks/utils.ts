@@ -97,8 +97,49 @@ export const mapConfigToFormData = (configResponse: ConfigResponse): Partial<For
     maxFutureDays: String(config.maxFutureDays ?? 7),
 
     // Central logo
-    useCentralLogo: config.useCentralLogo || false
+    useCentralLogo: config.useCentralLogo || false,
+
+    // Stats panel
+    showStatsPanel: config.showStatsPanel !== undefined ? config.showStatsPanel : true,
+    ...parseStatsPanelConfig(config.statsPanelConfig)
   };
+};
+
+/**
+ * Parse stats_panel_config JSON string into individual boolean form fields
+ * Returns all true if string is null/empty (default: show everything)
+ */
+const parseStatsPanelConfig = (jsonStr?: string): Record<string, boolean> => {
+  const defaults = {
+    statCredit: true,
+    statSales: true,
+    statPercentage: true,
+    statPrize: true,
+    statNet: true,
+    statFinal: true,
+    statBalance: true,
+    statFall: true,
+    statAccumulatedFall: true,
+  };
+
+  if (!jsonStr) return defaults;
+
+  try {
+    const parsed = JSON.parse(jsonStr) as Record<string, boolean>;
+    return {
+      statCredit: parsed.credit !== undefined ? parsed.credit : true,
+      statSales: parsed.sales !== undefined ? parsed.sales : true,
+      statPercentage: parsed.percentage !== undefined ? parsed.percentage : true,
+      statPrize: parsed.prize !== undefined ? parsed.prize : true,
+      statNet: parsed.net !== undefined ? parsed.net : true,
+      statFinal: parsed.final !== undefined ? parsed.final : true,
+      statBalance: parsed.balance !== undefined ? parsed.balance : true,
+      statFall: parsed.fall !== undefined ? parsed.fall : true,
+      statAccumulatedFall: parsed.accumulatedFall !== undefined ? parsed.accumulatedFall : true,
+    };
+  } catch {
+    return defaults;
+  }
 };
 
 /**

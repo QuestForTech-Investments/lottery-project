@@ -171,6 +171,8 @@ public class BettingPoolConfigDto
     public int MaxFutureDays { get; set; } = 7;
     public string FutureSalesMode { get; set; } = "OFF";
     public bool UseCentralLogo { get; set; } = false;
+    public bool ShowStatsPanel { get; set; } = true;
+    public string? StatsPanelConfig { get; set; }
 }
 
 /// <summary>

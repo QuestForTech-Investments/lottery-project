@@ -88,6 +88,8 @@ export interface BettingPoolConfigData {
     maxFutureDays?: number;
     futureSalesMode?: string;
     useCentralLogo?: boolean;
+    showStatsPanel?: boolean;
+    statsPanelConfig?: string;
   };
   discountConfig?: {
     discountMode?: string;

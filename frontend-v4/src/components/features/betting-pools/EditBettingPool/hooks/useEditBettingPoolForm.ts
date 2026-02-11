@@ -1131,7 +1131,19 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
           futureSalesMode: formData.futureSalesMode || 'OFF',
           allowFutureSales: formData.futureSalesMode !== 'OFF',
           maxFutureDays: formData.maxFutureDays ? parseInt(formData.maxFutureDays) : 7,
-          useCentralLogo: formData.useCentralLogo || false
+          useCentralLogo: formData.useCentralLogo || false,
+          showStatsPanel: formData.showStatsPanel !== undefined ? formData.showStatsPanel : true,
+          statsPanelConfig: JSON.stringify({
+            credit: formData.statCredit !== undefined ? formData.statCredit : true,
+            sales: formData.statSales !== undefined ? formData.statSales : true,
+            percentage: formData.statPercentage !== undefined ? formData.statPercentage : true,
+            prize: formData.statPrize !== undefined ? formData.statPrize : true,
+            net: formData.statNet !== undefined ? formData.statNet : true,
+            final: formData.statFinal !== undefined ? formData.statFinal : true,
+            balance: formData.statBalance !== undefined ? formData.statBalance : true,
+            fall: formData.statFall !== undefined ? formData.statFall : true,
+            accumulatedFall: formData.statAccumulatedFall !== undefined ? formData.statAccumulatedFall : true,
+          })
         },
         discountConfig: {
           discountMode: discountModeMap[formData.discountMode] || 'OFF',

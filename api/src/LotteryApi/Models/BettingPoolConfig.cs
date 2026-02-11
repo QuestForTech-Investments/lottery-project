@@ -83,6 +83,13 @@ public class BettingPoolConfig
     [Column("use_central_logo")]
     public bool UseCentralLogo { get; set; } = false;
 
+    [Column("show_stats_panel")]
+    public bool ShowStatsPanel { get; set; } = true;
+
+    [MaxLength(500)]
+    [Column("stats_panel_config")]
+    public string? StatsPanelConfig { get; set; }
+
     [Column("created_at")]
     public DateTime? CreatedAt { get; set; }
 

@@ -789,7 +789,9 @@ public class BettingPoolsController : ControllerBase
                     AllowFutureSales = bettingPool.Config.AllowFutureSales,
                     MaxFutureDays = bettingPool.Config.MaxFutureDays,
                     FutureSalesMode = bettingPool.Config.FutureSalesMode,
-                    UseCentralLogo = bettingPool.Config.UseCentralLogo
+                    UseCentralLogo = bettingPool.Config.UseCentralLogo,
+                    ShowStatsPanel = bettingPool.Config.ShowStatsPanel,
+                    StatsPanelConfig = bettingPool.Config.StatsPanelConfig
                 } : null,
                 DiscountConfig = bettingPool.DiscountConfig != null ? new BettingPoolDiscountConfigDto
                 {
@@ -884,6 +886,8 @@ public class BettingPoolsController : ControllerBase
                 bettingPool.Config.AllowFutureSales = dto.Config.FutureSalesMode != "OFF";
                 bettingPool.Config.MaxFutureDays = dto.Config.MaxFutureDays;
                 bettingPool.Config.UseCentralLogo = dto.Config.UseCentralLogo;
+                bettingPool.Config.ShowStatsPanel = dto.Config.ShowStatsPanel;
+                bettingPool.Config.StatsPanelConfig = dto.Config.StatsPanelConfig;
                 bettingPool.Config.UpdatedAt = DateTime.UtcNow;
             }
 
@@ -1133,6 +1137,8 @@ public class BettingPoolsController : ControllerBase
                     AllowFutureSales = dto.Config.FutureSalesMode != "OFF",
                     MaxFutureDays = dto.Config.MaxFutureDays,
                     UseCentralLogo = dto.Config.UseCentralLogo,
+                    ShowStatsPanel = dto.Config.ShowStatsPanel,
+                    StatsPanelConfig = dto.Config.StatsPanelConfig,
                     CreatedAt = DateTime.UtcNow
                 };
                 _context.BettingPoolConfigs.Add(config);

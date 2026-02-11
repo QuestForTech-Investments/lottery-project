@@ -52,6 +52,16 @@ interface ConfigFormData {
   futureSalesMode: string;
   maxFutureDays: string;
   useCentralLogo: boolean;
+  showStatsPanel: boolean;
+  statCredit: boolean;
+  statSales: boolean;
+  statPercentage: boolean;
+  statPrize: boolean;
+  statNet: boolean;
+  statFinal: boolean;
+  statBalance: boolean;
+  statFall: boolean;
+  statAccumulatedFall: boolean;
   [key: string]: string | boolean | null;
 }
 
@@ -545,6 +555,93 @@ const ConfigurationTab: React.FC<ConfigTabProps> = ({ formData, handleChange, be
           />
         </Grid>
 
+        {/* Stats Panel Configuration */}
+        <Grid item xs={12}>
+          <Typography variant="subtitle1" gutterBottom sx={{ mt: 2, fontWeight: 'bold' }}>
+            Panel de Estadísticas
+          </Typography>
+          <Divider sx={{ mb: 2 }} />
+        </Grid>
+
+        <Grid item xs={12}>
+          <FormControlLabel
+            control={
+              <Switch
+                checked={formData.showStatsPanel}
+                onChange={handleChange}
+                name="showStatsPanel"
+              />
+            }
+            label="Mostrar Panel de Estadísticas en TPV"
+          />
+        </Grid>
+
+        {formData.showStatsPanel && (
+          <Grid item xs={12}>
+            <Box sx={{ pl: 2 }}>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                Seleccione los valores visibles en el panel:
+              </Typography>
+              <Grid container spacing={1}>
+                <Grid item xs={6} sm={4} md={3}>
+                  <FormControlLabel
+                    control={<Switch checked={formData.statCredit} onChange={handleChange} name="statCredit" size="small" />}
+                    label="Crédito"
+                  />
+                </Grid>
+                <Grid item xs={6} sm={4} md={3}>
+                  <FormControlLabel
+                    control={<Switch checked={formData.statSales} onChange={handleChange} name="statSales" size="small" />}
+                    label="Venta"
+                  />
+                </Grid>
+                <Grid item xs={6} sm={4} md={3}>
+                  <FormControlLabel
+                    control={<Switch checked={formData.statPercentage} onChange={handleChange} name="statPercentage" size="small" />}
+                    label="%"
+                  />
+                </Grid>
+                <Grid item xs={6} sm={4} md={3}>
+                  <FormControlLabel
+                    control={<Switch checked={formData.statPrize} onChange={handleChange} name="statPrize" size="small" />}
+                    label="Premio"
+                  />
+                </Grid>
+                <Grid item xs={6} sm={4} md={3}>
+                  <FormControlLabel
+                    control={<Switch checked={formData.statNet} onChange={handleChange} name="statNet" size="small" />}
+                    label="Neto"
+                  />
+                </Grid>
+                <Grid item xs={6} sm={4} md={3}>
+                  <FormControlLabel
+                    control={<Switch checked={formData.statFinal} onChange={handleChange} name="statFinal" size="small" />}
+                    label="Final"
+                  />
+                </Grid>
+                <Grid item xs={6} sm={4} md={3}>
+                  <FormControlLabel
+                    control={<Switch checked={formData.statBalance} onChange={handleChange} name="statBalance" size="small" />}
+                    label="Balance"
+                  />
+                </Grid>
+                <Grid item xs={6} sm={4} md={3}>
+                  <FormControlLabel
+                    control={<Switch checked={formData.statFall} onChange={handleChange} name="statFall" size="small" />}
+                    label="Caída"
+                  />
+                </Grid>
+                <Grid item xs={6} sm={4} md={3}>
+                  <FormControlLabel
+                    control={<Switch checked={formData.statAccumulatedFall} onChange={handleChange} name="statAccumulatedFall" size="small" />}
+                    label="Caída Acum."
+                  />
+                </Grid>
+              </Grid>
+            </Box>
+          </Grid>
+        )}
+
         {/* Clear Contacts - Only in edit mode */}
         {bettingPoolId && (
           <>
@@ -630,7 +727,8 @@ const arePropsEqual = (prevProps: ConfigTabProps, nextProps: ConfigTabProps): bo
     'printRechargeReceipt', 'allowPasswordChange', 'printerType',
     'discountMode', 'discountAmount', 'discountPerEvery', 'maximumCancelTicketAmount', 'maxTicketAmount',
     'dailyPhoneRechargeLimit', 'limitPreference', 'futureSalesMode', 'maxFutureDays',
-    'useCentralLogo'
+    'useCentralLogo', 'showStatsPanel', 'statCredit', 'statSales', 'statPercentage',
+    'statPrize', 'statNet', 'statFinal', 'statBalance', 'statFall', 'statAccumulatedFall'
   ];
 
   for (const field of configFields) {
