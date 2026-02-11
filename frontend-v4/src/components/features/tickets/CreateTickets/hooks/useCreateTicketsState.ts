@@ -328,6 +328,15 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
     // Detect Cash3 Box suffix: "123b" or "123+"
     const isCash3Box = numLength === 3 && /^\d{3}[bB+]$/.test(trimmed);
 
+    // Auto-detect: if draw supports Play4 (gameTypeId 10-13), 4 digits → Play4 instead of Palé
+    const drawSupportsPlay4 = drawsToPlay.some(draw => {
+      const gts = drawGameTypes.get(draw.id) || [];
+      return gts.some(gt => gt >= 10 && gt <= 13);
+    });
+    const isPlay4 = selectedBetType?.includes('play4') || selectedBetType === 'pick5'
+      || numLength >= 5
+      || (numLength === 4 && drawSupportsPlay4 && selectedBetType !== 'pale' && selectedBetType !== 'tripleta');
+
     // Validate bet type for selected draws
     let betTypeName = '';
     let isAllowed = true;
@@ -342,8 +351,7 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
           isAllowed = false;
           break;
         }
-      } else if (selectedBetType?.includes('play4') || selectedBetType === 'pick5' || numLength >= 5) {
-        // Play4/Pick5 check BEFORE pale - both pale and play4 can be 4 digits
+      } else if (isPlay4) {
         const hasPlay4 = allowedGameTypes.some(gt => (gt >= 10 && gt <= 13) || (gt >= 15 && gt <= 20));
         if (!hasPlay4) {
           betTypeName = 'Play 4 / Pick 5';
@@ -394,14 +402,13 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
       drawId: draw.id,
       betNumber: cleanBetNumber + displaySuffix,
       betAmount: numericAmount,
-      selectedBetType: selectedBetType || '',
+      selectedBetType: isPlay4 ? 'play4-straight' : (selectedBetType || ''),
     }));
 
     // Add to appropriate column based on bet type
-    // Play4/Pick5 check BEFORE pale - both can be 4 digits
     if (selectedBetType === 'directo' || numLength === 2) {
       setDirectBets(prev => [...prev, ...newBets]);
-    } else if (selectedBetType?.includes('play4') || selectedBetType === 'pick5' || numLength >= 5) {
+    } else if (isPlay4) {
       setPlay4Bets(prev => [...prev, ...newBets]);
     } else if (selectedBetType === 'pale' || selectedBetType === 'tripleta' || numLength === 4 || numLength === 6) {
       setPaleBets(prev => [...prev, ...newBets]);
