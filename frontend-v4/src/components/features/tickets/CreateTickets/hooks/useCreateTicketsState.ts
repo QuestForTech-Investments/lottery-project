@@ -342,6 +342,14 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
           isAllowed = false;
           break;
         }
+      } else if (selectedBetType?.includes('play4') || selectedBetType === 'pick5' || numLength >= 5) {
+        // Play4/Pick5 check BEFORE pale - both pale and play4 can be 4 digits
+        const hasPlay4 = allowedGameTypes.some(gt => (gt >= 10 && gt <= 13) || (gt >= 15 && gt <= 20));
+        if (!hasPlay4) {
+          betTypeName = 'Play 4 / Pick 5';
+          isAllowed = false;
+          break;
+        }
       } else if (selectedBetType === 'pale' || numLength === 4) {
         if (!allowedGameTypes.includes(2)) {
           betTypeName = 'Palé';
@@ -361,13 +369,6 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
           isAllowed = false;
           break;
         }
-      } else if (selectedBetType?.includes('play4') || selectedBetType === 'pick5' || numLength >= 5) {
-        const hasPlay4 = allowedGameTypes.some(gt => (gt >= 10 && gt <= 13) || (gt >= 15 && gt <= 20));
-        if (!hasPlay4) {
-          betTypeName = 'Play 4 / Pick 5';
-          isAllowed = false;
-          break;
-        }
       }
     }
 
@@ -382,9 +383,9 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
 
     setBetError('');
 
-    // Clean bet number: strip suffix but preserve digits
+    // Clean bet number: strip suffix, add s (straight) or b (box)
     const cleanBetNumber = trimmed.replace(/[^0-9]/g, '');
-    const displaySuffix = isCash3Box ? '+' : '';
+    const displaySuffix = numLength === 3 ? (isCash3Box ? 'b' : 's') : '';
 
     const newBets = drawsToPlay.map((draw, index) => ({
       id: Date.now() + index,
@@ -393,17 +394,19 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
       drawId: draw.id,
       betNumber: cleanBetNumber + displaySuffix,
       betAmount: numericAmount,
+      selectedBetType: selectedBetType || '',
     }));
 
     // Add to appropriate column based on bet type
+    // Play4/Pick5 check BEFORE pale - both can be 4 digits
     if (selectedBetType === 'directo' || numLength === 2) {
       setDirectBets(prev => [...prev, ...newBets]);
+    } else if (selectedBetType?.includes('play4') || selectedBetType === 'pick5' || numLength >= 5) {
+      setPlay4Bets(prev => [...prev, ...newBets]);
     } else if (selectedBetType === 'pale' || selectedBetType === 'tripleta' || numLength === 4 || numLength === 6) {
       setPaleBets(prev => [...prev, ...newBets]);
     } else if (selectedBetType?.includes('cash3') || numLength === 3) {
       setCash3Bets(prev => [...prev, ...newBets]);
-    } else if (selectedBetType?.includes('play4') || selectedBetType === 'pick5' || numLength >= 4) {
-      setPlay4Bets(prev => [...prev, ...newBets]);
     } else {
       setDirectBets(prev => [...prev, ...newBets]);
     }
@@ -431,12 +434,14 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
     }
   }, []);
 
-  const getBetTypeId = useCallback((betNum: string): number => {
+  const getBetTypeId = useCallback((betNum: string, betType?: string): number => {
     const digits = betNum.replace(/[^0-9]/g, '');
     const numLength = digits.length;
-    // Cash3 Box: "123+" suffix
-    if (numLength === 3 && betNum.endsWith('+')) return 5;
+    // Cash3 Box: "123b" suffix
+    if (numLength === 3 && betNum.endsWith('b')) return 5;
     if (numLength === 2) return 1;   // DIRECTO
+    // 4 digits: Play4 if explicitly selected, otherwise Pale
+    if (numLength === 4 && betType?.includes('play4')) return 10; // PLAY4_STRAIGHT
     if (numLength === 4) return 2;   // PALE
     if (numLength === 6) return 3;   // TRIPLETA
     if (numLength === 3) return 4;   // CASH3_STRAIGHT
@@ -464,7 +469,7 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
         lines: allBets.map((bet) => ({
           drawId: bet.drawId,
           betNumber: bet.betNumber.replace(/[^0-9]/g, ''),
-          betTypeId: getBetTypeId(bet.betNumber),
+          betTypeId: getBetTypeId(bet.betNumber, bet.selectedBetType),
           betAmount: bet.betAmount,
           multiplier: 1.00,
           isLuckyPick: false

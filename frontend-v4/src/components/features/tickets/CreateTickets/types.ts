@@ -30,6 +30,7 @@ export interface Bet {
   betNumber: string;
   betAmount: number;
   betType?: { name: string };
+  selectedBetType?: string;
 }
 
 export interface BetType {

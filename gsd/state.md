@@ -249,6 +249,9 @@ Solo guardar General (~56 items vs ~3920). Batch endpoints backend.
 - **Admin local:** admin / Admin123456
 - **App original:** oliver / oliver0597@
 
+## ⚠️ Reglas de Testing
+- **NO modificar datos de Lottobook 01 (ID 9) en pruebas.** Es la banca principal del cliente. Usar otras bancas para testing.
+
 ---
 
 ## Lecciones Aprendidas (2026-02-07)
