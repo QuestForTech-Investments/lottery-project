@@ -322,8 +322,11 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
 
     if (!betNumber || !amount || drawsToPlay.length === 0) return;
 
-    const numLength = betNumber.replace(/[^0-9]/g, '').length;
+    const trimmed = betNumber.trim();
+    const numLength = trimmed.replace(/[^0-9]/g, '').length;
     const numericAmount = parseFloat(amount) || 0;
+    // Detect Cash3 Box suffix: "123b" or "123+"
+    const isCash3Box = numLength === 3 && /^\d{3}[bB+]$/.test(trimmed);
 
     // Validate bet type for selected draws
     let betTypeName = '';
@@ -379,12 +382,16 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
 
     setBetError('');
 
+    // Clean bet number: strip suffix but preserve digits
+    const cleanBetNumber = trimmed.replace(/[^0-9]/g, '');
+    const displaySuffix = isCash3Box ? '+' : '';
+
     const newBets = drawsToPlay.map((draw, index) => ({
       id: Date.now() + index,
       drawName: draw.name,
       drawAbbr: draw.abbreviation || draw.name,
       drawId: draw.id,
-      betNumber: betNumber,
+      betNumber: cleanBetNumber + displaySuffix,
       betAmount: numericAmount,
     }));
 
@@ -425,12 +432,15 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
   }, []);
 
   const getBetTypeId = useCallback((betNum: string): number => {
-    const numLength = betNum.replace(/[^0-9]/g, '').length;
-    if (numLength === 2) return 1;
-    if (numLength === 4) return 2;
-    if (numLength === 6) return 3;
-    if (numLength === 3) return 4;
-    if (numLength >= 5) return 10;
+    const digits = betNum.replace(/[^0-9]/g, '');
+    const numLength = digits.length;
+    // Cash3 Box: "123+" suffix
+    if (numLength === 3 && betNum.endsWith('+')) return 5;
+    if (numLength === 2) return 1;   // DIRECTO
+    if (numLength === 4) return 2;   // PALE
+    if (numLength === 6) return 3;   // TRIPLETA
+    if (numLength === 3) return 4;   // CASH3_STRAIGHT
+    if (numLength >= 5) return 10;   // PLAY4_STRAIGHT
     return 1;
   }, []);
 

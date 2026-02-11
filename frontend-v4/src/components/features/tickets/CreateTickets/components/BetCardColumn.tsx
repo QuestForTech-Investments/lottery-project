@@ -14,10 +14,12 @@ import type { Bet, ColumnType } from '../types';
 const formatBetNumber = (number: string): string => {
   if (!number) return '';
 
+  // Preserve Cash3 Box suffix (+)
+  const hasBoxSuffix = String(number).endsWith('+');
   const cleanNumber = String(number).replace(/[^0-9]/g, '');
 
   if (cleanNumber.length <= 3) {
-    return cleanNumber;
+    return cleanNumber + (hasBoxSuffix ? '+' : '');
   }
 
   const pairs: string[] = [];
