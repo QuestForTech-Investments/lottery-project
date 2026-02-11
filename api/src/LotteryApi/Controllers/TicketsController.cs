@@ -3,6 +3,7 @@ using LotteryApi.Data;
 using LotteryApi.DTOs;
 using LotteryApi.Helpers;
 using LotteryApi.Models;
+using LotteryApi.Services;
 using LotteryApi.Services.ExternalResults;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -20,14 +21,17 @@ public class TicketsController : ControllerBase
     private readonly LotteryDbContext _context;
     private readonly ILogger<TicketsController> _logger;
     private readonly IExternalResultsService _externalResultsService;
+    private readonly ILimitReservationService _limitReservationService;
 
     public TicketsController(
         LotteryDbContext context,
         ILogger<TicketsController> logger,
-        IExternalResultsService externalResultsService)
+        IExternalResultsService externalResultsService,
+        ILimitReservationService limitReservationService)
     {
         _context = context;
         _logger = logger;
+        _limitReservationService = limitReservationService;
         _externalResultsService = externalResultsService;
     }
 
@@ -684,6 +688,12 @@ public class TicketsController : ControllerBase
             _context.Tickets.Add(ticket);
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
+
+            // 10.0.1 Release limit reservations for saved plays
+            var savedPlays = ticket.TicketLines
+                .Select(l => (l.DrawId, l.BetNumber))
+                .ToList();
+            _limitReservationService.ReleaseAllForBettingPool(dto.BettingPoolId, savedPlays);
 
             _logger.LogInformation(
                 "Created ticket {TicketCode} (ID: {TicketId}) with {LineCount} lines, total: ${Total}",
@@ -1846,8 +1856,13 @@ public class TicketsController : ControllerBase
             isAtLimit = consumption.IsAtLimit;
             currentAmount = consumption.CurrentAmount;
         }
-        _logger.LogInformation($"LIMIT FOUND: d{drawId}, l{limit}, b{bet}, bn{betNumber}, bp{bettingPool}, il{isAtLimit}, ca{currentAmount}, t{DateOnly.FromDateTime(timestamp)}");
 
-        return limit == -1 || (!isAtLimit && currentAmount + bet <= limit);
+        // Include in-memory reservations from other terminals
+        var reservedAmount = _limitReservationService.GetReservedAmount(drawId, betNumber);
+        var totalUsed = currentAmount + reservedAmount;
+
+        _logger.LogInformation($"LIMIT FOUND: d{drawId}, l{limit}, b{bet}, bn{betNumber}, bp{bettingPool}, il{isAtLimit}, ca{currentAmount}, ra{reservedAmount}, t{DateOnly.FromDateTime(timestamp)}");
+
+        return limit == -1 || (!isAtLimit && totalUsed + bet <= limit);
     }
 }

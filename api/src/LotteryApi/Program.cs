@@ -110,6 +110,7 @@ builder.Services.AddScoped<IPermissionRepository, PermissionRepository>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ILoginSessionService, LoginSessionService>();
 builder.Services.AddSingleton<ICacheService, MemoryCacheService>();
+builder.Services.AddSingleton<ILimitReservationService, LimitReservationService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 
 // Register External Results Services (lottery results fetching and ticket processing)

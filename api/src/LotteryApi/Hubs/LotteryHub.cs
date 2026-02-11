@@ -1,6 +1,7 @@
 using LotteryApi.Data;
 using LotteryApi.DTOs;
 using LotteryApi.Models;
+using LotteryApi.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
@@ -16,11 +17,13 @@ public class LotteryHub : Hub<ILotteryHubClient>
 {
     private readonly ILogger<LotteryHub> _logger;
     private readonly LotteryDbContext _context;
+    private readonly ILimitReservationService _limitReservationService;
 
-    public LotteryHub(ILogger<LotteryHub> logger, LotteryDbContext context)
+    public LotteryHub(ILogger<LotteryHub> logger, LotteryDbContext context, ILimitReservationService limitReservationService)
     {
         _logger = logger;
         _context = context;
+        _limitReservationService = limitReservationService;
     }
 
     /// <summary>
@@ -246,9 +249,11 @@ public class LotteryHub : Hub<ILotteryHubClient>
                 ?? 0;
 
             var currentAmount = consumption?.CurrentAmount ?? 0;
-            var availableAmount = maxLimit > 0 ? maxLimit - currentAmount : 0;
-            var percentageUsed = maxLimit > 0 ? (currentAmount / maxLimit) * 100 : 0;
-            var isBlocked = consumption?.IsAtLimit ?? false || (maxLimit > 0 && currentAmount >= maxLimit);
+            var reservedAmount = _limitReservationService.GetReservedAmount(drawId, playNumber);
+            var totalUsed = currentAmount + reservedAmount;
+            var availableAmount = maxLimit > 0 ? maxLimit - totalUsed : 0;
+            var percentageUsed = maxLimit > 0 ? (totalUsed / maxLimit) * 100 : 0;
+            var isBlocked = consumption?.IsAtLimit ?? false || (maxLimit > 0 && totalUsed >= maxLimit);
 
             drawsAvailability.Add(new DrawAvailability
             {
