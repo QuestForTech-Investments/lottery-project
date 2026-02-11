@@ -49,7 +49,7 @@ interface ConfigFormData {
   discountAmount: string;
   discountPerEvery: string;
   limitPreference: string | null;
-  allowFutureSales: boolean;
+  futureSalesMode: string;
   maxFutureDays: string;
   useCentralLogo: boolean;
   [key: string]: string | boolean | null;
@@ -517,16 +517,18 @@ const ConfigurationTab: React.FC<ConfigTabProps> = ({ formData, handleChange, be
         </Grid>
 
         <Grid item xs={12} md={6}>
-          <FormControlLabel
-            control={
-              <Switch
-                checked={formData.allowFutureSales}
-                onChange={handleChange}
-                name="allowFutureSales"
-              />
-            }
-            label="Permitir Ventas Futuras"
-          />
+          <FormControl component="fieldset">
+            <FormLabel component="legend">Modo de Ventas Futuras</FormLabel>
+            <RadioGroup
+              name="futureSalesMode"
+              value={formData.futureSalesMode}
+              onChange={handleChange}
+            >
+              <FormControlLabel value="OFF" control={<Radio />} label="No permitir ventas futuras" />
+              <FormControlLabel value="WEEK" control={<Radio />} label="Hasta el domingo de esta semana" />
+              <FormControlLabel value="DAYS" control={<Radio />} label="Cantidad de días específicos" />
+            </RadioGroup>
+          </FormControl>
         </Grid>
 
         <Grid item xs={12} md={6}>
@@ -538,7 +540,7 @@ const ConfigurationTab: React.FC<ConfigTabProps> = ({ formData, handleChange, be
             value={formData.maxFutureDays}
             onChange={handleChange}
             inputProps={{ min: "1", max: "7" }}
-            disabled={!formData.allowFutureSales}
+            disabled={formData.futureSalesMode !== 'DAYS'}
             helperText="Cantidad de días en el futuro que se pueden vender tickets (1-7)"
           />
         </Grid>
@@ -627,7 +629,7 @@ const arePropsEqual = (prevProps: ConfigTabProps, nextProps: ConfigTabProps): bo
     'smsOnly', 'minutesToCancelTicket', 'ticketsToCancelPerDay', 'enableRecharges',
     'printRechargeReceipt', 'allowPasswordChange', 'printerType',
     'discountMode', 'discountAmount', 'discountPerEvery', 'maximumCancelTicketAmount', 'maxTicketAmount',
-    'dailyPhoneRechargeLimit', 'limitPreference', 'allowFutureSales', 'maxFutureDays',
+    'dailyPhoneRechargeLimit', 'limitPreference', 'futureSalesMode', 'maxFutureDays',
     'useCentralLogo'
   ];
 

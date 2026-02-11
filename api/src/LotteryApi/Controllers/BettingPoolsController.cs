@@ -788,6 +788,7 @@ public class BettingPoolsController : ControllerBase
                     PaymentMode = bettingPool.Config.PaymentMode,
                     AllowFutureSales = bettingPool.Config.AllowFutureSales,
                     MaxFutureDays = bettingPool.Config.MaxFutureDays,
+                    FutureSalesMode = bettingPool.Config.FutureSalesMode,
                     UseCentralLogo = bettingPool.Config.UseCentralLogo
                 } : null,
                 DiscountConfig = bettingPool.DiscountConfig != null ? new BettingPoolDiscountConfigDto
@@ -879,7 +880,8 @@ public class BettingPoolsController : ControllerBase
                 bettingPool.Config.MaxTicketAmount = dto.Config.MaxTicketAmount;
                 bettingPool.Config.MaxDailyRecharge = dto.Config.MaxDailyRecharge;
                 bettingPool.Config.PaymentMode = dto.Config.PaymentMode;
-                bettingPool.Config.AllowFutureSales = dto.Config.AllowFutureSales;
+                bettingPool.Config.FutureSalesMode = dto.Config.FutureSalesMode ?? "OFF";
+                bettingPool.Config.AllowFutureSales = dto.Config.FutureSalesMode != "OFF";
                 bettingPool.Config.MaxFutureDays = dto.Config.MaxFutureDays;
                 bettingPool.Config.UseCentralLogo = dto.Config.UseCentralLogo;
                 bettingPool.Config.UpdatedAt = DateTime.UtcNow;
@@ -1127,7 +1129,8 @@ public class BettingPoolsController : ControllerBase
                     MaxTicketAmount = dto.Config.MaxTicketAmount,
                     MaxDailyRecharge = dto.Config.MaxDailyRecharge,
                     PaymentMode = dto.Config.PaymentMode,
-                    AllowFutureSales = dto.Config.AllowFutureSales,
+                    FutureSalesMode = dto.Config.FutureSalesMode ?? "OFF",
+                    AllowFutureSales = dto.Config.FutureSalesMode != "OFF",
                     MaxFutureDays = dto.Config.MaxFutureDays,
                     UseCentralLogo = dto.Config.UseCentralLogo,
                     CreatedAt = DateTime.UtcNow

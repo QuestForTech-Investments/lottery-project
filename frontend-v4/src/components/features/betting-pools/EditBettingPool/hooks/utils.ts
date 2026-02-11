@@ -92,8 +92,8 @@ export const mapConfigToFormData = (configResponse: ConfigResponse): Partial<For
     // ✅ NEW: Payment mode / limit preference
     limitPreference: config.paymentMode ? PAYMENT_MODE_REVERSE_MAP[config.paymentMode] || null : null,
 
-    // ✅ NEW: Future sales configuration
-    allowFutureSales: config.allowFutureSales !== undefined ? config.allowFutureSales : true,
+    // Future sales configuration
+    futureSalesMode: config.futureSalesMode || (config.allowFutureSales ? 'DAYS' : 'OFF'),
     maxFutureDays: String(config.maxFutureDays ?? 7),
 
     // Central logo

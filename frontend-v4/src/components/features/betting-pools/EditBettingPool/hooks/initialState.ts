@@ -50,7 +50,7 @@ export const INITIAL_FORM_DATA: FormData = {
   creditLimit: '',
 
   // Future sales
-  allowFutureSales: true,
+  futureSalesMode: 'OFF',
   maxFutureDays: '7',
 
   // Central logo

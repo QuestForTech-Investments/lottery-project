@@ -1127,8 +1127,9 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
           maxDailyRecharge: formData.dailyPhoneRechargeLimit ? parseFloat(formData.dailyPhoneRechargeLimit) : null,
           // ✅ FIX: Use dynamic paymentMode from limitPreference field
           paymentMode: formData.limitPreference ? paymentModeMap[formData.limitPreference] : undefined,
-          // ✅ NEW: Future sales configuration
-          allowFutureSales: formData.allowFutureSales !== undefined ? formData.allowFutureSales : true,
+          // Future sales configuration
+          futureSalesMode: formData.futureSalesMode || 'OFF',
+          allowFutureSales: formData.futureSalesMode !== 'OFF',
           maxFutureDays: formData.maxFutureDays ? parseInt(formData.maxFutureDays) : 7,
           useCentralLogo: formData.useCentralLogo || false
         },

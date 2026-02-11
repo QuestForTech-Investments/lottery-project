@@ -55,7 +55,7 @@ export interface FormData {
   limitPreference: string | null;
   creditLimit: string;
   // Future sales
-  allowFutureSales: boolean;
+  futureSalesMode: string;
   maxFutureDays: string;
   // Central logo
   useCentralLogo: boolean;
@@ -229,6 +229,7 @@ export interface ConfigResponse {
     paymentMode?: string;  // ✅ NEW: Payment mode (BANCA, ZONA, GRUPO)
     allowFutureSales?: boolean;
     maxFutureDays?: number;
+    futureSalesMode?: string;
     useCentralLogo?: boolean;
   };
   discountConfig?: {

@@ -52,7 +52,7 @@ interface FormData {
   maxTicketAmount: string;
   dailyPhoneRechargeLimit: string;
   limitPreference: string | null;
-  allowFutureSales: boolean;
+  futureSalesMode: string;
   maxFutureDays: string;
   autoFooter: boolean;
   footerText1: string;
@@ -207,7 +207,7 @@ const getInitialFormData = (branchCode = ''): FormData => ({
   maxTicketAmount: '',
   dailyPhoneRechargeLimit: '',
   limitPreference: null,
-  allowFutureSales: true,
+  futureSalesMode: 'OFF',
   maxFutureDays: '7',
 
   // Pies de página
@@ -656,7 +656,7 @@ const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
             updates.dailyPhoneRechargeLimit = String(configData.config.maxDailyRecharge ?? '');
             updates.enableRecharges = configData.config.enableRecharges !== undefined ? configData.config.enableRecharges : true;
             updates.allowPasswordChange = configData.config.allowPasswordChange !== undefined ? configData.config.allowPasswordChange : true;
-            updates.allowFutureSales = configData.config.allowFutureSales !== undefined ? configData.config.allowFutureSales : true;
+            updates.futureSalesMode = configData.config.futureSalesMode || (configData.config.allowFutureSales ? 'DAYS' : 'OFF');
             updates.maxFutureDays = String(configData.config.maxFutureDays ?? 7);
             updates.creditLimit = String(configData.config.creditLimit ?? '');
             updates.useCentralLogo = configData.config.useCentralLogo || false;
@@ -1445,7 +1445,8 @@ const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
         printTicketCopy: formData.printTicketCopy,
 
         // Future sales configuration
-        allowFutureSales: formData.allowFutureSales !== undefined ? formData.allowFutureSales : true,
+        futureSalesMode: formData.futureSalesMode || 'OFF',
+        allowFutureSales: formData.futureSalesMode !== 'OFF',
         maxFutureDays: formData.maxFutureDays ? parseInt(formData.maxFutureDays) : 7,
 
         // Note: Other fields (prizes, schedules, etc.) would need additional API endpoints

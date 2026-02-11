@@ -441,17 +441,34 @@ public class TicketsController : ControllerBase
                     var bpConfig = await _context.BettingPoolConfigs
                         .FirstOrDefaultAsync(c => c.BettingPoolId == dto.BettingPoolId);
 
-                    var allowFutureSales = bpConfig?.AllowFutureSales ?? true;
+                    var futureSalesMode = bpConfig?.FutureSalesMode ?? "OFF";
                     var maxFutureDays = bpConfig?.MaxFutureDays ?? 7;
 
-                    if (!allowFutureSales)
+                    switch (futureSalesMode)
                     {
-                        return BadRequest(new { message = "Esta banca no permite ventas futuras" });
-                    }
+                        case "OFF":
+                            return BadRequest(new { message = "Esta banca no permite ventas futuras" });
 
-                    if (ticketDate > todayBusiness.AddDays(maxFutureDays))
-                    {
-                        return BadRequest(new { message = $"No se puede crear tickets para más de {maxFutureDays} días en el futuro" });
+                        case "WEEK":
+                            // Calculate next Sunday (end of current week)
+                            var daysUntilSunday = ((int)DayOfWeek.Sunday - (int)todayBusiness.DayOfWeek + 7) % 7;
+                            if (daysUntilSunday == 0) daysUntilSunday = 7; // If today is Sunday, allow until next Sunday
+                            var nextSunday = todayBusiness.AddDays(daysUntilSunday);
+                            if (ticketDate > nextSunday)
+                            {
+                                return BadRequest(new { message = "Solo se permite vender tickets hasta el domingo de esta semana" });
+                            }
+                            break;
+
+                        case "DAYS":
+                            if (ticketDate > todayBusiness.AddDays(maxFutureDays))
+                            {
+                                return BadRequest(new { message = $"No se puede crear tickets para más de {maxFutureDays} días en el futuro" });
+                            }
+                            break;
+
+                        default:
+                            return BadRequest(new { message = "Esta banca no permite ventas futuras" });
                     }
                 }
             }

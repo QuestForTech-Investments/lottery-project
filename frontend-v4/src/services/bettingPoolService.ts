@@ -86,6 +86,7 @@ export interface BettingPoolConfigData {
     paymentMode?: string;
     allowFutureSales?: boolean;
     maxFutureDays?: number;
+    futureSalesMode?: string;
     useCentralLogo?: boolean;
   };
   discountConfig?: {

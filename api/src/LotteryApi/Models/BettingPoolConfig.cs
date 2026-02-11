@@ -71,10 +71,14 @@ public class BettingPoolConfig
     public string PaymentMode { get; set; } = "BANCA";
 
     [Column("allow_future_sales")]
-    public bool AllowFutureSales { get; set; } = true;
+    public bool AllowFutureSales { get; set; } = false;
 
     [Column("max_future_days")]
     public int MaxFutureDays { get; set; } = 7;
+
+    [MaxLength(10)]
+    [Column("future_sales_mode")]
+    public string FutureSalesMode { get; set; } = "OFF";
 
     [Column("use_central_logo")]
     public bool UseCentralLogo { get; set; } = false;
