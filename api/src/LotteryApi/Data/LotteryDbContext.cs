@@ -84,6 +84,9 @@ public class LotteryDbContext : DbContext
     public DbSet<HotNumber> HotNumbers { get; set; }
     public DbSet<HotNumberLimit> HotNumberLimits { get; set; }
 
+    // Contacts
+    public DbSet<Contact> Contacts { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -189,6 +192,10 @@ public class LotteryDbContext : DbContext
 
         modelBuilder.Entity<HotNumberLimit>()
             .HasIndex(hnl => hnl.IsActive);
+
+        // Contacts indexes
+        modelBuilder.Entity<Contact>()
+            .HasIndex(c => c.BettingPoolId);
     }
 
     private void ConfigureUniqueConstraints(ModelBuilder modelBuilder)
@@ -422,6 +429,13 @@ public class LotteryDbContext : DbContext
             .HasOne(lc => lc.BettingPool)
             .WithMany()
             .HasForeignKey(lc => lc.BettingPoolId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // Contact -> BettingPool
+        modelBuilder.Entity<Contact>()
+            .HasOne(c => c.BettingPool)
+            .WithMany()
+            .HasForeignKey(c => c.BettingPoolId)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }

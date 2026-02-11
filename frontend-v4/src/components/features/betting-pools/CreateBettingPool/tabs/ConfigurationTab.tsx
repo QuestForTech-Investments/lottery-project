@@ -1,4 +1,4 @@
-import React, { type ChangeEvent } from 'react';
+import React, { useState, type ChangeEvent } from 'react';
 import {
   Grid,
   TextField,
@@ -11,7 +11,17 @@ import {
   RadioGroup,
   Radio,
   FormLabel,
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
+  Alert,
+  CircularProgress,
 } from '@mui/material';
+import { DeleteSweep as DeleteSweepIcon } from '@mui/icons-material';
+import { clearContactsByBettingPool } from '@services/contactService';
 
 interface ConfigFormData {
   fallType: string;
@@ -47,13 +57,33 @@ interface ConfigFormData {
 interface ConfigTabProps {
   formData: ConfigFormData;
   handleChange: (e: ChangeEvent<HTMLInputElement>) => void;
+  bettingPoolId?: number;
 }
 
 /**
  * ConfigurationTab Component
  * Contains ALL configuration fields from V1 with Material-UI styling
  */
-const ConfigurationTab: React.FC<ConfigTabProps> = ({ formData, handleChange }) => {
+const ConfigurationTab: React.FC<ConfigTabProps> = ({ formData, handleChange, bettingPoolId }) => {
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [clearing, setClearing] = useState(false);
+  const [clearResult, setClearResult] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  const handleClearContacts = async () => {
+    if (!bettingPoolId) return;
+    setClearing(true);
+    setClearResult(null);
+    try {
+      const result = await clearContactsByBettingPool(bettingPoolId);
+      setClearResult({ type: 'success', message: result.message });
+    } catch {
+      setClearResult({ type: 'error', message: 'Error al limpiar la lista de contactos' });
+    } finally {
+      setClearing(false);
+      setConfirmOpen(false);
+    }
+  };
+
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h6" gutterBottom>
@@ -510,6 +540,65 @@ const ConfigurationTab: React.FC<ConfigTabProps> = ({ formData, handleChange }) 
             helperText="Cantidad de días en el futuro que se pueden vender tickets (1-7)"
           />
         </Grid>
+
+        {/* Clear Contacts - Only in edit mode */}
+        {bettingPoolId && (
+          <>
+            <Grid item xs={12}>
+              <Typography variant="subtitle1" gutterBottom sx={{ mt: 2, fontWeight: 'bold' }}>
+                Lista de Contactos
+              </Typography>
+              <Divider sx={{ mb: 2 }} />
+            </Grid>
+
+            <Grid item xs={12}>
+              {clearResult && (
+                <Alert
+                  severity={clearResult.type}
+                  onClose={() => setClearResult(null)}
+                  sx={{ mb: 2 }}
+                >
+                  {clearResult.message}
+                </Alert>
+              )}
+              <Button
+                variant="outlined"
+                color="error"
+                startIcon={clearing ? <CircularProgress size={18} /> : <DeleteSweepIcon />}
+                onClick={() => setConfirmOpen(true)}
+                disabled={clearing}
+              >
+                Limpiar Lista de Contactos
+              </Button>
+              <Typography variant="caption" color="text.secondary" sx={{ ml: 2 }}>
+                Elimina todos los contactos asignados a esta banca
+              </Typography>
+            </Grid>
+
+            <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
+              <DialogTitle>Confirmar eliminación</DialogTitle>
+              <DialogContent>
+                <DialogContentText>
+                  ¿Está seguro que desea eliminar todos los contactos de esta banca? Esta acción no se puede deshacer.
+                </DialogContentText>
+              </DialogContent>
+              <DialogActions>
+                <Button onClick={() => setConfirmOpen(false)} disabled={clearing}>
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={handleClearContacts}
+                  color="error"
+                  variant="contained"
+                  disabled={clearing}
+                  startIcon={clearing ? <CircularProgress size={18} /> : undefined}
+                >
+                  {clearing ? 'Eliminando...' : 'Eliminar Todos'}
+                </Button>
+              </DialogActions>
+            </Dialog>
+          </>
+        )}
       </Grid>
     </Box>
   );
@@ -520,8 +609,11 @@ const ConfigurationTab: React.FC<ConfigTabProps> = ({ formData, handleChange }) 
  * Only re-renders when relevant fields for this tab change
  */
 const arePropsEqual = (prevProps: ConfigTabProps, nextProps: ConfigTabProps): boolean => {
-  // Check if handleChange changed
+  // Check if handleChange or bettingPoolId changed
   if (prevProps.handleChange !== nextProps.handleChange) {
+    return false;
+  }
+  if (prevProps.bettingPoolId !== nextProps.bettingPoolId) {
     return false;
   }
 

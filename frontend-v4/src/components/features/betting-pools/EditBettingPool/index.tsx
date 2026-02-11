@@ -183,6 +183,7 @@ const EditBettingPoolMUI: React.FC = () => {
               <ConfigurationTab
                 formData={formData as unknown as Parameters<typeof ConfigurationTab>[0]['formData']}
                 handleChange={handleChange as unknown as Parameters<typeof ConfigurationTab>[0]['handleChange']}
+                bettingPoolId={id ? parseInt(id) : undefined}
               />
             )}
 
