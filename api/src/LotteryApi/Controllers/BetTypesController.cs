@@ -16,7 +16,7 @@ public class BetTypesController : ControllerBase
     private const string BET_TYPES_CACHE_KEY = "bet-types:all";
     private const string BET_TYPES_WITH_FIELDS_CACHE_KEY = "bet-types:with-fields";
     private const string PRIZE_FIELDS_CACHE_KEY = "prize-fields:all";
-    private static readonly TimeSpan BET_TYPES_CACHE_TTL = TimeSpan.FromHours(1); // Bet types change rarely
+    private static readonly TimeSpan BET_TYPES_CACHE_TTL = TimeSpan.FromMinutes(5);
 
     public BetTypesController(
         LotteryDbContext context,
