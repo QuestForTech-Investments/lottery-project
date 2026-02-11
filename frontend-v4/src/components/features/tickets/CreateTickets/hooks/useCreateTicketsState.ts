@@ -325,17 +325,13 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
     const trimmed = betNumber.trim();
     const numLength = trimmed.replace(/[^0-9]/g, '').length;
     const numericAmount = parseFloat(amount) || 0;
-    // Detect Cash3 Box suffix: "123b" or "123+"
+    // Detect suffixes: Cash3 Box (123b/123+), Pick4 Straight (1234-), Pick4 Box (1234+)
     const isCash3Box = numLength === 3 && /^\d{3}[bB+]$/.test(trimmed);
-
-    // Auto-detect: if draw supports Play4 (gameTypeId 10-13), 4 digits → Play4 instead of Palé
-    const drawSupportsPlay4 = drawsToPlay.some(draw => {
-      const gts = drawGameTypes.get(draw.id) || [];
-      return gts.some(gt => gt >= 10 && gt <= 13);
-    });
-    const isPlay4 = selectedBetType?.includes('play4') || selectedBetType === 'pick5'
-      || numLength >= 5
-      || (numLength === 4 && drawSupportsPlay4 && selectedBetType !== 'pale' && selectedBetType !== 'tripleta');
+    const isPick4Straight = numLength === 4 && /^\d{4}-$/.test(trimmed);
+    const isPick4Box = numLength === 4 && /^\d{4}[+bB]$/.test(trimmed);
+    const isPick4 = isPick4Straight || isPick4Box
+      || selectedBetType?.includes('play4') || selectedBetType === 'pick5'
+      || numLength >= 5;
 
     // Validate bet type for selected draws
     let betTypeName = '';
@@ -351,7 +347,7 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
           isAllowed = false;
           break;
         }
-      } else if (isPlay4) {
+      } else if (isPick4) {
         const hasPlay4 = allowedGameTypes.some(gt => (gt >= 10 && gt <= 13) || (gt >= 15 && gt <= 20));
         if (!hasPlay4) {
           betTypeName = 'Play 4 / Pick 5';
@@ -391,9 +387,16 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
 
     setBetError('');
 
-    // Clean bet number: strip suffix, add s (straight) or b (box)
+    // Clean bet number and add display suffix
     const cleanBetNumber = trimmed.replace(/[^0-9]/g, '');
-    const displaySuffix = numLength === 3 ? (isCash3Box ? 'b' : 's') : '';
+    let displaySuffix = '';
+    if (numLength === 3) {
+      displaySuffix = isCash3Box ? 'b' : 's';
+    } else if (isPick4Straight) {
+      displaySuffix = 's';
+    } else if (isPick4Box) {
+      displaySuffix = 'b';
+    }
 
     const newBets = drawsToPlay.map((draw, index) => ({
       id: Date.now() + index,
@@ -402,13 +405,13 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
       drawId: draw.id,
       betNumber: cleanBetNumber + displaySuffix,
       betAmount: numericAmount,
-      selectedBetType: isPlay4 ? 'play4-straight' : (selectedBetType || ''),
+      selectedBetType: selectedBetType || '',
     }));
 
     // Add to appropriate column based on bet type
     if (selectedBetType === 'directo' || numLength === 2) {
       setDirectBets(prev => [...prev, ...newBets]);
-    } else if (isPlay4) {
+    } else if (isPick4) {
       setPlay4Bets(prev => [...prev, ...newBets]);
     } else if (selectedBetType === 'pale' || selectedBetType === 'tripleta' || numLength === 4 || numLength === 6) {
       setPaleBets(prev => [...prev, ...newBets]);
@@ -441,14 +444,19 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
     }
   }, []);
 
-  const getBetTypeId = useCallback((betNum: string, betType?: string): number => {
+  const getBetTypeId = useCallback((betNum: string): number => {
     const digits = betNum.replace(/[^0-9]/g, '');
     const numLength = digits.length;
-    // Cash3 Box: "123b" suffix
-    if (numLength === 3 && betNum.endsWith('b')) return 5;
+    // Suffix-based detection: s=straight, b=box
+    const suffix = betNum.match(/[sb]$/)?.[0];
+    // Cash3: 3 digits
+    if (numLength === 3 && suffix === 'b') return 5;  // CASH3_BOX
+    if (numLength === 3 && suffix === 's') return 4;  // CASH3_STRAIGHT
+    // Pick4: 4 digits with suffix
+    if (numLength === 4 && suffix === 's') return 10; // PLAY4_STRAIGHT
+    if (numLength === 4 && suffix === 'b') return 11; // PLAY4_BOX
+    // Length-based defaults
     if (numLength === 2) return 1;   // DIRECTO
-    // 4 digits: Play4 if explicitly selected, otherwise Pale
-    if (numLength === 4 && betType?.includes('play4')) return 10; // PLAY4_STRAIGHT
     if (numLength === 4) return 2;   // PALE
     if (numLength === 6) return 3;   // TRIPLETA
     if (numLength === 3) return 4;   // CASH3_STRAIGHT
@@ -476,7 +484,7 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
         lines: allBets.map((bet) => ({
           drawId: bet.drawId,
           betNumber: bet.betNumber.replace(/[^0-9]/g, ''),
-          betTypeId: getBetTypeId(bet.betNumber, bet.selectedBetType),
+          betTypeId: getBetTypeId(bet.betNumber),
           betAmount: bet.betAmount,
           multiplier: 1.00,
           isLuckyPick: false

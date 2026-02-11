@@ -14,14 +14,21 @@ import type { Bet, ColumnType } from '../types';
 const formatBetNumber = (number: string): string => {
   if (!number) return '';
 
-  // Preserve Cash3 suffix: s (straight) or b (box)
+  // Preserve suffix: s (straight) or b (box) for Cash3 and Pick4
   const suffix = String(number).match(/[sb]$/)?.[0] || '';
   const cleanNumber = String(number).replace(/[^0-9]/g, '');
 
-  if (cleanNumber.length <= 3) {
+  // Numbers with suffix (Cash3/Pick4) show as-is with suffix
+  if (suffix) {
     return cleanNumber + suffix;
   }
 
+  // Plain numbers <= 3 digits show as-is
+  if (cleanNumber.length <= 3) {
+    return cleanNumber;
+  }
+
+  // Palé/Tripleta: format with dashes (12-34, 12-34-56)
   const pairs: string[] = [];
   for (let i = 0; i < cleanNumber.length; i += 2) {
     pairs.push(cleanNumber.slice(i, i + 2));
