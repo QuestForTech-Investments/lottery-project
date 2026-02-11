@@ -32,7 +32,6 @@ import type {
   PrizeField,
 } from './types';
 import {
-  DRAW_ORDER,
   BET_TYPE_ORDER,
   getAllowedBetTypesForDraw,
 } from './constants';
@@ -123,14 +122,10 @@ const PrizesTab: React.FC<PrizesTabProps> = ({
               name: draw.drawName,
               drawId: draw.drawId
             }));
-            const sortedDraws = DRAW_ORDER
-              .map(orderName => apiDraws.find(draw => draw.name === orderName))
-              .filter((draw): draw is Draw => draw !== undefined);
-            const unorderedDraws = apiDraws.filter(draw => !DRAW_ORDER.includes(draw.name));
+            const sortedDraws = apiDraws.sort((a, b) => a.name.localeCompare(b.name));
             const formattedDraws: Draw[] = [
               { id: 'general', name: 'General' },
-              ...sortedDraws,
-              ...unorderedDraws
+              ...sortedDraws
             ];
             setLocalDraws(formattedDraws);
           } else {

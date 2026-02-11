@@ -95,14 +95,9 @@ const DrawsTab: React.FC<DrawsTabProps> = ({ formData, handleChange, draws: prop
           const { getAllDraws } = await import('@services/drawService');
           const response = await getAllDraws({ loadAll: true }) as DrawsApiResponse;
           if (response.success && response.data) {
-            const sortedDraws = response.data.sort((a: Draw, b: Draw) => {
-              const indexA = DRAW_ORDER.indexOf(a.drawName);
-              const indexB = DRAW_ORDER.indexOf(b.drawName);
-              if (indexA === -1 && indexB === -1) return 0;
-              if (indexA === -1) return 1;
-              if (indexB === -1) return -1;
-              return indexA - indexB;
-            });
+            const sortedDraws = response.data.sort((a: Draw, b: Draw) =>
+              a.drawName.localeCompare(b.drawName)
+            );
             setLocalDraws(sortedDraws);
           }
         } catch (err) {

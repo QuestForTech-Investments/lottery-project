@@ -31,7 +31,6 @@ import type {
   TemplateFields,
   TemplateBettingPool,
 } from './types';
-import { DRAW_ORDER } from './constants';
 import { INITIAL_FORM_DATA } from './initialState';
 import {
   mapConfigToFormData,
@@ -146,15 +145,10 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
 
         // Process all draws (for DrawsTab and PrizesTab)
         if (allDrawsResponse.success && allDrawsResponse.data) {
-          // Sort draws according to DRAW_ORDER (for DrawsTab)
-          const sortedDraws = allDrawsResponse.data.sort((a, b) => {
-            const indexA = DRAW_ORDER.indexOf(a.drawName);
-            const indexB = DRAW_ORDER.indexOf(b.drawName);
-            if (indexA === -1 && indexB === -1) return 0;
-            if (indexA === -1) return 1;
-            if (indexB === -1) return -1;
-            return indexA - indexB;
-          });
+          // Sort draws alphabetically by name
+          const sortedDraws = allDrawsResponse.data.sort((a, b) =>
+            a.drawName.localeCompare(b.drawName)
+          );
           setDraws(sortedDraws);
 
           // Format draws for PrizesTab (with 'General' tab)
