@@ -68,7 +68,9 @@ const DrawsGrid: React.FC<DrawsGridProps> = memo(({
           const isClosed = !!draw.closingTime && draw.disabled;
           const isDisabled = !selectedPool || draw.disabled || loadingAllowedDraws;
 
-          const drawColor = draw.color && draw.color !== '#FFFFFF' ? draw.color : '#607D8B';
+          const c = draw.color;
+          const isTooLight = !c || (c.length >= 7 && parseInt(c.slice(1, 3), 16) > 240 && parseInt(c.slice(3, 5), 16) > 240 && parseInt(c.slice(5, 7), 16) > 240);
+          const drawColor = isTooLight ? '#607D8B' : c;
 
           return (
             <Box
