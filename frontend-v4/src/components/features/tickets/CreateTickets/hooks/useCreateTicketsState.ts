@@ -102,6 +102,7 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
   const [allowedDrawIds, setAllowedDrawIds] = useState<Set<number>>(new Set());
   const [loadingAllowedDraws, setLoadingAllowedDraws] = useState<boolean>(false);
   const [drawGameTypes, setDrawGameTypes] = useState<Map<number, number[]>>(new Map());
+  const [drawClosingTimes, setDrawClosingTimes] = useState<Map<number, string>>(new Map());
 
   // Stats
   const [dailyBets] = useState<number>(0);
@@ -151,6 +152,7 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
       if (!selectedPool) {
         setAllowedDrawIds(new Set());
         setDrawGameTypes(new Map());
+        setDrawClosingTimes(new Map());
         return;
       }
 
@@ -169,12 +171,23 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
           }
         });
         setDrawGameTypes(gameTypesMap);
+
+        // Store closing times per draw
+        const closingMap = new Map<number, string>();
+        activeDraws.forEach((d) => {
+          if (d.drawTime) {
+            closingMap.set(d.drawId, d.drawTime);
+          }
+        });
+        setDrawClosingTimes(closingMap);
+
         setSelectedDraw(null);
         setSelectedDraws([]);
       } catch (error) {
         console.error('Error loading allowed draws:', error);
         setAllowedDrawIds(new Set());
         setDrawGameTypes(new Map());
+        setDrawClosingTimes(new Map());
       } finally {
         setLoadingAllowedDraws(false);
       }
@@ -214,6 +227,22 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
     };
     loadDraws();
   }, []);
+
+  // Merge closing times into draws - mark as disabled if draw already closed
+  const drawsWithClosingInfo = useMemo(() => {
+    if (drawClosingTimes.size === 0) return draws;
+    const now = new Date();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    return draws.map(draw => {
+      const closing = drawClosingTimes.get(draw.id);
+      if (!closing) return draw;
+      // Parse "HH:mm:ss" closing time
+      const parts = closing.split(':');
+      const closingMinutes = parseInt(parts[0]) * 60 + parseInt(parts[1]);
+      const isClosed = currentMinutes >= closingMinutes;
+      return { ...draw, closingTime: closing, disabled: draw.disabled || isClosed };
+    });
+  }, [draws, drawClosingTimes]);
 
   // Memoized totals
   const calculateTotal = useCallback((bets: Bet[]): string => {
@@ -465,7 +494,7 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
     setSelectedPool,
     selectedDraw,
     selectedDraws,
-    draws,
+    draws: drawsWithClosingInfo,
     loadingDraws,
     loadingAllowedDraws,
     allowedDrawIds,

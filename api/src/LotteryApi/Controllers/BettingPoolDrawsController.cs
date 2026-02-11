@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using LotteryApi.Data;
+using LotteryApi.Helpers;
 using LotteryApi.Models;
 using LotteryApi.DTOs;
 using System.Diagnostics;
@@ -60,14 +61,14 @@ public class BettingPoolDrawsController : ControllerBase
                 return Ok(new List<BettingPoolDrawDto>());
             }
 
-            if (playableOnly)
-                bettingPoolDraws = bettingPoolDraws.FindAll(bpd => bpd.Draw!.WeeklySchedules.Where(ws =>
-                    {
-                        var TimeStamp = DateTime.Now.TimeOfDay;
+            var nowBusiness = DateTimeHelper.NowInBusinessTimezone();
+            var currentDayOfWeek = (byte)nowBusiness.DayOfWeek;
+            var currentTime = nowBusiness.TimeOfDay;
 
-                        return ws.DayOfWeek == (byte)DateTime.Now.DayOfWeek && ws.StartTime <= TimeStamp && ws.EndTime >= TimeStamp;
-                    }).Any()
-                );
+            if (playableOnly)
+                bettingPoolDraws = bettingPoolDraws.FindAll(bpd => bpd.Draw!.WeeklySchedules.Any(ws =>
+                    ws.DayOfWeek == currentDayOfWeek && ws.StartTime <= currentTime && ws.EndTime >= currentTime
+                ));
 
             // Get all draw IDs
             var drawIds = bettingPoolDraws.Select(bpd => bpd.DrawId).ToHashSet();
@@ -143,9 +144,9 @@ public class BettingPoolDrawsController : ControllerBase
                 DrawName = bpd.Draw?.DrawName,
                 Abbreviation = bpd.Draw?.Abbreviation,
                 DrawTime = bpd.Draw?.WeeklySchedules?
-                    .Where(ws => ws.DayOfWeek == (byte)DateTime.Now.DayOfWeek &&
-                                 ws.StartTime <= DateTime.Now.TimeOfDay &&
-                                 ws.EndTime >= DateTime.Now.TimeOfDay)
+                    .Where(ws => ws.DayOfWeek == currentDayOfWeek &&
+                                 ws.StartTime <= currentTime &&
+                                 ws.EndTime >= currentTime)
                     .FirstOrDefault()?.EndTime ?? bpd.Draw?.DrawTime,
                 LotteryId = bpd.Draw?.LotteryId,
                 LotteryName = bpd.Draw?.Lottery?.LotteryName,

@@ -19,6 +19,7 @@ export interface Draw {
   lotteryId?: number;
   imageUrl?: string;
   availableGameTypes?: number[];
+  closingTime?: string; // HH:mm:ss from API (EndTime of today's schedule)
 }
 
 export interface Bet {
@@ -84,6 +85,7 @@ export interface AvailableGameType {
 export interface BettingPoolDrawResponse {
   drawId: number;
   isActive: boolean;
+  drawTime?: string; // Closing time (HH:mm:ss)
   availableGameTypes?: AvailableGameType[];
 }
 

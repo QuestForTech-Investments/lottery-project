@@ -65,6 +65,7 @@ const DrawsGrid: React.FC<DrawsGridProps> = memo(({
           const isSelected = multiLotteryMode
             ? selectedDraws.some(s => s.id === draw.id)
             : selectedDraw?.id === draw.id;
+          const isClosed = !!draw.closingTime && draw.disabled;
           const isDisabled = !selectedPool || draw.disabled || loadingAllowedDraws;
 
           return (
@@ -74,13 +75,13 @@ const DrawsGrid: React.FC<DrawsGridProps> = memo(({
               sx={{
                 px: 1.5,
                 py: 0.75,
-                bgcolor: isSelected ? '#fff' : isDisabled ? '#bdbdbd' : draw.color,
-                color: isSelected ? '#333' : 'white',
+                bgcolor: isSelected ? '#fff' : isDisabled ? '#555' : draw.color,
+                color: isSelected ? '#333' : isDisabled ? 'rgba(255,255,255,0.85)' : 'white',
                 fontSize: '12px',
                 fontWeight: 'bold',
                 borderRadius: '4px',
                 cursor: isDisabled ? 'not-allowed' : 'pointer',
-                opacity: isDisabled ? 0.5 : 1,
+                opacity: 1,
                 textTransform: 'uppercase',
                 whiteSpace: 'nowrap',
                 minHeight: '36px',
@@ -93,7 +94,7 @@ const DrawsGrid: React.FC<DrawsGridProps> = memo(({
                 transition: 'all 0.15s ease',
                 pointerEvents: isDisabled ? 'none' : 'auto',
                 '&:hover': {
-                  opacity: isDisabled ? 0.5 : 0.85,
+                  opacity: isDisabled ? 1 : 0.85,
                   transform: isDisabled ? 'none' : 'translateY(-1px)',
                 },
               }}
@@ -130,6 +131,11 @@ const DrawsGrid: React.FC<DrawsGridProps> = memo(({
                 )}
               </Box>
               {draw.name}
+              {isClosed && (
+                <Typography component="span" sx={{ fontSize: '9px', ml: 0.5, opacity: 0.8, fontWeight: 'normal' }}>
+                  (Cerrado)
+                </Typography>
+              )}
             </Box>
           );
         })

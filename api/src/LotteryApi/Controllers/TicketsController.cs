@@ -452,14 +452,24 @@ public class TicketsController : ControllerBase
 
             // 3. Validate cutoff times for all draws
             var now = DateTime.UtcNow;
+            var nowBusiness = DateTimeHelper.NowInBusinessTimezone();
+            var currentTime = nowBusiness.TimeOfDay;
+            var currentDayOfWeek = (byte)nowBusiness.DayOfWeek;
             var drawIds = dto.Lines.Select(l => l.DrawId).Distinct().ToList();
             var betTypeIds = dto.Lines.Select(l => l.BetTypeId).Distinct().ToList();
 
             // Pre-fetch all required data to avoid N+1 queries
             var draws = await _context.Draws
                 .Include(d => d.Lottery)
+                .Include(d => d.WeeklySchedules)
                 .Where(d => drawIds.Contains(d.DrawId))
                 .ToListAsync();
+
+            // Pre-fetch AnticipatedClosingMinutes per draw for this betting pool
+            var bettingPoolDraws = await _context.BettingPoolDraws
+                .AsNoTracking()
+                .Where(bpd => bpd.BettingPoolId == dto.BettingPoolId && drawIds.Contains(bpd.DrawId))
+                .ToDictionaryAsync(bpd => bpd.DrawId, bpd => bpd.AnticipatedClosingMinutes);
             var betTypesDict = await _context.GameTypes
                 .Where(gt => betTypeIds.Contains(gt.GameTypeId))
                 .ToDictionaryAsync(gt => gt.GameTypeId);
@@ -502,15 +512,30 @@ public class TicketsController : ControllerBase
                     continue;
                 }
 
-                // TEMPORARY: Commented for testing purposes
-                // var cutoffTime = today.Add(draw.DrawTime).AddMinutes(-30); // 30 min before
-                // if (now >= cutoffTime)
-                // {
-                //     return UnprocessableEntity(new
-                //     {
-                //         message = $"El sorteo {draw.DrawName} ya cerró las ventas a las {cutoffTime:HH:mm}"
-                //     });
-                // }
+                // Validate draw is still open for betting (only for today's tickets)
+                if (ticketDate == todayBusiness)
+                {
+                    // Get closing time from weekly schedule or fallback to DrawTime
+                    var todaySchedule = draw.WeeklySchedules?
+                        .FirstOrDefault(ws => ws.DayOfWeek == currentDayOfWeek && ws.IsActive);
+                    var closingTime = todaySchedule?.EndTime ?? draw.DrawTime;
+
+                    // Subtract AnticipatedClosingMinutes if configured for this pool
+                    bettingPoolDraws.TryGetValue(draw.DrawId, out var anticipatedMinutes);
+                    if (anticipatedMinutes.HasValue && anticipatedMinutes.Value > 0)
+                    {
+                        closingTime = closingTime.Subtract(TimeSpan.FromMinutes(anticipatedMinutes.Value));
+                    }
+
+                    if (currentTime >= closingTime)
+                    {
+                        var closingFormatted = DateTime.Today.Add(closingTime).ToString("hh:mm tt");
+                        return UnprocessableEntity(new
+                        {
+                            message = $"El sorteo {draw.DrawName} ya cerró las ventas a las {closingFormatted}"
+                        });
+                    }
+                }
             }
 
             // 4. Generate ticket code (format: EA-{BANCACODE}-{SEQUENCE})
