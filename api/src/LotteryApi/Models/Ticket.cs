@@ -43,6 +43,10 @@ public class Ticket
     [Column("global_discount", TypeName = "decimal(5,2)")]
     public decimal GlobalDiscount { get; set; } = 0.00m;
 
+    [MaxLength(10)]
+    [Column("discount_mode")]
+    public string DiscountMode { get; set; } = "OFF";
+
     [MaxLength(3)]
     [Column("currency_code")]
     public string CurrencyCode { get; set; } = "DOP";

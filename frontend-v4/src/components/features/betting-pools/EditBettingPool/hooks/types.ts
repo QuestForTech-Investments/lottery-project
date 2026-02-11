@@ -46,8 +46,9 @@ export interface FormData {
   printRechargeReceipt: boolean;
   allowPasswordChange: boolean;
   printerType: string;
-  discountProvider: string;
   discountMode: string;
+  discountAmount: string;
+  discountPerEvery: string;
   maximumCancelTicketAmount: string;
   maxTicketAmount: string;
   dailyPhoneRechargeLimit: string;
@@ -231,8 +232,9 @@ export interface ConfigResponse {
     useCentralLogo?: boolean;
   };
   discountConfig?: {
-    discountProvider?: string;
     discountMode?: string;
+    discountAmount?: number;
+    discountPerEvery?: number;
   };
   printConfig?: {
     printMode?: string;

@@ -21,8 +21,9 @@ export const INITIAL_FORM_DATA: FormData = {
   canChangePassword: 'no_change',
   language: null,
   printMode: null,
-  discountProvider: null,
   discountMode: null,
+  discountAmount: '',
+  discountPerEvery: '',
   updateGeneralValues: false,
   autoFooter: false,
   footer1: '',
@@ -46,6 +47,4 @@ export const LANGUAGE_OPTIONS = ['ESPAÑOL', 'INGLÉS'] as const;
 
 export const PRINT_MODE_OPTIONS = ['DRIVER', 'GENÉRICO'] as const;
 
-export const DISCOUNT_PROVIDER_OPTIONS = ['GRUPO', 'RIFERO'] as const;
-
-export const DISCOUNT_MODE_OPTIONS = ['OFF', 'EFECTIVO', 'TICKET_GRATIS'] as const;
+export const DISCOUNT_MODE_OPTIONS = ['OFF', 'GRUPO', 'RIFERO'] as const;

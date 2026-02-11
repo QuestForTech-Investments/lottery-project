@@ -51,6 +51,7 @@ public class CreateTicketDto
 
     public decimal GlobalMultiplier { get; set; } = 1.00m;
     public decimal GlobalDiscount { get; set; } = 0.00m;
+    public bool ApplyDiscount { get; set; } = false;
     public string? TerminalId { get; set; }
     public string? IpAddress { get; set; }
 
@@ -314,6 +315,9 @@ public class BettingPoolParamDto
     public decimal CurrentBalance { get; set; }
     public decimal CommissionPercentage { get; set; }
     public decimal DiscountPercentage { get; set; }
+    public string DiscountMode { get; set; } = "OFF";
+    public decimal? DiscountAmount { get; set; }
+    public int? DiscountPerEvery { get; set; }
 }
 
 /// <summary>

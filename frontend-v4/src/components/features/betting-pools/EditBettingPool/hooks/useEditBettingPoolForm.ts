@@ -1085,8 +1085,7 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
         '6': 'WEEKLY_NO_ACCUMULATED'   // Semanal sin acumulado
       };
       const printModeMap: Record<string, string> = { '1': 'DRIVER', '2': 'GENERIC' };
-      const discountProviderMap: Record<string, string> = { '1': 'GROUP', '2': 'SELLER' };
-      const discountModeMap: Record<string, string> = { '1': 'OFF', '2': 'CASH', '3': 'FREE_TICKET' };
+      const discountModeMap: Record<string, string> = { '1': 'OFF', '2': 'GRUPO', '3': 'RIFERO' };
       // ✅ NEW: Payment mode map (frontend limitPreference → API paymentMode)
       const paymentModeMap: Record<string, string> = { '1': 'BANCA', '2': 'ZONA', '3': 'GRUPO' };
 
@@ -1134,8 +1133,9 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
           useCentralLogo: formData.useCentralLogo || false
         },
         discountConfig: {
-          discountProvider: discountProviderMap[formData.discountProvider] || 'GRUPO',
-          discountMode: discountModeMap[formData.discountMode] || 'OFF'
+          discountMode: discountModeMap[formData.discountMode] || 'OFF',
+          discountAmount: formData.discountAmount ? parseFloat(formData.discountAmount) : null,
+          discountPerEvery: formData.discountPerEvery ? parseInt(formData.discountPerEvery) : null
         },
         printConfig: {
           printMode: printModeMap[formData.printerType] || 'DRIVER',

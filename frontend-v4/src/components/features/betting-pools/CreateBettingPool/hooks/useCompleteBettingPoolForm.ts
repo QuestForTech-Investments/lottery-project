@@ -45,8 +45,9 @@ interface FormData {
   printRechargeReceipt: boolean;
   allowPasswordChange: boolean;
   printerType: string;
-  discountProvider: string;
   discountMode: string;
+  discountAmount: string;
+  discountPerEvery: string;
   maximumCancelTicketAmount: string;
   maxTicketAmount: string;
   dailyPhoneRechargeLimit: string;
@@ -199,8 +200,9 @@ const getInitialFormData = (branchCode = ''): FormData => ({
   printRechargeReceipt: true,
   allowPasswordChange: true,
   printerType: '1', // 1=Driver, 2=Genérico
-  discountProvider: '2', // 1=Grupo, 2=Rifero
-  discountMode: '1', // 1=Off, 2=Efectivo, 3=Ticket Gratis
+  discountMode: '1', // 1=Off, 2=Grupo, 3=Rifero
+  discountAmount: '',
+  discountPerEvery: '',
   maximumCancelTicketAmount: '',
   maxTicketAmount: '',
   dailyPhoneRechargeLimit: '',
@@ -627,14 +629,14 @@ const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
               'OFF': '1', 'COLLECTION': '2', 'DAILY': '3', 'MONTHLY': '4',
               'WEEKLY': '5', 'WEEKLY_ACCUMULATED': '5', 'WEEKLY_NO_ACCUMULATED': '6'
             };
-            const discountProviderMap: Record<string, string> = { 'GROUP': '1', 'SELLER': '2' };
-            const discountModeMap: Record<string, string> = { 'OFF': '1', 'CASH': '2', 'FREE_TICKET': '3' };
+            const discountModeMap: Record<string, string> = { 'OFF': '1', 'GRUPO': '2', 'RIFERO': '3' };
             const printModeMap: Record<string, string> = { 'DRIVER': '1', 'GENERIC': '2' };
             const paymentModeMap: Record<string, string> = { 'BANCA': '1', 'ZONA': '2', 'ZONE': '2', 'GRUPO': '3', 'GROUP': '3' };
 
             updates.fallType = fallTypeMap[configData.config.fallType || 'OFF'] || '1';
-            updates.discountProvider = discountProviderMap[configData.discountConfig?.discountProvider || 'SELLER'] || '2';
             updates.discountMode = discountModeMap[configData.discountConfig?.discountMode || 'OFF'] || '1';
+            updates.discountAmount = String(configData.discountConfig?.discountAmount ?? '');
+            updates.discountPerEvery = String(configData.discountConfig?.discountPerEvery ?? '');
             updates.printerType = printModeMap[configData.printConfig?.printMode || 'DRIVER'] || '1';
             if (configData.config.paymentMode) {
               updates.limitPreference = paymentModeMap[configData.config.paymentMode] || null;
@@ -1413,8 +1415,7 @@ const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
       // Map form values to API format (English values matching backend)
       const fallTypeMap: Record<string, string> = { '1': 'OFF', '2': 'COLLECTION', '3': 'DAILY', '4': 'MONTHLY', '5': 'WEEKLY', '6': 'WEEKLY_NO_ACCUMULATED' };
       const printModeMap: Record<string, string> = { '1': 'DRIVER', '2': 'GENERIC' };
-      const discountProviderMap: Record<string, string> = { '1': 'GROUP', '2': 'SELLER' };
-      const discountModeMap: Record<string, string> = { '1': 'OFF', '2': 'CASH', '3': 'FREE_TICKET' };
+      const discountModeMap: Record<string, string> = { '1': 'OFF', '2': 'GRUPO', '3': 'RIFERO' };
 
       const bettingPoolData = {
         bettingPoolName: formData.bettingPoolName,
@@ -1429,8 +1430,9 @@ const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
         // Configuration mapped to API
         fallType: fallTypeMap[formData.fallType] || 'OFF',
         printMode: printModeMap[formData.printerType] || 'DRIVER',
-        discountProvider: discountProviderMap[formData.discountProvider] || 'SELLER',
         discountMode: discountModeMap[formData.discountMode] || 'OFF',
+        discountAmount: formData.discountAmount ? parseFloat(formData.discountAmount) : null,
+        discountPerEvery: formData.discountPerEvery ? parseInt(formData.discountPerEvery) : null,
 
         deactivationBalance: formData.deactivationBalance ? parseFloat(formData.deactivationBalance) : null,
         dailySaleLimit: formData.dailySaleLimit ? parseFloat(formData.dailySaleLimit) : null,

@@ -89,8 +89,9 @@ export interface BettingPoolConfigData {
     useCentralLogo?: boolean;
   };
   discountConfig?: {
-    discountProvider?: string;
     discountMode?: string;
+    discountAmount?: number | null;
+    discountPerEvery?: number | null;
   };
   printConfig?: {
     printMode?: string;

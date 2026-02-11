@@ -792,8 +792,9 @@ public class BettingPoolsController : ControllerBase
                 } : null,
                 DiscountConfig = bettingPool.DiscountConfig != null ? new BettingPoolDiscountConfigDto
                 {
-                    DiscountProvider = bettingPool.DiscountConfig.DiscountProvider,
-                    DiscountMode = bettingPool.DiscountConfig.DiscountMode
+                    DiscountMode = bettingPool.DiscountConfig.DiscountMode,
+                    DiscountAmount = bettingPool.DiscountConfig.DiscountAmount,
+                    DiscountPerEvery = bettingPool.DiscountConfig.DiscountPerEvery
                 } : null,
                 PrintConfig = bettingPool.PrintConfig != null ? new BettingPoolPrintConfigDto
                 {
@@ -897,8 +898,9 @@ public class BettingPoolsController : ControllerBase
                     _context.BettingPoolDiscountConfigs.Add(bettingPool.DiscountConfig);
                 }
 
-                bettingPool.DiscountConfig.DiscountProvider = dto.DiscountConfig.DiscountProvider;
                 bettingPool.DiscountConfig.DiscountMode = dto.DiscountConfig.DiscountMode;
+                bettingPool.DiscountConfig.DiscountAmount = dto.DiscountConfig.DiscountAmount;
+                bettingPool.DiscountConfig.DiscountPerEvery = dto.DiscountConfig.DiscountPerEvery;
                 bettingPool.DiscountConfig.UpdatedAt = DateTime.UtcNow;
             }
 
@@ -1139,8 +1141,9 @@ public class BettingPoolsController : ControllerBase
                 var discountConfig = new BettingPoolDiscountConfig
                 {
                     BettingPoolId = bettingPool.BettingPoolId,
-                    DiscountProvider = dto.DiscountConfig.DiscountProvider,
                     DiscountMode = dto.DiscountConfig.DiscountMode,
+                    DiscountAmount = dto.DiscountConfig.DiscountAmount,
+                    DiscountPerEvery = dto.DiscountConfig.DiscountPerEvery,
                     CreatedAt = DateTime.UtcNow
                 };
                 _context.BettingPoolDiscountConfigs.Add(discountConfig);

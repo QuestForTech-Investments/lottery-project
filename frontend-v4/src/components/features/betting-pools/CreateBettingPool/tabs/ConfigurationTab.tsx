@@ -45,8 +45,9 @@ interface ConfigFormData {
   allowPasswordChange: boolean;
   maxTicketAmount: string;
   printerType: string;
-  discountProvider: string;
   discountMode: string;
+  discountAmount: string;
+  discountPerEvery: string;
   limitPreference: string | null;
   allowFutureSales: boolean;
   maxFutureDays: string;
@@ -419,50 +420,16 @@ const ConfigurationTab: React.FC<ConfigTabProps> = ({ formData, handleChange, be
           />
         </Grid>
 
-        {/* Print & Discount Settings */}
+        {/* Discount Settings */}
         <Grid item xs={12}>
           <Typography variant="subtitle1" gutterBottom sx={{ mt: 2, fontWeight: 'bold' }}>
-            Impresión y Descuentos
+            Descuentos
           </Typography>
           <Divider sx={{ mb: 2 }} />
         </Grid>
 
-        {/* Printer Type - Radio Group */}
-        <Grid item xs={12} md={6}>
-          <FormControl component="fieldset">
-            <FormLabel component="legend" sx={{ fontWeight: 'bold' }}>Modo de Impresión</FormLabel>
-            <RadioGroup
-              row
-              name="printerType"
-              value={formData.printerType}
-              onChange={handleChange}
-              sx={{ mt: 1 }}
-            >
-              <FormControlLabel value="1" control={<Radio />} label="DRIVER" />
-              <FormControlLabel value="2" control={<Radio />} label="GENÉRICO" />
-            </RadioGroup>
-          </FormControl>
-        </Grid>
-
-        {/* Discount Provider - Radio Group */}
-        <Grid item xs={12} md={6}>
-          <FormControl component="fieldset">
-            <FormLabel component="legend" sx={{ fontWeight: 'bold' }}>Proveedor de Descuento</FormLabel>
-            <RadioGroup
-              row
-              name="discountProvider"
-              value={formData.discountProvider}
-              onChange={handleChange}
-              sx={{ mt: 1 }}
-            >
-              <FormControlLabel value="1" control={<Radio />} label="GRUPO" />
-              <FormControlLabel value="2" control={<Radio />} label="RIFERO" />
-            </RadioGroup>
-          </FormControl>
-        </Grid>
-
         {/* Discount Mode - Radio Group */}
-        <Grid item xs={12}>
+        <Grid item xs={12} md={6}>
           <FormControl component="fieldset">
             <FormLabel component="legend" sx={{ fontWeight: 'bold' }}>Modo de Descuento</FormLabel>
             <RadioGroup
@@ -473,11 +440,46 @@ const ConfigurationTab: React.FC<ConfigTabProps> = ({ formData, handleChange, be
               sx={{ mt: 1 }}
             >
               <FormControlLabel value="1" control={<Radio />} label="OFF" />
-              <FormControlLabel value="2" control={<Radio />} label="EFECTIVO" />
-              <FormControlLabel value="3" control={<Radio />} label="TICKET GRATIS" />
+              <FormControlLabel value="2" control={<Radio />} label="GRUPO" />
+              <FormControlLabel value="3" control={<Radio />} label="RIFERO" />
             </RadioGroup>
           </FormControl>
         </Grid>
+
+        {/* Discount Amount & Per Every - Conditional fields */}
+        {(formData.discountMode === '2' || formData.discountMode === '3') && (
+          <>
+            <Grid item xs={6} md={3}>
+              <TextField
+                fullWidth
+                type="number"
+                label="Descontar"
+                name="discountAmount"
+                value={formData.discountAmount}
+                onChange={handleChange}
+                inputProps={{ step: "0.01", min: "0" }}
+                helperText="Monto a descontar"
+              />
+            </Grid>
+            <Grid item xs={6} md={3}>
+              <TextField
+                fullWidth
+                type="number"
+                label="De cada"
+                name="discountPerEvery"
+                value={formData.discountPerEvery}
+                onChange={handleChange}
+                inputProps={{ step: "1", min: "1" }}
+                helperText="De cada X $"
+                error={
+                  !!formData.discountPerEvery &&
+                  !!formData.discountAmount &&
+                  parseInt(formData.discountPerEvery) <= parseFloat(formData.discountAmount)
+                }
+              />
+            </Grid>
+          </>
+        )}
 
         {/* Payment Mode Settings */}
         <Grid item xs={12}>
@@ -623,8 +625,8 @@ const arePropsEqual = (prevProps: ConfigTabProps, nextProps: ConfigTabProps): bo
     'enableTemporaryBalance', 'temporaryAdditionalBalance', 'isActive',
     'controlWinningTickets', 'allowJackpot', 'printEnabled', 'printTicketCopy',
     'smsOnly', 'minutesToCancelTicket', 'ticketsToCancelPerDay', 'enableRecharges',
-    'printRechargeReceipt', 'allowPasswordChange', 'printerType', 'discountProvider',
-    'discountMode', 'maximumCancelTicketAmount', 'maxTicketAmount',
+    'printRechargeReceipt', 'allowPasswordChange', 'printerType',
+    'discountMode', 'discountAmount', 'discountPerEvery', 'maximumCancelTicketAmount', 'maxTicketAmount',
     'dailyPhoneRechargeLimit', 'limitPreference', 'allowFutureSales', 'maxFutureDays',
     'useCentralLogo'
   ];

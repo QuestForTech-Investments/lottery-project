@@ -18,15 +18,10 @@ const PRINT_MODE_REVERSE_MAP: Record<string, string> = {
   'GENERIC': '2'
 };
 
-const DISCOUNT_PROVIDER_REVERSE_MAP: Record<string, string> = {
-  'GROUP': '1',
-  'SELLER': '2'
-};
-
 const DISCOUNT_MODE_REVERSE_MAP: Record<string, string> = {
   'OFF': '1',
-  'CASH': '2',
-  'FREE_TICKET': '3'
+  'GRUPO': '2',
+  'RIFERO': '3'
 };
 
 // ✅ NEW: Payment Mode mapping (API -> Frontend)
@@ -72,8 +67,9 @@ export const mapConfigToFormData = (configResponse: ConfigResponse): Partial<For
     dailyPhoneRechargeLimit: String(config.maxDailyRecharge ?? ''),
 
     // Discount config fields
-    discountProvider: (discountConfig.discountProvider ? DISCOUNT_PROVIDER_REVERSE_MAP[discountConfig.discountProvider] : null) || '1',
     discountMode: (discountConfig.discountMode ? DISCOUNT_MODE_REVERSE_MAP[discountConfig.discountMode] : null) || '1',
+    discountAmount: String(discountConfig.discountAmount ?? ''),
+    discountPerEvery: String(discountConfig.discountPerEvery ?? ''),
 
     // Print config fields
     printerType: (printConfig.printMode ? PRINT_MODE_REVERSE_MAP[printConfig.printMode] : null) || '1',

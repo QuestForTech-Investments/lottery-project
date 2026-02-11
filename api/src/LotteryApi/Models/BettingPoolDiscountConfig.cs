@@ -15,12 +15,14 @@ public class BettingPoolDiscountConfig
     public int BettingPoolId { get; set; }
 
     [MaxLength(50)]
-    [Column("discount_provider")]
-    public string DiscountProvider { get; set; } = "GRUPO";
-
-    [MaxLength(50)]
     [Column("discount_mode")]
     public string DiscountMode { get; set; } = "OFF";
+
+    [Column("discount_amount", TypeName = "decimal(18,2)")]
+    public decimal? DiscountAmount { get; set; }
+
+    [Column("discount_per_every")]
+    public int? DiscountPerEvery { get; set; }
 
     [Column("created_at")]
     public DateTime? CreatedAt { get; set; }

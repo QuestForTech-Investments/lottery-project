@@ -187,9 +187,23 @@ public class TicketsController : ControllerBase
                         IsActive = bp.IsActive,
                         CurrentBalance = 0m, // TODO: Calculate from balances table
                         CommissionPercentage = 10.00m, // TODO: Get from config
-                        DiscountPercentage = 0.00m // TODO: Get from config
+                        DiscountPercentage = 0.00m
                     })
                     .FirstOrDefaultAsync();
+
+                if (pool != null)
+                {
+                    var discountConfig = await _context.BettingPoolDiscountConfigs
+                        .Where(dc => dc.BettingPoolId == bettingPoolId.Value)
+                        .FirstOrDefaultAsync();
+
+                    if (discountConfig != null && discountConfig.DiscountMode != "OFF")
+                    {
+                        pool.DiscountMode = discountConfig.DiscountMode;
+                        pool.DiscountAmount = discountConfig.DiscountAmount;
+                        pool.DiscountPerEvery = discountConfig.DiscountPerEvery;
+                    }
+                }
 
                 currentBettingPool = pool;
             }
@@ -563,7 +577,6 @@ public class TicketsController : ControllerBase
                 IpAddress = dto.IpAddress,
                 CreatedAt = now,
                 GlobalMultiplier = dto.GlobalMultiplier,
-                GlobalDiscount = dto.GlobalDiscount,
                 CurrencyCode = "DOP",
                 CustomerName = dto.CustomerName,
                 CustomerPhone = dto.CustomerPhone,
@@ -573,8 +586,35 @@ public class TicketsController : ControllerBase
                 Status = "pending"
             };
 
-            // 7. Get discount percentage (commission is per-line based on bet type)
-            var discountPercentage = dto.GlobalDiscount > 0 ? dto.GlobalDiscount : 0.00m;
+            // 6.5 Resolve discount from betting pool config when ApplyDiscount = true
+            var discountAmount = 0m;
+            var discountPerEvery = 0;
+            if (dto.ApplyDiscount)
+            {
+                var discountConfig = await _context.BettingPoolDiscountConfigs
+                    .Where(dc => dc.BettingPoolId == dto.BettingPoolId)
+                    .FirstOrDefaultAsync();
+
+                if (discountConfig != null && discountConfig.DiscountMode != "OFF"
+                    && discountConfig.DiscountAmount.HasValue && discountConfig.DiscountPerEvery.HasValue
+                    && discountConfig.DiscountPerEvery.Value > 0)
+                {
+                    discountAmount = discountConfig.DiscountAmount.Value;
+                    discountPerEvery = discountConfig.DiscountPerEvery.Value;
+                    ticket.DiscountMode = discountConfig.DiscountMode;
+                    ticket.GlobalDiscount = discountAmount;
+                }
+                else
+                {
+                    ticket.DiscountMode = "OFF";
+                }
+            }
+            else
+            {
+                ticket.DiscountMode = "OFF";
+            }
+
+            // 7. Discount is floor-based: floor(betAmount / perEvery) * discountAmount
 
             // 8. Create ticket lines and calculate totals
             var lineNumber = 1;
@@ -630,8 +670,8 @@ public class TicketsController : ControllerBase
                     lineDto.BetTypeId,
                     draw.LotteryId);
 
-                // Calculate line totals with commission
-                CalculateTicketLine(line, commissionPercentage, discountPercentage);
+                // Calculate line totals with commission and floor-based discount
+                CalculateTicketLine(line, commissionPercentage, discountAmount, discountPerEvery);
 
                 totalBetAmount += line.BetAmount;
                 totalDiscount += line.DiscountAmount;
@@ -1308,10 +1348,24 @@ public class TicketsController : ControllerBase
     /// <summary>
     /// Calculate ticket line amounts (discount, commission, net)
     /// </summary>
-    private void CalculateTicketLine(TicketLine line, decimal commissionPercentage, decimal discountPercentage)
+    private void CalculateTicketLine(TicketLine line, decimal commissionPercentage, decimal discountAmount, int discountPerEvery)
     {
-        line.DiscountPercentage = discountPercentage;
-        line.DiscountAmount = line.BetAmount * (discountPercentage / 100);
+        // Floor-based discount: floor(betAmount / perEvery) * discountAmount
+        // e.g. config 1:10, bet $15 → floor(15/10) * 1 = $1 discount
+        if (discountPerEvery > 0 && discountAmount > 0)
+        {
+            var multiplier = Math.Floor(line.BetAmount / discountPerEvery);
+            line.DiscountAmount = multiplier * discountAmount;
+            line.DiscountPercentage = line.BetAmount > 0
+                ? Math.Round((line.DiscountAmount / line.BetAmount) * 100, 2)
+                : 0;
+        }
+        else
+        {
+            line.DiscountAmount = 0;
+            line.DiscountPercentage = 0;
+        }
+
         line.Subtotal = line.BetAmount - line.DiscountAmount;
         line.TotalWithMultiplier = line.Subtotal * line.Multiplier;
         line.CommissionPercentage = commissionPercentage;

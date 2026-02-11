@@ -31,8 +31,9 @@ interface FormData {
   printTicketCopy: boolean;
   fallType: string;
   printMode: string;
-  discountProvider: string;
   discountMode: string;
+  discountAmount: string;
+  discountPerEvery: string;
   [key: string]: string | boolean;
 }
 
@@ -99,8 +100,9 @@ const useCreateBettingPoolForm = (): UseCreateBettingPoolFormReturn => {
     // Dropdown settings
     fallType: 'OFF',
     printMode: 'DRIVER',
-    discountProvider: 'GRUPO',
     discountMode: 'OFF',
+    discountAmount: '',
+    discountPerEvery: '',
   });
 
   // UI state
@@ -253,8 +255,9 @@ const useCreateBettingPoolForm = (): UseCreateBettingPoolFormReturn => {
         // Settings
         fallType: formData.fallType,
         printMode: formData.printMode,
-        discountProvider: formData.discountProvider,
         discountMode: formData.discountMode,
+        discountAmount: formData.discountAmount ? parseFloat(formData.discountAmount) : null,
+        discountPerEvery: formData.discountPerEvery ? parseInt(formData.discountPerEvery) : null,
 
         // Toggles
         controlWinningTickets: formData.controlWinningTickets,

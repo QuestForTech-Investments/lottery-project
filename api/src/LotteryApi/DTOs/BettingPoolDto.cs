@@ -177,8 +177,9 @@ public class BettingPoolConfigDto
 /// </summary>
 public class BettingPoolDiscountConfigDto
 {
-    public string DiscountProvider { get; set; } = "GRUPO";
     public string DiscountMode { get; set; } = "OFF";
+    public decimal? DiscountAmount { get; set; }
+    public int? DiscountPerEvery { get; set; }
 }
 
 /// <summary>

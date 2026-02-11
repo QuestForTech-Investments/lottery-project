@@ -63,8 +63,9 @@ export interface FormData {
   canChangePassword: string;
   language: string | null;
   printMode: string | null;
-  discountProvider: string | null;
   discountMode: string | null;
+  discountAmount: string;
+  discountPerEvery: string;
   updateGeneralValues: boolean;
   autoFooter: boolean;
   footer1: string;

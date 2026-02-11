@@ -78,7 +78,8 @@ public class SalesReportsController : ControllerBase
                     var totalSold = x.Tickets.Sum(t => t.GrandTotal);
                     var totalPrizes = x.Tickets.Sum(t => t.TotalPrize);
                     var totalCommissions = x.Tickets.Sum(t => t.TotalCommission);
-                    var totalNet = totalSold - totalCommissions - totalPrizes;
+                    var riferoDiscount = x.Tickets.Where(t => t.DiscountMode == "RIFERO").Sum(t => t.TotalDiscount);
+                    var totalNet = totalSold + riferoDiscount - totalCommissions - totalPrizes;
 
                     return new BettingPoolSalesDto
                     {
@@ -155,6 +156,7 @@ public class SalesReportsController : ControllerBase
             decimal totalSold = tickets.Sum(t => t.GrandTotal);
             decimal totalNet = tickets.Sum(t => t.TotalNet);
             decimal totalPrizes = tickets.Sum(t => t.TotalPrize);
+            decimal riferoDiscount = tickets.Where(t => t.DiscountMode == "RIFERO").Sum(t => t.TotalDiscount);
 
             var summary = new SalesSummaryDto
             {
@@ -167,7 +169,7 @@ public class SalesReportsController : ControllerBase
                 BenefitPercentage = 0
             };
 
-            summary.TotalNet = summary.TotalSold - summary.TotalCommissions - summary.TotalPrizes;
+            summary.TotalNet = summary.TotalSold + riferoDiscount - summary.TotalCommissions - summary.TotalPrizes;
 
             if (totalSold > 0) summary.BenefitPercentage = (summary.TotalNet / summary.TotalSold) * 100;
 
@@ -258,7 +260,8 @@ public class SalesReportsController : ControllerBase
                 var totalPrizes = dayTickets.Sum(t => t.TotalPrize);
                 var totalCommissions = dayTickets.Sum(t => t.TotalCommission);
                 var totalDiscounts = dayTickets.Sum(t => t.TotalDiscount);
-                var totalNet = totalSold - totalCommissions - totalPrizes;
+                var riferoDiscount = dayTickets.Where(t => t.DiscountMode == "RIFERO").Sum(t => t.TotalDiscount);
+                var totalNet = totalSold + riferoDiscount - totalCommissions - totalPrizes;
 
                 dailySummaries.Add(new DailySalesSummaryDto
                 {
@@ -350,6 +353,7 @@ public class SalesReportsController : ControllerBase
                     var totalSold = x.Tickets.Sum(t => t.GrandTotal);
                     var totalPrizes = x.Tickets.Sum(t => t.TotalPrize);
                     var totalCommissions = x.Tickets.Sum(t => t.TotalCommission);
+                    var riferoDiscount = x.Tickets.Where(t => t.DiscountMode == "RIFERO").Sum(t => t.TotalDiscount);
 
                     // Count tickets by state
                     var pendingCount = x.Tickets.Count(t => t.TicketState == "P");
@@ -367,7 +371,7 @@ public class SalesReportsController : ControllerBase
                         TotalSold = totalSold,
                         TotalPrizes = totalPrizes,
                         TotalCommissions = totalCommissions,
-                        TotalNet = totalSold - totalCommissions - totalPrizes,
+                        TotalNet = totalSold + riferoDiscount - totalCommissions - totalPrizes,
                         PendingCount = pendingCount,
                         WinnerCount = winnerCount,
                         LoserCount = loserCount
@@ -529,6 +533,9 @@ public class SalesReportsController : ControllerBase
 
                 var bettingPoolIds = tickets.Select(t => t.BettingPoolId).Distinct().Count();
 
+                var zoneRiferoDiscount = tickets.Where(t => t.DiscountMode == "RIFERO").Sum(t => t.TotalDiscount);
+                var zoneTotalNet = tickets.Sum(t => t.GrandTotal) + zoneRiferoDiscount - tickets.Sum(t => t.TotalCommission) - tickets.Sum(t => t.TotalPrize);
+
                 zoneSales.Add(new ZoneSalesDto
                 {
                     ZoneId = zone.ZoneId,
@@ -541,9 +548,9 @@ public class SalesReportsController : ControllerBase
                     TotalPrizes = tickets.Sum(t => t.TotalPrize),
                     TotalCommissions = tickets.Sum(t => t.TotalCommission),
                     TotalDiscounts = tickets.Sum(t => t.TotalDiscount),
-                    TotalNet = tickets.Sum(t => t.GrandTotal) - tickets.Sum(t => t.TotalCommission) - tickets.Sum(t => t.TotalPrize),
+                    TotalNet = zoneTotalNet,
                     Fall = 0, // TODO: Calculate based on business rules
-                    Final = tickets.Sum(t => t.GrandTotal) - tickets.Sum(t => t.TotalCommission) - tickets.Sum(t => t.TotalPrize),
+                    Final = zoneTotalNet,
                     Balance = 0 // TODO: Calculate based on business rules
                 });
             }

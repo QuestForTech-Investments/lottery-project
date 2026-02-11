@@ -184,30 +184,16 @@ const ConfigurationTab: FC<ConfigurationTabProps> = memo(({ formData, zones, onI
           </Box>
 
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 2 }}>
-            <Typography sx={{ minWidth: 200 }}>Proveedor de descuento</Typography>
-            <ToggleButtonGroup
-              value={formData.discountProvider}
-              exclusive
-              onChange={(_, newVal) => onInputChange('discountProvider', newVal)}
-              size="small"
-            >
-              <ToggleButton value="GRUPO">GRUPO</ToggleButton>
-              <ToggleButton value="RIFERO">RIFERO</ToggleButton>
-            </ToggleButtonGroup>
-          </Box>
-
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 2 }}>
             <Typography sx={{ minWidth: 200 }}>Modo de descuento</Typography>
             <ToggleButtonGroup
               value={formData.discountMode}
               exclusive
               onChange={(_, newVal) => onInputChange('discountMode', newVal)}
               size="small"
-              sx={{ flexWrap: 'wrap' }}
             >
               <ToggleButton value="OFF">OFF</ToggleButton>
-              <ToggleButton value="EFECTIVO">EFECTIVO</ToggleButton>
-              <ToggleButton value="TICKET_GRATIS">TICKET GRATIS</ToggleButton>
+              <ToggleButton value="GRUPO">GRUPO</ToggleButton>
+              <ToggleButton value="RIFERO">RIFERO</ToggleButton>
             </ToggleButtonGroup>
           </Box>
 
