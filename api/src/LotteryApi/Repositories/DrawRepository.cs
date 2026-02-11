@@ -20,7 +20,7 @@ public class DrawRepository : GenericRepository<Draw>, IDrawRepository
             .Include(d => d.Lottery)
                 .ThenInclude(l => l!.Country)
             .AsSplitQuery()
-            .OrderBy(d => d.DrawTime)
+            .OrderBy(d => d.DrawName)
             .ToListAsync();
     }
 
@@ -32,8 +32,7 @@ public class DrawRepository : GenericRepository<Draw>, IDrawRepository
             .Include(d => d.Lottery)
                 .ThenInclude(l => l!.Country)
             .AsSplitQuery()
-            .OrderBy(d => d.Lottery!.Country!.CountryName)
-                .ThenBy(d => d.DrawTime)
+            .OrderBy(d => d.DrawName)
             .ToListAsync();
     }
 
@@ -45,7 +44,7 @@ public class DrawRepository : GenericRepository<Draw>, IDrawRepository
             .Include(d => d.Lottery)
                 .ThenInclude(l => l!.Country)
             .AsSplitQuery()
-            .OrderBy(d => d.DrawTime)
+            .OrderBy(d => d.DrawName)
             .ToListAsync();
     }
 
@@ -129,7 +128,7 @@ public class DrawRepository : GenericRepository<Draw>, IDrawRepository
         return await _dbSet
             .AsNoTracking()
             .Where(d => d.LotteryId == lotteryId && d.IsActive)
-            .OrderBy(d => d.DrawTime)
+            .OrderBy(d => d.DrawName)
             .Select(d => new DrawDto
             {
                 DrawId = d.DrawId,
