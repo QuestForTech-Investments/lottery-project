@@ -72,3 +72,8 @@
 .vscode/
 Thumbs.db
 ehthumbs.db
+
+# Screenshots & Playwright
+captures/
+*.png
+.playwright-mcp/

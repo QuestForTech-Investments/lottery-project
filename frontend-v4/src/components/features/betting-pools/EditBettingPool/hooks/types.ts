@@ -139,6 +139,8 @@ export interface TemplateBettingPool {
   bettingPoolId: number;
   bettingPoolName: string;
   bettingPoolCode?: string;
+  zoneId?: number;
+  zoneName?: string;
 }
 
 export interface SyntheticEventLike {

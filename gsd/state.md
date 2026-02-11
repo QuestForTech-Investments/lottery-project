@@ -10,14 +10,66 @@
 
 ## Último Commit
 ```
-UI: Center Estado and Acciones cells in ticket monitoring table (c434e82)
+Filter bet types per draw: PICK_TWO and CASH3_6X1 categories (31e87cc)
 ```
-**Fecha:** 2026-02-08
+**Fecha:** 2026-02-10
 **Estado:** ✅ Desplegado
 
 ---
 
-## Cambios de Hoy (2026-02-08) - Sesión 5: Monitor de Tickets UI
+## Cambios de Hoy (2026-02-10) - Sesión 7: Filtro por sorteo + Template zona
+
+### ✅ Draw Abbreviation in DTOs (07306a7)
+**Cambio:** Incluir campo `Abbreviation` en DTOs y controllers de sorteos para que el frontend pueda mostrarlo.
+**Archivos:** API DTOs y controllers
+
+### ✅ Filter bet types per draw (31e87cc)
+**Problema:** Todos los sorteos mostraban todos los tipos de apuesta. La app original filtra:
+- FL PICK2 AM/PM, LA CHICA, DIARIA 11AM/3PM/9PM → solo **Pick Two**
+- NY/FL 6x1 draws → solo **Cash3** variantes
+
+**Fix:** Lógica de filtrado en `betTypeCompatibilityService.ts` y constantes en `PrizesTab/constants.ts`.
+**Estado:** ✅ Desplegado en producción
+
+### 🔧 Template copy: copiar zona + per-draw prize fix (pendiente deploy)
+**Problema 1:** Al aplicar plantilla, NO se copiaba la zona.
+**Problema 2:** Al guardar con plantilla, se creaban overrides per-draw para TODOS los sorteos (propagados desde General), aunque la plantilla source solo tuviera overrides para algunos.
+**Problema 3:** Create form faltaba `creditLimit` y `useCentralLogo` en template copy.
+**Problema 4:** Create form `parseInt("draw_43", 10)` → NaN (bug en parseo de drawId).
+
+**Fix (12 edits en 3 archivos):**
+1. `EditBettingPool/hooks/types.ts` — `zoneId?`/`zoneName?` en `TemplateBettingPool`
+2. `EditBettingPool/hooks/useEditBettingPoolForm.ts`:
+   - `templateDrawOverridesRef` → `Set<number>` (tracks specific drawIds with real overrides)
+   - `savePrizeConfigurations` param `allowDrawSpecific: Set<number> | boolean`
+   - Draw/lottery filtering only processes drawIds in the Set
+   - `applyTemplate` populates `overrideDrawIds` set
+3. `CreateBettingPool/hooks/useCompleteBettingPoolForm.ts`:
+   - Same `Set<number>` ref change
+   - `savePrizeConfigurations` accepts `drawOverrides?: Set<number>` param
+   - Filters `drawSpecificConfigs` by the set before batch save
+   - Fixed `parseInt` bug for "draw_XX" format
+   - Added `creditLimit` and `useCentralLogo` to template config copy
+
+**Verificado en local:** Template LB02→LB01 → solo 267 overrides (matching source), NO 4,623.
+**Pendiente:** Deploy.
+
+---
+
+## Cambios del (2026-02-09) - Sesión 6: Central Logo + Prize Loading Perf
+
+### ✅ Central logo flag & footer fields (16bb575)
+**Cambio:** Agregar flag `useCentralLogo` y ajustar campos de footer.
+
+### ✅ Cleanup PrizesTab (2fd0374)
+**Cambio:** Eliminar variable `isCustom` no usada y usar batch update.
+
+### ✅ Perf: Single API call for prize configs (df5c4d8)
+**Cambio:** Cargar todas las configuraciones de premios de todos los sorteos en una sola llamada API en vez de una por sorteo.
+
+---
+
+## Cambios de (2026-02-08) - Sesión 5: Monitor de Tickets UI
 
 ### ✅ Ticket Monitoring Table Redesign (083bac0, c434e82)
 **Cambios:**
@@ -157,6 +209,28 @@ Solo guardar General (~56 items vs ~3920). Batch endpoints backend.
 
 ---
 
+## Pendientes Técnicos (Tech Debt)
+
+### ✅ ~~Limpiar screenshots sueltos en raíz~~
+~~49 archivos `.png` eliminados. Agregado `*.png` a `.gitignore` para prevenir recurrencia.~~
+
+### 🔧 TypeScript errors (14 errores)
+1. **`zoneName` not on `BettingPool`** — `useCompleteBettingPoolForm.ts` y `useEditBettingPoolForm.ts` usan `zoneName` pero el tipo no lo tiene. Agregar al tipo `BettingPool`.
+2. **Null-safety en `UsersTab.tsx`** — 6 errores de `response` possibly null. Agregar null checks.
+3. **`keyof BetTypeAmounts` → `string`** — `CreateLimit`, `DeleteLimits` (3 errores). Cast necesario.
+4. **`string` → `LimitType` cast** — `LimitsList/index.tsx`. Agregar cast seguro.
+5. **`IndividualResultForm` key mismatch** — Tipo de key no compatible.
+
+### 📦 Commit pendiente (5 archivos modificados)
+- `.gitignore`
+- `DESIGN_SYSTEM.md` y `MIGRATION_RULES.md` movidos a `docs/`
+- `useCompleteBettingPoolForm.ts` — template copy zona
+- `useEditBettingPoolForm.ts` — template copy zona
+- `EditBettingPool/hooks/types.ts` — `zoneId`/`zoneName` en `TemplateBettingPool`
+- `gsd/state.md`
+
+---
+
 ## Próxima Fase
 **Fase 5: Resultados y Sincronización**
 - Sincronización de resultados desde app original
@@ -199,4 +273,4 @@ Solo guardar General (~56 items vs ~3920). Batch endpoints backend.
 
 ---
 
-**Fecha de última actualización:** 2026-02-08 09:30
+**Fecha de última actualización:** 2026-02-10

@@ -78,6 +78,7 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
   const [loadingTemplates, setLoadingTemplates] = useState<boolean>(false);
   const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
   const [loadingTemplateData, setLoadingTemplateData] = useState<boolean>(false);
+  const templateDrawOverridesRef = useRef<Set<number>>(new Set());
   const [templateFields, setTemplateFields] = useState<TemplateFields>({
     configuration: true,
     footers: true,
@@ -365,7 +366,7 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
     bettingPoolId: string | undefined,
     currentFormData: FormData | Record<string, string | number | boolean | number[] | AutoExpense[] | null>,
     initialData: FormData | null = null,
-    allowDrawSpecific: boolean = false
+    allowDrawSpecific: Set<number> | boolean = false
   ): Promise<SavePrizeResult> => {
     const startTime = performance.now();
 
@@ -416,11 +417,17 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
           lotteryId = 'general';
           cleanKey = parts.slice(1).join('_'); // Remove "general_"
         }
-        // Draw-specific fields (draw_XX_*) - only process if allowDrawSpecific is true
+        // Draw-specific fields (draw_XX_*) - only process if allowDrawSpecific is true/Set
         else if (parts[0] === 'draw' && parts.length >= 5) {
           if (!allowDrawSpecific) {
-            // Skip - draw-specific configs are saved separately via savePrizeConfigForSingleDraw()
             return;
+          }
+          // If allowDrawSpecific is a Set, only process draws in the Set
+          if (allowDrawSpecific instanceof Set) {
+            const drawIdNum = parseInt(parts[1], 10);
+            if (!allowDrawSpecific.has(drawIdNum)) {
+              return;
+            }
           }
           lotteryId = `${parts[0]}_${parts[1]}`; // "draw_43"
           cleanKey = parts.slice(2).join('_'); // Remove "draw_XX_"
@@ -428,8 +435,13 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
         // Lottery-specific fields (lottery_XX_*) - legacy format, only process if allowDrawSpecific
         else if (parts[0] === 'lottery' && parts.length >= 5) {
           if (!allowDrawSpecific) {
-            // Skip - lottery-specific configs are saved separately
             return;
+          }
+          if (allowDrawSpecific instanceof Set) {
+            const drawIdNum = parseInt(parts[1], 10);
+            if (!allowDrawSpecific.has(drawIdNum)) {
+              return;
+            }
           }
           lotteryId = `${parts[0]}_${parts[1]}`; // "lottery_43"
           cleanKey = parts.slice(2).join('_'); // Remove "lottery_XX_"
@@ -1166,7 +1178,7 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
         // ========================================
 
         try {
-          const prizeResult = await savePrizeConfigurations(id, formData, initialFormData);
+          const prizeResult = await savePrizeConfigurations(id, formData, initialFormData, templateDrawOverridesRef.current);
 
           if (prizeResult.success) {
             if (prizeResult.skipped) {
@@ -1261,6 +1273,7 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
 
         // Show success message and navigate to betting pools list
         setSuccessMessage('✅ Banca actualizada exitosamente');
+        templateDrawOverridesRef.current = new Set();
 
         // Navigate to betting pools list after a short delay
         setTimeout(() => {
@@ -1356,6 +1369,8 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
             bettingPoolId: pool.bettingPoolId,
             bettingPoolName: pool.bettingPoolName,
             bettingPoolCode: pool.bettingPoolCode,
+            zoneId: pool.zoneId,
+            zoneName: pool.zoneName,
           }));
         setTemplateBettingPools(filteredPools);
       }
@@ -1433,6 +1448,20 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
         // Fetch bet types with fields (needed for defaults + prizeTypeId mapping)
         promises.push(getAllBetTypesWithFields());
         dataTypes.push('betTypes');
+
+        // Fetch per-draw prize configs
+        const fetchDrawPrizeConfigs = async () => {
+          const resp = await fetch(`${API_BASE}/betting-pools/${selectedTemplateId}/draws/prize-config/all`, {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+              'Content-Type': 'application/json'
+            }
+          });
+          if (!resp.ok) return [];
+          return resp.json();
+        };
+        promises.push(fetchDrawPrizeConfigs());
+        dataTypes.push('drawPrizes');
       }
 
       // Fetch schedules if selected
@@ -1455,6 +1484,7 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
       // Collect prize-related data first (needs both betTypes and prizes to combine)
       let betTypesData: BetType[] = [];
       let prizeConfigs: Array<{ prizeTypeId: number; fieldCode: string; customValue: number }> = [];
+      let drawPrizeConfigs: Array<{ drawId: number; prizeTypeId: number; fieldCode: string; customValue: number }> = [];
 
       results.forEach((result, index) => {
         const dataType = dataTypes[index];
@@ -1468,6 +1498,13 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
             if (templateFields.configuration) {
               const configUpdates = mapConfigToFormData(configData);
               Object.assign(updates, configUpdates);
+
+              // Copy zone from template
+              const templatePool = templateBettingPools.find(p => p.bettingPoolId === selectedTemplateId);
+              if (templatePool?.zoneId) {
+                updates.selectedZone = String(templatePool.zoneId);
+                updates.zoneId = String(templatePool.zoneId);
+              }
             }
 
             // Footers fields
@@ -1507,6 +1544,14 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
             }
           }
 
+          // Collect draw prize configs for later processing
+          if (dataType === 'drawPrizes') {
+            const configs = result.value as Array<{ drawId: number; prizeTypeId: number; fieldCode: string; customValue: number }>;
+            if (configs && Array.isArray(configs)) {
+              drawPrizeConfigs = configs;
+            }
+          }
+
           // Process commissions
           if (dataType === 'commissions') {
             const commissions = result.value as Array<{
@@ -1531,6 +1576,8 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
                 'PICK_TWO_FRONT': 'PICK TWO FRONT', 'PICK_TWO_BACK': 'PICK TWO BACK',
                 'PICK_TWO_MIDDLE': 'PICK TWO MIDDLE', 'SINGULACION': 'SINGULACION', 'PANAMA': 'PANAMA',
               };
+
+              // General commissions (lotteryId === null)
               commissions.filter(r => r.lotteryId === null).forEach(record => {
                 const betTypeCode = gameTypeMap[record.gameType] || record.gameType;
                 if (record.commissionDiscount1 !== null && record.commissionDiscount1 !== 0) {
@@ -1545,6 +1592,35 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
                 if (record.commissionDiscount4 !== null && record.commissionDiscount4 !== 0) {
                   (updates as Record<string, unknown>)[`general_COMMISSION_${betTypeCode}_COMMISSION_DISCOUNT_4`] = record.commissionDiscount4;
                 }
+              });
+
+              // Per-draw commissions (lotteryId !== null)
+              // Build lotteryId → drawIds mapping from available draws
+              const lotteryToDrawIds: Record<number, number[]> = {};
+              draws.forEach(d => {
+                if (d.lotteryId) {
+                  if (!lotteryToDrawIds[d.lotteryId]) lotteryToDrawIds[d.lotteryId] = [];
+                  lotteryToDrawIds[d.lotteryId].push(d.drawId);
+                }
+              });
+
+              commissions.filter(r => r.lotteryId !== null).forEach(record => {
+                const betTypeCode = gameTypeMap[record.gameType] || record.gameType;
+                const drawIds = lotteryToDrawIds[record.lotteryId!] || [];
+                drawIds.forEach(drawId => {
+                  if (record.commissionDiscount1 !== null && record.commissionDiscount1 !== 0) {
+                    (updates as Record<string, unknown>)[`draw_${drawId}_COMMISSION_${betTypeCode}_COMMISSION_DISCOUNT_1`] = record.commissionDiscount1;
+                  }
+                  if (record.commissionDiscount2 !== null && record.commissionDiscount2 !== 0) {
+                    (updates as Record<string, unknown>)[`draw_${drawId}_COMMISSION_${betTypeCode}_COMMISSION_DISCOUNT_2`] = record.commissionDiscount2;
+                  }
+                  if (record.commissionDiscount3 !== null && record.commissionDiscount3 !== 0) {
+                    (updates as Record<string, unknown>)[`draw_${drawId}_COMMISSION_${betTypeCode}_COMMISSION_DISCOUNT_3`] = record.commissionDiscount3;
+                  }
+                  if (record.commissionDiscount4 !== null && record.commissionDiscount4 !== 0) {
+                    (updates as Record<string, unknown>)[`draw_${drawId}_COMMISSION_${betTypeCode}_COMMISSION_DISCOUNT_4`] = record.commissionDiscount4;
+                  }
+                });
               });
             }
           }
@@ -1613,6 +1689,22 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
               }
             }
           });
+        }
+
+        // Step 3: Per-draw prize configs - track which drawIds have real overrides
+        if (drawPrizeConfigs.length > 0) {
+          const overrideDrawIds = new Set<number>();
+          drawPrizeConfigs.forEach(config => {
+            if (config.fieldCode && config.customValue !== undefined) {
+              const betTypeCode = prizeTypeToCode[config.prizeTypeId];
+              if (betTypeCode) {
+                const fieldKey = `draw_${config.drawId}_${betTypeCode}_${config.fieldCode}`;
+                (updates as Record<string, unknown>)[fieldKey] = config.customValue;
+                overrideDrawIds.add(config.drawId);
+              }
+            }
+          });
+          templateDrawOverridesRef.current = overrideDrawIds;
         }
       }
 
