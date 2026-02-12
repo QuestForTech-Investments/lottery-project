@@ -37,6 +37,9 @@ public class Draw
     [Column("use_weekly_schedule")]
     public bool UseWeeklySchedule { get; set; } = false;
 
+    [Column("display_order")]
+    public int DisplayOrder { get; set; } = 0;
+
     [Column("is_active")]
     public bool IsActive { get; set; } = true;
 

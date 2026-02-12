@@ -122,10 +122,10 @@ const PrizesTab: React.FC<PrizesTabProps> = ({
               name: draw.drawName,
               drawId: draw.drawId
             }));
-            const sortedDraws = apiDraws.sort((a, b) => a.name.localeCompare(b.name));
+            // API returns draws sorted by display_order - preserve that order
             const formattedDraws: Draw[] = [
               { id: 'general', name: 'General' },
-              ...sortedDraws
+              ...apiDraws
             ];
             setLocalDraws(formattedDraws);
           } else {

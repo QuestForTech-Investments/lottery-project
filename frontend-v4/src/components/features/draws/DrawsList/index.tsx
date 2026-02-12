@@ -29,7 +29,7 @@ import { Search as SearchIcon, Edit as EditIcon, DragIndicator as DragIndicatorI
 import { getAllDraws, updateDraw } from '../../../../services/drawService';
 
 type SortOrder = 'asc' | 'desc';
-type SortableColumn = 'name' | 'abbreviation';
+type SortableColumn = 'name' | 'abbreviation' | 'displayOrder';
 
 interface DrawOriginalData {
   drawId: number;
@@ -38,6 +38,7 @@ interface DrawOriginalData {
   description?: string;
   abbreviation?: string;
   displayColor?: string;
+  displayOrder?: number;
   lotteryColour?: string;
   isActive?: boolean;
 }
@@ -47,6 +48,7 @@ interface Draw {
   index: number;
   name: string;
   abbreviation: string;
+  displayOrder: number;
   color: string;
   originalData: DrawOriginalData;
 }
@@ -64,6 +66,7 @@ interface SnackbarState {
 
 interface EditForm {
   abbreviation: string;
+  displayOrder: number;
   color: string;
 }
 
@@ -79,7 +82,7 @@ const DrawsList = (): React.ReactElement => {
   // State for edit modal
   const [editModalOpen, setEditModalOpen] = useState<boolean>(false);
   const [editingDraw, setEditingDraw] = useState<Draw | null>(null);
-  const [editForm, setEditForm] = useState<EditForm>({ abbreviation: '', color: '#9e9e9e' });
+  const [editForm, setEditForm] = useState<EditForm>({ abbreviation: '', displayOrder: 0, color: '#9e9e9e' });
   const [saving, setSaving] = useState<boolean>(false);
 
   // Load draws desde la API
@@ -97,8 +100,8 @@ const DrawsList = (): React.ReactElement => {
             index: index + 1,
             name: draw.drawName,
             abbreviation: draw.abbreviation || '',
+            displayOrder: draw.displayOrder || 0,
             color: draw.displayColor || draw.lotteryColour || '#9e9e9e',
-            // Save original data for update
             originalData: draw
           }));
           setDraws(transformedDraws);
@@ -185,6 +188,7 @@ const DrawsList = (): React.ReactElement => {
       setEditingDraw(draw);
       setEditForm({
         abbreviation: draw.abbreviation || '',
+        displayOrder: draw.displayOrder || 0,
         color: draw.color || '#9e9e9e'
       });
       setEditModalOpen(true);
@@ -194,7 +198,7 @@ const DrawsList = (): React.ReactElement => {
   const handleCloseEditModal = useCallback(() => {
     setEditModalOpen(false);
     setEditingDraw(null);
-    setEditForm({ abbreviation: '', color: '#9e9e9e' });
+    setEditForm({ abbreviation: '', displayOrder: 0, color: '#9e9e9e' });
   }, []);
 
   const handleSaveEdit = useCallback(async () => {
@@ -207,6 +211,7 @@ const DrawsList = (): React.ReactElement => {
         drawTime: editingDraw.originalData.drawTime,
         description: editingDraw.originalData.description,
         abbreviation: editForm.abbreviation,
+        displayOrder: editForm.displayOrder,
         displayColor: editForm.color,
         isActive: editingDraw.originalData.isActive
       });
@@ -214,7 +219,7 @@ const DrawsList = (): React.ReactElement => {
       // Update estado local
       setDraws(prev => prev.map(d =>
         d.id === editingDraw.id
-          ? { ...d, abbreviation: editForm.abbreviation, color: editForm.color }
+          ? { ...d, abbreviation: editForm.abbreviation, displayOrder: editForm.displayOrder, color: editForm.color }
           : d
       ));
 
@@ -277,6 +282,10 @@ const DrawsList = (): React.ReactElement => {
 
   const handleEditFormAbbreviationChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
     setEditForm(prev => ({ ...prev, abbreviation: e.target.value }));
+  }, []);
+
+  const handleEditFormDisplayOrderChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
+    setEditForm(prev => ({ ...prev, displayOrder: parseInt(e.target.value) || 0 }));
   }, []);
 
   const handleEditFormColorChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
@@ -360,6 +369,15 @@ const DrawsList = (): React.ReactElement => {
                       Abreviación
                     </TableSortLabel>
                   </TableCell>
+                  <TableCell sx={{ fontSize: '14px', fontWeight: 600, color: '#787878', width: '80px', py: 2 }}>
+                    <TableSortLabel
+                      active={sortBy === 'displayOrder'}
+                      direction={sortBy === 'displayOrder' ? sortOrder : 'asc'}
+                      onClick={() => handleSort('displayOrder')}
+                    >
+                      Orden
+                    </TableSortLabel>
+                  </TableCell>
                   <TableCell sx={{ fontSize: '14px', fontWeight: 600, color: '#787878', width: '120px', py: 2 }}>Color</TableCell>
                   <TableCell sx={{ fontSize: '14px', fontWeight: 600, color: '#787878', textAlign: 'center', width: '120px', py: 2 }}>Acciones</TableCell>
                 </TableRow>
@@ -384,6 +402,7 @@ const DrawsList = (): React.ReactElement => {
                       </TableCell>
                       <TableCell sx={{ fontSize: '16px', py: 2, fontWeight: 500 }}>{draw.name}</TableCell>
                       <TableCell sx={{ fontSize: '16px', py: 2 }}>{draw.abbreviation}</TableCell>
+                      <TableCell sx={{ fontSize: '16px', py: 2, textAlign: 'center' }}>{draw.displayOrder}</TableCell>
                       <TableCell sx={{ py: 2 }}>
                         <input
                           type="color"
@@ -411,7 +430,7 @@ const DrawsList = (): React.ReactElement => {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={5} sx={{ textAlign: 'center', color: '#999', py: 3 }}>
+                    <TableCell colSpan={6} sx={{ textAlign: 'center', color: '#999', py: 3 }}>
                       No hay entradas disponibles
                     </TableCell>
                   </TableRow>
@@ -462,6 +481,18 @@ const DrawsList = (): React.ReactElement => {
                 fullWidth
                 size="small"
                 placeholder="Ingrese la abreviación"
+              />
+
+              {/* Orden de visualización */}
+              <TextField
+                label="Orden de visualización"
+                type="number"
+                value={editForm.displayOrder}
+                onChange={handleEditFormDisplayOrderChange}
+                fullWidth
+                size="small"
+                placeholder="0"
+                helperText="Menor número = aparece primero"
               />
 
               {/* Color */}

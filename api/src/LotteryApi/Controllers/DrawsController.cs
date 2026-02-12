@@ -83,7 +83,7 @@ public class DrawsController : ControllerBase
 
             var query = _context.Draws
                 .Where(d => d.IsActive)
-                .OrderBy(d => d.DrawName)
+                .OrderBy(d => d.DisplayOrder).ThenBy(d => d.DrawName)
                 .AsQueryable();
 
             if (lotteryId.HasValue)
@@ -346,6 +346,7 @@ public class DrawsController : ControllerBase
         draw.Description = dto.Description;
         draw.Abbreviation = dto.Abbreviation;
         draw.DisplayColor = dto.DisplayColor;
+        if (dto.DisplayOrder.HasValue) draw.DisplayOrder = dto.DisplayOrder.Value;
         draw.IsActive = dto.IsActive;
         draw.UpdatedAt = DateTime.UtcNow;
 

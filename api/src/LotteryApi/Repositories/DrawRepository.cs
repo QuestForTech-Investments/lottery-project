@@ -20,7 +20,7 @@ public class DrawRepository : GenericRepository<Draw>, IDrawRepository
             .Include(d => d.Lottery)
                 .ThenInclude(l => l!.Country)
             .AsSplitQuery()
-            .OrderBy(d => d.DrawName)
+            .OrderBy(d => d.DisplayOrder).ThenBy(d => d.DrawName)
             .ToListAsync();
     }
 
@@ -32,7 +32,7 @@ public class DrawRepository : GenericRepository<Draw>, IDrawRepository
             .Include(d => d.Lottery)
                 .ThenInclude(l => l!.Country)
             .AsSplitQuery()
-            .OrderBy(d => d.DrawName)
+            .OrderBy(d => d.DisplayOrder).ThenBy(d => d.DrawName)
             .ToListAsync();
     }
 
@@ -44,7 +44,7 @@ public class DrawRepository : GenericRepository<Draw>, IDrawRepository
             .Include(d => d.Lottery)
                 .ThenInclude(l => l!.Country)
             .AsSplitQuery()
-            .OrderBy(d => d.DrawName)
+            .OrderBy(d => d.DisplayOrder).ThenBy(d => d.DrawName)
             .ToListAsync();
     }
 
@@ -75,7 +75,7 @@ public class DrawRepository : GenericRepository<Draw>, IDrawRepository
         var totalCount = await query.CountAsync();
 
         var items = await query
-            .OrderBy(d => d.DrawName)
+            .OrderBy(d => d.DisplayOrder).ThenBy(d => d.DrawName)
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
             .Select(d => new DrawDto
@@ -87,8 +87,9 @@ public class DrawRepository : GenericRepository<Draw>, IDrawRepository
                 Description = d.Description,
                 Abbreviation = d.Abbreviation,
                 DisplayColor = d.DisplayColor,
-                ImageUrl = d.Lottery!.ImageUrl,  // Map from lottery for backward compatibility
-                LotteryImageUrl = d.Lottery!.ImageUrl,  // New field with correct name
+                DisplayOrder = d.DisplayOrder,
+                ImageUrl = d.Lottery!.ImageUrl,
+                LotteryImageUrl = d.Lottery!.ImageUrl,
                 IsActive = d.IsActive,
                 LotteryName = d.Lottery!.LotteryName,
                 LotteryColour = d.Lottery!.Colour,
@@ -113,8 +114,9 @@ public class DrawRepository : GenericRepository<Draw>, IDrawRepository
                 Description = d.Description,
                 Abbreviation = d.Abbreviation,
                 DisplayColor = d.DisplayColor,
-                ImageUrl = d.Lottery!.ImageUrl,  // Map from lottery for backward compatibility
-                LotteryImageUrl = d.Lottery!.ImageUrl,  // New field with correct name
+                DisplayOrder = d.DisplayOrder,
+                ImageUrl = d.Lottery!.ImageUrl,
+                LotteryImageUrl = d.Lottery!.ImageUrl,
                 IsActive = d.IsActive,
                 LotteryName = d.Lottery!.LotteryName,
                 LotteryColour = d.Lottery!.Colour,
@@ -128,7 +130,7 @@ public class DrawRepository : GenericRepository<Draw>, IDrawRepository
         return await _dbSet
             .AsNoTracking()
             .Where(d => d.LotteryId == lotteryId && d.IsActive)
-            .OrderBy(d => d.DrawName)
+            .OrderBy(d => d.DisplayOrder).ThenBy(d => d.DrawName)
             .Select(d => new DrawDto
             {
                 DrawId = d.DrawId,
@@ -138,8 +140,9 @@ public class DrawRepository : GenericRepository<Draw>, IDrawRepository
                 Description = d.Description,
                 Abbreviation = d.Abbreviation,
                 DisplayColor = d.DisplayColor,
-                ImageUrl = d.Lottery!.ImageUrl,  // Map from lottery for backward compatibility
-                LotteryImageUrl = d.Lottery!.ImageUrl,  // New field with correct name
+                DisplayOrder = d.DisplayOrder,
+                ImageUrl = d.Lottery!.ImageUrl,
+                LotteryImageUrl = d.Lottery!.ImageUrl,
                 IsActive = d.IsActive,
                 LotteryName = d.Lottery!.LotteryName,
                 LotteryColour = d.Lottery!.Colour,

@@ -96,7 +96,7 @@ const DrawsTab: React.FC<DrawsTabProps> = ({ formData, handleChange, draws: prop
           const response = await getAllDraws({ loadAll: true }) as DrawsApiResponse;
           if (response.success && response.data) {
             const sortedDraws = response.data.sort((a: Draw, b: Draw) =>
-              a.drawName.localeCompare(b.drawName)
+              (a.displayOrder || 0) - (b.displayOrder || 0) || a.drawName.localeCompare(b.drawName)
             );
             setLocalDraws(sortedDraws);
           }

@@ -11,6 +11,7 @@ public class DrawDto
     public string? DisplayColor { get; set; }
     public string? ImageUrl { get; set; }  // Keep for backward compatibility, maps to LotteryImageUrl
     public string? LotteryImageUrl { get; set; }  // Image URL from lottery
+    public int DisplayOrder { get; set; }
     public bool IsActive { get; set; }
     public string? LotteryName { get; set; }
     public string? LotteryColour { get; set; }
@@ -34,5 +35,6 @@ public class UpdateDrawDto
     public string? Description { get; set; }
     public string? Abbreviation { get; set; }
     public string? DisplayColor { get; set; }
+    public int? DisplayOrder { get; set; }
     public bool IsActive { get; set; }
 }
