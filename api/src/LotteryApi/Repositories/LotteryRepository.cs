@@ -90,6 +90,7 @@ public class LotteryRepository : GenericRepository<Lottery>, ILotteryRepository
                 LotteryName = l.LotteryName,
                 LotteryType = l.LotteryType,
                 Description = l.Description,
+                Color = l.Colour,
                 IsActive = l.IsActive,
                 CountryName = l.Country!.CountryName,
                 ImageUrl = l.ImageUrl
@@ -110,6 +111,7 @@ public class LotteryRepository : GenericRepository<Lottery>, ILotteryRepository
                 LotteryName = l.LotteryName,
                 LotteryType = l.LotteryType,
                 Description = l.Description,
+                Color = l.Colour,
                 IsActive = l.IsActive,
                 CountryName = l.Country!.CountryName,
                 ImageUrl = l.ImageUrl

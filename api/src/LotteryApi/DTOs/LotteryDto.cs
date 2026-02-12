@@ -19,6 +19,7 @@ public class CreateLotteryDto
     public string LotteryName { get; set; } = string.Empty;
     public string? LotteryType { get; set; }
     public string? Description { get; set; }
+    public string? Color { get; set; }
 }
 
 public class UpdateLotteryDto
@@ -27,4 +28,5 @@ public class UpdateLotteryDto
     public string? LotteryType { get; set; }
     public string? Description { get; set; }
     public bool IsActive { get; set; }
+    public string? Color { get; set; }
 }

@@ -157,6 +157,7 @@ public class LotteriesController : ControllerBase
             LotteryName = dto.LotteryName,
             LotteryType = dto.LotteryType,
             Description = dto.Description,
+            Colour = dto.Color,
             IsActive = true,
             CreatedAt = DateTime.UtcNow
         };
@@ -170,6 +171,7 @@ public class LotteriesController : ControllerBase
             LotteryName = lottery.LotteryName,
             LotteryType = lottery.LotteryType,
             Description = lottery.Description,
+            Color = lottery.Colour,
             IsActive = lottery.IsActive
         };
 
@@ -194,6 +196,7 @@ public class LotteriesController : ControllerBase
         lottery.LotteryName = dto.LotteryName;
         lottery.LotteryType = dto.LotteryType;
         lottery.Description = dto.Description;
+        lottery.Colour = dto.Color;
         lottery.IsActive = dto.IsActive;
         lottery.UpdatedAt = DateTime.UtcNow;
 

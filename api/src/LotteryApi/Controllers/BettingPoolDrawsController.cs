@@ -66,7 +66,7 @@ public class BettingPoolDrawsController : ControllerBase
             var currentTime = nowBusiness.TimeOfDay;
 
             if (playableOnly)
-                bettingPoolDraws = bettingPoolDraws.FindAll(bpd => bpd.Draw!.WeeklySchedules.Any(ws =>
+                bettingPoolDraws = bettingPoolDraws.FindAll(bpd => bpd.IsActive && bpd.Draw!.WeeklySchedules.Any(ws =>
                     ws.DayOfWeek == currentDayOfWeek && ws.StartTime <= currentTime && ws.EndTime >= currentTime
                 ));
 
@@ -159,7 +159,7 @@ public class BettingPoolDrawsController : ControllerBase
                     : new List<GameTypeDto>(),
                 LotteryImage = bpd.Draw!.Lottery!.ImageUrl,
                 IsDominican = bpd.Draw!.Lottery!.Country!.CountryName == "República Dominicana" || bpd.Draw?.Lottery!.Country!.CountryName == "Dominican Republic",
-                Color = bpd.Draw!.Lottery!.Colour,
+                Color = bpd.Draw!.DisplayColor ?? bpd.Draw!.Lottery!.Colour,
                 WeeklySchedule = ConvertToWeeklyScheduleDto(bpd.Draw?.WeeklySchedules?.ToList())
             }).ToList();
 
