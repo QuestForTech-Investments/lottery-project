@@ -264,20 +264,57 @@ const DrawsList = (): React.ReactElement => {
     }
   }, []);
 
-  const handleDrop = useCallback((e: DragEvent<HTMLTableRowElement>, dropIndex: number) => {
+  const handleDrop = useCallback(async (e: DragEvent<HTMLTableRowElement>, dropIndex: number) => {
     e.preventDefault();
     const dragIndex = parseInt(e.dataTransfer.getData('text/html'));
     if (dragIndex === dropIndex) return;
 
-    setDraws(prev => {
-      const newDraws = [...prev];
-      const [draggedDraw] = newDraws.splice(dragIndex, 1);
-      newDraws.splice(dropIndex, 0, draggedDraw);
+    // Reorder locally
+    const newDraws = [...draws];
+    const [draggedDraw] = newDraws.splice(dragIndex, 1);
+    newDraws.splice(dropIndex, 0, draggedDraw);
 
-      // Update indices
-      return newDraws.map((d, idx) => ({ ...d, index: idx + 1 }));
-    });
-  }, []);
+    // Calculate new displayOrder for the moved draw based on neighbors
+    const prevOrder = dropIndex > 0 ? newDraws[dropIndex - 1].displayOrder : 0;
+    const nextOrder = dropIndex < newDraws.length - 1 ? newDraws[dropIndex + 1].displayOrder : prevOrder + 20;
+    const newOrder = Math.floor((prevOrder + nextOrder) / 2);
+
+    // Avoid collision: if no gap between neighbors, use prevOrder + 1
+    const finalOrder = newOrder <= prevOrder ? prevOrder + 1 : newOrder;
+
+    const updatedDraws = newDraws.map((d, idx) => ({
+      ...d,
+      index: idx + 1,
+      displayOrder: d.id === draggedDraw.id ? finalOrder : d.displayOrder
+    }));
+    setDraws(updatedDraws);
+
+    // Save to API
+    try {
+      await updateDraw(draggedDraw.id, {
+        drawName: draggedDraw.originalData.drawName,
+        drawTime: draggedDraw.originalData.drawTime,
+        description: draggedDraw.originalData.description,
+        abbreviation: draggedDraw.originalData.abbreviation,
+        displayOrder: finalOrder,
+        displayColor: draggedDraw.color,
+        isActive: draggedDraw.originalData.isActive
+      });
+      setSnackbar({
+        open: true,
+        message: `"${draggedDraw.name}" movido a posición ${dropIndex + 1} (orden: ${finalOrder})`,
+        severity: 'success'
+      });
+    } catch (err) {
+      const error = err as Error;
+      console.error('Error saving display order:', err);
+      setSnackbar({
+        open: true,
+        message: 'Error al guardar el orden: ' + (error.message || 'Error desconocido'),
+        severity: 'error'
+      });
+    }
+  }, [draws]);
 
   const handleCloseSnackbar = useCallback(() => {
     setSnackbar(prev => ({ ...prev, open: false }));
