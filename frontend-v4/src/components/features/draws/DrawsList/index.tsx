@@ -269,13 +269,13 @@ const DrawsList = (): React.ReactElement => {
     const dragIndex = parseInt(e.dataTransfer.getData('text/html'));
     if (dragIndex === dropIndex) return;
 
-    // Reorder locally
-    const newDraws = [...draws];
-    const [draggedDraw] = newDraws.splice(dragIndex, 1);
-    newDraws.splice(dropIndex, 0, draggedDraw);
+    // Use sortedDraws (matches visual table order) for correct indices
+    const visualDraws = [...sortedDraws];
+    const [draggedDraw] = visualDraws.splice(dragIndex, 1);
+    visualDraws.splice(dropIndex, 0, draggedDraw);
 
     // Renumber all draws: 10, 20, 30...
-    const updatedDraws = newDraws.map((d, idx) => ({
+    const updatedDraws = visualDraws.map((d, idx) => ({
       ...d,
       index: idx + 1,
       displayOrder: (idx + 1) * 10
@@ -284,7 +284,7 @@ const DrawsList = (): React.ReactElement => {
 
     // Build batch update with only changed draws
     const reorderItems = updatedDraws
-      .filter((d, idx) => d.displayOrder !== draws.find(orig => orig.id === d.id)?.displayOrder)
+      .filter(d => d.displayOrder !== sortedDraws.find(orig => orig.id === d.id)?.displayOrder)
       .map(d => ({ drawId: d.id, displayOrder: d.displayOrder }));
 
     if (reorderItems.length === 0) return;
@@ -314,7 +314,7 @@ const DrawsList = (): React.ReactElement => {
         severity: 'error'
       });
     }
-  }, [draws]);
+  }, [sortedDraws]);
 
   const handleCloseSnackbar = useCallback(() => {
     setSnackbar(prev => ({ ...prev, open: false }));
