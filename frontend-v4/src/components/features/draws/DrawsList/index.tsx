@@ -72,7 +72,7 @@ interface EditForm {
 
 const DrawsList = (): React.ReactElement => {
   const [quickFilter, setQuickFilter] = useState<string>('');
-  const [sortBy, setSortBy] = useState<SortableColumn | null>(null);
+  const [sortBy, setSortBy] = useState<SortableColumn | null>('displayOrder');
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
   const [draws, setDraws] = useState<Draw[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -274,35 +274,35 @@ const DrawsList = (): React.ReactElement => {
     const [draggedDraw] = newDraws.splice(dragIndex, 1);
     newDraws.splice(dropIndex, 0, draggedDraw);
 
-    // Calculate new displayOrder for the moved draw based on neighbors
-    const prevOrder = dropIndex > 0 ? newDraws[dropIndex - 1].displayOrder : 0;
-    const nextOrder = dropIndex < newDraws.length - 1 ? newDraws[dropIndex + 1].displayOrder : prevOrder + 20;
-    const newOrder = Math.floor((prevOrder + nextOrder) / 2);
-
-    // Avoid collision: if no gap between neighbors, use prevOrder + 1
-    const finalOrder = newOrder <= prevOrder ? prevOrder + 1 : newOrder;
-
+    // Renumber all draws: 10, 20, 30...
     const updatedDraws = newDraws.map((d, idx) => ({
       ...d,
       index: idx + 1,
-      displayOrder: d.id === draggedDraw.id ? finalOrder : d.displayOrder
+      displayOrder: (idx + 1) * 10
     }));
     setDraws(updatedDraws);
 
-    // Save to API
+    // Build batch update with only changed draws
+    const reorderItems = updatedDraws
+      .filter((d, idx) => d.displayOrder !== draws.find(orig => orig.id === d.id)?.displayOrder)
+      .map(d => ({ drawId: d.id, displayOrder: d.displayOrder }));
+
+    if (reorderItems.length === 0) return;
+
+    // Save to API via batch endpoint
     try {
-      await updateDraw(draggedDraw.id, {
-        drawName: draggedDraw.originalData.drawName,
-        drawTime: draggedDraw.originalData.drawTime,
-        description: draggedDraw.originalData.description,
-        abbreviation: draggedDraw.originalData.abbreviation,
-        displayOrder: finalOrder,
-        displayColor: draggedDraw.color,
-        isActive: draggedDraw.originalData.isActive
+      const token = localStorage.getItem('authToken');
+      await fetch(`${import.meta.env.VITE_API_BASE_URL || '/api'}/draws/reorder`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(reorderItems)
       });
       setSnackbar({
         open: true,
-        message: `"${draggedDraw.name}" movido a posición ${dropIndex + 1} (orden: ${finalOrder})`,
+        message: `"${draggedDraw.name}" movido a posición ${dropIndex + 1}`,
         severity: 'success'
       });
     } catch (err) {

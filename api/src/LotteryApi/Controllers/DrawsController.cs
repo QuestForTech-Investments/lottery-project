@@ -365,6 +365,39 @@ public class DrawsController : ControllerBase
     }
 
     /// <summary>
+    /// Batch update display order for multiple draws
+    /// </summary>
+    [HttpPut("reorder")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> Reorder([FromBody] List<DrawReorderDto> items)
+    {
+        if (items == null || items.Count == 0)
+            return BadRequest("No items provided");
+
+        var drawIds = items.Select(i => i.DrawId).ToList();
+        var draws = await _context.Draws
+            .Where(d => drawIds.Contains(d.DrawId))
+            .ToListAsync();
+
+        foreach (var item in items)
+        {
+            var draw = draws.FirstOrDefault(d => d.DrawId == item.DrawId);
+            if (draw != null)
+            {
+                draw.DisplayOrder = item.DisplayOrder;
+                draw.UpdatedAt = DateTime.UtcNow;
+            }
+        }
+
+        await _context.SaveChangesAsync();
+        await _cache.RemoveByPrefixAsync("draws:");
+
+        _logger.LogInformation("Reordered {Count} draws", items.Count);
+        return NoContent();
+    }
+
+    /// <summary>
     /// Clear draws cache to force reload from database
     /// </summary>
     [HttpPost("cache/clear")]

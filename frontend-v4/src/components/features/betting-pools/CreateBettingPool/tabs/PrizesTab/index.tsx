@@ -117,12 +117,15 @@ const PrizesTab: React.FC<PrizesTabProps> = ({
           const { getAllDraws } = await import('@services/drawService');
           const drawsResponse = await getAllDraws({ isActive: true, loadAll: true }) as DrawsApiResponse;
           if (drawsResponse.success && drawsResponse.data) {
-            const apiDraws: Draw[] = drawsResponse.data.map((draw: ApiDraw) => ({
+            // Sort draws by display_order for config tabs
+            const sortedApiDraws = [...drawsResponse.data].sort((a, b) =>
+              (a.displayOrder || 0) - (b.displayOrder || 0) || a.drawName.localeCompare(b.drawName)
+            );
+            const apiDraws: Draw[] = sortedApiDraws.map((draw: ApiDraw) => ({
               id: `draw_${draw.drawId}`,
               name: draw.drawName,
               drawId: draw.drawId
             }));
-            // API returns draws sorted by display_order - preserve that order
             const formattedDraws: Draw[] = [
               { id: 'general', name: 'General' },
               ...apiDraws

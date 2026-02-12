@@ -62,6 +62,7 @@ export interface PrizesTabProps {
 export interface ApiDraw {
   drawId: number;
   drawName: string;
+  displayOrder?: number;
   isActive?: boolean;
 }
 

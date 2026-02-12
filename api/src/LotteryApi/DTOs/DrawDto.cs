@@ -38,3 +38,9 @@ public class UpdateDrawDto
     public int? DisplayOrder { get; set; }
     public bool IsActive { get; set; }
 }
+
+public class DrawReorderDto
+{
+    public int DrawId { get; set; }
+    public int DisplayOrder { get; set; }
+}
