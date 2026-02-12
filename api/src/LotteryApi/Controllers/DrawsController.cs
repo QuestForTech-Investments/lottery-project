@@ -30,6 +30,9 @@ public class DrawsController : ControllerBase
     /// <summary>
     /// Get all draws with pagination (optimized with caching and SQL projection)
     /// </summary>
+    /// <param name="pageNumber">Page number (default: 1)</param>
+    /// <param name="pageSize">Page size (default: 50)</param>
+    /// <param name="sortBy">Sort field: null or "name" = sort by draw name, "displayOrder" = sort by display order then name</param>
     [HttpGet]
     [ProducesResponseType(typeof(PagedResponse<DrawDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAll([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 50, [FromQuery] string? sortBy = null)

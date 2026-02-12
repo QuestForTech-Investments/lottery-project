@@ -24,6 +24,7 @@ public class BettingPoolDrawDto
     // Configuration
     public bool IsActive { get; set; }
     public int? AnticipatedClosingMinutes { get; set; }
+    public int DisplayOrder { get; set; }
 
     public bool? IsDominican { get; set; }
 

@@ -29,8 +29,11 @@ public class BettingPoolDrawsController : ControllerBase
     /// Get all draws configured for a betting pool
     /// Returns draw names, lottery names, and available game types
     /// </summary>
+    /// <param name="bettingPoolId">Betting pool ID</param>
+    /// <param name="playableOnly">If true, only returns active draws playable at the current day/time</param>
+    /// <param name="sortBy">Sort field: null or "name" = sort by draw name, "displayOrder" = sort by display order then name</param>
     [HttpGet]
-    public async Task<ActionResult<List<BettingPoolDrawDto>>> GetDraws(int bettingPoolId, [FromQuery] bool playableOnly = false)
+    public async Task<ActionResult<List<BettingPoolDrawDto>>> GetDraws(int bettingPoolId, [FromQuery] bool playableOnly = false, [FromQuery] string? sortBy = null)
     {
         try
         {
@@ -53,8 +56,11 @@ public class BettingPoolDrawsController : ControllerBase
                 .Include(bpd => bpd.Draw)
                     .ThenInclude(d => d!.WeeklySchedules)
                 .AsSplitQuery()
-                .OrderBy(bpd => bpd.Draw!.DrawName)
                 .ToListAsync();
+
+            bettingPoolDraws = sortBy == "displayOrder"
+                ? bettingPoolDraws.OrderBy(bpd => bpd.Draw!.DisplayOrder).ThenBy(bpd => bpd.Draw!.DrawName).ToList()
+                : bettingPoolDraws.OrderBy(bpd => bpd.Draw!.DrawName).ToList();
 
             if (!bettingPoolDraws.Any())
             {
@@ -151,6 +157,7 @@ public class BettingPoolDrawsController : ControllerBase
                 CountryName = bpd.Draw?.Lottery?.Country?.CountryName,
                 IsActive = bpd.IsActive,
                 AnticipatedClosingMinutes = bpd.AnticipatedClosingMinutes,
+                DisplayOrder = bpd.Draw?.DisplayOrder ?? 0,
                 AvailableGameTypes = gameTypesByDraw.TryGetValue(bpd.DrawId, out var available)
                     ? available
                     : new List<GameTypeDto>(),
