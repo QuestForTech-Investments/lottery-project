@@ -86,8 +86,15 @@ const PrizesTab: React.FC<PrizesTabProps> = ({
     onBatchChange?.(updates);
   };
 
-  // Use prop draws if provided, otherwise use local draws
-  const draws = propDraws.length > 0 ? propDraws : localDraws;
+  // Use prop draws if provided, otherwise use local draws - sort alphabetically (General always first)
+  const draws = useMemo(() => {
+    const source = propDraws.length > 0 ? propDraws : localDraws;
+    return [...source].sort((a, b) => {
+      if (a.id === 'general') return -1;
+      if (b.id === 'general') return 1;
+      return a.name.localeCompare(b.name);
+    });
+  }, [propDraws, localDraws]);
   const loadingDraws = propDraws.length > 0 ? propLoadingDraws : localLoadingDraws;
 
   // Active draw name for filtering

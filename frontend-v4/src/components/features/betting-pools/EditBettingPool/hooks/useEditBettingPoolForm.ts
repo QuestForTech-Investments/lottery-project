@@ -145,7 +145,7 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
 
         // Process all draws (for DrawsTab and PrizesTab)
         if (allDrawsResponse.success && allDrawsResponse.data) {
-          // Sort draws alphabetically for config tabs
+          // Sort draws alphabetically
           const sortedDraws = [...allDrawsResponse.data].sort((a, b) =>
             a.drawName.localeCompare(b.drawName)
           );
