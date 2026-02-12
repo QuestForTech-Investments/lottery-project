@@ -15,7 +15,8 @@ public interface IDrawRepository : IGenericRepository<Draw>
     Task<(IEnumerable<DrawDto> Items, int TotalCount)> GetPagedDrawsOptimizedAsync(
         int pageNumber,
         int pageSize,
-        Expression<Func<Draw, bool>>? filter = null);
+        Expression<Func<Draw, bool>>? filter = null,
+        string? sortBy = null);
     Task<DrawDto?> GetDrawDtoByIdAsync(int drawId);
     Task<IEnumerable<DrawDto>> GetDrawsDtoByLotteryAsync(int lotteryId);
 }

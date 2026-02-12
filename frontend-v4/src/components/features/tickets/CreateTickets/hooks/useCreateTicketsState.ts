@@ -200,7 +200,7 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
     const loadDraws = async () => {
       setLoadingDraws(true);
       try {
-        const response = await api.get('/draws?pageSize=1000') as { items?: DrawApiResponse[] } | DrawApiResponse[];
+        const response = await api.get('/draws?pageSize=1000&sortBy=displayOrder') as { items?: DrawApiResponse[] } | DrawApiResponse[];
         const items = (response && 'items' in response ? response.items : response) || [];
 
         const formattedDraws = (items as DrawApiResponse[]).map((draw) => ({

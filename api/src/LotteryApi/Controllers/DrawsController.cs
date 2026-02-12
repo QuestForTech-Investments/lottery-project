@@ -32,9 +32,9 @@ public class DrawsController : ControllerBase
     /// </summary>
     [HttpGet]
     [ProducesResponseType(typeof(PagedResponse<DrawDto>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetAll([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 50)
+    public async Task<IActionResult> GetAll([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 50, [FromQuery] string? sortBy = null)
     {
-        var cacheKey = $"draws:page{pageNumber}:size{pageSize}";
+        var cacheKey = $"draws:page{pageNumber}:size{pageSize}:sort{sortBy ?? "name"}";
         var cached = await _cache.GetAsync<PagedResponse<DrawDto>>(cacheKey);
 
         if (cached != null)
@@ -47,7 +47,8 @@ public class DrawsController : ControllerBase
         var (items, totalCount) = await _drawRepository.GetPagedDrawsOptimizedAsync(
             pageNumber,
             pageSize,
-            filter: d => d.IsActive
+            filter: d => d.IsActive,
+            sortBy: sortBy
         );
 
         var response = new PagedResponse<DrawDto>
@@ -83,7 +84,7 @@ public class DrawsController : ControllerBase
 
             var query = _context.Draws
                 .Where(d => d.IsActive)
-                .OrderBy(d => d.DisplayOrder).ThenBy(d => d.DrawName)
+                .OrderBy(d => d.DrawName)
                 .AsQueryable();
 
             if (lotteryId.HasValue)

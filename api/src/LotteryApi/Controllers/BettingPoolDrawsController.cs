@@ -53,7 +53,7 @@ public class BettingPoolDrawsController : ControllerBase
                 .Include(bpd => bpd.Draw)
                     .ThenInclude(d => d!.WeeklySchedules)
                 .AsSplitQuery()
-                .OrderBy(bpd => bpd.Draw!.DisplayOrder).ThenBy(bpd => bpd.Draw!.DrawName)
+                .OrderBy(bpd => bpd.Draw!.DrawName)
                 .ToListAsync();
 
             if (!bettingPoolDraws.Any())

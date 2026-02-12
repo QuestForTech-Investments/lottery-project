@@ -145,11 +145,8 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
 
         // Process all draws (for DrawsTab and PrizesTab)
         if (allDrawsResponse.success && allDrawsResponse.data) {
-          // Sort draws by display_order (set in DB), then alphabetically
-          const sortedDraws = allDrawsResponse.data.sort((a, b) =>
-            (a.displayOrder || 0) - (b.displayOrder || 0) || a.drawName.localeCompare(b.drawName)
-          );
-          setDraws(sortedDraws);
+          // API returns draws sorted alphabetically - preserve that order
+          setDraws(allDrawsResponse.data);
 
           // Format draws for PrizesTab (with 'General' tab)
           const formattedForPrizes = sortedDraws.map(draw => ({

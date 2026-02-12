@@ -20,7 +20,7 @@ public class DrawRepository : GenericRepository<Draw>, IDrawRepository
             .Include(d => d.Lottery)
                 .ThenInclude(l => l!.Country)
             .AsSplitQuery()
-            .OrderBy(d => d.DisplayOrder).ThenBy(d => d.DrawName)
+            .OrderBy(d => d.DrawName)
             .ToListAsync();
     }
 
@@ -32,7 +32,7 @@ public class DrawRepository : GenericRepository<Draw>, IDrawRepository
             .Include(d => d.Lottery)
                 .ThenInclude(l => l!.Country)
             .AsSplitQuery()
-            .OrderBy(d => d.DisplayOrder).ThenBy(d => d.DrawName)
+            .OrderBy(d => d.DrawName)
             .ToListAsync();
     }
 
@@ -44,7 +44,7 @@ public class DrawRepository : GenericRepository<Draw>, IDrawRepository
             .Include(d => d.Lottery)
                 .ThenInclude(l => l!.Country)
             .AsSplitQuery()
-            .OrderBy(d => d.DisplayOrder).ThenBy(d => d.DrawName)
+            .OrderBy(d => d.DrawName)
             .ToListAsync();
     }
 
@@ -63,7 +63,8 @@ public class DrawRepository : GenericRepository<Draw>, IDrawRepository
     public async Task<(IEnumerable<DrawDto> Items, int TotalCount)> GetPagedDrawsOptimizedAsync(
         int pageNumber,
         int pageSize,
-        Expression<Func<Draw, bool>>? filter = null)
+        Expression<Func<Draw, bool>>? filter = null,
+        string? sortBy = null)
     {
         var query = _dbSet.AsNoTracking();
 
@@ -74,8 +75,11 @@ public class DrawRepository : GenericRepository<Draw>, IDrawRepository
 
         var totalCount = await query.CountAsync();
 
-        var items = await query
-            .OrderBy(d => d.DisplayOrder).ThenBy(d => d.DrawName)
+        var orderedQuery = sortBy == "displayOrder"
+            ? query.OrderBy(d => d.DisplayOrder).ThenBy(d => d.DrawName)
+            : query.OrderBy(d => d.DrawName);
+
+        var items = await orderedQuery
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
             .Select(d => new DrawDto
@@ -130,7 +134,7 @@ public class DrawRepository : GenericRepository<Draw>, IDrawRepository
         return await _dbSet
             .AsNoTracking()
             .Where(d => d.LotteryId == lotteryId && d.IsActive)
-            .OrderBy(d => d.DisplayOrder).ThenBy(d => d.DrawName)
+            .OrderBy(d => d.DrawName)
             .Select(d => new DrawDto
             {
                 DrawId = d.DrawId,
