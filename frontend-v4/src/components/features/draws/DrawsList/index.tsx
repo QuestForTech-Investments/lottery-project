@@ -251,6 +251,17 @@ const DrawsList = (): React.ReactElement => {
   const handleDragOver = useCallback((e: DragEvent<HTMLTableRowElement>) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
+
+    // Auto-scroll when dragging near viewport edges
+    const scrollMargin = 80;
+    const scrollSpeed = 15;
+    const y = e.clientY;
+
+    if (y < scrollMargin) {
+      window.scrollBy(0, -scrollSpeed);
+    } else if (y > window.innerHeight - scrollMargin) {
+      window.scrollBy(0, scrollSpeed);
+    }
   }, []);
 
   const handleDrop = useCallback((e: DragEvent<HTMLTableRowElement>, dropIndex: number) => {
