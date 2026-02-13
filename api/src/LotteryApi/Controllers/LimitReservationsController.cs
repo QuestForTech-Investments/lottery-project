@@ -91,7 +91,7 @@ public class LimitReservationsController : ControllerBase
 
             var totalUsed = dbAmount + existingReserved + request.Amount;
             var remaining = maxLimit > 0 ? maxLimit - totalUsed : 0;
-            var isBlocked = maxLimit > 0 && totalUsed >= maxLimit;
+            var isBlocked = maxLimit > 0 && totalUsed > maxLimit;
 
             if (isBlocked)
             {

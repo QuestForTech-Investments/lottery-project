@@ -253,7 +253,7 @@ public class LotteryHub : Hub<ILotteryHubClient>
             var totalUsed = currentAmount + reservedAmount;
             var availableAmount = maxLimit > 0 ? maxLimit - totalUsed : 0;
             var percentageUsed = maxLimit > 0 ? (totalUsed / maxLimit) * 100 : 0;
-            var isBlocked = consumption?.IsAtLimit ?? false || (maxLimit > 0 && totalUsed >= maxLimit);
+            var isBlocked = consumption?.IsAtLimit ?? false || (maxLimit > 0 && totalUsed > maxLimit);
 
             drawsAvailability.Add(new DrawAvailability
             {
