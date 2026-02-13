@@ -1240,8 +1240,11 @@ public class TicketsController : ControllerBase
                 return UnprocessableEntity(new { code = "TICKET_ALREADY_PAID" });
             }
 
-            // 4. Validate cancellation time window (5 minutes)
-            var cancelMinutes = 5;
+            // 4. Validate cancellation time window
+            var bpCancelConfig = await _context.BettingPoolConfigs
+                .AsNoTracking()
+                .FirstOrDefaultAsync(c => c.BettingPoolId == ticket.BettingPoolId);
+            var cancelMinutes = bpCancelConfig?.CancelMinutes ?? 5;
             var now = DateTime.UtcNow;
             var timeSinceCreation = now - ticket.CreatedAt;
 
