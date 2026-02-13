@@ -427,6 +427,10 @@ public class TicketsController : ControllerBase
             var todayBusiness = DateTimeHelper.TodayInBusinessTimezone();
             var ticketDate = dto.TicketDate?.Date ?? todayBusiness;
 
+            var bpConfig = await _context.BettingPoolConfigs
+                .AsNoTracking()
+                .FirstOrDefaultAsync(c => c.BettingPoolId == dto.BettingPoolId);
+
             // Future sales validation (only if ticketDate is provided and is in the future)
             if (dto.TicketDate.HasValue)
             {
@@ -437,10 +441,6 @@ public class TicketsController : ControllerBase
 
                 if (ticketDate > todayBusiness)
                 {
-                    // Fetch betting pool config to check future sales settings
-                    var bpConfig = await _context.BettingPoolConfigs
-                        .FirstOrDefaultAsync(c => c.BettingPoolId == dto.BettingPoolId);
-
                     var futureSalesMode = bpConfig?.FutureSalesMode ?? "OFF";
                     var maxFutureDays = bpConfig?.MaxFutureDays ?? 7;
 
@@ -470,6 +470,33 @@ public class TicketsController : ControllerBase
                         default:
                             return BadRequest(new { message = "Esta banca no permite ventas futuras" });
                     }
+                }
+            }
+
+            // 1.6 Validate daily sale limit
+            var dailySaleLimit = bpConfig?.DailySaleLimit;
+            if (dailySaleLimit.HasValue && dailySaleLimit.Value > 0)
+            {
+                var currentDailySales = await _context.Tickets
+                    .Where(t => t.BettingPoolId == dto.BettingPoolId
+                              && t.CreatedAt.Date == todayBusiness
+                              && !t.IsCancelled)
+                    .SumAsync(t => (decimal?)t.GrandTotal) ?? 0m;
+
+                var newTicketEstimate = dto.Lines.Sum(l => l.BetAmount);
+
+                if (currentDailySales + newTicketEstimate > dailySaleLimit.Value)
+                {
+                    var remaining = dailySaleLimit.Value - currentDailySales;
+                    return UnprocessableEntity(new
+                    {
+                        code = "ticket/daily-sale-limit-exceeded",
+                        message = "La banca ha alcanzado su límite de venta diaria",
+                        dailySaleLimit = dailySaleLimit.Value,
+                        currentDailySales,
+                        ticketAmount = newTicketEstimate,
+                        remaining = remaining > 0 ? remaining : 0m
+                    });
                 }
             }
 
