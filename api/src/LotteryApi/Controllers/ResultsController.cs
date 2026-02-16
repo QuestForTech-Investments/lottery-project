@@ -350,30 +350,7 @@ public class ResultsController : ControllerBase
 
         // Map to DTOs with real usernames and parsed numbers
         var logs = results.Select(r => {
-            var winningNumber = r.WinningNumber ?? "";
-            var additionalNumber = r.AdditionalNumber ?? "";
-
-            // Parse winning number into individual components
-            // Format: "889475" -> num1=88, num2=94, num3=75
-            var num1 = winningNumber.Length >= 2 ? winningNumber.Substring(0, 2) : "";
-            var num2 = winningNumber.Length >= 4 ? winningNumber.Substring(2, 2) : "";
-            var num3 = winningNumber.Length >= 6 ? winningNumber.Substring(4, 2) : "";
-
-            // Parse additional number for USA lotteries
-            // Format: "084017908401" -> cash3=084, play4=0179, pick5=08401
-            var cash3 = additionalNumber.Length >= 3 ? additionalNumber.Substring(0, 3) : "";
-            var play4 = additionalNumber.Length >= 7 ? additionalNumber.Substring(3, 4) : "";
-            var pick5 = additionalNumber.Length >= 12 ? additionalNumber.Substring(7, 5) : "";
-
-            // Calculate derived bet types from Cash3
-            // Bolita1 = first 2 digits (e.g., "084" -> "08")
-            // Bolita2 = last 2 digits (e.g., "084" -> "84")
-            // Singulaccion1/2/3 = individual digits (e.g., "084" -> "0", "8", "4")
-            var bolita1 = cash3.Length >= 2 ? cash3.Substring(0, 2) : "";
-            var bolita2 = cash3.Length >= 3 ? cash3.Substring(1, 2) : "";
-            var singulaccion1 = cash3.Length >= 1 ? cash3.Substring(0, 1) : "";
-            var singulaccion2 = cash3.Length >= 2 ? cash3.Substring(1, 1) : "";
-            var singulaccion3 = cash3.Length >= 3 ? cash3.Substring(2, 1) : "";
+            var p = ParseWinningNumber(r.WinningNumber, r.AdditionalNumber);
 
             return new ResultLogDto
             {
@@ -382,17 +359,17 @@ public class ResultsController : ControllerBase
                 ResultDate = r.ResultDate,
                 CreatedAt = r.CreatedAt ?? DateTime.UtcNow,
                 WinningNumbers = r.WinningNumber ?? "",
-                Num1 = num1,
-                Num2 = num2,
-                Num3 = num3,
-                Cash3 = cash3,
-                Play4 = play4,
-                Pick5 = pick5,
-                Bolita1 = bolita1,
-                Bolita2 = bolita2,
-                Singulaccion1 = singulaccion1,
-                Singulaccion2 = singulaccion2,
-                Singulaccion3 = singulaccion3
+                Num1 = p.Num1,
+                Num2 = p.Num2,
+                Num3 = p.Num3,
+                Cash3 = p.Cash3,
+                Play4 = p.Play4,
+                Pick5 = p.Pick5,
+                Bolita1 = p.Bolita1,
+                Bolita2 = p.Bolita2,
+                Singulaccion1 = p.Singulaccion1,
+                Singulaccion2 = p.Singulaccion2,
+                Singulaccion3 = p.Singulaccion3
             };
         }).ToList();
 
@@ -889,54 +866,7 @@ public class ResultsController : ControllerBase
 
     private static ResultDto MapToDto(Result result)
     {
-        var winningNumber = result.WinningNumber ?? "";
-
-        // Parse winning number into individual components
-        // Format: "889475" -> num1=88, num2=94, num3=75
-        var num1 = "";
-        var num2 = "";
-        var num3 = "";
-        var cash3 = "";
-        var play4 = "";
-        var pick5 = "";
-
-        if (winningNumber.Length >= 2)
-        {
-            num1 = winningNumber.Substring(0, 2);
-        }
-        if (winningNumber.Length >= 4)
-        {
-            num2 = winningNumber.Substring(2, 2);
-        }
-        if (winningNumber.Length >= 6)
-        {
-            num3 = winningNumber.Substring(4, 2);
-        }
-
-        // Additional number might contain cash3, play4, pick5
-        var additionalNumber = result.AdditionalNumber ?? "";
-        if (additionalNumber.Length >= 3)
-        {
-            cash3 = additionalNumber.Substring(0, 3);
-        }
-        if (additionalNumber.Length >= 7)
-        {
-            play4 = additionalNumber.Substring(3, 4);
-        }
-        if (additionalNumber.Length >= 12)
-        {
-            pick5 = additionalNumber.Substring(7, 5);
-        }
-
-        // Calculate derived bet types from Cash3 for USA lotteries
-        // Bolita1 = first 2 digits (e.g., "084" -> "08")
-        // Bolita2 = last 2 digits (e.g., "084" -> "84")
-        // Singulaccion1/2/3 = individual digits (e.g., "084" -> "0", "8", "4")
-        var bolita1 = cash3.Length >= 2 ? cash3.Substring(0, 2) : "";
-        var bolita2 = cash3.Length >= 3 ? cash3.Substring(1, 2) : "";
-        var singulaccion1 = cash3.Length >= 1 ? cash3.Substring(0, 1) : "";
-        var singulaccion2 = cash3.Length >= 2 ? cash3.Substring(1, 1) : "";
-        var singulaccion3 = cash3.Length >= 3 ? cash3.Substring(2, 1) : "";
+        var p = ParseWinningNumber(result.WinningNumber, result.AdditionalNumber);
 
         return new ResultDto
         {
@@ -953,17 +883,17 @@ public class ResultsController : ControllerBase
             UpdatedAt = result.UpdatedAt,
             ApprovedAt = result.ApprovedAt,
             ApprovedBy = result.ApprovedBy,
-            Num1 = num1,
-            Num2 = num2,
-            Num3 = num3,
-            Cash3 = cash3,
-            Play4 = play4,
-            Pick5 = pick5,
-            Bolita1 = bolita1,
-            Bolita2 = bolita2,
-            Singulaccion1 = singulaccion1,
-            Singulaccion2 = singulaccion2,
-            Singulaccion3 = singulaccion3
+            Num1 = p.Num1,
+            Num2 = p.Num2,
+            Num3 = p.Num3,
+            Cash3 = p.Cash3,
+            Play4 = p.Play4,
+            Pick5 = p.Pick5,
+            Bolita1 = p.Bolita1,
+            Bolita2 = p.Bolita2,
+            Singulaccion1 = p.Singulaccion1,
+            Singulaccion2 = p.Singulaccion2,
+            Singulaccion3 = p.Singulaccion3
         };
     }
 
@@ -973,26 +903,7 @@ public class ResultsController : ControllerBase
     /// </summary>
     private static ResultDto MapToDtoFromProjection(Result result, Draw draw)
     {
-        var winningNumber = result.WinningNumber ?? "";
-
-        // Parse winning number into individual components
-        // Format: "889475" -> num1=88, num2=94, num3=75
-        var num1 = winningNumber.Length >= 2 ? winningNumber.Substring(0, 2) : "";
-        var num2 = winningNumber.Length >= 4 ? winningNumber.Substring(2, 2) : "";
-        var num3 = winningNumber.Length >= 6 ? winningNumber.Substring(4, 2) : "";
-
-        // Additional number might contain cash3, play4, pick5
-        var additionalNumber = result.AdditionalNumber ?? "";
-        var cash3 = additionalNumber.Length >= 3 ? additionalNumber.Substring(0, 3) : "";
-        var play4 = additionalNumber.Length >= 7 ? additionalNumber.Substring(3, 4) : "";
-        var pick5 = additionalNumber.Length >= 12 ? additionalNumber.Substring(7, 5) : "";
-
-        // Calculate derived bet types from Cash3 for USA lotteries
-        var bolita1 = cash3.Length >= 2 ? cash3.Substring(0, 2) : "";
-        var bolita2 = cash3.Length >= 3 ? cash3.Substring(1, 2) : "";
-        var singulaccion1 = cash3.Length >= 1 ? cash3.Substring(0, 1) : "";
-        var singulaccion2 = cash3.Length >= 2 ? cash3.Substring(1, 1) : "";
-        var singulaccion3 = cash3.Length >= 3 ? cash3.Substring(2, 1) : "";
+        var p = ParseWinningNumber(result.WinningNumber, result.AdditionalNumber);
 
         return new ResultDto
         {
@@ -1009,17 +920,74 @@ public class ResultsController : ControllerBase
             UpdatedAt = result.UpdatedAt,
             ApprovedAt = result.ApprovedAt,
             ApprovedBy = result.ApprovedBy,
-            Num1 = num1,
-            Num2 = num2,
-            Num3 = num3,
-            Cash3 = cash3,
-            Play4 = play4,
-            Pick5 = pick5,
-            Bolita1 = bolita1,
-            Bolita2 = bolita2,
-            Singulaccion1 = singulaccion1,
-            Singulaccion2 = singulaccion2,
-            Singulaccion3 = singulaccion3
+            Num1 = p.Num1,
+            Num2 = p.Num2,
+            Num3 = p.Num3,
+            Cash3 = p.Cash3,
+            Play4 = p.Play4,
+            Pick5 = p.Pick5,
+            Bolita1 = p.Bolita1,
+            Bolita2 = p.Bolita2,
+            Singulaccion1 = p.Singulaccion1,
+            Singulaccion2 = p.Singulaccion2,
+            Singulaccion3 = p.Singulaccion3
         };
+    }
+
+    /// <summary>
+    /// Parsed components from a winning number string.
+    /// For 4-digit "Más" results (ABCD): num1=AB, num2=BC, num3=CD, cash3=ABC, play4=ABCD
+    /// For 6-digit standard results: num1=first 2, num2=middle 2, num3=last 2
+    /// </summary>
+    private struct ParsedWinningNumber
+    {
+        public string Num1, Num2, Num3;
+        public string Cash3, Play4, Pick5;
+        public string Bolita1, Bolita2;
+        public string Singulaccion1, Singulaccion2, Singulaccion3;
+    }
+
+    private static ParsedWinningNumber ParseWinningNumber(string? winningNumber, string? additionalNumber)
+    {
+        var wn = winningNumber ?? "";
+        var an = additionalNumber ?? "";
+        var p = new ParsedWinningNumber();
+
+        if (wn.Length == 4)
+        {
+            // "Más" lottery: 4-digit result "ABCD" -> overlapping derivation
+            p.Num1 = wn.Substring(0, 2);       // AB
+            p.Num2 = wn.Substring(1, 2);       // BC
+            p.Num3 = wn.Substring(2, 2);       // CD
+            p.Cash3 = wn.Substring(0, 3);      // ABC
+            p.Play4 = wn;                       // ABCD
+            p.Pick5 = "";
+            p.Bolita1 = "";
+            p.Bolita2 = "";
+            p.Singulaccion1 = "";
+            p.Singulaccion2 = "";
+            p.Singulaccion3 = "";
+        }
+        else
+        {
+            // Standard 6-digit result: "AABBCC" -> num1=AA, num2=BB, num3=CC
+            p.Num1 = wn.Length >= 2 ? wn.Substring(0, 2) : "";
+            p.Num2 = wn.Length >= 4 ? wn.Substring(2, 2) : "";
+            p.Num3 = wn.Length >= 6 ? wn.Substring(4, 2) : "";
+
+            // Additional number: cash3 + play4 + pick5
+            p.Cash3 = an.Length >= 3 ? an.Substring(0, 3) : "";
+            p.Play4 = an.Length >= 7 ? an.Substring(3, 4) : "";
+            p.Pick5 = an.Length >= 12 ? an.Substring(7, 5) : "";
+
+            // Derived from Cash3
+            p.Bolita1 = p.Cash3.Length >= 2 ? p.Cash3.Substring(0, 2) : "";
+            p.Bolita2 = p.Cash3.Length >= 3 ? p.Cash3.Substring(1, 2) : "";
+            p.Singulaccion1 = p.Cash3.Length >= 1 ? p.Cash3.Substring(0, 1) : "";
+            p.Singulaccion2 = p.Cash3.Length >= 2 ? p.Cash3.Substring(1, 1) : "";
+            p.Singulaccion3 = p.Cash3.Length >= 3 ? p.Cash3.Substring(2, 1) : "";
+        }
+
+        return p;
     }
 }
