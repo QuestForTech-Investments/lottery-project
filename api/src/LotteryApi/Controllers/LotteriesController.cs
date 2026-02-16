@@ -137,7 +137,8 @@ public class LotteriesController : ControllerBase
             LotteryType = l.LotteryType,
             Description = l.Description,
             IsActive = l.IsActive,
-            CountryName = l.Country?.CountryName
+            CountryName = l.Country?.CountryName,
+            Timezone = l.Timezone
         });
 
         return Ok(dtos);
@@ -198,6 +199,10 @@ public class LotteriesController : ControllerBase
         lottery.Description = dto.Description;
         lottery.Colour = dto.Color;
         lottery.IsActive = dto.IsActive;
+        if (!string.IsNullOrEmpty(dto.Timezone))
+        {
+            lottery.Timezone = dto.Timezone;
+        }
         lottery.UpdatedAt = DateTime.UtcNow;
 
         await _lotteryRepository.UpdateAsync(lottery);

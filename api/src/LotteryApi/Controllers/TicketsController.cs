@@ -209,24 +209,40 @@ public class TicketsController : ControllerBase
             }
 
             // Get available draws (active draws only, not yet closed)
-            var draws = await _context.Draws
+            // Use each lottery's timezone to determine if the draw is closed
+            var drawsRaw = await _context.Draws
                 .Include(d => d.Lottery)
                 .Where(d => d.IsActive)
                 .OrderBy(d => d.DrawTime)
-                .Select(d => new DrawParamDto
+                .Select(d => new
+                {
+                    d.DrawId,
+                    d.LotteryId,
+                    LotteryName = d.Lottery != null ? d.Lottery.LotteryName : "",
+                    d.DrawTime,
+                    d.IsActive,
+                    Timezone = d.Lottery != null ? d.Lottery.Timezone : "America/Santo_Domingo"
+                })
+                .ToListAsync();
+
+            var draws = drawsRaw.Select(d =>
+            {
+                var nowInTz = DateTimeHelper.NowInTimezone(d.Timezone);
+                var todayInTz = nowInTz.Date;
+                return new DrawParamDto
                 {
                     DrawId = d.DrawId,
                     LotteryId = d.LotteryId,
-                    LotteryName = d.Lottery != null ? d.Lottery.LotteryName : "",
-                    LotteryCode = null, // Not available in Lottery model
-                    DrawDate = today,
+                    LotteryName = d.LotteryName,
+                    LotteryCode = null,
+                    DrawDate = todayInTz,
                     DrawTime = d.DrawTime,
-                    CutoffTime = today.Add(d.DrawTime).AddMinutes(-30), // 30 min before draw
+                    CutoffTime = todayInTz.Add(d.DrawTime).AddMinutes(-30),
                     IsActive = d.IsActive,
-                    IsClosed = today.Add(d.DrawTime) <= now,
-                    ImageUrl = null // Not available in Lottery model
-                })
-                .ToListAsync();
+                    IsClosed = todayInTz.Add(d.DrawTime) <= nowInTz,
+                    ImageUrl = null
+                };
+            }).ToList();
 
             // Get available bet types (game types)
             var betTypes = await _context.GameTypes
@@ -514,9 +530,6 @@ public class TicketsController : ControllerBase
 
             // 3. Validate cutoff times for all draws
             var now = DateTime.UtcNow;
-            var nowBusiness = DateTimeHelper.NowInBusinessTimezone();
-            var currentTime = nowBusiness.TimeOfDay;
-            var currentDayOfWeek = (byte)nowBusiness.DayOfWeek;
             var drawIds = dto.Lines.Select(l => l.DrawId).Distinct().ToList();
             var betTypeIds = dto.Lines.Select(l => l.BetTypeId).Distinct().ToList();
 
@@ -577,9 +590,15 @@ public class TicketsController : ControllerBase
                 // Validate draw is still open for betting (only for today's tickets)
                 if (ticketDate == todayBusiness)
                 {
-                    // Only validate closing if draw has a schedule for today
+                    // Use the draw's lottery timezone for closing time comparison
+                    // This ensures draws close at the correct absolute time regardless of POS location
+                    var drawTimezone = draw.Lottery?.Timezone ?? "America/Santo_Domingo";
+                    var nowInDrawTz = DateTimeHelper.NowInTimezone(drawTimezone);
+                    var currentTimeInDrawTz = nowInDrawTz.TimeOfDay;
+                    var dayOfWeekInDrawTz = (byte)nowInDrawTz.DayOfWeek;
+
                     var todaySchedule = draw.WeeklySchedules?
-                        .FirstOrDefault(ws => ws.DayOfWeek == currentDayOfWeek && ws.IsActive);
+                        .FirstOrDefault(ws => ws.DayOfWeek == dayOfWeekInDrawTz && ws.IsActive);
 
                     if (todaySchedule != null)
                     {
@@ -592,7 +611,7 @@ public class TicketsController : ControllerBase
                             closingTime = closingTime.Subtract(TimeSpan.FromMinutes(anticipatedMinutes.Value));
                         }
 
-                        if (currentTime >= closingTime)
+                        if (currentTimeInDrawTz >= closingTime)
                         {
                             var closingFormatted = DateTime.Today.Add(closingTime).ToString("hh:mm tt");
                             return UnprocessableEntity(new

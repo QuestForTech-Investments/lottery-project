@@ -67,14 +67,17 @@ public class BettingPoolDrawsController : ControllerBase
                 return Ok(new List<BettingPoolDrawDto>());
             }
 
-            var nowBusiness = DateTimeHelper.NowInBusinessTimezone();
-            var currentDayOfWeek = (byte)nowBusiness.DayOfWeek;
-            var currentTime = nowBusiness.TimeOfDay;
-
             if (playableOnly)
-                bettingPoolDraws = bettingPoolDraws.FindAll(bpd => bpd.IsActive && bpd.Draw!.WeeklySchedules.Any(ws =>
-                    ws.DayOfWeek == currentDayOfWeek && ws.StartTime <= currentTime && ws.EndTime >= currentTime
-                ));
+                bettingPoolDraws = bettingPoolDraws.FindAll(bpd =>
+                {
+                    if (!bpd.IsActive) return false;
+                    var tz = bpd.Draw?.Lottery?.Timezone ?? "America/Santo_Domingo";
+                    var nowInTz = DateTimeHelper.NowInTimezone(tz);
+                    var dow = (byte)nowInTz.DayOfWeek;
+                    var time = nowInTz.TimeOfDay;
+                    return bpd.Draw!.WeeklySchedules.Any(ws =>
+                        ws.DayOfWeek == dow && ws.StartTime <= time && ws.EndTime >= time);
+                });
 
             // Get all draw IDs
             var drawIds = bettingPoolDraws.Select(bpd => bpd.DrawId).ToHashSet();
@@ -142,16 +145,21 @@ public class BettingPoolDrawsController : ControllerBase
                 );
 
             // Build DTOs
-            var result = bettingPoolDraws.Select(bpd => new BettingPoolDrawDto
+            var result = bettingPoolDraws.Select(bpd =>
             {
-                BettingPoolDrawId = bpd.BettingPoolDrawId,
-                BettingPoolId = bpd.BettingPoolId,
-                DrawId = bpd.DrawId,
-                DrawName = bpd.Draw?.DrawName,
-                Abbreviation = bpd.Draw?.Abbreviation,
-                DrawTime = bpd.Draw?.WeeklySchedules?
-                    .Where(ws => ws.DayOfWeek == currentDayOfWeek && ws.IsActive)
-                    .FirstOrDefault()?.EndTime,
+                var tz = bpd.Draw?.Lottery?.Timezone ?? "America/Santo_Domingo";
+                var nowInTz = DateTimeHelper.NowInTimezone(tz);
+                var dow = (byte)nowInTz.DayOfWeek;
+                return new BettingPoolDrawDto
+                {
+                    BettingPoolDrawId = bpd.BettingPoolDrawId,
+                    BettingPoolId = bpd.BettingPoolId,
+                    DrawId = bpd.DrawId,
+                    DrawName = bpd.Draw?.DrawName,
+                    Abbreviation = bpd.Draw?.Abbreviation,
+                    DrawTime = bpd.Draw?.WeeklySchedules?
+                        .Where(ws => ws.DayOfWeek == dow && ws.IsActive)
+                        .FirstOrDefault()?.EndTime,
                 LotteryId = bpd.Draw?.LotteryId,
                 LotteryName = bpd.Draw?.Lottery?.LotteryName,
                 CountryName = bpd.Draw?.Lottery?.Country?.CountryName,
@@ -168,6 +176,7 @@ public class BettingPoolDrawsController : ControllerBase
                 IsDominican = bpd.Draw!.Lottery!.Country!.CountryName == "República Dominicana" || bpd.Draw?.Lottery!.Country!.CountryName == "Dominican Republic",
                 Color = bpd.Draw!.DisplayColor ?? bpd.Draw!.Lottery!.Colour,
                 WeeklySchedule = ConvertToWeeklyScheduleDto(bpd.Draw?.WeeklySchedules?.ToList())
+                };
             }).ToList();
 
             _logger.LogInformation("Retrieved {Count} draws for betting pool {BettingPoolId}",

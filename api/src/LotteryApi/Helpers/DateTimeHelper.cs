@@ -76,6 +76,17 @@ public static class DateTimeHelper
     }
 
     /// <summary>
+    /// Gets the current date/time in a specific timezone.
+    /// Use this when you need "now" in a draw's local time (e.g., for closing time validation).
+    /// Falls back to business timezone if timezoneId is null.
+    /// </summary>
+    public static DateTime NowInTimezone(string? timezoneId)
+    {
+        var tz = TimeZoneInfo.FindSystemTimeZoneById(timezoneId ?? BusinessTimezoneId);
+        return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz);
+    }
+
+    /// <summary>
     /// Gets the business timezone info object.
     /// </summary>
     public static TimeZoneInfo GetBusinessTimeZone() => _businessTimeZone;

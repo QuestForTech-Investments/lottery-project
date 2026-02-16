@@ -71,7 +71,8 @@ public class LotteryRepository : GenericRepository<Lottery>, ILotteryRepository
                 Color = l.Colour,
                 IsActive = l.IsActive,
                 CountryName = l.Country!.CountryName,
-                ImageUrl = l.ImageUrl
+                ImageUrl = l.ImageUrl,
+                Timezone = l.Timezone
             })
             .ToListAsync();
 
@@ -93,7 +94,8 @@ public class LotteryRepository : GenericRepository<Lottery>, ILotteryRepository
                 Color = l.Colour,
                 IsActive = l.IsActive,
                 CountryName = l.Country!.CountryName,
-                ImageUrl = l.ImageUrl
+                ImageUrl = l.ImageUrl,
+                Timezone = l.Timezone
             })
             .FirstOrDefaultAsync();
     }
@@ -114,7 +116,8 @@ public class LotteryRepository : GenericRepository<Lottery>, ILotteryRepository
                 Color = l.Colour,
                 IsActive = l.IsActive,
                 CountryName = l.Country!.CountryName,
-                ImageUrl = l.ImageUrl
+                ImageUrl = l.ImageUrl,
+                Timezone = l.Timezone
             })
             .ToListAsync();
     }

@@ -11,6 +11,7 @@ public class LotteryDto
     public string? Color { get; set; }
     public string? CountryName { get; set; }
     public string? ImageUrl { get; set; }
+    public string? Timezone { get; set; }
 }
 
 public class CreateLotteryDto
@@ -29,4 +30,5 @@ public class UpdateLotteryDto
     public string? Description { get; set; }
     public bool IsActive { get; set; }
     public string? Color { get; set; }
+    public string? Timezone { get; set; }
 }
