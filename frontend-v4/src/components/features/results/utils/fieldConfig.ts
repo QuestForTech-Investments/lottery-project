@@ -84,16 +84,6 @@ const PLAY4_ONLY_DRAWS = [
 ];
 
 /**
- * "Más" lottery draws - produce a single 4-digit official result
- * Derived prizes: pick3=ABC, 1ra=AB, 2da=BC, 3ra=CD from "ABCD"
- */
-const MAS_DRAWS = [
-  'GANA MAS',
-  'MAS AM',
-  'MAS PM',
-];
-
-/**
  * Cache for enabled fields by draw name
  * Prevents recalculation on every render
  */
@@ -126,16 +116,6 @@ export const getEnabledFields = (drawName: string): EnabledFields => {
     const result = {
       ...ALL_DISABLED,
       play4: true,       // Only Play4 is editable - Massachusetts only draws 4 numbers
-    };
-    enabledFieldsCache.set(drawName, result);
-    return result;
-  }
-
-  // Check for "Más" draws (4-digit result, all other fields derived)
-  if (MAS_DRAWS.some(d => normalizedName.includes(d) || d.includes(normalizedName))) {
-    const result = {
-      ...ALL_DISABLED,
-      play4: true,       // Only play4 is editable - user enters 4-digit official result
     };
     enabledFieldsCache.set(drawName, result);
     return result;
@@ -356,81 +336,31 @@ export const isUsaTriggerField = (field: string): boolean => {
  * Auto-calculated fields for Play4-only lotteries (Massachusetts)
  */
 export interface Play4OnlyCalculatedFields {
-  num2: string;       // 2da = DE
-  num3: string;       // 3ra = FG
+  num1: string;       // 1ra = AB (overlapping)
+  num2: string;       // 2da = BC (overlapping)
+  num3: string;       // 3ra = CD (overlapping)
+  cash3: string;      // Pick3 = ABC (first 3 digits)
 }
 
 /**
  * Auto-calculate derived fields for Play4-only lotteries (Massachusetts)
  *
- * Algorithm:
- * Given Play4 = "DEFG" (4 digits):
- *   - num2 (2da) = DE
- *   - num3 (3ra) = FG
- *
- * @param play4 - 4-digit Play4 number (e.g., "4173")
- * @returns Object with auto-calculated fields
- *
- * @example
- * calculatePlay4OnlyFields("4173")
- * // Returns:
- * // {
- * //   num2: "41",
- * //   num3: "73",
- * // }
- */
-export const calculatePlay4OnlyFields = (play4: string): Play4OnlyCalculatedFields => {
-  // Ensure proper format with leading zeros
-  const p4 = (play4 || '').padStart(4, '0').slice(0, 4);
-
-  const D = p4[0] || '0';
-  const E = p4[1] || '0';
-  const F = p4[2] || '0';
-  const G = p4[3] || '0';
-
-  return {
-    num2: D + E,      // 2da = first 2 digits of play4
-    num3: F + G,      // 3ra = last 2 digits of play4
-  };
-};
-
-/**
- * Check if a draw is Play4-only (Massachusetts)
- */
-export const isPlay4OnlyDraw = (drawName: string): boolean => {
-  const normalizedName = drawName.toUpperCase().trim();
-  return PLAY4_ONLY_DRAWS.some(d => normalizedName.includes(d) || d.includes(normalizedName));
-};
-
-// =============================================================================
-// "Más" Lottery Auto-Calculation (4-digit result)
-// =============================================================================
-
-/**
- * Auto-calculated fields for "Más" lotteries
- */
-export interface MasCalculatedFields {
-  num1: string;   // 1ra = AB (first 2 digits)
-  num2: string;   // 2da = BC (middle overlap)
-  num3: string;   // 3ra = CD (last 2 digits)
-  cash3: string;  // Pick3 = ABC (first 3 digits)
-}
-
-/**
- * Derive prize fields from a 4-digit "Más" result
- *
- * Given result4 = "ABCD":
+ * Algorithm (overlapping derivation):
+ * Given Play4 = "ABCD" (4 digits):
  *   - num1 (1ra) = AB
  *   - num2 (2da) = BC
  *   - num3 (3ra) = CD
  *   - cash3 (Pick3) = ABC
  *
+ * @param play4 - 4-digit Play4 number (e.g., "0124")
+ * @returns Object with auto-calculated fields
+ *
  * @example
- * calculateMasFields("0124")
- * // { num1: "01", num2: "12", num3: "24", cash3: "012" }
+ * calculatePlay4OnlyFields("0124")
+ * // Returns: { num1: "01", num2: "12", num3: "24", cash3: "012" }
  */
-export const calculateMasFields = (result4: string): MasCalculatedFields => {
-  const r = (result4 || '').padStart(4, '0').slice(0, 4);
+export const calculatePlay4OnlyFields = (play4: string): Play4OnlyCalculatedFields => {
+  const r = (play4 || '').padStart(4, '0').slice(0, 4);
   return {
     num1: r[0] + r[1],
     num2: r[1] + r[2],
@@ -440,11 +370,11 @@ export const calculateMasFields = (result4: string): MasCalculatedFields => {
 };
 
 /**
- * Check if a draw is a "Más" draw (4-digit result with derived prizes)
+ * Check if a draw is Play4-only (Massachusetts)
  */
-export const isMasDraw = (drawName: string): boolean => {
+export const isPlay4OnlyDraw = (drawName: string): boolean => {
   const normalizedName = drawName.toUpperCase().trim();
-  return MAS_DRAWS.some(d => normalizedName.includes(d) || d.includes(normalizedName));
+  return PLAY4_ONLY_DRAWS.some(d => normalizedName.includes(d) || d.includes(normalizedName));
 };
 
 // =============================================================================
@@ -462,10 +392,10 @@ interface ValidationResult {
  * Validate a result row before saving
  */
 export const validateResultRow = (row: DrawResultRow): ValidationResult => {
-  // "Más" draws: play4 must be exactly 4 digits
-  if (isMasDraw(row.drawName)) {
+  // Play4-only draws (Massachusetts): play4 must be exactly 4 digits
+  if (isPlay4OnlyDraw(row.drawName)) {
     if (!row.play4 || !/^\d{4}$/.test(row.play4)) {
-      return { valid: false, error: 'El resultado de Más debe ser exactamente 4 dígitos' };
+      return { valid: false, error: 'El resultado debe ser exactamente 4 dígitos' };
     }
     return { valid: true, error: null };
   }

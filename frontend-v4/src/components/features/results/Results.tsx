@@ -40,8 +40,6 @@ import {
   isUsaTriggerField,
   calculatePlay4OnlyFields,
   isPlay4OnlyDraw,
-  calculateMasFields,
-  isMasDraw,
   validateResultRow,
 } from './utils';
 import { getDrawCategory } from '@services/betTypeCompatibilityService';
@@ -247,9 +245,9 @@ const Results = (): React.ReactElement => {
       if (isUsaTriggerField(field)) {
         const row = drawResultsRef.current.find((r) => r.drawId === drawId);
         if (row) {
-          if (isMasDraw(row.drawName) && field === 'play4') {
-            // "Más" draws: derive 1ra, 2da, 3ra, Pick3 from the 4-digit result
-            const calculated = calculateMasFields(sanitizedValue);
+          if (isPlay4OnlyDraw(row.drawName) && field === 'play4') {
+            // Play4-only draws (Massachusetts): overlapping derivation from 4-digit result
+            const calculated = calculatePlay4OnlyFields(sanitizedValue);
             actions.updateField(drawId, 'num1', calculated.num1);
             actions.updateField(drawId, 'num2', calculated.num2);
             actions.updateField(drawId, 'num3', calculated.num3);
@@ -257,26 +255,18 @@ const Results = (): React.ReactElement => {
           } else {
             const category = getDrawCategory(row.drawName);
             if (category === 'USA') {
-              if (isPlay4OnlyDraw(row.drawName)) {
-                if (field === 'play4') {
-                  const calculated = calculatePlay4OnlyFields(sanitizedValue);
-                  actions.updateField(drawId, 'num2', calculated.num2);
-                  actions.updateField(drawId, 'num3', calculated.num3);
-                }
-              } else {
-                const cash3Value = field === 'cash3' ? sanitizedValue : row.cash3;
-                const play4Value = field === 'play4' ? sanitizedValue : row.play4;
-                const calculated = calculateUsaFields(cash3Value, play4Value);
-                actions.updateField(drawId, 'num1', calculated.num1);
-                actions.updateField(drawId, 'num2', calculated.num2);
-                actions.updateField(drawId, 'num3', calculated.num3);
-                actions.updateField(drawId, 'bolita1', calculated.bolita1);
-                actions.updateField(drawId, 'bolita2', calculated.bolita2);
-                actions.updateField(drawId, 'singulaccion1', calculated.singulaccion1);
-                actions.updateField(drawId, 'singulaccion2', calculated.singulaccion2);
-                actions.updateField(drawId, 'singulaccion3', calculated.singulaccion3);
-                actions.updateField(drawId, 'pick5', calculated.pick5);
-              }
+              const cash3Value = field === 'cash3' ? sanitizedValue : row.cash3;
+              const play4Value = field === 'play4' ? sanitizedValue : row.play4;
+              const calculated = calculateUsaFields(cash3Value, play4Value);
+              actions.updateField(drawId, 'num1', calculated.num1);
+              actions.updateField(drawId, 'num2', calculated.num2);
+              actions.updateField(drawId, 'num3', calculated.num3);
+              actions.updateField(drawId, 'bolita1', calculated.bolita1);
+              actions.updateField(drawId, 'bolita2', calculated.bolita2);
+              actions.updateField(drawId, 'singulaccion1', calculated.singulaccion1);
+              actions.updateField(drawId, 'singulaccion2', calculated.singulaccion2);
+              actions.updateField(drawId, 'singulaccion3', calculated.singulaccion3);
+              actions.updateField(drawId, 'pick5', calculated.pick5);
             }
           }
         }
@@ -310,9 +300,9 @@ const Results = (): React.ReactElement => {
       if (field === 'cash3' || field === 'pickFour') {
         const selectedDraw = drawResults.find((d) => d.drawId === individualForm.selectedDrawId);
         if (selectedDraw) {
-          if (isMasDraw(selectedDraw.drawName) && field === 'pickFour') {
-            // "Más" draws: derive 1ra, 2da, 3ra, Pick3 from the 4-digit result
-            const calculated = calculateMasFields(sanitizedValue);
+          if (isPlay4OnlyDraw(selectedDraw.drawName) && field === 'pickFour') {
+            // Play4-only draws (Massachusetts): overlapping derivation from 4-digit result
+            const calculated = calculatePlay4OnlyFields(sanitizedValue);
             actions.setIndividualForm({
               num1: calculated.num1,
               num2: calculated.num2,
@@ -322,30 +312,20 @@ const Results = (): React.ReactElement => {
           } else {
             const category = getDrawCategory(selectedDraw.drawName);
             if (category === 'USA') {
-              if (isPlay4OnlyDraw(selectedDraw.drawName)) {
-                if (field === 'pickFour') {
-                  const calculated = calculatePlay4OnlyFields(sanitizedValue);
-                  actions.setIndividualForm({
-                    num2: calculated.num2,
-                    num3: calculated.num3,
-                  });
-                }
-              } else {
-                const cash3Value = field === 'cash3' ? sanitizedValue : individualForm.cash3;
-                const pickFourValue = field === 'pickFour' ? sanitizedValue : individualForm.pickFour;
-                const calculated = calculateUsaFields(cash3Value, pickFourValue);
-                actions.setIndividualForm({
-                  num1: calculated.num1,
-                  num2: calculated.num2,
-                  num3: calculated.num3,
-                  bolita1: calculated.bolita1,
-                  bolita2: calculated.bolita2,
-                  singulaccion1: calculated.singulaccion1,
-                  singulaccion2: calculated.singulaccion2,
-                  singulaccion3: calculated.singulaccion3,
-                  pickFive: calculated.pick5,
-                });
-              }
+              const cash3Value = field === 'cash3' ? sanitizedValue : individualForm.cash3;
+              const pickFourValue = field === 'pickFour' ? sanitizedValue : individualForm.pickFour;
+              const calculated = calculateUsaFields(cash3Value, pickFourValue);
+              actions.setIndividualForm({
+                num1: calculated.num1,
+                num2: calculated.num2,
+                num3: calculated.num3,
+                bolita1: calculated.bolita1,
+                bolita2: calculated.bolita2,
+                singulaccion1: calculated.singulaccion1,
+                singulaccion2: calculated.singulaccion2,
+                singulaccion3: calculated.singulaccion3,
+                pickFive: calculated.pick5,
+              });
             }
           }
         }
@@ -394,11 +374,11 @@ const Results = (): React.ReactElement => {
     for (const row of dirtyRows) {
       actions.setSaving(row.drawId, true);
       try {
-        // "Más" draws store the 4-digit result directly; standard draws concatenate num1+num2+num3
-        const winningNumber = isMasDraw(row.drawName)
+        // Play4-only draws store the 4-digit result directly; standard draws concatenate num1+num2+num3
+        const winningNumber = isPlay4OnlyDraw(row.drawName)
           ? (row.play4 || '').padStart(4, '0')
           : row.num1 + row.num2 + row.num3;
-        const additionalNumber = isMasDraw(row.drawName)
+        const additionalNumber = isPlay4OnlyDraw(row.drawName)
           ? null
           : (row.cash3 || '') + (row.play4 || '') + (row.pick5 || '');
         const data = {
@@ -436,11 +416,11 @@ const Results = (): React.ReactElement => {
       const row = drawResults.find((d) => d.drawId === individualForm.selectedDrawId);
       if (!row) return;
 
-      // "Más" draws store the 4-digit result directly; standard draws concatenate num1+num2+num3
-      const winningNumber = isMasDraw(row.drawName)
+      // Play4-only draws store the 4-digit result directly; standard draws concatenate num1+num2+num3
+      const winningNumber = isPlay4OnlyDraw(row.drawName)
         ? (individualForm.pickFour || '').padStart(4, '0')
         : individualForm.num1 + individualForm.num2 + individualForm.num3;
-      const additionalNumber = isMasDraw(row.drawName)
+      const additionalNumber = isPlay4OnlyDraw(row.drawName)
         ? null
         : (individualForm.cash3 || '') + (individualForm.pickFour || '') + (individualForm.pickFive || '');
 
