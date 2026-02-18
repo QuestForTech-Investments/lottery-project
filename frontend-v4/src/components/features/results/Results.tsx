@@ -327,7 +327,28 @@ const Results = (): React.ReactElement => {
           }
         });
 
+        // After updating rows, propagate auto-calc for Super Palé and 6x1
         if (changed) {
+          // Super Palé: propagate source draw's 1ra to target
+          Object.entries(SUPER_PALE_SOURCE_MAP).forEach(([sourceName, target]) => {
+            const sourceRow = updated.find(r => r.drawName.toUpperCase().includes(sourceName));
+            const targetRow = updated.find(r => r.drawName.toUpperCase().includes(target.targetDraw));
+            if (sourceRow?.num1 && targetRow && !targetRow.hasResult && !targetRow.isDirty) {
+              targetRow[target.targetField] = sourceRow.num1;
+              targetRow.isDirty = true;
+            }
+          });
+
+          // 6x1: propagate source draw's cash3/play4 to target
+          Object.entries(DRAW_6X1_SOURCE_MAP).forEach(([sourceName, target]) => {
+            const sourceRow = updated.find(r => r.drawName.toUpperCase().includes(sourceName));
+            const targetRow = updated.find(r => r.drawName.toUpperCase().includes(target.targetDraw));
+            if (sourceRow && targetRow && !targetRow.hasResult && !targetRow.isDirty) {
+              if (sourceRow.cash3) { targetRow.cash3 = sourceRow.cash3; targetRow.isDirty = true; }
+              if (sourceRow.play4) { targetRow.play4 = sourceRow.play4; targetRow.isDirty = true; }
+            }
+          });
+
           actions.setDrawResults(updated);
         }
         actions.setLastRefresh(new Date());
