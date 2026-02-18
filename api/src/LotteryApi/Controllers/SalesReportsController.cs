@@ -136,42 +136,59 @@ public class SalesReportsController : ControllerBase
     /// <param name="date">Date to get sales summary for (defaults to today)</param>
     /// <returns>Sales summary for the specified date</returns>
     [HttpGet("daily-summary")]
-    public async Task<ActionResult<SalesSummaryDto>> GetDailySalesSummary([FromQuery] DateTime? date = null)
+    public async Task<ActionResult<SalesSummaryDto>> GetDailySalesSummary(
+        [FromQuery] DateTime? date = null,
+        [FromQuery] int? bettingPoolId = null)
     {
         try
         {
             var targetDate = date ?? DateTimeHelper.TodayInBusinessTimezone();
-            var startDate = targetDate.Date;
-            var endDate = startDate.AddDays(1).AddTicks(-1); // End of day
 
-            _logger.LogInformation("Getting daily sales summary for {Date}", targetDate);
+            // Convert to UTC using Santo Domingo timezone (same logic as by-betting-pool)
+            string timezoneId = "America/Santo_Domingo";
+            var businessTimezone = TimeZoneInfo.FindSystemTimeZoneById(timezoneId);
 
-            // Get all tickets for the day (not cancelled) - filter by DrawDate
-            var tickets = await _context.Tickets
-                .Include(t => t.TicketLines)
+            var localStartOfDay = new DateTime(targetDate.Year, targetDate.Month, targetDate.Day, 0, 0, 0, DateTimeKind.Unspecified);
+            var localEndOfDay = new DateTime(targetDate.Year, targetDate.Month, targetDate.Day, 23, 59, 59, 999, DateTimeKind.Unspecified);
+
+            var utcStart = TimeZoneInfo.ConvertTimeToUtc(localStartOfDay, businessTimezone);
+            var utcEnd = TimeZoneInfo.ConvertTimeToUtc(localEndOfDay, businessTimezone);
+
+            _logger.LogInformation(
+                "Getting daily sales summary for {Date} (UTC: {UtcStart} to {UtcEnd}), BettingPoolId: {BettingPoolId}",
+                targetDate, utcStart, utcEnd, bettingPoolId);
+
+            var query = _context.Tickets
                 .Where(t => !t.IsCancelled
-                    && t.TicketLines.Any(tl => tl.DrawDate.Date == targetDate.Date))
-                .ToListAsync();
+                    && t.CreatedAt >= utcStart
+                    && t.CreatedAt < utcEnd);
 
-            decimal totalSold = tickets.Sum(t => t.GrandTotal);
-            decimal totalNet = tickets.Sum(t => t.TotalNet);
-            decimal totalPrizes = tickets.Sum(t => t.TotalPrize);
-            decimal riferoDiscount = tickets.Where(t => t.DiscountMode == "RIFERO").Sum(t => t.TotalDiscount);
+            if (bettingPoolId.HasValue)
+            {
+                query = query.Where(t => t.BettingPoolId == bettingPoolId.Value);
+            }
+
+            var tickets = await query.ToListAsync();
+
+            var totalSold = tickets.Sum(t => t.GrandTotal);
+            var totalPrizes = tickets.Sum(t => t.TotalPrize);
+            var totalCommissions = tickets.Sum(t => t.TotalCommission);
+            var totalDiscounts = tickets.Sum(t => t.TotalDiscount);
+            var riferoDiscount = tickets.Where(t => t.DiscountMode == "RIFERO").Sum(t => t.TotalDiscount);
+            var totalNet = totalSold + riferoDiscount - totalCommissions - totalPrizes;
 
             var summary = new SalesSummaryDto
             {
                 TotalSold = totalSold,
                 TotalPrizes = totalPrizes,
-                TotalCommissions = tickets.Sum(t => t.TotalCommission),
+                TotalCommissions = totalCommissions,
+                TotalDiscounts = totalDiscounts,
+                Fall = 0,
                 TotalNet = totalNet,
                 Balance = 0,
                 Credits = 0,
-                BenefitPercentage = 0
+                BenefitPercentage = totalSold > 0 ? (totalNet / totalSold) * 100 : 0
             };
-
-            summary.TotalNet = summary.TotalSold + riferoDiscount - summary.TotalCommissions - summary.TotalPrizes;
-
-            if (totalSold > 0) summary.BenefitPercentage = (summary.TotalNet / summary.TotalSold) * 100;
 
             _logger.LogInformation(
                 "Daily summary for {Date}: Sold={TotalSold}, Prizes={TotalPrizes}, Commissions={TotalCommissions}, Net={TotalNet}",
