@@ -85,9 +85,8 @@ public class BettingPoolDrawsController : ControllerBase
             // Load available game types for these draws (from draw_game_compatibility)
             var drawGameTypes = await _context.DrawGameCompatibilities
                 .AsNoTracking()
-                .Where(dgc => drawIds.Contains(dgc.DrawId) && dgc.IsActive)
-                .Include(dgc => dgc.GameType)
-                .Where(dgc => dgc.GameType != null && dgc.GameType.IsActive)
+                .Where(dgc => drawIds.Contains(dgc.DrawId) && dgc.IsActive
+                    && dgc.GameType != null && dgc.GameType.IsActive)
                 .OrderBy(dgc => dgc.DrawId)
                 .ThenBy(dgc => dgc.GameType!.DisplayOrder ?? int.MaxValue)
                 .ThenBy(dgc => dgc.GameType!.GameName)
@@ -120,7 +119,6 @@ public class BettingPoolDrawsController : ControllerBase
                 .Where(bpdgt => bpdgt.BettingPoolId == bettingPoolId &&
                                drawIds.Contains(bpdgt.DrawId) &&
                                bpdgt.IsActive)
-                .Include(bpdgt => bpdgt.GameType)
                 .Select(bpdgt => new
                 {
                     bpdgt.DrawId,
@@ -218,9 +216,8 @@ public class BettingPoolDrawsController : ControllerBase
             // Load available game types
             var availableGameTypes = await _context.DrawGameCompatibilities
                 .AsNoTracking()
-                .Where(dgc => dgc.DrawId == bettingPoolDraw.DrawId && dgc.IsActive)
-                .Include(dgc => dgc.GameType)
-                .Where(dgc => dgc.GameType != null && dgc.GameType.IsActive)
+                .Where(dgc => dgc.DrawId == bettingPoolDraw.DrawId && dgc.IsActive
+                    && dgc.GameType != null && dgc.GameType.IsActive)
                 .OrderBy(dgc => dgc.GameType!.DisplayOrder ?? int.MaxValue)
                 .Select(dgc => new GameTypeDto
                 {
@@ -240,7 +237,6 @@ public class BettingPoolDrawsController : ControllerBase
                 .Where(bpdgt => bpdgt.BettingPoolId == bettingPoolId &&
                                bpdgt.DrawId == bettingPoolDraw.DrawId &&
                                bpdgt.IsActive)
-                .Include(bpdgt => bpdgt.GameType)
                 .OrderBy(bpdgt => bpdgt.GameType!.DisplayOrder ?? int.MaxValue)
                 .Select(bpdgt => new GameTypeDto
                 {
@@ -647,9 +643,8 @@ public class BettingPoolDrawsController : ControllerBase
 
             // Load game types from draw_game_compatibility
             var gameTypesByDraw = await _context.DrawGameCompatibilities
-                .Where(dgc => drawIds.Contains(dgc.DrawId) && dgc.IsActive)
-                .Include(dgc => dgc.GameType)
-                .Where(dgc => dgc.GameType != null && dgc.GameType.IsActive)
+                .Where(dgc => drawIds.Contains(dgc.DrawId) && dgc.IsActive
+                    && dgc.GameType != null && dgc.GameType.IsActive)
                 .OrderBy(dgc => dgc.DrawId)
                 .ThenBy(dgc => dgc.GameType!.DisplayOrder ?? int.MaxValue)
                 .ThenBy(dgc => dgc.GameType!.GameName)
@@ -749,9 +744,8 @@ public class BettingPoolDrawsController : ControllerBase
 
         var availableGameTypes = await _context.DrawGameCompatibilities
             .AsNoTracking()
-            .Where(dgc => dgc.DrawId == bettingPoolDraw.DrawId && dgc.IsActive)
-            .Include(dgc => dgc.GameType)
-            .Where(dgc => dgc.GameType != null && dgc.GameType.IsActive)
+            .Where(dgc => dgc.DrawId == bettingPoolDraw.DrawId && dgc.IsActive
+                && dgc.GameType != null && dgc.GameType.IsActive)
             .OrderBy(dgc => dgc.GameType!.DisplayOrder ?? int.MaxValue)
             .Select(dgc => new GameTypeDto
             {
@@ -770,7 +764,6 @@ public class BettingPoolDrawsController : ControllerBase
             .Where(bpdgt => bpdgt.BettingPoolId == bettingPoolId &&
                            bpdgt.DrawId == bettingPoolDraw.DrawId &&
                            bpdgt.IsActive)
-            .Include(bpdgt => bpdgt.GameType)
             .OrderBy(bpdgt => bpdgt.GameType!.DisplayOrder ?? int.MaxValue)
             .Select(bpdgt => new GameTypeDto
             {
