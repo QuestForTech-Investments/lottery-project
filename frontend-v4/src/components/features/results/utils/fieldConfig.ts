@@ -84,6 +84,25 @@ const PLAY4_ONLY_DRAWS = [
 ];
 
 /**
+ * Super Palé draws that are auto-calculated from source draw results.
+ * SUPER PALE TARDE = Real(1ra) + Gana Más(1ra)
+ * SUPER PALE NOCHE = Nacional(1ra) + Quiniela Palé(1ra)
+ * NOTE: NY-FL variants are NOT auto-calculated (manual entry)
+ */
+const SUPER_PALE_AUTO_DRAWS = ['SUPER PALE TARDE', 'SUPER PALE NOCHE'];
+
+/**
+ * Mapping of source draw names to their Super Palé target draw and field.
+ * When a source draw's num1 (1ra) is entered, the target Super Palé draw's field is auto-populated.
+ */
+export const SUPER_PALE_SOURCE_MAP: Record<string, { targetDraw: string; targetField: 'num1' | 'num2' }> = {
+  'REAL': { targetDraw: 'SUPER PALE TARDE', targetField: 'num1' },
+  'GANA MAS': { targetDraw: 'SUPER PALE TARDE', targetField: 'num2' },
+  'NACIONAL': { targetDraw: 'SUPER PALE NOCHE', targetField: 'num1' },
+  'QUINIELA PALE': { targetDraw: 'SUPER PALE NOCHE', targetField: 'num2' },
+};
+
+/**
  * Cache for enabled fields by draw name
  * Prevents recalculation on every render
  */
@@ -117,6 +136,13 @@ export const getEnabledFields = (drawName: string): EnabledFields => {
       ...ALL_DISABLED,
       play4: true,       // Only Play4 is editable - Massachusetts only draws 4 numbers
     };
+    enabledFieldsCache.set(drawName, result);
+    return result;
+  }
+
+  // Super Palé auto-calculated draws (Tarde/Noche) - all fields readonly, populated from source draws
+  if (SUPER_PALE_AUTO_DRAWS.some(d => normalizedName.includes(d))) {
+    const result = { ...ALL_DISABLED };
     enabledFieldsCache.set(drawName, result);
     return result;
   }
@@ -378,6 +404,37 @@ export const isPlay4OnlyDraw = (drawName: string): boolean => {
 };
 
 // =============================================================================
+// Super Palé Auto-Calculation
+// =============================================================================
+
+/**
+ * Check if a draw is a Super Palé auto-calculated draw (Tarde/Noche only)
+ */
+export const isSuperPaleAutoDraw = (drawName: string): boolean => {
+  const normalized = drawName.toUpperCase().trim();
+  return SUPER_PALE_AUTO_DRAWS.some(d => normalized.includes(d));
+};
+
+/**
+ * Get the Super Palé target for a source draw.
+ * Returns null if the draw is not a Super Palé source.
+ *
+ * @example
+ * getSuperPaleTarget('REAL') // { targetDraw: 'SUPER PALE TARDE', targetField: 'num1' }
+ * getSuperPaleTarget('GANA MAS') // { targetDraw: 'SUPER PALE TARDE', targetField: 'num2' }
+ * getSuperPaleTarget('LOTEKA') // null
+ */
+export const getSuperPaleTarget = (sourceDrawName: string): { targetDraw: string; targetField: 'num1' | 'num2' } | null => {
+  const normalized = sourceDrawName.toUpperCase().trim();
+  for (const [source, target] of Object.entries(SUPER_PALE_SOURCE_MAP)) {
+    if (normalized.includes(source) || source.includes(normalized)) {
+      return target;
+    }
+  }
+  return null;
+};
+
+// =============================================================================
 // Validation Functions
 // =============================================================================
 
@@ -396,6 +453,17 @@ export const validateResultRow = (row: DrawResultRow): ValidationResult => {
   if (isPlay4OnlyDraw(row.drawName)) {
     if (!row.play4 || !/^\d{4}$/.test(row.play4)) {
       return { valid: false, error: 'El resultado debe ser exactamente 4 dígitos' };
+    }
+    return { valid: true, error: null };
+  }
+
+  // Super Palé auto-calculated draws: num1 and num2 are required
+  if (isSuperPaleAutoDraw(row.drawName)) {
+    if (!row.num1 || !/^\d{2}$/.test(row.num1)) {
+      return { valid: false, error: 'Falta 1ra (resultado fuente no publicado)' };
+    }
+    if (!row.num2 || !/^\d{2}$/.test(row.num2)) {
+      return { valid: false, error: 'Falta 2da (resultado fuente no publicado)' };
     }
     return { valid: true, error: null };
   }

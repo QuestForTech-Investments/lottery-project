@@ -40,6 +40,8 @@ import {
   isUsaTriggerField,
   calculatePlay4OnlyFields,
   isPlay4OnlyDraw,
+  getSuperPaleTarget,
+  SUPER_PALE_SOURCE_MAP,
   validateResultRow,
 } from './utils';
 import { getDrawCategory } from '@services/betTypeCompatibilityService';
@@ -170,6 +172,16 @@ const Results = (): React.ReactElement => {
         };
       });
 
+      // Pre-populate Super Palé auto-calc draws from existing source results
+      Object.entries(SUPER_PALE_SOURCE_MAP).forEach(([sourceName, target]) => {
+        const sourceRow = mergedData.find(r => r.drawName.toUpperCase().includes(sourceName));
+        const targetRow = mergedData.find(r => r.drawName.toUpperCase().includes(target.targetDraw));
+        if (sourceRow?.num1 && targetRow && !targetRow.hasResult) {
+          targetRow[target.targetField] = sourceRow.num1;
+          targetRow.isDirty = true;
+        }
+      });
+
       actions.setDrawResults(mergedData);
     } catch (err) {
       console.error('Error loading data:', err);
@@ -267,6 +279,22 @@ const Results = (): React.ReactElement => {
               actions.updateField(drawId, 'singulaccion2', calculated.singulaccion2);
               actions.updateField(drawId, 'singulaccion3', calculated.singulaccion3);
               actions.updateField(drawId, 'pick5', calculated.pick5);
+            }
+          }
+        }
+      }
+
+      // Super Palé auto-calculation: when source draw's num1 changes, update target Super Palé draw
+      if (field === 'num1') {
+        const row = drawResultsRef.current.find((r) => r.drawId === drawId);
+        if (row) {
+          const target = getSuperPaleTarget(row.drawName);
+          if (target) {
+            const targetRow = drawResultsRef.current.find(
+              (r) => r.drawName.toUpperCase().trim().includes(target.targetDraw)
+            );
+            if (targetRow) {
+              actions.updateField(targetRow.drawId, target.targetField, sanitizedValue);
             }
           }
         }
@@ -374,13 +402,9 @@ const Results = (): React.ReactElement => {
     for (const row of dirtyRows) {
       actions.setSaving(row.drawId, true);
       try {
-        // Play4-only draws store the 4-digit result directly; standard draws concatenate num1+num2+num3
-        const winningNumber = isPlay4OnlyDraw(row.drawName)
-          ? (row.play4 || '').padStart(4, '0')
-          : row.num1 + row.num2 + row.num3;
-        const additionalNumber = isPlay4OnlyDraw(row.drawName)
-          ? null
-          : (row.cash3 || '') + (row.play4 || '') + (row.pick5 || '');
+        // All draws use standard storage: winningNumber = num1+num2+num3, additionalNumber = cash3+play4+pick5
+        const winningNumber = row.num1 + row.num2 + row.num3;
+        const additionalNumber = (row.cash3 || '') + (row.play4 || '') + (row.pick5 || '');
         const data = {
           drawId: row.drawId,
           winningNumber,
@@ -416,13 +440,9 @@ const Results = (): React.ReactElement => {
       const row = drawResults.find((d) => d.drawId === individualForm.selectedDrawId);
       if (!row) return;
 
-      // Play4-only draws store the 4-digit result directly; standard draws concatenate num1+num2+num3
-      const winningNumber = isPlay4OnlyDraw(row.drawName)
-        ? (individualForm.pickFour || '').padStart(4, '0')
-        : individualForm.num1 + individualForm.num2 + individualForm.num3;
-      const additionalNumber = isPlay4OnlyDraw(row.drawName)
-        ? null
-        : (individualForm.cash3 || '') + (individualForm.pickFour || '') + (individualForm.pickFive || '');
+      // All draws use standard storage: winningNumber = num1+num2+num3, additionalNumber = cash3+play4+pick5
+      const winningNumber = individualForm.num1 + individualForm.num2 + individualForm.num3;
+      const additionalNumber = (individualForm.cash3 || '') + (individualForm.pickFour || '') + (individualForm.pickFive || '');
 
       const data = {
         drawId: individualForm.selectedDrawId,
@@ -458,6 +478,25 @@ const Results = (): React.ReactElement => {
           isDirty: false,
         };
       });
+
+      // Super Palé auto-calc: propagate source draw's 1ra to target Super Palé draw
+      const publishedDraw = updatedResults.find(r => r.drawId === individualForm.selectedDrawId);
+      if (publishedDraw) {
+        const target = getSuperPaleTarget(publishedDraw.drawName);
+        if (target) {
+          const targetIdx = updatedResults.findIndex(
+            r => r.drawName.toUpperCase().trim().includes(target.targetDraw)
+          );
+          if (targetIdx !== -1 && !updatedResults[targetIdx].hasResult) {
+            updatedResults[targetIdx] = {
+              ...updatedResults[targetIdx],
+              [target.targetField]: publishedDraw.num1,
+              isDirty: true,
+            };
+          }
+        }
+      }
+
       actions.setDrawResults(updatedResults);
       actions.setSuccess(`Resultado publicado para ${row.drawName}`);
 

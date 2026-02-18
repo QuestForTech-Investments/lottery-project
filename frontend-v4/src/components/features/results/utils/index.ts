@@ -17,5 +17,8 @@ export {
   isUsaTriggerField,
   calculatePlay4OnlyFields,
   isPlay4OnlyDraw,
+  isSuperPaleAutoDraw,
+  getSuperPaleTarget,
+  SUPER_PALE_SOURCE_MAP,
   validateResultRow,
 } from './fieldConfig';

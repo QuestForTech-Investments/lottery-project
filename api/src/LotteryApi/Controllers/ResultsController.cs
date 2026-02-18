@@ -350,7 +350,7 @@ public class ResultsController : ControllerBase
 
         // Map to DTOs with real usernames and parsed numbers
         var logs = results.Select(r => {
-            var p = ParseWinningNumber(r.WinningNumber, r.AdditionalNumber);
+            var p = ParseWinningNumber(r.WinningNumber, r.AdditionalNumber, r.Draw?.DrawName);
 
             return new ResultLogDto
             {
@@ -866,7 +866,7 @@ public class ResultsController : ControllerBase
 
     private static ResultDto MapToDto(Result result)
     {
-        var p = ParseWinningNumber(result.WinningNumber, result.AdditionalNumber);
+        var p = ParseWinningNumber(result.WinningNumber, result.AdditionalNumber, result.Draw?.DrawName);
 
         return new ResultDto
         {
@@ -903,7 +903,7 @@ public class ResultsController : ControllerBase
     /// </summary>
     private static ResultDto MapToDtoFromProjection(Result result, Draw draw)
     {
-        var p = ParseWinningNumber(result.WinningNumber, result.AdditionalNumber);
+        var p = ParseWinningNumber(result.WinningNumber, result.AdditionalNumber, draw.DrawName);
 
         return new ResultDto
         {
@@ -936,7 +936,8 @@ public class ResultsController : ControllerBase
 
     /// <summary>
     /// Parsed components from a winning number string.
-    /// For 4-digit "Más" results (ABCD): num1=AB, num2=BC, num3=CD, cash3=ABC, play4=ABCD
+    /// For MASS 4-digit results (ABCD): overlapping num1=AB, num2=BC, num3=CD, cash3=ABC, play4=ABCD
+    /// For Super Palé 4-digit results (AABB): standard num1=AA, num2=BB
     /// For 6-digit standard results: num1=first 2, num2=middle 2, num3=last 2
     /// </summary>
     private struct ParsedWinningNumber
@@ -947,7 +948,7 @@ public class ResultsController : ControllerBase
         public string Singulaccion1, Singulaccion2, Singulaccion3;
     }
 
-    private static ParsedWinningNumber ParseWinningNumber(string? winningNumber, string? additionalNumber)
+    private static ParsedWinningNumber ParseWinningNumber(string? winningNumber, string? additionalNumber, string? drawName = null)
     {
         var wn = winningNumber ?? "";
         var an = additionalNumber ?? "";
@@ -955,18 +956,37 @@ public class ResultsController : ControllerBase
 
         if (wn.Length == 4)
         {
-            // "Más" lottery: 4-digit result "ABCD" -> overlapping derivation
-            p.Num1 = wn.Substring(0, 2);       // AB
-            p.Num2 = wn.Substring(1, 2);       // BC
-            p.Num3 = wn.Substring(2, 2);       // CD
-            p.Cash3 = wn.Substring(0, 3);      // ABC
-            p.Play4 = wn;                       // ABCD
-            p.Pick5 = "";
-            p.Bolita1 = "";
-            p.Bolita2 = "";
-            p.Singulaccion1 = "";
-            p.Singulaccion2 = "";
-            p.Singulaccion3 = "";
+            var dn = (drawName ?? "").ToUpperInvariant();
+            if (dn.Contains("MASS"))
+            {
+                // MASS AM/PM: 4-digit result "ABCD" -> overlapping derivation
+                p.Num1 = wn.Substring(0, 2);       // AB
+                p.Num2 = wn.Substring(1, 2);       // BC
+                p.Num3 = wn.Substring(2, 2);       // CD
+                p.Cash3 = wn.Substring(0, 3);      // ABC
+                p.Play4 = wn;                       // ABCD
+                p.Pick5 = "";
+                p.Bolita1 = "";
+                p.Bolita2 = "";
+                p.Singulaccion1 = "";
+                p.Singulaccion2 = "";
+                p.Singulaccion3 = "";
+            }
+            else
+            {
+                // Super Palé and other 4-digit results: standard non-overlapping
+                p.Num1 = wn.Substring(0, 2);
+                p.Num2 = wn.Substring(2, 2);
+                p.Num3 = "";
+                p.Cash3 = "";
+                p.Play4 = "";
+                p.Pick5 = "";
+                p.Bolita1 = "";
+                p.Bolita2 = "";
+                p.Singulaccion1 = "";
+                p.Singulaccion2 = "";
+                p.Singulaccion3 = "";
+            }
         }
         else
         {

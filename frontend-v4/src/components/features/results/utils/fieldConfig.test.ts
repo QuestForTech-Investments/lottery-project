@@ -112,3 +112,91 @@ describe('isPlay4OnlyDraw', () => {
     expect(isPlay4OnlyDraw('LOTEKA')).toBe(false);
   });
 });
+
+// =============================================================================
+// Super Palé Auto-Calculation Tests
+// =============================================================================
+
+const SUPER_PALE_AUTO_DRAWS = ['SUPER PALE TARDE', 'SUPER PALE NOCHE'];
+
+const SUPER_PALE_SOURCE_MAP: Record<string, { targetDraw: string; targetField: 'num1' | 'num2' }> = {
+  'REAL': { targetDraw: 'SUPER PALE TARDE', targetField: 'num1' },
+  'GANA MAS': { targetDraw: 'SUPER PALE TARDE', targetField: 'num2' },
+  'NACIONAL': { targetDraw: 'SUPER PALE NOCHE', targetField: 'num1' },
+  'QUINIELA PALE': { targetDraw: 'SUPER PALE NOCHE', targetField: 'num2' },
+};
+
+const isSuperPaleAutoDraw = (drawName: string): boolean => {
+  const normalized = drawName.toUpperCase().trim();
+  return SUPER_PALE_AUTO_DRAWS.some(d => normalized.includes(d));
+};
+
+const getSuperPaleTarget = (sourceDrawName: string): { targetDraw: string; targetField: 'num1' | 'num2' } | null => {
+  const normalized = sourceDrawName.toUpperCase().trim();
+  for (const [source, target] of Object.entries(SUPER_PALE_SOURCE_MAP)) {
+    if (normalized.includes(source) || source.includes(normalized)) {
+      return target;
+    }
+  }
+  return null;
+};
+
+describe('isSuperPaleAutoDraw', () => {
+  it('detects SUPER PALE TARDE', () => {
+    expect(isSuperPaleAutoDraw('SUPER PALE TARDE')).toBe(true);
+  });
+
+  it('detects SUPER PALE NOCHE', () => {
+    expect(isSuperPaleAutoDraw('SUPER PALE NOCHE')).toBe(true);
+  });
+
+  it('detects case-insensitive', () => {
+    expect(isSuperPaleAutoDraw('super pale tarde')).toBe(true);
+    expect(isSuperPaleAutoDraw('Super Pale Noche')).toBe(true);
+  });
+
+  it('rejects NY-FL variants (manual entry)', () => {
+    expect(isSuperPaleAutoDraw('SUPER PALE NY-FL AM')).toBe(false);
+    expect(isSuperPaleAutoDraw('SUPER PALE NY-FL PM')).toBe(false);
+  });
+
+  it('rejects unrelated draws', () => {
+    expect(isSuperPaleAutoDraw('NACIONAL')).toBe(false);
+    expect(isSuperPaleAutoDraw('REAL')).toBe(false);
+    expect(isSuperPaleAutoDraw('GANA MAS')).toBe(false);
+  });
+});
+
+describe('getSuperPaleTarget', () => {
+  it('maps REAL to SUPER PALE TARDE num1', () => {
+    const target = getSuperPaleTarget('REAL');
+    expect(target).toEqual({ targetDraw: 'SUPER PALE TARDE', targetField: 'num1' });
+  });
+
+  it('maps GANA MAS to SUPER PALE TARDE num2', () => {
+    const target = getSuperPaleTarget('GANA MAS');
+    expect(target).toEqual({ targetDraw: 'SUPER PALE TARDE', targetField: 'num2' });
+  });
+
+  it('maps NACIONAL to SUPER PALE NOCHE num1', () => {
+    const target = getSuperPaleTarget('NACIONAL');
+    expect(target).toEqual({ targetDraw: 'SUPER PALE NOCHE', targetField: 'num1' });
+  });
+
+  it('maps QUINIELA PALE to SUPER PALE NOCHE num2', () => {
+    const target = getSuperPaleTarget('QUINIELA PALE');
+    expect(target).toEqual({ targetDraw: 'SUPER PALE NOCHE', targetField: 'num2' });
+  });
+
+  it('returns null for non-source draws', () => {
+    expect(getSuperPaleTarget('LOTEKA')).toBeNull();
+    expect(getSuperPaleTarget('TEXAS AM')).toBeNull();
+    expect(getSuperPaleTarget('SUPER PALE TARDE')).toBeNull();
+    expect(getSuperPaleTarget('MASS AM')).toBeNull();
+  });
+
+  it('handles case-insensitive matching', () => {
+    expect(getSuperPaleTarget('real')).toEqual({ targetDraw: 'SUPER PALE TARDE', targetField: 'num1' });
+    expect(getSuperPaleTarget('gana mas')).toEqual({ targetDraw: 'SUPER PALE TARDE', targetField: 'num2' });
+  });
+});
