@@ -84,6 +84,14 @@ const PLAY4_ONLY_DRAWS = [
 ];
 
 /**
+ * USA draws that only have Cash3/Pick3 (no Play4/Pick4)
+ * California AM only draws 3 numbers
+ */
+const CASH3_ONLY_DRAWS = [
+  'CALIFORNIA AM',
+];
+
+/**
  * Super Palé draws that are auto-calculated from source draw results.
  * SUPER PALE TARDE = Real(1ra) + Gana Más(1ra)
  * SUPER PALE NOCHE = Nacional(1ra) + Quiniela Palé(1ra)
@@ -100,6 +108,22 @@ export const SUPER_PALE_SOURCE_MAP: Record<string, { targetDraw: string; targetF
   'GANA MAS': { targetDraw: 'SUPER PALE TARDE', targetField: 'num2' },
   'NACIONAL': { targetDraw: 'SUPER PALE NOCHE', targetField: 'num1' },
   'QUINIELA PALE': { targetDraw: 'SUPER PALE NOCHE', targetField: 'num2' },
+};
+
+/**
+ * 6x1 draws that are auto-calculated from their source draw's cash3 and play4.
+ */
+const DRAW_6X1_AUTO = ['NY AM 6X1', 'NY PM 6X1', 'FL AM 6X1', 'FL PM 6X1'];
+
+/**
+ * Mapping of source draws to their 6x1 target draw.
+ * When a source draw's cash3 or play4 is entered, the 6x1 target draw is auto-populated.
+ */
+export const DRAW_6X1_SOURCE_MAP: Record<string, { targetDraw: string }> = {
+  'NEW YORK DAY': { targetDraw: 'NY AM 6X1' },
+  'NEW YORK NIGHT': { targetDraw: 'NY PM 6X1' },
+  'FLORIDA AM': { targetDraw: 'FL AM 6X1' },
+  'FLORIDA PM': { targetDraw: 'FL PM 6X1' },
 };
 
 /**
@@ -136,6 +160,23 @@ export const getEnabledFields = (drawName: string): EnabledFields => {
       ...ALL_DISABLED,
       play4: true,       // Only Play4 is editable - Massachusetts only draws 4 numbers
     };
+    enabledFieldsCache.set(drawName, result);
+    return result;
+  }
+
+  // Cash3-only draws (California AM - only Pick 3, no Pick 4)
+  if (CASH3_ONLY_DRAWS.some(d => normalizedName.includes(d) || d.includes(normalizedName))) {
+    const result = {
+      ...ALL_DISABLED,
+      cash3: true,       // Only Cash3/Pick3 is editable
+    };
+    enabledFieldsCache.set(drawName, result);
+    return result;
+  }
+
+  // 6x1 auto-calculated draws - all fields readonly, populated from source draws
+  if (DRAW_6X1_AUTO.some(d => normalizedName.includes(d) || d.includes(normalizedName))) {
+    const result = { ...ALL_DISABLED };
     enabledFieldsCache.set(drawName, result);
     return result;
   }
@@ -183,6 +224,15 @@ export const getEnabledFields = (drawName: string): EnabledFields => {
         singulaccion1: false,  // Auto-calculated from cash3[0]
         singulaccion2: false,  // Auto-calculated from cash3[1]
         singulaccion3: false,  // Auto-calculated from cash3[2]
+      };
+      break;
+
+    case 'CASH3_6X1':
+      // 6x1 draws (NY AM 6x1, FL AM 6X1, etc.) - only Pick 3 and Pick 4
+      result = {
+        ...ALL_DISABLED,
+        cash3: true,
+        play4: true,
       };
       break;
 
@@ -435,6 +485,32 @@ export const getSuperPaleTarget = (sourceDrawName: string): { targetDraw: string
 };
 
 // =============================================================================
+// 6x1 Auto-Calculation
+// =============================================================================
+
+/**
+ * Check if a draw is a 6x1 auto-calculated draw
+ */
+export const is6x1AutoDraw = (drawName: string): boolean => {
+  const normalized = drawName.toUpperCase().trim();
+  return DRAW_6X1_AUTO.some(d => normalized.includes(d) || d.includes(normalized));
+};
+
+/**
+ * Get the 6x1 target for a source draw.
+ * Returns null if the draw is not a 6x1 source.
+ */
+export const get6x1Target = (sourceDrawName: string): { targetDraw: string } | null => {
+  const normalized = sourceDrawName.toUpperCase().trim();
+  for (const [source, target] of Object.entries(DRAW_6X1_SOURCE_MAP)) {
+    if (normalized.includes(source) || source.includes(normalized)) {
+      return target;
+    }
+  }
+  return null;
+};
+
+// =============================================================================
 // Validation Functions
 // =============================================================================
 
@@ -453,6 +529,17 @@ export const validateResultRow = (row: DrawResultRow): ValidationResult => {
   if (isPlay4OnlyDraw(row.drawName)) {
     if (!row.play4 || !/^\d{4}$/.test(row.play4)) {
       return { valid: false, error: 'El resultado debe ser exactamente 4 dígitos' };
+    }
+    return { valid: true, error: null };
+  }
+
+  // 6x1 auto-calculated draws: cash3 and play4 are required
+  if (is6x1AutoDraw(row.drawName)) {
+    if (!row.cash3 || !/^\d{3}$/.test(row.cash3)) {
+      return { valid: false, error: 'Falta Pick 3 (resultado fuente no publicado)' };
+    }
+    if (!row.play4 || !/^\d{4}$/.test(row.play4)) {
+      return { valid: false, error: 'Falta Pick 4 (resultado fuente no publicado)' };
     }
     return { valid: true, error: null };
   }

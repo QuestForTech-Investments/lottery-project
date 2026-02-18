@@ -23,6 +23,7 @@ public class BettingPoolDrawDto
 
     // Configuration
     public bool IsActive { get; set; }
+    public bool IsClosed { get; set; }
     public int? AnticipatedClosingMinutes { get; set; }
     public int DisplayOrder { get; set; }
 

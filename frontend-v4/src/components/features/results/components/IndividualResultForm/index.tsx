@@ -11,7 +11,7 @@ import {
   type SelectChangeEvent,
 } from '@mui/material';
 import type { DrawResultRow, IndividualResultForm as IndividualResultFormType, IndividualResultFormProps } from '../../types';
-import { getEnabledFields } from '../../utils';
+import { getEnabledFields, isSuperPaleAutoDraw, is6x1AutoDraw } from '../../utils';
 import { COLORS } from '../../constants';
 
 /**
@@ -122,6 +122,7 @@ export const IndividualResultForm: FC<IndividualResultFormProps> = memo(({
               sx={{ bgcolor: '#fff' }}
             >
               {drawResults
+                .filter((draw) => !isSuperPaleAutoDraw(draw.drawName) && !is6x1AutoDraw(draw.drawName))
                 .filter((draw) => !draw.hasResult || draw.drawId === form.selectedDrawId)
                 .map((draw) => (
                   <MenuItem key={draw.drawId} value={draw.drawId}>

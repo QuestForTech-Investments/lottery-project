@@ -148,6 +148,20 @@ public class BettingPoolDrawsController : ControllerBase
                 var tz = bpd.Draw?.Lottery?.Timezone ?? "America/Santo_Domingo";
                 var nowInTz = DateTimeHelper.NowInTimezone(tz);
                 var dow = (byte)nowInTz.DayOfWeek;
+                var currentTime = nowInTz.TimeOfDay;
+                var todaySchedule = bpd.Draw?.WeeklySchedules?
+                    .FirstOrDefault(ws => ws.DayOfWeek == dow && ws.IsActive);
+                var endTime = todaySchedule?.EndTime;
+
+                // Calculate effective closing time (EndTime minus anticipated minutes)
+                var closingTime = endTime;
+                if (closingTime.HasValue && bpd.AnticipatedClosingMinutes.HasValue && bpd.AnticipatedClosingMinutes.Value > 0)
+                {
+                    closingTime = closingTime.Value.Subtract(TimeSpan.FromMinutes(bpd.AnticipatedClosingMinutes.Value));
+                }
+
+                var isClosed = closingTime.HasValue && currentTime >= closingTime.Value;
+
                 return new BettingPoolDrawDto
                 {
                     BettingPoolDrawId = bpd.BettingPoolDrawId,
@@ -155,13 +169,12 @@ public class BettingPoolDrawsController : ControllerBase
                     DrawId = bpd.DrawId,
                     DrawName = bpd.Draw?.DrawName,
                     Abbreviation = bpd.Draw?.Abbreviation,
-                    DrawTime = bpd.Draw?.WeeklySchedules?
-                        .Where(ws => ws.DayOfWeek == dow && ws.IsActive)
-                        .FirstOrDefault()?.EndTime,
+                    DrawTime = endTime,
                 LotteryId = bpd.Draw?.LotteryId,
                 LotteryName = bpd.Draw?.Lottery?.LotteryName,
                 CountryName = bpd.Draw?.Lottery?.Country?.CountryName,
                 IsActive = bpd.IsActive,
+                IsClosed = isClosed,
                 AnticipatedClosingMinutes = bpd.AnticipatedClosingMinutes,
                 DisplayOrder = bpd.Draw?.DisplayOrder ?? 0,
                 AvailableGameTypes = gameTypesByDraw.TryGetValue(bpd.DrawId, out var available)

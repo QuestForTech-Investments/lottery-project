@@ -20,5 +20,8 @@ export {
   isSuperPaleAutoDraw,
   getSuperPaleTarget,
   SUPER_PALE_SOURCE_MAP,
+  is6x1AutoDraw,
+  get6x1Target,
+  DRAW_6X1_SOURCE_MAP,
   validateResultRow,
 } from './fieldConfig';

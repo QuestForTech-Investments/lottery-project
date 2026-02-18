@@ -67,7 +67,7 @@ const ResultsTableSection: FC<ResultsTableSectionProps> = memo(({
   onEdit,
 }) => {
   return (
-    <Box sx={{ mt: 2 }}>
+    <Box sx={{ mt: 2 }} className="results-table-section">
       <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: COLORS.primary }}>
         Resultados {selectedDate}
       </Typography>

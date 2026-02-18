@@ -86,6 +86,7 @@ export interface AvailableGameType {
 export interface BettingPoolDrawResponse {
   drawId: number;
   isActive: boolean;
+  isClosed: boolean;
   drawTime?: string; // Closing time (HH:mm:ss)
   availableGameTypes?: AvailableGameType[];
 }

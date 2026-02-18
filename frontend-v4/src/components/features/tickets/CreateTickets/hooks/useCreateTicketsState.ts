@@ -103,6 +103,7 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
   const [loadingAllowedDraws, setLoadingAllowedDraws] = useState<boolean>(false);
   const [drawGameTypes, setDrawGameTypes] = useState<Map<number, number[]>>(new Map());
   const [drawClosingTimes, setDrawClosingTimes] = useState<Map<number, string>>(new Map());
+  const [closedDrawIds, setClosedDrawIds] = useState<Set<number>>(new Set());
 
   // Stats
   const [dailyBets] = useState<number>(0);
@@ -147,53 +148,64 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
   }, []);
 
   // Load allowed draws when betting pool changes
-  useEffect(() => {
-    const loadAllowedDraws = async () => {
-      if (!selectedPool) {
-        setAllowedDrawIds(new Set());
-        setDrawGameTypes(new Map());
-        setDrawClosingTimes(new Map());
-        return;
-      }
+  const loadAllowedDraws = useCallback(async (isRefresh = false) => {
+    if (!selectedPool) {
+      setAllowedDrawIds(new Set());
+      setDrawGameTypes(new Map());
+      setDrawClosingTimes(new Map());
+      return;
+    }
 
-      setLoadingAllowedDraws(true);
-      try {
-        const response = await api.get(`/betting-pools/${selectedPool.bettingPoolId}/draws`) as BettingPoolDrawResponse[];
-        const activeDraws = (response || []).filter((d) => d.isActive);
-        const drawIds = activeDraws.map((d) => d.drawId);
-        setAllowedDrawIds(new Set(drawIds));
+    if (!isRefresh) setLoadingAllowedDraws(true);
+    try {
+      const response = await api.get(`/betting-pools/${selectedPool.bettingPoolId}/draws`) as BettingPoolDrawResponse[];
+      const activeDraws = (response || []).filter((d) => d.isActive);
+      const drawIds = activeDraws.map((d) => d.drawId);
+      setAllowedDrawIds(new Set(drawIds));
 
-        const gameTypesMap = new Map<number, number[]>();
-        activeDraws.forEach((d) => {
-          if (d.availableGameTypes && d.availableGameTypes.length > 0) {
-            const gameTypeIds = d.availableGameTypes.map(gt => gt.gameTypeId);
-            gameTypesMap.set(d.drawId, gameTypeIds);
-          }
-        });
-        setDrawGameTypes(gameTypesMap);
+      const gameTypesMap = new Map<number, number[]>();
+      activeDraws.forEach((d) => {
+        if (d.availableGameTypes && d.availableGameTypes.length > 0) {
+          const gameTypeIds = d.availableGameTypes.map(gt => gt.gameTypeId);
+          gameTypesMap.set(d.drawId, gameTypeIds);
+        }
+      });
+      setDrawGameTypes(gameTypesMap);
 
-        // Store closing times per draw
-        const closingMap = new Map<number, string>();
-        activeDraws.forEach((d) => {
-          if (d.drawTime) {
-            closingMap.set(d.drawId, d.drawTime);
-          }
-        });
-        setDrawClosingTimes(closingMap);
+      // Store closing times and server-side isClosed per draw
+      const closingMap = new Map<number, string>();
+      const closedSet = new Set<number>();
+      activeDraws.forEach((d) => {
+        if (d.drawTime) {
+          closingMap.set(d.drawId, d.drawTime);
+        }
+        if (d.isClosed) {
+          closedSet.add(d.drawId);
+        }
+      });
+      setDrawClosingTimes(closingMap);
+      setClosedDrawIds(closedSet);
 
+      if (!isRefresh) {
         setSelectedDraw(null);
         setSelectedDraws([]);
-      } catch (error) {
+      }
+    } catch (error) {
+      if (!isRefresh) {
         console.error('Error loading allowed draws:', error);
         setAllowedDrawIds(new Set());
         setDrawGameTypes(new Map());
         setDrawClosingTimes(new Map());
-      } finally {
-        setLoadingAllowedDraws(false);
+        setClosedDrawIds(new Set());
       }
-    };
-    loadAllowedDraws();
+    } finally {
+      if (!isRefresh) setLoadingAllowedDraws(false);
+    }
   }, [selectedPool?.bettingPoolId]);
+
+  useEffect(() => {
+    loadAllowedDraws();
+  }, [loadAllowedDraws]);
 
   // Load draws from API
   useEffect(() => {
@@ -228,21 +240,25 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
     loadDraws();
   }, []);
 
-  // Merge closing times into draws - mark as disabled if draw already closed
+  // Re-fetch draw closing status from the server every 30s
+  useEffect(() => {
+    if (!selectedPool) return;
+    const id = setInterval(() => loadAllowedDraws(true), 30_000);
+    return () => clearInterval(id);
+  }, [selectedPool, loadAllowedDraws]);
+
+  // Merge closing times into draws - use server-side isClosed
   const drawsWithClosingInfo = useMemo(() => {
-    if (drawClosingTimes.size === 0) return draws;
-    const now = new Date();
-    const currentMinutes = now.getHours() * 60 + now.getMinutes();
     return draws.map(draw => {
       const closing = drawClosingTimes.get(draw.id);
-      if (!closing) return draw;
-      // Parse "HH:mm:ss" closing time
-      const parts = closing.split(':');
-      const closingMinutes = parseInt(parts[0]) * 60 + parseInt(parts[1]);
-      const isClosed = currentMinutes >= closingMinutes;
-      return { ...draw, closingTime: closing, disabled: draw.disabled || isClosed };
+      const isClosed = closedDrawIds.has(draw.id);
+      return {
+        ...draw,
+        closingTime: closing,
+        disabled: draw.disabled || isClosed,
+      };
     });
-  }, [draws, drawClosingTimes]);
+  }, [draws, drawClosingTimes, closedDrawIds]);
 
   // Memoized totals
   const calculateTotal = useCallback((bets: Bet[]): string => {

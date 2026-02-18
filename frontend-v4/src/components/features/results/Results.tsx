@@ -31,7 +31,7 @@ import {
 // Internal module imports
 import { useResultsState } from './hooks';
 import type { DrawResultRow, IndividualResultForm as IndividualResultFormType, EnabledFields } from './types';
-import { COLORS, INDIVIDUAL_FIELD_ORDER } from './constants';
+import { COLORS, INDIVIDUAL_FIELD_ORDER, AUTO_REFRESH_INTERVAL } from './constants';
 import {
   getMaxLength,
   getEnabledFields,
@@ -42,6 +42,8 @@ import {
   isPlay4OnlyDraw,
   getSuperPaleTarget,
   SUPER_PALE_SOURCE_MAP,
+  get6x1Target,
+  DRAW_6X1_SOURCE_MAP,
   validateResultRow,
 } from './utils';
 import { getDrawCategory } from '@services/betTypeCompatibilityService';
@@ -182,6 +184,16 @@ const Results = (): React.ReactElement => {
         }
       });
 
+      // Pre-populate 6x1 auto-calc draws from existing source results
+      Object.entries(DRAW_6X1_SOURCE_MAP).forEach(([sourceName, target]) => {
+        const sourceRow = mergedData.find(r => r.drawName.toUpperCase().includes(sourceName));
+        const targetRow = mergedData.find(r => r.drawName.toUpperCase().includes(target.targetDraw));
+        if (sourceRow && targetRow && !targetRow.hasResult) {
+          if (sourceRow.cash3) { targetRow.cash3 = sourceRow.cash3; targetRow.isDirty = true; }
+          if (sourceRow.play4) { targetRow.play4 = sourceRow.play4; targetRow.isDirty = true; }
+        }
+      });
+
       actions.setDrawResults(mergedData);
     } catch (err) {
       console.error('Error loading data:', err);
@@ -229,6 +241,104 @@ const Results = (): React.ReactElement => {
 
     loadDataAndSetup();
   }, [selectedDate]);
+
+  // ---------------------------------------------------------------------------
+  // Auto-refresh: silently update rows that have no result and are not being edited
+  // ---------------------------------------------------------------------------
+  useEffect(() => {
+    if (!state.autoRefreshEnabled || activeTab !== 0) return;
+
+    const silentRefresh = async () => {
+      // Skip refresh if user is focused on any input inside the results table
+      const activeEl = document.activeElement;
+      if (activeEl && activeEl.tagName === 'INPUT' && activeEl.closest('.results-table-section')) {
+        return;
+      }
+
+      try {
+        const [drawsList, resultsList] = await Promise.all([
+          getDrawsForResults(selectedDate),
+          getResults(selectedDate),
+        ]);
+
+        const resultsMap = new Map<number, ResultDto>();
+        resultsList.forEach((r) => resultsMap.set(r.drawId, r));
+
+        const current = drawResultsRef.current;
+        let changed = false;
+
+        const updated = current.map((row) => {
+          // Skip rows the user is currently editing or that already had a result
+          if (row.isDirty || row.isSaving) return row;
+
+          const freshResult = resultsMap.get(row.drawId);
+          if (freshResult && !row.hasResult) {
+            // A new result appeared from another user/session
+            changed = true;
+            return {
+              ...row,
+              resultId: freshResult.resultId,
+              num1: freshResult.num1 || '',
+              num2: freshResult.num2 || '',
+              num3: freshResult.num3 || '',
+              cash3: freshResult.cash3 || '',
+              play4: freshResult.play4 || '',
+              pick5: freshResult.pick5 || '',
+              bolita1: freshResult.bolita1 ?? '',
+              bolita2: freshResult.bolita2 ?? '',
+              singulaccion1: freshResult.singulaccion1 ?? '',
+              singulaccion2: freshResult.singulaccion2 ?? '',
+              singulaccion3: freshResult.singulaccion3 ?? '',
+              hasResult: true,
+              isDirty: false,
+            };
+          }
+          return row;
+        });
+
+        // Also add any new draws that weren't in the original list
+        const currentIds = new Set(current.map((r) => r.drawId));
+        drawsList.forEach((draw) => {
+          if (!currentIds.has(draw.drawId)) {
+            changed = true;
+            const result = resultsMap.get(draw.drawId);
+            const drawColor = (draw as { color?: string }).color || '#37b9f9';
+            updated.push({
+              drawId: draw.drawId,
+              drawName: draw.drawName || draw.abbreviation || `Draw ${draw.drawId}`,
+              abbreviation: draw.abbreviation,
+              color: drawColor,
+              resultId: result?.resultId || null,
+              num1: result?.num1 || '',
+              num2: result?.num2 || '',
+              num3: result?.num3 || '',
+              cash3: result?.cash3 || '',
+              play4: result?.play4 || '',
+              pick5: result?.pick5 || '',
+              bolita1: result?.bolita1 ?? '',
+              bolita2: result?.bolita2 ?? '',
+              singulaccion1: result?.singulaccion1 ?? '',
+              singulaccion2: result?.singulaccion2 ?? '',
+              singulaccion3: result?.singulaccion3 ?? '',
+              hasResult: !!result,
+              isDirty: false,
+              isSaving: false,
+            });
+          }
+        });
+
+        if (changed) {
+          actions.setDrawResults(updated);
+        }
+        actions.setLastRefresh(new Date());
+      } catch {
+        // Silent fail - don't show error for background refresh
+      }
+    };
+
+    const intervalId = setInterval(silentRefresh, AUTO_REFRESH_INTERVAL);
+    return () => clearInterval(intervalId);
+  }, [selectedDate, activeTab, state.autoRefreshEnabled, actions]);
 
   useEffect(() => {
     if (activeTab !== 1) return;
@@ -295,6 +405,22 @@ const Results = (): React.ReactElement => {
             );
             if (targetRow) {
               actions.updateField(targetRow.drawId, target.targetField, sanitizedValue);
+            }
+          }
+        }
+      }
+
+      // 6x1 auto-calculation: when source draw's cash3 or play4 changes, update target 6x1 draw
+      if (field === 'cash3' || field === 'play4') {
+        const row = drawResultsRef.current.find((r) => r.drawId === drawId);
+        if (row) {
+          const target = get6x1Target(row.drawName);
+          if (target) {
+            const targetRow = drawResultsRef.current.find(
+              (r) => r.drawName.toUpperCase().trim().includes(target.targetDraw)
+            );
+            if (targetRow) {
+              actions.updateField(targetRow.drawId, field, sanitizedValue);
             }
           }
         }
@@ -491,6 +617,22 @@ const Results = (): React.ReactElement => {
             updatedResults[targetIdx] = {
               ...updatedResults[targetIdx],
               [target.targetField]: publishedDraw.num1,
+              isDirty: true,
+            };
+          }
+        }
+
+        // 6x1 auto-calc: propagate source draw's cash3/play4 to target 6x1 draw
+        const target6x1 = get6x1Target(publishedDraw.drawName);
+        if (target6x1) {
+          const targetIdx = updatedResults.findIndex(
+            r => r.drawName.toUpperCase().trim().includes(target6x1.targetDraw)
+          );
+          if (targetIdx !== -1 && !updatedResults[targetIdx].hasResult) {
+            updatedResults[targetIdx] = {
+              ...updatedResults[targetIdx],
+              cash3: publishedDraw.cash3,
+              play4: publishedDraw.play4,
               isDirty: true,
             };
           }
