@@ -83,7 +83,7 @@ const DailySales = (): React.ReactElement => {
         total: (item.pendingCount || 0) + (item.loserCount || 0) + (item.winnerCount || 0),
         sales: item.totalSold,
         commissions: item.totalCommissions,
-        discounts: 0,
+        discounts: item.totalDiscounts,
         prizes: item.totalPrizes,
         net: item.totalNet,
         fall: 0,

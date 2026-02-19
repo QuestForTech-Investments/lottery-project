@@ -66,6 +66,7 @@ export interface FormData {
   statPercentage: boolean;
   statPrize: boolean;
   statNet: boolean;
+  statDiscount: boolean;
   statFinal: boolean;
   statBalance: boolean;
   statFall: boolean;

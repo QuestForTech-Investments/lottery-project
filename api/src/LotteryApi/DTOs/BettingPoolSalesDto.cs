@@ -11,6 +11,7 @@ public class BettingPoolSalesDto
     public decimal TotalSold { get; set; }
     public decimal TotalPrizes { get; set; }
     public decimal TotalCommissions { get; set; }
+    public decimal TotalDiscounts { get; set; }
     public decimal TotalNet { get; set; }
 
     /// <summary>

@@ -58,6 +58,7 @@ interface ConfigFormData {
   statPercentage: boolean;
   statPrize: boolean;
   statNet: boolean;
+  statDiscount: boolean;
   statFinal: boolean;
   statBalance: boolean;
   statFall: boolean;
@@ -615,6 +616,12 @@ const ConfigurationTab: React.FC<ConfigTabProps> = ({ formData, handleChange, be
                 </Grid>
                 <Grid item xs={6} sm={4} md={3}>
                   <FormControlLabel
+                    control={<Switch checked={formData.statDiscount} onChange={handleChange} name="statDiscount" size="small" />}
+                    label="Descuento"
+                  />
+                </Grid>
+                <Grid item xs={6} sm={4} md={3}>
+                  <FormControlLabel
                     control={<Switch checked={formData.statFinal} onChange={handleChange} name="statFinal" size="small" />}
                     label="Final"
                   />
@@ -728,7 +735,7 @@ const arePropsEqual = (prevProps: ConfigTabProps, nextProps: ConfigTabProps): bo
     'discountMode', 'discountAmount', 'discountPerEvery', 'maximumCancelTicketAmount', 'maxTicketAmount',
     'dailyPhoneRechargeLimit', 'limitPreference', 'futureSalesMode', 'maxFutureDays',
     'useCentralLogo', 'showStatsPanel', 'statCredit', 'statSales', 'statPercentage',
-    'statPrize', 'statNet', 'statFinal', 'statBalance', 'statFall', 'statAccumulatedFall'
+    'statPrize', 'statNet', 'statDiscount', 'statFinal', 'statBalance', 'statFall', 'statAccumulatedFall'
   ];
 
   for (const field of configFields) {

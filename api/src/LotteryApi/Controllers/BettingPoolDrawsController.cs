@@ -46,10 +46,10 @@ public class BettingPoolDrawsController : ControllerBase
                 return NotFound(new { message = "Banca no encontrada" });
             }
 
-            // Load all betting pool draws with related data
+            // Load all betting pool draws with related data (only active draws)
             var bettingPoolDraws = await _context.BettingPoolDraws
                 .AsNoTracking()
-                .Where(bpd => bpd.BettingPoolId == bettingPoolId)
+                .Where(bpd => bpd.BettingPoolId == bettingPoolId && bpd.Draw != null && bpd.Draw.IsActive)
                 .Include(bpd => bpd.Draw)
                     .ThenInclude(d => d!.Lottery)
                         .ThenInclude(l => l!.Country)

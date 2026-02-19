@@ -478,7 +478,7 @@ const TicketDetailPanel: FC<TicketDetailPanelProps> = memo(({ ticket, onClose })
 
       {/* Totals line */}
       <Typography sx={PANEL_STYLES.totalsLine}>
-        Jugadas (Monto: {formatCurrency(totalMonto)}) (Pendientes de pago: {formatCurrency(totalPendiente)}) (Total de premios: {formatCurrency(totalPremios)})
+        Jugadas (Monto: {formatCurrency(totalMonto)}) (Pendientes de pago: {formatCurrency(totalPendiente)}) (Total de premios: {formatCurrency(totalPremios)}){ticket.descuento > 0 && ` (Descuento: ${formatCurrency(ticket.descuento)})`}
       </Typography>
 
       {/* Plays grouped by lottery/draw */}

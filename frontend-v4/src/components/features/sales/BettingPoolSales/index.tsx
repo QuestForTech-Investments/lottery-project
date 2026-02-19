@@ -15,6 +15,7 @@ interface SalesData {
   nombre: string;
   ventas: number;
   comisiones: number;
+  descuentos: number;
   premios: number;
   neto: number;
 }
@@ -22,6 +23,7 @@ interface SalesData {
 interface Totals {
   ventas: number;
   comisiones: number;
+  descuentos: number;
   premios: number;
   neto: number;
 }
@@ -34,6 +36,7 @@ interface BettingPoolSalesDto {
   totalSold: number;
   totalPrizes: number;
   totalCommissions: number;
+  totalDiscounts: number;
   totalNet: number;
 }
 
@@ -42,7 +45,7 @@ const BettingPoolSales = (): React.ReactElement => {
   const [banca, setBanca] = useState<Banca | null>(null);
   const [data, setData] = useState<SalesData[]>([]);
   const [bancasList, setBancasList] = useState<Banca[]>([]);
-  const [totals, setTotals] = useState<Totals>({ ventas: 0, comisiones: 0, premios: 0, neto: 0 });
+  const [totals, setTotals] = useState<Totals>({ ventas: 0, comisiones: 0, descuentos: 0, premios: 0, neto: 0 });
   const [loading, setLoading] = useState<boolean>(false);
 
 
@@ -81,6 +84,7 @@ const BettingPoolSales = (): React.ReactElement => {
         nombre: item.bettingPoolName,
         ventas: item.totalSold,
         comisiones: item.totalCommissions,
+        descuentos: item.totalDiscounts,
         premios: item.totalPrizes,
         neto: item.totalNet
       }));
@@ -90,9 +94,10 @@ const BettingPoolSales = (): React.ReactElement => {
       const newTotals = mapped.reduce((acc, row) => ({
         ventas: acc.ventas + row.ventas,
         comisiones: acc.comisiones + row.comisiones,
+        descuentos: acc.descuentos + row.descuentos,
         premios: acc.premios + row.premios,
         neto: acc.neto + row.neto
-      }), { ventas: 0, comisiones: 0, premios: 0, neto: 0 });
+      }), { ventas: 0, comisiones: 0, descuentos: 0, premios: 0, neto: 0 });
 
       setTotals(newTotals);
     } catch (error) {
@@ -156,6 +161,7 @@ const BettingPoolSales = (): React.ReactElement => {
                 <TableCell sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.75rem' }}>Nombre</TableCell>
                 <TableCell align="right" sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.75rem' }}>Ventas</TableCell>
                 <TableCell align="right" sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.75rem' }}>Comisiones</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.75rem' }}>Descuentos</TableCell>
                 <TableCell align="right" sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.75rem' }}>Premios</TableCell>
                 <TableCell align="right" sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.75rem' }}>Neto</TableCell>
               </TableRow>
@@ -167,6 +173,7 @@ const BettingPoolSales = (): React.ReactElement => {
                   <TableCell>{d.nombre}</TableCell>
                   <TableCell align="right">{formatCurrency(d.ventas)}</TableCell>
                   <TableCell align="right">{formatCurrency(d.comisiones)}</TableCell>
+                  <TableCell align="right">{formatCurrency(d.descuentos)}</TableCell>
                   <TableCell align="right">{formatCurrency(d.premios)}</TableCell>
                   <TableCell align="right" sx={{ color: d.neto >= 0 ? 'success.main' : 'error.main' }}>{formatCurrency(d.neto)}</TableCell>
                 </TableRow>
@@ -176,6 +183,7 @@ const BettingPoolSales = (): React.ReactElement => {
                 <TableCell>-</TableCell>
                 <TableCell align="right">{formatCurrency(totals.ventas)}</TableCell>
                 <TableCell align="right">{formatCurrency(totals.comisiones)}</TableCell>
+                <TableCell align="right">{formatCurrency(totals.descuentos)}</TableCell>
                 <TableCell align="right">{formatCurrency(totals.premios)}</TableCell>
                 <TableCell align="right" sx={{ color: totals.neto >= 0 ? 'success.main' : 'error.main' }}>{formatCurrency(totals.neto)}</TableCell>
               </TableRow>

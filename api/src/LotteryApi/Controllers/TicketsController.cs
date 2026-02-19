@@ -46,11 +46,21 @@ public class TicketsController : ControllerBase
             .AsNoTracking()
             .Where(t => t.BettingPoolId == bettingPoolId);
 
-        // Filter by date (DrawDate - the date the ticket is FOR)
+        // Filter by date: tickets created on that date OR tickets with draws for that date
         if (date.HasValue)
         {
             var filterDate = date.Value.Date;
-            query = query.Where(t => t.TicketLines.Any(tl => tl.DrawDate.Date == filterDate));
+
+            string timezoneId = "America/Santo_Domingo";
+            var businessTimezone = TimeZoneInfo.FindSystemTimeZoneById(timezoneId);
+            var localStart = new DateTime(filterDate.Year, filterDate.Month, filterDate.Day, 0, 0, 0, DateTimeKind.Unspecified);
+            var localEnd = new DateTime(filterDate.Year, filterDate.Month, filterDate.Day, 23, 59, 59, 999, DateTimeKind.Unspecified);
+            var utcStart = TimeZoneInfo.ConvertTimeToUtc(localStart, businessTimezone);
+            var utcEnd = TimeZoneInfo.ConvertTimeToUtc(localEnd, businessTimezone);
+
+            query = query.Where(t =>
+                (t.CreatedAt >= utcStart && t.CreatedAt < utcEnd)
+                || t.TicketLines.Any(tl => tl.DrawDate.Date == filterDate));
         }
 
         var tickets = await query
@@ -63,7 +73,7 @@ public class TicketsController : ControllerBase
                 BettingPoolName = t.BettingPool!.BettingPoolName,
                 BettingPoolCode = t.BettingPool!.BettingPoolCode,
                 UserId = t.UserId,
-                UserName = t.User!.FullName,
+                UserName = t.User!.Username,
                 TerminalId = t.TerminalId,
                 IpAddress = t.IpAddress,
                 CreatedAt = t.CreatedAt,
@@ -77,7 +87,7 @@ public class TicketsController : ControllerBase
                 TotalWithMultiplier = t.TotalWithMultiplier,
                 TotalCommission = t.TotalCommission,
                 TotalNet = t.TotalNet,
-                GrandTotal = t.GrandTotal,
+                GrandTotal = t.TotalBetAmount,
                 TotalPrize = t.TotalPrize,
                 WinningLines = t.WinningLines,
                 Status = t.Status,
@@ -1109,10 +1119,10 @@ public class TicketsController : ControllerBase
                     BettingPoolId = t.BettingPoolId,
                     BettingPoolName = t.BettingPool != null ? t.BettingPool.BettingPoolName : null,
                     UserId = t.UserId,
-                    UserName = t.User != null ? t.User.FullName : null,
+                    UserName = t.User != null ? t.User.Username : null,
                     CreatedAt = t.CreatedAt,
                     TotalLines = t.TotalLines,
-                    GrandTotal = t.GrandTotal,
+                    GrandTotal = t.TotalBetAmount,
                     TotalPrize = t.TotalPrize,
                     WinningLines = t.WinningLines,
                     Status = t.Status,

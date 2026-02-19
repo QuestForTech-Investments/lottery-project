@@ -72,6 +72,7 @@ export interface BettingPoolSalesDto {
   totalSold: number;
   totalPrizes: number;
   totalCommissions: number;
+  totalDiscounts: number;
   totalNet: number;
   pendingCount: number;
   winnerCount: number;

@@ -63,6 +63,7 @@ export const INITIAL_FORM_DATA: FormData = {
   statPercentage: true,
   statPrize: true,
   statNet: true,
+  statDiscount: true,
   statFinal: true,
   statBalance: true,
   statFall: true,

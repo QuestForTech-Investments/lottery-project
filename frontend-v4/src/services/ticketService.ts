@@ -92,6 +92,7 @@ export interface TicketResponse {
   createdAt: string;
   userName: string;
   grandTotal: number;
+  totalDiscount: number;
   totalPrize: number;
   cancelledAt: string | null;
   isCancelled: boolean;
@@ -139,6 +140,7 @@ export interface MappedTicket {
   fecha: string;
   usuario: string;
   monto: number;
+  descuento: number;
   premio: number;
   fechaCancelacion: string | null;
   estado: 'Ganador' | 'Cancelado' | 'Pagado' | 'Pendiente' | 'Perdedor';
@@ -235,6 +237,7 @@ export const mapTicketResponse = (ticket: TicketResponse): MappedTicket => {
     fecha: formatDateToSantoDomingo(ticket.createdAt),
     usuario: ticket.userName || 'N/A',
     monto: ticket.grandTotal,
+    descuento: ticket.totalDiscount || 0,
     premio: ticket.totalPrize || 0,
     fechaCancelacion: ticket.cancelledAt
       ? formatDateToSantoDomingo(ticket.cancelledAt)

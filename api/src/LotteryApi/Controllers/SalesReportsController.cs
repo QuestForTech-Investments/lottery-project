@@ -158,24 +158,25 @@ public class SalesReportsController : ControllerBase
                 "Getting daily sales summary for {Date} (UTC: {UtcStart} to {UtcEnd}), BettingPoolId: {BettingPoolId}",
                 targetDate, utcStart, utcEnd, bettingPoolId);
 
+            // Include tickets created today OR tickets from previous days with draws for today
             var query = _context.Tickets
                 .Where(t => !t.IsCancelled
-                    && t.CreatedAt >= utcStart
-                    && t.CreatedAt < utcEnd);
+                    && ((t.CreatedAt >= utcStart && t.CreatedAt < utcEnd)
+                        || t.TicketLines.Any(tl => tl.DrawDate.Date == targetDate.Date)));
 
             if (bettingPoolId.HasValue)
             {
                 query = query.Where(t => t.BettingPoolId == bettingPoolId.Value);
             }
 
-            var tickets = await query.ToListAsync();
+            var tickets = await query.Distinct().ToListAsync();
 
-            var totalSold = tickets.Sum(t => t.GrandTotal);
+            var totalSold = tickets.Sum(t => t.TotalBetAmount);
             var totalPrizes = tickets.Sum(t => t.TotalPrize);
             var totalCommissions = tickets.Sum(t => t.TotalCommission);
             var totalDiscounts = tickets.Sum(t => t.TotalDiscount);
             var riferoDiscount = tickets.Where(t => t.DiscountMode == "RIFERO").Sum(t => t.TotalDiscount);
-            var totalNet = totalSold + riferoDiscount - totalCommissions - totalPrizes;
+            var totalNet = totalSold - totalDiscounts - totalCommissions - totalPrizes;
 
             var summary = new SalesSummaryDto
             {
@@ -318,7 +319,8 @@ public class SalesReportsController : ControllerBase
     public async Task<ActionResult<List<BettingPoolSalesDto>>> GetSalesByBettingPool(
         [FromQuery] DateTime startDate,
         [FromQuery] DateTime endDate,
-        [FromQuery] int? zoneId = null)
+        [FromQuery] int? zoneId = null,
+        [FromQuery] int? lotteryId = null)
     {
         try
         {
@@ -340,8 +342,8 @@ public class SalesReportsController : ControllerBase
             var utcEnd = TimeZoneInfo.ConvertTimeToUtc(localEndOfDay, businessTimezone);
 
             _logger.LogInformation(
-                "Getting sales by betting pool from {StartDate} to {EndDate} (UTC: {UtcStart} to {UtcEnd}), ZoneId: {ZoneId}",
-                startDate, endDate, utcStart, utcEnd, zoneId);
+                "Getting sales by betting pool from {StartDate} to {EndDate} (UTC: {UtcStart} to {UtcEnd}), ZoneId: {ZoneId}, LotteryId: {LotteryId}",
+                startDate, endDate, utcStart, utcEnd, zoneId, lotteryId);
 
             var query = _context.BettingPools.AsQueryable();
 
@@ -351,14 +353,18 @@ public class SalesReportsController : ControllerBase
                 query = query.Where(bp => bp.ZoneId == zoneId.Value);
             }
 
+            var filterStartDate = startDate.Date;
+            var filterEndDate = endDate.Date;
+
             var salesData = await query
                 .Select(bp => new
                 {
                     BettingPool = bp,
                     Tickets = bp.Tickets
                         .Where(t => !t.IsCancelled
-                            && t.CreatedAt >= utcStart
-                            && t.CreatedAt < utcEnd)
+                            && ((t.CreatedAt >= utcStart && t.CreatedAt < utcEnd)
+                                || t.TicketLines.Any(tl => tl.DrawDate.Date >= filterStartDate && tl.DrawDate.Date <= filterEndDate)))
+                        .Where(t => !lotteryId.HasValue || t.TicketLines.Any(tl => tl.Draw.LotteryId == lotteryId.Value))
                         .ToList()
                 })
                 .ToListAsync();
@@ -367,10 +373,10 @@ public class SalesReportsController : ControllerBase
                 .Where(x => x.Tickets.Any())
                 .Select(x =>
                 {
-                    var totalSold = x.Tickets.Sum(t => t.GrandTotal);
+                    var totalSold = x.Tickets.Sum(t => t.TotalBetAmount);
                     var totalPrizes = x.Tickets.Sum(t => t.TotalPrize);
                     var totalCommissions = x.Tickets.Sum(t => t.TotalCommission);
-                    var riferoDiscount = x.Tickets.Where(t => t.DiscountMode == "RIFERO").Sum(t => t.TotalDiscount);
+                    var totalDiscounts = x.Tickets.Sum(t => t.TotalDiscount);
 
                     // Count tickets by state
                     var pendingCount = x.Tickets.Count(t => t.TicketState == "P");
@@ -388,7 +394,8 @@ public class SalesReportsController : ControllerBase
                         TotalSold = totalSold,
                         TotalPrizes = totalPrizes,
                         TotalCommissions = totalCommissions,
-                        TotalNet = totalSold + riferoDiscount - totalCommissions - totalPrizes,
+                        TotalDiscounts = totalDiscounts,
+                        TotalNet = totalSold - totalDiscounts - totalCommissions - totalPrizes,
                         PendingCount = pendingCount,
                         WinnerCount = winnerCount,
                         LoserCount = loserCount
@@ -468,10 +475,11 @@ public class SalesReportsController : ControllerBase
                         TicketCount = ticketIds.Count,
                         LineCount = g.Count(),
                         WinnerCount = g.Count(tl => tl.IsWinner),
-                        TotalSold = g.Sum(tl => tl.Subtotal),
+                        TotalSold = g.Sum(tl => tl.BetAmount),
                         TotalPrizes = g.Sum(tl => tl.PrizeAmount),
                         TotalCommissions = g.Sum(tl => tl.CommissionAmount),
-                        TotalNet = g.Sum(tl => tl.Subtotal) - g.Sum(tl => tl.CommissionAmount) - g.Sum(tl => tl.PrizeAmount)
+                        TotalDiscounts = g.Sum(tl => tl.DiscountAmount),
+                        TotalNet = g.Sum(tl => tl.BetAmount) - g.Sum(tl => tl.DiscountAmount) - g.Sum(tl => tl.CommissionAmount) - g.Sum(tl => tl.PrizeAmount)
                     };
                 })
                 .OrderBy(d => d.DrawTime)
@@ -482,6 +490,7 @@ public class SalesReportsController : ControllerBase
                 TotalSold = drawSales.Sum(d => d.TotalSold),
                 TotalPrizes = drawSales.Sum(d => d.TotalPrizes),
                 TotalCommissions = drawSales.Sum(d => d.TotalCommissions),
+                TotalDiscounts = drawSales.Sum(d => d.TotalDiscounts),
                 TotalNet = drawSales.Sum(d => d.TotalNet)
             };
 

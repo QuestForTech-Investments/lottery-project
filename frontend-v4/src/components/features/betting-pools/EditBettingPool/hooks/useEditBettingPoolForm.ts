@@ -1139,6 +1139,7 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
             percentage: formData.statPercentage !== undefined ? formData.statPercentage : true,
             prize: formData.statPrize !== undefined ? formData.statPrize : true,
             net: formData.statNet !== undefined ? formData.statNet : true,
+            discount: formData.statDiscount !== undefined ? formData.statDiscount : true,
             final: formData.statFinal !== undefined ? formData.statFinal : true,
             balance: formData.statBalance !== undefined ? formData.statBalance : true,
             fall: formData.statFall !== undefined ? formData.statFall : true,

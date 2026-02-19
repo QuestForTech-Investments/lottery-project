@@ -60,6 +60,7 @@ interface FormData {
   statPercentage: boolean;
   statPrize: boolean;
   statNet: boolean;
+  statDiscount: boolean;
   statFinal: boolean;
   statBalance: boolean;
   statFall: boolean;
@@ -227,6 +228,7 @@ const getInitialFormData = (branchCode = ''): FormData => ({
   statPercentage: true,
   statPrize: true,
   statNet: true,
+  statDiscount: true,
   statFinal: true,
   statBalance: true,
   statFall: true,
@@ -693,6 +695,7 @@ const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
                 updates.statPercentage = parsed.percentage !== undefined ? parsed.percentage : true;
                 updates.statPrize = parsed.prize !== undefined ? parsed.prize : true;
                 updates.statNet = parsed.net !== undefined ? parsed.net : true;
+                updates.statDiscount = parsed.discount !== undefined ? parsed.discount : true;
                 updates.statFinal = parsed.final !== undefined ? parsed.final : true;
                 updates.statBalance = parsed.balance !== undefined ? parsed.balance : true;
                 updates.statFall = parsed.fall !== undefined ? parsed.fall : true;
@@ -1496,6 +1499,7 @@ const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
           percentage: formData.statPercentage !== undefined ? formData.statPercentage : true,
           prize: formData.statPrize !== undefined ? formData.statPrize : true,
           net: formData.statNet !== undefined ? formData.statNet : true,
+          discount: formData.statDiscount !== undefined ? formData.statDiscount : true,
           final: formData.statFinal !== undefined ? formData.statFinal : true,
           balance: formData.statBalance !== undefined ? formData.statBalance : true,
           fall: formData.statFall !== undefined ? formData.statFall : true,
