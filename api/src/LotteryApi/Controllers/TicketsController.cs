@@ -743,8 +743,8 @@ public class TicketsController : ControllerBase
                     lineDto.BetTypeId,
                     draw.LotteryId);
 
-                // Calculate line totals with commission and floor-based discount
-                CalculateTicketLine(line, commissionPercentage, discountAmount, discountPerEvery);
+                // Calculate line totals with commission (discount is on ticket total)
+                CalculateTicketLine(line, commissionPercentage);
 
                 totalBetAmount += line.BetAmount;
                 totalDiscount += line.DiscountAmount;
@@ -783,11 +783,19 @@ public class TicketsController : ControllerBase
                 invalidBets = invalidBets.ToArray(),
             });
 
-            // 9. Set ticket totals
+            // 9. Calculate discount on the ticket total bet amount
+            // Floor-based: floor(totalBetAmount / perEvery) * discountAmount
+            // e.g. config 1:10, totalBet $30 → floor(30/10) * 1 = $3 discount
+            if (discountPerEvery > 0 && discountAmount > 0)
+            {
+                totalDiscount = Math.Floor(totalBetAmount / discountPerEvery) * discountAmount;
+            }
+
+            // 10. Set ticket totals
             ticket.TotalLines = dto.Lines.Count;
             ticket.TotalBetAmount = totalBetAmount;
             ticket.TotalDiscount = totalDiscount;
-            ticket.TotalSubtotal = totalSubtotal;
+            ticket.TotalSubtotal = totalBetAmount - totalDiscount;
             ticket.TotalWithMultiplier = totalWithMultiplier;
             ticket.TotalCommission = totalCommission;
             ticket.TotalNet = totalNet;
@@ -1424,25 +1432,13 @@ public class TicketsController : ControllerBase
     /// <summary>
     /// Calculate ticket line amounts (discount, commission, net)
     /// </summary>
-    private void CalculateTicketLine(TicketLine line, decimal commissionPercentage, decimal discountAmount, int discountPerEvery)
+    private void CalculateTicketLine(TicketLine line, decimal commissionPercentage)
     {
-        // Floor-based discount: floor(betAmount / perEvery) * discountAmount
-        // e.g. config 1:10, bet $15 → floor(15/10) * 1 = $1 discount
-        if (discountPerEvery > 0 && discountAmount > 0)
-        {
-            var multiplier = Math.Floor(line.BetAmount / discountPerEvery);
-            line.DiscountAmount = multiplier * discountAmount;
-            line.DiscountPercentage = line.BetAmount > 0
-                ? Math.Round((line.DiscountAmount / line.BetAmount) * 100, 2)
-                : 0;
-        }
-        else
-        {
-            line.DiscountAmount = 0;
-            line.DiscountPercentage = 0;
-        }
+        // Discount is calculated on the ticket total, not per line
+        line.DiscountAmount = 0;
+        line.DiscountPercentage = 0;
 
-        line.Subtotal = line.BetAmount - line.DiscountAmount;
+        line.Subtotal = line.BetAmount;
         line.TotalWithMultiplier = line.Subtotal * line.Multiplier;
         line.CommissionPercentage = commissionPercentage;
         line.CommissionAmount = line.TotalWithMultiplier * (commissionPercentage / 100);
