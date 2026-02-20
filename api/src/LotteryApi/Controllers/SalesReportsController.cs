@@ -330,20 +330,9 @@ public class SalesReportsController : ControllerBase
                 return BadRequest(new { message = "La fecha de fin debe ser mayor o igual a la fecha de inicio" });
             }
 
-            // Convert dates to UTC using Santo Domingo timezone (UTC-4)
-            // This ensures that when user selects Dec 13, they see tickets created during Dec 13 Santo Domingo time
-            string timezoneId = "America/Santo_Domingo";
-            var businessTimezone = TimeZoneInfo.FindSystemTimeZoneById(timezoneId);
-
-            var localStartOfDay = new DateTime(startDate.Year, startDate.Month, startDate.Day, 0, 0, 0, DateTimeKind.Unspecified);
-            var localEndOfDay = new DateTime(endDate.Year, endDate.Month, endDate.Day, 23, 59, 59, 999, DateTimeKind.Unspecified);
-
-            var utcStart = TimeZoneInfo.ConvertTimeToUtc(localStartOfDay, businessTimezone);
-            var utcEnd = TimeZoneInfo.ConvertTimeToUtc(localEndOfDay, businessTimezone);
-
             _logger.LogInformation(
-                "Getting sales by betting pool from {StartDate} to {EndDate} (UTC: {UtcStart} to {UtcEnd}), ZoneId: {ZoneId}, LotteryId: {LotteryId}",
-                startDate, endDate, utcStart, utcEnd, zoneId, lotteryId);
+                "Getting sales by betting pool from {StartDate} to {EndDate}, ZoneId: {ZoneId}, LotteryId: {LotteryId}",
+                startDate, endDate, zoneId, lotteryId);
 
             var query = _context.BettingPools.AsQueryable();
 
@@ -362,8 +351,7 @@ public class SalesReportsController : ControllerBase
                     BettingPool = bp,
                     Tickets = bp.Tickets
                         .Where(t => !t.IsCancelled
-                            && ((t.CreatedAt >= utcStart && t.CreatedAt < utcEnd)
-                                || t.TicketLines.Any(tl => tl.DrawDate.Date >= filterStartDate && tl.DrawDate.Date <= filterEndDate)))
+                            && t.TicketLines.Any(tl => tl.DrawDate.Date >= filterStartDate && tl.DrawDate.Date <= filterEndDate))
                         .Where(t => !lotteryId.HasValue || t.TicketLines.Any(tl => tl.Draw.LotteryId == lotteryId.Value))
                         .ToList()
                 })

@@ -52,6 +52,19 @@ public class CreateTicketDto
     public decimal GlobalMultiplier { get; set; } = 1.00m;
     public decimal GlobalDiscount { get; set; } = 0.00m;
     public bool ApplyDiscount { get; set; } = false;
+
+    /// <summary>
+    /// When true, allows creating a ticket with yesterday's draw date.
+    /// Requires TICKET_PREVIOUS_DAY_SALE permission.
+    /// </summary>
+    public bool AllowPastDate { get; set; } = false;
+
+    /// <summary>
+    /// When true, allows creating a ticket for draws that have already closed.
+    /// Requires SELL_OUT_OF_HOURS permission.
+    /// </summary>
+    public bool AllowClosedDraw { get; set; } = false;
+
     public string? TerminalId { get; set; }
     public string? IpAddress { get; set; }
 
@@ -136,6 +149,7 @@ public class TicketListDto
     public DateTime? EarliestDrawTime { get; set; }
     public DateTime? LatestDrawTime { get; set; }
     public int PrintCount { get; set; }
+    public bool IsOutOfScheduleSale { get; set; }
 }
 
 /// <summary>

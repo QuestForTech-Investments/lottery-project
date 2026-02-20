@@ -101,6 +101,7 @@ export interface TicketResponse {
   bettingPoolName?: string;
   ticketState?: string; // P=Pending, W=Winner, L=Loser
   winningLines?: number;
+  isOutOfScheduleSale?: boolean;
   lines?: TicketLineResponse[];
 }
 
@@ -138,12 +139,16 @@ export interface MappedTicket {
   id: number;
   numero: string;
   fecha: string;
+  rawCreatedAt: string;
   usuario: string;
   monto: number;
   descuento: number;
   premio: number;
   fechaCancelacion: string | null;
   estado: 'Ganador' | 'Cancelado' | 'Pagado' | 'Pendiente' | 'Perdedor';
+  isPreviousDay?: boolean;
+  isFutureDay?: boolean;
+  isOutOfScheduleSale?: boolean;
   lines?: MappedTicketLine[];
 }
 
@@ -194,8 +199,15 @@ export const filterTickets = async (filters: TicketFilterParams): Promise<Ticket
 /**
  * Cancel a ticket
  */
-export const cancelTicket = async (ticketId: number): Promise<TicketResponse> => {
-  const response = await api.patch<TicketResponse>(`/tickets/${ticketId}/cancel`);
+export const cancelTicket = async (
+  ticketId: number,
+  cancelledBy: number,
+  cancellationReason: string = 'Cancelado por usuario'
+): Promise<TicketResponse> => {
+  const response = await api.patch<TicketResponse>(`/tickets/${ticketId}/cancel`, {
+    cancelledBy,
+    cancellationReason,
+  });
   if (!response) {
     throw new Error('Failed to cancel ticket');
   }
@@ -235,6 +247,7 @@ export const mapTicketResponse = (ticket: TicketResponse): MappedTicket => {
     id: ticket.ticketId,
     numero: ticket.ticketCode,
     fecha: formatDateToSantoDomingo(ticket.createdAt),
+    rawCreatedAt: ticket.createdAt,
     usuario: ticket.userName || 'N/A',
     monto: ticket.grandTotal,
     descuento: ticket.totalDiscount || 0,
@@ -243,6 +256,7 @@ export const mapTicketResponse = (ticket: TicketResponse): MappedTicket => {
       ? formatDateToSantoDomingo(ticket.cancelledAt)
       : null,
     estado,
+    isOutOfScheduleSale: ticket.isOutOfScheduleSale || false,
   };
 };
 

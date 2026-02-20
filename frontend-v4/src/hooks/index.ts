@@ -25,3 +25,6 @@ export { useTimezone, getTimezoneOptions, getAllTimezones } from './useTimezone'
 export { useBetDetection } from './useBetDetection';
 export { useExpenses } from './useExpenses';
 export { useKeyboardShortcuts } from './useKeyboardShortcuts';
+
+// Permissions
+export { useUserPermissions } from './useUserPermissions';

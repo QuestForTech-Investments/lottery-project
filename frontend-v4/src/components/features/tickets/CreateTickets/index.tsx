@@ -10,7 +10,7 @@
 
 import React, { memo } from 'react';
 import {
-  Box, TextField, Typography, Autocomplete,
+  Box, TextField, Typography, Autocomplete, Chip,
   Dialog, DialogContent, Snackbar, Alert
 } from '@mui/material';
 import { Dices } from 'lucide-react';
@@ -19,8 +19,10 @@ import TicketPrinter from '../TicketPrinter';
 
 // Internal imports
 import { useCreateTicketsState } from './hooks/useCreateTicketsState';
-import { BET_TYPES, COLUMN_COLORS, COLUMN_TITLES } from './constants';
-import { BetCardColumn, DrawsGrid, StatsRow, BetInputRow } from './components';
+import { useUserPermissions } from '@hooks/useUserPermissions';
+import { COLUMN_COLORS, COLUMN_TITLES } from './constants';
+import { BetCardColumn, DrawsGrid, StatsRow, BetInputRow, TicketsDropdown } from './components';
+import type { TicketDateMode } from './types';
 
 /**
  * CreateTickets - Exact replica of the original Vue.js application
@@ -28,6 +30,7 @@ import { BetCardColumn, DrawsGrid, StatsRow, BetInputRow } from './components';
 const CreateTickets: React.FC = () => {
   const {
     betNumberInputRef,
+    amountInputRef,
     selectedPool,
     pools,
     setSelectedPool,
@@ -46,11 +49,10 @@ const CreateTickets: React.FC = () => {
     setMultiLotteryMode,
     betNumber,
     amount,
-    selectedBetType,
     betError,
+    betWarning,
     setBetNumber,
     setAmount,
-    setSelectedBetType,
     directBets,
     paleBets,
     cash3Bets,
@@ -77,8 +79,20 @@ const CreateTickets: React.FC = () => {
     handleDeleteAll,
     handleCreateTicket,
     handleDuplicate,
-    handleKeyDown,
+    handleBetNumberKeyDown,
+    handleAmountKeyDown,
+    ticketDateMode,
+    selectedFutureDate,
+    effectiveTicketDate,
+    handleTogglePreviousDay,
+    handleToggleFutureDate,
+    handleFutureDateChange,
+    creatingTicket,
+    cancelMinutes,
+    allowSplitAmount,
   } = useCreateTicketsState();
+
+  const { hasPermission } = useUserPermissions();
 
   return (
     <Box sx={{ bgcolor: bgColor, minHeight: '100vh', p: 2, transition: 'background-color 0.3s ease' }}>
@@ -146,17 +160,19 @@ const CreateTickets: React.FC = () => {
         betNumber={betNumber}
         amount={amount}
         betError={betError}
-        selectedBetType={selectedBetType}
+        betWarning={betWarning}
         selectedDraw={selectedDraw}
-        betTypes={BET_TYPES}
         totalBets={totalBets}
         grandTotal={grandTotal}
         betNumberInputRef={betNumberInputRef}
+        amountInputRef={amountInputRef}
         onBetNumberChange={setBetNumber}
         onAmountChange={setAmount}
-        onBetTypeChange={setSelectedBetType}
         onAddBet={handleAddBet}
-        onKeyDown={handleKeyDown}
+        onBetNumberKeyDown={handleBetNumberKeyDown}
+        onAmountKeyDown={handleAmountKeyDown}
+        allowSplitAmount={allowSplitAmount}
+        ticketsDropdown={<TicketsDropdown selectedPool={selectedPool} cancelMinutes={cancelMinutes} />}
       />
 
       {/* Bet Columns */}
@@ -214,6 +230,15 @@ const CreateTickets: React.FC = () => {
       {/* Action Buttons */}
       <ActionButtonsRow
         totalBets={totalBets}
+        creatingTicket={creatingTicket}
+        ticketDateMode={ticketDateMode}
+        selectedFutureDate={selectedFutureDate}
+        effectiveTicketDate={effectiveTicketDate}
+        canPreviousDay={hasPermission('TICKET_PREVIOUS_DAY_SALE')}
+        canFutureDate={hasPermission('TICKET_FUTURE_SALE')}
+        onTogglePreviousDay={handleTogglePreviousDay}
+        onToggleFutureDate={handleToggleFutureDate}
+        onFutureDateChange={handleFutureDateChange}
         onDuplicate={handleDuplicate}
         onCreate={handleCreateTicket}
         onHelp={() => setHelpModalOpen(true)}
@@ -331,57 +356,145 @@ DrawPreview.displayName = 'DrawPreview';
 
 interface ActionButtonsRowProps {
   totalBets: number;
+  creatingTicket: boolean;
+  ticketDateMode: TicketDateMode;
+  selectedFutureDate: string;
+  effectiveTicketDate: string | null;
+  canPreviousDay: boolean;
+  canFutureDate: boolean;
+  onTogglePreviousDay: () => void;
+  onToggleFutureDate: () => void;
+  onFutureDateChange: (date: string) => void;
   onDuplicate: () => void;
   onCreate: () => void;
   onHelp: () => void;
 }
 
-const ActionButtonsRow = memo<ActionButtonsRowProps>(({ totalBets, onDuplicate, onCreate, onHelp }) => (
-  <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2 }}>
-    <Box
-      component="button"
-      onClick={onDuplicate}
-      disabled={totalBets === 0}
-      sx={{
-        px: 4, py: 1.5,
-        bgcolor: totalBets === 0 ? '#ccc' : '#9e9e9e',
-        color: 'white', border: 'none', borderRadius: '4px',
-        fontSize: '14px', fontWeight: 'bold',
-        cursor: totalBets === 0 ? 'not-allowed' : 'pointer',
-        '&:hover': { bgcolor: totalBets === 0 ? '#ccc' : '#757575' },
-      }}
-    >
-      DUPLICAR
+const ActionButtonsRow = memo<ActionButtonsRowProps>(({
+  totalBets, creatingTicket, ticketDateMode, selectedFutureDate, effectiveTicketDate,
+  canPreviousDay, canFutureDate,
+  onTogglePreviousDay, onToggleFutureDate, onFutureDateChange,
+  onDuplicate, onCreate, onHelp,
+}) => {
+  // Compute min/max for the future date picker
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const maxDate = new Date();
+  maxDate.setDate(maxDate.getDate() + 7);
+  const minDateStr = tomorrow.toISOString().split('T')[0];
+  const maxDateStr = maxDate.toISOString().split('T')[0];
+
+  const isPreviousDayActive = ticketDateMode === 'previousDay';
+  const isFutureDateActive = ticketDateMode === 'futureDate';
+
+  return (
+    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+        {canPreviousDay && (
+          <Box
+            component="button"
+            onClick={onTogglePreviousDay}
+            sx={{
+              px: 3, py: 1.5,
+              bgcolor: isPreviousDayActive ? '#e65100' : '#607d8b',
+              color: 'white', border: 'none', borderRadius: '4px',
+              fontSize: '13px', fontWeight: 'bold', cursor: 'pointer',
+              outline: isPreviousDayActive ? '2px solid #bf360c' : 'none',
+              '&:hover': { bgcolor: isPreviousDayActive ? '#bf360c' : '#455a64' },
+            }}
+          >
+            VENTA DIA ANTERIOR
+          </Box>
+        )}
+        {canFutureDate && (
+          <>
+            <Box
+              component="button"
+              onClick={onToggleFutureDate}
+              sx={{
+                px: 3, py: 1.5,
+                bgcolor: isFutureDateActive ? '#1565c0' : '#607d8b',
+                color: 'white', border: 'none', borderRadius: '4px',
+                fontSize: '13px', fontWeight: 'bold', cursor: 'pointer',
+                outline: isFutureDateActive ? '2px solid #0d47a1' : 'none',
+                '&:hover': { bgcolor: isFutureDateActive ? '#0d47a1' : '#455a64' },
+              }}
+            >
+              VENTA FUTURA
+            </Box>
+            {isFutureDateActive && (
+              <TextField
+                type="date"
+                size="small"
+                value={selectedFutureDate}
+                onChange={(e) => onFutureDateChange(e.target.value)}
+                inputProps={{ min: minDateStr, max: maxDateStr }}
+                sx={{ width: 170, bgcolor: 'white', borderRadius: '4px' }}
+              />
+            )}
+          </>
+        )}
+        <Box
+          component="button"
+          onClick={onDuplicate}
+          disabled={totalBets === 0}
+          sx={{
+            px: 4, py: 1.5,
+            bgcolor: totalBets === 0 ? '#ccc' : '#9e9e9e',
+            color: 'white', border: 'none', borderRadius: '4px',
+            fontSize: '14px', fontWeight: 'bold',
+            cursor: totalBets === 0 ? 'not-allowed' : 'pointer',
+            '&:hover': { bgcolor: totalBets === 0 ? '#ccc' : '#757575' },
+          }}
+        >
+          DUPLICAR
+        </Box>
+        <Box
+          component="button"
+          onClick={onCreate}
+          disabled={totalBets === 0 || creatingTicket}
+          sx={{
+            px: 4, py: 1.5,
+            bgcolor: (totalBets === 0 || creatingTicket) ? '#ccc' : '#8b5cf6',
+            color: 'white', border: 'none', borderRadius: '4px',
+            fontSize: '14px', fontWeight: 'bold',
+            cursor: (totalBets === 0 || creatingTicket) ? 'not-allowed' : 'pointer',
+            '&:hover': { bgcolor: (totalBets === 0 || creatingTicket) ? '#ccc' : '#7c3aed' },
+          }}
+        >
+          {creatingTicket ? 'CREANDO...' : 'CREAR TICKET'}
+        </Box>
+        <Box
+          component="button"
+          onClick={onHelp}
+          sx={{
+            px: 4, py: 1.5,
+            bgcolor: '#4caf50', color: 'white', border: 'none', borderRadius: '4px',
+            fontSize: '14px', fontWeight: 'bold', cursor: 'pointer',
+            '&:hover': { bgcolor: '#388e3c' },
+          }}
+        >
+          AYUDA
+        </Box>
+      </Box>
+      {/* Indicator chips */}
+      <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center', flexWrap: 'wrap' }}>
+        {effectiveTicketDate && (
+          <Chip
+            label={
+              isPreviousDayActive
+                ? `Fecha de sorteo: ${effectiveTicketDate} (dia anterior)`
+                : `Fecha de sorteo: ${effectiveTicketDate} (futura)`
+            }
+            color={isPreviousDayActive ? 'warning' : 'info'}
+            variant="filled"
+            sx={{ fontWeight: 'bold', fontSize: '13px' }}
+          />
+        )}
+      </Box>
     </Box>
-    <Box
-      component="button"
-      onClick={onCreate}
-      disabled={totalBets === 0}
-      sx={{
-        px: 4, py: 1.5,
-        bgcolor: totalBets === 0 ? '#ccc' : '#8b5cf6',
-        color: 'white', border: 'none', borderRadius: '4px',
-        fontSize: '14px', fontWeight: 'bold',
-        cursor: totalBets === 0 ? 'not-allowed' : 'pointer',
-        '&:hover': { bgcolor: totalBets === 0 ? '#ccc' : '#7c3aed' },
-      }}
-    >
-      CREAR TICKET
-    </Box>
-    <Box
-      component="button"
-      onClick={onHelp}
-      sx={{
-        px: 4, py: 1.5,
-        bgcolor: '#4caf50', color: 'white', border: 'none', borderRadius: '4px',
-        fontSize: '14px', fontWeight: 'bold', cursor: 'pointer',
-        '&:hover': { bgcolor: '#388e3c' },
-      }}
-    >
-      AYUDA
-    </Box>
-  </Box>
-));
+  );
+});
 
 ActionButtonsRow.displayName = 'ActionButtonsRow';
 

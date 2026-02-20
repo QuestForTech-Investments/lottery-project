@@ -1,22 +1,24 @@
-import React, { memo, type RefObject, type KeyboardEvent } from 'react';
-import { Box, TextField, Select, MenuItem, FormControl, Typography, IconButton } from '@mui/material';
-import type { BetType, Draw } from '../types';
+import React, { memo, type RefObject, type KeyboardEvent, type ReactNode } from 'react';
+import { Box, TextField, Typography, IconButton } from '@mui/material';
+import type { Draw } from '../types';
 
 interface BetInputRowProps {
   betNumber: string;
   amount: string;
   betError: string;
-  selectedBetType: string;
+  betWarning: string;
   selectedDraw: Draw | null;
-  betTypes: BetType[];
   totalBets: number;
   grandTotal: string;
   betNumberInputRef: RefObject<HTMLInputElement>;
+  amountInputRef: RefObject<HTMLInputElement>;
   onBetNumberChange: (value: string) => void;
   onAmountChange: (value: string) => void;
-  onBetTypeChange: (value: string) => void;
   onAddBet: () => void;
-  onKeyDown: (e: KeyboardEvent<HTMLInputElement>) => void;
+  onBetNumberKeyDown: (e: KeyboardEvent<HTMLInputElement>) => void;
+  onAmountKeyDown: (e: KeyboardEvent<HTMLInputElement>) => void;
+  ticketsDropdown?: ReactNode;
+  allowSplitAmount?: boolean;
 }
 
 /**
@@ -28,18 +30,31 @@ const BetInputRow: React.FC<BetInputRowProps> = memo(({
   betNumber,
   amount,
   betError,
-  selectedBetType,
+  betWarning,
   selectedDraw,
-  betTypes,
   totalBets,
   grandTotal,
   betNumberInputRef,
+  amountInputRef,
   onBetNumberChange,
   onAmountChange,
-  onBetTypeChange,
   onAddBet,
-  onKeyDown,
-}) => (
+  onBetNumberKeyDown,
+  onAmountKeyDown,
+  ticketsDropdown,
+  allowSplitAmount = false,
+}) => {
+  const handleAmountChange = (value: string) => {
+    // Allow split syntax (e.g. "5+2") only for non-Dominican draws
+    const pattern = allowSplitAmount
+      ? /^\d*\.?\d*(\+\d*\.?\d*)?$/
+      : /^\d*\.?\d*$/;
+    if (value === '' || pattern.test(value)) {
+      onAmountChange(value);
+    }
+  };
+
+  return (
   <>
     {/* Main input row */}
     <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
@@ -47,7 +62,7 @@ const BetInputRow: React.FC<BetInputRowProps> = memo(({
         placeholder="JUGADA"
         value={betNumber}
         onChange={(e) => onBetNumberChange(e.target.value)}
-        onKeyDown={onKeyDown}
+        onKeyDown={onBetNumberKeyDown}
         disabled={!selectedDraw}
         autoFocus={!!selectedDraw}
         inputRef={betNumberInputRef}
@@ -70,26 +85,26 @@ const BetInputRow: React.FC<BetInputRowProps> = memo(({
       />
       <TextField
         placeholder="N/A"
-        value={betError}
+        value={betError || betWarning}
         disabled
         sx={{
           flex: 1,
           '& .MuiOutlinedInput-root': {
-            bgcolor: betError ? '#c62828' : 'white',
+            bgcolor: betError ? '#c62828' : betWarning ? '#e65100' : 'white',
             height: '100%',
           },
           '& .MuiOutlinedInput-notchedOutline': {
-            borderColor: betError ? '#c62828' : 'rgba(0, 0, 0, 0.23)',
+            borderColor: betError ? '#c62828' : betWarning ? '#e65100' : 'rgba(0, 0, 0, 0.23)',
           },
           '& input': {
-            fontSize: betError ? '14px' : '24px',
+            fontSize: (betError || betWarning) ? '14px' : '24px',
             fontWeight: 'bold',
             textAlign: 'center',
             py: 2,
-            color: betError ? '#fff' : '#333',
-            WebkitTextFillColor: betError ? '#fff' : '#999',
+            color: (betError || betWarning) ? '#fff' : '#333',
+            WebkitTextFillColor: (betError || betWarning) ? '#fff' : '#999',
             '&.Mui-disabled': {
-              WebkitTextFillColor: betError ? '#fff' : '#999',
+              WebkitTextFillColor: (betError || betWarning) ? '#fff' : '#999',
             },
           },
           '& input::placeholder': {
@@ -101,11 +116,11 @@ const BetInputRow: React.FC<BetInputRowProps> = memo(({
       <TextField
         placeholder="MONTO"
         value={amount}
-        onChange={(e) => onAmountChange(e.target.value)}
-        onKeyDown={onKeyDown}
+        onChange={(e) => handleAmountChange(e.target.value)}
+        onKeyDown={onAmountKeyDown}
         disabled={!selectedDraw}
-        type="number"
-        inputProps={{ tabIndex: 2 }}
+        inputRef={amountInputRef}
+        inputProps={{ tabIndex: 2, inputMode: 'decimal' }}
         sx={{
           flex: 1,
           bgcolor: 'white',
@@ -124,21 +139,9 @@ const BetInputRow: React.FC<BetInputRowProps> = memo(({
       />
     </Box>
 
-    {/* Dropdown + Counter row */}
+    {/* Tickets dropdown + Counter row */}
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2, flexWrap: 'wrap' }}>
-      <FormControl size="small" sx={{ minWidth: 150, bgcolor: 'white' }}>
-        <Select
-          value={selectedBetType}
-          onChange={(e) => onBetTypeChange(e.target.value)}
-          displayEmpty
-          disabled={!selectedDraw}
-        >
-          <MenuItem value="">Seleccione...</MenuItem>
-          {betTypes.map((type) => (
-            <MenuItem key={type.id} value={type.id}>{type.name}</MenuItem>
-          ))}
-        </Select>
-      </FormControl>
+      {ticketsDropdown}
       <IconButton
         onClick={onAddBet}
         disabled={!betNumber || !amount || !selectedDraw}
@@ -158,7 +161,8 @@ const BetInputRow: React.FC<BetInputRowProps> = memo(({
       </Typography>
     </Box>
   </>
-));
+  );
+});
 
 BetInputRow.displayName = 'BetInputRow';
 

@@ -8,14 +8,19 @@
 import { useState, useEffect, useRef, useMemo, useCallback, type RefObject, type KeyboardEvent } from 'react';
 import api from '@services/api';
 import { getCurrentUser } from '@services/authService';
+import { getBettingPoolConfig } from '@services/bettingPoolService';
+import { useUserPermissions } from '@hooks/useUserPermissions';
 import type {
   BettingPool, Draw, Bet, ColumnType, VisibleColumns,
-  BettingPoolDrawResponse, DrawApiResponse, TicketData
+  BettingPoolDrawResponse, DrawApiResponse, TicketData,
+  TicketDateMode, BetDetectionResult
 } from '../types';
+import { GAME_TYPES, BET_TYPES, SPLIT_PAIRS } from '../constants';
 
 interface UseCreateTicketsStateReturn {
   // Refs
   betNumberInputRef: RefObject<HTMLInputElement>;
+  amountInputRef: RefObject<HTMLInputElement>;
 
   // Pool state
   selectedPool: BettingPool | null;
@@ -46,6 +51,7 @@ interface UseCreateTicketsStateReturn {
   amount: string;
   selectedBetType: string;
   betError: string;
+  betWarning: string;
   setBetNumber: (value: string) => void;
   setAmount: (value: string) => void;
   setSelectedBetType: (value: string) => void;
@@ -76,6 +82,20 @@ interface UseCreateTicketsStateReturn {
   grandTotal: string;
   totalBets: number;
 
+  // Date mode
+  ticketDateMode: TicketDateMode;
+  selectedFutureDate: string;
+  effectiveTicketDate: string | null;
+  handleTogglePreviousDay: () => void;
+  handleToggleFutureDate: () => void;
+  handleFutureDateChange: (date: string) => void;
+
+  // Split amount
+  allowSplitAmount: boolean;
+
+  // Cancel config
+  cancelMinutes: number;
+
   // Handlers
   handleDrawClick: (draw: Draw) => void;
   handleAddBet: () => void;
@@ -83,16 +103,20 @@ interface UseCreateTicketsStateReturn {
   handleDeleteAll: (column: ColumnType) => void;
   handleCreateTicket: () => Promise<void>;
   handleDuplicate: () => void;
-  handleKeyDown: (e: KeyboardEvent<HTMLInputElement>) => void;
+  handleBetNumberKeyDown: (e: KeyboardEvent<HTMLInputElement>) => void;
+  handleAmountKeyDown: (e: KeyboardEvent<HTMLInputElement>) => void;
+  creatingTicket: boolean;
 }
 
 export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
   // Refs
   const betNumberInputRef = useRef<HTMLInputElement>(null);
+  const amountInputRef = useRef<HTMLInputElement>(null);
 
   // Pool state
   const [selectedPool, setSelectedPool] = useState<BettingPool | null>(null);
   const [pools, setPools] = useState<BettingPool[]>([]);
+  const [creatingTicket, setCreatingTicket] = useState(false);
 
   // Draw state
   const [selectedDraw, setSelectedDraw] = useState<Draw | null>(null);
@@ -104,6 +128,7 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
   const [drawGameTypes, setDrawGameTypes] = useState<Map<number, number[]>>(new Map());
   const [drawClosingTimes, setDrawClosingTimes] = useState<Map<number, string>>(new Map());
   const [closedDrawIds, setClosedDrawIds] = useState<Set<number>>(new Set());
+  const [drawIsDominican, setDrawIsDominican] = useState<Map<number, boolean>>(new Map());
 
   // Stats
   const [dailyBets] = useState<number>(0);
@@ -119,6 +144,7 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
   const [amount, setAmount] = useState<string>('');
   const [selectedBetType, setSelectedBetType] = useState<string>('');
   const [betError, setBetError] = useState<string>('');
+  const [betWarning, setBetWarning] = useState<string>('');
 
   // Bets by column
   const [directBets, setDirectBets] = useState<Bet[]>([]);
@@ -131,6 +157,35 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
   const [ticketModalOpen, setTicketModalOpen] = useState<boolean>(false);
   const [ticketData, setTicketData] = useState<TicketData | null>(null);
   const [successMessage, setSuccessMessage] = useState<string>('');
+
+  // Date mode for previous-day / future sales
+  const [ticketDateMode, setTicketDateMode] = useState<TicketDateMode>('today');
+  const [selectedFutureDate, setSelectedFutureDate] = useState<string>('');
+
+  // Permission-based closed draw bypass
+  const { hasPermission } = useUserPermissions();
+  const canSellClosed = hasPermission('SELL_OUT_OF_HOURS');
+
+  // Cancel minutes from pool config
+  const [cancelMinutes, setCancelMinutes] = useState<number>(5);
+
+  useEffect(() => {
+    if (!selectedPool) {
+      setCancelMinutes(5);
+      return;
+    }
+    const fetchConfig = async () => {
+      try {
+        const result = await getBettingPoolConfig(selectedPool.bettingPoolId);
+        if (result.data?.config?.cancelMinutes != null) {
+          setCancelMinutes(result.data.config.cancelMinutes);
+        }
+      } catch {
+        // Keep default
+      }
+    };
+    fetchConfig();
+  }, [selectedPool?.bettingPoolId]);
 
   // Load betting pools on mount
   useEffect(() => {
@@ -153,6 +208,7 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
       setAllowedDrawIds(new Set());
       setDrawGameTypes(new Map());
       setDrawClosingTimes(new Map());
+      setDrawIsDominican(new Map());
       return;
     }
 
@@ -186,6 +242,13 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
       setDrawClosingTimes(closingMap);
       setClosedDrawIds(closedSet);
 
+      // Store isDominican flag per draw
+      const dominicanMap = new Map<number, boolean>();
+      activeDraws.forEach((d) => {
+        dominicanMap.set(d.drawId, d.isDominican ?? true);
+      });
+      setDrawIsDominican(dominicanMap);
+
       if (!isRefresh) {
         setSelectedDraw(null);
         setSelectedDraws([]);
@@ -197,6 +260,7 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
         setDrawGameTypes(new Map());
         setDrawClosingTimes(new Map());
         setClosedDrawIds(new Set());
+        setDrawIsDominican(new Map());
       }
     } finally {
       if (!isRefresh) setLoadingAllowedDraws(false);
@@ -248,6 +312,7 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
   }, [selectedPool, loadAllowedDraws]);
 
   // Merge closing times into draws - use server-side isClosed
+  // When user has SELL_OUT_OF_HOURS permission, closed draws remain selectable
   const drawsWithClosingInfo = useMemo(() => {
     return draws.map(draw => {
       const closing = drawClosingTimes.get(draw.id);
@@ -255,10 +320,11 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
       return {
         ...draw,
         closingTime: closing,
-        disabled: draw.disabled || isClosed,
+        isClosed,
+        disabled: draw.disabled || (isClosed && !canSellClosed),
       };
     });
-  }, [draws, drawClosingTimes, closedDrawIds]);
+  }, [draws, drawClosingTimes, closedDrawIds, canSellClosed]);
 
   // Memoized totals
   const calculateTotal = useCallback((bets: Bet[]): string => {
@@ -300,16 +366,53 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
 
     const gameTypesArray = Array.from(allGameTypes);
     return {
-      directo: gameTypesArray.some(gt => gt === 1 || gt === 21),
+      directo: gameTypesArray.some(gt => gt === 1 || gt === 19 || gt === 20 || gt === 21),
       pale: gameTypesArray.some(gt => gt === 2 || gt === 3 || gt === 14),
       cash3: gameTypesArray.some(gt => gt >= 4 && gt <= 9),
-      play4: gameTypesArray.some(gt => (gt >= 10 && gt <= 13) || (gt >= 15 && gt <= 20)),
+      play4: gameTypesArray.some(gt => (gt >= 10 && gt <= 13) || (gt >= 15 && gt <= 18)),
     };
   }, [selectedDraw?.id, selectedDraws, multiLotteryMode, drawGameTypes]);
+
+  // Allow split amount (X+Y) only when all selected draws are non-Dominican
+  const allowSplitAmount = useMemo<boolean>(() => {
+    const drawsToCheck = multiLotteryMode && selectedDraws.length > 0
+      ? selectedDraws
+      : selectedDraw ? [selectedDraw] : [];
+    if (drawsToCheck.length === 0) return false;
+    return drawsToCheck.every(d => drawIsDominican.get(d.id) === false);
+  }, [multiLotteryMode, selectedDraws, selectedDraw, drawIsDominican]);
 
   const bgColor = useMemo(() => {
     return selectedDraw?.color ? `${selectedDraw.color}30` : '#c8e6c9';
   }, [selectedDraw?.color]);
+
+  // Date mode handlers
+  const handleTogglePreviousDay = useCallback(() => {
+    setTicketDateMode(prev => prev === 'previousDay' ? 'today' : 'previousDay');
+    setSelectedFutureDate('');
+  }, []);
+
+  const handleToggleFutureDate = useCallback(() => {
+    setTicketDateMode(prev => prev === 'futureDate' ? 'today' : 'futureDate');
+    setSelectedFutureDate('');
+  }, []);
+
+  const handleFutureDateChange = useCallback((date: string) => {
+    setSelectedFutureDate(date);
+  }, []);
+
+  // Compute effective ticket date based on mode
+  const effectiveTicketDate = useMemo<string | null>(() => {
+    if (ticketDateMode === 'previousDay') {
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      return yesterday.toISOString().split('T')[0];
+    }
+    if (ticketDateMode === 'futureDate' && selectedFutureDate) {
+      return selectedFutureDate;
+    }
+    return null; // today — don't send ticketDate
+  }, [ticketDateMode, selectedFutureDate]);
 
   // Handlers
   const handleDrawClick = useCallback((draw: Draw): void => {
@@ -331,6 +434,148 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
     }
   }, [selectedPool, multiLotteryMode, selectedDraws, selectedDraw]);
 
+  // Resolve the gameTypeId from the dropdown selection
+  const getDropdownGameTypeId = useCallback((dropdownValue: string): number | null => {
+    if (!dropdownValue) return null;
+    const bt = BET_TYPES.find(t => t.id === dropdownValue);
+    return bt?.gameTypeId ?? null;
+  }, []);
+
+  /**
+   * Detect bet type from input pattern.
+   * Checks patterns in priority order (most specific first).
+   * Uses draw's allowedGameTypes for disambiguation.
+   */
+  const determineBetType = useCallback((
+    input: string,
+    dropdownBetType: string,
+    allowedGameTypes: number[]
+  ): BetDetectionResult | null => {
+    const trimmed = input.trim();
+    if (!trimmed) return null;
+
+    const dropdownGtId = getDropdownGameTypeId(dropdownBetType);
+    const allowed = new Set(allowedGameTypes);
+    const hasAllowed = allowed.size > 0;
+
+    // Helper: pick best candidate from list, considering dropdown and draw permissions
+    const pickCandidate = (candidates: number[], fallback: number): number => {
+      // If dropdown matches a candidate, prefer it
+      if (dropdownGtId && candidates.includes(dropdownGtId)) return dropdownGtId;
+      // If draw has restrictions, filter to allowed
+      if (hasAllowed) {
+        const valid = candidates.filter(id => allowed.has(id));
+        if (valid.length > 0) return valid[0];
+      }
+      return fallback;
+    };
+
+    const buildResult = (gtId: number, clean: string, pos?: number): BetDetectionResult => {
+      const cfg = GAME_TYPES[gtId];
+      return {
+        gameTypeId: gtId,
+        cleanNumber: clean,
+        displaySuffix: cfg.displaySuffix,
+        column: cfg.column,
+        displayName: cfg.name,
+        position: pos,
+      };
+    };
+
+    let match: RegExpMatchArray | null;
+
+    // 1. Super Pale with S prefix: S1234
+    match = trimmed.match(/^[sS](\d{4})$/);
+    if (match) return buildResult(14, match[1]);
+
+    // 2. Singulacion: digit-position (e.g. 5-1, 5-2, 5-3)
+    match = trimmed.match(/^(\d)-([123])$/);
+    if (match) return buildResult(20, match[1], parseInt(match[2]));
+
+    // 3. Bolita: 2digits+position (e.g. 12+1, 12+2)
+    match = trimmed.match(/^(\d{2})\+([12])$/);
+    if (match) return buildResult(19, match[1], parseInt(match[2]));
+
+    // 4. Pick2 Middle: 2digits-3 (e.g. 12-3)
+    match = trimmed.match(/^(\d{2})-3$/);
+    if (match) return buildResult(18, match[1]);
+
+    // 5. Pick2 Front: 2digits + f (e.g. 12f)
+    match = trimmed.match(/^(\d{2})[fF]$/);
+    if (match) return buildResult(16, match[1]);
+
+    // 6. Pick2 Back: 2digits + b (e.g. 12b)
+    match = trimmed.match(/^(\d{2})[bB]$/);
+    if (match) return buildResult(17, match[1]);
+
+    // 7. Cash3 Front Box: 3digits + f+ (e.g. 123f+)
+    match = trimmed.match(/^(\d{3})[fF]\+$/);
+    if (match) return buildResult(7, match[1]);
+
+    // 8. Cash3 Front Straight: 3digits + f (e.g. 123f)
+    match = trimmed.match(/^(\d{3})[fF]$/);
+    if (match) return buildResult(6, match[1]);
+
+    // 9. Cash3 Back Box: 3digits + b+ (e.g. 123b+)
+    match = trimmed.match(/^(\d{3})[bB]\+$/);
+    if (match) return buildResult(9, match[1]);
+
+    // 10. Cash3 Back Straight: 3digits + b (e.g. 123b)
+    match = trimmed.match(/^(\d{3})[bB]$/);
+    if (match) return buildResult(8, match[1]);
+
+    // 11. Cash3 Box: 3digits + or . (e.g. 123+, 123.)
+    match = trimmed.match(/^(\d{3})[+.]$/);
+    if (match) return buildResult(5, match[1]);
+
+    // 12. Cash3 Straight: 3digits or 3digits- (e.g. 123, 123-)
+    match = trimmed.match(/^(\d{3})-?$/);
+    if (match) return buildResult(4, match[1]);
+
+    // 13. Pick5 Straight: 5digits- (e.g. 12345-)
+    match = trimmed.match(/^(\d{5})-$/);
+    if (match) return buildResult(12, match[1]);
+
+    // 14. Pick5 Box: 5digits+ (e.g. 12345+)
+    match = trimmed.match(/^(\d{5})\+$/);
+    if (match) return buildResult(13, match[1]);
+
+    // 15. Play4 Straight / Panama: 4digits- (ambiguous: 10 vs 21)
+    match = trimmed.match(/^(\d{4})-$/);
+    if (match) {
+      const gtId = pickCandidate([10, 21], 10);
+      return buildResult(gtId, match[1]);
+    }
+
+    // 16. Play4 Box: 4digits+ (e.g. 1234+)
+    match = trimmed.match(/^(\d{4})\+$/);
+    if (match) return buildResult(11, match[1]);
+
+    // 17. Tripleta: 6 digits (e.g. 123456)
+    match = trimmed.match(/^(\d{6})$/);
+    if (match) return buildResult(3, match[1]);
+
+    // 18. Pale / Super Pale: 4 digits (ambiguous: 2 vs 14)
+    match = trimmed.match(/^(\d{4})$/);
+    if (match) {
+      const gtId = pickCandidate([2, 14], 2);
+      return buildResult(gtId, match[1]);
+    }
+
+    // 19. Directo / Pick2: 2 digits (ambiguous: 1 vs 15)
+    match = trimmed.match(/^(\d{2})$/);
+    if (match) {
+      const gtId = pickCandidate([1, 15], 1);
+      return buildResult(gtId, match[1]);
+    }
+
+    // 20. Plain 5 digits (no suffix) → Pick5 Straight
+    match = trimmed.match(/^(\d{5})$/);
+    if (match) return buildResult(12, match[1]);
+
+    return null;
+  }, [getDropdownGameTypeId]);
+
   const handleAddBet = useCallback((): void => {
     const drawsToPlay = multiLotteryMode && selectedDraws.length > 0
       ? selectedDraws
@@ -338,109 +583,140 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
 
     if (!betNumber || !amount || drawsToPlay.length === 0) return;
 
-    const trimmed = betNumber.trim();
-    const numLength = trimmed.replace(/[^0-9]/g, '').length;
-    const numericAmount = parseFloat(amount) || 0;
-    // Detect suffixes: Cash3 Box (123b/123+), Pick4 Straight (1234-), Pick4 Box (1234+)
-    const isCash3Box = numLength === 3 && /^\d{3}[bB+]$/.test(trimmed);
-    const isPick4Straight = numLength === 4 && /^\d{4}-$/.test(trimmed);
-    const isPick4Box = numLength === 4 && /^\d{4}[+bB]$/.test(trimmed);
-    const isPick4 = isPick4Straight || isPick4Box
-      || selectedBetType?.includes('play4') || selectedBetType === 'pick5'
-      || numLength >= 5;
+    // Parse split amount (e.g. "5+2" → straight $5, box $2)
+    const amountParts = amount.trim().split('+');
+    const isSplitAmount = amountParts.length === 2 && amountParts[1] !== '';
+    const numericAmount = isSplitAmount
+      ? parseFloat(amountParts[0]) || 0
+      : parseFloat(amount) || 0;
+    const boxAmount = isSplitAmount ? parseFloat(amountParts[1]) || 0 : 0;
 
-    // Validate bet type for selected draws
-    let betTypeName = '';
-    let isAllowed = true;
+    setBetError('');
+    setBetWarning('');
+
+    // Partial validation: check each draw independently
+    const allowedBets: Array<{ draw: Draw; detection: BetDetectionResult }> = [];
+    const blockedNames: string[] = [];
 
     for (const draw of drawsToPlay) {
       const allowedGameTypes = drawGameTypes.get(draw.id) || [];
-      if (allowedGameTypes.length === 0) continue;
+      const detection = determineBetType(betNumber, selectedBetType, allowedGameTypes);
 
-      if (selectedBetType === 'directo' || numLength === 2) {
-        if (!allowedGameTypes.includes(1) && !allowedGameTypes.includes(21)) {
-          betTypeName = 'Directo';
-          isAllowed = false;
-          break;
-        }
-      } else if (isPick4) {
-        const hasPlay4 = allowedGameTypes.some(gt => (gt >= 10 && gt <= 13) || (gt >= 15 && gt <= 20));
-        if (!hasPlay4) {
-          betTypeName = 'Play 4 / Pick 5';
-          isAllowed = false;
-          break;
-        }
-      } else if (selectedBetType === 'pale' || numLength === 4) {
-        if (!allowedGameTypes.includes(2)) {
-          betTypeName = 'Palé';
-          isAllowed = false;
-          break;
-        }
-      } else if (selectedBetType === 'tripleta' || numLength === 6) {
-        if (!allowedGameTypes.includes(3)) {
-          betTypeName = 'Tripleta';
-          isAllowed = false;
-          break;
-        }
-      } else if (selectedBetType?.includes('cash3') || numLength === 3) {
-        const hasCash3 = allowedGameTypes.some(gt => gt >= 4 && gt <= 9);
-        if (!hasCash3) {
-          betTypeName = 'Cash 3';
-          isAllowed = false;
-          break;
-        }
+      if (!detection) {
+        // Unrecognized pattern — block for all draws
+        setBetError('Formato de jugada no reconocido');
+        setBetNumber('');
+        setTimeout(() => betNumberInputRef.current?.focus(), 100);
+        return;
+      }
+
+      // If draw has no game type restrictions, allow anything
+      if (allowedGameTypes.length === 0) {
+        allowedBets.push({ draw, detection });
+        continue;
+      }
+
+      // Check if draw allows this game type
+      if (allowedGameTypes.includes(detection.gameTypeId)) {
+        allowedBets.push({ draw, detection });
+      } else {
+        blockedNames.push(draw.abbreviation || draw.name);
       }
     }
 
-    if (!isAllowed) {
-      const drawName = drawsToPlay.find(d => (drawGameTypes.get(d.id) || []).length > 0)?.name || 'esta lotería';
-      setBetError(`${betTypeName} no permitido en ${drawName}`);
+    // No draws allow this bet type
+    if (allowedBets.length === 0) {
+      const firstName = blockedNames[0] || 'esta lotería';
+      const detection = determineBetType(betNumber, selectedBetType, []);
+      const typeName = detection?.displayName || 'Este tipo';
+      setBetError(`${typeName} no permitido en ${firstName}`);
       setBetNumber('');
-      setAmount('');
       setTimeout(() => betNumberInputRef.current?.focus(), 100);
       return;
     }
 
-    setBetError('');
-
-    // Clean bet number and add display suffix
-    const cleanBetNumber = trimmed.replace(/[^0-9]/g, '');
-    let displaySuffix = '';
-    if (numLength === 3) {
-      displaySuffix = isCash3Box ? 'b' : 's';
-    } else if (isPick4Straight) {
-      displaySuffix = 's';
-    } else if (isPick4Box) {
-      displaySuffix = 'b';
+    // Some draws blocked — show amber warning (auto-clear 3s)
+    if (blockedNames.length > 0) {
+      setBetWarning(`Excluida de: ${blockedNames.join(', ')}`);
+      setTimeout(() => setBetWarning(''), 3000);
     }
 
-    const newBets = drawsToPlay.map((draw, index) => ({
-      id: Date.now() + index,
-      drawName: draw.name,
-      drawAbbr: draw.abbreviation || draw.name,
-      drawId: draw.id,
-      betNumber: cleanBetNumber + displaySuffix,
-      betAmount: numericAmount,
-      selectedBetType: selectedBetType || '',
-    }));
+    // Create bets only for allowed draws
+    const newDirectBets: Bet[] = [];
+    const newPaleBets: Bet[] = [];
+    const newCash3Bets: Bet[] = [];
+    const newPlay4Bets: Bet[] = [];
 
-    // Add to appropriate column based on bet type
-    if (selectedBetType === 'directo' || numLength === 2) {
-      setDirectBets(prev => [...prev, ...newBets]);
-    } else if (isPick4) {
-      setPlay4Bets(prev => [...prev, ...newBets]);
-    } else if (selectedBetType === 'pale' || selectedBetType === 'tripleta' || numLength === 4 || numLength === 6) {
-      setPaleBets(prev => [...prev, ...newBets]);
-    } else if (selectedBetType?.includes('cash3') || numLength === 3) {
-      setCash3Bets(prev => [...prev, ...newBets]);
-    } else {
-      setDirectBets(prev => [...prev, ...newBets]);
-    }
+    const pushBet = (bet: Bet, column: ColumnType) => {
+      switch (column) {
+        case 'directo': newDirectBets.push(bet); break;
+        case 'pale':    newPaleBets.push(bet); break;
+        case 'cash3':   newCash3Bets.push(bet); break;
+        case 'play4':   newPlay4Bets.push(bet); break;
+      }
+    };
+
+    let idCounter = Date.now();
+
+    allowedBets.forEach(({ draw, detection }) => {
+      const splitPair = SPLIT_PAIRS[detection.gameTypeId];
+
+      if (isSplitAmount && splitPair) {
+        // Split: create straight bet + box bet
+        const straightCfg = GAME_TYPES[splitPair.straightId];
+        const boxCfg = GAME_TYPES[splitPair.boxId];
+
+        const straightBet: Bet = {
+          id: idCounter++,
+          drawName: draw.name,
+          drawAbbr: draw.abbreviation || draw.name,
+          drawId: draw.id,
+          betNumber: detection.cleanNumber + straightCfg.displaySuffix,
+          betAmount: numericAmount,
+          selectedBetType: selectedBetType || '',
+          gameTypeId: splitPair.straightId,
+          position: detection.position,
+        };
+        pushBet(straightBet, straightCfg.column);
+
+        const boxBet: Bet = {
+          id: idCounter++,
+          drawName: draw.name,
+          drawAbbr: draw.abbreviation || draw.name,
+          drawId: draw.id,
+          betNumber: detection.cleanNumber + boxCfg.displaySuffix,
+          betAmount: boxAmount,
+          selectedBetType: selectedBetType || '',
+          gameTypeId: splitPair.boxId,
+          position: detection.position,
+        };
+        pushBet(boxBet, boxCfg.column);
+      } else {
+        // Non-split: single bet (if split syntax used on non-eligible type, combine amounts)
+        const finalAmount = isSplitAmount ? numericAmount + boxAmount : numericAmount;
+        const bet: Bet = {
+          id: idCounter++,
+          drawName: draw.name,
+          drawAbbr: draw.abbreviation || draw.name,
+          drawId: draw.id,
+          betNumber: detection.cleanNumber + detection.displaySuffix,
+          betAmount: finalAmount,
+          selectedBetType: selectedBetType || '',
+          gameTypeId: detection.gameTypeId,
+          position: detection.position,
+        };
+        pushBet(bet, detection.column);
+      }
+    });
+
+    if (newDirectBets.length > 0) setDirectBets(prev => [...prev, ...newDirectBets]);
+    if (newPaleBets.length > 0)   setPaleBets(prev => [...prev, ...newPaleBets]);
+    if (newCash3Bets.length > 0)  setCash3Bets(prev => [...prev, ...newCash3Bets]);
+    if (newPlay4Bets.length > 0)  setPlay4Bets(prev => [...prev, ...newPlay4Bets]);
 
     setBetNumber('');
-    setAmount('');
     setTimeout(() => betNumberInputRef.current?.focus(), 0);
-  }, [multiLotteryMode, selectedDraws, selectedDraw, betNumber, amount, selectedBetType, drawGameTypes]);
+  }, [multiLotteryMode, selectedDraws, selectedDraw, betNumber, amount, selectedBetType, drawGameTypes, determineBetType, allowSplitAmount]);
 
   const handleDeleteBet = useCallback((column: ColumnType, id: number): void => {
     switch (column) {
@@ -460,23 +736,17 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
     }
   }, []);
 
-  const getBetTypeId = useCallback((betNum: string): number => {
-    const digits = betNum.replace(/[^0-9]/g, '');
+  // getBetTypeId now uses stored gameTypeId from detection, with fallback
+  const getBetTypeId = useCallback((bet: Bet): number => {
+    if (bet.gameTypeId) return bet.gameTypeId;
+    // Fallback for legacy bets without gameTypeId
+    const digits = bet.betNumber.replace(/[^0-9]/g, '');
     const numLength = digits.length;
-    // Suffix-based detection: s=straight, b=box
-    const suffix = betNum.match(/[sb]$/)?.[0];
-    // Cash3: 3 digits
-    if (numLength === 3 && suffix === 'b') return 5;  // CASH3_BOX
-    if (numLength === 3 && suffix === 's') return 4;  // CASH3_STRAIGHT
-    // Pick4: 4 digits with suffix
-    if (numLength === 4 && suffix === 's') return 10; // PLAY4_STRAIGHT
-    if (numLength === 4 && suffix === 'b') return 11; // PLAY4_BOX
-    // Length-based defaults
-    if (numLength === 2) return 1;   // DIRECTO
-    if (numLength === 4) return 2;   // PALE
-    if (numLength === 6) return 3;   // TRIPLETA
-    if (numLength === 3) return 4;   // CASH3_STRAIGHT
-    if (numLength >= 5) return 10;   // PLAY4_STRAIGHT
+    if (numLength === 2) return 1;
+    if (numLength === 4) return 2;
+    if (numLength === 6) return 3;
+    if (numLength === 3) return 4;
+    if (numLength >= 5) return 10;
     return 1;
   }, []);
 
@@ -493,21 +763,36 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
       return;
     }
 
+    setCreatingTicket(true);
     try {
-      const ticketPayload = {
+      const ticketPayload: Record<string, unknown> = {
         bettingPoolId: selectedPool.bettingPoolId,
         userId: parseInt(getCurrentUser()?.id || '1', 10),
-        lines: allBets.map((bet) => ({
-          drawId: bet.drawId,
-          betNumber: bet.betNumber.replace(/[^0-9]/g, ''),
-          betTypeId: getBetTypeId(bet.betNumber),
-          betAmount: bet.betAmount,
-          multiplier: 1.00,
-          isLuckyPick: false
-        })),
+        lines: allBets.map((bet) => {
+          const line: Record<string, unknown> = {
+            drawId: bet.drawId,
+            betNumber: bet.betNumber.replace(/[^0-9]/g, ''),
+            betTypeId: getBetTypeId(bet),
+            betAmount: bet.betAmount,
+            multiplier: 1.00,
+            isLuckyPick: false,
+          };
+          if (bet.position != null) {
+            line.position = bet.position;
+          }
+          return line;
+        }),
         globalMultiplier: 1.00,
-        globalDiscount: discountActive ? 0.00 : 0.00
+        applyDiscount: discountActive
       };
+
+      // Attach date overrides when a non-today mode is active
+      if (effectiveTicketDate) {
+        ticketPayload.ticketDate = effectiveTicketDate;
+        if (ticketDateMode === 'previousDay') {
+          ticketPayload.allowPastDate = true;
+        }
+      }
 
       const response = await api.post('/tickets', ticketPayload) as TicketData;
 
@@ -519,14 +804,23 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
     } catch (error) {
       console.error('Error creating ticket:', error);
       alert('Error al crear el ticket');
+    } finally {
+      setCreatingTicket(false);
     }
-  }, [directBets, paleBets, cash3Bets, play4Bets, selectedPool, discountActive, getBetTypeId]);
+  }, [directBets, paleBets, cash3Bets, play4Bets, selectedPool, discountActive, getBetTypeId, effectiveTicketDate, ticketDateMode]);
 
   const handleDuplicate = useCallback((): void => {
     alert('Función de duplicar pendiente de implementar');
   }, []);
 
-  const handleKeyDown = useCallback((e: KeyboardEvent<HTMLInputElement>): void => {
+  const handleBetNumberKeyDown = useCallback((e: KeyboardEvent<HTMLInputElement>): void => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      amountInputRef.current?.focus();
+    }
+  }, []);
+
+  const handleAmountKeyDown = useCallback((e: KeyboardEvent<HTMLInputElement>): void => {
     if (e.key === 'Enter') {
       e.preventDefault();
       handleAddBet();
@@ -535,6 +829,7 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
 
   return {
     betNumberInputRef,
+    amountInputRef,
     selectedPool,
     pools,
     setSelectedPool,
@@ -555,6 +850,7 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
     amount,
     selectedBetType,
     betError,
+    betWarning,
     setBetNumber,
     setAmount,
     setSelectedBetType,
@@ -570,6 +866,12 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
     setTicketModalOpen,
     setTicketData,
     setSuccessMessage,
+    ticketDateMode,
+    selectedFutureDate,
+    effectiveTicketDate,
+    handleTogglePreviousDay,
+    handleToggleFutureDate,
+    handleFutureDateChange,
     visibleColumns,
     bgColor,
     directTotal,
@@ -584,7 +886,11 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
     handleDeleteAll,
     handleCreateTicket,
     handleDuplicate,
-    handleKeyDown,
+    handleBetNumberKeyDown,
+    handleAmountKeyDown,
+    creatingTicket,
+    cancelMinutes,
+    allowSplitAmount,
   };
 };
 

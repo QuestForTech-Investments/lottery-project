@@ -5,8 +5,8 @@
  */
 
 import { memo, useCallback, type FC } from 'react';
-import { TableRow, TableCell, Box, IconButton } from '@mui/material';
-import { Print as PrintIcon, Cancel as CancelIcon, Send as SendIcon } from '@mui/icons-material';
+import { TableRow, TableCell, Box, IconButton, Tooltip } from '@mui/material';
+import { Print as PrintIcon, Cancel as CancelIcon, Send as SendIcon, Schedule as ScheduleIcon, ArrowBack as ArrowBackIcon, ArrowForward as ArrowForwardIcon } from '@mui/icons-material';
 import { formatCurrency } from '../../../../../utils/formatCurrency';
 import { getEstadoColor } from '../constants';
 import type { TicketRowProps } from '../types';
@@ -43,7 +43,26 @@ const TicketRow: FC<TicketRowProps> = memo(({ ticket, isSelected, onRowClick, on
       }}
       onClick={handleRowClick}
     >
-      <TableCell>{ticket.numero}</TableCell>
+      <TableCell>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
+          {ticket.numero}
+          {ticket.isOutOfScheduleSale && (
+            <Tooltip title="Venta fuera de horario" arrow>
+              <ScheduleIcon sx={{ fontSize: 14, color: '#e53935' }} />
+            </Tooltip>
+          )}
+          {ticket.isPreviousDay && (
+            <Tooltip title="Venta día anterior" arrow>
+              <ArrowBackIcon sx={{ fontSize: 14, color: '#ff9800' }} />
+            </Tooltip>
+          )}
+          {ticket.isFutureDay && (
+            <Tooltip title="Venta futura" arrow>
+              <ArrowForwardIcon sx={{ fontSize: 14, color: '#2196f3' }} />
+            </Tooltip>
+          )}
+        </Box>
+      </TableCell>
       <TableCell>{ticket.fecha}</TableCell>
       <TableCell>{ticket.usuario}</TableCell>
       <TableCell>{formatCurrency(ticket.monto)}</TableCell>

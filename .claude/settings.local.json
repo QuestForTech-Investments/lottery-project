@@ -75,7 +75,8 @@
       "mcp__playwright__browser_press_key",
       "Bash(TOKEN=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMSIsInVuaXF1ZV9uYW1lIjoiYWRtaW4iLCJ1c2VySWQiOiIxMSIsInVzZXJuYW1lIjoiYWRtaW4iLCJqdGkiOiJmZWE1ODkxZC1hZTJlLTQ1MzUtYWI0MC1mNTFlMzU0ZDdiY2UiLCJodHRwOi8vc2NoZW1hcy5taWNyb3NvZnQuY29tL3dzLzIwMDgvMDYvaWRlbnRpdHkvY2xhaW1zL3JvbGUiOiJBZG1pbmlzdHJhdG9yIiwiYmV0dGluZ1Bvb2xJZCI6IjkiLCJleHAiOjE3NzA0OTYwODAsImlzcyI6IkxvdHRlcnlBcGkiLCJhdWQiOiJMb3R0ZXJ5QXBpIn0.RtZQbwBajGQCbD9gwuksOd7mW5A854Utf3budwGJXkM)",
       "Bash(echo:*)",
-      "Bash(TOKEN='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMSIsInVuaXF1ZV9uYW1lIjoiYWRtaW4iLCJ1c2VySWQiOiIxMSIsInVzZXJuYW1lIjoiYWRtaW4iLCJqdGkiOiJmZWE1ODkxZC1hZTJlLTQ1MzUtYWI0MC1mNTFlMzU0ZDdiY2UiLCJodHRwOi8vc2NoZW1hcy5taWNyb3NvZnQuY29tL3dzLzIwMDgvMDYvaWRlbnRpdHkvY2xhaW1zL3JvbGUiOiJBZG1pbmlzdHJhdG9yIiwiYmV0dGluZ1Bvb2xJZCI6IjkiLCJleHAiOjE3NzA0OTYwODAsImlzcyI6IkxvdHRlcnlBcGkiLCJhdWQiOiJMb3R0ZXJ5QXBpIn0.RtZQbwBajGQCbD9gwuksOd7mW5A854Utf3budwGJXkM' curl -sS -o /tmp/draws.json -w \"HTTP: %{http_code}\\\\n\" -H \"Authorization: Bearer $TOKEN\" \"https://lottery-api-prod.azurewebsites.net/api/betting-pools/9/draws\" ls -la /tmp/draws.json cat /tmp/draws.json)"
+      "Bash(TOKEN='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMSIsInVuaXF1ZV9uYW1lIjoiYWRtaW4iLCJ1c2VySWQiOiIxMSIsInVzZXJuYW1lIjoiYWRtaW4iLCJqdGkiOiJmZWE1ODkxZC1hZTJlLTQ1MzUtYWI0MC1mNTFlMzU0ZDdiY2UiLCJodHRwOi8vc2NoZW1hcy5taWNyb3NvZnQuY29tL3dzLzIwMDgvMDYvaWRlbnRpdHkvY2xhaW1zL3JvbGUiOiJBZG1pbmlzdHJhdG9yIiwiYmV0dGluZ1Bvb2xJZCI6IjkiLCJleHAiOjE3NzA0OTYwODAsImlzcyI6IkxvdHRlcnlBcGkiLCJhdWQiOiJMb3R0ZXJ5QXBpIn0.RtZQbwBajGQCbD9gwuksOd7mW5A854Utf3budwGJXkM' curl -sS -o /tmp/draws.json -w \"HTTP: %{http_code}\\\\n\" -H \"Authorization: Bearer $TOKEN\" \"https://lottery-api-prod.azurewebsites.net/api/betting-pools/9/draws\" ls -la /tmp/draws.json cat /tmp/draws.json)",
+      "mcp__ide__getDiagnostics"
     ]
   }
 }

@@ -4,31 +4,34 @@ import { Trash2 } from 'lucide-react';
 import type { Bet, ColumnType } from '../types';
 
 /**
- * Format bet number with dashes separating each 2 digits
- * Examples:
- * - "23" -> "23" (directo)
- * - "2321" -> "23-21" (palé)
- * - "224466" -> "22-44-66" (tripleta)
- * - "123" -> "123" (cash3 - 3 digits no separator)
+ * Format bet number for display in column.
+ * Handles all 21 game type suffixes:
+ * - s (straight), b (box), fs (front straight), fb (front box),
+ *   bs (back straight), bb (back box), f (pick2 front),
+ *   bk (pick2 back), m (pick2 middle)
+ * - Plain multi-digit numbers: dash-separated pairs (pale/tripleta)
  */
 const formatBetNumber = (number: string): string => {
   if (!number) return '';
 
-  // Preserve suffix: s (straight) or b (box) for Cash3 and Pick4
-  const suffix = String(number).match(/[sb]$/)?.[0] || '';
-  const cleanNumber = String(number).replace(/[^0-9]/g, '');
+  const str = String(number);
 
-  // Numbers with suffix (Cash3/Pick4) show as-is with suffix
-  if (suffix) {
-    return cleanNumber + suffix;
+  // Match known suffixes (longest first to avoid partial matches)
+  const suffixMatch = str.match(/(fs|fb|bs|bb|bk|[sbfm])$/);
+  if (suffixMatch) {
+    const suffix = suffixMatch[1];
+    const digits = str.slice(0, str.length - suffix.length);
+    return digits + suffix;
   }
 
-  // Plain numbers <= 3 digits show as-is
-  if (cleanNumber.length <= 3) {
+  const cleanNumber = str.replace(/[^0-9]/g, '');
+
+  // Numbers <= 3 digits or 5 digits show as-is (cash3, play4, pick5)
+  if (cleanNumber.length <= 3 || cleanNumber.length === 5) {
     return cleanNumber;
   }
 
-  // Palé/Tripleta: format with dashes (12-34, 12-34-56)
+  // 4 or 6 digits: Pale/Tripleta — format with dashes (12-34, 12-34-56)
   const pairs: string[] = [];
   for (let i = 0; i < cleanNumber.length; i += 2) {
     pairs.push(cleanNumber.slice(i, i + 2));

@@ -457,12 +457,28 @@ public class TicketsController : ControllerBase
                 .AsNoTracking()
                 .FirstOrDefaultAsync(c => c.BettingPoolId == dto.BettingPoolId);
 
-            // Future sales validation (only if ticketDate is provided and is in the future)
+            // Date validation (only if ticketDate is provided)
             if (dto.TicketDate.HasValue)
             {
                 if (ticketDate < todayBusiness)
                 {
-                    return BadRequest(new { message = "No se puede crear tickets para fechas pasadas" });
+                    // Allow exactly yesterday when AllowPastDate is true
+                    var yesterday = todayBusiness.AddDays(-1);
+                    if (!dto.AllowPastDate || ticketDate < yesterday)
+                    {
+                        return BadRequest(new { message = "No se puede crear tickets para fechas pasadas" });
+                    }
+
+                    // Server-side permission check for previous-day sales
+                    var hasPastDatePermission = await _context.UserPermissions
+                        .AnyAsync(up => up.UserId == dto.UserId
+                            && up.Permission!.PermissionCode == "TICKET_PREVIOUS_DAY_SALE"
+                            && up.IsActive);
+
+                    if (!hasPastDatePermission)
+                    {
+                        return StatusCode(403, new { message = "No tiene permiso para ventas de dia anterior" });
+                    }
                 }
 
                 if (ticketDate > todayBusiness)
@@ -555,6 +571,13 @@ public class TicketsController : ControllerBase
                 .AsNoTracking()
                 .Where(bpd => bpd.BettingPoolId == dto.BettingPoolId && drawIds.Contains(bpd.DrawId))
                 .ToDictionaryAsync(bpd => bpd.DrawId, bpd => bpd.AnticipatedClosingMinutes);
+
+            // Pre-check if user has SELL_OUT_OF_HOURS permission (used to skip closing validation)
+            var canSellClosedDraws = await _context.UserPermissions
+                .AnyAsync(up => up.UserId == dto.UserId
+                    && up.Permission!.PermissionCode == "SELL_OUT_OF_HOURS"
+                    && up.IsActive);
+
             var betTypesDict = await _context.GameTypes
                 .Where(gt => betTypeIds.Contains(gt.GameTypeId))
                 .ToDictionaryAsync(gt => gt.GameTypeId);
@@ -571,6 +594,7 @@ public class TicketsController : ControllerBase
                 drawGameCompatibilities.Select(dgc => (dgc.DrawId, dgc.GameTypeId)));
 
             List<object> invalidBets = new List<object>();
+            bool hasClosedDraw = false;
 
             foreach (var line in dto.Lines)
             {
@@ -623,11 +647,16 @@ public class TicketsController : ControllerBase
 
                         if (currentTimeInDrawTz >= closingTime)
                         {
-                            var closingFormatted = DateTime.Today.Add(closingTime).ToString("hh:mm tt");
-                            return UnprocessableEntity(new
+                            // Users with SELL_OUT_OF_HOURS permission skip closing rejection
+                            if (!canSellClosedDraws)
                             {
-                                message = $"El sorteo {draw.DrawName} ya cerró las ventas a las {closingFormatted}"
-                            });
+                                var closingFormatted = DateTime.Today.Add(closingTime).ToString("hh:mm tt");
+                                return UnprocessableEntity(new
+                                {
+                                    message = $"El sorteo {draw.DrawName} ya cerró las ventas a las {closingFormatted}"
+                                });
+                            }
+                            hasClosedDraw = true;
                         }
                     }
                 }
@@ -656,6 +685,7 @@ public class TicketsController : ControllerBase
                 CustomerEmail = dto.CustomerEmail,
                 CustomerIdNumber = dto.CustomerIdNumber,
                 Notes = dto.Notes,
+                SpecialFlags = hasClosedDraw ? "OUT_OF_SCHEDULE" : null,
                 Status = "pending"
             };
 
@@ -1143,7 +1173,8 @@ public class TicketsController : ControllerBase
                     CustomerPhone = t.CustomerPhone,
                     EarliestDrawTime = t.EarliestDrawTime,
                     LatestDrawTime = t.LatestDrawTime,
-                    PrintCount = t.PrintCount
+                    PrintCount = t.PrintCount,
+                    IsOutOfScheduleSale = t.SpecialFlags != null && t.SpecialFlags.Contains("OUT_OF_SCHEDULE")
                 })
                 .ToListAsync();
 

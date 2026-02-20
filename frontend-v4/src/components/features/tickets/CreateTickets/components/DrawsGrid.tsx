@@ -65,7 +65,7 @@ const DrawsGrid: React.FC<DrawsGridProps> = memo(({
           const isSelected = multiLotteryMode
             ? selectedDraws.some(s => s.id === draw.id)
             : selectedDraw?.id === draw.id;
-          const isClosed = !!draw.closingTime && draw.disabled;
+          const isClosed = !!draw.isClosed;
           const noPool = !selectedPool;
           const isDrawDisabled = draw.disabled || loadingAllowedDraws;
           const isClickable = !noPool && !isDrawDisabled;

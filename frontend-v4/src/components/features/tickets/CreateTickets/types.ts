@@ -16,6 +16,7 @@ export interface Draw {
   abbreviation?: string;
   color: string;
   disabled: boolean;
+  isClosed?: boolean;
   lotteryId?: number;
   imageUrl?: string;
   availableGameTypes?: number[];
@@ -31,11 +32,23 @@ export interface Bet {
   betAmount: number;
   betType?: { name: string };
   selectedBetType?: string;
+  gameTypeId?: number;   // Resolved game type ID (1-21)
+  position?: number;     // For Bolita/Singulacion (API Position field)
 }
 
 export interface BetType {
   id: string;
   name: string;
+  gameTypeId?: number;  // Maps to GAME_TYPES key
+}
+
+export interface BetDetectionResult {
+  gameTypeId: number;
+  cleanNumber: string;    // Digits only for API
+  displaySuffix: string;  // Shown in bet column
+  column: ColumnType;
+  displayName: string;    // For error messages
+  position?: number;      // For Bolita/Singulacion (API Position field)
 }
 
 export interface TicketLine {
@@ -65,6 +78,8 @@ export interface TicketData {
 
 export type ColumnType = 'directo' | 'pale' | 'cash3' | 'play4';
 
+export type TicketDateMode = 'today' | 'previousDay' | 'futureDate';
+
 export interface VisibleColumns {
   directo: boolean;
   pale: boolean;
@@ -87,6 +102,7 @@ export interface BettingPoolDrawResponse {
   drawId: number;
   isActive: boolean;
   isClosed: boolean;
+  isDominican?: boolean;
   drawTime?: string; // Closing time (HH:mm:ss)
   availableGameTypes?: AvailableGameType[];
 }
