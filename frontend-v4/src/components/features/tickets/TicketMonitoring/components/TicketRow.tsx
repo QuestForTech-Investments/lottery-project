@@ -43,25 +43,33 @@ const TicketRow: FC<TicketRowProps> = memo(({ ticket, isSelected, onRowClick, on
       }}
       onClick={handleRowClick}
     >
-      <TableCell>
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
-          {ticket.numero}
-          {ticket.isOutOfScheduleSale && (
-            <Tooltip title="Venta fuera de horario" arrow>
-              <ScheduleIcon sx={{ fontSize: 14, color: '#e53935' }} />
-            </Tooltip>
-          )}
-          {ticket.isPreviousDay && (
-            <Tooltip title="Venta día anterior" arrow>
-              <ArrowBackIcon sx={{ fontSize: 14, color: '#ff9800' }} />
-            </Tooltip>
-          )}
-          {ticket.isFutureDay && (
-            <Tooltip title="Venta futura" arrow>
-              <ArrowForwardIcon sx={{ fontSize: 14, color: '#2196f3' }} />
-            </Tooltip>
-          )}
-        </Box>
+      <TableCell sx={{ position: 'relative' }}>
+        {ticket.numero}
+        {(ticket.isOutOfScheduleSale || ticket.isPreviousDay || ticket.isFutureDay) && (
+          <Box sx={{ position: 'absolute', right: -4, top: '50%', transform: 'translateY(-50%)', display: 'flex', alignItems: 'center' }}>
+            {ticket.isOutOfScheduleSale && (
+              <Tooltip title="Venta fuera de horario" arrow>
+                <ScheduleIcon sx={{ fontSize: 17, color: '#e53935' }} />
+              </Tooltip>
+            )}
+            {ticket.isPreviousDay && (
+              <Tooltip title="Venta día anterior" arrow>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <ArrowBackIcon sx={{ fontSize: 17, color: '#ff9800', mr: -0.3 }} />
+                  <ScheduleIcon sx={{ fontSize: 17, color: '#ff9800' }} />
+                </Box>
+              </Tooltip>
+            )}
+            {ticket.isFutureDay && (
+              <Tooltip title="Venta futura" arrow>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <ScheduleIcon sx={{ fontSize: 17, color: '#2196f3' }} />
+                  <ArrowForwardIcon sx={{ fontSize: 17, color: '#2196f3', ml: -0.3 }} />
+                </Box>
+              </Tooltip>
+            )}
+          </Box>
+        )}
       </TableCell>
       <TableCell>{ticket.fecha}</TableCell>
       <TableCell>{ticket.usuario}</TableCell>

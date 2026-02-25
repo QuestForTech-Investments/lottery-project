@@ -643,19 +643,40 @@ const Results = (): React.ReactElement => {
           }
         }
 
-        // 6x1 auto-calc: propagate source draw's cash3/play4 to target 6x1 draw
+        // 6x1 auto-publish: propagate source draw's cash3/play4 and publish
         const target6x1 = get6x1Target(publishedDraw.drawName);
         if (target6x1) {
           const targetIdx = updatedResults.findIndex(
             r => r.drawName.toUpperCase().trim().includes(target6x1.targetDraw)
           );
-          if (targetIdx !== -1 && !updatedResults[targetIdx].hasResult) {
+          if (targetIdx !== -1 && !updatedResults[targetIdx].hasResult
+            && publishedDraw.cash3 && /^\d{3}$/.test(publishedDraw.cash3)
+            && publishedDraw.play4 && /^\d{4}$/.test(publishedDraw.play4)) {
             updatedResults[targetIdx] = {
               ...updatedResults[targetIdx],
               cash3: publishedDraw.cash3,
               play4: publishedDraw.play4,
-              isDirty: true,
             };
+            try {
+              const saved6x1 = await createResult({
+                drawId: updatedResults[targetIdx].drawId,
+                winningNumber: '',
+                additionalNumber: publishedDraw.cash3 + publishedDraw.play4,
+                resultDate: selectedDate,
+              });
+              updatedResults[targetIdx] = {
+                ...updatedResults[targetIdx],
+                resultId: saved6x1?.resultId || null,
+                hasResult: true,
+                isDirty: false,
+              };
+            } catch (err) {
+              console.error(`Error auto-publishing ${updatedResults[targetIdx].drawName}:`, err);
+              updatedResults[targetIdx] = {
+                ...updatedResults[targetIdx],
+                isDirty: true,
+              };
+            }
           }
         }
       }
@@ -663,8 +684,8 @@ const Results = (): React.ReactElement => {
       actions.setDrawResults(updatedResults);
       actions.setSuccess(`Resultado publicado para ${row.drawName}`);
 
-      const currentIndex = drawResults.findIndex((d) => d.drawId === individualForm.selectedDrawId);
-      const nextPendingDraw = drawResults.find((d, index) => index > currentIndex && !d.hasResult);
+      const currentIndex = updatedResults.findIndex((d) => d.drawId === individualForm.selectedDrawId);
+      const nextPendingDraw = updatedResults.find((d, index) => index > currentIndex && !d.hasResult);
 
       if (nextPendingDraw) {
         actions.setIndividualForm({

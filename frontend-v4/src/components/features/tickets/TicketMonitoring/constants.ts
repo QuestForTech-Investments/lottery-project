@@ -123,7 +123,7 @@ export const STYLES = {
     fontFamily: 'Montserrat, "Helvetica Neue", Arial, sans-serif',
   },
   quickSearch: { mb: 0, maxWidth: 200, '& .MuiInputBase-root': { height: 32 } },
-  tableContainer: { maxWidth: 796 },
+  tableContainer: { maxWidth: 880 },
   tableHeader: { backgroundColor: '#e3e3e3' },
   tableHeaderCell: {
     fontWeight: 600,
@@ -137,13 +137,13 @@ export const STYLES = {
 
 // Column widths - compact to leave room for detail panel
 export const COLUMN_WIDTHS: Record<string, number> = {
-  'Número': 150,
-  'Fecha': 130,
-  'Usuario': 50,
-  'Monto': 70,
-  'Premio': 70,
-  'Fecha de cancelación': 100,
-  'Estado': 65,
+  'Número': 160,
+  'Fecha': 135,
+  'Usuario': 60,
+  'Monto': 80,
+  'Premio': 60,
+  'Fecha de cancelación': 140,
+  'Estado': 70,
   'Acciones': 60,
 };
 
