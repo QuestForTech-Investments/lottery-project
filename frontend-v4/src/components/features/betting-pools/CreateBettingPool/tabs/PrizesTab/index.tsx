@@ -222,20 +222,22 @@ const PrizesTab: React.FC<PrizesTabProps> = ({
 
       const betTypesData = await getAllBetTypesWithFields();
 
-      let mappedBetTypes: BetType[] = betTypesData.map(bt => ({
-        betTypeId: bt.betTypeId,
-        betTypeName: bt.betTypeName,
-        betTypeCode: bt.betTypeCode || '',
-        description: undefined,
-        prizeFields: (bt.prizeFields || []).map(pf => ({
-          prizeTypeId: pf.prizeTypeId,
-          fieldName: pf.fieldName,
-          fieldCode: pf.fieldCode,
-          defaultMultiplier: pf.defaultValue || 0,
-          minMultiplier: undefined,
-          maxMultiplier: undefined
-        }))
-      }));
+      let mappedBetTypes: BetType[] = betTypesData
+        .filter(bt => bt.betTypeCode !== 'SINGULACION') // Exclude legacy plain SINGULACION (use SINGULACIÓN 1/2/3 instead)
+        .map(bt => ({
+          betTypeId: bt.betTypeId,
+          betTypeName: bt.betTypeName,
+          betTypeCode: bt.betTypeCode || '',
+          description: undefined,
+          prizeFields: (bt.prizeFields || []).map(pf => ({
+            prizeTypeId: pf.prizeTypeId,
+            fieldName: pf.fieldName,
+            fieldCode: pf.fieldCode,
+            defaultMultiplier: pf.defaultValue || 0,
+            minMultiplier: undefined,
+            maxMultiplier: undefined
+          }))
+        }));
 
       const allowedCodes = getAllowedBetTypesForDraw(drawName);
       if (allowedCodes) {

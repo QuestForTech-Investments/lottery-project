@@ -722,7 +722,6 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
         'PICK_TWO_FRONT': 'PICK TWO FRONT',
         'PICK_TWO_BACK': 'PICK TWO BACK',
         'PICK_TWO_MIDDLE': 'PICK TWO MIDDLE',
-        'SINGULACION': 'SINGULACION',
         'PANAMA': 'PANAMA',
       };
 
@@ -849,7 +848,6 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
         'PICK TWO FRONT': 'PICK_TWO_FRONT',
         'PICK TWO BACK': 'PICK_TWO_BACK',
         'PICK TWO MIDDLE': 'PICK_TWO_MIDDLE',
-        'SINGULACION': 'SINGULACION',
         'PANAMA': 'PANAMA',
       };
 
@@ -1586,7 +1584,7 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
                 'CASH3_FRONT_STRAIGHT': 'CASH3 FRONT STRAIGHT', 'CASH3_FRONT_BOX': 'CASH3_FRONT_BOX',
                 'CASH3_BACK_STRAIGHT': 'CASH3_BACK_STRAIGHT', 'CASH3_BACK_BOX': 'CASH3 BACK BOX',
                 'PICK_TWO_FRONT': 'PICK TWO FRONT', 'PICK_TWO_BACK': 'PICK TWO BACK',
-                'PICK_TWO_MIDDLE': 'PICK TWO MIDDLE', 'SINGULACION': 'SINGULACION', 'PANAMA': 'PANAMA',
+                'PICK_TWO_MIDDLE': 'PICK TWO MIDDLE', 'PANAMA': 'PANAMA',
               };
 
               // General commissions (lotteryId === null)

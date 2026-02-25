@@ -609,12 +609,18 @@ public class ExternalResultsService : IExternalResultsService
     {
         var betNumber = line.BetNumber.Trim();
         var winningNumber = result.WinningNumber.Trim();
+        var additionalNumber = result.AdditionalNumber?.Trim() ?? "";
         var betTypeCode = line.BetTypeCode?.ToUpper() ?? "";
 
         // Extract individual positions from winning number (format: NNNNNN = num1+num2+num3)
         var num1 = winningNumber.Length >= 2 ? winningNumber.Substring(0, 2) : winningNumber;
         var num2 = winningNumber.Length >= 4 ? winningNumber.Substring(2, 2) : "";
         var num3 = winningNumber.Length >= 6 ? winningNumber.Substring(4, 2) : "";
+
+        // Extract Cash3 (3 digits), Play4 (4 digits), Pick5 (5 digits) from additional number
+        var cash3Result = additionalNumber.Length >= 3 ? additionalNumber.Substring(0, 3) : "";
+        var play4Result = additionalNumber.Length >= 7 ? additionalNumber.Substring(3, 4) : "";
+        var pick5Result = additionalNumber.Length >= 12 ? additionalNumber.Substring(7, 5) : "";
 
         // Different matching rules based on bet type
         return betTypeCode switch
@@ -641,7 +647,71 @@ public class ExternalResultsService : IExternalResultsService
             // TODO: Implement cross-lottery Super Palé in future version.
             "SUPER_PALE" or "SUPER PALÉ" or "SUPER_PALÉ" => CheckSuperPaleMatch(betNumber, num1, num3) ? 1 : 0,
 
-            // Default - check all positions
+            // Cash3 Straight - 3 digit exact match against Cash3 result
+            // DisplayOrder 1 = Todos en secuencia (exact match), DisplayOrder 2 = Triples (e.g., 222, 333)
+            "CASH3_STRAIGHT" or "CASH3 STRAIGHT" => GetCash3StraightPosition(betNumber, cash3Result),
+
+            // Cash3 Box - 3 digit any-order match against Cash3 result
+            // DisplayOrder 1 = 3-Way (2 identical digits), DisplayOrder 2 = 6-Way (3 unique digits)
+            "CASH3_BOX" or "CASH3 BOX" => GetCash3BoxPosition(betNumber, cash3Result),
+
+            // Cash3 Front Straight - uses first 3 digits of Play4 result
+            "CASH3_FRONT_STRAIGHT" or "CASH3 FRONT STRAIGHT" => GetCash3StraightPosition(betNumber, play4Result.Length >= 3 ? play4Result.Substring(0, 3) : ""),
+
+            // Cash3 Back Straight - uses last 3 digits of Play4 result
+            "CASH3_BACK_STRAIGHT" or "CASH3 BACK STRAIGHT" => GetCash3StraightPosition(betNumber, play4Result.Length >= 3 ? play4Result.Substring(1, 3) : ""),
+
+            // Cash3 Front Box - uses first 3 digits of Play4 result, any order
+            "CASH3_FRONT_BOX" or "CASH3 FRONT BOX" => GetCash3BoxPosition(betNumber, play4Result.Length >= 3 ? play4Result.Substring(0, 3) : ""),
+
+            // Cash3 Back Box - uses last 3 digits of Play4 result, any order
+            "CASH3_BACK_BOX" or "CASH3 BACK BOX" => GetCash3BoxPosition(betNumber, play4Result.Length >= 3 ? play4Result.Substring(1, 3) : ""),
+
+            // Play4 Straight - 4 digit exact match against Play4 result
+            // DisplayOrder 1 = Todos en secuencia (exact match), DisplayOrder 2 = Dobles (two pairs, e.g., 1122, 3355)
+            "PLAY4 STRAIGHT" or "PLAY4_STRAIGHT" => GetPlay4StraightPosition(betNumber, play4Result),
+
+            // Play4 Box - 4 digit any-order match against Play4 result
+            // DisplayOrder 1 = 24-Way (4 unique), 2 = 12-Way (1 pair), 3 = 6-Way (2 pairs), 4 = 4-Way (3 identical)
+            "PLAY4 BOX" or "PLAY4_BOX" => GetPlay4BoxPosition(betNumber, play4Result),
+
+            // Bolita 1 - 2 digit bet matches first 2 digits of Cash3 (e.g., Cash3 "915" → Bolita1 = "91")
+            "BOLITA 1" or "BOLITA_1" => betNumber == (cash3Result.Length >= 2 ? cash3Result.Substring(0, 2) : "") ? 1 : 0,
+
+            // Bolita 2 - 2 digit bet matches last 2 digits of Cash3 (e.g., Cash3 "915" → Bolita2 = "15")
+            "BOLITA 2" or "BOLITA_2" => betNumber == (cash3Result.Length >= 3 ? cash3Result.Substring(1, 2) : "") ? 1 : 0,
+
+            // Singulacion 1 - 1 digit bet matches 1st digit of Cash3 (e.g., Cash3 "915" → "9")
+            "SINGULACIÓN 1" or "SINGULACION_1" => betNumber == (cash3Result.Length >= 1 ? cash3Result.Substring(0, 1) : "") ? 1 : 0,
+
+            // Singulacion 2 - 1 digit bet matches 2nd digit of Cash3 (e.g., Cash3 "915" → "1")
+            "SINGULACIÓN 2" or "SINGULACION_2" => betNumber == (cash3Result.Length >= 2 ? cash3Result.Substring(1, 1) : "") ? 1 : 0,
+
+            // Singulacion 3 - 1 digit bet matches 3rd digit of Cash3 (e.g., Cash3 "915" → "5")
+            "SINGULACIÓN 3" or "SINGULACION_3" => betNumber == (cash3Result.Length >= 3 ? cash3Result.Substring(2, 1) : "") ? 1 : 0,
+
+            // Pick5 Straight - 5 digit exact match against Pick5 result
+            // DisplayOrder 1 = Todos en secuencia (5 unique digits), DisplayOrder 2 = Dobles (has repeated digits)
+            "PICK5 STRAIGHT" or "PICK5_STRAIGHT" => GetPick5StraightPosition(betNumber, pick5Result),
+
+            // Pick5 Box - 5 digit any-order match against Pick5 result
+            // DisplayOrder 1-6 based on digit pattern
+            "PICK5 BOX" or "PICK5_BOX" => GetPick5BoxPosition(betNumber, pick5Result),
+
+            // Pick Two - 2 digit box match (any order) against the draw result (num1)
+            // DisplayOrder 1 = Primer Pago (non-double), DisplayOrder 2 = Dobles (e.g., 22, 33)
+            "PICK TWO" or "PICK_TWO" or "PICK2" => GetPickTwoPosition(betNumber, num1),
+
+            // Pick Two Front - first 2 digits of Play4 (e.g., Play4 "1347" → "13")
+            "PICK TWO FRONT" or "PICK_TWO_FRONT" => GetPickTwoPosition(betNumber, play4Result.Length >= 2 ? play4Result.Substring(0, 2) : ""),
+
+            // Pick Two Middle - middle 2 digits of Play4 (e.g., Play4 "1347" → "34")
+            "PICK TWO MIDDLE" or "PICK_TWO_MIDDLE" => GetPickTwoPosition(betNumber, play4Result.Length >= 3 ? play4Result.Substring(1, 2) : ""),
+
+            // Pick Two Back - last 2 digits of Play4 (e.g., Play4 "1347" → "47")
+            "PICK TWO BACK" or "PICK_TWO_BACK" => GetPickTwoPosition(betNumber, play4Result.Length >= 4 ? play4Result.Substring(2, 2) : ""),
+
+            // Default - check all positions (Directo fallback)
             _ => GetDirectoPosition(betNumber, num1, num2, num3)
         };
     }
@@ -799,6 +869,246 @@ public class ExternalResultsService : IExternalResultsService
         var winDigits = winningNumber.OrderBy(c => c).ToArray();
 
         return betDigits.SequenceEqual(winDigits);
+    }
+
+    /// <summary>
+    /// Cash3 Straight: 3-digit exact match.
+    /// DisplayOrder 1 = Todos en secuencia (regular straight match)
+    /// DisplayOrder 2 = Triples (all 3 digits identical, e.g., 222, 333)
+    /// </summary>
+    private int GetCash3StraightPosition(string betNumber, string cash3Result)
+    {
+        if (betNumber.Length != 3 || cash3Result.Length < 3)
+            return 0;
+
+        if (betNumber != cash3Result)
+            return 0;
+
+        // It's a match - determine if it's a triple
+        if (betNumber[0] == betNumber[1] && betNumber[1] == betNumber[2])
+        {
+            _logger.LogInformation("Cash3 Straight Triple match: {Bet} = {Result}, DisplayOrder 2", betNumber, cash3Result);
+            return 2; // Triples
+        }
+
+        _logger.LogInformation("Cash3 Straight match: {Bet} = {Result}, DisplayOrder 1", betNumber, cash3Result);
+        return 1; // Todos en secuencia
+    }
+
+    /// <summary>
+    /// Cash3 Box: 3-digit any-order match.
+    /// DisplayOrder 1 = 3-Way (2 identical digits, e.g., 112 → 3 permutations)
+    /// DisplayOrder 2 = 6-Way (3 unique digits, e.g., 123 → 6 permutations)
+    /// </summary>
+    private int GetCash3BoxPosition(string betNumber, string cash3Result)
+    {
+        if (betNumber.Length != 3 || cash3Result.Length < 3)
+            return 0;
+
+        if (!IsBoxMatch(betNumber, cash3Result))
+            return 0;
+
+        // Determine if 3-way (2 identical) or 6-way (3 unique)
+        var distinctDigits = betNumber.Distinct().Count();
+
+        if (distinctDigits == 2)
+        {
+            _logger.LogInformation("Cash3 Box 3-Way match: {Bet} ~ {Result}, DisplayOrder 1", betNumber, cash3Result);
+            return 1; // 3-Way: 2 identical digits
+        }
+
+        _logger.LogInformation("Cash3 Box 6-Way match: {Bet} ~ {Result}, DisplayOrder 2", betNumber, cash3Result);
+        return 2; // 6-Way: 3 unique digits
+    }
+
+    /// <summary>
+    /// Play4 Straight: 4-digit exact match against Play4 result.
+    /// DisplayOrder 1 = Todos en secuencia (regular straight match)
+    /// DisplayOrder 2 = Dobles (two pairs of identical digits, e.g., 1122, 3355)
+    /// </summary>
+    private int GetPlay4StraightPosition(string betNumber, string play4Result)
+    {
+        if (betNumber.Length != 4 || play4Result.Length < 4)
+            return 0;
+
+        if (betNumber != play4Result)
+            return 0;
+
+        // Check if it's a "dobles" (exactly 2 distinct digits, each appearing exactly twice)
+        var digitGroups = betNumber.GroupBy(c => c).Select(g => g.Count()).OrderBy(c => c).ToArray();
+        if (digitGroups.Length == 2 && digitGroups[0] == 2 && digitGroups[1] == 2)
+        {
+            _logger.LogInformation("Play4 Straight Dobles match: {Bet} = {Result}, DisplayOrder 2", betNumber, play4Result);
+            return 2; // Dobles
+        }
+
+        _logger.LogInformation("Play4 Straight match: {Bet} = {Result}, DisplayOrder 1", betNumber, play4Result);
+        return 1; // Todos en secuencia
+    }
+
+    /// <summary>
+    /// Play4 Box: 4-digit any-order match against Play4 result.
+    /// DisplayOrder 1 = 24-Way (4 unique digits, e.g., 1234)
+    /// DisplayOrder 2 = 12-Way (1 pair of identical digits, e.g., 1123)
+    /// DisplayOrder 3 = 6-Way (2 pairs of identical digits, e.g., 1133, 0550)
+    /// DisplayOrder 4 = 4-Way (3 identical digits, e.g., 5333)
+    /// </summary>
+    private int GetPlay4BoxPosition(string betNumber, string play4Result)
+    {
+        if (betNumber.Length != 4 || play4Result.Length < 4)
+            return 0;
+
+        if (!IsBoxMatch(betNumber, play4Result))
+            return 0;
+
+        var digitGroups = betNumber.GroupBy(c => c).Select(g => g.Count()).OrderByDescending(c => c).ToArray();
+
+        // 4 unique digits → 24-Way (4! = 24 permutations)
+        if (digitGroups.Length == 4)
+        {
+            _logger.LogInformation("Play4 Box 24-Way match: {Bet} ~ {Result}, DisplayOrder 1", betNumber, play4Result);
+            return 1;
+        }
+
+        // 3 identical + 1 different → 4-Way (4!/3! = 4 permutations)
+        if (digitGroups.Length == 2 && digitGroups[0] == 3)
+        {
+            _logger.LogInformation("Play4 Box 4-Way match: {Bet} ~ {Result}, DisplayOrder 4", betNumber, play4Result);
+            return 4;
+        }
+
+        // 2 pairs of identical → 6-Way (4!/(2!×2!) = 6 permutations)
+        if (digitGroups.Length == 2 && digitGroups[0] == 2)
+        {
+            _logger.LogInformation("Play4 Box 6-Way match: {Bet} ~ {Result}, DisplayOrder 3", betNumber, play4Result);
+            return 3;
+        }
+
+        // 1 pair + 2 unique → 12-Way (4!/2! = 12 permutations)
+        if (digitGroups.Length == 3)
+        {
+            _logger.LogInformation("Play4 Box 12-Way match: {Bet} ~ {Result}, DisplayOrder 2", betNumber, play4Result);
+            return 2;
+        }
+
+        // Fallback (shouldn't reach here for valid 4-digit numbers)
+        _logger.LogWarning("Play4 Box unexpected pattern: {Bet}, defaulting to DisplayOrder 1", betNumber);
+        return 1;
+    }
+
+    /// <summary>
+    /// Pick5 Straight: 5-digit exact match against Pick5 result.
+    /// DisplayOrder 1 = Todos en secuencia (5 unique digits)
+    /// DisplayOrder 2 = Dobles (has any repeated digits, e.g., 11324, 14425)
+    /// </summary>
+    private int GetPick5StraightPosition(string betNumber, string pick5Result)
+    {
+        if (betNumber.Length != 5 || pick5Result.Length < 5)
+            return 0;
+
+        if (betNumber != pick5Result)
+            return 0;
+
+        // Check if it has any repeated digits (dobles)
+        if (betNumber.Distinct().Count() < 5)
+        {
+            _logger.LogInformation("Pick5 Straight Dobles match: {Bet} = {Result}, DisplayOrder 2", betNumber, pick5Result);
+            return 2; // Dobles
+        }
+
+        _logger.LogInformation("Pick5 Straight match: {Bet} = {Result}, DisplayOrder 1", betNumber, pick5Result);
+        return 1; // Todos en secuencia
+    }
+
+    /// <summary>
+    /// Pick5 Box: 5-digit any-order match against Pick5 result.
+    /// DisplayOrder 1 = 5-Way: 4 identical (AAAAB) → 5!/4! = 5
+    /// DisplayOrder 2 = 10-Way: 3 identical + 1 pair (AAABB) → 5!/(3!×2!) = 10
+    /// DisplayOrder 3 = 20-Way: 3 identical + 2 unique (AAABC) → 5!/3! = 20
+    /// DisplayOrder 4 = 30-Way: 2 pairs + 1 unique (AABBC) → 5!/(2!×2!) = 30
+    /// DisplayOrder 5 = 60-Way: 1 pair + 3 unique (AABCD) → 5!/2! = 60
+    /// DisplayOrder 6 = 120-Way: 5 unique (ABCDE) → 5! = 120
+    /// </summary>
+    private int GetPick5BoxPosition(string betNumber, string pick5Result)
+    {
+        if (betNumber.Length != 5 || pick5Result.Length < 5)
+            return 0;
+
+        if (!IsBoxMatch(betNumber, pick5Result))
+            return 0;
+
+        var digitGroups = betNumber.GroupBy(c => c).Select(g => g.Count()).OrderByDescending(c => c).ToArray();
+        var distinctCount = digitGroups.Length;
+        var maxCount = digitGroups[0];
+
+        // 4 identical + 1 different (AAAAB) → 5-Way
+        if (distinctCount == 2 && maxCount == 4)
+        {
+            _logger.LogInformation("Pick5 Box 5-Way match: {Bet} ~ {Result}, DisplayOrder 1", betNumber, pick5Result);
+            return 1;
+        }
+
+        // 3 identical + 1 pair (AAABB) → 10-Way
+        if (distinctCount == 2 && maxCount == 3)
+        {
+            _logger.LogInformation("Pick5 Box 10-Way match: {Bet} ~ {Result}, DisplayOrder 2", betNumber, pick5Result);
+            return 2;
+        }
+
+        // 3 identical + 2 unique (AAABC) → 20-Way
+        if (distinctCount == 3 && maxCount == 3)
+        {
+            _logger.LogInformation("Pick5 Box 20-Way match: {Bet} ~ {Result}, DisplayOrder 3", betNumber, pick5Result);
+            return 3;
+        }
+
+        // 2 pairs + 1 unique (AABBC) → 30-Way
+        if (distinctCount == 3 && maxCount == 2)
+        {
+            _logger.LogInformation("Pick5 Box 30-Way match: {Bet} ~ {Result}, DisplayOrder 4", betNumber, pick5Result);
+            return 4;
+        }
+
+        // 1 pair + 3 unique (AABCD) → 60-Way
+        if (distinctCount == 4)
+        {
+            _logger.LogInformation("Pick5 Box 60-Way match: {Bet} ~ {Result}, DisplayOrder 5", betNumber, pick5Result);
+            return 5;
+        }
+
+        // 5 unique (ABCDE) → 120-Way
+        if (distinctCount == 5)
+        {
+            _logger.LogInformation("Pick5 Box 120-Way match: {Bet} ~ {Result}, DisplayOrder 6", betNumber, pick5Result);
+            return 6;
+        }
+
+        _logger.LogWarning("Pick5 Box unexpected pattern: {Bet}, defaulting to DisplayOrder 6", betNumber);
+        return 6;
+    }
+
+    /// <summary>
+    /// Pick Two: 2-digit box match (order doesn't matter).
+    /// DisplayOrder 1 = Primer Pago (non-double, e.g., 12 matches 12 or 21)
+    /// DisplayOrder 2 = Dobles (double digits, e.g., 22, 33, 44)
+    /// </summary>
+    private int GetPickTwoPosition(string betNumber, string resultNumber)
+    {
+        if (betNumber.Length != 2 || resultNumber.Length < 2)
+            return 0;
+
+        if (!IsBoxMatch(betNumber, resultNumber))
+            return 0;
+
+        // Check if it's a double (both digits the same)
+        if (betNumber[0] == betNumber[1])
+        {
+            _logger.LogInformation("Pick Two Dobles match: {Bet} ~ {Result}, DisplayOrder 2", betNumber, resultNumber);
+            return 2; // Dobles
+        }
+
+        _logger.LogInformation("Pick Two match: {Bet} ~ {Result}, DisplayOrder 1", betNumber, resultNumber);
+        return 1; // Primer Pago
     }
 
     /// <summary>

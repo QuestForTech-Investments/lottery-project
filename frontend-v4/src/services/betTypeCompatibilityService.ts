@@ -40,7 +40,7 @@ export const BET_TYPE_CODES = {
     // Bolita
     'BOLITA 1', 'BOLITA 2',
     // Singulación (with and without accent)
-    'SINGULACION', 'SINGULACIÓN 1', 'SINGULACIÓN 2', 'SINGULACIÓN 3',
+    'SINGULACIÓN 1', 'SINGULACIÓN 2', 'SINGULACIÓN 3',
     // Pick Two variants
     'PICK TWO', 'PICK TWO FRONT', 'PICK TWO BACK', 'PICK TWO MIDDLE',
     'PICK2'
