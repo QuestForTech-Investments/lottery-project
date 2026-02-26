@@ -323,16 +323,21 @@ export const useTicketMonitoring = (): UseTicketMonitoringReturn => {
   const handleErrorClose = useCallback(() => setError(null), []);
 
   const handleRowClick = useCallback(async (ticketId: number) => {
+    const listTicket = tickets.find(t => t.id === ticketId);
     try {
       // Fetch ticket detail with lines from API
       const ticketDetail = await ticketService.getTicketById(ticketId);
       const mappedTicket = mapTicketWithLines(ticketDetail);
+      // Preserve status flags from the list ticket
+      if (listTicket) {
+        mappedTicket.isPreviousDay = listTicket.isPreviousDay;
+        mappedTicket.isFutureDay = listTicket.isFutureDay;
+        mappedTicket.isOutOfScheduleSale = listTicket.isOutOfScheduleSale;
+      }
       setSelectedTicket(mappedTicket);
     } catch (err) {
       console.error('Error loading ticket detail:', err);
-      // Fallback to ticket from list (without lines)
-      const ticket = tickets.find(t => t.id === ticketId);
-      if (ticket) setSelectedTicket(ticket);
+      if (listTicket) setSelectedTicket(listTicket);
     }
   }, [tickets]);
 

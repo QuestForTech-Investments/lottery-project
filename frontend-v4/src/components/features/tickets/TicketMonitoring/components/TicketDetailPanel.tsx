@@ -20,6 +20,9 @@ import {
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import EditIcon from '@mui/icons-material/Edit';
+import ScheduleIcon from '@mui/icons-material/Schedule';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import { formatCurrency } from '../../../../../utils/formatCurrency';
 import ticketService from '../../../../../services/ticketService';
 import type { LinePrizeMultipliers } from '../../../../../services/ticketService';
@@ -305,14 +308,21 @@ interface PlayRowProps {
   isWinner: boolean;
   isPending: boolean;
   onEditPrize: (betNumber: string) => void;
+  isOutOfScheduleSale?: boolean;
+  isPreviousDay?: boolean;
+  isFutureDay?: boolean;
 }
 
-const formatBetNumber = (num: string): string => {
+const formatBetNumber = (num: string, betTypeName?: string): string => {
   if (num.length <= 2) return num;
-  return num.match(/.{1,2}/g)?.join('-') || num;
+  const name = (betTypeName || '').toUpperCase();
+  if (name.includes('PAL') || name.includes('TRIPLETA') || name.includes('SUPER PAL')) {
+    return num.match(/.{1,2}/g)?.join('-') || num;
+  }
+  return num;
 };
 
-const PlayRow: FC<PlayRowProps> = memo(({ line, index, isWinner, isPending, onEditPrize }) => {
+const PlayRow: FC<PlayRowProps> = memo(({ line, index, isWinner, isPending, onEditPrize, isOutOfScheduleSale, isPreviousDay, isFutureDay }) => {
   const backgroundColor = useMemo(() => {
     const isEven = index % 2 === 0;
     if (isWinner) return isEven ? ROW_COLORS.winnerEven : ROW_COLORS.winnerOdd;
@@ -326,7 +336,12 @@ const PlayRow: FC<PlayRowProps> = memo(({ line, index, isWinner, isPending, onEd
 
   return (
     <Box sx={{ ...PANEL_STYLES.tableRow, backgroundColor }}>
-      <Typography sx={PANEL_STYLES.tableCell}>{formatBetNumber(line.betNumber)}</Typography>
+      <Box sx={{ ...PANEL_STYLES.tableCell, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.3 }}>
+        <Typography component="span" sx={{ fontSize: 'inherit' }}>{formatBetNumber(line.betNumber, line.betTypeName)}</Typography>
+        {isOutOfScheduleSale && <ScheduleIcon sx={{ fontSize: 14, color: '#e53935' }} />}
+        {isPreviousDay && <><ArrowBackIcon sx={{ fontSize: 14, color: '#ff9800', mr: -0.3 }} /><ScheduleIcon sx={{ fontSize: 14, color: '#ff9800' }} /></>}
+        {isFutureDay && <><ScheduleIcon sx={{ fontSize: 14, color: '#2196f3' }} /><ArrowForwardIcon sx={{ fontSize: 14, color: '#2196f3', ml: -0.3 }} /></>}
+      </Box>
       <Typography sx={PANEL_STYLES.tableCell}>{line.betTypeName || '-'}</Typography>
       <Typography sx={PANEL_STYLES.tableCell}>{formatCurrency(line.betAmount)}</Typography>
       <Box sx={{ ...PANEL_STYLES.tableCell, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
@@ -508,6 +523,9 @@ const TicketDetailPanel: FC<TicketDetailPanelProps> = memo(({ ticket, onClose })
                 isWinner={line.prizeAmount > 0}
                 isPending={ticket.estado === 'Pendiente'}
                 onEditPrize={handleEditPrize}
+                isOutOfScheduleSale={ticket.isOutOfScheduleSale}
+                isPreviousDay={ticket.isPreviousDay}
+                isFutureDay={ticket.isFutureDay}
               />
             ))}
           </Box>
