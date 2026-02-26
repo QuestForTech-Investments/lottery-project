@@ -817,15 +817,21 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
     if (e.key === 'Enter') {
       e.preventDefault();
       amountInputRef.current?.focus();
+    } else if (e.key === '*') {
+      e.preventDefault();
+      handleCreateTicket();
     }
-  }, []);
+  }, [handleCreateTicket]);
 
   const handleAmountKeyDown = useCallback((e: KeyboardEvent<HTMLInputElement>): void => {
     if (e.key === 'Enter') {
       e.preventDefault();
       handleAddBet();
+    } else if (e.key === '*') {
+      e.preventDefault();
+      handleCreateTicket();
     }
-  }, [handleAddBet]);
+  }, [handleAddBet, handleCreateTicket]);
 
   return {
     betNumberInputRef,
