@@ -151,6 +151,7 @@ public class TicketsController : ControllerBase
                     ExceedsLimit = l.ExceedsLimit,
                     IsLuckyPick = l.IsLuckyPick,
                     IsHotNumber = l.IsHotNumber,
+                    IsOutOfScheduleSale = l.IsOutOfScheduleSale,
                     Notes = l.Notes
                 }).ToList()
             })
@@ -595,6 +596,7 @@ public class TicketsController : ControllerBase
 
             List<object> invalidBets = new List<object>();
             bool hasClosedDraw = false;
+            var closedDrawIds = new HashSet<int>();
 
             foreach (var line in dto.Lines)
             {
@@ -657,6 +659,7 @@ public class TicketsController : ControllerBase
                                 });
                             }
                             hasClosedDraw = true;
+                            closedDrawIds.Add(draw.DrawId);
                         }
                     }
                 }
@@ -760,6 +763,7 @@ public class TicketsController : ControllerBase
                     BetAmount = lineDto.BetAmount,
                     Multiplier = lineDto.Multiplier > 0 ? lineDto.Multiplier : dto.GlobalMultiplier,
                     IsLuckyPick = lineDto.IsLuckyPick,
+                    IsOutOfScheduleSale = closedDrawIds.Contains(lineDto.DrawId),
                     Notes = lineDto.Notes,
                     CreatedAt = now,
                     CreatedBy = dto.UserId,
@@ -994,6 +998,7 @@ public class TicketsController : ControllerBase
                         ExceedsLimit = l.ExceedsLimit,
                         IsLuckyPick = l.IsLuckyPick,
                         IsHotNumber = l.IsHotNumber,
+                        IsOutOfScheduleSale = l.IsOutOfScheduleSale,
                         Notes = l.Notes
                     };
                 }).ToList()
@@ -1730,6 +1735,7 @@ public class TicketsController : ControllerBase
                 ExceedsLimit = l.ExceedsLimit,
                 IsLuckyPick = l.IsLuckyPick,
                 IsHotNumber = l.IsHotNumber,
+                IsOutOfScheduleSale = l.IsOutOfScheduleSale,
                 Notes = l.Notes
             }).ToList()
         };

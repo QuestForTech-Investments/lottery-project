@@ -83,6 +83,7 @@ export interface TicketLineResponse {
   exceedsLimit: boolean;
   isLuckyPick: boolean;
   isHotNumber: boolean;
+  isOutOfScheduleSale: boolean;
   notes: string | null;
 }
 
@@ -133,6 +134,7 @@ export interface MappedTicketLine {
   betTypeName: string;
   betAmount: number;
   prizeAmount: number;
+  isOutOfScheduleSale?: boolean;
 }
 
 export interface MappedTicket {
@@ -275,6 +277,7 @@ export const mapTicketWithLines = (ticket: TicketResponse): MappedTicket => {
     betTypeName: line.betTypeName,
     betAmount: line.betAmount,
     prizeAmount: line.prizeAmount,
+    isOutOfScheduleSale: line.isOutOfScheduleSale || false,
   }));
 
   return {

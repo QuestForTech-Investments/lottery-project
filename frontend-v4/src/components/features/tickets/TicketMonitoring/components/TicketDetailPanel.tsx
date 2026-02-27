@@ -523,7 +523,7 @@ const TicketDetailPanel: FC<TicketDetailPanelProps> = memo(({ ticket, onClose })
                 isWinner={line.prizeAmount > 0}
                 isPending={ticket.estado === 'Pendiente'}
                 onEditPrize={handleEditPrize}
-                isOutOfScheduleSale={ticket.isOutOfScheduleSale}
+                isOutOfScheduleSale={line.isOutOfScheduleSale}
                 isPreviousDay={ticket.isPreviousDay}
                 isFutureDay={ticket.isFutureDay}
               />

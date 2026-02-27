@@ -114,6 +114,7 @@ public class TicketLineDto
     public bool ExceedsLimit { get; set; }
     public bool IsLuckyPick { get; set; }
     public bool IsHotNumber { get; set; }
+    public bool IsOutOfScheduleSale { get; set; }
     public string? Notes { get; set; }
 }
 

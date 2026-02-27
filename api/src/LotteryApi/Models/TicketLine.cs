@@ -127,6 +127,9 @@ public class TicketLine
     [Column("is_hot_number")]
     public bool IsHotNumber { get; set; } = false;
 
+    [Column("is_out_of_schedule")]
+    public bool IsOutOfScheduleSale { get; set; } = false;
+
     [Column("sequence_number")]
     public int? SequenceNumber { get; set; }
 
