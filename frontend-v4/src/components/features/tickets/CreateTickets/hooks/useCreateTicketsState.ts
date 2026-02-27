@@ -366,10 +366,10 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
 
     const gameTypesArray = Array.from(allGameTypes);
     return {
-      directo: gameTypesArray.some(gt => gt === 1 || gt === 19 || gt === 20 || gt === 21) || directBets.length > 0,
+      directo: gameTypesArray.some(gt => gt === 1 || (gt >= 15 && gt <= 18) || gt === 19 || gt === 20 || gt === 21) || directBets.length > 0,
       pale: gameTypesArray.some(gt => gt === 2 || gt === 3 || gt === 14) || paleBets.length > 0,
       cash3: gameTypesArray.some(gt => gt >= 4 && gt <= 9) || cash3Bets.length > 0,
-      play4: gameTypesArray.some(gt => (gt >= 10 && gt <= 13) || (gt >= 15 && gt <= 18)) || play4Bets.length > 0,
+      play4: gameTypesArray.some(gt => gt >= 10 && gt <= 13) || play4Bets.length > 0,
     };
   }, [selectedDraw?.id, selectedDraws, multiLotteryMode, drawGameTypes, directBets.length, paleBets.length, cash3Bets.length, play4Bets.length]);
 
