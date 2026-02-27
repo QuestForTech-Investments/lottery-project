@@ -118,6 +118,7 @@ const BetInputRow: React.FC<BetInputRowProps> = memo(({
         value={amount}
         onChange={(e) => handleAmountChange(e.target.value)}
         onKeyDown={onAmountKeyDown}
+        onFocus={(e) => e.target.select()}
         disabled={!selectedDraw}
         inputRef={amountInputRef}
         inputProps={{ tabIndex: 2, inputMode: 'decimal' }}

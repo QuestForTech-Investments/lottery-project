@@ -14,6 +14,7 @@ import ticketService, {
   calculateTicketTotals,
 } from '@services/ticketService';
 import { getAllLotteries } from '@services/lotteryService';
+import { getCurrentUser } from '@services/authService';
 import { useDebounce } from '@hooks/index';
 import type { BettingPool, Lottery, SelectOption } from '@/types';
 import { TICKET_STATUS_MAP, DEBOUNCE_DELAY } from '@constants/index';
@@ -356,8 +357,15 @@ export const useTicketMonitoring = (): UseTicketMonitoringReturn => {
       return;
     }
 
+    const currentUser = getCurrentUser();
+    const userId = Number(currentUser?.id);
+    if (!userId) {
+      setError('No se pudo identificar el usuario. Inicie sesión nuevamente.');
+      return;
+    }
+
     try {
-      await ticketService.cancelTicket(ticketId);
+      await ticketService.cancelTicket(ticketId, userId);
       await loadTickets(null, undefined, fecha);
       if (selectedTicket?.id === ticketId) {
         setSelectedTicket(null);

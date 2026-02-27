@@ -47,9 +47,17 @@ const TicketRow: FC<TicketRowProps> = memo(({ ticket, isSelected, onRowClick, on
         {ticket.numero}
         {(ticket.isOutOfScheduleSale || ticket.isPreviousDay || ticket.isFutureDay) && (
           <Box sx={{ position: 'absolute', right: -4, top: '50%', transform: 'translateY(-50%)', display: 'flex', alignItems: 'center' }}>
-            {ticket.isOutOfScheduleSale && (
+            {ticket.isOutOfScheduleSale && ticket.estado !== 'Cancelado' && (
               <Tooltip title="Venta fuera de horario" arrow>
                 <ScheduleIcon sx={{ fontSize: 17, color: '#e53935' }} />
+              </Tooltip>
+            )}
+            {ticket.estado === 'Cancelado' && ticket.isOutOfScheduleSale && (
+              <Tooltip title="Cancelado con jugadas fuera de horario" arrow>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <ScheduleIcon sx={{ fontSize: 17, color: '#9c27b0' }} />
+                  <CancelIcon sx={{ fontSize: 17, color: '#9c27b0', ml: -0.3 }} />
+                </Box>
               </Tooltip>
             )}
             {ticket.isPreviousDay && (
