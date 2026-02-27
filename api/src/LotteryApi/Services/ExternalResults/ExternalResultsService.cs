@@ -57,6 +57,37 @@ public class ExternalResultsService : IExternalResultsService
     private readonly ILogger<ExternalResultsService> _logger;
     private readonly ExternalResultsSettings _settings;
 
+    /// <summary>
+    /// Maps game_type_id (stored in ticket_lines.bet_type_id) to the actual
+    /// bet_type_id used in the prize_types table. These are different numbering
+    /// systems: game_types is the play classification while bet_types is the
+    /// prize configuration key.
+    /// </summary>
+    private static readonly Dictionary<int, int> GameTypeToPrizeBetType = new()
+    {
+        { 1, 1 },    // DIRECTO → Directo
+        { 2, 2 },    // PALE → Pale
+        { 3, 3 },    // TRIPLETA → Tripleta
+        { 4, 4 },    // CASH3_STRAIGHT → Cash3 Straight
+        { 5, 5 },    // CASH3_BOX → Cash3 Box
+        { 6, 16 },   // CASH3_FRONT_STRAIGHT → Cash3 Front Straight
+        { 7, 7 },    // CASH3_FRONT_BOX → Cash3 Front Box
+        { 8, 8 },    // CASH3_BACK_STRAIGHT → Cash3 Back Straight
+        { 9, 34 },   // CASH3_BACK_BOX → Cash3 Back Box
+        { 10, 18 },  // PLAY4_STRAIGHT → Play4 Straight
+        { 11, 19 },  // PLAY4_BOX → Play4 Box
+        { 12, 30 },  // PICK5_STRAIGHT → Pick5 Straight
+        { 13, 31 },  // PICK5_BOX → Pick5 Box
+        { 14, 14 },  // SUPER_PALE → Super Pale
+        { 15, 32 },  // PICK2 → Pick Two
+        { 16, 9 },   // PICK2_FRONT → Pick Two Front
+        { 17, 10 },  // PICK2_BACK → Pick Two Back
+        { 18, 11 },  // PICK2_MIDDLE → Pick Two Middle
+        { 19, 25 },  // BOLITA → Bolita 1
+        { 20, 20 },  // SINGULACION → Singulacion
+        { 21, 21 },  // PANAMA → Panama
+    };
+
     public ExternalResultsService(
         LotteryDbContext context,
         IEnumerable<ILotteryResultProvider> providers,
@@ -1131,26 +1162,40 @@ public class ExternalResultsService : IExternalResultsService
         // Get the betting pool ID from the ticket
         var bettingPoolId = line.Ticket?.BettingPoolId;
 
+        // Resolve the correct prize bet_type_id from the game_type_id mapping.
+        // ticket_lines.bet_type_id stores game_type_id, but prize_types.bet_type_id
+        // uses a different numbering system.
+        var prizeBetTypeId = GameTypeToPrizeBetType.TryGetValue(line.BetTypeId, out var mapped)
+            ? mapped
+            : line.BetTypeId;
+
+        if (prizeBetTypeId != line.BetTypeId)
+        {
+            _logger.LogInformation("Mapped game_type_id {GameTypeId} to prize bet_type_id {PrizeBetTypeId} for bet type {BetTypeCode}",
+                line.BetTypeId, prizeBetTypeId, line.BetTypeCode);
+        }
+
         // Find the prize type for this bet type based on the winning position
         // DisplayOrder corresponds to the result position:
         // DisplayOrder 1 = Prize for 1st position (Primer Pago)
         // DisplayOrder 2 = Prize for 2nd position (Segundo Pago)
         // DisplayOrder 3 = Prize for 3rd position (Tercer Pago)
         var prizeType = await _context.PrizeTypes
-            .Where(pt => pt.BetTypeId == line.BetTypeId && pt.IsActive && pt.DisplayOrder == winningPosition)
+            .Where(pt => pt.BetTypeId == prizeBetTypeId && pt.IsActive && pt.DisplayOrder == winningPosition)
             .FirstOrDefaultAsync();
 
         // Fallback: if no prize type for this specific position, try to get the first one
         if (prizeType == null)
         {
             prizeType = await _context.PrizeTypes
-                .Where(pt => pt.BetTypeId == line.BetTypeId && pt.IsActive)
+                .Where(pt => pt.BetTypeId == prizeBetTypeId && pt.IsActive)
                 .OrderBy(pt => pt.DisplayOrder)
                 .FirstOrDefaultAsync();
 
             if (prizeType == null)
             {
-                _logger.LogWarning("No prize type found for bet type {BetTypeId}", line.BetTypeId);
+                _logger.LogWarning("No prize type found for prize bet_type_id {PrizeBetTypeId} (game_type_id {GameTypeId})",
+                    prizeBetTypeId, line.BetTypeId);
                 return 0;
             }
 
@@ -1160,20 +1205,38 @@ public class ExternalResultsService : IExternalResultsService
 
         decimal multiplier = prizeType.DefaultMultiplier;
 
-        // Check for custom banca configuration
+        // Prize cascade: draw_specific > banca_default > system_default
         if (bettingPoolId.HasValue)
         {
-            var bancaConfig = await _context.BancaPrizeConfigs
-                .FirstOrDefaultAsync(bc =>
-                    bc.BettingPoolId == bettingPoolId.Value &&
-                    bc.PrizeTypeId == prizeType.PrizeTypeId);
+            // 1. Check draw-specific config (highest priority)
+            var drawConfig = await _context.DrawPrizeConfigs
+                .FirstOrDefaultAsync(dc =>
+                    dc.DrawId == line.DrawId &&
+                    dc.BettingPoolId == bettingPoolId.Value &&
+                    dc.PrizeTypeId == prizeType.PrizeTypeId);
 
-            if (bancaConfig != null)
+            if (drawConfig != null)
             {
-                multiplier = bancaConfig.CustomValue;
-                _logger.LogInformation("Using custom banca multiplier {Multiplier} for pool {PoolId}, position {Position}",
-                    multiplier, bettingPoolId, winningPosition);
+                multiplier = drawConfig.CustomValue;
+                _logger.LogInformation("Using draw-specific multiplier {Multiplier} for draw {DrawId}, pool {PoolId}, position {Position}",
+                    multiplier, line.DrawId, bettingPoolId, winningPosition);
             }
+            else
+            {
+                // 2. Check banca default config
+                var bancaConfig = await _context.BancaPrizeConfigs
+                    .FirstOrDefaultAsync(bc =>
+                        bc.BettingPoolId == bettingPoolId.Value &&
+                        bc.PrizeTypeId == prizeType.PrizeTypeId);
+
+                if (bancaConfig != null)
+                {
+                    multiplier = bancaConfig.CustomValue;
+                    _logger.LogInformation("Using banca multiplier {Multiplier} for pool {PoolId}, position {Position}",
+                        multiplier, bettingPoolId, winningPosition);
+                }
+            }
+            // 3. Otherwise falls through to prizeType.DefaultMultiplier (system default)
         }
 
         // Store the multiplier in the line for future reference
