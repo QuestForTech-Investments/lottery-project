@@ -272,16 +272,26 @@ export const mapTicketWithLines = (ticket: TicketResponse): MappedTicket => {
   const baseTicket = mapTicketResponse(ticket);
 
   // Map lines if present
-  const lines: MappedTicketLine[] = (ticket.lines || []).map((line) => ({
-    drawId: line.drawId,
-    drawName: line.drawName,
-    betNumber: line.betNumber,
-    betTypeId: line.betTypeId,
-    betTypeName: line.betTypeName,
-    betAmount: line.betAmount,
-    prizeAmount: line.prizeAmount,
-    isOutOfScheduleSale: line.isOutOfScheduleSale || false,
-  }));
+  const lines: MappedTicketLine[] = (ticket.lines || []).map((line) => {
+    // Append position to betTypeName for position-based types
+    let betTypeName = line.betTypeName;
+    if (line.position != null) {
+      const nameUpper = (betTypeName || '').toUpperCase();
+      if (nameUpper.includes('SINGULA') || nameUpper.includes('BOLITA')) {
+        betTypeName = `${betTypeName} ${line.position}`;
+      }
+    }
+    return {
+      drawId: line.drawId,
+      drawName: line.drawName,
+      betNumber: line.betNumber,
+      betTypeId: line.betTypeId,
+      betTypeName,
+      betAmount: line.betAmount,
+      prizeAmount: line.prizeAmount,
+      isOutOfScheduleSale: line.isOutOfScheduleSale || false,
+    };
+  });
 
   return {
     ...baseTicket,

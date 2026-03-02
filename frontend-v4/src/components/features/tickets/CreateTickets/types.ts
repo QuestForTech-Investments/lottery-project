@@ -29,6 +29,7 @@ export interface Bet {
   drawAbbr?: string;
   drawId: number;
   betNumber: string;
+  cleanNumber?: string;  // Digits-only for API (without display suffix)
   betAmount: number;
   betType?: { name: string };
   selectedBetType?: string;

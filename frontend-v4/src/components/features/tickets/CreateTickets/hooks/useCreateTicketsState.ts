@@ -678,6 +678,7 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
           drawAbbr: draw.abbreviation || draw.name,
           drawId: draw.id,
           betNumber: detection.cleanNumber + straightCfg.displaySuffix,
+          cleanNumber: detection.cleanNumber,
           betAmount: numericAmount,
           selectedBetType: selectedBetType || '',
           gameTypeId: splitPair.straightId,
@@ -691,6 +692,7 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
           drawAbbr: draw.abbreviation || draw.name,
           drawId: draw.id,
           betNumber: detection.cleanNumber + boxCfg.displaySuffix,
+          cleanNumber: detection.cleanNumber,
           betAmount: boxAmount,
           selectedBetType: selectedBetType || '',
           gameTypeId: splitPair.boxId,
@@ -706,6 +708,7 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
           drawAbbr: draw.abbreviation || draw.name,
           drawId: draw.id,
           betNumber: detection.cleanNumber + detection.displaySuffix,
+          cleanNumber: detection.cleanNumber,
           betAmount: finalAmount,
           selectedBetType: selectedBetType || '',
           gameTypeId: detection.gameTypeId,
@@ -777,7 +780,7 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
         lines: allBets.map((bet) => {
           const line: Record<string, unknown> = {
             drawId: bet.drawId,
-            betNumber: bet.betNumber.replace(/[^0-9]/g, ''),
+            betNumber: bet.cleanNumber || bet.betNumber.replace(/[^0-9]/g, ''),
             betTypeId: getBetTypeId(bet),
             betAmount: bet.betAmount,
             multiplier: 1.00,
