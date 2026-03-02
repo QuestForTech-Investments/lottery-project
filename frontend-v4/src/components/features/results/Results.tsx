@@ -634,32 +634,40 @@ const Results = (): React.ReactElement => {
           const targetIdx = updatedResults.findIndex(
             r => r.drawName.toUpperCase().trim().includes(target.targetDraw)
           );
-          if (targetIdx !== -1 && !updatedResults[targetIdx].hasResult) {
+          if (targetIdx !== -1) {
             updatedResults[targetIdx] = {
               ...updatedResults[targetIdx],
               [target.targetField]: publishedDraw.num1,
-              isDirty: true,
             };
 
-            // Auto-publish Super Palé when both source numbers are present
             const spRow = updatedResults[targetIdx];
             if (spRow.num1 && /^\d{2}$/.test(spRow.num1) && spRow.num2 && /^\d{2}$/.test(spRow.num2)) {
-              try {
-                const savedSP = await createResult({
-                  drawId: spRow.drawId,
-                  winningNumber: spRow.num1 + spRow.num2,
-                  additionalNumber: null,
-                  resultDate: selectedDate,
-                });
-                updatedResults[targetIdx] = {
-                  ...updatedResults[targetIdx],
-                  resultId: savedSP?.resultId || null,
-                  hasResult: true,
-                  isDirty: false,
-                };
-              } catch (err) {
-                console.error(`Error auto-publishing ${spRow.drawName}:`, err);
+              // Backend cascade already saved/updated the composite result,
+              // just update local state to reflect it
+              updatedResults[targetIdx] = {
+                ...updatedResults[targetIdx],
+                hasResult: true,
+                isDirty: false,
+              };
+              // If backend didn't cascade (no resultId yet), create it
+              if (!updatedResults[targetIdx].resultId) {
+                try {
+                  const savedSP = await createResult({
+                    drawId: spRow.drawId,
+                    winningNumber: spRow.num1 + spRow.num2,
+                    additionalNumber: null,
+                    resultDate: selectedDate,
+                  });
+                  updatedResults[targetIdx] = {
+                    ...updatedResults[targetIdx],
+                    resultId: savedSP?.resultId || null,
+                  };
+                } catch (err) {
+                  console.error(`Error auto-publishing ${spRow.drawName}:`, err);
+                }
               }
+            } else {
+              updatedResults[targetIdx] = { ...updatedResults[targetIdx], isDirty: true };
             }
           }
         }
@@ -670,33 +678,33 @@ const Results = (): React.ReactElement => {
           const targetIdx = updatedResults.findIndex(
             r => r.drawName.toUpperCase().trim().includes(target6x1.targetDraw)
           );
-          if (targetIdx !== -1 && !updatedResults[targetIdx].hasResult
+          if (targetIdx !== -1
             && publishedDraw.cash3 && /^\d{3}$/.test(publishedDraw.cash3)
             && publishedDraw.play4 && /^\d{4}$/.test(publishedDraw.play4)) {
             updatedResults[targetIdx] = {
               ...updatedResults[targetIdx],
               cash3: publishedDraw.cash3,
               play4: publishedDraw.play4,
+              hasResult: true,
+              isDirty: false,
             };
-            try {
-              const saved6x1 = await createResult({
-                drawId: updatedResults[targetIdx].drawId,
-                winningNumber: '',
-                additionalNumber: publishedDraw.cash3 + publishedDraw.play4,
-                resultDate: selectedDate,
-              });
-              updatedResults[targetIdx] = {
-                ...updatedResults[targetIdx],
-                resultId: saved6x1?.resultId || null,
-                hasResult: true,
-                isDirty: false,
-              };
-            } catch (err) {
-              console.error(`Error auto-publishing ${updatedResults[targetIdx].drawName}:`, err);
-              updatedResults[targetIdx] = {
-                ...updatedResults[targetIdx],
-                isDirty: true,
-              };
+            // If backend didn't cascade (no resultId yet), create it
+            if (!updatedResults[targetIdx].resultId) {
+              try {
+                const saved6x1 = await createResult({
+                  drawId: updatedResults[targetIdx].drawId,
+                  winningNumber: '',
+                  additionalNumber: publishedDraw.cash3 + publishedDraw.play4,
+                  resultDate: selectedDate,
+                });
+                updatedResults[targetIdx] = {
+                  ...updatedResults[targetIdx],
+                  resultId: saved6x1?.resultId || null,
+                };
+              } catch (err) {
+                console.error(`Error auto-publishing ${updatedResults[targetIdx].drawName}:`, err);
+                updatedResults[targetIdx] = { ...updatedResults[targetIdx], isDirty: true };
+              }
             }
           }
         }

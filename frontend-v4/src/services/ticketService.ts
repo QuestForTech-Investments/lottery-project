@@ -135,6 +135,7 @@ export interface MappedTicketLine {
   betTypeName: string;
   betAmount: number;
   prizeAmount: number;
+  lineStatus?: string;
   isOutOfScheduleSale?: boolean;
 }
 
@@ -289,6 +290,7 @@ export const mapTicketWithLines = (ticket: TicketResponse): MappedTicket => {
       betTypeName,
       betAmount: line.betAmount,
       prizeAmount: line.prizeAmount,
+      lineStatus: line.lineStatus,
       isOutOfScheduleSale: line.isOutOfScheduleSale || false,
     };
   });

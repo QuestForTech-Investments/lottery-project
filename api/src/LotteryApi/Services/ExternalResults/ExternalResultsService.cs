@@ -38,6 +38,12 @@ public interface IExternalResultsService
     Task<(int ticketsProcessed, int winnersFound)> ProcessTicketsForDrawAsync(int drawId, DateTime date, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Reset processed ticket lines for a draw/date back to pending,
+    /// so they can be reprocessed with a corrected result.
+    /// </summary>
+    Task ResetTicketLinesForDrawAsync(int drawId, DateTime date, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Get draw mappings configuration
     /// </summary>
     List<DrawMapping> GetDrawMappings();
@@ -576,6 +582,60 @@ public class ExternalResultsService : IExternalResultsService
         await _context.SaveChangesAsync(cancellationToken);
 
         return (ticketsProcessed, winnersFound);
+    }
+
+    /// <summary>
+    /// Resets all processed ticket lines for a draw/date back to pending,
+    /// so they can be reprocessed with a corrected result.
+    /// Also resets the parent ticket's winner counts and prize totals.
+    /// </summary>
+    public async Task ResetTicketLinesForDrawAsync(
+        int drawId, DateTime date, CancellationToken cancellationToken = default)
+    {
+        var processedLines = await _context.Set<TicketLine>()
+            .Include(tl => tl.Ticket)
+            .Where(tl =>
+                tl.DrawId == drawId &&
+                tl.DrawDate.Date == date.Date &&
+                (tl.LineStatus == "winner" || tl.LineStatus == "loser") &&
+                !tl.Ticket!.IsCancelled)
+            .ToListAsync(cancellationToken);
+
+        if (processedLines.Count == 0) return;
+
+        var affectedTicketIds = new HashSet<long>();
+
+        foreach (var line in processedLines)
+        {
+            // Subtract this line's prize from the ticket before resetting
+            if (line.IsWinner && line.Ticket != null)
+            {
+                line.Ticket.TotalPrize -= line.PrizeAmount;
+                line.Ticket.WinningLines--;
+                if (line.Ticket.TotalPrize < 0) line.Ticket.TotalPrize = 0;
+                if (line.Ticket.WinningLines < 0) line.Ticket.WinningLines = 0;
+            }
+
+            line.LineStatus = "pending";
+            line.IsWinner = false;
+            line.PrizeAmount = 0;
+            line.WinningPosition = null;
+            line.ResultNumber = null;
+            line.ResultCheckedAt = null;
+
+            affectedTicketIds.Add(line.TicketId);
+        }
+
+        // Reset ticket states for affected tickets
+        if (affectedTicketIds.Any())
+        {
+            await UpdateTicketStatesAsync(affectedTicketIds, cancellationToken);
+        }
+
+        await _context.SaveChangesAsync(cancellationToken);
+
+        _logger.LogInformation("Reset {Count} ticket lines for draw {DrawId} on {Date}",
+            processedLines.Count, drawId, date.Date);
     }
 
     /// <summary>

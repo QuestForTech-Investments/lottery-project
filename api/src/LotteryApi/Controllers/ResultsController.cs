@@ -19,6 +19,32 @@ public class ResultsController : ControllerBase
     private readonly ILogger<ResultsController> _logger;
     private readonly IExternalResultsService _externalResultsService;
 
+    /// <summary>
+    /// Super Pale: source draw → (target composite draw, which field it contributes: num1 or num2).
+    /// SUPER PALE TARDE = REAL(1ra) + GANA MAS(1ra)
+    /// SUPER PALE NOCHE = NACIONAL(1ra) + QUINIELA PALE(1ra)
+    /// </summary>
+    private static readonly Dictionary<string, (string TargetDraw, string TargetField)> SuperPaleSourceMap =
+        new(StringComparer.OrdinalIgnoreCase)
+    {
+        { "REAL", ("SUPER PALE TARDE", "num1") },
+        { "GANA MAS", ("SUPER PALE TARDE", "num2") },
+        { "NACIONAL", ("SUPER PALE NOCHE", "num1") },
+        { "QUINIELA PALE", ("SUPER PALE NOCHE", "num2") },
+    };
+
+    /// <summary>
+    /// 6x1: source draw → target 6x1 draw. Copies cash3+play4 from source.
+    /// </summary>
+    private static readonly Dictionary<string, string> Draw6x1SourceMap =
+        new(StringComparer.OrdinalIgnoreCase)
+    {
+        { "NEW YORK DAY", "NY AM 6X1" },
+        { "NEW YORK NIGHT", "NY PM 6X1" },
+        { "FLORIDA AM", "FL AM 6X1" },
+        { "FLORIDA PM", "FL PM 6X1" },
+    };
+
     public ResultsController(
         LotteryDbContext context,
         ILogger<ResultsController> logger,
@@ -155,12 +181,20 @@ public class ResultsController : ControllerBase
 
             _logger.LogInformation("Updated result {ResultId} for draw {DrawId}", existingResult.ResultId, dto.DrawId);
 
+            // Reset previously processed lines so they can be reprocessed with the new result
+            await _externalResultsService.ResetTicketLinesForDrawAsync(dto.DrawId, dto.ResultDate);
+
             // Automatically check for winners when result is updated
             var (ticketsProcessed, winnersFound) = await _externalResultsService.ProcessTicketsForDrawAsync(
                 dto.DrawId, dto.ResultDate);
 
             _logger.LogInformation("Processed {TicketsProcessed} tickets for draw {DrawId}, found {WinnersFound} winners",
                 ticketsProcessed, dto.DrawId, winnersFound);
+
+            // Cascade reprocess to composite draws (Super Pale, 6x1)
+            var (cascadeTickets, cascadeWinners) = await CascadeReprocessCompositeDrawsAsync(draw.DrawName, dto.ResultDate);
+            ticketsProcessed += cascadeTickets;
+            winnersFound += cascadeWinners;
 
             var resultDto = MapToDto(existingResult);
             return Ok(new
@@ -197,6 +231,11 @@ public class ResultsController : ControllerBase
 
         _logger.LogInformation("Processed {TicketsProcessed} tickets for draw {DrawId}, found {WinnersFound} winners",
             newTicketsProcessed, dto.DrawId, newWinnersFound);
+
+        // Cascade reprocess to composite draws (Super Pale, 6x1)
+        var (newCascadeTickets, newCascadeWinners) = await CascadeReprocessCompositeDrawsAsync(draw.DrawName, dto.ResultDate);
+        newTicketsProcessed += newCascadeTickets;
+        newWinnersFound += newCascadeWinners;
 
         var newResultDto = MapToDto(result);
         return Ok(new
@@ -246,12 +285,21 @@ public class ResultsController : ControllerBase
 
         _logger.LogInformation("Updated result {ResultId}", id);
 
-        // Automatically check for winners when result is updated
+        // Reset previously processed lines so they can be reprocessed with the new result
+        await _externalResultsService.ResetTicketLinesForDrawAsync(dto.DrawId, dto.ResultDate);
+
+        // Reprocess all tickets with the updated result
         var (ticketsProcessed, winnersFound) = await _externalResultsService.ProcessTicketsForDrawAsync(
             dto.DrawId, dto.ResultDate);
 
         _logger.LogInformation("Processed {TicketsProcessed} tickets for draw {DrawId}, found {WinnersFound} winners",
             ticketsProcessed, dto.DrawId, winnersFound);
+
+        // Cascade reprocess to composite draws (Super Pale, 6x1)
+        var drawName = result.Draw?.DrawName ?? "";
+        var (cascadeTickets, cascadeWinners) = await CascadeReprocessCompositeDrawsAsync(drawName, dto.ResultDate);
+        ticketsProcessed += cascadeTickets;
+        winnersFound += cascadeWinners;
 
         var resultDto = MapToDto(result);
         return Ok(new
@@ -709,25 +757,34 @@ public class ResultsController : ControllerBase
         var totalTicketsProcessed = 0;
         var totalWinnersFound = 0;
 
-        // Get unique draw IDs that were updated or created
-        var processedDrawIds = response.Details
+        // Get draws that were updated or created (need both ID and name for cascade)
+        var processedDraws = response.Details
             .Where(d => d.Status == "updated" || d.Status == "created")
-            .Select(d => GetDrawIdByName(d.DrawName))
-            .Where(id => id.HasValue)
-            .Select(id => id!.Value)
-            .Distinct()
+            .Select(d => new { Name = d.DrawName, Id = GetDrawIdByName(d.DrawName) })
+            .Where(d => d.Id.HasValue)
+            .Select(d => new { d.Name, Id = d.Id!.Value })
+            .GroupBy(d => d.Id)
+            .Select(g => g.First())
             .ToList();
 
-        foreach (var drawId in processedDrawIds)
+        foreach (var draw in processedDraws)
         {
+            // Reset lines for updated results so they can be reprocessed
+            await _externalResultsService.ResetTicketLinesForDrawAsync(draw.Id, request.Date);
+
             var (ticketsProcessed, winnersFound) = await _externalResultsService.ProcessTicketsForDrawAsync(
-                drawId, request.Date);
+                draw.Id, request.Date);
             totalTicketsProcessed += ticketsProcessed;
             totalWinnersFound += winnersFound;
+
+            // Cascade reprocess to composite draws (Super Pale, 6x1)
+            var (cascadeTickets, cascadeWinners) = await CascadeReprocessCompositeDrawsAsync(draw.Name, request.Date);
+            totalTicketsProcessed += cascadeTickets;
+            totalWinnersFound += cascadeWinners;
         }
 
         _logger.LogInformation("Processed {TicketsProcessed} tickets across {DrawCount} draws, found {WinnersFound} winners",
-            totalTicketsProcessed, processedDrawIds.Count, totalWinnersFound);
+            totalTicketsProcessed, processedDraws.Count, totalWinnersFound);
 
         response.Success = response.Errors.Count == 0;
         response.Message = $"Sync completed: {response.Updated} updated, {response.Created} created, {response.Skipped} skipped, {totalWinnersFound} winners found";
@@ -819,6 +876,176 @@ public class ResultsController : ControllerBase
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// Cascade: update the composite draw's result AND reprocess its tickets.
+    /// For Super Pale: updates the relevant num (1ra or 2da) from the source draw's 1ra.
+    /// For 6x1: copies cash3+play4 from the source and recalculates the winning number.
+    /// </summary>
+    private async Task<(int totalTickets, int totalWinners)> CascadeReprocessCompositeDrawsAsync(
+        string sourceDrawName, DateTime resultDate)
+    {
+        var totalTickets = 0;
+        var totalWinners = 0;
+
+        // --- Super Pale cascade ---
+        if (SuperPaleSourceMap.TryGetValue(sourceDrawName, out var spTarget))
+        {
+            var (t, w) = await CascadeSuperPaleAsync(sourceDrawName, spTarget.TargetDraw, spTarget.TargetField, resultDate);
+            totalTickets += t;
+            totalWinners += w;
+        }
+
+        // --- 6x1 cascade ---
+        if (Draw6x1SourceMap.TryGetValue(sourceDrawName, out var target6x1))
+        {
+            var (t, w) = await Cascade6x1Async(sourceDrawName, target6x1, resultDate);
+            totalTickets += t;
+            totalWinners += w;
+        }
+
+        return (totalTickets, totalWinners);
+    }
+
+    /// <summary>
+    /// Update a Super Pale result with the source draw's 1ra, then reset+reprocess tickets.
+    /// Super Pale WinningNumber is 4 digits: num1(2) + num2(2).
+    /// </summary>
+    private async Task<(int tickets, int winners)> CascadeSuperPaleAsync(
+        string sourceDrawName, string targetDrawName, string targetField, DateTime resultDate)
+    {
+        // Get source draw's result to extract its 1ra (first 2 digits)
+        var sourceDraw = await _context.Draws.AsNoTracking()
+            .FirstOrDefaultAsync(d => d.DrawName == sourceDrawName && d.IsActive == true);
+        if (sourceDraw == null) return (0, 0);
+
+        var sourceResult = await _context.Results.AsNoTracking()
+            .FirstOrDefaultAsync(r => r.DrawId == sourceDraw.DrawId && r.ResultDate.Date == resultDate.Date);
+        if (sourceResult == null || string.IsNullOrEmpty(sourceResult.WinningNumber) || sourceResult.WinningNumber.Length < 2)
+            return (0, 0);
+
+        var sourceNum1 = sourceResult.WinningNumber.Substring(0, 2);
+
+        // Find the composite draw
+        var compositeDraw = await _context.Draws.AsNoTracking()
+            .FirstOrDefaultAsync(d => d.DrawName == targetDrawName && d.IsActive == true);
+        if (compositeDraw == null)
+        {
+            _logger.LogWarning("Super Pale draw '{DrawName}' not found, skipping cascade", targetDrawName);
+            return (0, 0);
+        }
+
+        // Get or create the composite result (tracked, so we can modify it)
+        var compositeResult = await _context.Results
+            .FirstOrDefaultAsync(r => r.DrawId == compositeDraw.DrawId && r.ResultDate.Date == resultDate.Date);
+
+        if (compositeResult == null)
+        {
+            // Create a new result for the composite draw
+            compositeResult = new Result
+            {
+                DrawId = compositeDraw.DrawId,
+                ResultDate = resultDate,
+                WinningNumber = targetField == "num1" ? sourceNum1 + "00" : "00" + sourceNum1,
+                CreatedAt = DateTime.UtcNow,
+            };
+            _context.Results.Add(compositeResult);
+            _logger.LogInformation("Created new result for '{DrawName}' from source '{Source}'", targetDrawName, sourceDrawName);
+        }
+        else
+        {
+            // Update the relevant half of the 4-digit winning number
+            var existing = (compositeResult.WinningNumber ?? "0000").PadRight(4, '0');
+            compositeResult.WinningNumber = targetField == "num1"
+                ? sourceNum1 + existing.Substring(2, 2)
+                : existing.Substring(0, 2) + sourceNum1;
+            compositeResult.UpdatedAt = DateTime.UtcNow;
+            _logger.LogInformation("Updated '{DrawName}' {Field} to {Value} from source '{Source}'",
+                targetDrawName, targetField, sourceNum1, sourceDrawName);
+        }
+
+        await _context.SaveChangesAsync();
+
+        // Reset and reprocess tickets
+        await _externalResultsService.ResetTicketLinesForDrawAsync(compositeDraw.DrawId, resultDate);
+        var (processed, winners) = await _externalResultsService.ProcessTicketsForDrawAsync(compositeDraw.DrawId, resultDate);
+
+        _logger.LogInformation("Cascade Super Pale '{DrawName}': {Processed} tickets, {Winners} winners",
+            targetDrawName, processed, winners);
+
+        return (processed, winners);
+    }
+
+    /// <summary>
+    /// Update a 6x1 draw's result with the source draw's cash3+play4, then reset+reprocess.
+    /// 6x1 WinningNumber = num1+num2+num3 derived from cash3+play4 (USA algorithm).
+    /// </summary>
+    private async Task<(int tickets, int winners)> Cascade6x1Async(
+        string sourceDrawName, string targetDrawName, DateTime resultDate)
+    {
+        // Get source draw's result for cash3+play4
+        var sourceDraw = await _context.Draws.AsNoTracking()
+            .FirstOrDefaultAsync(d => d.DrawName == sourceDrawName && d.IsActive == true);
+        if (sourceDraw == null) return (0, 0);
+
+        var sourceResult = await _context.Results.AsNoTracking()
+            .FirstOrDefaultAsync(r => r.DrawId == sourceDraw.DrawId && r.ResultDate.Date == resultDate.Date);
+        if (sourceResult == null || string.IsNullOrEmpty(sourceResult.AdditionalNumber))
+            return (0, 0);
+
+        var an = sourceResult.AdditionalNumber;
+        if (an.Length < 7) return (0, 0); // Need at least cash3(3) + play4(4)
+
+        var cash3 = an.Substring(0, 3);
+        var play4 = an.Substring(3, 4);
+
+        // Find the 6x1 draw
+        var compositeDraw = await _context.Draws.AsNoTracking()
+            .FirstOrDefaultAsync(d => d.DrawName == targetDrawName && d.IsActive == true);
+        if (compositeDraw == null)
+        {
+            _logger.LogWarning("6x1 draw '{DrawName}' not found, skipping cascade", targetDrawName);
+            return (0, 0);
+        }
+
+        // Get or create the composite result (tracked)
+        // 6x1 draws only have cash3+play4, no WinningNumber (no 1ra/2da/3ra)
+        var compositeResult = await _context.Results
+            .FirstOrDefaultAsync(r => r.DrawId == compositeDraw.DrawId && r.ResultDate.Date == resultDate.Date);
+
+        if (compositeResult == null)
+        {
+            compositeResult = new Result
+            {
+                DrawId = compositeDraw.DrawId,
+                ResultDate = resultDate,
+                WinningNumber = "",
+                AdditionalNumber = cash3 + play4,
+                CreatedAt = DateTime.UtcNow,
+            };
+            _context.Results.Add(compositeResult);
+            _logger.LogInformation("Created new result for '{DrawName}' from source '{Source}'", targetDrawName, sourceDrawName);
+        }
+        else
+        {
+            compositeResult.AdditionalNumber = cash3 + play4;
+            compositeResult.WinningNumber = "";
+            compositeResult.UpdatedAt = DateTime.UtcNow;
+            _logger.LogInformation("Updated '{DrawName}' (cash3={C3}, play4={P4}) from source '{Source}'",
+                targetDrawName, cash3, play4, sourceDrawName);
+        }
+
+        await _context.SaveChangesAsync();
+
+        // Reset and reprocess tickets
+        await _externalResultsService.ResetTicketLinesForDrawAsync(compositeDraw.DrawId, resultDate);
+        var (processed, winners) = await _externalResultsService.ProcessTicketsForDrawAsync(compositeDraw.DrawId, resultDate);
+
+        _logger.LogInformation("Cascade 6x1 '{DrawName}': {Processed} tickets, {Winners} winners",
+            targetDrawName, processed, winners);
+
+        return (processed, winners);
     }
 
     private int? GetCurrentUserId()
