@@ -1179,7 +1179,8 @@ public class TicketsController : ControllerBase
                     EarliestDrawTime = t.EarliestDrawTime,
                     LatestDrawTime = t.LatestDrawTime,
                     PrintCount = t.PrintCount,
-                    IsOutOfScheduleSale = t.SpecialFlags != null && t.SpecialFlags.Contains("OUT_OF_SCHEDULE")
+                    IsOutOfScheduleSale = t.SpecialFlags != null && t.SpecialFlags.Contains("OUT_OF_SCHEDULE"),
+                    IsCancelledOutOfTime = t.SpecialFlags != null && t.SpecialFlags.Contains("CANCELLED_OUT_OF_TIME")
                 })
                 .ToListAsync();
 
@@ -1314,20 +1315,29 @@ public class TicketsController : ControllerBase
             }
 
             // 4. Validate cancellation time window
-            var bpCancelConfig = await _context.BettingPoolConfigs
-                .AsNoTracking()
-                .FirstOrDefaultAsync(c => c.BettingPoolId == ticket.BettingPoolId);
-            var cancelMinutes = bpCancelConfig?.CancelMinutes ?? 5;
-            var now = DateTime.UtcNow;
-            var timeSinceCreation = now - ticket.CreatedAt;
+            var canCancelAnytime = await _context.UserPermissions
+                .AnyAsync(up => up.UserId == dto.CancelledBy
+                    && up.Permission!.PermissionCode == "CANCEL_TICKETS_ANYTIME"
+                    && up.IsActive);
 
-            if (timeSinceCreation.TotalMinutes > cancelMinutes)
+            var now = DateTime.UtcNow;
+
+            if (!canCancelAnytime)
             {
-                return UnprocessableEntity(new
+                var bpCancelConfig = await _context.BettingPoolConfigs
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(c => c.BettingPoolId == ticket.BettingPoolId);
+                var cancelMinutes = bpCancelConfig?.CancelMinutes ?? 5;
+                var timeSinceCreation = now - ticket.CreatedAt;
+
+                if (timeSinceCreation.TotalMinutes > cancelMinutes)
                 {
-                    code = "CANCELLATION_TIME_EXPIRED",
-                    maxMinutes = cancelMinutes
-                });
+                    return UnprocessableEntity(new
+                    {
+                        code = "CANCELLATION_TIME_EXPIRED",
+                        maxMinutes = cancelMinutes
+                    });
+                }
             }
 
             // 5. Validate user exists
@@ -1337,7 +1347,26 @@ public class TicketsController : ControllerBase
                 return NotFound(new { code = "USER_NOT_FOUND" });
             }
 
-            // 6. Cancel ticket
+            // 6. Check if cancellation is out of time (admin override)
+            if (canCancelAnytime)
+            {
+                var bpCancelConfig = await _context.BettingPoolConfigs
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(c => c.BettingPoolId == ticket.BettingPoolId);
+                var cancelMinutes = bpCancelConfig?.CancelMinutes ?? 5;
+                var timeSinceCreation = now - ticket.CreatedAt;
+
+                if (timeSinceCreation.TotalMinutes > cancelMinutes)
+                {
+                    // Append CANCELLED_OUT_OF_TIME flag
+                    var flags = string.IsNullOrEmpty(ticket.SpecialFlags)
+                        ? "CANCELLED_OUT_OF_TIME"
+                        : ticket.SpecialFlags + "|CANCELLED_OUT_OF_TIME";
+                    ticket.SpecialFlags = flags;
+                }
+            }
+
+            // 7. Cancel ticket
             ticket.IsCancelled = true;
             ticket.CancelledAt = now;
             ticket.CancelledBy = dto.CancelledBy;
@@ -1346,7 +1375,7 @@ public class TicketsController : ControllerBase
             ticket.UpdatedAt = now;
             ticket.UpdatedBy = dto.CancelledBy;
 
-            // 7. Cancel all lines
+            // 8. Cancel all lines
             foreach (var line in ticket.TicketLines)
             {
                 line.LineStatus = "cancelled";
@@ -1363,7 +1392,7 @@ public class TicketsController : ControllerBase
                 dto.CancelledBy,
                 dto.CancellationReason);
 
-            // 8. Return updated ticket
+            // 9. Return updated ticket
             var updatedTicket = await GetTicketById(ticket.TicketId);
             return Ok(updatedTicket);
         }

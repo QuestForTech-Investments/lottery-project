@@ -6,7 +6,7 @@
 
 import { memo, useCallback, type FC } from 'react';
 import { TableRow, TableCell, Box, IconButton, Tooltip } from '@mui/material';
-import { Print as PrintIcon, Cancel as CancelIcon, Send as SendIcon, Schedule as ScheduleIcon, ArrowBack as ArrowBackIcon, ArrowForward as ArrowForwardIcon } from '@mui/icons-material';
+import { Print as PrintIcon, Cancel as CancelIcon, Send as SendIcon, Schedule as ScheduleIcon, ArrowBack as ArrowBackIcon, ArrowForward as ArrowForwardIcon, Visibility as VisibilityIcon } from '@mui/icons-material';
 import { formatCurrency } from '../../../../../utils/formatCurrency';
 import { getEstadoColor } from '../constants';
 import type { TicketRowProps } from '../types';
@@ -43,41 +43,43 @@ const TicketRow: FC<TicketRowProps> = memo(({ ticket, isSelected, onRowClick, on
       }}
       onClick={handleRowClick}
     >
-      <TableCell sx={{ position: 'relative' }}>
-        {ticket.numero}
-        {(ticket.isOutOfScheduleSale || ticket.isPreviousDay || ticket.isFutureDay) && (
-          <Box sx={{ position: 'absolute', right: -4, top: '50%', transform: 'translateY(-50%)', display: 'flex', alignItems: 'center' }}>
-            {ticket.isOutOfScheduleSale && ticket.estado !== 'Cancelado' && (
-              <Tooltip title="Venta fuera de horario" arrow>
-                <ScheduleIcon sx={{ fontSize: 17, color: '#e53935' }} />
-              </Tooltip>
-            )}
-            {ticket.estado === 'Cancelado' && ticket.isOutOfScheduleSale && (
-              <Tooltip title="Cancelado con jugadas fuera de horario" arrow>
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <ScheduleIcon sx={{ fontSize: 17, color: '#9c27b0' }} />
-                  <CancelIcon sx={{ fontSize: 17, color: '#9c27b0', ml: -0.3 }} />
-                </Box>
-              </Tooltip>
-            )}
-            {ticket.isPreviousDay && (
-              <Tooltip title="Venta día anterior" arrow>
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <ArrowBackIcon sx={{ fontSize: 17, color: '#ff9800', mr: -0.3 }} />
-                  <ScheduleIcon sx={{ fontSize: 17, color: '#ff9800' }} />
-                </Box>
-              </Tooltip>
-            )}
-            {ticket.isFutureDay && (
-              <Tooltip title="Venta futura" arrow>
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <ScheduleIcon sx={{ fontSize: 17, color: '#2196f3' }} />
-                  <ArrowForwardIcon sx={{ fontSize: 17, color: '#2196f3', ml: -0.3 }} />
-                </Box>
-              </Tooltip>
-            )}
-          </Box>
-        )}
+      <TableCell>{ticket.numero}</TableCell>
+      <TableCell sx={{ px: 0 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'center', gap: 0.25 }}>
+          {ticket.isOutOfScheduleSale && ticket.estado === 'Ganador' && (
+            <Tooltip title="Ganador con jugadas fuera de horario" arrow>
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <ScheduleIcon sx={{ fontSize: 18, color: '#e53935' }} />
+                <VisibilityIcon sx={{ fontSize: 18, color: '#e53935' }} />
+              </Box>
+            </Tooltip>
+          )}
+          {ticket.isOutOfScheduleSale && ticket.estado !== 'Cancelado' && ticket.estado !== 'Ganador' && (
+            <Tooltip title="Venta fuera de horario" arrow>
+              <ScheduleIcon sx={{ fontSize: 18, color: '#e53935' }} />
+            </Tooltip>
+          )}
+          {ticket.estado === 'Cancelado' && ticket.isOutOfScheduleSale && (
+            <Tooltip title="Cancelado con jugadas fuera de horario" arrow>
+              <ScheduleIcon sx={{ fontSize: 18, color: '#9c27b0' }} />
+            </Tooltip>
+          )}
+          {ticket.isCancelledOutOfTime && (
+            <Tooltip title="Cancelado fuera de tiempo" arrow>
+              <CancelIcon sx={{ fontSize: 18, color: '#e65100' }} />
+            </Tooltip>
+          )}
+          {ticket.isPreviousDay && (
+            <Tooltip title="Venta día anterior" arrow>
+              <ArrowBackIcon sx={{ fontSize: 18, color: '#ff9800' }} />
+            </Tooltip>
+          )}
+          {ticket.isFutureDay && (
+            <Tooltip title="Venta futura" arrow>
+              <ArrowForwardIcon sx={{ fontSize: 18, color: '#2196f3' }} />
+            </Tooltip>
+          )}
+        </Box>
       </TableCell>
       <TableCell>{ticket.fecha}</TableCell>
       <TableCell>{ticket.usuario}</TableCell>

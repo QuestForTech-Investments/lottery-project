@@ -672,11 +672,11 @@ public class ExternalResultsService : IExternalResultsService
             // Pulito - last digit of bet matches last digit of any position
             "PULITO" or "LAST1" => GetPulitoPosition(betNumber, num1, num2, num3),
 
-            // Super Palé - matches positions 1 and 3 of SAME draw
-            // NOTE: According to lottery rules, Super Palé should be between TWO different lotteries.
-            // Current implementation checks positions 1 and 3 of the same draw.
-            // TODO: Implement cross-lottery Super Palé in future version.
-            "SUPER_PALE" or "SUPER PALÉ" or "SUPER_PALÉ" => CheckSuperPaleMatch(betNumber, num1, num3) ? 1 : 0,
+            // Super Palé - composed from TWO source draws:
+            // SUPER PALE TARDE = Real(1ra) + Gana Más(1ra)
+            // SUPER PALE NOCHE = Nacional(1ra) + Quiniela Palé(1ra)
+            // Result stored as num1 + num2 (4 digits), num3 is empty.
+            "SUPER_PALE" or "SUPER PALÉ" or "SUPER_PALÉ" => CheckSuperPaleMatch(betNumber, num1, num2) ? 1 : 0,
 
             // Cash3 Straight - 3 digit exact match against Cash3 result
             // DisplayOrder 1 = Todos en secuencia (exact match), DisplayOrder 2 = Triples (e.g., 222, 333)
@@ -706,20 +706,19 @@ public class ExternalResultsService : IExternalResultsService
             // DisplayOrder 1 = 24-Way (4 unique), 2 = 12-Way (1 pair), 3 = 6-Way (2 pairs), 4 = 4-Way (3 identical)
             "PLAY4 BOX" or "PLAY4_BOX" => GetPlay4BoxPosition(betNumber, play4Result),
 
-            // Bolita 1 - 2 digit bet matches first 2 digits of Cash3 (e.g., Cash3 "915" → Bolita1 = "91")
-            "BOLITA 1" or "BOLITA_1" => betNumber == (cash3Result.Length >= 2 ? cash3Result.Substring(0, 2) : "") ? 1 : 0,
+            // Bolita - 2 digit bet matches Cash3 digits by position
+            // Position 1: first 2 digits (e.g., Cash3 "915" → "91")
+            // Position 2: last 2 digits (e.g., Cash3 "915" → "15")
+            "BOLITA" or "BOLITA 1" or "BOLITA_1" or "BOLITA 2" or "BOLITA_2" =>
+                GetBolitaPosition(betNumber, cash3Result, line.Position ?? 1, betTypeCode),
 
-            // Bolita 2 - 2 digit bet matches last 2 digits of Cash3 (e.g., Cash3 "915" → Bolita2 = "15")
-            "BOLITA 2" or "BOLITA_2" => betNumber == (cash3Result.Length >= 3 ? cash3Result.Substring(1, 2) : "") ? 1 : 0,
-
-            // Singulacion 1 - 1 digit bet matches 1st digit of Cash3 (e.g., Cash3 "915" → "9")
-            "SINGULACIÓN 1" or "SINGULACION_1" => betNumber == (cash3Result.Length >= 1 ? cash3Result.Substring(0, 1) : "") ? 1 : 0,
-
-            // Singulacion 2 - 1 digit bet matches 2nd digit of Cash3 (e.g., Cash3 "915" → "1")
-            "SINGULACIÓN 2" or "SINGULACION_2" => betNumber == (cash3Result.Length >= 2 ? cash3Result.Substring(1, 1) : "") ? 1 : 0,
-
-            // Singulacion 3 - 1 digit bet matches 3rd digit of Cash3 (e.g., Cash3 "915" → "5")
-            "SINGULACIÓN 3" or "SINGULACION_3" => betNumber == (cash3Result.Length >= 3 ? cash3Result.Substring(2, 1) : "") ? 1 : 0,
+            // Singulacion - 1 digit bet matches a specific digit of Cash3 by position
+            // Position 1: 1st digit (e.g., Cash3 "915" → "9")
+            // Position 2: 2nd digit (e.g., Cash3 "915" → "1")
+            // Position 3: 3rd digit (e.g., Cash3 "915" → "5")
+            "SINGULACION" or "SINGULACIÓN" or "SINGULACIÓN 1" or "SINGULACION_1"
+                or "SINGULACIÓN 2" or "SINGULACION_2" or "SINGULACIÓN 3" or "SINGULACION_3" =>
+                GetSingulacionPosition(betNumber, cash3Result, line.Position ?? 1, betTypeCode),
 
             // Pick5 Straight - 5 digit exact match against Pick5 result
             // DisplayOrder 1 = Todos en secuencia (5 unique digits), DisplayOrder 2 = Dobles (has repeated digits)
@@ -757,6 +756,54 @@ public class ExternalResultsService : IExternalResultsService
         if (betNumber == num2) return 2;
         if (betNumber == num3) return 3;
         return 0;
+    }
+
+    /// <summary>
+    /// Returns 1 if the Bolita bet wins, 0 otherwise.
+    /// Uses line.Position to determine which Cash3 segment to check.
+    /// Handles both bare "BOLITA" code (position from line) and legacy "BOLITA_1"/"BOLITA_2" codes.
+    /// </summary>
+    private int GetBolitaPosition(string betNumber, string cash3Result, int position, string betTypeCode)
+    {
+        // Resolve position: if betTypeCode includes a number, use it; otherwise use line.Position
+        var resolvedPosition = betTypeCode switch
+        {
+            "BOLITA 1" or "BOLITA_1" => 1,
+            "BOLITA 2" or "BOLITA_2" => 2,
+            _ => position
+        };
+
+        return resolvedPosition switch
+        {
+            1 => betNumber == (cash3Result.Length >= 2 ? cash3Result.Substring(0, 2) : "") ? 1 : 0,
+            2 => betNumber == (cash3Result.Length >= 3 ? cash3Result.Substring(1, 2) : "") ? 1 : 0,
+            _ => 0
+        };
+    }
+
+    /// <summary>
+    /// Returns 1 if the Singulacion bet wins, 0 otherwise.
+    /// Uses line.Position to determine which Cash3 digit to check.
+    /// Handles both bare "SINGULACION" code (position from line) and legacy "SINGULACION_1" etc.
+    /// </summary>
+    private int GetSingulacionPosition(string betNumber, string cash3Result, int position, string betTypeCode)
+    {
+        // Resolve position: if betTypeCode includes a number, use it; otherwise use line.Position
+        var resolvedPosition = betTypeCode switch
+        {
+            "SINGULACIÓN 1" or "SINGULACION_1" => 1,
+            "SINGULACIÓN 2" or "SINGULACION_2" => 2,
+            "SINGULACIÓN 3" or "SINGULACION_3" => 3,
+            _ => position
+        };
+
+        return resolvedPosition switch
+        {
+            1 => betNumber == (cash3Result.Length >= 1 ? cash3Result.Substring(0, 1) : "") ? 1 : 0,
+            2 => betNumber == (cash3Result.Length >= 2 ? cash3Result.Substring(1, 1) : "") ? 1 : 0,
+            3 => betNumber == (cash3Result.Length >= 3 ? cash3Result.Substring(2, 1) : "") ? 1 : 0,
+            _ => 0
+        };
     }
 
     /// <summary>
@@ -864,18 +911,20 @@ public class ExternalResultsService : IExternalResultsService
     }
 
     /// <summary>
-    /// Checks if Super Palé matches (positions 1 and 3).
+    /// Checks if Super Palé matches. Super Palé result is composed from two source draws:
+    /// sourceA (1ra) stored as num1, sourceB (1ra) stored as num2.
+    /// Bet wins if first 2 digits match one source and last 2 digits match the other (either order).
     /// </summary>
-    private bool CheckSuperPaleMatch(string betNumber, string num1, string num3)
+    private bool CheckSuperPaleMatch(string betNumber, string sourceA, string sourceB)
     {
-        if (betNumber.Length != 4 || string.IsNullOrEmpty(num1) || string.IsNullOrEmpty(num3))
+        if (betNumber.Length != 4 || string.IsNullOrEmpty(sourceA) || string.IsNullOrEmpty(sourceB))
             return false;
 
         var betFirst = betNumber.Substring(0, 2);
         var betSecond = betNumber.Substring(2, 2);
 
-        return (betFirst == num1 && betSecond == num3) ||
-               (betFirst == num3 && betSecond == num1);
+        return (betFirst == sourceA && betSecond == sourceB) ||
+               (betFirst == sourceB && betSecond == sourceA);
     }
 
     private bool CheckPaleMatch(string betNumber, string num1, string num2)
@@ -1168,6 +1217,28 @@ public class ExternalResultsService : IExternalResultsService
         var prizeBetTypeId = GameTypeToPrizeBetType.TryGetValue(line.BetTypeId, out var mapped)
             ? mapped
             : line.BetTypeId;
+
+        // Position-aware override for Bolita and Singulacion:
+        // Each position has its own prize bet_type_id in the prize_types table.
+        if (line.BetTypeId == 19 && line.Position.HasValue) // BOLITA
+        {
+            prizeBetTypeId = line.Position.Value switch
+            {
+                1 => 25,  // BOLITA_1
+                2 => 26,  // BOLITA_2
+                _ => 25
+            };
+        }
+        else if (line.BetTypeId == 20 && line.Position.HasValue) // SINGULACION
+        {
+            prizeBetTypeId = line.Position.Value switch
+            {
+                1 => 27,  // SINGULACION_1
+                2 => 28,  // SINGULACION_2
+                3 => 29,  // SINGULACION_3
+                _ => 27
+            };
+        }
 
         if (prizeBetTypeId != line.BetTypeId)
         {

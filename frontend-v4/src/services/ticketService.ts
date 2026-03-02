@@ -103,6 +103,7 @@ export interface TicketResponse {
   ticketState?: string; // P=Pending, W=Winner, L=Loser
   winningLines?: number;
   isOutOfScheduleSale?: boolean;
+  isCancelledOutOfTime?: boolean;
   lines?: TicketLineResponse[];
 }
 
@@ -151,6 +152,7 @@ export interface MappedTicket {
   isPreviousDay?: boolean;
   isFutureDay?: boolean;
   isOutOfScheduleSale?: boolean;
+  isCancelledOutOfTime?: boolean;
   lines?: MappedTicketLine[];
 }
 
@@ -259,6 +261,7 @@ export const mapTicketResponse = (ticket: TicketResponse): MappedTicket => {
       : null,
     estado,
     isOutOfScheduleSale: ticket.isOutOfScheduleSale || false,
+    isCancelledOutOfTime: ticket.isCancelledOutOfTime || false,
   };
 };
 

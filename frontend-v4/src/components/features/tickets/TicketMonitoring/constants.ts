@@ -123,7 +123,7 @@ export const STYLES = {
     fontFamily: 'Montserrat, "Helvetica Neue", Arial, sans-serif',
   },
   quickSearch: { mb: 0, maxWidth: 200, '& .MuiInputBase-root': { height: 32 } },
-  tableContainer: { maxWidth: 880 },
+  tableContainer: { maxWidth: 920 },
   tableHeader: { backgroundColor: '#e3e3e3' },
   tableHeaderCell: {
     fontWeight: 600,
@@ -137,7 +137,8 @@ export const STYLES = {
 
 // Column widths - compact to leave room for detail panel
 export const COLUMN_WIDTHS: Record<string, number> = {
-  'Número': 160,
+  'Número': 165,
+  '': 40,
   'Fecha': 135,
   'Usuario': 60,
   'Monto': 80,

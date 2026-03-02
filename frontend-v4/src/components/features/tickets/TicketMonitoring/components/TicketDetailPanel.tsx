@@ -20,6 +20,7 @@ import {
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import EditIcon from '@mui/icons-material/Edit';
+import CancelIcon from '@mui/icons-material/Cancel';
 import ScheduleIcon from '@mui/icons-material/Schedule';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
@@ -474,6 +475,17 @@ const TicketDetailPanel: FC<TicketDetailPanelProps> = memo(({ ticket, onClose })
           Fecha de impresión: {ticket.fecha}
         </Typography>
       </Box>
+
+      {/* Cancelled out of time flag */}
+      {ticket.isCancelledOutOfTime && (
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, py: 0.5 }}>
+          <CancelIcon sx={{ fontSize: 16, color: '#e65100' }} />
+          <ScheduleIcon sx={{ fontSize: 16, color: '#e65100' }} />
+          <Typography sx={{ fontSize: '12px', color: '#e65100', fontWeight: 'bold' }}>
+            Cancelado fuera de tiempo
+          </Typography>
+        </Box>
+      )}
 
       {/* Legend */}
       <Box sx={{ padding: '2px 15px' }}>

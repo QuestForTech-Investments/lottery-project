@@ -640,6 +640,27 @@ const Results = (): React.ReactElement => {
               [target.targetField]: publishedDraw.num1,
               isDirty: true,
             };
+
+            // Auto-publish Super Palé when both source numbers are present
+            const spRow = updatedResults[targetIdx];
+            if (spRow.num1 && /^\d{2}$/.test(spRow.num1) && spRow.num2 && /^\d{2}$/.test(spRow.num2)) {
+              try {
+                const savedSP = await createResult({
+                  drawId: spRow.drawId,
+                  winningNumber: spRow.num1 + spRow.num2,
+                  additionalNumber: null,
+                  resultDate: selectedDate,
+                });
+                updatedResults[targetIdx] = {
+                  ...updatedResults[targetIdx],
+                  resultId: savedSP?.resultId || null,
+                  hasResult: true,
+                  isDirty: false,
+                };
+              } catch (err) {
+                console.error(`Error auto-publishing ${spRow.drawName}:`, err);
+              }
+            }
           }
         }
 

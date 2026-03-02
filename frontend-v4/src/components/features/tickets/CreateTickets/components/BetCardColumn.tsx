@@ -17,7 +17,8 @@ const formatBetNumber = (number: string): string => {
   const str = String(number);
 
   // Match known suffixes (longest first to avoid partial matches)
-  const suffixMatch = str.match(/(fs|fb|bs|bb|bk|[sbfm])$/);
+  // s1-s3 = singulacion, b1-b2 = bolita, fs/fb/bs/bb/bk = cash3/pick2 variants
+  const suffixMatch = str.match(/(fs|fb|bs|bb|bk|s[123]|b[12]|[sbfm])$/);
   if (suffixMatch) {
     const suffix = suffixMatch[1];
     const digits = str.slice(0, str.length - suffix.length);

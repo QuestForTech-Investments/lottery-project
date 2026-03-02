@@ -66,6 +66,7 @@ export const TICKET_STATUS_MAP: Record<Exclude<TicketStatusKey, 'todos'>, Ticket
 
 export const TICKET_TABLE_HEADERS = [
   'Número',
+  '',
   'Fecha',
   'Usuario',
   'Monto',

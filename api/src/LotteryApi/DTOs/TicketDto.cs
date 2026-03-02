@@ -151,6 +151,7 @@ public class TicketListDto
     public DateTime? LatestDrawTime { get; set; }
     public int PrintCount { get; set; }
     public bool IsOutOfScheduleSale { get; set; }
+    public bool IsCancelledOutOfTime { get; set; }
 }
 
 /// <summary>

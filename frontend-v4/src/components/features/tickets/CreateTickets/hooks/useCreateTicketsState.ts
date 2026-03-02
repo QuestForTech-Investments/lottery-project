@@ -472,10 +472,16 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
 
     const buildResult = (gtId: number, clean: string, pos?: number): BetDetectionResult => {
       const cfg = GAME_TYPES[gtId];
+      // Dynamic suffix for position-based types
+      let suffix = cfg.displaySuffix;
+      if (pos != null) {
+        if (gtId === 20) suffix = `s${pos}`;     // Singulacion: 5s1, 5s2, 5s3
+        else if (gtId === 19) suffix = `b${pos}`; // Bolita: 12b1, 12b2
+      }
       return {
         gameTypeId: gtId,
         cleanNumber: clean,
-        displaySuffix: cfg.displaySuffix,
+        displaySuffix: suffix,
         column: cfg.column,
         displayName: cfg.name,
         position: pos,

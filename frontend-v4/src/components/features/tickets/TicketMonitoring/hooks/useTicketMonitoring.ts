@@ -334,6 +334,7 @@ export const useTicketMonitoring = (): UseTicketMonitoringReturn => {
         mappedTicket.isPreviousDay = listTicket.isPreviousDay;
         mappedTicket.isFutureDay = listTicket.isFutureDay;
         mappedTicket.isOutOfScheduleSale = listTicket.isOutOfScheduleSale;
+        mappedTicket.isCancelledOutOfTime = listTicket.isCancelledOutOfTime;
       }
       setSelectedTicket(mappedTicket);
     } catch (err) {
