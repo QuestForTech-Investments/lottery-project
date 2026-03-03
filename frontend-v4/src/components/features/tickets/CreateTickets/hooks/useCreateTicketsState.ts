@@ -809,6 +809,7 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
       setPaleBets([]);
       setCash3Bets([]);
       setPlay4Bets([]);
+      setMultiLotteryMode(false);
       setSuccessMessage(`Ticket creado: ${response.ticketCode || 'OK'}`);
     } catch (error) {
       console.error('Error creating ticket:', error);

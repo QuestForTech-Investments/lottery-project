@@ -106,7 +106,7 @@ public class DrawsController : ControllerBase
                     LotteryName = d.Lottery!.LotteryName,
                     Timezone = d.Lottery!.Timezone,
                     d.DisplayColor,
-                    LogoUrl = (string?)null, // TODO: Add logo_url field to Lottery table
+                    LogoUrl = d.Lottery!.ImageUrl,
                     d.DrawTime,
                     d.UseWeeklySchedule,
                     WeeklySchedules = d.WeeklySchedules

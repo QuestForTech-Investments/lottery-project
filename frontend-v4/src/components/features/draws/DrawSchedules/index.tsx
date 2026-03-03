@@ -725,7 +725,7 @@ const DrawSchedules = (): React.ReactElement => {
                               >
                                 {/* Draw Card Header */}
                                 <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-                                  {/* Plus Icon */}
+                                  {/* Draw Logo */}
                                   <Box
                                     sx={{
                                       width: 40,
@@ -733,11 +733,23 @@ const DrawSchedules = (): React.ReactElement => {
                                       display: 'flex',
                                       alignItems: 'center',
                                       justifyContent: 'center',
-                                      color: '#999',
-                                      cursor: 'pointer'
+                                      borderRadius: 1,
+                                      overflow: 'hidden',
+                                      flexShrink: 0,
                                     }}
                                   >
-                                    <AddIcon />
+                                    {draw.logoUrl ? (
+                                      <Box
+                                        component="img"
+                                        src={draw.logoUrl}
+                                        alt={draw.drawName}
+                                        sx={{ width: 40, height: 40, objectFit: 'contain' }}
+                                      />
+                                    ) : (
+                                      <Box sx={{ color: '#999' }}>
+                                        <AddIcon />
+                                      </Box>
+                                    )}
                                   </Box>
 
                                   {/* Name, Abbreviation, Color */}
