@@ -13,7 +13,9 @@ const SANTO_DOMINGO_TIMEZONE = 'America/Santo_Domingo';
  * The lottery system operates in Santo Domingo timezone (UTC-4)
  */
 const formatDateToSantoDomingo = (dateString: string): string => {
-  const date = new Date(dateString);
+  // Ensure UTC interpretation: API stores UTC but may omit the Z suffix
+  const utcString = dateString.endsWith('Z') || dateString.includes('+') ? dateString : dateString + 'Z';
+  const date = new Date(utcString);
   const dateFormatted = date.toLocaleDateString('en-US', {
     timeZone: SANTO_DOMINGO_TIMEZONE,
     month: '2-digit',

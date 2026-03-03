@@ -86,9 +86,10 @@ public class DrawsController : ControllerBase
             }
 
             var query = _context.Draws
+                .AsNoTracking()
                 .Where(d => d.IsActive)
                 .OrderBy(d => d.DrawName)
-                .AsQueryable();
+                .AsSplitQuery();
 
             if (lotteryId.HasValue)
             {
@@ -103,7 +104,7 @@ public class DrawsController : ControllerBase
                     d.Abbreviation,
                     d.LotteryId,
                     LotteryName = d.Lottery!.LotteryName,
-                    Timezone = (string?)null, // TODO: Add timezone field to Lottery table
+                    Timezone = d.Lottery!.Timezone,
                     d.DisplayColor,
                     LogoUrl = (string?)null, // TODO: Add logo_url field to Lottery table
                     d.DrawTime,
