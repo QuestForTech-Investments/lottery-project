@@ -357,6 +357,13 @@ interface Lottery {
   draws: Draw[];
 }
 
+const TIMEZONE_LABELS: Record<string, string> = {
+  'America/Santo_Domingo': 'REP DOM',
+  'America/New_York': 'USA',
+  'America/Tegucigalpa': 'HONDURAS',
+  'America/Panama': 'PANAMÁ',
+};
+
 interface SnackbarState {
   open: boolean;
   message: string;
@@ -696,7 +703,7 @@ const DrawSchedules = (): React.ReactElement => {
                         }
                       }}
                     >
-                      {lottery.lotteryName} ({lottery.timezone})
+                      {lottery.lotteryName} ({TIMEZONE_LABELS[lottery.timezone] || lottery.timezone})
                     </Button>
 
                     {/* Expanded Section with Draw Cards */}

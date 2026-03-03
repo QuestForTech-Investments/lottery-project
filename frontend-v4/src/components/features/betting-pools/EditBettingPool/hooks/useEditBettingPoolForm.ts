@@ -1249,13 +1249,16 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
               enabledGameTypeIds: number[];
             }
             const drawsToSave: DrawToSave[] = [];
+            const selectedSet = new Set(formData.selectedDraws);
 
-            formData.selectedDraws.forEach(drawId => {
-              const hasAnticipatedClosing = formData.anticipatedClosingDraws?.includes(drawId);
+            // Send ALL draws — enabled ones as isActive: true, disabled ones as isActive: false
+            draws.forEach(draw => {
+              const isActive = selectedSet.has(draw.drawId);
+              const hasAnticipatedClosing = isActive && formData.anticipatedClosingDraws?.includes(draw.drawId);
               drawsToSave.push({
-                drawId: drawId,  // NEW: drawId instead of lotteryId
-                isActive: true,  // NEW: isActive instead of isEnabled
-                anticipatedClosingMinutes: hasAnticipatedClosing ? parseInt(formData.anticipatedClosing) || null : null,  // NEW: anticipatedClosingMinutes
+                drawId: draw.drawId,
+                isActive,
+                anticipatedClosingMinutes: hasAnticipatedClosing ? parseInt(formData.anticipatedClosing) || null : null,
                 enabledGameTypeIds: []
               });
             });

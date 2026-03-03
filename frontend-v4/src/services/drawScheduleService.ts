@@ -117,19 +117,36 @@ export const updateDrawSchedules = async (schedules: DrawSchedule[]): Promise<Up
 /**
  * Group draws by lottery
  */
+// Lotteries that should be visually grouped under a parent lottery in schedules
+// Key: child lotteryId, Value: { parentId, parentName }
+const LOTTERY_GROUP_OVERRIDES: Record<number, { parentId: number; parentName: string }> = {
+  4: { parentId: 1, parentName: 'Lotería Nacional Dominicana' }, // Gana Más → Nacional
+};
+
 export const groupDrawsByLottery = (draws: DrawSchedule[]): LotteryWithDraws[] => {
   const lotteryMap = new Map<number, LotteryWithDraws>();
 
-  draws.forEach(draw => {
-    if (!lotteryMap.has(draw.lotteryId)) {
-      lotteryMap.set(draw.lotteryId, {
-        lotteryId: draw.lotteryId,
-        lotteryName: draw.lotteryName,
+  // Process non-overridden (parent) draws first so they define group metadata
+  const sorted = [...draws].sort((a, b) => {
+    const aIsChild = LOTTERY_GROUP_OVERRIDES[a.lotteryId] ? 1 : 0;
+    const bIsChild = LOTTERY_GROUP_OVERRIDES[b.lotteryId] ? 1 : 0;
+    return aIsChild - bIsChild;
+  });
+
+  sorted.forEach(draw => {
+    const override = LOTTERY_GROUP_OVERRIDES[draw.lotteryId];
+    const groupId = override?.parentId ?? draw.lotteryId;
+    const groupName = override?.parentName ?? draw.lotteryName;
+
+    if (!lotteryMap.has(groupId)) {
+      lotteryMap.set(groupId, {
+        lotteryId: groupId,
+        lotteryName: groupName,
         timezone: draw.timezone,
         draws: []
       });
     }
-    lotteryMap.get(draw.lotteryId)!.draws.push(draw);
+    lotteryMap.get(groupId)!.draws.push(draw);
   });
 
   return Array.from(lotteryMap.values());
