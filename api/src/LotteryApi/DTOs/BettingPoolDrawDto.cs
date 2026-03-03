@@ -19,6 +19,7 @@ public class BettingPoolDrawDto
     public string? LotteryName { get; set; }
     public string? CountryName { get; set; }
     public string? LotteryImage { get; set; }
+    public string? Timezone { get; set; }
     public string? Color { get; set; }
 
     // Configuration
