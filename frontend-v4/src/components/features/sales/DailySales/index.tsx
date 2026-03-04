@@ -300,13 +300,13 @@ const DailySales = (): React.ReactElement => {
               {subTab === 0 && (
                 <>
                   <Typography variant="h5" align="center" gutterBottom sx={{ fontWeight: 400, mb: 3, fontSize: '1.7rem' }}>
-                    Venta del día Total: <Box component="span" sx={{
-                      backgroundColor: '#ede9fe',
+                    Venta Neta del Día: <Box component="span" sx={{
+                      backgroundColor: totals.final > 0 ? '#e8f5e9' : totals.final < 0 ? '#ffebee' : '#e3f2fd',
                       px: 2,
                       py: 0.5,
                       borderRadius: 1,
-                      color: '#6d28d9'
-                    }}>{formatCurrency(totals.sales)}</Box>
+                      color: totals.final > 0 ? '#2e7d32' : totals.final < 0 ? '#c62828' : '#1565c0'
+                    }}>{formatCurrency(totals.final)}</Box>
                   </Typography>
 
                   {/* Filter controls - single left-aligned container */}

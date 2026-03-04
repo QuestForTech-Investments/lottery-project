@@ -68,11 +68,11 @@ const SalesTable: FC<SalesTableProps> = memo(({ data, totals, columns, onCodeCli
                   <TableCell align="right">{formatCurrency(row.commissions)}</TableCell>
                   <TableCell align="right">{formatCurrency(row.discounts)}</TableCell>
                   <TableCell align="right">{formatCurrency(row.prizes)}</TableCell>
-                  <TableCell align="right" sx={{ color: row.net < 0 ? 'error.main' : 'inherit' }}>
+                  <TableCell align="right" sx={{ color: row.net > 0 ? '#2e7d32' : row.net < 0 ? '#c62828' : '#1565c0', fontWeight: 600 }}>
                     {formatCurrency(row.net)}
                   </TableCell>
                   <TableCell align="right">{formatCurrency(row.fall)}</TableCell>
-                  <TableCell align="right" sx={{ color: row.final < 0 ? 'error.main' : 'inherit' }}>
+                  <TableCell align="right" sx={{ color: row.final > 0 ? '#2e7d32' : row.final < 0 ? '#c62828' : '#1565c0', fontWeight: 600 }}>
                     {formatCurrency(row.final)}
                   </TableCell>
                   <TableCell align="right" sx={{ color: row.balance > 0 ? '#2e7d32' : row.balance < 0 ? '#c62828' : '#1565c0', fontWeight: 600 }}>
@@ -93,10 +93,10 @@ const SalesTable: FC<SalesTableProps> = memo(({ data, totals, columns, onCodeCli
                 <TableCell align="right">{formatCurrency(totals.commissions)}</TableCell>
                 <TableCell align="right">{formatCurrency(totals.discounts)}</TableCell>
                 <TableCell align="right">{formatCurrency(totals.prizes)}</TableCell>
-                <TableCell align="right" sx={{ color: totals.net < 0 ? 'error.main' : 'inherit' }}>{formatCurrency(totals.net)}</TableCell>
+                <TableCell align="right" sx={{ color: totals.net > 0 ? '#2e7d32' : totals.net < 0 ? '#c62828' : '#1565c0' }}>{formatCurrency(totals.net)}</TableCell>
                 <TableCell align="right">{formatCurrency(totals.fall)}</TableCell>
-                <TableCell align="right" sx={{ color: totals.final < 0 ? 'error.main' : 'inherit' }}>{formatCurrency(totals.final)}</TableCell>
-                <TableCell align="right">{formatCurrency(totals.balance)}</TableCell>
+                <TableCell align="right" sx={{ color: totals.final > 0 ? '#2e7d32' : totals.final < 0 ? '#c62828' : '#1565c0' }}>{formatCurrency(totals.final)}</TableCell>
+                <TableCell align="right" sx={{ color: totals.balance > 0 ? '#2e7d32' : totals.balance < 0 ? '#c62828' : '#1565c0' }}>{formatCurrency(totals.balance)}</TableCell>
                 <TableCell align="right">{formatCurrency(totals.accumulatedFall)}</TableCell>
               </TableRow>
             </>
