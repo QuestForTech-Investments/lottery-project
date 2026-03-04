@@ -1948,8 +1948,16 @@ public class TicketsController : ControllerBase
             return;
         }
 
-        // Find existing consumption record
-        var consumption = await _context.LimitConsumptions
+        // Check local change tracker first (handles duplicate numbers in same ticket)
+        var consumption = _context.LimitConsumptions.Local
+            .FirstOrDefault(lc => lc.LimitRuleId == limitRule.LimitRuleId
+                && lc.DrawId == drawId
+                && lc.DrawDate == today
+                && lc.BetNumber == betNumber
+                && lc.BettingPoolId == bettingPoolId);
+
+        // Then check the database
+        consumption ??= await _context.LimitConsumptions
             .Where(lc => lc.LimitRuleId == limitRule.LimitRuleId
                 && lc.DrawId == drawId
                 && lc.DrawDate == today
