@@ -312,6 +312,7 @@ public class TicketListResponseDto
 /// </summary>
 public class TicketCreationParamsDto
 {
+    public string ServerTime { get; set; } = DateTime.UtcNow.ToString("o");
     public BettingPoolParamDto? CurrentBettingPool { get; set; }
     public List<DrawParamDto> AvailableDraws { get; set; } = new();
     public List<BetTypeParamDto> BetTypes { get; set; } = new();

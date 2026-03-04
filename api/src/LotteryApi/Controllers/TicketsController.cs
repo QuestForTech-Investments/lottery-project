@@ -295,6 +295,7 @@ public class TicketsController : ControllerBase
 
             var result = new TicketCreationParamsDto
             {
+                ServerTime = DateTime.UtcNow.ToString("o"),
                 CurrentBettingPool = currentBettingPool,
                 AvailableDraws = draws,
                 BetTypes = betTypes,
