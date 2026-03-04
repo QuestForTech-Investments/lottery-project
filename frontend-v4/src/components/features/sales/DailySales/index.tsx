@@ -88,7 +88,7 @@ const DailySales = (): React.ReactElement => {
         net: item.totalNet,
         fall: 0,
         final: item.totalNet,
-        balance: 0,
+        balance: item.balance || 0,
         accumulatedFall: 0,
       }));
 

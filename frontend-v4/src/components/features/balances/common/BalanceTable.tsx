@@ -94,11 +94,16 @@ const BalanceTable = React.memo(({
       }
       if (value > 0) {
         return {
-          backgroundColor: '#e3f2fd',
-          color: '#1565c0',
+          backgroundColor: '#e8f5e9',
+          color: '#2e7d32',
           fontWeight: 600
         };
       }
+      return {
+        backgroundColor: '#e3f2fd',
+        color: '#1565c0',
+        fontWeight: 600
+      };
     }
     return {};
   }, []);

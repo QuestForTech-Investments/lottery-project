@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, type SyntheticEvent, type ChangeEvent } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, type SyntheticEvent, type ChangeEvent } from 'react';
 import {
   Box,
   Paper,
@@ -10,7 +10,9 @@ import {
   Radio,
   Autocomplete,
   TextField,
-  Chip
+  Chip,
+  CircularProgress,
+  Alert
 } from '@mui/material';
 import {
   Refresh as RefreshIcon,
@@ -21,22 +23,12 @@ import {
 import BalanceTable from '../common/BalanceTable';
 import DateFilter from '../common/DateFilter';
 import QuickFilter from '../common/QuickFilter';
-
-interface BettingPoolData {
-  id: number;
-  numero: number;
-  nombre: string;
-  usuarios: string;
-  referencia: string;
-  zona: string;
-  balance: number;
-  prestamos: number;
-}
-
-interface Zone {
-  id: number;
-  name: string;
-}
+import {
+  getBettingPoolBalances,
+  extractZonesFromBalances,
+  type BettingPoolBalanceData,
+  type BalanceZone
+} from '../../../../services/balanceService';
 
 interface ColumnDefinition {
   key: string;
@@ -47,27 +39,6 @@ interface ColumnDefinition {
 }
 
 type BalanceType = 'all' | 'positive' | 'negative';
-
-// Mock data for development
-const MOCK_DATA: BettingPoolData[] = [
-  { id: 1, numero: 1, nombre: 'LA CENTRAL 01', usuarios: '001', referencia: 'GILBERTO ISLA GORDA TL', zona: 'GRUPO GILBERTO TL', balance: 112.66, prestamos: 0.00 },
-  { id: 2, numero: 10, nombre: 'LA CENTRAL 10', usuarios: '010', referencia: 'GILBERTO TL', zona: 'GRUPO GILBERTO TL', balance: 447.61, prestamos: 0.00 },
-  { id: 3, numero: 16, nombre: 'LA CENTRAL 16', usuarios: '016', referencia: 'CHINO TL', zona: 'GRUPO KENDRICK TL', balance: 1476.36, prestamos: 0.00 },
-  { id: 4, numero: 63, nombre: 'LA CENTRAL 63', usuarios: '063', referencia: 'NELL TL', zona: 'GRUPO KENDRICK TL', balance: 744.92, prestamos: 0.00 },
-  { id: 5, numero: 101, nombre: 'LA CENTRAL 101', usuarios: '101', referencia: 'FELO TL', zona: 'GRUPO KENDRICK TL', balance: 1052.00, prestamos: 0.00 },
-  { id: 6, numero: 119, nombre: 'LA CENTRAL 119', usuarios: '119', referencia: 'EUDDY (GF)', zona: 'GRUPO GUYANA (DANI)', balance: 0.00, prestamos: 0.00 },
-  { id: 7, numero: 135, nombre: 'LA CENTRAL 135', usuarios: '135', referencia: 'MORENA D (GF)', zona: 'GRUPO GUYANA (DANI)', balance: 498.40, prestamos: 0.00 },
-  { id: 8, numero: 150, nombre: 'LA CENTRAL 150', usuarios: '150', referencia: 'DANNY (GF)', zona: 'GRUPO GUYANA (DANI)', balance: 141.23, prestamos: 0.00 },
-  { id: 9, numero: 186, nombre: 'CARIBBEAN 186', usuarios: '186', referencia: 'BOB BALATA GF)', zona: 'GRUPO GUYANA (OMAR)', balance: -595.06, prestamos: 100.00 },
-  { id: 10, numero: 198, nombre: 'CARIBBEAN 198', usuarios: '198', referencia: 'LISSET (GF)', zona: 'GRUPO GUYANA (OMAR)', balance: 700.86, prestamos: 0.00 },
-];
-
-const MOCK_ZONES: Zone[] = [
-  { id: 1, name: 'GRUPO GILBERTO TL' },
-  { id: 2, name: 'GRUPO KENDRICK TL' },
-  { id: 3, name: 'GRUPO GUYANA (DANI)' },
-  { id: 4, name: 'GRUPO GUYANA (OMAR)' },
-];
 
 const COLUMNS: ColumnDefinition[] = [
   { key: 'numero', label: 'Número', sortable: true },
@@ -82,17 +53,45 @@ const COLUMNS: ColumnDefinition[] = [
 const BettingPoolBalances = (): React.ReactElement => {
   // State
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
-  const [selectedZones, setSelectedZones] = useState<Zone[]>(MOCK_ZONES);
+  const [selectedZones, setSelectedZones] = useState<BalanceZone[]>([]);
+  const [allZones, setAllZones] = useState<BalanceZone[]>([]);
   const [balanceType, setBalanceType] = useState<BalanceType>('all');
   const [quickFilter, setQuickFilter] = useState<string>('');
-  const [data] = useState<BettingPoolData[]>(MOCK_DATA);
+  const [data, setData] = useState<BettingPoolBalanceData[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch data
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const balances = await getBettingPoolBalances();
+      setData(balances);
+
+      const zones = extractZonesFromBalances(balances);
+      setAllZones(zones);
+
+      // Select all zones by default on first load
+      setSelectedZones(prev => prev.length === 0 ? zones : prev);
+    } catch (err) {
+      console.error('[ERROR] [BALANCES] Error fetching betting pool balances:', err);
+      setError('Error al cargar los balances. Intente de nuevo.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   // Handlers
   const handleDateChange = useCallback((date: string) => {
     setSelectedDate(date);
   }, []);
 
-  const handleZonesChange = useCallback((_event: SyntheticEvent, newValue: Zone[]) => {
+  const handleZonesChange = useCallback((_event: SyntheticEvent, newValue: BalanceZone[]) => {
     setSelectedZones(newValue);
   }, []);
 
@@ -105,8 +104,8 @@ const BettingPoolBalances = (): React.ReactElement => {
   }, []);
 
   const handleRefresh = useCallback(() => {
-    // TODO: Call API
-  }, [selectedDate, selectedZones, balanceType]);
+    fetchData();
+  }, [fetchData]);
 
   const handlePrint = useCallback(() => {
     window.print();
@@ -121,7 +120,7 @@ const BettingPoolBalances = (): React.ReactElement => {
     let result = data;
 
     // Filter by zones
-    if (selectedZones.length > 0 && selectedZones.length < MOCK_ZONES.length) {
+    if (selectedZones.length > 0 && selectedZones.length < allZones.length) {
       const zoneNames = selectedZones.map(z => z.name);
       result = result.filter(item => zoneNames.includes(item.zona));
     }
@@ -144,7 +143,7 @@ const BettingPoolBalances = (): React.ReactElement => {
     }
 
     return result;
-  }, [data, selectedZones, balanceType, quickFilter]);
+  }, [data, selectedZones, allZones.length, balanceType, quickFilter]);
 
   // Calculate totals
   const totals = useMemo(() => {
@@ -179,10 +178,11 @@ const BettingPoolBalances = (): React.ReactElement => {
               <Autocomplete
                 multiple
                 size="small"
-                options={MOCK_ZONES}
+                options={allZones}
                 value={selectedZones}
                 onChange={handleZonesChange}
                 getOptionLabel={(option) => option.name}
+                isOptionEqualToValue={(option, value) => option.id === value.id}
                 renderInput={(params) => (
                   <TextField
                     {...params}
@@ -261,6 +261,7 @@ const BettingPoolBalances = (): React.ReactElement => {
             variant="contained"
             startIcon={<RefreshIcon />}
             onClick={handleRefresh}
+            disabled={loading}
             sx={{
               backgroundColor: '#8b5cf6',
               '&:hover': { backgroundColor: '#3fb5b8' },
@@ -306,12 +307,25 @@ const BettingPoolBalances = (): React.ReactElement => {
           />
         </Box>
 
-        {/* Data Table */}
-        <BalanceTable
-          columns={COLUMNS}
-          data={filteredData as unknown as Array<Record<string, unknown> & { id?: number | string }>}
-          totals={totals}
-        />
+        {/* Error */}
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {error}
+          </Alert>
+        )}
+
+        {/* Loading */}
+        {loading ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+            <CircularProgress />
+          </Box>
+        ) : (
+          <BalanceTable
+            columns={COLUMNS}
+            data={filteredData as unknown as Array<Record<string, unknown> & { id?: number | string }>}
+            totals={totals}
+          />
+        )}
       </Paper>
     </Box>
   );

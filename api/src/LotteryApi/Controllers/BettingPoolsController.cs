@@ -91,7 +91,8 @@ public class BettingPoolsController : ControllerBase
                         .Select(ubp => ubp.User!.Username)
                         .ToList(),
                     IsActive = bp.IsActive,
-                    CreatedAt = bp.CreatedAt
+                    CreatedAt = bp.CreatedAt,
+                    Balance = bp.Balance != null ? bp.Balance.CurrentBalance : 0m
                 })
                 .ToListAsync();
 

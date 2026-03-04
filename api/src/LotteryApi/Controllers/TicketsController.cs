@@ -196,7 +196,7 @@ public class TicketsController : ControllerBase
                         Code = bp.BettingPoolCode ?? "",
                         Name = bp.BettingPoolName ?? "",
                         IsActive = bp.IsActive,
-                        CurrentBalance = 0m, // TODO: Calculate from balances table
+                        CurrentBalance = bp.Balance != null ? bp.Balance.CurrentBalance : 0m,
                         CommissionPercentage = 10.00m, // TODO: Get from config
                         DiscountPercentage = 0.00m
                     })
@@ -341,7 +341,7 @@ public class TicketsController : ControllerBase
                     Code = bp.BettingPoolCode ?? "",
                     Name = bp.BettingPoolName ?? "",
                     IsActive = bp.IsActive,
-                    CurrentBalance = 0m,
+                    CurrentBalance = bp.Balance != null ? bp.Balance.CurrentBalance : 0m,
                     CommissionPercentage = 10.00m,
                     DiscountPercentage = 0.00m
                 })
@@ -840,7 +840,11 @@ public class TicketsController : ControllerBase
             ticket.EarliestDrawTime = earliestDrawTime;
             ticket.LatestDrawTime = latestDrawTime;
 
-            // 10. Save to database
+            // 10. Update betting pool balance (totalNet - totalDiscount)
+            var balanceAmount = totalNet - totalDiscount;
+            await UpdateBettingPoolBalanceAsync(dto.BettingPoolId, balanceAmount, dto.UserId);
+
+            // 11. Save to database
             _context.Tickets.Add(ticket);
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
@@ -1384,6 +1388,13 @@ public class TicketsController : ControllerBase
                 line.UpdatedBy = dto.CancelledBy;
             }
 
+            // 8.1 Reverse balance: subtract (TotalNet - TotalDiscount), add back TotalPrize if winner
+            var balanceReversal = -(ticket.TotalNet - ticket.TotalDiscount) + ticket.TotalPrize;
+            if (balanceReversal != 0)
+            {
+                await UpdateBettingPoolBalanceAsync(ticket.BettingPoolId, balanceReversal, dto.CancelledBy);
+            }
+
             await _context.SaveChangesAsync();
 
             _logger.LogInformation(
@@ -1907,6 +1918,34 @@ public class TicketsController : ControllerBase
         {
             _logger.LogError(ex, "Error resetting commissions");
             return StatusCode(500, new { message = "Error al resetear las comisiones" });
+        }
+    }
+
+    /// <summary>
+    /// Update the betting pool balance. Positive amount increases, negative decreases.
+    /// Creates the balance record if it doesn't exist.
+    /// </summary>
+    private async Task UpdateBettingPoolBalanceAsync(int bettingPoolId, decimal amount, int? userId = null)
+    {
+        var balance = await _context.Balances
+            .FirstOrDefaultAsync(b => b.BettingPoolId == bettingPoolId);
+
+        if (balance == null)
+        {
+            balance = new Balance
+            {
+                BettingPoolId = bettingPoolId,
+                CurrentBalance = amount,
+                LastUpdated = DateTime.UtcNow,
+                UpdatedBy = userId
+            };
+            _context.Balances.Add(balance);
+        }
+        else
+        {
+            balance.CurrentBalance += amount;
+            balance.LastUpdated = DateTime.UtcNow;
+            balance.UpdatedBy = userId;
         }
     }
 

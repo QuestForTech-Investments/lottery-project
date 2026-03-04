@@ -366,7 +366,7 @@ const CombinacionesTab = ({ selectedDate, setSelectedDate, zones, selectedZones,
                       <TableCell align="right">{formatCurrency(row.totalCommissions)}</TableCell>
                       <TableCell align="right">{formatCurrency(0)}</TableCell>
                       <TableCell align="right">{formatCurrency(row.totalPrizes)}</TableCell>
-                      <TableCell align="right" sx={{ color: row.balance < 0 ? 'error.main' : 'success.main' }}>
+                      <TableCell align="right" sx={{ color: row.balance > 0 ? '#2e7d32' : row.balance < 0 ? '#c62828' : '#1565c0', fontWeight: 600 }}>
                         {formatCurrency(row.balance)}
                       </TableCell>
                     </TableRow>

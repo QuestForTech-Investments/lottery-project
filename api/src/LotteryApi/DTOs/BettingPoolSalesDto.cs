@@ -31,4 +31,9 @@ public class BettingPoolSalesDto
     /// </summary>
     [System.Text.Json.Serialization.JsonInclude]
     public int LoserCount { get; set; }
+
+    /// <summary>
+    /// Current running balance for this betting pool
+    /// </summary>
+    public decimal Balance { get; set; }
 }

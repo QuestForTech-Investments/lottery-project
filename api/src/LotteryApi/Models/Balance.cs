@@ -7,6 +7,7 @@ namespace LotteryApi.Models;
 public class Balance
 {
     [Key]
+    [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     [Column("balance_id")]
     public int BalanceId { get; set; }
 

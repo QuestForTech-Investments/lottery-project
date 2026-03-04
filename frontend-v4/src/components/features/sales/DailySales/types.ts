@@ -77,6 +77,7 @@ export interface BettingPoolSalesDto {
   pendingCount: number;
   winnerCount: number;
   loserCount: number;
+  balance: number;
 }
 
 // ============================================================================

@@ -20,6 +20,7 @@ public class BettingPoolListDto
     public List<string> Users { get; set; } = new();
     public bool IsActive { get; set; }
     public DateTime? CreatedAt { get; set; }
+    public decimal Balance { get; set; }
 }
 
 /// <summary>

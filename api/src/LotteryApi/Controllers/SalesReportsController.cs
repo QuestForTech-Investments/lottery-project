@@ -178,6 +178,20 @@ public class SalesReportsController : ControllerBase
             var riferoDiscount = tickets.Where(t => t.DiscountMode == "RIFERO").Sum(t => t.TotalDiscount);
             var totalNet = totalSold - totalDiscounts - totalCommissions - totalPrizes;
 
+            // Get balance for the betting pool(s)
+            decimal balance = 0m;
+            if (bettingPoolId.HasValue)
+            {
+                balance = await _context.Balances
+                    .Where(b => b.BettingPoolId == bettingPoolId.Value)
+                    .Select(b => b.CurrentBalance)
+                    .FirstOrDefaultAsync();
+            }
+            else
+            {
+                balance = await _context.Balances.SumAsync(b => b.CurrentBalance);
+            }
+
             var summary = new SalesSummaryDto
             {
                 TotalSold = totalSold,
@@ -186,7 +200,7 @@ public class SalesReportsController : ControllerBase
                 TotalDiscounts = totalDiscounts,
                 Fall = 0,
                 TotalNet = totalNet,
-                Balance = 0,
+                Balance = balance,
                 Credits = 0,
                 BenefitPercentage = totalSold > 0 ? (totalNet / totalSold) * 100 : 0
             };
@@ -346,6 +360,7 @@ public class SalesReportsController : ControllerBase
             var filterEndDate = endDate.Date;
 
             var salesData = await query
+                .Include(bp => bp.Balance)
                 .Select(bp => new
                 {
                     BettingPool = bp,
@@ -386,7 +401,8 @@ public class SalesReportsController : ControllerBase
                         TotalNet = totalSold - totalDiscounts - totalCommissions - totalPrizes,
                         PendingCount = pendingCount,
                         WinnerCount = winnerCount,
-                        LoserCount = loserCount
+                        LoserCount = loserCount,
+                        Balance = x.BettingPool.Balance != null ? x.BettingPool.Balance.CurrentBalance : 0m
                     };
                 })
                 .OrderBy(x => x.BettingPoolCode)
@@ -545,10 +561,15 @@ public class SalesReportsController : ControllerBase
 
                 if (!tickets.Any()) continue;
 
-                var bettingPoolIds = tickets.Select(t => t.BettingPoolId).Distinct().Count();
+                var distinctPoolIds = tickets.Select(t => t.BettingPoolId).Distinct().ToList();
+                var bettingPoolIds = distinctPoolIds.Count;
 
                 var zoneRiferoDiscount = tickets.Where(t => t.DiscountMode == "RIFERO").Sum(t => t.TotalDiscount);
                 var zoneTotalNet = tickets.Sum(t => t.GrandTotal) + zoneRiferoDiscount - tickets.Sum(t => t.TotalCommission) - tickets.Sum(t => t.TotalPrize);
+
+                var zoneBalance = await _context.Balances
+                    .Where(b => distinctPoolIds.Contains(b.BettingPoolId))
+                    .SumAsync(b => b.CurrentBalance);
 
                 zoneSales.Add(new ZoneSalesDto
                 {
@@ -563,9 +584,9 @@ public class SalesReportsController : ControllerBase
                     TotalCommissions = tickets.Sum(t => t.TotalCommission),
                     TotalDiscounts = tickets.Sum(t => t.TotalDiscount),
                     TotalNet = zoneTotalNet,
-                    Fall = 0, // TODO: Calculate based on business rules
+                    Fall = 0,
                     Final = zoneTotalNet,
-                    Balance = 0 // TODO: Calculate based on business rules
+                    Balance = zoneBalance
                 });
             }
 

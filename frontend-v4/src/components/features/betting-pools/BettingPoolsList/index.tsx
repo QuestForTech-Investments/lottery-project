@@ -349,7 +349,10 @@ const BancasListMUI: React.FC = () => {
                         <TableCell align="right">
                           <Typography
                             variant="body2"
-                            color={pool.balance >= 0 ? 'success.main' : 'error.main'}
+                            sx={{
+                              color: pool.balance > 0 ? '#2e7d32' : pool.balance < 0 ? '#c62828' : '#1565c0',
+                              fontWeight: 600
+                            }}
                           >
                             {formatCurrency(pool.balance)}
                           </Typography>

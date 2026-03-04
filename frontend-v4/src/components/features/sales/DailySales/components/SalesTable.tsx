@@ -75,7 +75,7 @@ const SalesTable: FC<SalesTableProps> = memo(({ data, totals, columns, onCodeCli
                   <TableCell align="right" sx={{ color: row.final < 0 ? 'error.main' : 'inherit' }}>
                     {formatCurrency(row.final)}
                   </TableCell>
-                  <TableCell align="right" sx={{ color: row.balance < 0 ? 'error.main' : 'success.main' }}>
+                  <TableCell align="right" sx={{ color: row.balance > 0 ? '#2e7d32' : row.balance < 0 ? '#c62828' : '#1565c0', fontWeight: 600 }}>
                     {formatCurrency(row.balance)}
                   </TableCell>
                   <TableCell align="right">{formatCurrency(row.accumulatedFall)}</TableCell>

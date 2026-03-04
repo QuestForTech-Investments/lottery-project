@@ -139,7 +139,7 @@ const useBettingPoolsList = (): UseBettingPoolsListReturn => {
           // Use zoneName directly from API response instead of looking up from map
           zone: bettingPool.zoneName || 'Sin zona',
           zoneId: bettingPool.zoneId,
-          balance: 0,
+          balance: bettingPool.balance || 0,
           accumulatedFall: 0,
           loans: 0
         };

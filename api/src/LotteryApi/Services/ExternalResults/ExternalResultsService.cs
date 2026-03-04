@@ -540,6 +540,9 @@ public class ExternalResultsService : IExternalResultsService
         // Track affected tickets to update their state
         var affectedTicketIds = new HashSet<long>();
 
+        // Track prize amounts per betting pool for balance updates
+        var prizeByBettingPool = new Dictionary<int, decimal>();
+
         foreach (var line in pendingLines)
         {
             ticketsProcessed++;
@@ -561,6 +564,11 @@ public class ExternalResultsService : IExternalResultsService
                     line.Ticket.WinningLines++;
                     line.Ticket.TotalPrize += line.PrizeAmount;
                     affectedTicketIds.Add(line.TicketId);
+
+                    // Accumulate prize for balance deduction
+                    var poolId = line.Ticket.BettingPoolId;
+                    prizeByBettingPool.TryAdd(poolId, 0);
+                    prizeByBettingPool[poolId] += line.PrizeAmount;
                 }
 
                 _logger.LogInformation("Winner found in draw {DrawId}! Position {Position}, Prize: {Prize}",
@@ -577,6 +585,28 @@ public class ExternalResultsService : IExternalResultsService
         if (affectedTicketIds.Any())
         {
             await UpdateTicketStatesAsync(affectedTicketIds, cancellationToken);
+        }
+
+        // Decrease betting pool balances by prize amounts
+        foreach (var (poolId, totalPrize) in prizeByBettingPool)
+        {
+            var balance = await _context.Balances
+                .FirstOrDefaultAsync(b => b.BettingPoolId == poolId, cancellationToken);
+
+            if (balance != null)
+            {
+                balance.CurrentBalance -= totalPrize;
+                balance.LastUpdated = DateTime.UtcNow;
+            }
+            else
+            {
+                _context.Balances.Add(new Balance
+                {
+                    BettingPoolId = poolId,
+                    CurrentBalance = -totalPrize,
+                    LastUpdated = DateTime.UtcNow
+                });
+            }
         }
 
         await _context.SaveChangesAsync(cancellationToken);
@@ -604,12 +634,19 @@ public class ExternalResultsService : IExternalResultsService
         if (processedLines.Count == 0) return;
 
         var affectedTicketIds = new HashSet<long>();
+        // Track prizes to reverse in balance
+        var prizeReversalByPool = new Dictionary<int, decimal>();
 
         foreach (var line in processedLines)
         {
             // Subtract this line's prize from the ticket before resetting
             if (line.IsWinner && line.Ticket != null)
             {
+                // Track for balance reversal (add back the prize that was deducted)
+                var poolId = line.Ticket.BettingPoolId;
+                prizeReversalByPool.TryAdd(poolId, 0);
+                prizeReversalByPool[poolId] += line.PrizeAmount;
+
                 line.Ticket.TotalPrize -= line.PrizeAmount;
                 line.Ticket.WinningLines--;
                 if (line.Ticket.TotalPrize < 0) line.Ticket.TotalPrize = 0;
@@ -630,6 +667,19 @@ public class ExternalResultsService : IExternalResultsService
         if (affectedTicketIds.Any())
         {
             await UpdateTicketStatesAsync(affectedTicketIds, cancellationToken);
+        }
+
+        // Reverse prize deductions from balances (add back prizes)
+        foreach (var (poolId, totalPrize) in prizeReversalByPool)
+        {
+            var balance = await _context.Balances
+                .FirstOrDefaultAsync(b => b.BettingPoolId == poolId, cancellationToken);
+
+            if (balance != null)
+            {
+                balance.CurrentBalance += totalPrize;
+                balance.LastUpdated = DateTime.UtcNow;
+            }
         }
 
         await _context.SaveChangesAsync(cancellationToken);

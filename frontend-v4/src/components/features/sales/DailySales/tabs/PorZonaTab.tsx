@@ -382,7 +382,7 @@ const PorZonaTab = ({ selectedDate, setSelectedDate, zones, selectedZones, handl
                       </TableCell>
                       <TableCell align="right">{formatCurrency(row.fall)}</TableCell>
                       <TableCell align="right">{formatCurrency(row.final)}</TableCell>
-                      <TableCell align="right" sx={{ color: row.balance < 0 ? 'error.main' : 'success.main' }}>
+                      <TableCell align="right" sx={{ color: row.balance > 0 ? '#2e7d32' : row.balance < 0 ? '#c62828' : '#1565c0', fontWeight: 600 }}>
                         {formatCurrency(row.balance)}
                       </TableCell>
                     </TableRow>
