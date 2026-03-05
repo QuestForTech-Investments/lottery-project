@@ -22,6 +22,7 @@ import type { SelectChangeEvent } from '@mui/material/Select';
 import { Search as SearchIcon } from '@mui/icons-material';
 import api from '@services/api';
 import { formatCurrency } from '@/utils/formatCurrency';
+import { getTodayDate } from '@/utils/formatters';
 
 // Tab components
 import BancaPorSorteoTab from './tabs/BancaPorSorteoTab';
@@ -56,7 +57,7 @@ const DailySales = (): React.ReactElement => {
 
   // Filter state
   const [selectedDate, setSelectedDate] = useState<string>(() => {
-    return new Date().toISOString().split('T')[0];
+    return getTodayDate();
   });
   const [selectedZones, setSelectedZones] = useState<number[]>([]);
   const [selectedGroup, setSelectedGroup] = useState<string>('');
@@ -121,7 +122,7 @@ const DailySales = (): React.ReactElement => {
       const allZoneIds = zonesArray.map((z) => z.zoneId || z.id).filter((id): id is number => id !== undefined);
       setSelectedZones(allZoneIds);
 
-      await loadSalesData(new Date().toISOString().split('T')[0]);
+      await loadSalesData(getTodayDate());
     } catch (err) {
       console.error('[DATA] Error loading data:', err);
       setError(err instanceof Error ? err.message : 'Error loading data');

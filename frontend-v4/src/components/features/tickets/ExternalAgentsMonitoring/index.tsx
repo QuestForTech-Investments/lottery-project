@@ -5,6 +5,7 @@ import {
   Button, ToggleButtonGroup, ToggleButton, Table, TableHead, TableBody, TableRow, TableCell, IconButton
 } from '@mui/material';
 import { Visibility } from '@mui/icons-material';
+import { getTodayDate } from '@/utils/formatters';
 
 interface Agente {
   id: number;
@@ -47,7 +48,7 @@ interface Counts {
 type FiltroEstado = 'todos' | 'ganadores' | 'pendientes' | 'perdedores' | 'cancelados';
 
 const ExternalAgentsMonitoring: React.FC = () => {
-  const [fecha, setFecha] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [fecha, setFecha] = useState<string>(getTodayDate());
   const [agente, setAgente] = useState<Agente | null>(null);
   const [loteria, setLoteria] = useState<Loteria | null>(null);
   const [tipoJugada, setTipoJugada] = useState<TipoJugada | null>(null);

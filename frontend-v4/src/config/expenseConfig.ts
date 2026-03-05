@@ -3,6 +3,8 @@
  * Centralized configuration to avoid hardcoding values
  */
 
+import { getTodayDate } from '@/utils/formatters';
+
 export interface ExpenseType {
   id: string
   name: string
@@ -67,7 +69,7 @@ export const DEFAULT_EXPENSE: Expense = {
   amount: '',
   frequency: 'monthly',
   day: '1',
-  date: new Date().toISOString().split('T')[0]
+  date: getTodayDate()
 };
 
 export const PAGINATION_OPTIONS = [5, 10, 20, 50, 100];

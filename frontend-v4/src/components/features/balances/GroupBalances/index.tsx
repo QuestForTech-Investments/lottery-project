@@ -13,6 +13,7 @@ import {
 import BalanceTable from '../common/BalanceTable';
 import QuickFilter from '../common/QuickFilter';
 import DateFilter from '../common/DateFilter';
+import { getTodayDate } from '@/utils/formatters';
 
 interface GroupData {
   id: number;
@@ -44,7 +45,7 @@ const COLUMNS: ColumnDefinition[] = [
 
 const GroupBalances = (): React.ReactElement => {
   // State
-  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState<string>(getTodayDate());
   const [quickFilter, setQuickFilter] = useState<string>('');
   const [pageSize, setPageSize] = useState<number>(20);
   const [page, setPage] = useState<number>(0);

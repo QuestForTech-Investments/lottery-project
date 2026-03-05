@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { formatCurrency } from '@/utils/formatCurrency';
 import { Box, Paper, Typography, TextField, Autocomplete, Button, Table, TableBody, TableRow, TableCell, CircularProgress, Divider } from '@mui/material';
 import api from '@services/api';
+import { getTodayDate } from '@/utils/formatters';
 
 interface Zona {
   id: number;
@@ -22,7 +23,7 @@ interface ZoneSalesDto {
 }
 
 const ZoneSales = (): React.ReactElement => {
-  const [fecha, setFecha] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [fecha, setFecha] = useState<string>(getTodayDate());
   const [zona, setZona] = useState<Zona | null>(null);
   const [summary, setSummary] = useState<{
     zoneName: string;

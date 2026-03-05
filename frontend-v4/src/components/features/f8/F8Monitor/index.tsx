@@ -21,6 +21,7 @@ import {
 } from '@mui/material';
 import type { SelectChangeEvent } from '@mui/material/Select';
 import { Search as SearchIcon } from '@mui/icons-material';
+import { getTodayDate } from '@/utils/formatters';
 
 interface Filters {
   fecha: string;
@@ -42,7 +43,7 @@ interface PlayData {
  */
 const F8Monitor = (): React.ReactElement => {
   const [filters, setFilters] = useState<Filters>({
-    fecha: new Date().toISOString().split('T')[0],
+    fecha: getTodayDate(),
     sorteo: '',
     jugada: ''
   });

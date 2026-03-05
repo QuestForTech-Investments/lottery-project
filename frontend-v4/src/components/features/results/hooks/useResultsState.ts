@@ -15,6 +15,7 @@ import type {
   ExternalResultDto,
 } from '../types';
 import { EMPTY_INDIVIDUAL_FORM } from '../constants';
+import { getTodayDate } from '@/utils/formatters';
 
 // =============================================================================
 // Initial State
@@ -22,7 +23,7 @@ import { EMPTY_INDIVIDUAL_FORM } from '../constants';
 
 const getInitialState = (): ResultsState => ({
   // Date and navigation
-  selectedDate: new Date().toISOString().split('T')[0],
+  selectedDate: getTodayDate(),
   activeTab: 0,
   logsFilterDate: '',
   // Data

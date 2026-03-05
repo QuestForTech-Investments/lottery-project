@@ -21,6 +21,7 @@ import { getAllZones } from '../../../../services/zoneService';
 import { getBettingPools } from '../../../../services/bettingPoolService';
 import { getPlaysSummary, PlaySummary } from '../../../../services/playService';
 import { formatCurrency } from '@/utils/formatCurrency';
+import { getTodayDate } from '@/utils/formatters';
 
 // Types
 interface Draw {
@@ -53,7 +54,7 @@ const PRIMARY_HOVER = '#7c3aed';
 
 const PlayMonitoring: React.FC = () => {
   // Filter state
-  const [date, setDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [date, setDate] = useState<string>(getTodayDate());
   const [selectedDraw, setSelectedDraw] = useState<Draw | null>(null);
   const [selectedZones, setSelectedZones] = useState<Zone[]>([]);
   const [selectedPool, setSelectedPool] = useState<BettingPool | null>(null);

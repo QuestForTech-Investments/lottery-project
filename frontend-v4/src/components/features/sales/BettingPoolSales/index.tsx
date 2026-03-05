@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { formatCurrency } from '@/utils/formatCurrency';
 import { Box, Paper, Typography, TextField, Grid, Autocomplete, Button, Table, TableHead, TableBody, TableRow, TableCell, CircularProgress } from '@mui/material';
 import api from '@services/api';
+import { getTodayDate } from '@/utils/formatters';
 
 interface Banca {
   id: number;
@@ -41,7 +42,7 @@ interface BettingPoolSalesDto {
 }
 
 const BettingPoolSales = (): React.ReactElement => {
-  const [fecha, setFecha] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [fecha, setFecha] = useState<string>(getTodayDate());
   const [banca, setBanca] = useState<Banca | null>(null);
   const [data, setData] = useState<SalesData[]>([]);
   const [bancasList, setBancasList] = useState<Banca[]>([]);

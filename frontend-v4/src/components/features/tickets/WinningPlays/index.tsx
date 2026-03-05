@@ -24,6 +24,7 @@ import {
   ZoneParam
 } from '../../../../services/winningPlayService';
 import { formatCurrency } from '@/utils/formatCurrency';
+import { getTodayDate } from '@/utils/formatters';
 
 // Primary color from design system
 const PRIMARY_COLOR = '#8b5cf6';
@@ -42,8 +43,8 @@ interface Zone {
 
 const WinningPlays: React.FC = () => {
   // Filter state
-  const [startDate, setStartDate] = useState<string>(new Date().toISOString().split('T')[0]);
-  const [endDate, setEndDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [startDate, setStartDate] = useState<string>(getTodayDate());
+  const [endDate, setEndDate] = useState<string>(getTodayDate());
   const [selectedDraw, setSelectedDraw] = useState<Draw | null>(null);
   const [selectedZones, setSelectedZones] = useState<Zone[]>([]);
 

@@ -40,6 +40,7 @@ public class LotteryDbContext : DbContext
     // Betting Pools
     public DbSet<BettingPool> BettingPools { get; set; }
     public DbSet<Balance> Balances { get; set; }
+    public DbSet<BalanceHistory> BalanceHistories { get; set; }
     public DbSet<BettingPoolConfig> BettingPoolConfigs { get; set; }
     public DbSet<BettingPoolPrintConfig> BettingPoolPrintConfigs { get; set; }
     public DbSet<BettingPoolDiscountConfig> BettingPoolDiscountConfigs { get; set; }

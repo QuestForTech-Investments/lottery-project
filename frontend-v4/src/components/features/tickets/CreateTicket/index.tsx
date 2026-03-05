@@ -10,6 +10,7 @@ import { Box, Typography } from '@mui/material';
 import JsBarcode from 'jsbarcode';
 import api from '../../../../services/api';
 import TicketPrinter from '../TicketPrinter';
+import { getTodayDate } from '@/utils/formatters';
 
 // Types and constants
 import type { Draw, BetType, TicketLine, MockTicket, Totals } from './types';
@@ -113,7 +114,7 @@ const CreateTicket: React.FC = () => {
         lotteryName: line.lotteryName,
         drawId: line.drawId,
         drawName: line.drawName,
-        drawDate: new Date().toISOString().split('T')[0],
+        drawDate: getTodayDate(),
         drawTime: '12:00:00',
         betNumber: line.betNumber,
         betTypeId: line.betTypeId,

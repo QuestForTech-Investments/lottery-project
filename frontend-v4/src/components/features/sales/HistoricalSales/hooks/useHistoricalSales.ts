@@ -6,6 +6,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import api from '@services/api';
+import { getTodayDate } from '@/utils/formatters';
 import type {
   Zona,
   Grupo,
@@ -62,10 +63,10 @@ export const useHistoricalSales = (): UseHistoricalSalesReturn => {
 
   // Filter state
   const [fechaInicial, setFechaInicial] = useState<string>(
-    new Date().toISOString().split('T')[0]
+    getTodayDate()
   );
   const [fechaFinal, setFechaFinal] = useState<string>(
-    new Date().toISOString().split('T')[0]
+    getTodayDate()
   );
   const [zonas, setZonas] = useState<Zona[]>([]);
   const [grupo, setGrupo] = useState<string | number>('');

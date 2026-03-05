@@ -6,6 +6,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import api from '@services/api';
+import { getTodayDate } from '@/utils/formatters';
 import type {
   BettingPool,
   ReportItem,
@@ -74,10 +75,10 @@ export const useCleanPendingPayments = (): UseCleanPendingPaymentsReturn => {
 
   // Report tab state
   const [reportStartDate, setReportStartDate] = useState<string>(
-    new Date().toISOString().split('T')[0]
+    getTodayDate()
   );
   const [reportEndDate, setReportEndDate] = useState<string>(
-    new Date().toISOString().split('T')[0]
+    getTodayDate()
   );
   const [reportBancaId, setReportBancaId] = useState<string>('');
   const [reportData, setReportData] = useState<ReportItem[]>([]);
@@ -90,7 +91,7 @@ export const useCleanPendingPayments = (): UseCleanPendingPaymentsReturn => {
   const [modalOpen, setModalOpen] = useState<boolean>(false);
   const [selectedPool, setSelectedPool] = useState<BettingPool | null>(null);
   const [cleanDate, setCleanDate] = useState<string>(
-    new Date().toISOString().split('T')[0]
+    getTodayDate()
   );
   const [cleanSummary, setCleanSummary] = useState<CleanSummary>({
     tickets: 0,
@@ -137,7 +138,7 @@ export const useCleanPendingPayments = (): UseCleanPendingPaymentsReturn => {
   // Modal handlers
   const handleOpenModal = useCallback((pool: BettingPool): void => {
     setSelectedPool(pool);
-    setCleanDate(new Date().toISOString().split('T')[0]);
+    setCleanDate(getTodayDate());
     setCleanSummary({ tickets: 0, amount: 0 });
     setModalOpen(true);
   }, []);

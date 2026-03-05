@@ -16,6 +16,7 @@ using LotteryApi.Hubs;
 using LotteryApi.Middleware;
 using LotteryApi.Repositories;
 using LotteryApi.Services;
+using LotteryApi.Services.BalanceCutoff;
 using LotteryApi.Services.ExternalResults;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -115,6 +116,9 @@ builder.Services.AddScoped<INotificationService, NotificationService>();
 
 // Register External Results Services (lottery results fetching and ticket processing)
 builder.Services.AddExternalResultsServices(builder.Configuration);
+
+// Register Balance Cutoff Services (daily balance snapshots)
+builder.Services.AddBalanceCutoffServices(builder.Configuration);
 
 // Register Memory Cache for performance
 builder.Services.AddMemoryCache();

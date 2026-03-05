@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, memo } from 'react';
 import { formatCurrency } from '@/utils/formatCurrency';
 import { Box, Paper, Typography, TextField, Table, TableHead, TableBody, TableRow, TableCell, IconButton } from '@mui/material';
 import { Search } from '@mui/icons-material';
+import { getTodayDate } from '@/utils/formatters';
 
 interface AnomalousTicket {
   numero: string;
@@ -23,7 +24,7 @@ interface ResultChange {
 }
 
 const TicketAnomalies: React.FC = () => {
-  const [fecha, setFecha] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [fecha, setFecha] = useState<string>(getTodayDate());
   const [filtroTickets, setFiltroTickets] = useState<string>('');
   const [filtroCambios, setFiltroCambios] = useState<string>('');
   const [ticketsData, setTicketsData] = useState<AnomalousTicket[]>([]);

@@ -1,6 +1,7 @@
 import React, { useState, memo } from 'react';
 import { Box, Paper, Typography, TextField, Button, Stack } from '@mui/material';
 import { Refresh, PictureAsPdf } from '@mui/icons-material';
+import { getTodayDate } from '@/utils/formatters';
 
 interface PoolData {
   id: number;
@@ -9,7 +10,7 @@ interface PoolData {
 }
 
 const ImportedPool: React.FC = () => {
-  const [fecha, setFecha] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [fecha, setFecha] = useState<string>(getTodayDate());
   const [data] = useState<PoolData[]>([]);
 
   return (

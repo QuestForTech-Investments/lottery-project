@@ -3,6 +3,7 @@ import { formatCurrency } from '@/utils/formatCurrency';
 import { Box, Paper, Typography, TextField, Grid, Autocomplete, Button, Stack, Table, TableHead, TableBody, TableRow, TableCell, Switch, FormControlLabel, InputAdornment, CircularProgress } from '@mui/material';
 import { PictureAsPdf, Search } from '@mui/icons-material';
 import api from '@services/api';
+import { getTodayDate } from '@/utils/formatters';
 
 interface Banca {
   id: number;
@@ -53,8 +54,8 @@ interface DailySalesDto {
 }
 
 const SalesByDate = (): React.ReactElement => {
-  const [fechaInicial, setFechaInicial] = useState<string>(new Date().toISOString().split('T')[0]);
-  const [fechaFinal, setFechaFinal] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [fechaInicial, setFechaInicial] = useState<string>(getTodayDate());
+  const [fechaFinal, setFechaFinal] = useState<string>(getTodayDate());
   const [bancas, setBancas] = useState<Banca[]>([]);
   const [zonas, setZonas] = useState<Zona[]>([]);
   const [mostrarComision2, setMostrarComision2] = useState<boolean>(false);

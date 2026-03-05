@@ -29,6 +29,7 @@ import {
   type BettingPoolBalanceData,
   type BalanceZone
 } from '../../../../services/balanceService';
+import { getTodayDate } from '@/utils/formatters';
 
 interface ColumnDefinition {
   key: string;
@@ -51,8 +52,8 @@ const COLUMNS: ColumnDefinition[] = [
 ];
 
 const BettingPoolBalances = (): React.ReactElement => {
-  // State
-  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  // State — default to today (shows yesterday's end-of-day snapshot as starting balance)
+  const [selectedDate, setSelectedDate] = useState<string>(getTodayDate());
   const [selectedZones, setSelectedZones] = useState<BalanceZone[]>([]);
   const [allZones, setAllZones] = useState<BalanceZone[]>([]);
   const [balanceType, setBalanceType] = useState<BalanceType>('all');
@@ -66,7 +67,7 @@ const BettingPoolBalances = (): React.ReactElement => {
     try {
       setLoading(true);
       setError(null);
-      const balances = await getBettingPoolBalances();
+      const balances = await getBettingPoolBalances(selectedDate);
       setData(balances);
 
       const zones = extractZonesFromBalances(balances);
@@ -80,7 +81,7 @@ const BettingPoolBalances = (): React.ReactElement => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [selectedDate]);
 
   useEffect(() => {
     fetchData();

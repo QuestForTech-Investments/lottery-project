@@ -32,9 +32,11 @@ export interface BalanceZone {
 
 /**
  * Get betting pool balances from API
+ * @param date - Optional date filter (YYYY-MM-DD). Defaults to yesterday on the server.
  */
-export const getBettingPoolBalances = async (): Promise<BettingPoolBalanceData[]> => {
-  const apiData = await api.get('/balances/betting-pools') as BettingPoolBalanceAPI[];
+export const getBettingPoolBalances = async (date?: string): Promise<BettingPoolBalanceData[]> => {
+  const params = date ? `?date=${date}` : '';
+  const apiData = await api.get(`/balances/betting-pools${params}`) as BettingPoolBalanceAPI[];
 
   return apiData.map(item => ({
     id: item.bettingPoolId,

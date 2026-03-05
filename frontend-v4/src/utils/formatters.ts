@@ -168,6 +168,15 @@ export const formatList = (list: Array<string | number> | null | undefined, sepa
   return list.join(separator)
 }
 
+/**
+ * Get today's date in Santo Domingo timezone (YYYY-MM-DD)
+ * Use this instead of new Date().toISOString().split('T')[0]
+ * to avoid UTC offset issues (e.g. 8 PM Santo Domingo = next day in UTC)
+ */
+export const getTodayDate = (): string => {
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Santo_Domingo' });
+}
+
 export default {
   formatDate,
   formatDateTime,
@@ -178,5 +187,6 @@ export default {
   capitalizeFirst,
   formatUserStatus,
   formatUserDisplayName,
-  formatList
+  formatList,
+  getTodayDate
 }

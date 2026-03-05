@@ -18,6 +18,7 @@ import { getCurrentUser } from '@services/authService';
 import { useDebounce } from '@hooks/index';
 import type { BettingPool, Lottery, SelectOption } from '@/types';
 import { TICKET_STATUS_MAP, DEBOUNCE_DELAY } from '@constants/index';
+import { getTodayDate } from '@/utils/formatters';
 
 import type { BettingPoolApiResponse, FilterEstado, MappedTicket, TicketCounts, TicketTotals } from '../types';
 import { INITIAL_COUNTS, INITIAL_TOTALS } from '../constants';
@@ -81,7 +82,7 @@ export const useTicketMonitoring = (): UseTicketMonitoringReturn => {
 
   // Filter states
   const [fecha, setFecha] = useState<string>(
-    () => urlDate || new Date().toISOString().split('T')[0]
+    () => urlDate || getTodayDate()
   );
   const [banca, setBanca] = useState<BettingPool | null>(null);
   const [bancas, setBancas] = useState<BettingPool[]>([]);
