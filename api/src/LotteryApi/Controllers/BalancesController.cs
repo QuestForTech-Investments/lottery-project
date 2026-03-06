@@ -70,7 +70,7 @@ public class BalancesController : ControllerBase
             // Use snapshot for the resolved date — returns 0 if none exists for a banca
             var results = await query
                 .GroupJoin(
-                    _context.BalanceHistories.Where(bh => bh.BalanceDate == snapshotDateTime),
+                    _context.BalanceHistories.Where(bh => bh.BalanceDate == snapshotDate),
                     bp => bp.BettingPoolId,
                     bh => bh.BettingPoolId,
                     (bp, histories) => new { bp, histories })
