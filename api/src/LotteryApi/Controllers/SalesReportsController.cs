@@ -360,18 +360,9 @@ public class SalesReportsController : ControllerBase
             var filterEndDate = endDate.Date;
 
             // Resolve snapshot date for BalanceOfTheDay (same logic as BalancesController)
-            var today = DateTimeHelper.TodayInBusinessTimezone();
-            DateTime snapshotDate;
-            if (filterEndDate == today)
-            {
-                var hasTodaySnapshot = await _context.BalanceHistories
-                    .AnyAsync(bh => bh.BalanceDate == filterEndDate);
-                snapshotDate = hasTodaySnapshot ? filterEndDate : filterEndDate.AddDays(-1);
-            }
-            else
-            {
-                snapshotDate = filterEndDate;
-            }
+            var hasSnapshot = await _context.BalanceHistories
+                .AnyAsync(bh => bh.BalanceDate == filterEndDate);
+            var snapshotDate = hasSnapshot ? filterEndDate : filterEndDate.AddDays(-1);
 
             // Load snapshots for the resolved date
             var snapshots = await _context.BalanceHistories
