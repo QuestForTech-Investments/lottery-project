@@ -43,11 +43,19 @@ public class BalancesController : ControllerBase
             var today = DateTimeHelper.TodayInBusinessTimezone();
             var requestedDate = date?.Date ?? today;
 
-            // If today's snapshot exists, use it; otherwise fall back to yesterday's
-            // For past dates: use that date's snapshot, fall back to date-1
-            var hasTodaySnapshot = await _context.BalanceHistories
-                .AnyAsync(bh => bh.BalanceDate == requestedDate);
-            var snapshotDate = hasTodaySnapshot ? requestedDate : requestedDate.AddDays(-1);
+            // For today: if today's snapshot doesn't exist yet, fall back to yesterday
+            // For past dates: always use that exact date (show 0 if no snapshot)
+            DateTime snapshotDate;
+            if (requestedDate == today)
+            {
+                var hasTodaySnapshot = await _context.BalanceHistories
+                    .AnyAsync(bh => bh.BalanceDate == requestedDate);
+                snapshotDate = hasTodaySnapshot ? requestedDate : requestedDate.AddDays(-1);
+            }
+            else
+            {
+                snapshotDate = requestedDate;
+            }
 
             var query = _context.BettingPools
                 .AsNoTracking()
@@ -59,10 +67,10 @@ public class BalancesController : ControllerBase
                 query = query.Where(bp => bp.ZoneId == zoneId.Value);
             }
 
-            // Use snapshot for the resolved date — returns 0 if none exists
+            // Use snapshot for the resolved date — returns 0 if none exists for a banca
             var results = await query
                 .GroupJoin(
-                    _context.BalanceHistories.Where(bh => bh.BalanceDate == snapshotDate),
+                    _context.BalanceHistories.Where(bh => bh.BalanceDate == snapshotDateTime),
                     bp => bp.BettingPoolId,
                     bh => bh.BettingPoolId,
                     (bp, histories) => new { bp, histories })

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, type ChangeEvent } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, type ChangeEvent } from 'react';
 import {
   Box,
   Paper,
@@ -7,11 +7,13 @@ import {
   Select,
   MenuItem,
   TablePagination,
+  CircularProgress,
   type SelectChangeEvent
 } from '@mui/material';
 
 import BalanceTable from '../common/BalanceTable';
 import QuickFilter from '../common/QuickFilter';
+import { getAccountableEntities, type AccountableEntityAPI } from '../../../../services/accountableEntityService';
 
 interface BankData {
   id: number;
@@ -29,18 +31,6 @@ interface ColumnDefinition {
   align?: 'left' | 'center' | 'right';
 }
 
-// Mock data for development
-const MOCK_DATA: BankData[] = [
-  { id: 1, nombre: 'BANCO POPULAR', codigo: 'BP001', zona: 'ZONA NORTE', balance: 15250.50 },
-  { id: 2, nombre: 'BANCO BHD LEON', codigo: 'BHD002', zona: 'ZONA NORTE', balance: 8730.25 },
-  { id: 3, nombre: 'BANCO RESERVAS', codigo: 'BR003', zona: 'ZONA SUR', balance: -2450.00 },
-  { id: 4, nombre: 'BANCO SANTA CRUZ', codigo: 'BSC004', zona: 'ZONA SUR', balance: 12100.75 },
-  { id: 5, nombre: 'BANCO CARIBE', codigo: 'BC005', zona: 'ZONA ESTE', balance: 5680.30 },
-  { id: 6, nombre: 'BANCO PROMERICA', codigo: 'BPR006', zona: 'ZONA ESTE', balance: -890.45 },
-  { id: 7, nombre: 'BANCO LOPEZ DE HARO', codigo: 'BLH007', zona: 'ZONA OESTE', balance: 22340.80 },
-  { id: 8, nombre: 'BANCO VIMENCA', codigo: 'BV008', zona: 'ZONA OESTE', balance: 0.00 },
-];
-
 const COLUMNS: ColumnDefinition[] = [
   { key: 'nombre', label: 'Nombre', sortable: true },
   { key: 'codigo', label: 'Código', sortable: true },
@@ -49,16 +39,39 @@ const COLUMNS: ColumnDefinition[] = [
 ];
 
 const BankBalances = (): React.ReactElement => {
-  // State
   const [quickFilter, setQuickFilter] = useState<string>('');
   const [pageSize, setPageSize] = useState<number>(20);
   const [page, setPage] = useState<number>(0);
-  const [data] = useState<BankData[]>(MOCK_DATA);
+  const [data, setData] = useState<BankData[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Handlers
+  useEffect(() => {
+    const loadBanks = async () => {
+      setLoading(true);
+      try {
+        const entities: AccountableEntityAPI[] = await getAccountableEntities({
+          entityType: 'Banco',
+          isActive: true
+        });
+        setData(entities.map(e => ({
+          id: e.entityId,
+          nombre: e.entityName,
+          codigo: e.entityCode,
+          zona: e.zoneName || '',
+          balance: e.currentBalance
+        })));
+      } catch (err) {
+        console.error('Error loading bank balances:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadBanks();
+  }, []);
+
   const handleQuickFilterChange = useCallback((value: string) => {
     setQuickFilter(value);
-    setPage(0); // Reset to first page on filter
+    setPage(0);
   }, []);
 
   const handlePageSizeChange = useCallback((event: SelectChangeEvent<number>) => {
@@ -70,35 +83,24 @@ const BankBalances = (): React.ReactElement => {
     setPage(newPage);
   }, []);
 
-  // Filtered data
   const filteredData = useMemo(() => {
-    let result = data;
-
-    // Quick filter
-    if (quickFilter) {
-      const search = quickFilter.toLowerCase();
-      result = result.filter(item =>
-        Object.values(item).some(val =>
-          String(val).toLowerCase().includes(search)
-        )
-      );
-    }
-
-    return result;
+    if (!quickFilter) return data;
+    const search = quickFilter.toLowerCase();
+    return data.filter(item =>
+      Object.values(item).some(val =>
+        String(val).toLowerCase().includes(search)
+      )
+    );
   }, [data, quickFilter]);
 
-  // Paginated data
   const paginatedData = useMemo(() => {
     const start = page * pageSize;
     return filteredData.slice(start, start + pageSize);
   }, [filteredData, page, pageSize]);
 
-  // Calculate totals
-  const totals = useMemo(() => {
-    return {
-      balance: filteredData.reduce((sum, item) => sum + item.balance, 0),
-    };
-  }, [filteredData]);
+  const totals = useMemo(() => ({
+    balance: filteredData.reduce((sum, item) => sum + item.balance, 0),
+  }), [filteredData]);
 
   return (
     <Box sx={{ p: 3 }}>
@@ -107,9 +109,7 @@ const BankBalances = (): React.ReactElement => {
           Balances de bancos
         </Typography>
 
-        {/* Filters Section */}
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: 'wrap', gap: 2 }}>
-          {/* Entries per page */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <Typography variant="body2" sx={{ color: 'text.secondary' }}>
               Entradas por página
@@ -130,7 +130,6 @@ const BankBalances = (): React.ReactElement => {
             </FormControl>
           </Box>
 
-          {/* Quick Filter */}
           <Box sx={{ minWidth: 250 }}>
             <QuickFilter
               value={quickFilter}
@@ -140,27 +139,33 @@ const BankBalances = (): React.ReactElement => {
           </Box>
         </Box>
 
-        {/* Data Table */}
-        <BalanceTable
-          columns={COLUMNS}
-          data={paginatedData as unknown as Array<Record<string, unknown> & { id?: number | string }>}
-          totals={totals}
-        />
+        {loading ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+            <CircularProgress />
+          </Box>
+        ) : (
+          <>
+            <BalanceTable
+              columns={COLUMNS}
+              data={paginatedData as unknown as Array<Record<string, unknown> & { id?: number | string }>}
+              totals={totals}
+            />
 
-        {/* Pagination */}
-        <TablePagination
-          component="div"
-          count={filteredData.length}
-          page={page}
-          onPageChange={handlePageChange}
-          rowsPerPage={pageSize}
-          onRowsPerPageChange={(e: ChangeEvent<HTMLInputElement>) => handlePageSizeChange({ target: { value: e.target.value } } as SelectChangeEvent<number>)}
-          labelRowsPerPage=""
-          rowsPerPageOptions={[]}
-          labelDisplayedRows={({ from, to, count }) =>
-            `Mostrando ${from}-${to} de ${count} entradas`
-          }
-        />
+            <TablePagination
+              component="div"
+              count={filteredData.length}
+              page={page}
+              onPageChange={handlePageChange}
+              rowsPerPage={pageSize}
+              onRowsPerPageChange={(e: ChangeEvent<HTMLInputElement>) => handlePageSizeChange({ target: { value: e.target.value } } as SelectChangeEvent<number>)}
+              labelRowsPerPage=""
+              rowsPerPageOptions={[]}
+              labelDisplayedRows={({ from, to, count }) =>
+                `Mostrando ${from}-${to} de ${count} entradas`
+              }
+            />
+          </>
+        )}
       </Paper>
     </Box>
   );

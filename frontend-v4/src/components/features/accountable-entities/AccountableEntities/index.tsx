@@ -1,4 +1,5 @@
-import React, { useState, useCallback, type SyntheticEvent, type ChangeEvent } from 'react';
+import React, { useState, useCallback, useEffect, useMemo, type SyntheticEvent, type ChangeEvent } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Card,
@@ -17,10 +18,13 @@ import {
   InputAdornment,
   IconButton,
   TableSortLabel,
-  Alert
+  Alert,
+  CircularProgress
 } from '@mui/material';
 import { Search as SearchIcon, Edit as EditIcon } from '@mui/icons-material';
 import { formatCurrency } from '@/utils/formatCurrency';
+import api from '../../../../services/api';
+import { getAccountableEntities, type AccountableEntityAPI } from '../../../../services/accountableEntityService';
 
 type SortOrder = 'asc' | 'desc';
 
@@ -32,58 +36,105 @@ interface Entity {
   caida?: number;
   prestamo?: number;
   zona?: string;
+  entityType?: string;
 }
 
 type ColumnKey = 'nombre' | 'codigo' | 'balance' | 'caida' | 'prestamo' | 'zona';
 
+const getValueColor = (value: number | undefined): string => {
+  if (value === undefined || value === null) return '#2c2c2c';
+  if (value > 0) return '#2e7d32';
+  if (value < 0) return '#c62828';
+  return '#1565c0';
+};
+
 const AccountableEntities = (): React.ReactElement => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<number>(0);
   const [quickFilter, setQuickFilter] = useState<string>('');
   const [sortBy, setSortBy] = useState<ColumnKey | null>(null);
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
+  const [bancas, setBancas] = useState<Entity[]>([]);
+  const [accountableEntities, setAccountableEntities] = useState<AccountableEntityAPI[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Mockup data - Bancas (137 total, showing first 20)
-  const bancas: Entity[] = [
-    { id: 220, nombre: 'CARIBBEAN 186', codigo: 'LAN-0186', balance: 610.26, caida: 0.00, prestamo: 0.00 },
-    { id: 232, nombre: 'CARIBBEAN 198', codigo: 'LAN-0198', balance: 700.86, caida: 0.00, prestamo: 0.00 },
-    { id: 10967, nombre: 'CARIBBEAN 264', codigo: 'LAN-0264', balance: 499.84, caida: 0.00, prestamo: 0.00 },
-    { id: 11093, nombre: 'CARIBBEAN 278', codigo: 'LAN-0278', balance: 462.60, caida: 0.00, prestamo: 0.00 },
-    { id: 11094, nombre: 'CARIBBEAN 279', codigo: 'LAN-0279', balance: 600.16, caida: 0.00, prestamo: 0.00 },
-    { id: 11099, nombre: 'CARIBBEAN 284', codigo: 'LAN-0284', balance: 549.01, caida: 0.00, prestamo: 0.00 },
-    { id: 11109, nombre: 'CARIBBEAN 294', codigo: 'LAN-0294', balance: 395.76, caida: 0.00, prestamo: 200.00 },
-    { id: 42652, nombre: 'CARIBBEAN 380', codigo: 'LAN-0380', balance: 68.12, caida: 0.00, prestamo: 500.00 },
-    { id: 90, nombre: 'LA CENTRAL 63', codigo: 'LAN-0063', balance: 930.73, caida: 0.00, prestamo: 0.00 },
-    { id: 28, nombre: 'LA CENTRAL 01', codigo: 'LAN-0001', balance: 139.26, caida: 0.00, prestamo: 0.00 },
-    { id: 37, nombre: 'LA CENTRAL 10', codigo: 'LAN-0010', balance: 796.85, caida: 0.00, prestamo: 0.00 },
-    { id: 133, nombre: 'LA CENTRAL 101', codigo: 'LAN-0101', balance: 1492.80, caida: 0.00, prestamo: 0.00 },
-    { id: 153, nombre: 'LA CENTRAL 119', codigo: 'LAN-0119', balance: 349.60, caida: 0.00, prestamo: 0.00 },
-    { id: 169, nombre: 'LA CENTRAL 135', codigo: 'LAN-0135', balance: 499.20, caida: -1739.20, prestamo: 0.00 },
-    { id: 180, nombre: 'LA CENTRAL 146', codigo: 'LAN-0146', balance: 825.40, caida: 0.00, prestamo: 0.00 },
-    { id: 195, nombre: 'LA CENTRAL 161', codigo: 'LAN-0161', balance: 654.30, caida: 0.00, prestamo: 100.00 },
-    { id: 201, nombre: 'LA CENTRAL 167', codigo: 'LAN-0167', balance: 1125.75, caida: 0.00, prestamo: 0.00 },
-    { id: 215, nombre: 'LA CENTRAL 181', codigo: 'LAN-0181', balance: 432.90, caida: 0.00, prestamo: 0.00 },
-    { id: 228, nombre: 'LA CENTRAL 194', codigo: 'LAN-0194', balance: 789.50, caida: 0.00, prestamo: 0.00 },
-    { id: 241, nombre: 'LA CENTRAL 207', codigo: 'LAN-0207', balance: 563.25, caida: 0.00, prestamo: 0.00 }
-  ];
+  // Load data
+  useEffect(() => {
+    const loadData = async () => {
+      setLoading(true);
+      try {
+        // Load bancas (betting pools with live balance) and accountable entities in parallel
+        const [bpResponse, entities] = await Promise.all([
+          api.get('/betting-pools?isActive=true&pageSize=500') as Promise<{
+            items: Array<{
+              bettingPoolId: number;
+              bettingPoolCode: string;
+              bettingPoolName: string;
+              zoneName: string | null;
+              balance: number;
+            }>;
+          }>,
+          getAccountableEntities({ isActive: true })
+        ]);
 
-  const empleados: Entity[] = []; // Empty in original
-  const bancos: Entity[] = []; // Empty in original
-  const zonas: Entity[] = []; // Empty in original
-  const otros: Entity[] = []; // Empty in original
+        const bpItems = bpResponse.items || [];
+        setBancas(bpItems.map(bp => ({
+          id: bp.bettingPoolId,
+          nombre: bp.bettingPoolName,
+          codigo: bp.bettingPoolCode,
+          balance: bp.balance,
+          caida: 0,
+          prestamo: 0,
+          zona: bp.zoneName || ''
+        })));
+
+        setAccountableEntities(entities);
+      } catch (err) {
+        console.error('Error loading entities:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadData();
+  }, []);
+
+  const bancos = useMemo(() =>
+    accountableEntities
+      .filter(e => e.entityType === 'Banco')
+      .map(e => ({
+        id: e.entityId,
+        nombre: e.entityName,
+        codigo: e.entityCode,
+        balance: e.currentBalance,
+        zona: e.zoneName || ''
+      })),
+    [accountableEntities]
+  );
+
+  const otros = useMemo(() =>
+    accountableEntities
+      .filter(e => e.entityType === 'Otro')
+      .map(e => ({
+        id: e.entityId,
+        nombre: e.entityName,
+        codigo: e.entityCode,
+        balance: e.currentBalance,
+        zona: e.zoneName || ''
+      })),
+    [accountableEntities]
+  );
 
   const tabs = ['bancas', 'empleados', 'bancos', 'zonas', 'otros'];
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- Mock data arrays are stable
   const getCurrentData = useCallback((): Entity[] => {
     switch (tabs[activeTab]) {
       case 'bancas': return bancas;
-      case 'empleados': return empleados;
       case 'bancos': return bancos;
-      case 'zonas': return zonas;
       case 'otros': return otros;
       default: return [];
     }
-  }, [activeTab]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, bancas, bancos, otros]);
 
   const filteredData = getCurrentData().filter(item => {
     const searchText = quickFilter.toLowerCase();
@@ -116,10 +167,14 @@ const AccountableEntities = (): React.ReactElement => {
   }, [sortBy, sortOrder]);
 
   const handleEdit = useCallback((id: number) => {
-    alert(`Editar entidad ${id} (mockup)`);
-  }, []);
+    const currentTab = tabs[activeTab];
+    if (currentTab === 'bancas') {
+      navigate(`/betting-pools/edit/${id}`);
+    } else {
+      alert(`Editar entidad ${id}`);
+    }
+  }, [activeTab, navigate]);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- tabs array is stable
   const getColumns = useCallback((): ColumnKey[] => {
     switch (tabs[activeTab]) {
       case 'bancas':
@@ -127,13 +182,15 @@ const AccountableEntities = (): React.ReactElement => {
       case 'empleados':
         return ['nombre', 'codigo', 'balance', 'prestamo', 'zona'];
       case 'bancos':
+        return ['nombre', 'codigo', 'balance', 'zona'];
       case 'zonas':
         return ['nombre', 'codigo', 'balance', 'zona'];
       case 'otros':
-        return ['nombre', 'codigo'];
+        return ['nombre', 'codigo', 'balance', 'zona'];
       default:
         return [];
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
 
   const getColumnLabel = useCallback((col: ColumnKey): string => {
@@ -162,6 +219,8 @@ const AccountableEntities = (): React.ReactElement => {
     setQuickFilter(e.target.value);
   }, []);
 
+  const isCurrencyColumn = (col: ColumnKey) => ['balance', 'caida', 'prestamo'].includes(col);
+
   return (
     <Box sx={{ p: 3, bgcolor: '#f5f5f5', minHeight: '100vh' }}>
       <Card>
@@ -182,7 +241,6 @@ const AccountableEntities = (): React.ReactElement => {
 
           {/* Tab Content */}
           <Box>
-            {/* Título */}
             <Typography
               variant="h4"
               sx={{
@@ -215,70 +273,85 @@ const AccountableEntities = (): React.ReactElement => {
               />
             </Box>
 
-            {/* Table */}
-            <TableContainer component={Paper} variant="outlined">
-              <Table>
-                <TableHead>
-                  <TableRow sx={{ bgcolor: '#e3e3e3' }}>
-                    {getColumns().map(col => (
-                      <TableCell key={col} sx={{ fontSize: '12px', fontWeight: 600, color: '#787878' }}>
-                        <TableSortLabel
-                          active={sortBy === col}
-                          direction={sortBy === col ? sortOrder : 'asc'}
-                          onClick={() => handleSort(col)}
-                        >
-                          {getColumnLabel(col)}
-                        </TableSortLabel>
-                      </TableCell>
-                    ))}
-                    <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878', textAlign: 'center' }}>Actions</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {sortedData.length > 0 ? (
-                    sortedData.map((item) => (
-                      <TableRow key={item.id} hover>
+            {loading ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                <CircularProgress />
+              </Box>
+            ) : (
+              <>
+                {/* Table */}
+                <TableContainer component={Paper} variant="outlined">
+                  <Table>
+                    <TableHead>
+                      <TableRow sx={{ bgcolor: '#f8f9fa' }}>
                         {getColumns().map(col => (
                           <TableCell
                             key={col}
-                            sx={{
-                              fontSize: '14px',
-                              color: col === 'caida' && (item[col] as number) < 0 ? '#dc3545' : '#2c2c2c'
-                            }}
+                            sx={{ fontSize: '14px', fontFamily: 'Montserrat, sans-serif', fontWeight: 600 }}
+                            align="center"
                           >
-                            {['balance', 'caida', 'prestamo'].includes(col)
-                              ? formatCurrency(item[col] as number)
-                              : item[col]}
+                            <TableSortLabel
+                              active={sortBy === col}
+                              direction={sortBy === col ? sortOrder : 'asc'}
+                              onClick={() => handleSort(col)}
+                            >
+                              {getColumnLabel(col)}
+                            </TableSortLabel>
                           </TableCell>
                         ))}
-                        <TableCell sx={{ textAlign: 'center' }}>
-                          <IconButton
-                            size="small"
-                            onClick={() => handleEdit(item.id)}
-                            sx={{ color: '#8b5cf6' }}
-                          >
-                            <EditIcon fontSize="small" />
-                          </IconButton>
-                        </TableCell>
+                        <TableCell sx={{ fontSize: '14px', fontFamily: 'Montserrat, sans-serif', fontWeight: 600, textAlign: 'center' }}>Acciones</TableCell>
                       </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={getColumns().length + 1}>
-                        <Alert severity="info" sx={{ justifyContent: 'center' }}>
-                          No hay entradas disponibles
-                        </Alert>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
+                    </TableHead>
+                    <TableBody>
+                      {sortedData.length > 0 ? (
+                        sortedData.map((item) => (
+                          <TableRow key={item.id} hover>
+                            {getColumns().map(col => (
+                              <TableCell
+                                key={col}
+                                align="center"
+                                sx={{
+                                  fontSize: '14px',
+                                  color: isCurrencyColumn(col)
+                                    ? getValueColor(item[col] as number)
+                                    : '#2c2c2c',
+                                  fontWeight: isCurrencyColumn(col) ? 600 : 400
+                                }}
+                              >
+                                {isCurrencyColumn(col)
+                                  ? formatCurrency(item[col] as number)
+                                  : item[col]}
+                              </TableCell>
+                            ))}
+                            <TableCell sx={{ textAlign: 'center' }}>
+                              <IconButton
+                                size="small"
+                                onClick={() => handleEdit(item.id)}
+                                sx={{ color: '#8b5cf6' }}
+                              >
+                                <EditIcon fontSize="small" />
+                              </IconButton>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={getColumns().length + 1}>
+                            <Alert severity="info" sx={{ justifyContent: 'center' }}>
+                              No hay entradas disponibles
+                            </Alert>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
 
-            {/* Footer */}
-            <Typography sx={{ textAlign: 'center', fontSize: '12px', color: '#999', mt: 2 }}>
-              Mostrando {sortedData.length} {getCurrentData().length > sortedData.length ? `de ${getCurrentData().length}` : ''} entradas
-            </Typography>
+                <Typography sx={{ textAlign: 'center', fontSize: '12px', color: '#999', mt: 2 }}>
+                  Mostrando {sortedData.length} {getCurrentData().length > sortedData.length ? `de ${getCurrentData().length}` : ''} entradas
+                </Typography>
+              </>
+            )}
           </Box>
         </CardContent>
       </Card>
