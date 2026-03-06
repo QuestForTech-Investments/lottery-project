@@ -36,4 +36,9 @@ public class BettingPoolSalesDto
     /// Current running balance for this betting pool
     /// </summary>
     public decimal Balance { get; set; }
+
+    /// <summary>
+    /// Balance snapshot for the requested date (from balance_history)
+    /// </summary>
+    public decimal BalanceOfTheDay { get; set; }
 }

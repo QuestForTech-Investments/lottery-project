@@ -359,6 +359,25 @@ public class SalesReportsController : ControllerBase
             var filterStartDate = startDate.Date;
             var filterEndDate = endDate.Date;
 
+            // Resolve snapshot date for BalanceOfTheDay (same logic as BalancesController)
+            var today = DateTimeHelper.TodayInBusinessTimezone();
+            DateTime snapshotDate;
+            if (filterEndDate == today)
+            {
+                var hasTodaySnapshot = await _context.BalanceHistories
+                    .AnyAsync(bh => bh.BalanceDate == filterEndDate);
+                snapshotDate = hasTodaySnapshot ? filterEndDate : filterEndDate.AddDays(-1);
+            }
+            else
+            {
+                snapshotDate = filterEndDate;
+            }
+
+            // Load snapshots for the resolved date
+            var snapshots = await _context.BalanceHistories
+                .Where(bh => bh.BalanceDate == snapshotDate)
+                .ToDictionaryAsync(bh => bh.BettingPoolId, bh => bh.BalanceAmount);
+
             var salesData = await query
                 .Include(bp => bp.Balance)
                 .Select(bp => new
@@ -402,7 +421,8 @@ public class SalesReportsController : ControllerBase
                         PendingCount = pendingCount,
                         WinnerCount = winnerCount,
                         LoserCount = loserCount,
-                        Balance = x.BettingPool.Balance != null ? x.BettingPool.Balance.CurrentBalance : 0m
+                        Balance = x.BettingPool.Balance != null ? x.BettingPool.Balance.CurrentBalance : 0m,
+                        BalanceOfTheDay = snapshots.TryGetValue(x.BettingPool.BettingPoolId, out var snap) ? snap : 0m
                     };
                 })
                 .OrderBy(x => x.BettingPoolCode)
