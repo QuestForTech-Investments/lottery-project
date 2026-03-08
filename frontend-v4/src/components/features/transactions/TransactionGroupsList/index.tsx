@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback, type ChangeEvent } from 'react';
 import CreateTransactionGroupModal from './CreateTransactionGroupModal';
+import TransactionGroupDetailModal from './TransactionGroupDetailModal';
 import {
   Box,
   Card,
@@ -33,11 +34,13 @@ interface SortConfig {
 }
 
 const TransactionGroupsList = (): React.ReactElement => {
-  const [startDate, setStartDate] = useState<string>('');
-  const [endDate, setEndDate] = useState<string>('');
+  const today = new Date().toLocaleDateString('en-CA');
+  const [startDate, setStartDate] = useState<string>(today);
+  const [endDate, setEndDate] = useState<string>(today);
   const [quickFilter, setQuickFilter] = useState<string>('');
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: null, direction: 'asc' });
   const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [detailGroupId, setDetailGroupId] = useState<number | null>(null);
   const [groups, setGroups] = useState<TransactionGroupAPI[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -57,8 +60,8 @@ const TransactionGroupsList = (): React.ReactElement => {
   }, []);
 
   useEffect(() => {
-    loadGroups();
-  }, [loadGroups]);
+    loadGroups(today, today);
+  }, [loadGroups, today]);
 
   const handleFilter = useCallback(() => {
     loadGroups(startDate, endDate);
@@ -71,16 +74,18 @@ const TransactionGroupsList = (): React.ReactElement => {
     }));
   }, []);
 
+  const parseUtc = (dateStr: string): Date => {
+    return new Date(dateStr.endsWith('Z') ? dateStr : dateStr + 'Z');
+  };
+
   const formatDate = (dateStr: string | null): string => {
     if (!dateStr) return '';
-    const d = new Date(dateStr);
-    return d.toLocaleDateString('es-DO', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    return parseUtc(dateStr).toLocaleDateString('es-DO', { day: '2-digit', month: '2-digit', year: 'numeric' });
   };
 
   const formatTime = (dateStr: string | null): string => {
     if (!dateStr) return '';
-    const d = new Date(dateStr);
-    return d.toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    return parseUtc(dateStr).toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   };
 
   const filteredAndSortedData = useMemo(() => {
@@ -195,7 +200,15 @@ const TransactionGroupsList = (): React.ReactElement => {
                   ) : (
                     filteredAndSortedData.map((item) => (
                       <TableRow key={item.groupId} hover>
-                        <TableCell>{item.groupNumber}</TableCell>
+                        <TableCell>
+                          <Typography
+                            component="span"
+                            sx={{ color: '#1976d2', cursor: 'pointer', textDecoration: 'underline', fontSize: 'inherit' }}
+                            onClick={() => setDetailGroupId(item.groupId)}
+                          >
+                            {item.groupNumber}
+                          </Typography>
+                        </TableCell>
                         <TableCell>{formatDate(item.createdAt)}</TableCell>
                         <TableCell>{formatTime(item.createdAt)}</TableCell>
                         <TableCell>{item.createdByName ?? ''}</TableCell>
@@ -227,6 +240,13 @@ const TransactionGroupsList = (): React.ReactElement => {
         open={createModalOpen}
         onClose={() => setCreateModalOpen(false)}
         onCreated={handleCreated}
+      />
+
+      <TransactionGroupDetailModal
+        open={detailGroupId !== null}
+        groupId={detailGroupId}
+        onClose={() => setDetailGroupId(null)}
+        onDeleted={handleCreated}
       />
     </Box>
   );

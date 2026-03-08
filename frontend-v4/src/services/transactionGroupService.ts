@@ -63,6 +63,8 @@ export interface CreateTransactionGroupData {
   lines: CreateTransactionGroupLineData[];
 }
 
+const getTzOffset = (): string => String(new Date().getTimezoneOffset());
+
 export const getTransactionGroups = async (params?: {
   startDate?: string;
   endDate?: string;
@@ -72,6 +74,7 @@ export const getTransactionGroups = async (params?: {
   if (params?.startDate) searchParams.set('startDate', params.startDate);
   if (params?.endDate) searchParams.set('endDate', params.endDate);
   if (params?.search) searchParams.set('search', params.search);
+  searchParams.set('tzOffset', getTzOffset());
 
   const query = searchParams.toString();
   return await api.get(`/transaction-groups${query ? `?${query}` : ''}`) as TransactionGroupAPI[];
@@ -83,6 +86,10 @@ export const getTransactionGroup = async (id: number): Promise<TransactionGroupA
 
 export const createTransactionGroup = async (data: CreateTransactionGroupData): Promise<TransactionGroupAPI> => {
   return await api.post('/transaction-groups', data) as TransactionGroupAPI;
+};
+
+export const deleteTransactionGroup = async (id: number): Promise<void> => {
+  await api.delete(`/transaction-groups/${id}`);
 };
 
 export interface TransactionLineReportAPI {
@@ -142,6 +149,7 @@ export const getTransactionLines = async (params?: {
   if (params?.entityName) searchParams.set('entityName', params.entityName);
   if (params?.createdBy) searchParams.set('createdBy', params.createdBy);
   if (params?.limit) searchParams.set('limit', params.limit.toString());
+  searchParams.set('tzOffset', getTzOffset());
 
   const query = searchParams.toString();
   return await api.get(`/transaction-groups/lines${query ? `?${query}` : ''}`) as TransactionLineReportAPI[];

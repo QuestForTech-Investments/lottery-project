@@ -87,6 +87,51 @@ public class BalancesController : ControllerBase
                 })
                 .ToListAsync();
 
+            // Adjust balances with today's transactions (after the snapshot)
+            var todayUtcStart = DateTimeHelper.GetUtcStartOfDay(today);
+            var todayUtcEnd = DateTimeHelper.GetUtcEndOfDay(today);
+
+            // Get net transaction effects for bancas as entity1: debit increases balance, credit decreases
+            var entity1Adjustments = await _context.TransactionGroupLines
+                .AsNoTracking()
+                .Where(l => l.Entity1Type == "bettingPool"
+                    && l.Group!.CreatedAt >= todayUtcStart
+                    && l.Group!.CreatedAt <= todayUtcEnd)
+                .GroupBy(l => l.Entity1Id)
+                .Select(g => new { BettingPoolId = g.Key, Net = g.Sum(l => l.Debit - l.Credit) })
+                .ToListAsync();
+
+            // Get net transaction effects for bancas as entity2: credit increases balance, debit decreases
+            var entity2Adjustments = await _context.TransactionGroupLines
+                .AsNoTracking()
+                .Where(l => l.Entity2Type == "bettingPool"
+                    && l.Group!.CreatedAt >= todayUtcStart
+                    && l.Group!.CreatedAt <= todayUtcEnd)
+                .GroupBy(l => l.Entity2Id!.Value)
+                .Select(g => new { BettingPoolId = g.Key, Net = g.Sum(l => l.Credit - l.Debit) })
+                .ToListAsync();
+
+            var adjustmentMap = new Dictionary<int, decimal>();
+            foreach (var adj in entity1Adjustments)
+            {
+                adjustmentMap.TryGetValue(adj.BettingPoolId, out var current);
+                adjustmentMap[adj.BettingPoolId] = current + adj.Net;
+            }
+            foreach (var adj in entity2Adjustments)
+            {
+                adjustmentMap.TryGetValue(adj.BettingPoolId, out var current);
+                adjustmentMap[adj.BettingPoolId] = current + adj.Net;
+            }
+
+            // Apply transaction adjustments to snapshot balances
+            foreach (var result in results)
+            {
+                if (adjustmentMap.TryGetValue(result.BettingPoolId, out var adjustment))
+                {
+                    result.Balance += adjustment;
+                }
+            }
+
             return Ok(results);
         }
         catch (Exception ex)

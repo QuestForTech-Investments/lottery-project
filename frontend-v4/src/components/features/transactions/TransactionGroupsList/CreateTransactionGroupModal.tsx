@@ -33,6 +33,7 @@ import { formatCurrency } from '@/utils/formatCurrency';
 import { getAllZones } from '../../../../services/zoneService';
 import { getAccountableEntities } from '../../../../services/accountableEntityService';
 import api from '../../../../services/api';
+import type { BettingPoolBalanceAPI } from '../../../../services/balanceService';
 
 const TRANSACTION_TYPES = ['Cobro', 'Pago', 'Ajuste', 'Retiro', 'Gasto'];
 
@@ -132,7 +133,7 @@ const CreateTransactionGroupModal = ({ open, onClose, onCreated }: CreateTransac
 
     const loadData = async () => {
       try {
-        const [zonesResponse, bpResponse, entities] = await Promise.all([
+        const [zonesResponse, bpResponse, entities, historicalBalances] = await Promise.all([
           getAllZones({ isActive: true, pageSize: 200 }),
           api.get('/betting-pools?isActive=true&pageSize=500') as Promise<{
             items: Array<{
@@ -144,11 +145,18 @@ const CreateTransactionGroupModal = ({ open, onClose, onCreated }: CreateTransac
               zoneId: number;
             }>;
           }>,
-          getAccountableEntities({ isActive: true })
+          getAccountableEntities({ isActive: true }),
+          api.get('/balances/betting-pools') as Promise<BettingPoolBalanceAPI[]>
         ]);
 
         const zoneItems = (zonesResponse as { data?: Array<{ zoneId: number; zoneName: string }> }).data || [];
         setZones(zoneItems.map(z => ({ id: z.zoneId, name: z.zoneName })));
+
+        // Build map of historical (previous fallback) balances by bettingPoolId
+        const histBalanceMap = new Map<number, number>();
+        if (Array.isArray(historicalBalances)) {
+          historicalBalances.forEach(hb => histBalanceMap.set(hb.bettingPoolId, hb.balance));
+        }
 
         const bpItems = bpResponse.items || [];
         setBettingPools(bpItems.map(bp => ({
@@ -156,7 +164,7 @@ const CreateTransactionGroupModal = ({ open, onClose, onCreated }: CreateTransac
           name: bp.bettingPoolName,
           code: bp.bettingPoolCode,
           reference: bp.reference || undefined,
-          balance: bp.balance,
+          balance: histBalanceMap.get(bp.bettingPoolId) ?? 0,
           zoneId: bp.zoneId,
           source: 'bettingPool' as const
         })));

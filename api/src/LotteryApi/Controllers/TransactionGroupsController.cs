@@ -26,7 +26,8 @@ public class TransactionGroupsController : ControllerBase
     public async Task<ActionResult<List<TransactionGroupDto>>> GetGroups(
         [FromQuery] string? startDate = null,
         [FromQuery] string? endDate = null,
-        [FromQuery] string? search = null)
+        [FromQuery] string? search = null,
+        [FromQuery] int? tzOffset = null)
     {
         try
         {
@@ -34,14 +35,18 @@ public class TransactionGroupsController : ControllerBase
                 .AsNoTracking()
                 .AsQueryable();
 
+            var offset = TimeSpan.FromMinutes(tzOffset ?? 0);
+
             if (DateTime.TryParse(startDate, out var start))
             {
-                query = query.Where(g => g.CreatedAt >= start.Date);
+                var startUtc = start.Date.Add(offset);
+                query = query.Where(g => g.CreatedAt >= startUtc);
             }
 
             if (DateTime.TryParse(endDate, out var end))
             {
-                query = query.Where(g => g.CreatedAt < end.Date.AddDays(1));
+                var endUtc = end.Date.AddDays(1).Add(offset);
+                query = query.Where(g => g.CreatedAt < endUtc);
             }
 
             if (!string.IsNullOrWhiteSpace(search))
@@ -213,7 +218,8 @@ public class TransactionGroupsController : ControllerBase
         [FromQuery] string? transactionType = null,
         [FromQuery] string? entityName = null,
         [FromQuery] string? createdBy = null,
-        [FromQuery] int? limit = null)
+        [FromQuery] int? limit = null,
+        [FromQuery] int? tzOffset = null)
     {
         try
         {
@@ -223,14 +229,18 @@ public class TransactionGroupsController : ControllerBase
                     .ThenInclude(g => g!.CreatedByUser)
                 .AsQueryable();
 
+            var offset = TimeSpan.FromMinutes(tzOffset ?? 0);
+
             if (DateTime.TryParse(startDate, out var start))
             {
-                query = query.Where(l => l.Group!.CreatedAt >= start.Date);
+                var startUtc = start.Date.Add(offset);
+                query = query.Where(l => l.Group!.CreatedAt >= startUtc);
             }
 
             if (DateTime.TryParse(endDate, out var end))
             {
-                query = query.Where(l => l.Group!.CreatedAt < end.Date.AddDays(1));
+                var endUtc = end.Date.AddDays(1).Add(offset);
+                query = query.Where(l => l.Group!.CreatedAt < endUtc);
             }
 
             if (!string.IsNullOrWhiteSpace(entityType))
@@ -399,6 +409,48 @@ public class TransactionGroupsController : ControllerBase
             await transaction.RollbackAsync();
             _logger.LogError(ex, "Error creating transaction group");
             return StatusCode(500, new { error = "Error al crear grupo de transacciones" });
+        }
+    }
+
+    [HttpDelete("{id}")]
+    public async Task<ActionResult> DeleteGroup(int id)
+    {
+        using var transaction = await _context.Database.BeginTransactionAsync();
+        try
+        {
+            var group = await _context.TransactionGroups
+                .Include(g => g.Lines)
+                .FirstOrDefaultAsync(g => g.GroupId == id);
+
+            if (group == null)
+                return NotFound(new { message = "Grupo no encontrado" });
+
+            // Reverse balance changes for each line
+            foreach (var line in group.Lines)
+            {
+                decimal entity1Delta = line.Debit - line.Credit;
+                decimal entity2Delta = line.Credit - line.Debit;
+
+                // Reverse: subtract what was added
+                await UpdateEntityBalance(line.Entity1Type, line.Entity1Id, -entity1Delta);
+                if (line.Entity2Type != null && line.Entity2Id.HasValue)
+                {
+                    await UpdateEntityBalance(line.Entity2Type, line.Entity2Id.Value, -entity2Delta);
+                }
+            }
+
+            _context.TransactionGroupLines.RemoveRange(group.Lines);
+            _context.TransactionGroups.Remove(group);
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+
+            return Ok(new { message = "Grupo eliminado exitosamente" });
+        }
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync();
+            _logger.LogError(ex, "Error deleting transaction group {Id}", id);
+            return StatusCode(500, new { error = "Error al eliminar grupo de transacciones" });
         }
     }
 

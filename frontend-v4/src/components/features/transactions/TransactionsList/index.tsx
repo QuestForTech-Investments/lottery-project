@@ -68,8 +68,9 @@ const TransactionsList = (): React.ReactElement => {
   const [lines, setLines] = useState<TransactionLineReportAPI[]>([]);
 
   // Filter states
-  const [startDate, setStartDate] = useState<string>('');
-  const [endDate, setEndDate] = useState<string>('');
+  const today = new Date().toLocaleDateString('en-CA');
+  const [startDate, setStartDate] = useState<string>(today);
+  const [endDate, setEndDate] = useState<string>(today);
   const [selectedEntityType, setSelectedEntityType] = useState<string>('');
   const [selectedEntity, setSelectedEntity] = useState<string>('');
   const [selectedTransactionType, setSelectedTransactionType] = useState<string>('');
@@ -136,8 +137,8 @@ const TransactionsList = (): React.ReactElement => {
   }, []);
 
   useEffect(() => {
-    loadLines();
-  }, [loadLines]);
+    loadLines({ startDate: today, endDate: today });
+  }, [loadLines, today]);
 
   const handleFilter = useCallback(() => {
     loadLines({
@@ -157,16 +158,18 @@ const TransactionsList = (): React.ReactElement => {
     }));
   }, []);
 
+  const parseUtc = (dateStr: string): Date => {
+    return new Date(dateStr.endsWith('Z') ? dateStr : dateStr + 'Z');
+  };
+
   const formatDate = (dateStr: string | null): string => {
     if (!dateStr) return '';
-    const d = new Date(dateStr);
-    return d.toLocaleDateString('es-DO', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    return parseUtc(dateStr).toLocaleDateString('es-DO', { day: '2-digit', month: '2-digit', year: 'numeric' });
   };
 
   const formatTime = (dateStr: string | null): string => {
     if (!dateStr) return '';
-    const d = new Date(dateStr);
-    return d.toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit' });
+    return parseUtc(dateStr).toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit' });
   };
 
   const formatCurrency = (val: number): string => `$${val.toFixed(2)}`;
