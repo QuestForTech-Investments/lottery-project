@@ -104,6 +104,7 @@ const DrawSchedulesMUI = lazy(() => import('@components/features/draws/DrawSched
 // Accountable Entities feature components
 const AccountableEntitiesMUI = lazy(() => import('@components/features/accountable-entities/AccountableEntities'))
 const CreateAccountableEntityMUI = lazy(() => import('@components/features/accountable-entities/CreateAccountableEntity'))
+const EditAccountableEntityMUI = lazy(() => import('@components/features/accountable-entities/EditAccountableEntity'))
 
 // My Group feature components
 const GroupConfigurationMUI = lazy(() => import('@components/features/my-group/GroupConfiguration'))
@@ -248,6 +249,7 @@ function App() {
                           {/* Entities */}
                           <Route path="/entities/list" element={<LazyRoute component={AccountableEntitiesMUI} />} />
                           <Route path="/entities/new" element={<LazyRoute component={CreateAccountableEntityMUI} />} />
+                          <Route path="/entities/edit/:id" element={<LazyRoute component={EditAccountableEntityMUI} />} />
 
                           {/* Configuration */}
                           <Route path="/my-group/configuration" element={<LazyRoute component={GroupConfigurationMUI} />} />

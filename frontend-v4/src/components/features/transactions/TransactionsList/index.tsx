@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, type ChangeEvent } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, type ChangeEvent } from 'react';
 import {
   Box,
   Card,
@@ -22,6 +22,7 @@ import {
   InputLabel,
   Checkbox,
   FormControlLabel,
+  CircularProgress,
   type SelectChangeEvent
 } from '@mui/material';
 import {
@@ -29,34 +30,42 @@ import {
   FileDownload as FileDownloadIcon,
   PictureAsPdf as PdfIcon
 } from '@mui/icons-material';
+import {
+  getTransactionLines,
+  getTransactionLineFilterOptions,
+  getEntitiesByType,
+  type TransactionLineReportAPI,
+  type EntityOption
+} from '@services/transactionGroupService';
 
 type SortDirection = 'asc' | 'desc';
-
-interface Transaction {
-  id: number;
-  concepto: string;
-  fecha: string;
-  hora: string;
-  creadoPor: string;
-  entidad1: string;
-  entidad2: string;
-  saldoInicialEntidad1: number;
-  saldoInicialEntidad2: number;
-  debito: number;
-  credito: number;
-  saldoFinalEntidad1: number;
-  saldoFinalEntidad2: number;
-  notas: string;
-}
+type SortKey = 'transactionType' | 'createdAt' | 'createdByName' | 'entity1Name' | 'entity2Name' | 'debit' | 'credit' | null;
 
 interface SortConfig {
-  key: keyof Transaction | null;
+  key: SortKey;
   direction: SortDirection;
 }
+
+const ENTITY_TYPE_LABELS: Record<string, string> = {
+  bettingPool: 'Banca',
+  accountableEntity: 'Banco',
+  zone: 'Zona',
+  group: 'Grupo',
+  externalAgent: 'Agente externo',
+  employee: 'Empleado',
+  personalClient: 'Cliente personal',
+  system: 'Sistema',
+  accumulatedDrop: 'Caída acumulada',
+  other: 'Otros'
+};
+
+const getEntityTypeLabel = (type: string): string => ENTITY_TYPE_LABELS[type] ?? type;
 
 const TransactionsList = (): React.ReactElement => {
   const [quickFilter, setQuickFilter] = useState<string>('');
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: null, direction: 'asc' });
+  const [loading, setLoading] = useState(true);
+  const [lines, setLines] = useState<TransactionLineReportAPI[]>([]);
 
   // Filter states
   const [startDate, setStartDate] = useState<string>('');
@@ -67,60 +76,147 @@ const TransactionsList = (): React.ReactElement => {
   const [selectedCreatedBy, setSelectedCreatedBy] = useState<string>('');
   const [showNotes, setShowNotes] = useState<boolean>(false);
 
-  const mockupData: Transaction[] = [
-    { id: 1, concepto: 'Cobro de banca LA CENTRAL 01', fecha: '18/11/2025', hora: '09:30', creadoPor: 'admin', entidad1: 'LA CENTRAL 01', entidad2: 'Caja Principal', saldoInicialEntidad1: 10000.00, saldoInicialEntidad2: 50000.00, debito: 5000.00, credito: 5000.00, saldoFinalEntidad1: 5000.00, saldoFinalEntidad2: 55000.00, notas: 'Cobro de ventas del día' },
-    { id: 2, concepto: 'Pago a Banco Principal', fecha: '18/11/2025', hora: '10:15', creadoPor: 'supervisor', entidad1: 'Caja Principal', entidad2: 'Banco Principal', saldoInicialEntidad1: 55000.00, saldoInicialEntidad2: 20000.00, debito: 3000.00, credito: 3000.00, saldoFinalEntidad1: 52000.00, saldoFinalEntidad2: 23000.00, notas: 'Pago de facturas' },
-    { id: 3, concepto: 'Cobro de banca LA ESTRELLA 02', fecha: '18/11/2025', hora: '11:00', creadoPor: 'admin', entidad1: 'LA ESTRELLA 02', entidad2: 'Caja Principal', saldoInicialEntidad1: 8000.00, saldoInicialEntidad2: 52000.00, debito: 7500.00, credito: 7500.00, saldoFinalEntidad1: 500.00, saldoFinalEntidad2: 59500.00, notas: 'Cobro de ventas semanales' },
-    { id: 4, concepto: 'Transferencia entre bancos', fecha: '17/11/2025', hora: '14:30', creadoPor: 'manager', entidad1: 'Banco Principal', entidad2: 'Banco Secundario', saldoInicialEntidad1: 23000.00, saldoInicialEntidad2: 15000.00, debito: 4500.00, credito: 4500.00, saldoFinalEntidad1: 18500.00, saldoFinalEntidad2: 19500.00, notas: 'Ajuste de saldos' },
-    { id: 5, concepto: 'Cobro de banca LA SUERTE 03', fecha: '17/11/2025', hora: '16:45', creadoPor: 'admin', entidad1: 'LA SUERTE 03', entidad2: 'Caja Principal', saldoInicialEntidad1: 12000.00, saldoInicialEntidad2: 59500.00, debito: 6000.00, credito: 6000.00, saldoFinalEntidad1: 6000.00, saldoFinalEntidad2: 65500.00, notas: '' }
-  ];
+  // Filter options from API
+  const [entityTypeOptions, setEntityTypeOptions] = useState<string[]>([]);
+  const [transactionTypeOptions, setTransactionTypeOptions] = useState<string[]>([]);
+  const [createdByOptions, setCreatedByOptions] = useState<string[]>([]);
+  const [entityOptions, setEntityOptions] = useState<EntityOption[]>([]);
+
+  // Load filter options on mount
+  useEffect(() => {
+    const loadOptions = async () => {
+      try {
+        const options = await getTransactionLineFilterOptions();
+        setEntityTypeOptions(options.entityTypes ?? []);
+        setTransactionTypeOptions(options.transactionTypes ?? []);
+        setCreatedByOptions(options.createdByUsers ?? []);
+      } catch (err) {
+        console.error('Error loading filter options:', err);
+      }
+    };
+    loadOptions();
+  }, []);
+
+  // Load entities when entity type changes
+  useEffect(() => {
+    if (!selectedEntityType) {
+      setEntityOptions([]);
+      setSelectedEntity('');
+      return;
+    }
+    const loadEntities = async () => {
+      try {
+        const entities = await getEntitiesByType(selectedEntityType);
+        setEntityOptions(Array.isArray(entities) ? entities : []);
+        setSelectedEntity('');
+      } catch (err) {
+        console.error('Error loading entities:', err);
+      }
+    };
+    loadEntities();
+  }, [selectedEntityType]);
+
+  const loadLines = useCallback(async (params?: {
+    startDate?: string;
+    endDate?: string;
+    entityType?: string;
+    transactionType?: string;
+    entityName?: string;
+    createdBy?: string;
+  }) => {
+    try {
+      setLoading(true);
+      const data = await getTransactionLines(params);
+      setLines(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error('Error loading transactions:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadLines();
+  }, [loadLines]);
 
   const handleFilter = useCallback(() => {
-  }, [startDate, endDate, selectedEntityType, selectedEntity, selectedTransactionType, selectedCreatedBy, showNotes]);
+    loadLines({
+      startDate: startDate || undefined,
+      endDate: endDate || undefined,
+      entityType: selectedEntityType || undefined,
+      transactionType: selectedTransactionType || undefined,
+      entityName: selectedEntity || undefined,
+      createdBy: selectedCreatedBy || undefined
+    });
+  }, [startDate, endDate, selectedEntityType, selectedTransactionType, selectedEntity, selectedCreatedBy, loadLines]);
 
-  const handleExportCSV = useCallback(() => { console.log('Exporting to CSV'); }, []);
-  const handleExportPDF = useCallback(() => { console.log('Exporting to PDF'); }, []);
+  const handleSort = useCallback((key: SortKey) => {
+    setSortConfig(prev => ({
+      key,
+      direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
+    }));
+  }, []);
 
-  const handleSort = useCallback((key: keyof Transaction) => {
-    let direction: SortDirection = 'asc';
-    if (sortConfig.key === key && sortConfig.direction === 'asc') {
-      direction = 'desc';
-    }
-    setSortConfig({ key, direction });
-  }, [sortConfig]);
+  const formatDate = (dateStr: string | null): string => {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('es-DO', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  };
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- mockupData is stable
+  const formatTime = (dateStr: string | null): string => {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    return d.toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit' });
+  };
+
+  const formatCurrency = (val: number): string => `$${val.toFixed(2)}`;
+
   const filteredAndSortedData = useMemo(() => {
-    let filtered = mockupData;
+    let filtered = lines;
 
     if (quickFilter) {
+      const lower = quickFilter.toLowerCase();
       filtered = filtered.filter((item) =>
-        Object.values(item).some((val) =>
-          String(val).toLowerCase().includes(quickFilter.toLowerCase())
-        )
+        item.transactionType.toLowerCase().includes(lower) ||
+        item.entity1Name.toLowerCase().includes(lower) ||
+        (item.entity2Name && item.entity2Name.toLowerCase().includes(lower)) ||
+        (item.createdByName && item.createdByName.toLowerCase().includes(lower)) ||
+        (item.notes && item.notes.toLowerCase().includes(lower)) ||
+        item.groupNumber.toLowerCase().includes(lower)
       );
     }
 
     if (sortConfig.key) {
+      const key = sortConfig.key;
       filtered = [...filtered].sort((a, b) => {
-        const aVal = a[sortConfig.key!];
-        const bVal = b[sortConfig.key!];
+        let aVal: string | number = '';
+        let bVal: string | number = '';
+
+        switch (key) {
+          case 'transactionType': aVal = a.transactionType; bVal = b.transactionType; break;
+          case 'createdAt': aVal = a.createdAt ?? ''; bVal = b.createdAt ?? ''; break;
+          case 'createdByName': aVal = a.createdByName ?? ''; bVal = b.createdByName ?? ''; break;
+          case 'entity1Name': aVal = a.entity1Name; bVal = b.entity1Name; break;
+          case 'entity2Name': aVal = a.entity2Name ?? ''; bVal = b.entity2Name ?? ''; break;
+          case 'debit': aVal = a.debit; bVal = b.debit; break;
+          case 'credit': aVal = a.credit; bVal = b.credit; break;
+        }
 
         if (typeof aVal === 'number' && typeof bVal === 'number') {
           return sortConfig.direction === 'asc' ? aVal - bVal : bVal - aVal;
         }
 
-        const aStr = String(aVal).toLowerCase();
-        const bStr = String(bVal).toLowerCase();
-
-        if (aStr < bStr) return sortConfig.direction === 'asc' ? -1 : 1;
-        if (aStr > bStr) return sortConfig.direction === 'asc' ? 1 : -1;
+        if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
         return 0;
       });
     }
 
     return filtered;
-  }, [quickFilter, sortConfig]);
+  }, [lines, quickFilter, sortConfig]);
+
+  const totalDebit = filteredAndSortedData.reduce((sum, item) => sum + item.debit, 0);
+  const totalCredit = filteredAndSortedData.reduce((sum, item) => sum + item.credit, 0);
 
   return (
     <Box sx={{ p: 3 }}>
@@ -141,55 +237,47 @@ const TransactionsList = (): React.ReactElement => {
             </Grid>
 
             <Grid container spacing={2} sx={{ mb: 2 }}>
-              <Grid item xs={12} md={6}>
+              <Grid item xs={12} md={3}>
                 <FormControl fullWidth size="small">
                   <InputLabel>Tipo de entidad</InputLabel>
                   <Select value={selectedEntityType} label="Tipo de entidad" onChange={(e: SelectChangeEvent) => setSelectedEntityType(e.target.value)}>
                     <MenuItem value="">Seleccione</MenuItem>
-                    <MenuItem value="BANCA">Banca</MenuItem>
-                    <MenuItem value="BANCO">Banco</MenuItem>
-                    <MenuItem value="CAJA">Caja</MenuItem>
-                    <MenuItem value="USUARIO">Usuario</MenuItem>
+                    {entityTypeOptions.map((type) => (
+                      <MenuItem key={type} value={type}>{getEntityTypeLabel(type)}</MenuItem>
+                    ))}
                   </Select>
                 </FormControl>
               </Grid>
-              <Grid item xs={12} md={6}>
+              <Grid item xs={12} md={3}>
                 <FormControl fullWidth size="small">
                   <InputLabel>Entidad</InputLabel>
-                  <Select value={selectedEntity} label="Entidad" onChange={(e: SelectChangeEvent) => setSelectedEntity(e.target.value)}>
+                  <Select value={selectedEntity} label="Entidad" onChange={(e: SelectChangeEvent) => setSelectedEntity(e.target.value)} disabled={!selectedEntityType}>
                     <MenuItem value="">Seleccione</MenuItem>
-                    <MenuItem value="LA CENTRAL 01">LA CENTRAL 01</MenuItem>
-                    <MenuItem value="LA ESTRELLA 02">LA ESTRELLA 02</MenuItem>
-                    <MenuItem value="LA SUERTE 03">LA SUERTE 03</MenuItem>
-                    <MenuItem value="Caja Principal">Caja Principal</MenuItem>
-                    <MenuItem value="Banco Principal">Banco Principal</MenuItem>
-                    <MenuItem value="Banco Secundario">Banco Secundario</MenuItem>
+                    {entityOptions.map((entity) => (
+                      <MenuItem key={entity.id} value={entity.name}>{entity.name}</MenuItem>
+                    ))}
                   </Select>
                 </FormControl>
               </Grid>
-            </Grid>
-
-            <Grid container spacing={2} sx={{ mb: 2 }}>
-              <Grid item xs={12} md={6}>
+              <Grid item xs={12} md={3}>
                 <FormControl fullWidth size="small">
                   <InputLabel>Tipo de transacción</InputLabel>
                   <Select value={selectedTransactionType} label="Tipo de transacción" onChange={(e: SelectChangeEvent) => setSelectedTransactionType(e.target.value)}>
-                    <MenuItem value="">Seleccione</MenuItem>
-                    <MenuItem value="COBRO">Cobro</MenuItem>
-                    <MenuItem value="PAGO">Pago</MenuItem>
-                    <MenuItem value="TRANSFERENCIA">Transferencia</MenuItem>
-                    <MenuItem value="AJUSTE">Ajuste</MenuItem>
+                    <MenuItem value="">Todos</MenuItem>
+                    {transactionTypeOptions.map((type) => (
+                      <MenuItem key={type} value={type}>{type}</MenuItem>
+                    ))}
                   </Select>
                 </FormControl>
               </Grid>
-              <Grid item xs={12} md={6}>
+              <Grid item xs={12} md={3}>
                 <FormControl fullWidth size="small">
                   <InputLabel>Creado por</InputLabel>
                   <Select value={selectedCreatedBy} label="Creado por" onChange={(e: SelectChangeEvent) => setSelectedCreatedBy(e.target.value)}>
                     <MenuItem value="">Seleccione</MenuItem>
-                    <MenuItem value="admin">admin</MenuItem>
-                    <MenuItem value="supervisor">supervisor</MenuItem>
-                    <MenuItem value="manager">manager</MenuItem>
+                    {createdByOptions.map((user) => (
+                      <MenuItem key={user} value={user}>{user}</MenuItem>
+                    ))}
                   </Select>
                 </FormControl>
               </Grid>
@@ -201,8 +289,8 @@ const TransactionsList = (): React.ReactElement => {
 
             <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
               <Button variant="contained" onClick={handleFilter} sx={{ backgroundColor: '#8b5cf6', '&:hover': { backgroundColor: '#45b5b8' } }}>FILTRAR</Button>
-              <Button variant="contained" startIcon={<FileDownloadIcon />} onClick={handleExportCSV} sx={{ backgroundColor: '#8b5cf6', '&:hover': { backgroundColor: '#45b5b8' } }}>CSV</Button>
-              <Button variant="contained" startIcon={<PdfIcon />} onClick={handleExportPDF} sx={{ backgroundColor: '#8b5cf6', '&:hover': { backgroundColor: '#45b5b8' } }}>PDF</Button>
+              <Button variant="contained" startIcon={<FileDownloadIcon />} sx={{ backgroundColor: '#8b5cf6', '&:hover': { backgroundColor: '#45b5b8' } }}>CSV</Button>
+              <Button variant="contained" startIcon={<PdfIcon />} sx={{ backgroundColor: '#8b5cf6', '&:hover': { backgroundColor: '#45b5b8' } }}>PDF</Button>
             </Box>
           </Box>
 
@@ -210,60 +298,66 @@ const TransactionsList = (): React.ReactElement => {
             <TextField size="small" placeholder="Filtro rapido" value={quickFilter} onChange={(e: ChangeEvent<HTMLInputElement>) => setQuickFilter(e.target.value)} InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon /></InputAdornment> }} sx={{ maxWidth: 300 }} />
           </Box>
 
-          <TableContainer component={Paper} variant="outlined">
-            <Table size="small">
-              <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
-                <TableRow>
-                  <TableCell><TableSortLabel active={sortConfig.key === 'concepto'} direction={sortConfig.direction} onClick={() => handleSort('concepto')}>Concepto</TableSortLabel></TableCell>
-                  <TableCell><TableSortLabel active={sortConfig.key === 'fecha'} direction={sortConfig.direction} onClick={() => handleSort('fecha')}>Fecha</TableSortLabel></TableCell>
-                  <TableCell><TableSortLabel active={sortConfig.key === 'hora'} direction={sortConfig.direction} onClick={() => handleSort('hora')}>Hora</TableSortLabel></TableCell>
-                  <TableCell><TableSortLabel active={sortConfig.key === 'creadoPor'} direction={sortConfig.direction} onClick={() => handleSort('creadoPor')}>Creado por</TableSortLabel></TableCell>
-                  <TableCell>Entidad #1</TableCell>
-                  <TableCell>Entidad #2</TableCell>
-                  <TableCell align="right">Saldo inicial de Entidad #1</TableCell>
-                  <TableCell align="right">Saldo inicial de Entidad #2</TableCell>
-                  <TableCell align="right" sx={{ color: '#dc3545' }}>Débito</TableCell>
-                  <TableCell align="right" sx={{ color: '#28a745' }}>Crédito</TableCell>
-                  <TableCell align="right">Saldo final de Entidad #1</TableCell>
-                  <TableCell align="right">Saldo final de Entidad #2</TableCell>
-                  {showNotes && <TableCell>Notas</TableCell>}
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {filteredAndSortedData.length === 0 ? (
+          {loading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+              <CircularProgress />
+            </Box>
+          ) : (
+            <TableContainer component={Paper} variant="outlined">
+              <Table size="small">
+                <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
                   <TableRow>
-                    <TableCell colSpan={showNotes ? 13 : 12} align="center" sx={{ py: 3 }}>No hay entradas disponibles</TableCell>
+                    <TableCell><TableSortLabel active={sortConfig.key === 'transactionType'} direction={sortConfig.key === 'transactionType' ? sortConfig.direction : 'asc'} onClick={() => handleSort('transactionType')}>Concepto</TableSortLabel></TableCell>
+                    <TableCell><TableSortLabel active={sortConfig.key === 'createdAt'} direction={sortConfig.key === 'createdAt' ? sortConfig.direction : 'asc'} onClick={() => handleSort('createdAt')}>Fecha</TableSortLabel></TableCell>
+                    <TableCell>Hora</TableCell>
+                    <TableCell><TableSortLabel active={sortConfig.key === 'createdByName'} direction={sortConfig.key === 'createdByName' ? sortConfig.direction : 'asc'} onClick={() => handleSort('createdByName')}>Creado por</TableSortLabel></TableCell>
+                    <TableCell><TableSortLabel active={sortConfig.key === 'entity1Name'} direction={sortConfig.key === 'entity1Name' ? sortConfig.direction : 'asc'} onClick={() => handleSort('entity1Name')}>Entidad #1</TableSortLabel></TableCell>
+                    <TableCell><TableSortLabel active={sortConfig.key === 'entity2Name'} direction={sortConfig.key === 'entity2Name' ? sortConfig.direction : 'asc'} onClick={() => handleSort('entity2Name')}>Entidad #2</TableSortLabel></TableCell>
+                    <TableCell align="right">Saldo inicial de Entidad #1</TableCell>
+                    <TableCell align="right">Saldo inicial de Entidad #2</TableCell>
+                    <TableCell align="right" sx={{ color: '#dc3545' }}><TableSortLabel active={sortConfig.key === 'debit'} direction={sortConfig.key === 'debit' ? sortConfig.direction : 'asc'} onClick={() => handleSort('debit')}>Débito</TableSortLabel></TableCell>
+                    <TableCell align="right" sx={{ color: '#28a745' }}><TableSortLabel active={sortConfig.key === 'credit'} direction={sortConfig.key === 'credit' ? sortConfig.direction : 'asc'} onClick={() => handleSort('credit')}>Crédito</TableSortLabel></TableCell>
+                    <TableCell align="right">Saldo final de Entidad #1</TableCell>
+                    <TableCell align="right">Saldo final de Entidad #2</TableCell>
+                    {showNotes && <TableCell>Notas</TableCell>}
                   </TableRow>
-                ) : (
-                  <>
-                    {filteredAndSortedData.map((item) => (
-                      <TableRow key={item.id} hover>
-                        <TableCell>{item.concepto}</TableCell>
-                        <TableCell>{item.fecha}</TableCell>
-                        <TableCell>{item.hora}</TableCell>
-                        <TableCell>{item.creadoPor}</TableCell>
-                        <TableCell>{item.entidad1}</TableCell>
-                        <TableCell>{item.entidad2}</TableCell>
-                        <TableCell align="right">${item.saldoInicialEntidad1.toFixed(2)}</TableCell>
-                        <TableCell align="right">${item.saldoInicialEntidad2.toFixed(2)}</TableCell>
-                        <TableCell align="right" sx={{ color: '#dc3545', fontWeight: 500 }}>${item.debito.toFixed(2)}</TableCell>
-                        <TableCell align="right" sx={{ color: '#28a745', fontWeight: 500 }}>${item.credito.toFixed(2)}</TableCell>
-                        <TableCell align="right">${item.saldoFinalEntidad1.toFixed(2)}</TableCell>
-                        <TableCell align="right">${item.saldoFinalEntidad2.toFixed(2)}</TableCell>
-                        {showNotes && <TableCell>{item.notas}</TableCell>}
-                      </TableRow>
-                    ))}
-                    <TableRow sx={{ backgroundColor: '#f8f9fa', fontWeight: 600 }}>
-                      <TableCell colSpan={showNotes ? 9 : 8} align="right"><strong>Totales</strong></TableCell>
-                      <TableCell align="right" sx={{ color: '#dc3545', fontWeight: 600 }}>${filteredAndSortedData.reduce((sum, item) => sum + item.debito, 0).toFixed(2)}</TableCell>
-                      <TableCell align="right" sx={{ color: '#28a745', fontWeight: 600 }}>${filteredAndSortedData.reduce((sum, item) => sum + item.credito, 0).toFixed(2)}</TableCell>
-                      <TableCell colSpan={showNotes ? 3 : 2}></TableCell>
+                </TableHead>
+                <TableBody>
+                  {filteredAndSortedData.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={showNotes ? 13 : 12} align="center" sx={{ py: 3 }}>No hay entradas disponibles</TableCell>
                     </TableRow>
-                  </>
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                  ) : (
+                    <>
+                      {filteredAndSortedData.map((item) => (
+                        <TableRow key={item.lineId} hover>
+                          <TableCell>{item.transactionType}</TableCell>
+                          <TableCell>{formatDate(item.createdAt)}</TableCell>
+                          <TableCell>{formatTime(item.createdAt)}</TableCell>
+                          <TableCell>{item.createdByName ?? ''}</TableCell>
+                          <TableCell>{item.entity1Name}</TableCell>
+                          <TableCell>{item.entity2Name ?? ''}</TableCell>
+                          <TableCell align="right">{formatCurrency(item.entity1InitialBalance)}</TableCell>
+                          <TableCell align="right">{formatCurrency(item.entity2InitialBalance)}</TableCell>
+                          <TableCell align="right" sx={{ color: '#dc3545', fontWeight: 500 }}>{formatCurrency(item.debit)}</TableCell>
+                          <TableCell align="right" sx={{ color: '#28a745', fontWeight: 500 }}>{formatCurrency(item.credit)}</TableCell>
+                          <TableCell align="right">{formatCurrency(item.entity1FinalBalance)}</TableCell>
+                          <TableCell align="right">{formatCurrency(item.entity2FinalBalance)}</TableCell>
+                          {showNotes && <TableCell>{item.notes ?? ''}</TableCell>}
+                        </TableRow>
+                      ))}
+                      <TableRow sx={{ backgroundColor: '#f8f9fa', fontWeight: 600 }}>
+                        <TableCell colSpan={8} align="right"><strong>Totales</strong></TableCell>
+                        <TableCell align="right" sx={{ color: '#dc3545', fontWeight: 600 }}>{formatCurrency(totalDebit)}</TableCell>
+                        <TableCell align="right" sx={{ color: '#28a745', fontWeight: 600 }}>{formatCurrency(totalCredit)}</TableCell>
+                        <TableCell colSpan={showNotes ? 3 : 2}></TableCell>
+                      </TableRow>
+                    </>
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
 
           <Typography variant="body2" sx={{ mt: 2, color: 'text.secondary' }}>Mostrando {filteredAndSortedData.length} entradas</Typography>
         </CardContent>

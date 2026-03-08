@@ -19,12 +19,18 @@ import {
   IconButton,
   TableSortLabel,
   Alert,
-  CircularProgress
+  CircularProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
+  Button
 } from '@mui/material';
-import { Search as SearchIcon, Edit as EditIcon } from '@mui/icons-material';
+import { Search as SearchIcon, Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import { formatCurrency } from '@/utils/formatCurrency';
 import api from '../../../../services/api';
-import { getAccountableEntities, type AccountableEntityAPI } from '../../../../services/accountableEntityService';
+import { getAccountableEntities, deleteAccountableEntity, type AccountableEntityAPI } from '../../../../services/accountableEntityService';
 
 type SortOrder = 'asc' | 'desc';
 
@@ -57,46 +63,46 @@ const AccountableEntities = (): React.ReactElement => {
   const [bancas, setBancas] = useState<Entity[]>([]);
   const [accountableEntities, setAccountableEntities] = useState<AccountableEntityAPI[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null);
 
-  // Load data
-  useEffect(() => {
-    const loadData = async () => {
-      setLoading(true);
-      try {
-        // Load bancas (betting pools with live balance) and accountable entities in parallel
-        const [bpResponse, entities] = await Promise.all([
-          api.get('/betting-pools?isActive=true&pageSize=500') as Promise<{
-            items: Array<{
-              bettingPoolId: number;
-              bettingPoolCode: string;
-              bettingPoolName: string;
-              zoneName: string | null;
-              balance: number;
-            }>;
-          }>,
-          getAccountableEntities({ isActive: true })
-        ]);
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [bpResponse, entities] = await Promise.all([
+        api.get('/betting-pools?isActive=true&pageSize=500') as Promise<{
+          items: Array<{
+            bettingPoolId: number;
+            bettingPoolCode: string;
+            bettingPoolName: string;
+            zoneName: string | null;
+            balance: number;
+          }>;
+        }>,
+        getAccountableEntities({ isActive: true })
+      ]);
 
-        const bpItems = bpResponse.items || [];
-        setBancas(bpItems.map(bp => ({
-          id: bp.bettingPoolId,
-          nombre: bp.bettingPoolName,
-          codigo: bp.bettingPoolCode,
-          balance: bp.balance,
-          caida: 0,
-          prestamo: 0,
-          zona: bp.zoneName || ''
-        })));
+      const bpItems = bpResponse.items || [];
+      setBancas(bpItems.map(bp => ({
+        id: bp.bettingPoolId,
+        nombre: bp.bettingPoolName,
+        codigo: bp.bettingPoolCode,
+        balance: bp.balance,
+        caida: 0,
+        prestamo: 0,
+        zona: bp.zoneName || ''
+      })));
 
-        setAccountableEntities(entities);
-      } catch (err) {
-        console.error('Error loading entities:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadData();
+      setAccountableEntities(entities);
+    } catch (err) {
+      console.error('Error loading entities:', err);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const bancos = useMemo(() =>
     accountableEntities
@@ -171,9 +177,20 @@ const AccountableEntities = (): React.ReactElement => {
     if (currentTab === 'bancas') {
       navigate(`/betting-pools/edit/${id}`);
     } else {
-      alert(`Editar entidad ${id}`);
+      navigate(`/entities/edit/${id}`);
     }
   }, [activeTab, navigate]);
+
+  const handleDelete = useCallback(async () => {
+    if (!deleteTarget) return;
+    try {
+      await deleteAccountableEntity(deleteTarget.id);
+      setDeleteTarget(null);
+      loadData();
+    } catch (err) {
+      console.error('Error deleting entity:', err);
+    }
+  }, [deleteTarget, loadData]);
 
   const getColumns = useCallback((): ColumnKey[] => {
     switch (tabs[activeTab]) {
@@ -331,6 +348,15 @@ const AccountableEntities = (): React.ReactElement => {
                               >
                                 <EditIcon fontSize="small" />
                               </IconButton>
+                              {tabs[activeTab] !== 'bancas' && (item.balance === 0 || item.balance === undefined) && (
+                                <IconButton
+                                  size="small"
+                                  onClick={() => setDeleteTarget({ id: item.id, name: item.nombre })}
+                                  sx={{ color: '#c62828' }}
+                                >
+                                  <DeleteIcon fontSize="small" />
+                                </IconButton>
+                              )}
                             </TableCell>
                           </TableRow>
                         ))
@@ -355,6 +381,19 @@ const AccountableEntities = (): React.ReactElement => {
           </Box>
         </CardContent>
       </Card>
+
+      <Dialog open={deleteTarget !== null} onClose={() => setDeleteTarget(null)}>
+        <DialogTitle>Confirmar eliminación</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            ¿Está seguro que desea eliminar <strong>{deleteTarget?.name}</strong>?
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteTarget(null)}>Cancelar</Button>
+          <Button onClick={handleDelete} color="error" variant="contained">Eliminar</Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

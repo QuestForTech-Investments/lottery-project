@@ -1,4 +1,5 @@
-import React, { useState, useMemo, useCallback, type ChangeEvent } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, type ChangeEvent } from 'react';
+import CreateTransactionGroupModal from './CreateTransactionGroupModal';
 import {
   Box,
   Card,
@@ -17,23 +18,17 @@ import {
   InputAdornment,
   IconButton,
   Chip,
-  Grid
+  Grid,
+  CircularProgress
 } from '@mui/material';
 import { Search as SearchIcon, CalendarToday as CalendarIcon } from '@mui/icons-material';
+import { getTransactionGroups, type TransactionGroupAPI } from '@services/transactionGroupService';
 
 type SortDirection = 'asc' | 'desc';
-
-interface TransactionGroup {
-  numero: string;
-  fecha: string;
-  hora: string;
-  creadoPor: string;
-  esAutomatico: boolean;
-  notas: string;
-}
+type SortKey = 'groupNumber' | 'createdAt' | 'createdByName' | 'isAutomatic' | 'notes' | null;
 
 interface SortConfig {
-  key: keyof TransactionGroup | null;
+  key: SortKey;
   direction: SortDirection;
 }
 
@@ -42,48 +37,78 @@ const TransactionGroupsList = (): React.ReactElement => {
   const [endDate, setEndDate] = useState<string>('');
   const [quickFilter, setQuickFilter] = useState<string>('');
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: null, direction: 'asc' });
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [groups, setGroups] = useState<TransactionGroupAPI[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const mockupData: TransactionGroup[] = [
-    { numero: 'TG-001', fecha: '18/11/2025', hora: '09:30:00', creadoPor: 'admin', esAutomatico: true, notas: 'Cobro semanal a bancas zona norte' },
-    { numero: 'TG-002', fecha: '18/11/2025', hora: '10:15:00', creadoPor: 'supervisor', esAutomatico: false, notas: 'Pago manual a banco principal' },
-    { numero: 'TG-003', fecha: '18/11/2025', hora: '11:00:00', creadoPor: 'admin', esAutomatico: true, notas: 'Transacción automática de cierre diario' },
-    { numero: 'TG-004', fecha: '17/11/2025', hora: '14:30:00', creadoPor: 'manager', esAutomatico: false, notas: 'Ajuste de balances zona sur' },
-    { numero: 'TG-005', fecha: '17/11/2025', hora: '16:45:00', creadoPor: 'admin', esAutomatico: true, notas: 'Cobro automático fin de jornada' },
-    { numero: 'TG-006', fecha: '16/11/2025', hora: '09:00:00', creadoPor: 'supervisor', esAutomatico: false, notas: 'Pago a proveedor de servicios' },
-    { numero: 'TG-007', fecha: '16/11/2025', hora: '12:30:00', creadoPor: 'admin', esAutomatico: true, notas: 'Distribución automática de premios' },
-    { numero: 'TG-008', fecha: '15/11/2025', hora: '18:00:00', creadoPor: 'manager', esAutomatico: false, notas: 'Cierre manual de caja fuerte' }
-  ];
+  const loadGroups = useCallback(async (start?: string, end?: string) => {
+    try {
+      setLoading(true);
+      const data = await getTransactionGroups({
+        startDate: start || undefined,
+        endDate: end || undefined
+      });
+      setGroups(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error('Error loading transaction groups:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadGroups();
+  }, [loadGroups]);
 
   const handleFilter = useCallback(() => {
-  }, [startDate, endDate]);
+    loadGroups(startDate, endDate);
+  }, [startDate, endDate, loadGroups]);
 
-  const handleSort = useCallback((key: keyof TransactionGroup) => {
-    let direction: SortDirection = 'asc';
-    if (sortConfig.key === key && sortConfig.direction === 'asc') {
-      direction = 'desc';
-    }
-    setSortConfig({ key, direction });
-  }, [sortConfig]);
+  const handleSort = useCallback((key: SortKey) => {
+    setSortConfig(prev => ({
+      key,
+      direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
+    }));
+  }, []);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- mockupData is stable
+  const formatDate = (dateStr: string | null): string => {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('es-DO', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  };
+
+  const formatTime = (dateStr: string | null): string => {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    return d.toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  };
+
   const filteredAndSortedData = useMemo(() => {
-    let filtered = mockupData;
+    let filtered = groups;
 
     if (quickFilter) {
+      const lower = quickFilter.toLowerCase();
       filtered = filtered.filter((item) =>
-        Object.entries(item).some(([key, val]) => {
-          if (key === 'esAutomatico') {
-            return (val ? 'sí' : 'no').includes(quickFilter.toLowerCase());
-          }
-          return String(val).toLowerCase().includes(quickFilter.toLowerCase());
-        })
+        item.groupNumber.toLowerCase().includes(lower) ||
+        (item.createdByName && item.createdByName.toLowerCase().includes(lower)) ||
+        (item.notes && item.notes.toLowerCase().includes(lower)) ||
+        (item.isAutomatic ? 'sí' : 'no').includes(lower)
       );
     }
 
     if (sortConfig.key) {
+      const key = sortConfig.key;
       filtered = [...filtered].sort((a, b) => {
-        const aVal = a[sortConfig.key!];
-        const bVal = b[sortConfig.key!];
+        let aVal: string | boolean = '';
+        let bVal: string | boolean = '';
+
+        switch (key) {
+          case 'groupNumber': aVal = a.groupNumber; bVal = b.groupNumber; break;
+          case 'createdAt': aVal = a.createdAt ?? ''; bVal = b.createdAt ?? ''; break;
+          case 'createdByName': aVal = a.createdByName ?? ''; bVal = b.createdByName ?? ''; break;
+          case 'isAutomatic': aVal = a.isAutomatic; bVal = b.isAutomatic; break;
+          case 'notes': aVal = a.notes ?? ''; bVal = b.notes ?? ''; break;
+        }
 
         if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
         if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
@@ -92,7 +117,11 @@ const TransactionGroupsList = (): React.ReactElement => {
     }
 
     return filtered;
-  }, [quickFilter, sortConfig]);
+  }, [groups, quickFilter, sortConfig]);
+
+  const handleCreated = useCallback(() => {
+    loadGroups(startDate || undefined, endDate || undefined);
+  }, [loadGroups, startDate, endDate]);
 
   return (
     <Box sx={{ p: 3 }}>
@@ -127,7 +156,7 @@ const TransactionGroupsList = (): React.ReactElement => {
           </Grid>
 
           <Box sx={{ textAlign: 'center', mb: 3 }}>
-            <Button variant="contained" sx={{ bgcolor: '#8b5cf6', '&:hover': { bgcolor: '#45b5b8' }, fontWeight: 600, textTransform: 'uppercase', px: 4 }}>
+            <Button variant="contained" onClick={() => setCreateModalOpen(true)} sx={{ bgcolor: '#8b5cf6', '&:hover': { bgcolor: '#45b5b8' }, fontWeight: 600, textTransform: 'uppercase', px: 4 }}>
               Crear
             </Button>
           </Box>
@@ -139,54 +168,66 @@ const TransactionGroupsList = (): React.ReactElement => {
             InputProps={{ endAdornment: <InputAdornment position="end"><IconButton size="small"><SearchIcon fontSize="small" /></IconButton></InputAdornment> }}
           />
 
-          <TableContainer component={Paper} variant="outlined">
-            <Table size="small">
-              <TableHead sx={{ bgcolor: '#f8f9fa' }}>
-                <TableRow>
-                  <TableCell><TableSortLabel active={sortConfig.key === 'numero'} direction={sortConfig.key === 'numero' ? sortConfig.direction : 'asc'} onClick={() => handleSort('numero')} sx={{ fontWeight: 600 }}>Número</TableSortLabel></TableCell>
-                  <TableCell><TableSortLabel active={sortConfig.key === 'fecha'} direction={sortConfig.key === 'fecha' ? sortConfig.direction : 'asc'} onClick={() => handleSort('fecha')} sx={{ fontWeight: 600 }}>Fecha</TableSortLabel></TableCell>
-                  <TableCell><TableSortLabel active={sortConfig.key === 'hora'} direction={sortConfig.key === 'hora' ? sortConfig.direction : 'asc'} onClick={() => handleSort('hora')} sx={{ fontWeight: 600 }}>Hora</TableSortLabel></TableCell>
-                  <TableCell><TableSortLabel active={sortConfig.key === 'creadoPor'} direction={sortConfig.key === 'creadoPor' ? sortConfig.direction : 'asc'} onClick={() => handleSort('creadoPor')} sx={{ fontWeight: 600 }}>Creado por</TableSortLabel></TableCell>
-                  <TableCell align="center"><TableSortLabel active={sortConfig.key === 'esAutomatico'} direction={sortConfig.key === 'esAutomatico' ? sortConfig.direction : 'asc'} onClick={() => handleSort('esAutomatico')} sx={{ fontWeight: 600 }}>¿Es automático?</TableSortLabel></TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>Notas</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {filteredAndSortedData.length === 0 ? (
+          {loading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+              <CircularProgress />
+            </Box>
+          ) : (
+            <TableContainer component={Paper} variant="outlined">
+              <Table size="small">
+                <TableHead sx={{ bgcolor: '#f8f9fa' }}>
                   <TableRow>
-                    <TableCell colSpan={6} align="center" sx={{ py: 3 }}>
-                      <Typography variant="body2" color="text.secondary">No hay entradas disponibles</Typography>
-                    </TableCell>
+                    <TableCell><TableSortLabel active={sortConfig.key === 'groupNumber'} direction={sortConfig.key === 'groupNumber' ? sortConfig.direction : 'asc'} onClick={() => handleSort('groupNumber')} sx={{ fontWeight: 600 }}>Número</TableSortLabel></TableCell>
+                    <TableCell><TableSortLabel active={sortConfig.key === 'createdAt'} direction={sortConfig.key === 'createdAt' ? sortConfig.direction : 'asc'} onClick={() => handleSort('createdAt')} sx={{ fontWeight: 600 }}>Fecha</TableSortLabel></TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>Hora</TableCell>
+                    <TableCell><TableSortLabel active={sortConfig.key === 'createdByName'} direction={sortConfig.key === 'createdByName' ? sortConfig.direction : 'asc'} onClick={() => handleSort('createdByName')} sx={{ fontWeight: 600 }}>Creado por</TableSortLabel></TableCell>
+                    <TableCell align="center"><TableSortLabel active={sortConfig.key === 'isAutomatic'} direction={sortConfig.key === 'isAutomatic' ? sortConfig.direction : 'asc'} onClick={() => handleSort('isAutomatic')} sx={{ fontWeight: 600 }}>¿Es automático?</TableSortLabel></TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>Notas</TableCell>
                   </TableRow>
-                ) : (
-                  filteredAndSortedData.map((item, index) => (
-                    <TableRow key={index} hover>
-                      <TableCell>{item.numero}</TableCell>
-                      <TableCell>{item.fecha}</TableCell>
-                      <TableCell>{item.hora}</TableCell>
-                      <TableCell>{item.creadoPor}</TableCell>
-                      <TableCell align="center">
-                        <Chip label={item.esAutomatico ? 'Sí' : 'No'} color={item.esAutomatico ? 'success' : 'default'} size="small" sx={{ fontSize: '12px' }} />
+                </TableHead>
+                <TableBody>
+                  {filteredAndSortedData.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} align="center" sx={{ py: 3 }}>
+                        <Typography variant="body2" color="text.secondary">No hay entradas disponibles</Typography>
                       </TableCell>
-                      <TableCell>{item.notas}</TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                  ) : (
+                    filteredAndSortedData.map((item) => (
+                      <TableRow key={item.groupId} hover>
+                        <TableCell>{item.groupNumber}</TableCell>
+                        <TableCell>{formatDate(item.createdAt)}</TableCell>
+                        <TableCell>{formatTime(item.createdAt)}</TableCell>
+                        <TableCell>{item.createdByName ?? ''}</TableCell>
+                        <TableCell align="center">
+                          <Chip label={item.isAutomatic ? 'Sí' : 'No'} color={item.isAutomatic ? 'success' : 'default'} size="small" sx={{ fontSize: '12px' }} />
+                        </TableCell>
+                        <TableCell>{item.notes ?? ''}</TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
 
           <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
             Mostrando {filteredAndSortedData.length} entradas
           </Typography>
 
           <Box sx={{ textAlign: 'center', mt: 3 }}>
-            <Button variant="contained" sx={{ bgcolor: '#8b5cf6', '&:hover': { bgcolor: '#45b5b8' }, fontWeight: 600, textTransform: 'uppercase', px: 4 }}>
+            <Button variant="contained" onClick={() => setCreateModalOpen(true)} sx={{ bgcolor: '#8b5cf6', '&:hover': { bgcolor: '#45b5b8' }, fontWeight: 600, textTransform: 'uppercase', px: 4 }}>
               Crear
             </Button>
           </Box>
         </CardContent>
       </Card>
+
+      <CreateTransactionGroupModal
+        open={createModalOpen}
+        onClose={() => setCreateModalOpen(false)}
+        onCreated={handleCreated}
+      />
     </Box>
   );
 };

@@ -1095,7 +1095,7 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
         location: formData.location || null,
         reference: formData.reference || null,
         comment: formData.comment || null,
-        zoneId: parseInt(formData.selectedZone),
+        zoneId: parseInt(formData.zoneId),
         username: formData.username || null,
         password: formData.password || null,
         isActive: formData.isActive

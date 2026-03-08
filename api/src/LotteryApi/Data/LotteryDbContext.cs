@@ -54,6 +54,13 @@ public class LotteryDbContext : DbContext
     public DbSet<BettingPoolStyle> BettingPoolStyles { get; set; }
     public DbSet<BettingPoolAutomaticExpense> BettingPoolAutomaticExpenses { get; set; }
 
+    // Expense Categories
+    public DbSet<ExpenseCategory> ExpenseCategories { get; set; }
+
+    // Transaction Groups
+    public DbSet<TransactionGroup> TransactionGroups { get; set; }
+    public DbSet<TransactionGroupLine> TransactionGroupLines { get; set; }
+
     // N:M Relationships
     public DbSet<UserBettingPool> UserBettingPools { get; set; }
     public DbSet<UserZone> UserZones { get; set; }
@@ -438,6 +445,27 @@ public class LotteryDbContext : DbContext
             .HasOne(c => c.BettingPool)
             .WithMany()
             .HasForeignKey(c => c.BettingPoolId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // ExpenseCategory -> ParentCategory (self-referencing)
+        modelBuilder.Entity<ExpenseCategory>()
+            .HasOne(ec => ec.ParentCategory)
+            .WithMany(ec => ec.ChildCategories)
+            .HasForeignKey(ec => ec.ParentCategoryId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // TransactionGroupLine -> TransactionGroup
+        modelBuilder.Entity<TransactionGroupLine>()
+            .HasOne(l => l.Group)
+            .WithMany(g => g.Lines)
+            .HasForeignKey(l => l.GroupId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // TransactionGroup -> User (CreatedBy)
+        modelBuilder.Entity<TransactionGroup>()
+            .HasOne(g => g.CreatedByUser)
+            .WithMany()
+            .HasForeignKey(g => g.CreatedBy)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }

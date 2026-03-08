@@ -8,6 +8,7 @@ export interface BettingPool {
   bettingPoolId: number;
   bettingPoolCode: string;
   bettingPoolName: string;
+  reference?: string;
 }
 
 export interface Draw {

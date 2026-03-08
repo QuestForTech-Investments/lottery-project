@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, type SyntheticEvent } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, type SyntheticEvent } from 'react';
 import {
   Box,
   Card,
@@ -17,28 +17,34 @@ import {
   InputAdornment,
   IconButton,
   Tabs,
-  Tab
+  Tab,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Alert,
+  Snackbar,
+  CircularProgress
 } from '@mui/material';
 import {
   Search as SearchIcon,
   Edit as EditIcon,
   Delete as DeleteIcon
 } from '@mui/icons-material';
+import {
+  getExpenseCategories,
+  createExpenseCategory,
+  updateExpenseCategory,
+  deleteExpenseCategory,
+  type ExpenseCategoryAPI
+} from '@services/expenseCategoryService';
 
-interface ParentCategory {
-  id: number;
-  nombre: string;
-}
-
-interface ChildCategory {
-  id: number;
-  nombre: string;
-  parentId: number;
-}
-
-type Category = ParentCategory | ChildCategory;
 type SortDirection = 'asc' | 'desc';
-type SortKey = 'nombre' | null;
+type SortKey = 'categoryName' | 'parentCategoryName' | null;
 
 interface SortConfig {
   key: SortKey;
@@ -49,86 +55,170 @@ const ExpenseCategories = (): React.ReactElement => {
   const [activeTab, setActiveTab] = useState<number>(0);
   const [quickFilter, setQuickFilter] = useState<string>('');
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: null, direction: 'asc' });
+  const [loading, setLoading] = useState(true);
 
-  // Mockup data - Parent categories
-  const parentCategoriesData: ParentCategory[] = [
-    { id: 1, nombre: 'DIETA' },
-    { id: 2, nombre: 'EQUIPOS' },
-    { id: 3, nombre: 'MATERIAL GASTABLE' },
-    { id: 4, nombre: 'RENTA' },
-    { id: 5, nombre: 'SALARIO' },
-    { id: 6, nombre: 'SERVICIOS' },
-    { id: 7, nombre: 'TRANSPORTE' }
-  ];
+  // Data
+  const [categories, setCategories] = useState<ExpenseCategoryAPI[]>([]);
 
-  // Mockup data - Child categories
-  const childCategoriesData: ChildCategory[] = [
-    { id: 1, nombre: 'Almuerzos', parentId: 1 },
-    { id: 2, nombre: 'Cenas', parentId: 1 },
-    { id: 3, nombre: 'Computadoras', parentId: 2 },
-    { id: 4, nombre: 'Impresoras', parentId: 2 },
-    { id: 5, nombre: 'Papel', parentId: 3 },
-    { id: 6, nombre: 'Tinta', parentId: 3 },
-    { id: 7, nombre: 'Local comercial', parentId: 4 },
-    { id: 8, nombre: 'Bodega', parentId: 4 }
-  ];
+  // Dialog state
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogMode, setDialogMode] = useState<'create' | 'edit'>('create');
+  const [editingCategory, setEditingCategory] = useState<ExpenseCategoryAPI | null>(null);
+  const [dialogName, setDialogName] = useState('');
+  const [dialogParentId, setDialogParentId] = useState<number | ''>('');
+  const [dialogSaving, setDialogSaving] = useState(false);
 
-  const currentData: Category[] = activeTab === 0 ? parentCategoriesData : childCategoriesData;
+  // Delete confirmation
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deletingCategory, setDeletingCategory] = useState<ExpenseCategoryAPI | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
-  const handleTabChange = useCallback((event: SyntheticEvent, newValue: number): void => {
+  // Snackbar
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
+    open: false, message: '', severity: 'success'
+  });
+
+  const loadCategories = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await getExpenseCategories({ isActive: true });
+      setCategories(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error('Error loading categories:', err);
+      setSnackbar({ open: true, message: 'Error al cargar categorías', severity: 'error' });
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadCategories();
+  }, [loadCategories]);
+
+  const parentCategories = useMemo(
+    () => categories.filter(c => c.parentCategoryId === null),
+    [categories]
+  );
+
+  const childCategories = useMemo(
+    () => categories.filter(c => c.parentCategoryId !== null),
+    [categories]
+  );
+
+  const currentData = activeTab === 0 ? parentCategories : childCategories;
+
+  const handleTabChange = useCallback((_event: SyntheticEvent, newValue: number): void => {
     setActiveTab(newValue);
+    setQuickFilter('');
+    setSortConfig({ key: null, direction: 'asc' });
   }, []);
 
   const handleSort = useCallback((key: SortKey): void => {
-    let direction: SortDirection = 'asc';
-    if (sortConfig.key === key && sortConfig.direction === 'asc') {
-      direction = 'desc';
+    setSortConfig(prev => ({
+      key,
+      direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
+    }));
+  }, []);
+
+  // Create/Edit dialog
+  const openCreateDialog = useCallback(() => {
+    setDialogMode('create');
+    setEditingCategory(null);
+    setDialogName('');
+    setDialogParentId(activeTab === 1 && parentCategories.length > 0 ? parentCategories[0].categoryId : '');
+    setDialogOpen(true);
+  }, [activeTab, parentCategories]);
+
+  const openEditDialog = useCallback((category: ExpenseCategoryAPI) => {
+    setDialogMode('edit');
+    setEditingCategory(category);
+    setDialogName(category.categoryName);
+    setDialogParentId(category.parentCategoryId ?? '');
+    setDialogOpen(true);
+  }, []);
+
+  const handleDialogSave = useCallback(async () => {
+    if (!dialogName.trim()) return;
+
+    setDialogSaving(true);
+    try {
+      if (dialogMode === 'create') {
+        await createExpenseCategory({
+          categoryName: dialogName.trim(),
+          parentCategoryId: dialogParentId !== '' ? Number(dialogParentId) : null
+        });
+        setSnackbar({ open: true, message: 'Categoría creada exitosamente', severity: 'success' });
+      } else if (editingCategory) {
+        await updateExpenseCategory(editingCategory.categoryId, {
+          categoryName: dialogName.trim(),
+          parentCategoryId: dialogParentId !== '' ? Number(dialogParentId) : null
+        });
+        setSnackbar({ open: true, message: 'Categoría actualizada exitosamente', severity: 'success' });
+      }
+      setDialogOpen(false);
+      await loadCategories();
+    } catch (err) {
+      console.error('Error saving category:', err);
+      setSnackbar({ open: true, message: 'Error al guardar categoría', severity: 'error' });
+    } finally {
+      setDialogSaving(false);
     }
-    setSortConfig({ key, direction });
-  }, [sortConfig]);
+  }, [dialogMode, dialogName, dialogParentId, editingCategory, loadCategories]);
 
-  const handleEdit = useCallback((category: Category): void => {
-    // TODO: Implementar edit modal
+  // Delete
+  const openDeleteDialog = useCallback((category: ExpenseCategoryAPI) => {
+    setDeletingCategory(category);
+    setDeleteDialogOpen(true);
   }, []);
 
-  const handleDelete = useCallback((category: Category): void => {
-    // TODO: Implementar confirmación de eliminación
-  }, []);
+  const handleDelete = useCallback(async () => {
+    if (!deletingCategory) return;
 
-  const handleCreate = useCallback((): void => {
-    // TODO: Implementar modal de creación
-  }, []);
+    setDeleteLoading(true);
+    try {
+      await deleteExpenseCategory(deletingCategory.categoryId);
+      setSnackbar({ open: true, message: 'Categoría eliminada exitosamente', severity: 'success' });
+      setDeleteDialogOpen(false);
+      await loadCategories();
+    } catch (err) {
+      console.error('Error deleting category:', err);
+      setSnackbar({ open: true, message: 'Error al eliminar categoría', severity: 'error' });
+    } finally {
+      setDeleteLoading(false);
+    }
+  }, [deletingCategory, loadCategories]);
 
   const filteredAndSortedData = useMemo(() => {
     let filtered = currentData;
 
-    // Quick filter
     if (quickFilter) {
+      const lower = quickFilter.toLowerCase();
       filtered = filtered.filter((item) =>
-        item.nombre.toLowerCase().includes(quickFilter.toLowerCase())
+        item.categoryName.toLowerCase().includes(lower) ||
+        (item.parentCategoryName && item.parentCategoryName.toLowerCase().includes(lower))
       );
     }
 
-    // Sorting
     if (sortConfig.key) {
       const key = sortConfig.key;
       filtered = [...filtered].sort((a, b) => {
-        const aVal = a[key];
-        const bVal = b[key];
-
-        if (typeof aVal === 'string' && typeof bVal === 'string') {
-          const comparison = aVal.toLowerCase().localeCompare(bVal.toLowerCase());
-          return sortConfig.direction === 'asc' ? comparison : -comparison;
-        }
-
-        if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
-        if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
-        return 0;
+        const aVal = (key === 'parentCategoryName' ? a.parentCategoryName : a.categoryName) || '';
+        const bVal = (key === 'parentCategoryName' ? b.parentCategoryName : b.categoryName) || '';
+        const comparison = aVal.toLowerCase().localeCompare(bVal.toLowerCase());
+        return sortConfig.direction === 'asc' ? comparison : -comparison;
       });
     }
 
     return filtered;
   }, [currentData, quickFilter, sortConfig]);
+
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 300 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ p: 3 }}>
@@ -146,13 +236,9 @@ const ExpenseCategories = (): React.ReactElement => {
               mb: 2,
               '& .MuiTab-root': {
                 color: '#8b5cf6',
-                '&.Mui-selected': {
-                  color: '#8b5cf6'
-                }
+                '&.Mui-selected': { color: '#8b5cf6' }
               },
-              '& .MuiTabs-indicator': {
-                backgroundColor: '#8b5cf6'
-              }
+              '& .MuiTabs-indicator': { backgroundColor: '#8b5cf6' }
             }}
           >
             <Tab label="Categorias padre" />
@@ -184,33 +270,47 @@ const ExpenseCategories = (): React.ReactElement => {
                 <TableRow>
                   <TableCell>
                     <TableSortLabel
-                      active={sortConfig.key === 'nombre'}
-                      direction={sortConfig.direction}
-                      onClick={() => handleSort('nombre')}
+                      active={sortConfig.key === 'categoryName'}
+                      direction={sortConfig.key === 'categoryName' ? sortConfig.direction : 'asc'}
+                      onClick={() => handleSort('categoryName')}
                     >
                       Nombre
                     </TableSortLabel>
                   </TableCell>
+                  {activeTab === 1 && (
+                    <TableCell>
+                      <TableSortLabel
+                        active={sortConfig.key === 'parentCategoryName'}
+                        direction={sortConfig.key === 'parentCategoryName' ? sortConfig.direction : 'asc'}
+                        onClick={() => handleSort('parentCategoryName')}
+                      >
+                        Categoría padre
+                      </TableSortLabel>
+                    </TableCell>
+                  )}
                   <TableCell align="center" sx={{ width: '120px' }}>
-                    Actions
+                    Acciones
                   </TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {filteredAndSortedData.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={2} align="center" sx={{ py: 3 }}>
+                    <TableCell colSpan={activeTab === 1 ? 3 : 2} align="center" sx={{ py: 3 }}>
                       No hay entradas disponibles
                     </TableCell>
                   </TableRow>
                 ) : (
                   filteredAndSortedData.map((category) => (
-                    <TableRow key={category.id} hover>
-                      <TableCell>{category.nombre}</TableCell>
+                    <TableRow key={category.categoryId} hover>
+                      <TableCell>{category.categoryName}</TableCell>
+                      {activeTab === 1 && (
+                        <TableCell>{category.parentCategoryName}</TableCell>
+                      )}
                       <TableCell align="center">
                         <IconButton
                           size="small"
-                          onClick={() => handleEdit(category)}
+                          onClick={() => openEditDialog(category)}
                           sx={{ color: '#8b5cf6', mr: 1 }}
                           title="Editar"
                         >
@@ -221,7 +321,7 @@ const ExpenseCategories = (): React.ReactElement => {
                           variant="contained"
                           color="error"
                           startIcon={<DeleteIcon fontSize="small" />}
-                          onClick={() => handleDelete(category)}
+                          onClick={() => openDeleteDialog(category)}
                           sx={{ fontSize: '11px', textTransform: 'none' }}
                         >
                           Eliminar
@@ -238,7 +338,7 @@ const ExpenseCategories = (): React.ReactElement => {
           <Box sx={{ textAlign: 'center', mt: 3 }}>
             <Button
               variant="contained"
-              onClick={handleCreate}
+              onClick={openCreateDialog}
               sx={{
                 backgroundColor: '#8b5cf6',
                 '&:hover': { backgroundColor: '#45b5b8' },
@@ -259,6 +359,99 @@ const ExpenseCategories = (): React.ReactElement => {
           </Typography>
         </CardContent>
       </Card>
+
+      {/* Create/Edit Dialog */}
+      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>
+          {dialogMode === 'create' ? 'Crear Categoría' : 'Editar Categoría'}
+        </DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            fullWidth
+            label="Nombre"
+            value={dialogName}
+            onChange={(e) => setDialogName(e.target.value)}
+            sx={{ mt: 1 }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && dialogName.trim()) handleDialogSave();
+            }}
+          />
+          {(activeTab === 1 || (dialogMode === 'edit' && editingCategory?.parentCategoryId)) && (
+            <FormControl fullWidth sx={{ mt: 2 }}>
+              <InputLabel>Categoría padre</InputLabel>
+              <Select
+                value={dialogParentId}
+                label="Categoría padre"
+                onChange={(e) => setDialogParentId(e.target.value as number | '')}
+              >
+                {parentCategories.map(p => (
+                  <MenuItem key={p.categoryId} value={p.categoryId}>
+                    {p.categoryName}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDialogOpen(false)} disabled={dialogSaving}>
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleDialogSave}
+            variant="contained"
+            disabled={!dialogName.trim() || dialogSaving}
+            sx={{ bgcolor: '#8b5cf6', '&:hover': { bgcolor: '#45b5b8' } }}
+          >
+            {dialogSaving ? <CircularProgress size={20} /> : 'Guardar'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
+        <DialogTitle>Confirmar eliminación</DialogTitle>
+        <DialogContent>
+          <Typography>
+            ¿Está seguro que desea eliminar la categoría "{deletingCategory?.categoryName}"?
+          </Typography>
+          {deletingCategory && !deletingCategory.parentCategoryId && (
+            <Alert severity="warning" sx={{ mt: 2 }}>
+              Al eliminar una categoría padre, todas sus categorías hijo también serán desactivadas.
+            </Alert>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialogOpen(false)} disabled={deleteLoading}>
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleDelete}
+            color="error"
+            variant="contained"
+            disabled={deleteLoading}
+          >
+            {deleteLoading ? <CircularProgress size={20} /> : 'Eliminar'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Snackbar */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+          severity={snackbar.severity}
+          variant="filled"
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

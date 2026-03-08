@@ -104,8 +104,8 @@ const CreateTickets: React.FC = () => {
             size="small"
             options={pools}
             getOptionLabel={(option) =>
-              option.bettingPoolName
-                ? `${option.bettingPoolName} (${option.bettingPoolCode || ''}) (${option.bettingPoolId})`
+              option.bettingPoolCode
+                ? `${option.bettingPoolCode}${option.reference ? ` (${option.reference})` : ''}`
                 : ''
             }
             filterOptions={(options, { inputValue }) => {
@@ -113,7 +113,8 @@ const CreateTickets: React.FC = () => {
               return options.filter(option =>
                 option.bettingPoolName?.toLowerCase().includes(filterValue) ||
                 option.bettingPoolCode?.toLowerCase().includes(filterValue) ||
-                String(option.bettingPoolId).includes(filterValue)
+                String(option.bettingPoolId).includes(filterValue) ||
+                (option.reference && option.reference.toLowerCase().includes(filterValue))
               );
             }}
             value={selectedPool}

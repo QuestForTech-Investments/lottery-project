@@ -77,7 +77,16 @@
       "Bash(echo:*)",
       "Bash(TOKEN='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMSIsInVuaXF1ZV9uYW1lIjoiYWRtaW4iLCJ1c2VySWQiOiIxMSIsInVzZXJuYW1lIjoiYWRtaW4iLCJqdGkiOiJmZWE1ODkxZC1hZTJlLTQ1MzUtYWI0MC1mNTFlMzU0ZDdiY2UiLCJodHRwOi8vc2NoZW1hcy5taWNyb3NvZnQuY29tL3dzLzIwMDgvMDYvaWRlbnRpdHkvY2xhaW1zL3JvbGUiOiJBZG1pbmlzdHJhdG9yIiwiYmV0dGluZ1Bvb2xJZCI6IjkiLCJleHAiOjE3NzA0OTYwODAsImlzcyI6IkxvdHRlcnlBcGkiLCJhdWQiOiJMb3R0ZXJ5QXBpIn0.RtZQbwBajGQCbD9gwuksOd7mW5A854Utf3budwGJXkM' curl -sS -o /tmp/draws.json -w \"HTTP: %{http_code}\\\\n\" -H \"Authorization: Bearer $TOKEN\" \"https://lottery-api-prod.azurewebsites.net/api/betting-pools/9/draws\" ls -la /tmp/draws.json cat /tmp/draws.json)",
       "mcp__ide__getDiagnostics",
-      "Bash(xargs grep -l \"class GameType\")"
+      "Bash(xargs grep -l \"class GameType\")",
+      "mcp__plugin_playwright_playwright__browser_fill_form",
+      "mcp__plugin_playwright_playwright__browser_navigate",
+      "mcp__plugin_playwright_playwright__browser_wait_for",
+      "mcp__plugin_playwright_playwright__browser_click",
+      "Bash(xargs grep -l \"xpense\" -i)",
+      "mcp__plugin_playwright_playwright__browser_snapshot",
+      "mcp__plugin_playwright_playwright__browser_evaluate",
+      "mcp__plugin_playwright_playwright__browser_take_screenshot",
+      "mcp__plugin_playwright_playwright__browser_close"
     ]
   }
 }
