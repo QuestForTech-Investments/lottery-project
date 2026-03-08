@@ -11,6 +11,7 @@ export interface TransactionGroupAPI {
   createdAt: string | null;
   createdBy: number | null;
   createdByName: string | null;
+  entities: string | null;
   lines?: TransactionGroupLineAPI[];
 }
 

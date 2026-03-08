@@ -14,6 +14,7 @@ public class TransactionGroupDto
     public DateTime? CreatedAt { get; set; }
     public int? CreatedBy { get; set; }
     public string? CreatedByName { get; set; }
+    public string? Entities { get; set; }
     public List<TransactionGroupLineDto> Lines { get; set; } = new();
 }
 

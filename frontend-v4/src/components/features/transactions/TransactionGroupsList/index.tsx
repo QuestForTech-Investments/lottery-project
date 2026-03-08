@@ -26,7 +26,7 @@ import { Search as SearchIcon, CalendarToday as CalendarIcon } from '@mui/icons-
 import { getTransactionGroups, type TransactionGroupAPI } from '@services/transactionGroupService';
 
 type SortDirection = 'asc' | 'desc';
-type SortKey = 'groupNumber' | 'createdAt' | 'createdByName' | 'isAutomatic' | 'notes' | null;
+type SortKey = 'groupNumber' | 'createdAt' | 'createdByName' | 'isAutomatic' | 'status' | 'notes' | null;
 
 interface SortConfig {
   key: SortKey;
@@ -97,7 +97,9 @@ const TransactionGroupsList = (): React.ReactElement => {
         item.groupNumber.toLowerCase().includes(lower) ||
         (item.createdByName && item.createdByName.toLowerCase().includes(lower)) ||
         (item.notes && item.notes.toLowerCase().includes(lower)) ||
-        (item.isAutomatic ? 'sí' : 'no').includes(lower)
+        (item.isAutomatic ? 'sí' : 'no').includes(lower) ||
+        (item.status && item.status.toLowerCase().includes(lower)) ||
+        (item.entities && item.entities.toLowerCase().includes(lower))
       );
     }
 
@@ -112,6 +114,7 @@ const TransactionGroupsList = (): React.ReactElement => {
           case 'createdAt': aVal = a.createdAt ?? ''; bVal = b.createdAt ?? ''; break;
           case 'createdByName': aVal = a.createdByName ?? ''; bVal = b.createdByName ?? ''; break;
           case 'isAutomatic': aVal = a.isAutomatic; bVal = b.isAutomatic; break;
+          case 'status': aVal = a.status ?? ''; bVal = b.status ?? ''; break;
           case 'notes': aVal = a.notes ?? ''; bVal = b.notes ?? ''; break;
         }
 
@@ -187,13 +190,15 @@ const TransactionGroupsList = (): React.ReactElement => {
                     <TableCell sx={{ fontWeight: 600 }}>Hora</TableCell>
                     <TableCell><TableSortLabel active={sortConfig.key === 'createdByName'} direction={sortConfig.key === 'createdByName' ? sortConfig.direction : 'asc'} onClick={() => handleSort('createdByName')} sx={{ fontWeight: 600 }}>Creado por</TableSortLabel></TableCell>
                     <TableCell align="center"><TableSortLabel active={sortConfig.key === 'isAutomatic'} direction={sortConfig.key === 'isAutomatic' ? sortConfig.direction : 'asc'} onClick={() => handleSort('isAutomatic')} sx={{ fontWeight: 600 }}>¿Es automático?</TableSortLabel></TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>Referencia</TableCell>
+                    <TableCell align="center"><TableSortLabel active={sortConfig.key === 'status'} direction={sortConfig.key === 'status' ? sortConfig.direction : 'asc'} onClick={() => handleSort('status')} sx={{ fontWeight: 600 }}>Estado</TableSortLabel></TableCell>
                     <TableCell sx={{ fontWeight: 600 }}>Notas</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {filteredAndSortedData.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} align="center" sx={{ py: 3 }}>
+                      <TableCell colSpan={8} align="center" sx={{ py: 3 }}>
                         <Typography variant="body2" color="text.secondary">No hay entradas disponibles</Typography>
                       </TableCell>
                     </TableRow>
@@ -214,6 +219,19 @@ const TransactionGroupsList = (): React.ReactElement => {
                         <TableCell>{item.createdByName ?? ''}</TableCell>
                         <TableCell align="center">
                           <Chip label={item.isAutomatic ? 'Sí' : 'No'} color={item.isAutomatic ? 'success' : 'default'} size="small" sx={{ fontSize: '12px' }} />
+                        </TableCell>
+                        <TableCell sx={{ fontSize: '13px' }}>{item.entities ?? ''}</TableCell>
+                        <TableCell align="center">
+                          <Chip
+                            label={item.status}
+                            size="small"
+                            sx={{
+                              fontSize: '12px',
+                              fontWeight: 600,
+                              bgcolor: item.status === 'Eliminado' ? '#ffebee' : '#e8f5e9',
+                              color: item.status === 'Eliminado' ? '#c62828' : '#2e7d32'
+                            }}
+                          />
                         </TableCell>
                         <TableCell>{item.notes ?? ''}</TableCell>
                       </TableRow>

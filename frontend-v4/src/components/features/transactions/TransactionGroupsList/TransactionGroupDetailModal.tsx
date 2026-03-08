@@ -15,6 +15,7 @@ import {
   CircularProgress,
   Box,
   Button,
+  Chip,
   DialogActions,
   DialogContentText
 } from '@mui/material';
@@ -174,11 +175,15 @@ const TransactionGroupDetailModal: React.FC<Props> = ({ open, groupId, onClose, 
                   CSV
                 </Button>
                 <Box sx={{ flex: 1 }} />
-                <Button variant="contained" size="small" startIcon={<DeleteIcon />} onClick={() => setConfirmDeleteOpen(true)}
-                  disabled={deleting}
-                  sx={{ bgcolor: '#dc3545', '&:hover': { bgcolor: '#c82333' }, textTransform: 'none', fontWeight: 600 }}>
-                  {deleting ? <CircularProgress size={20} color="inherit" /> : 'Eliminar'}
-                </Button>
+                {group?.status !== 'Eliminado' ? (
+                  <Button variant="contained" size="small" startIcon={<DeleteIcon />} onClick={() => setConfirmDeleteOpen(true)}
+                    disabled={deleting}
+                    sx={{ bgcolor: '#dc3545', '&:hover': { bgcolor: '#c82333' }, textTransform: 'none', fontWeight: 600 }}>
+                    {deleting ? <CircularProgress size={20} color="inherit" /> : 'Eliminar'}
+                  </Button>
+                ) : (
+                  <Chip label="Eliminado" size="small" sx={{ bgcolor: '#ffebee', color: '#c62828', fontWeight: 600 }} />
+                )}
               </Box>
 
               <TableContainer component={Paper} variant="outlined">

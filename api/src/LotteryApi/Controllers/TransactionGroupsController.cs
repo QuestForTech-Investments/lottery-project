@@ -69,7 +69,8 @@ public class TransactionGroupsController : ControllerBase
                     Status = g.Status,
                     CreatedAt = g.CreatedAt,
                     CreatedBy = g.CreatedBy,
-                    CreatedByName = g.CreatedByUser != null ? g.CreatedByUser.Username : null
+                    CreatedByName = g.CreatedByUser != null ? g.CreatedByUser.Username : null,
+                    Entities = string.Join(", ", g.Lines.Select(l => l.Entity1Code).Distinct())
                 })
                 .ToListAsync();
 
@@ -200,6 +201,28 @@ public class TransactionGroupsController : ControllerBase
                 .Select(g => g.First())
                 .OrderBy(e => e.name)
                 .ToList();
+
+            // For bettingPool entities, enrich with current reference from DB
+            if (entityType == "bettingPool")
+            {
+                var bpIds = all.Select(e => e.id).ToList();
+                var references = await _context.BettingPools
+                    .AsNoTracking()
+                    .Where(bp => bpIds.Contains(bp.BettingPoolId))
+                    .Select(bp => new { bp.BettingPoolId, bp.BettingPoolCode, bp.Reference })
+                    .ToListAsync();
+
+                var refMap = references.ToDictionary(r => r.BettingPoolId);
+                var enriched = all.Select(e =>
+                {
+                    var code = refMap.TryGetValue(e.id, out var bp)
+                        ? (string.IsNullOrEmpty(bp.Reference) ? bp.BettingPoolCode : $"{bp.BettingPoolCode} ({bp.Reference})")
+                        : e.code;
+                    return new { e.name, code, e.id };
+                }).ToList();
+
+                return Ok(enriched);
+            }
 
             return Ok(all);
         }
@@ -439,8 +462,8 @@ public class TransactionGroupsController : ControllerBase
                 }
             }
 
-            _context.TransactionGroupLines.RemoveRange(group.Lines);
-            _context.TransactionGroups.Remove(group);
+            // Soft delete: mark as Eliminado instead of removing
+            group.Status = "Eliminado";
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
 

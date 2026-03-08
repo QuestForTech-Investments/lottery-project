@@ -257,7 +257,9 @@ const TransactionsList = (): React.ReactElement => {
                   <Select value={selectedEntity} label="Entidad" onChange={(e: SelectChangeEvent) => setSelectedEntity(e.target.value)} disabled={!selectedEntityType}>
                     <MenuItem value="">Seleccione</MenuItem>
                     {entityOptions.map((entity) => (
-                      <MenuItem key={entity.id} value={entity.name}>{entity.name}</MenuItem>
+                      <MenuItem key={entity.id} value={entity.name}>
+                        {entity.code ? `${entity.name} (${entity.code})` : entity.name}
+                      </MenuItem>
                     ))}
                   </Select>
                 </FormControl>
