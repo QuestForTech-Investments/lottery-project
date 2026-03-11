@@ -333,6 +333,7 @@ public class TransactionGroupsController : ControllerBase
                 .AsNoTracking()
                 .Include(l => l.Group)
                     .ThenInclude(g => g!.CreatedByUser)
+                .Where(l => l.Group!.Status != "Eliminado" && l.Group!.Status != "Rechazado")
                 .AsQueryable();
 
             var offset = TimeSpan.FromMinutes(tzOffset ?? 0);

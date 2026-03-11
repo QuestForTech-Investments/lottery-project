@@ -169,7 +169,12 @@ const TransactionsList = (): React.ReactElement => {
 
   const formatTime = (dateStr: string | null): string => {
     if (!dateStr) return '';
-    return parseUtc(dateStr).toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit' });
+    const d = parseUtc(dateStr);
+    const h = d.getHours();
+    const m = d.getMinutes().toString().padStart(2, '0');
+    const period = h >= 12 ? 'PM' : 'AM';
+    const h12 = h % 12 || 12;
+    return `${h12}:${m} ${period}`;
   };
 
   const formatCurrency = (val: number): string => `$${val.toFixed(2)}`;
@@ -314,7 +319,7 @@ const TransactionsList = (): React.ReactElement => {
                   <TableRow>
                     <TableCell><TableSortLabel active={sortConfig.key === 'transactionType'} direction={sortConfig.key === 'transactionType' ? sortConfig.direction : 'asc'} onClick={() => handleSort('transactionType')}>Concepto</TableSortLabel></TableCell>
                     <TableCell><TableSortLabel active={sortConfig.key === 'createdAt'} direction={sortConfig.key === 'createdAt' ? sortConfig.direction : 'asc'} onClick={() => handleSort('createdAt')}>Fecha</TableSortLabel></TableCell>
-                    <TableCell>Hora</TableCell>
+                    <TableCell sx={{ minWidth: 100, whiteSpace: 'nowrap' }}>Hora</TableCell>
                     <TableCell><TableSortLabel active={sortConfig.key === 'createdByName'} direction={sortConfig.key === 'createdByName' ? sortConfig.direction : 'asc'} onClick={() => handleSort('createdByName')}>Creado por</TableSortLabel></TableCell>
                     <TableCell><TableSortLabel active={sortConfig.key === 'entity1Name'} direction={sortConfig.key === 'entity1Name' ? sortConfig.direction : 'asc'} onClick={() => handleSort('entity1Name')}>Entidad #1</TableSortLabel></TableCell>
                     <TableCell><TableSortLabel active={sortConfig.key === 'entity2Name'} direction={sortConfig.key === 'entity2Name' ? sortConfig.direction : 'asc'} onClick={() => handleSort('entity2Name')}>Entidad #2</TableSortLabel></TableCell>
@@ -338,7 +343,7 @@ const TransactionsList = (): React.ReactElement => {
                         <TableRow key={item.lineId} hover>
                           <TableCell>{item.transactionType}</TableCell>
                           <TableCell>{formatDate(item.createdAt)}</TableCell>
-                          <TableCell>{formatTime(item.createdAt)}</TableCell>
+                          <TableCell sx={{ whiteSpace: 'nowrap' }}>{formatTime(item.createdAt)}</TableCell>
                           <TableCell>{item.createdByName ?? ''}</TableCell>
                           <TableCell>{item.entity1Name}</TableCell>
                           <TableCell>{item.entity2Name ?? ''}</TableCell>
