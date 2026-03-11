@@ -123,12 +123,25 @@ public class BalancesController : ControllerBase
                 adjustmentMap[adj.BettingPoolId] = current + adj.Net;
             }
 
-            // Apply transaction adjustments to snapshot balances
+            // Get active loan balances per betting pool
+            var loanBalances = await _context.Loans
+                .AsNoTracking()
+                .Where(l => l.EntityType == "bettingPool" && l.Status == "active")
+                .GroupBy(l => l.EntityId)
+                .Select(g => new { BettingPoolId = g.Key, TotalRemaining = g.Sum(l => l.RemainingBalance) })
+                .ToListAsync();
+            var loanMap = loanBalances.ToDictionary(x => x.BettingPoolId, x => x.TotalRemaining);
+
+            // Apply transaction adjustments and loan balances to snapshot
             foreach (var result in results)
             {
                 if (adjustmentMap.TryGetValue(result.BettingPoolId, out var adjustment))
                 {
                     result.Balance += adjustment;
+                }
+                if (loanMap.TryGetValue(result.BettingPoolId, out var loanBalance))
+                {
+                    result.Loans = loanBalance;
                 }
             }
 

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, type ChangeEvent, type FormEvent } from 'react';
+import React, { useState, useEffect, useCallback, type ChangeEvent } from 'react';
 import {
   Box,
   Card,
@@ -12,159 +12,135 @@ import {
   FormControlLabel,
   Radio,
   Button,
-  InputAdornment
+  InputAdornment,
+  Autocomplete,
+  CircularProgress,
+  Snackbar,
+  Alert
 } from '@mui/material';
 import type { SelectChangeEvent } from '@mui/material/Select';
+import { useNavigate } from 'react-router-dom';
+import { getBettingPools, type BettingPool } from '@services/bettingPoolService';
+import { createLoan } from '@services/loanService';
 
-interface LoanFormData {
-  entityType: string;
-  entityId: string | number;
-  loanAmount: string;
-  installmentAmount: string;
-  paymentFrequency: string;
-  startDate: string;
-  interestRate: string;
-  notes: string;
-}
-
-interface EntityType {
-  id: string;
-  name: string;
-}
-
-interface Entity {
-  id: number;
-  name: string;
-}
-
-interface EntitiesMap {
-  [key: string]: Entity[];
-}
+const DAY_LABELS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 
 const CreateLoan = (): React.ReactElement => {
-  const [formData, setFormData] = useState<LoanFormData>({
-    entityType: '',
-    entityId: '',
-    loanAmount: '',
-    installmentAmount: '',
-    paymentFrequency: 'diario',
-    startDate: '',
-    interestRate: '',
-    notes: ''
+  const navigate = useNavigate();
+  const today = new Date().toLocaleDateString('en-CA');
+
+  const [selectedPool, setSelectedPool] = useState<BettingPool | null>(null);
+  const [loanAmount, setLoanAmount] = useState('');
+  const [installmentAmount, setInstallmentAmount] = useState('');
+  const [frequency, setFrequency] = useState('daily');
+  const [paymentDay, setPaymentDay] = useState<number>(0);
+  const [startDate, setStartDate] = useState(today);
+  const [interestRate, setInterestRate] = useState('0');
+  const [notes, setNotes] = useState('');
+
+  const [pools, setPools] = useState<BettingPool[]>([]);
+  const [poolsLoading, setPoolsLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
+    open: false, message: '', severity: 'success'
   });
 
-  // Mockup data for entity types
-  const entityTypes: EntityType[] = [
-    { id: 'betting-pool', name: 'Banca' },
-    { id: 'bank', name: 'Banco' },
-    { id: 'zone', name: 'Zona' },
-    { id: 'collector', name: 'Cobrador' }
-  ];
-
-  // Mockup entities (will vary based on entity type)
-  const entities: EntitiesMap = {
-    'betting-pool': [
-      { id: 1, name: 'LA CENTRAL 01' },
-      { id: 2, name: 'LA CENTRAL 02' },
-      { id: 3, name: 'SUPER BANCA' },
-      { id: 4, name: 'BANCA REAL' }
-    ],
-    'bank': [
-      { id: 1, name: 'Banco Popular' },
-      { id: 2, name: 'BanReservas' },
-      { id: 3, name: 'Banco BHD' }
-    ],
-    'zone': [
-      { id: 1, name: 'Zona Norte' },
-      { id: 2, name: 'Zona Sur' },
-      { id: 3, name: 'Zona Este' }
-    ],
-    'collector': [
-      { id: 1, name: 'Juan Pérez' },
-      { id: 2, name: 'María González' }
-    ]
-  };
-
-  const handleInputChange = useCallback((e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | SelectChangeEvent<string | number>): void => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-
-    // Reset entity when entity type changes
-    if (name === 'entityType') {
-      setFormData(prev => ({ ...prev, entityId: '' }));
-    }
+  useEffect(() => {
+    const loadPools = async () => {
+      try {
+        const response = await getBettingPools({ isActive: true, pageSize: 1000 });
+        setPools(response?.items ?? []);
+      } catch (err) {
+        console.error('Error loading betting pools:', err);
+      } finally {
+        setPoolsLoading(false);
+      }
+    };
+    loadPools();
   }, []);
 
-  const handleSubmit = useCallback((e: FormEvent<HTMLFormElement>): void => {
-    e.preventDefault();
-    // TODO: Implement API call
-    alert('Préstamo creado exitosamente');
-  }, [formData]);
+  const handleSubmit = useCallback(async () => {
+    if (!selectedPool || !loanAmount || !installmentAmount) return;
 
-  const availableEntities: Entity[] = formData.entityType ? entities[formData.entityType] : [];
+    setSubmitting(true);
+    try {
+      await createLoan({
+        entityType: 'bettingPool',
+        entityId: selectedPool.bettingPoolId,
+        entityName: selectedPool.bettingPoolName,
+        entityCode: selectedPool.bettingPoolCode ?? '',
+        principalAmount: parseFloat(loanAmount),
+        installmentAmount: parseFloat(installmentAmount),
+        frequency,
+        paymentDay: frequency === 'weekly' ? paymentDay : null,
+        startDate,
+        interestRate: parseFloat(interestRate) || 0,
+        notes: notes || undefined
+      });
+      setSnackbar({ open: true, message: 'Préstamo creado exitosamente', severity: 'success' });
+      setTimeout(() => navigate('/loans/list'), 1500);
+    } catch (err) {
+      console.error('Error creating loan:', err);
+      setSnackbar({ open: true, message: 'Error al crear préstamo', severity: 'error' });
+    } finally {
+      setSubmitting(false);
+    }
+  }, [selectedPool, loanAmount, installmentAmount, frequency, paymentDay, startDate, interestRate, notes, navigate]);
+
+  const isValid = selectedPool && parseFloat(loanAmount) > 0 && parseFloat(installmentAmount) > 0;
 
   return (
     <Box sx={{ p: 3 }}>
       <Card>
         <CardContent>
-          {/* Title */}
-          <Typography variant="h5" sx={{ textAlign: 'center', mb: 4, color: '#2c2c2c' }}>
+          <Typography variant="h5" sx={{ textAlign: 'center', mb: 4, color: '#2c2c2c', fontWeight: 600 }}>
             Crear préstamo
           </Typography>
 
-          {/* Form */}
-          <Box
-            component="form"
-            onSubmit={handleSubmit}
-            sx={{ maxWidth: '800px', margin: '0 auto' }}
-          >
-            {/* Tipo de entidad */}
+          <Box sx={{ maxWidth: '800px', margin: '0 auto' }}>
+            {/* Entity Type */}
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
               <Typography sx={{ width: '280px', fontSize: '12px', color: 'rgb(120, 120, 120)' }}>
                 Tipo de entidad
               </Typography>
-              <FormControl fullWidth size="small" required>
-                <Select
-                  name="entityType"
-                  value={formData.entityType}
-                  onChange={handleInputChange}
-                  displayEmpty
-                  sx={{ fontSize: '14px' }}
-                >
-                  <MenuItem value="">Seleccione</MenuItem>
-                  {entityTypes.map(type => (
-                    <MenuItem key={type.id} value={type.id}>{type.name}</MenuItem>
-                  ))}
+              <FormControl fullWidth size="small">
+                <Select value="bettingPool" disabled sx={{ fontSize: '14px' }}>
+                  <MenuItem value="bettingPool">Banca</MenuItem>
                 </Select>
               </FormControl>
             </Box>
 
-            {/* Entidad */}
+            {/* Entity (Banca) */}
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
               <Typography sx={{ width: '280px', fontSize: '12px', color: 'rgb(120, 120, 120)' }}>
                 Entidad
               </Typography>
-              <FormControl fullWidth size="small" required>
-                <Select
-                  name="entityId"
-                  value={formData.entityId}
-                  onChange={handleInputChange}
-                  disabled={!formData.entityType}
-                  displayEmpty
-                  sx={{ fontSize: '14px' }}
-                >
-                  <MenuItem value="">Seleccione</MenuItem>
-                  {availableEntities.map(entity => (
-                    <MenuItem key={entity.id} value={entity.id}>{entity.name}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+              <Autocomplete
+                fullWidth
+                size="small"
+                options={pools}
+                loading={poolsLoading}
+                value={selectedPool}
+                onChange={(_e, val) => setSelectedPool(val)}
+                getOptionLabel={(opt) =>
+                  `${opt.bettingPoolCode ?? ''} - ${opt.bettingPoolName}${opt.reference ? ` (${opt.reference})` : ''}`
+                }
+                filterOptions={(options, { inputValue }) => {
+                  const lower = inputValue.toLowerCase();
+                  return options.filter(o =>
+                    (o.bettingPoolCode ?? '').toLowerCase().includes(lower) ||
+                    o.bettingPoolName.toLowerCase().includes(lower) ||
+                    (o.reference ?? '').toLowerCase().includes(lower)
+                  );
+                }}
+                renderInput={(params) => (
+                  <TextField {...params} placeholder="Buscar banca..." sx={{ '& input': { fontSize: '14px' } }} />
+                )}
+                isOptionEqualToValue={(opt, val) => opt.bettingPoolId === val.bettingPoolId}
+              />
             </Box>
 
-            {/* Monto a prestar */}
+            {/* Loan Amount */}
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
               <Typography sx={{ width: '280px', fontSize: '12px', color: 'rgb(120, 120, 120)' }}>
                 Monto a prestar
@@ -173,9 +149,8 @@ const CreateLoan = (): React.ReactElement => {
                 fullWidth
                 size="small"
                 type="number"
-                name="loanAmount"
-                value={formData.loanAmount}
-                onChange={handleInputChange}
+                value={loanAmount}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => setLoanAmount(e.target.value)}
                 required
                 inputProps={{ min: 0, step: 0.01 }}
                 placeholder="0.00"
@@ -186,7 +161,7 @@ const CreateLoan = (): React.ReactElement => {
               />
             </Box>
 
-            {/* Monto cuota */}
+            {/* Installment Amount */}
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
               <Typography sx={{ width: '280px', fontSize: '12px', color: 'rgb(120, 120, 120)' }}>
                 Monto cuota
@@ -195,9 +170,8 @@ const CreateLoan = (): React.ReactElement => {
                 fullWidth
                 size="small"
                 type="number"
-                name="installmentAmount"
-                value={formData.installmentAmount}
-                onChange={handleInputChange}
+                value={installmentAmount}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => setInstallmentAmount(e.target.value)}
                 required
                 inputProps={{ min: 0, step: 0.01 }}
                 placeholder="0.00"
@@ -208,7 +182,7 @@ const CreateLoan = (): React.ReactElement => {
               />
             </Box>
 
-            {/* Frecuencia de pago */}
+            {/* Frequency */}
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
               <Typography sx={{ width: '280px', fontSize: '12px', color: 'rgb(120, 120, 120)' }}>
                 Frecuencia de pago
@@ -216,16 +190,20 @@ const CreateLoan = (): React.ReactElement => {
               <FormControl component="fieldset" fullWidth>
                 <RadioGroup
                   row
-                  name="paymentFrequency"
-                  value={formData.paymentFrequency}
-                  onChange={handleInputChange}
+                  value={frequency}
+                  onChange={(e) => setFrequency(e.target.value)}
                 >
-                  {['diario', 'semanal', 'mensual', 'anual'].map(freq => (
+                  {[
+                    { value: 'daily', label: 'Diario' },
+                    { value: 'weekly', label: 'Semanal' },
+                    { value: 'monthly', label: 'Mensual' },
+                    { value: 'annual', label: 'Anual' }
+                  ].map(f => (
                     <FormControlLabel
-                      key={freq}
-                      value={freq}
+                      key={f.value}
+                      value={f.value}
                       control={<Radio size="small" />}
-                      label={freq.charAt(0).toUpperCase() + freq.slice(1)}
+                      label={f.label}
                       sx={{ '& .MuiFormControlLabel-label': { fontSize: '14px' } }}
                     />
                   ))}
@@ -233,25 +211,44 @@ const CreateLoan = (): React.ReactElement => {
               </FormControl>
             </Box>
 
-            {/* Fecha de inicio del préstamo */}
+            {/* Day of Week (only for weekly) */}
+            {frequency === 'weekly' && (
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
+                <Typography sx={{ width: '280px', fontSize: '12px', color: 'rgb(120, 120, 120)' }}>
+                  Día de pago
+                </Typography>
+                <FormControl fullWidth size="small">
+                  <Select
+                    value={paymentDay}
+                    onChange={(e: SelectChangeEvent<number>) => setPaymentDay(e.target.value as number)}
+                    sx={{ fontSize: '14px' }}
+                  >
+                    {DAY_LABELS.map((label, idx) => (
+                      <MenuItem key={idx} value={idx}>{label}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Box>
+            )}
+
+            {/* Start Date */}
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
               <Typography sx={{ width: '280px', fontSize: '12px', color: 'rgb(120, 120, 120)' }}>
-                Fecha de inicio del préstamo
+                Fecha de inicio
               </Typography>
               <TextField
                 fullWidth
                 size="small"
                 type="date"
-                name="startDate"
-                value={formData.startDate}
-                onChange={handleInputChange}
+                value={startDate}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => setStartDate(e.target.value)}
                 required
                 InputLabelProps={{ shrink: true }}
                 inputProps={{ sx: { fontSize: '14px' } }}
               />
             </Box>
 
-            {/* Tasa de interés */}
+            {/* Interest Rate */}
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
               <Typography sx={{ width: '280px', fontSize: '12px', color: 'rgb(120, 120, 120)' }}>
                 Tasa de interés
@@ -260,10 +257,8 @@ const CreateLoan = (): React.ReactElement => {
                 fullWidth
                 size="small"
                 type="number"
-                name="interestRate"
-                value={formData.interestRate}
-                onChange={handleInputChange}
-                required
+                value={interestRate}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => setInterestRate(e.target.value)}
                 inputProps={{ min: 0, max: 100, step: 0.1 }}
                 placeholder="0.0"
                 InputProps={{
@@ -273,7 +268,7 @@ const CreateLoan = (): React.ReactElement => {
               />
             </Box>
 
-            {/* Notas */}
+            {/* Notes */}
             <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 2.5 }}>
               <Typography sx={{ width: '280px', fontSize: '12px', color: 'rgb(120, 120, 120)', pt: 1 }}>
                 Notas
@@ -282,19 +277,19 @@ const CreateLoan = (): React.ReactElement => {
                 fullWidth
                 multiline
                 rows={3}
-                name="notes"
-                value={formData.notes}
-                onChange={handleInputChange}
+                value={notes}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => setNotes(e.target.value)}
                 placeholder="Notas adicionales..."
                 InputProps={{ sx: { fontSize: '14px' } }}
               />
             </Box>
 
-            {/* Submit Button */}
+            {/* Submit */}
             <Box sx={{ textAlign: 'center', mt: 4 }}>
               <Button
-                type="submit"
                 variant="contained"
+                onClick={handleSubmit}
+                disabled={!isValid || submitting}
                 sx={{
                   bgcolor: '#8b5cf6',
                   '&:hover': { bgcolor: '#7c3aed' },
@@ -306,12 +301,23 @@ const CreateLoan = (): React.ReactElement => {
                   textTransform: 'none'
                 }}
               >
-                Crear
+                {submitting ? <CircularProgress size={20} color="inherit" /> : 'Crear'}
               </Button>
             </Box>
           </Box>
         </CardContent>
       </Card>
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert severity={snackbar.severity} variant="filled">
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

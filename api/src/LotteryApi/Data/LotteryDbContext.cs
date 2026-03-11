@@ -96,6 +96,10 @@ public class LotteryDbContext : DbContext
     // Contacts
     public DbSet<Contact> Contacts { get; set; }
 
+    // Loans
+    public DbSet<Loan> Loans { get; set; }
+    public DbSet<LoanPayment> LoanPayments { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

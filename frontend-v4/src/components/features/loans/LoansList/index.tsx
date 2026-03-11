@@ -1,4 +1,4 @@
-import React, { useState, useCallback, type ChangeEvent, type FormEvent } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, type ChangeEvent } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Box,
@@ -15,475 +15,562 @@ import {
   Paper,
   Checkbox,
   FormControlLabel,
+  FormControl,
+  RadioGroup,
+  Radio,
+  Select,
+  MenuItem,
   Button,
   IconButton,
   Chip,
   InputAdornment,
-  Tab,
-  Tabs,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel
+  CircularProgress,
+  Snackbar,
+  Alert
 } from '@mui/material';
+import type { SelectChangeEvent } from '@mui/material/Select';
 import SearchIcon from '@mui/icons-material/Search';
-import InfoIcon from '@mui/icons-material/Info';
+import PaymentIcon from '@mui/icons-material/Payment';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import CloseIcon from '@mui/icons-material/Close';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
+import AddIcon from '@mui/icons-material/Add';
+import { getLoans, createLoanPayment, updateLoan, cancelLoan, type LoanAPI } from '@services/loanService';
 
-interface Loan {
-  id: number;
-  loanNumber: string;
-  totalLoaned: number;
-  interestRate: number;
-  totalPaid: number;
-  totalToPay: number;
-  createdAt: string;
-  lastPayment: string;
-  installment: number;
-  pendingInstallments: number;
-  frequency: string;
-  paymentDay: string;
-  status: string;
-  hasPending: boolean;
-}
+const FREQUENCY_LABELS: Record<string, string> = {
+  daily: 'Diario',
+  weekly: 'Semanal',
+  monthly: 'Mensual',
+  annual: 'Anual'
+};
 
-interface Filters {
-  onlyActive: boolean;
-  filterByZones: boolean;
-  bettingPoolNumber: string;
-  quickFilter: string;
-}
+const DAY_LABELS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 
-type SortDirection = 'asc' | 'desc';
-type SortKey = keyof Loan | null;
+const formatCurrency = (val: number): string =>
+  `$${val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-interface SortConfig {
-  key: SortKey;
-  direction: SortDirection;
-}
+const formatDate = (dateStr: string | null): string => {
+  if (!dateStr) return '-';
+  const d = new Date(dateStr.endsWith('Z') ? dateStr : dateStr + 'Z');
+  return d.toLocaleDateString('es-DO', { day: '2-digit', month: '2-digit', year: 'numeric' });
+};
 
-interface PaymentData {
-  bank: string;
-  amount: string;
-}
+type SortKey = keyof LoanAPI;
 
 const LoansList = (): React.ReactElement => {
-  const [filters, setFilters] = useState<Filters>({
-    onlyActive: true,
-    filterByZones: false,
-    bettingPoolNumber: '',
-    quickFilter: ''
+  const [loans, setLoans] = useState<LoanAPI[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [onlyActive, setOnlyActive] = useState(true);
+  const [quickFilter, setQuickFilter] = useState('');
+  const [sortConfig, setSortConfig] = useState<{ key: SortKey | null; direction: 'asc' | 'desc' }>({ key: null, direction: 'asc' });
+
+  // Payment modal
+  const [paymentLoan, setPaymentLoan] = useState<LoanAPI | null>(null);
+  const [paymentAmount, setPaymentAmount] = useState('');
+  const [paymentNotes, setPaymentNotes] = useState('');
+  const [paymentSubmitting, setPaymentSubmitting] = useState(false);
+
+  // Edit modal
+  const [editLoan, setEditLoan] = useState<LoanAPI | null>(null);
+  const [editInstallment, setEditInstallment] = useState('');
+  const [editFrequency, setEditFrequency] = useState('');
+  const [editPaymentDay, setEditPaymentDay] = useState<number>(0);
+  const [editInterestRate, setEditInterestRate] = useState('');
+  const [editNotes, setEditNotes] = useState('');
+  const [editSubmitting, setEditSubmitting] = useState(false);
+
+  // Delete modal
+  const [deleteLoan, setDeleteLoan] = useState<LoanAPI | null>(null);
+  const [deleteSubmitting, setDeleteSubmitting] = useState(false);
+
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
+    open: false, message: '', severity: 'success'
   });
-  const [sortConfig, setSortConfig] = useState<SortConfig>({ key: null, direction: 'asc' });
-  const [activeTab, setActiveTab] = useState<number>(0);
 
-  // Modal states
-  const [showPaymentModal, setShowPaymentModal] = useState<boolean>(false);
-  const [showDeleteModal, setShowDeleteModal] = useState<boolean>(false);
-  const [selectedLoan, setSelectedLoan] = useState<Loan | null>(null);
-  const [paymentData, setPaymentData] = useState<PaymentData>({
-    bank: '',
-    amount: ''
-  });
+  const loadLoans = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await getLoans(onlyActive ? { status: 'active' } : undefined);
+      setLoans(data);
+    } catch (err) {
+      console.error('Error loading loans:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [onlyActive]);
 
-  // Mockup data - 20 loans
-  const loansData: Loan[] = [
-    { id: 1, loanNumber: 'LP-001', totalLoaned: 5000.00, interestRate: 5.0, totalPaid: 2500.00, totalToPay: 2750.00, createdAt: '15/01/2025', lastPayment: '15/11/2025', installment: 500.00, pendingInstallments: 5, frequency: 'Semanal', paymentDay: 'Viernes', status: 'Activo', hasPending: false },
-    { id: 2, loanNumber: 'LP-002', totalLoaned: 10000.00, interestRate: 6.0, totalPaid: 10600.00, totalToPay: 0.00, createdAt: '20/01/2025', lastPayment: '10/11/2025', installment: 1000.00, pendingInstallments: 0, frequency: 'Mensual', paymentDay: '15', status: 'Completo', hasPending: false },
-    { id: 3, loanNumber: 'LP-003', totalLoaned: 3000.00, interestRate: 4.5, totalPaid: 0.00, totalToPay: 3135.00, createdAt: '01/02/2025', lastPayment: '-', installment: 300.00, pendingInstallments: 10, frequency: 'Semanal', paymentDay: 'Lunes', status: 'Activo', hasPending: true },
-    { id: 4, loanNumber: 'LP-004', totalLoaned: 15000.00, interestRate: 7.0, totalPaid: 8000.00, totalToPay: 8050.00, createdAt: '10/02/2025', lastPayment: '12/11/2025', installment: 1500.00, pendingInstallments: 5, frequency: 'Mensual', paymentDay: '10', status: 'Activo', hasPending: false },
-    { id: 5, loanNumber: 'LP-005', totalLoaned: 2000.00, interestRate: 3.0, totalPaid: 2060.00, totalToPay: 0.00, createdAt: '15/02/2025', lastPayment: '01/11/2025', installment: 200.00, pendingInstallments: 0, frequency: 'Diario', paymentDay: 'Todos', status: 'Completo', hasPending: false },
-    { id: 6, loanNumber: 'LP-006', totalLoaned: 8000.00, interestRate: 5.5, totalPaid: 4000.00, totalToPay: 4440.00, createdAt: '01/03/2025', lastPayment: '10/11/2025', installment: 800.00, pendingInstallments: 5, frequency: 'Semanal', paymentDay: 'Miércoles', status: 'Activo', hasPending: true },
-    { id: 7, loanNumber: 'LP-007', totalLoaned: 12000.00, interestRate: 6.5, totalPaid: 0.00, totalToPay: 12780.00, createdAt: '10/03/2025', lastPayment: '-', installment: 1200.00, pendingInstallments: 10, frequency: 'Mensual', paymentDay: '20', status: 'Activo', hasPending: false },
-    { id: 8, loanNumber: 'LP-008', totalLoaned: 4000.00, interestRate: 4.0, totalPaid: 4160.00, totalToPay: 0.00, createdAt: '20/03/2025', lastPayment: '05/11/2025', installment: 400.00, pendingInstallments: 0, frequency: 'Semanal', paymentDay: 'Jueves', status: 'Completo', hasPending: false },
-    { id: 9, loanNumber: 'LP-009', totalLoaned: 7000.00, interestRate: 5.0, totalPaid: 3500.00, totalToPay: 3850.00, createdAt: '01/04/2025', lastPayment: '08/11/2025', installment: 700.00, pendingInstallments: 5, frequency: 'Mensual', paymentDay: '5', status: 'Activo', hasPending: false },
-    { id: 10, loanNumber: 'LP-010', totalLoaned: 1500.00, interestRate: 3.5, totalPaid: 1552.50, totalToPay: 0.00, createdAt: '10/04/2025', lastPayment: '30/10/2025', installment: 150.00, pendingInstallments: 0, frequency: 'Diario', paymentDay: 'Todos', status: 'Completo', hasPending: false },
-    { id: 11, loanNumber: 'LP-011', totalLoaned: 20000.00, interestRate: 8.0, totalPaid: 10000.00, totalToPay: 11600.00, createdAt: '15/04/2025', lastPayment: '14/11/2025', installment: 2000.00, pendingInstallments: 5, frequency: 'Mensual', paymentDay: '15', status: 'Activo', hasPending: true },
-    { id: 12, loanNumber: 'LP-012', totalLoaned: 6000.00, interestRate: 4.5, totalPaid: 6270.00, totalToPay: 0.00, createdAt: '01/05/2025', lastPayment: '02/11/2025', installment: 600.00, pendingInstallments: 0, frequency: 'Semanal', paymentDay: 'Martes', status: 'Completo', hasPending: false },
-    { id: 13, loanNumber: 'LP-013', totalLoaned: 9000.00, interestRate: 5.5, totalPaid: 4500.00, totalToPay: 4995.00, createdAt: '10/05/2025', lastPayment: '11/11/2025', installment: 900.00, pendingInstallments: 5, frequency: 'Semanal', paymentDay: 'Viernes', status: 'Activo', hasPending: false },
-    { id: 14, loanNumber: 'LP-014', totalLoaned: 3500.00, interestRate: 4.0, totalPaid: 0.00, totalToPay: 3640.00, createdAt: '20/05/2025', lastPayment: '-', installment: 350.00, pendingInstallments: 10, frequency: 'Semanal', paymentDay: 'Lunes', status: 'Inactivo', hasPending: false },
-    { id: 15, loanNumber: 'LP-015', totalLoaned: 25000.00, interestRate: 7.5, totalPaid: 12500.00, totalToPay: 14375.00, createdAt: '01/06/2025', lastPayment: '13/11/2025', installment: 2500.00, pendingInstallments: 5, frequency: 'Mensual', paymentDay: '1', status: 'Activo', hasPending: true },
-    { id: 16, loanNumber: 'LP-016', totalLoaned: 4500.00, interestRate: 4.5, totalPaid: 4702.50, totalToPay: 0.00, createdAt: '10/06/2025', lastPayment: '04/11/2025', installment: 450.00, pendingInstallments: 0, frequency: 'Semanal', paymentDay: 'Miércoles', status: 'Completo', hasPending: false },
-    { id: 17, loanNumber: 'LP-017', totalLoaned: 11000.00, interestRate: 6.0, totalPaid: 5500.00, totalToPay: 6160.00, createdAt: '20/06/2025', lastPayment: '09/11/2025', installment: 1100.00, pendingInstallments: 5, frequency: 'Mensual', paymentDay: '20', status: 'Activo', hasPending: false },
-    { id: 18, loanNumber: 'LP-018', totalLoaned: 5500.00, interestRate: 5.0, totalPaid: 0.00, totalToPay: 5775.00, createdAt: '01/07/2025', lastPayment: '-', installment: 550.00, pendingInstallments: 10, frequency: 'Semanal', paymentDay: 'Jueves', status: 'Inactivo', hasPending: false },
-    { id: 19, loanNumber: 'LP-019', totalLoaned: 18000.00, interestRate: 7.0, totalPaid: 19260.00, totalToPay: 0.00, createdAt: '10/07/2025', lastPayment: '06/11/2025', installment: 1800.00, pendingInstallments: 0, frequency: 'Mensual', paymentDay: '10', status: 'Completo', hasPending: false },
-    { id: 20, loanNumber: 'LP-020', totalLoaned: 7500.00, interestRate: 5.5, totalPaid: 3750.00, totalToPay: 4162.50, createdAt: '20/07/2025', lastPayment: '12/11/2025', installment: 750.00, pendingInstallments: 5, frequency: 'Semanal', paymentDay: 'Viernes', status: 'Activo', hasPending: true }
-  ];
+  useEffect(() => {
+    loadLoans();
+  }, [loadLoans]);
 
-  const handleFilterChange = useCallback((e: ChangeEvent<HTMLInputElement>): void => {
-    const { name, value, checked, type } = e.target;
-    setFilters(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value
+  const handleSort = useCallback((key: SortKey) => {
+    setSortConfig(prev => ({
+      key,
+      direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
     }));
   }, []);
 
-  const handleSort = useCallback((key: keyof Loan): void => {
-    let direction: SortDirection = 'asc';
-    if (sortConfig.key === key && sortConfig.direction === 'asc') {
-      direction = 'desc';
+  const filteredAndSorted = useMemo(() => {
+    let data = loans;
+
+    if (quickFilter) {
+      const lower = quickFilter.toLowerCase();
+      data = data.filter(l =>
+        l.loanNumber.toLowerCase().includes(lower) ||
+        l.entityName.toLowerCase().includes(lower) ||
+        l.entityCode.toLowerCase().includes(lower)
+      );
     }
-    setSortConfig({ key, direction });
-  }, [sortConfig]);
 
-  // Handler functions
-  const handleOpenPaymentModal = useCallback((loan: Loan): void => {
-    setSelectedLoan(loan);
-    setPaymentData({ bank: '', amount: loan.installment.toString() });
-    setShowPaymentModal(true);
-  }, []);
+    if (sortConfig.key) {
+      const key = sortConfig.key;
+      data = [...data].sort((a, b) => {
+        const aVal = a[key];
+        const bVal = b[key];
+        if (aVal == null && bVal == null) return 0;
+        if (aVal == null) return 1;
+        if (bVal == null) return -1;
+        if (typeof aVal === 'string' && typeof bVal === 'string') {
+          const cmp = aVal.toLowerCase().localeCompare(bVal.toLowerCase());
+          return sortConfig.direction === 'asc' ? cmp : -cmp;
+        }
+        if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
 
-  const handleClosePaymentModal = useCallback((): void => {
-    setShowPaymentModal(false);
-    setSelectedLoan(null);
-    setPaymentData({ bank: '', amount: '' });
-  }, []);
+    return data;
+  }, [loans, quickFilter, sortConfig]);
 
-  const handlePayment = useCallback((e: FormEvent<HTMLFormElement>): void => {
-    e.preventDefault();
-    alert(`Pago registrado: $${paymentData.amount} para préstamo ${selectedLoan?.loanNumber}`);
-    handleClosePaymentModal();
-  }, [selectedLoan, paymentData, handleClosePaymentModal]);
+  const totals = useMemo(() => {
+    return filteredAndSorted.reduce((acc, l) => ({
+      principal: acc.principal + l.principalAmount,
+      totalPaid: acc.totalPaid + l.totalPaid,
+      remaining: acc.remaining + l.remainingBalance
+    }), { principal: 0, totalPaid: 0, remaining: 0 });
+  }, [filteredAndSorted]);
 
-  const handleOpenDeleteModal = useCallback((loan: Loan): void => {
-    setSelectedLoan(loan);
-    setShowDeleteModal(true);
-  }, []);
+  const handleOpenPayment = (loan: LoanAPI) => {
+    setPaymentLoan(loan);
+    setPaymentAmount(loan.installmentAmount.toString());
+    setPaymentNotes('');
+  };
 
-  const handleCloseDeleteModal = useCallback((): void => {
-    setShowDeleteModal(false);
-    setSelectedLoan(null);
-  }, []);
+  const handlePayment = async () => {
+    if (!paymentLoan || !paymentAmount) return;
+    setPaymentSubmitting(true);
+    try {
+      await createLoanPayment(paymentLoan.loanId, {
+        amountPaid: parseFloat(paymentAmount),
+        notes: paymentNotes || undefined
+      });
+      setSnackbar({ open: true, message: 'Pago registrado exitosamente', severity: 'success' });
+      setPaymentLoan(null);
+      loadLoans();
+    } catch (err) {
+      console.error('Error creating payment:', err);
+      setSnackbar({ open: true, message: 'Error al registrar pago', severity: 'error' });
+    } finally {
+      setPaymentSubmitting(false);
+    }
+  };
 
-  const handleConfirmDelete = useCallback((): void => {
-    alert(`Préstamo ${selectedLoan?.loanNumber} eliminado exitosamente`);
-    handleCloseDeleteModal();
-  }, [selectedLoan, handleCloseDeleteModal]);
+  const handleOpenEdit = (loan: LoanAPI) => {
+    setEditLoan(loan);
+    setEditInstallment(loan.installmentAmount.toString());
+    setEditFrequency(loan.frequency);
+    setEditPaymentDay(loan.paymentDay ?? 0);
+    setEditInterestRate(loan.interestRate.toString());
+    setEditNotes(loan.notes ?? '');
+  };
 
-  // Apply filters
-  let filteredData = loansData;
+  const handleEdit = async () => {
+    if (!editLoan) return;
+    setEditSubmitting(true);
+    try {
+      await updateLoan(editLoan.loanId, {
+        installmentAmount: parseFloat(editInstallment),
+        frequency: editFrequency,
+        paymentDay: editFrequency === 'weekly' ? editPaymentDay : undefined,
+        interestRate: parseFloat(editInterestRate) || 0,
+        notes: editNotes
+      });
+      setSnackbar({ open: true, message: 'Préstamo actualizado exitosamente', severity: 'success' });
+      setEditLoan(null);
+      loadLoans();
+    } catch (err) {
+      console.error('Error updating loan:', err);
+      setSnackbar({ open: true, message: 'Error al actualizar préstamo', severity: 'error' });
+    } finally {
+      setEditSubmitting(false);
+    }
+  };
 
-  if (filters.onlyActive) {
-    filteredData = filteredData.filter(loan => loan.status !== 'Inactivo');
-  }
+  const handleEarlyPay = () => {
+    if (!paymentLoan) return;
+    setPaymentAmount(paymentLoan.remainingBalance.toString());
+  };
 
-  if (filters.quickFilter) {
-    const searchLower = filters.quickFilter.toLowerCase();
-    filteredData = filteredData.filter(loan =>
-      loan.loanNumber.toLowerCase().includes(searchLower) ||
-      loan.status.toLowerCase().includes(searchLower) ||
-      loan.frequency.toLowerCase().includes(searchLower)
-    );
-  }
-
-  // Apply sorting
-  if (sortConfig.key) {
-    const key = sortConfig.key;
-    filteredData = [...filteredData].sort((a, b) => {
-      const aVal = a[key];
-      const bVal = b[key];
-
-      if (typeof aVal === 'string' && typeof bVal === 'string') {
-        const comparison = aVal.toLowerCase().localeCompare(bVal.toLowerCase());
-        return sortConfig.direction === 'asc' ? comparison : -comparison;
-      }
-
-      if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
-      if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
-      return 0;
-    });
-  }
-
-  // Calculate totals
-  const totals = filteredData.reduce((acc, loan) => ({
-    totalLoaned: acc.totalLoaned + loan.totalLoaned,
-    totalPaid: acc.totalPaid + loan.totalPaid,
-    totalToPay: acc.totalToPay + loan.totalToPay
-  }), { totalLoaned: 0, totalPaid: 0, totalToPay: 0 });
+  const handleCancelLoan = async () => {
+    if (!deleteLoan) return;
+    setDeleteSubmitting(true);
+    try {
+      await cancelLoan(deleteLoan.loanId);
+      setSnackbar({ open: true, message: 'Préstamo cancelado exitosamente', severity: 'success' });
+      setDeleteLoan(null);
+      loadLoans();
+    } catch (err) {
+      console.error('Error cancelling loan:', err);
+      setSnackbar({ open: true, message: 'Error al cancelar préstamo', severity: 'error' });
+    } finally {
+      setDeleteSubmitting(false);
+    }
+  };
 
   const getStatusChip = (status: string): React.ReactElement => {
-    const colors: Record<string, 'success' | 'info' | 'error' | 'default'> = {
-      'Activo': 'success',
-      'Completo': 'info',
-      'Inactivo': 'error'
+    const config: Record<string, { label: string; color: 'success' | 'info' | 'error' | 'default' }> = {
+      active: { label: 'Activo', color: 'success' },
+      completed: { label: 'Completado', color: 'info' },
+      cancelled: { label: 'Cancelado', color: 'error' }
     };
-    return (
-      <Chip
-        label={status}
-        color={colors[status] || 'default'}
-        size="small"
-        sx={{ fontSize: '11px', fontWeight: 500 }}
-      />
-    );
+    const c = config[status] ?? { label: status, color: 'default' as const };
+    return <Chip label={c.label} color={c.color} size="small" sx={{ fontSize: '11px', fontWeight: 500 }} />;
   };
+
+  const getPaymentDayLabel = (loan: LoanAPI): string => {
+    if (loan.frequency === 'daily') return 'Todos';
+    if (loan.frequency === 'weekly' && loan.paymentDay != null) return DAY_LABELS[loan.paymentDay] ?? '-';
+    if (loan.frequency === 'monthly' && loan.paymentDay != null) return `Día ${loan.paymentDay}`;
+    return '-';
+  };
+
+  const headerCell = (key: SortKey, label: string) => (
+    <TableCell
+      onClick={() => handleSort(key)}
+      sx={{ cursor: 'pointer', fontWeight: 'bold', whiteSpace: 'nowrap', fontSize: '12px' }}
+    >
+      {label} {sortConfig.key === key ? (sortConfig.direction === 'asc' ? '▲' : '▼') : ''}
+    </TableCell>
+  );
 
   return (
     <Box sx={{ p: 3 }}>
       <Card>
         <CardContent>
-          {/* Title */}
-          <Typography variant="h5" sx={{ textAlign: 'center', mb: 3, color: '#2c2c2c' }}>
-            Lista de préstamos
-          </Typography>
-
-          {/* Toggle Filters */}
-          <Box sx={{ mb: 2, display: 'flex', gap: 2 }}>
-            <FormControlLabel
-              control={
-                <Checkbox
-                  name="onlyActive"
-                  checked={filters.onlyActive}
-                  onChange={handleFilterChange}
-                />
-              }
-              label="Sólo préstamos activos"
-              sx={{ '& .MuiFormControlLabel-label': { fontSize: '14px' } }}
-            />
-            <FormControlLabel
-              control={
-                <Checkbox
-                  name="filterByZones"
-                  checked={filters.filterByZones}
-                  onChange={handleFilterChange}
-                />
-              }
-              label="Filtrar por zonas"
-              sx={{ '& .MuiFormControlLabel-label': { fontSize: '14px' } }}
-            />
-          </Box>
-
-          {/* Tab */}
-          <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
-            <Tabs
-              value={activeTab}
-              onChange={(e, newValue) => setActiveTab(newValue)}
-              sx={{
-                '& .MuiTab-root': { fontSize: '14px' },
-                '& .Mui-selected': { color: '#8b5cf6' },
-                '& .MuiTabs-indicator': { backgroundColor: '#8b5cf6' }
-              }}
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+            <Typography variant="h5" sx={{ color: '#2c2c2c', fontWeight: 600 }}>
+              Lista de préstamos
+            </Typography>
+            <Button
+              component={Link}
+              to="/loans/new"
+              variant="contained"
+              startIcon={<AddIcon />}
+              sx={{ bgcolor: '#8b5cf6', '&:hover': { bgcolor: '#7c3aed' }, textTransform: 'none' }}
             >
-              <Tab label="Bancas" />
-            </Tabs>
+              Crear préstamo
+            </Button>
           </Box>
 
-          {/* Search Filters */}
-          <Box sx={{ mb: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-            <TextField
-              size="small"
-              placeholder="Numero de banca"
-              name="bettingPoolNumber"
-              value={filters.bettingPoolNumber}
-              onChange={handleFilterChange}
-              sx={{ maxWidth: '300px' }}
-              InputProps={{
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <SearchIcon fontSize="small" />
-                  </InputAdornment>
-                )
-              }}
+          {/* Filters */}
+          <Box sx={{ mb: 2, display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+            <FormControlLabel
+              control={<Checkbox checked={onlyActive} onChange={(e) => setOnlyActive(e.target.checked)} />}
+              label="Sólo activos"
+              sx={{ '& .MuiFormControlLabel-label': { fontSize: '14px' } }}
             />
             <TextField
               size="small"
-              placeholder="Filtrado rápido"
-              name="quickFilter"
-              value={filters.quickFilter}
-              onChange={handleFilterChange}
+              placeholder="Filtro rápido"
+              value={quickFilter}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setQuickFilter(e.target.value)}
               sx={{ maxWidth: '300px' }}
               InputProps={{
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <SearchIcon fontSize="small" />
-                  </InputAdornment>
-                )
+                startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment>
               }}
             />
           </Box>
 
-          {/* Table */}
-          <TableContainer component={Paper} variant="outlined">
-            <Table size="small">
-              <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
-                <TableRow>
-                  <TableCell onClick={() => handleSort('loanNumber')} sx={{ cursor: 'pointer', fontWeight: 'bold' }}>#</TableCell>
-                  <TableCell onClick={() => handleSort('totalLoaned')} sx={{ cursor: 'pointer', fontWeight: 'bold' }}>Total prestado</TableCell>
-                  <TableCell onClick={() => handleSort('interestRate')} sx={{ cursor: 'pointer', fontWeight: 'bold' }}>Tasa de interés</TableCell>
-                  <TableCell onClick={() => handleSort('totalPaid')} sx={{ cursor: 'pointer', fontWeight: 'bold' }}>Total pagado</TableCell>
-                  <TableCell onClick={() => handleSort('totalToPay')} sx={{ cursor: 'pointer', fontWeight: 'bold' }}>Total a pagar</TableCell>
-                  <TableCell onClick={() => handleSort('createdAt')} sx={{ cursor: 'pointer', fontWeight: 'bold' }}>Fecha de creación</TableCell>
-                  <TableCell onClick={() => handleSort('lastPayment')} sx={{ cursor: 'pointer', fontWeight: 'bold' }}>Último pago</TableCell>
-                  <TableCell onClick={() => handleSort('installment')} sx={{ cursor: 'pointer', fontWeight: 'bold' }}>Cuota</TableCell>
-                  <TableCell onClick={() => handleSort('pendingInstallments')} sx={{ cursor: 'pointer', fontWeight: 'bold' }}>Cuotas pend.</TableCell>
-                  <TableCell onClick={() => handleSort('frequency')} sx={{ cursor: 'pointer', fontWeight: 'bold' }}>Frecuencia</TableCell>
-                  <TableCell onClick={() => handleSort('paymentDay')} sx={{ cursor: 'pointer', fontWeight: 'bold' }}>Día de pago</TableCell>
-                  <TableCell onClick={() => handleSort('status')} sx={{ cursor: 'pointer', fontWeight: 'bold' }}>Estado</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold' }}>Pendientes</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', textAlign: 'center', minWidth: '150px' }}>Actions</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {filteredData.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={14} sx={{ textAlign: 'center', py: 3 }}>
-                      No hay entradas disponibles
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredData.map((loan) => (
-                    <TableRow key={loan.id} hover>
-                      <TableCell>{loan.loanNumber}</TableCell>
-                      <TableCell>${loan.totalLoaned.toFixed(2)}</TableCell>
-                      <TableCell>{loan.interestRate}%</TableCell>
-                      <TableCell>${loan.totalPaid.toFixed(2)}</TableCell>
-                      <TableCell>${loan.totalToPay.toFixed(2)}</TableCell>
-                      <TableCell>{loan.createdAt}</TableCell>
-                      <TableCell>{loan.lastPayment}</TableCell>
-                      <TableCell>${loan.installment.toFixed(2)}</TableCell>
-                      <TableCell>{loan.pendingInstallments}</TableCell>
-                      <TableCell>{loan.frequency}</TableCell>
-                      <TableCell>{loan.paymentDay}</TableCell>
-                      <TableCell>{getStatusChip(loan.status)}</TableCell>
-                      <TableCell>{loan.hasPending ? 'Sí' : 'No'}</TableCell>
-                      <TableCell sx={{ textAlign: 'center' }}>
-                        <IconButton size="small" color="info" onClick={() => handleOpenPaymentModal(loan)} title="Pagar préstamo">
-                          <InfoIcon fontSize="small" />
-                        </IconButton>
-                        <IconButton
-                          size="small"
-                          component={Link}
-                          to={`/loans/edit/${loan.id}`}
-                          sx={{ color: '#8b5cf6', textDecoration: 'none' }}
-                          title="Editar"
-                        >
-                          <EditIcon fontSize="small" />
-                        </IconButton>
-                        <IconButton size="small" color="error" onClick={() => handleOpenDeleteModal(loan)} title="Eliminar">
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
-                      </TableCell>
+          {loading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+              <CircularProgress />
+            </Box>
+          ) : (
+            <>
+              <TableContainer component={Paper} variant="outlined">
+                <Table size="small">
+                  <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
+                    <TableRow>
+                      {headerCell('loanNumber', '#')}
+                      {headerCell('entityName', 'Banca')}
+                      {headerCell('principalAmount', 'Total prestado')}
+                      {headerCell('interestRate', 'Tasa %')}
+                      {headerCell('totalPaid', 'Total pagado')}
+                      {headerCell('remainingBalance', 'Pendiente')}
+                      {headerCell('installmentAmount', 'Cuota')}
+                      {headerCell('frequency', 'Frecuencia')}
+                      <TableCell sx={{ fontWeight: 'bold', fontSize: '12px' }}>Día</TableCell>
+                      {headerCell('startDate', 'Inicio')}
+                      {headerCell('status', 'Estado')}
+                      <TableCell sx={{ fontWeight: 'bold', textAlign: 'center', fontSize: '12px' }}>Acciones</TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-              {filteredData.length > 0 && (
-                <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
-                  <TableCell sx={{ fontWeight: 'bold' }}>Total</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold' }}>${totals.totalLoaned.toFixed(2)}</TableCell>
-                  <TableCell></TableCell>
-                  <TableCell sx={{ fontWeight: 'bold' }}>${totals.totalPaid.toFixed(2)}</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold' }}>${totals.totalToPay.toFixed(2)}</TableCell>
-                  <TableCell colSpan={9}></TableCell>
-                </TableRow>
-              )}
-            </Table>
-          </TableContainer>
+                  </TableHead>
+                  <TableBody>
+                    {filteredAndSorted.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={12} sx={{ textAlign: 'center', py: 3 }}>
+                          No hay préstamos disponibles
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredAndSorted.map((loan) => (
+                        <TableRow key={loan.loanId} hover>
+                          <TableCell sx={{ fontSize: '13px' }}>{loan.loanNumber}</TableCell>
+                          <TableCell sx={{ fontSize: '13px', whiteSpace: 'nowrap' }}>
+                            {loan.entityCode} - {loan.entityName}
+                          </TableCell>
+                          <TableCell sx={{ fontSize: '13px' }}>{formatCurrency(loan.principalAmount)}</TableCell>
+                          <TableCell sx={{ fontSize: '13px' }}>{loan.interestRate}%</TableCell>
+                          <TableCell sx={{ fontSize: '13px' }}>{formatCurrency(loan.totalPaid)}</TableCell>
+                          <TableCell sx={{ fontSize: '13px', fontWeight: 600, color: loan.remainingBalance > 0 ? '#dc3545' : '#28a745' }}>
+                            {formatCurrency(loan.remainingBalance)}
+                          </TableCell>
+                          <TableCell sx={{ fontSize: '13px' }}>{formatCurrency(loan.installmentAmount)}</TableCell>
+                          <TableCell sx={{ fontSize: '13px' }}>{FREQUENCY_LABELS[loan.frequency] ?? loan.frequency}</TableCell>
+                          <TableCell sx={{ fontSize: '13px' }}>{getPaymentDayLabel(loan)}</TableCell>
+                          <TableCell sx={{ fontSize: '13px' }}>{formatDate(loan.startDate)}</TableCell>
+                          <TableCell>{getStatusChip(loan.status)}</TableCell>
+                          <TableCell sx={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
+                            {loan.status === 'active' && (
+                              <>
+                                <IconButton size="small" color="primary" onClick={() => handleOpenPayment(loan)} title="Registrar pago">
+                                  <PaymentIcon fontSize="small" />
+                                </IconButton>
+                                <IconButton size="small" sx={{ color: '#8b5cf6' }} onClick={() => handleOpenEdit(loan)} title="Editar préstamo">
+                                  <EditIcon fontSize="small" />
+                                </IconButton>
+                                <IconButton size="small" color="error" onClick={() => setDeleteLoan(loan)} title="Cancelar préstamo">
+                                  <DeleteIcon fontSize="small" />
+                                </IconButton>
+                              </>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                    {filteredAndSorted.length > 0 && (
+                      <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+                        <TableCell sx={{ fontWeight: 'bold' }}>Total</TableCell>
+                        <TableCell />
+                        <TableCell sx={{ fontWeight: 'bold' }}>{formatCurrency(totals.principal)}</TableCell>
+                        <TableCell />
+                        <TableCell sx={{ fontWeight: 'bold' }}>{formatCurrency(totals.totalPaid)}</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold' }}>{formatCurrency(totals.remaining)}</TableCell>
+                        <TableCell colSpan={6} />
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
 
-          {/* Footer */}
-          <Typography variant="body2" sx={{ mt: 2, color: '#6c757d' }}>
-            Mostrando {filteredData.length} de {loansData.length} entradas
-          </Typography>
+              <Typography variant="body2" sx={{ mt: 2, color: '#6c757d' }}>
+                Mostrando {filteredAndSorted.length} préstamo{filteredAndSorted.length !== 1 ? 's' : ''}
+              </Typography>
+            </>
+          )}
         </CardContent>
       </Card>
 
       {/* Payment Dialog */}
-      <Dialog open={showPaymentModal} onClose={handleClosePaymentModal} maxWidth="sm" fullWidth>
+      <Dialog open={!!paymentLoan} onClose={() => setPaymentLoan(null)} maxWidth="sm" fullWidth>
         <DialogTitle sx={{ backgroundColor: '#8b5cf6', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          Pagar préstamo
-          <IconButton
-            edge="end"
-            color="inherit"
-            onClick={handleClosePaymentModal}
-            size="small"
-          >
+          Registrar pago — {paymentLoan?.loanNumber}
+          <IconButton edge="end" color="inherit" onClick={() => setPaymentLoan(null)} size="small">
             <CloseIcon />
           </IconButton>
         </DialogTitle>
-        <form onSubmit={handlePayment}>
-          <DialogContent sx={{ pt: 3 }}>
-            <FormControl fullWidth sx={{ mb: 2 }}>
-              <InputLabel id="bank-select-label">Banco</InputLabel>
-              <Select
-                labelId="bank-select-label"
-                value={paymentData.bank}
-                label="Banco"
-                onChange={(e) => setPaymentData({ ...paymentData, bank: e.target.value })}
-                required
-              >
-                <MenuItem value="">Seleccione</MenuItem>
-                <MenuItem value="Banco Popular">Banco Popular</MenuItem>
-                <MenuItem value="BanReservas">BanReservas</MenuItem>
-                <MenuItem value="Banco BHD">Banco BHD</MenuItem>
-                <MenuItem value="Banco Promerica">Banco Promerica</MenuItem>
-              </Select>
-            </FormControl>
-            <TextField
-              fullWidth
-              label="Monto cuota"
-              type="number"
-              placeholder="Monto"
-              value={paymentData.amount}
-              onChange={(e) => setPaymentData({ ...paymentData, amount: e.target.value })}
-              inputProps={{ step: '0.01', min: '0' }}
-              required
-            />
-          </DialogContent>
-          <DialogActions sx={{ px: 3, pb: 2 }}>
+        <DialogContent sx={{ pt: 3 }}>
+          <Box sx={{ mb: 2, mt: 1 }}>
+            <Typography variant="body2" color="text.secondary">
+              Banca: <strong>{paymentLoan?.entityCode} - {paymentLoan?.entityName}</strong>
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Pendiente: <strong style={{ color: '#dc3545' }}>{formatCurrency(paymentLoan?.remainingBalance ?? 0)}</strong>
+            </Typography>
+          </Box>
+          <TextField
+            fullWidth
+            label="Monto del pago"
+            type="number"
+            value={paymentAmount}
+            onChange={(e) => setPaymentAmount(e.target.value)}
+            inputProps={{ step: '0.01', min: '0' }}
+            InputProps={{ startAdornment: <InputAdornment position="start">$</InputAdornment> }}
+            sx={{ mb: 2 }}
+          />
+          <TextField
+            fullWidth
+            label="Notas (opcional)"
+            value={paymentNotes}
+            onChange={(e) => setPaymentNotes(e.target.value)}
+            multiline
+            rows={2}
+          />
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2, justifyContent: 'space-between' }}>
+          <Button
+            variant="outlined"
+            color="warning"
+            onClick={handleEarlyPay}
+            sx={{ textTransform: 'none' }}
+          >
+            Pagar todo ({formatCurrency(paymentLoan?.remainingBalance ?? 0)})
+          </Button>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Button onClick={() => setPaymentLoan(null)} sx={{ textTransform: 'none' }}>Cancelar</Button>
             <Button
-              type="submit"
               variant="contained"
-              sx={{
-                bgcolor: '#8b5cf6',
-                '&:hover': { bgcolor: '#7c3aed' },
-                color: 'white',
-                textTransform: 'none'
-              }}
+              onClick={handlePayment}
+              disabled={!paymentAmount || parseFloat(paymentAmount) <= 0 || paymentSubmitting}
+              sx={{ bgcolor: '#8b5cf6', '&:hover': { bgcolor: '#7c3aed' }, textTransform: 'none' }}
             >
-              PAGAR
+              {paymentSubmitting ? <CircularProgress size={20} color="inherit" /> : 'Registrar pago'}
             </Button>
-          </DialogActions>
-        </form>
+          </Box>
+        </DialogActions>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
-      <Dialog
-        open={showDeleteModal}
-        onClose={handleCloseDeleteModal}
-        maxWidth="xs"
-        fullWidth
-      >
+      {/* Cancel Confirmation Dialog */}
+      <Dialog open={!!deleteLoan} onClose={() => setDeleteLoan(null)} maxWidth="xs" fullWidth>
         <DialogContent sx={{ textAlign: 'center', py: 4 }}>
           <WarningAmberIcon sx={{ fontSize: 64, color: '#f0ad4e', mb: 2 }} />
-          <Typography variant="h6" sx={{ mb: 3, color: '#333' }}>
-            ¿Está seguro que desea eliminar este préstamo?
+          <Typography variant="h6" sx={{ mb: 1, color: '#333' }}>
+            ¿Cancelar préstamo {deleteLoan?.loanNumber}?
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+            Pendiente: {formatCurrency(deleteLoan?.remainingBalance ?? 0)}
           </Typography>
           <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
             <Button
               variant="contained"
-              color="primary"
-              onClick={handleConfirmDelete}
+              color="error"
+              onClick={handleCancelLoan}
+              disabled={deleteSubmitting}
               sx={{ minWidth: 100 }}
             >
-              Eliminar
+              {deleteSubmitting ? <CircularProgress size={20} color="inherit" /> : 'Cancelar préstamo'}
             </Button>
-            <Button
-              variant="outlined"
-              color="inherit"
-              onClick={handleCloseDeleteModal}
-              sx={{ minWidth: 100 }}
-            >
-              Cancelar
+            <Button variant="outlined" color="inherit" onClick={() => setDeleteLoan(null)} sx={{ minWidth: 100 }}>
+              Volver
             </Button>
           </Box>
         </DialogContent>
       </Dialog>
+
+      {/* Edit Dialog */}
+      <Dialog open={!!editLoan} onClose={() => setEditLoan(null)} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ backgroundColor: '#8b5cf6', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          Editar préstamo — {editLoan?.loanNumber}
+          <IconButton edge="end" color="inherit" onClick={() => setEditLoan(null)} size="small">
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ pt: 3 }}>
+          <Box sx={{ mb: 2, mt: 1 }}>
+            <Typography variant="body2" color="text.secondary">
+              Banca: <strong>{editLoan?.entityCode} - {editLoan?.entityName}</strong>
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Monto prestado: <strong>{formatCurrency(editLoan?.principalAmount ?? 0)}</strong> | Pendiente: <strong style={{ color: '#dc3545' }}>{formatCurrency(editLoan?.remainingBalance ?? 0)}</strong>
+            </Typography>
+          </Box>
+          <TextField
+            fullWidth
+            label="Monto cuota"
+            type="number"
+            value={editInstallment}
+            onChange={(e) => setEditInstallment(e.target.value)}
+            inputProps={{ step: '0.01', min: '0' }}
+            InputProps={{ startAdornment: <InputAdornment position="start">$</InputAdornment> }}
+            sx={{ mb: 2 }}
+          />
+          <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>Frecuencia</Typography>
+          <FormControl component="fieldset" sx={{ mb: 2 }}>
+            <RadioGroup
+              row
+              value={editFrequency}
+              onChange={(e) => setEditFrequency(e.target.value)}
+            >
+              {[
+                { value: 'daily', label: 'Diario' },
+                { value: 'weekly', label: 'Semanal' },
+                { value: 'monthly', label: 'Mensual' },
+                { value: 'annual', label: 'Anual' }
+              ].map(f => (
+                <FormControlLabel key={f.value} value={f.value} control={<Radio size="small" />} label={f.label} sx={{ '& .MuiFormControlLabel-label': { fontSize: '14px' } }} />
+              ))}
+            </RadioGroup>
+          </FormControl>
+          {editFrequency === 'weekly' && (
+            <FormControl fullWidth size="small" sx={{ mb: 2 }}>
+              <Select
+                value={editPaymentDay}
+                onChange={(e: SelectChangeEvent<number>) => setEditPaymentDay(e.target.value as number)}
+              >
+                {DAY_LABELS.map((label, idx) => (
+                  <MenuItem key={idx} value={idx}>{label}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          )}
+          <TextField
+            fullWidth
+            label="Tasa de interés (%)"
+            type="number"
+            value={editInterestRate}
+            onChange={(e) => setEditInterestRate(e.target.value)}
+            inputProps={{ min: 0, max: 100, step: 0.1 }}
+            InputProps={{ endAdornment: <InputAdornment position="end">%</InputAdornment> }}
+            sx={{ mb: 2 }}
+          />
+          <TextField
+            fullWidth
+            label="Notas"
+            value={editNotes}
+            onChange={(e) => setEditNotes(e.target.value)}
+            multiline
+            rows={2}
+          />
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setEditLoan(null)} sx={{ textTransform: 'none' }}>Cancelar</Button>
+          <Button
+            variant="contained"
+            onClick={handleEdit}
+            disabled={editSubmitting}
+            sx={{ bgcolor: '#8b5cf6', '&:hover': { bgcolor: '#7c3aed' }, textTransform: 'none' }}
+          >
+            {editSubmitting ? <CircularProgress size={20} color="inherit" /> : 'Guardar'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert severity={snackbar.severity} variant="filled">
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, type ChangeEvent } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, type ChangeEvent } from 'react';
 import {
   Box,
   Paper,
@@ -7,16 +7,19 @@ import {
   Select,
   MenuItem,
   TablePagination,
+  CircularProgress,
   type SelectChangeEvent
 } from '@mui/material';
 
 import BalanceTable from '../common/BalanceTable';
 import QuickFilter from '../common/QuickFilter';
+import { getBettingPoolBalances } from '@/services/balanceService';
 
-interface ZoneData {
+interface ZoneBalance {
   id: number;
   nombre: string;
   balance: number;
+  loans: number;
 }
 
 interface ColumnDefinition {
@@ -27,31 +30,58 @@ interface ColumnDefinition {
   align?: 'left' | 'center' | 'right';
 }
 
-// Mock data for development
-const MOCK_DATA: ZoneData[] = [
-  { id: 1, nombre: 'ZONA NORTE', balance: 45320.75 },
-  { id: 2, nombre: 'ZONA SUR', balance: 28450.30 },
-  { id: 3, nombre: 'ZONA ESTE', balance: -3240.50 },
-  { id: 4, nombre: 'ZONA OESTE', balance: 52180.90 },
-  { id: 5, nombre: 'ZONA CENTRAL', balance: 15670.25 },
-];
-
 const COLUMNS: ColumnDefinition[] = [
   { key: 'nombre', label: 'Nombre', sortable: true },
   { key: 'balance', label: 'Balance', sortable: true, format: 'currency', align: 'right' },
+  { key: 'loans', label: 'Préstamos', sortable: true, format: 'currency', align: 'right' },
 ];
 
 const ZoneBalances = (): React.ReactElement => {
-  // State
   const [quickFilter, setQuickFilter] = useState<string>('');
   const [pageSize, setPageSize] = useState<number>(20);
   const [page, setPage] = useState<number>(0);
-  const [data] = useState<ZoneData[]>(MOCK_DATA);
+  const [data, setData] = useState<ZoneBalance[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Handlers
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const balances = await getBettingPoolBalances();
+
+      // Aggregate by zone
+      const zoneMap = new Map<number, { name: string; balance: number; loans: number }>();
+      balances.forEach(bp => {
+        if (!bp.zoneId) return;
+        const existing = zoneMap.get(bp.zoneId);
+        if (existing) {
+          existing.balance += bp.balance;
+          existing.loans += bp.prestamos;
+        } else {
+          zoneMap.set(bp.zoneId, { name: bp.zona || 'Sin zona', balance: bp.balance, loans: bp.prestamos });
+        }
+      });
+
+      const zones: ZoneBalance[] = Array.from(zoneMap.entries()).map(([id, z]) => ({
+        id,
+        nombre: z.name,
+        balance: z.balance,
+        loans: z.loans,
+      }));
+
+      zones.sort((a, b) => a.nombre.localeCompare(b.nombre));
+      setData(zones);
+    } catch (err) {
+      console.error('Error loading zone balances:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadData(); }, [loadData]);
+
   const handleQuickFilterChange = useCallback((value: string) => {
     setQuickFilter(value);
-    setPage(0); // Reset to first page on filter
+    setPage(0);
   }, []);
 
   const handlePageSizeChange = useCallback((event: SelectChangeEvent<number>) => {
@@ -63,35 +93,31 @@ const ZoneBalances = (): React.ReactElement => {
     setPage(newPage);
   }, []);
 
-  // Filtered data
   const filteredData = useMemo(() => {
-    let result = data;
-
-    // Quick filter
-    if (quickFilter) {
-      const search = quickFilter.toLowerCase();
-      result = result.filter(item =>
-        Object.values(item).some(val =>
-          String(val).toLowerCase().includes(search)
-        )
-      );
-    }
-
-    return result;
+    if (!quickFilter) return data;
+    const search = quickFilter.toLowerCase();
+    return data.filter(item =>
+      Object.values(item).some(val => String(val).toLowerCase().includes(search))
+    );
   }, [data, quickFilter]);
 
-  // Paginated data
   const paginatedData = useMemo(() => {
     const start = page * pageSize;
     return filteredData.slice(start, start + pageSize);
   }, [filteredData, page, pageSize]);
 
-  // Calculate totals
-  const totals = useMemo(() => {
-    return {
-      balance: filteredData.reduce((sum, item) => sum + item.balance, 0),
-    };
-  }, [filteredData]);
+  const totals = useMemo(() => ({
+    balance: filteredData.reduce((sum, item) => sum + item.balance, 0),
+    loans: filteredData.reduce((sum, item) => sum + item.loans, 0),
+  }), [filteredData]);
+
+  if (loading) {
+    return (
+      <Box sx={{ p: 3, display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 300 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ p: 3 }}>
@@ -100,9 +126,7 @@ const ZoneBalances = (): React.ReactElement => {
           Balances de zonas
         </Typography>
 
-        {/* Filters Section */}
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: 'wrap', gap: 2 }}>
-          {/* Entries per page */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <Typography variant="body2" sx={{ color: 'text.secondary' }}>
               Entradas por página
@@ -123,7 +147,6 @@ const ZoneBalances = (): React.ReactElement => {
             </FormControl>
           </Box>
 
-          {/* Quick Filter */}
           <Box sx={{ minWidth: 250 }}>
             <QuickFilter
               value={quickFilter}
@@ -133,14 +156,12 @@ const ZoneBalances = (): React.ReactElement => {
           </Box>
         </Box>
 
-        {/* Data Table */}
         <BalanceTable
           columns={COLUMNS}
           data={paginatedData as unknown as Array<Record<string, unknown> & { id?: number | string }>}
           totals={totals}
         />
 
-        {/* Pagination */}
         <TablePagination
           component="div"
           count={filteredData.length}

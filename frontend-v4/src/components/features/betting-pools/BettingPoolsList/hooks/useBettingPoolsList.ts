@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, type ChangeEvent } from 'react';
 import { getBettingPools, handleBettingPoolError } from '@/services/bettingPoolService';
 import { getAllZones } from '@/services/zoneService';
+import { getLoans } from '@/services/loanService';
 
 interface TransformedBettingPool {
   id: number;
@@ -80,13 +81,14 @@ const useBettingPoolsList = (): UseBettingPoolsListReturn => {
       // ⚡ Performance tracking
       const startTime = performance.now();
 
-      // ⚡ OPTIMIZATION: Load zones and betting pools in parallel
-      const [zonesResponse, response] = await Promise.all([
+      // ⚡ OPTIMIZATION: Load zones, betting pools, and loans in parallel
+      const [zonesResponse, response, loansData] = await Promise.all([
         getAllZones(),
         getBettingPools({
           page: 1,
           pageSize: 1000 // Load all betting pools for client-side filtering
-        })
+        }),
+        getLoans({ status: 'active' }).catch(() => [])
       ]) as [
         { success: boolean; data?: Array<{ zoneId: number; name: string }> },
         { items?: Array<{
@@ -99,8 +101,17 @@ const useBettingPoolsList = (): UseBettingPoolsListReturn => {
           isActive: boolean;
           zoneName?: string;
           zoneId: number;
-        }> }
+        }> },
+        Array<{ entityId: number; remainingBalance: number }>
       ];
+
+      // Build loan totals map by entity
+      const loanTotals: Record<number, number> = {};
+      if (Array.isArray(loansData)) {
+        loansData.forEach(loan => {
+          loanTotals[loan.entityId] = (loanTotals[loan.entityId] || 0) + loan.remainingBalance;
+        });
+      }
 
       // Process zones response
       const zMap: ZonesMap = {};
@@ -141,7 +152,7 @@ const useBettingPoolsList = (): UseBettingPoolsListReturn => {
           zoneId: bettingPool.zoneId,
           balance: bettingPool.balance || 0,
           accumulatedFall: 0,
-          loans: 0
+          loans: loanTotals[bettingPool.bettingPoolId] || 0
         };
       });
 
