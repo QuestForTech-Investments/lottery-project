@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, type ChangeEvent } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, type ChangeEvent } from 'react';
 import {
   Box,
   Card,
@@ -18,102 +18,152 @@ import {
   IconButton,
   Chip,
   Grid,
-  Collapse,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
-  type SelectChangeEvent
+  CircularProgress,
+  Tooltip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Snackbar,
+  Alert
 } from '@mui/material';
 import {
   Search as SearchIcon,
   CalendarToday as CalendarIcon,
   Check as CheckIcon,
-  Close as CloseIcon,
-  ExpandMore as ExpandMoreIcon,
-  ExpandLess as ExpandLessIcon
+  Close as CloseIcon
 } from '@mui/icons-material';
+import {
+  getPendingApprovals,
+  approveTransactionGroup,
+  rejectTransactionGroup,
+  type TransactionGroupAPI
+} from '@services/transactionGroupService';
+import { useUserPermissions } from '@hooks/useUserPermissions';
 
 type SortDirection = 'asc' | 'desc';
-type TransactionStatus = 'PENDIENTE' | 'APROBADO' | 'RECHAZADO';
-type TransactionType = 'COBRO' | 'PAGO';
-
-interface TransactionApproval {
-  id: number;
-  cobrador: string;
-  revisadoPor: string | null;
-  tipo: TransactionType;
-  fecha: string;
-  numero: string;
-  banca: string;
-  zonaPrimaria: string;
-  banco: string;
-  credito: number;
-  debito: number;
-  balance: number;
-  estado: TransactionStatus;
-}
+type SortKey = 'groupNumber' | 'createdAt' | 'createdByName' | 'status' | 'entities' | null;
 
 interface SortConfig {
-  key: keyof TransactionApproval | null;
+  key: SortKey;
   direction: SortDirection;
 }
 
 const TransactionApprovals = (): React.ReactElement => {
-  const [showFilters, setShowFilters] = useState<boolean>(true);
+  const { hasPermission } = useUserPermissions();
+  const canApprove = hasPermission('TRANSACTION_APPROVE');
+
+  const today = new Date().toLocaleDateString('en-CA');
+  const [startDate, setStartDate] = useState<string>(today);
+  const [endDate, setEndDate] = useState<string>(today);
   const [quickFilter, setQuickFilter] = useState<string>('');
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: null, direction: 'asc' });
+  const [groups, setGroups] = useState<TransactionGroupAPI[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState<number | null>(null);
 
-  // Filter states
-  const [startDate, setStartDate] = useState<string>('');
-  const [endDate, setEndDate] = useState<string>('');
-  const [selectedZone, setSelectedZone] = useState<string>('');
-  const [selectedBank, setSelectedBank] = useState<string>('');
-  const [selectedCollector, setSelectedCollector] = useState<string>('');
-  const [selectedType, setSelectedType] = useState<string>('');
+  // Reject dialog state
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [rejectGroupId, setRejectGroupId] = useState<number | null>(null);
+  const [rejectReason, setRejectReason] = useState('');
 
-  // Mockup data - 8 transaction approvals
-  const mockupData: TransactionApproval[] = [
-    { id: 1, cobrador: 'Juan Pérez', revisadoPor: 'admin', tipo: 'COBRO', fecha: '18/11/2025', numero: 'TA-001', banca: 'LA CENTRAL 01', zonaPrimaria: 'Zona Norte', banco: 'Banco Principal', credito: 5000.00, debito: 0.00, balance: 5000.00, estado: 'PENDIENTE' },
-    { id: 2, cobrador: 'María González', revisadoPor: 'supervisor', tipo: 'PAGO', fecha: '18/11/2025', numero: 'TA-002', banca: 'LA ESTRELLA 02', zonaPrimaria: 'Zona Sur', banco: 'Banco Secundario', credito: 0.00, debito: 3000.00, balance: -3000.00, estado: 'APROBADO' },
-    { id: 3, cobrador: 'Carlos Rodríguez', revisadoPor: null, tipo: 'COBRO', fecha: '18/11/2025', numero: 'TA-003', banca: 'LA SUERTE 03', zonaPrimaria: 'Zona Este', banco: 'Banco Principal', credito: 7500.00, debito: 0.00, balance: 7500.00, estado: 'PENDIENTE' },
-    { id: 4, cobrador: 'Ana Martínez', revisadoPor: 'admin', tipo: 'PAGO', fecha: '17/11/2025', numero: 'TA-004', banca: 'LA FORTUNA 04', zonaPrimaria: 'Zona Oeste', banco: 'Banco Secundario', credito: 0.00, debito: 4500.00, balance: -4500.00, estado: 'RECHAZADO' },
-    { id: 5, cobrador: 'Luis Fernández', revisadoPor: 'manager', tipo: 'COBRO', fecha: '17/11/2025', numero: 'TA-005', banca: 'LA VICTORIA 05', zonaPrimaria: 'Zona Norte', banco: 'Banco Principal', credito: 6000.00, debito: 0.00, balance: 6000.00, estado: 'APROBADO' },
-    { id: 6, cobrador: 'Sofía Torres', revisadoPor: null, tipo: 'PAGO', fecha: '16/11/2025', numero: 'TA-006', banca: 'LA ESPERANZA 06', zonaPrimaria: 'Zona Sur', banco: 'Banco Secundario', credito: 0.00, debito: 2500.00, balance: -2500.00, estado: 'PENDIENTE' },
-    { id: 7, cobrador: 'Miguel Ángel', revisadoPor: 'supervisor', tipo: 'COBRO', fecha: '16/11/2025', numero: 'TA-007', banca: 'LA BENDICIÓN 07', zonaPrimaria: 'Zona Este', banco: 'Banco Principal', credito: 8000.00, debito: 0.00, balance: 8000.00, estado: 'APROBADO' },
-    { id: 8, cobrador: 'Patricia Ruiz', revisadoPor: 'admin', tipo: 'PAGO', fecha: '15/11/2025', numero: 'TA-008', banca: 'LA PROVIDENCIA 08', zonaPrimaria: 'Zona Oeste', banco: 'Banco Secundario', credito: 0.00, debito: 5500.00, balance: -5500.00, estado: 'RECHAZADO' }
-  ];
+  // Snackbar
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
+    open: false, message: '', severity: 'success'
+  });
 
-  const handleSort = useCallback((key: keyof TransactionApproval) => {
-    let direction: SortDirection = 'asc';
-    if (sortConfig.key === key && sortConfig.direction === 'asc') {
-      direction = 'desc';
+  const loadGroups = useCallback(async (start?: string, end?: string) => {
+    try {
+      setLoading(true);
+      const data = await getPendingApprovals({
+        startDate: start || undefined,
+        endDate: end || undefined
+      });
+      setGroups(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error('Error loading pending approvals:', err);
+    } finally {
+      setLoading(false);
     }
-    setSortConfig({ key, direction });
-  }, [sortConfig]);
+  }, []);
+
+  useEffect(() => {
+    loadGroups(today, today);
+  }, [loadGroups, today]);
 
   const handleFilter = useCallback(() => {
-  }, [startDate, endDate, selectedZone, selectedBank, selectedCollector, selectedType]);
+    loadGroups(startDate, endDate);
+  }, [startDate, endDate, loadGroups]);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- mockupData is stable
+  const handleSort = useCallback((key: SortKey) => {
+    setSortConfig(prev => ({
+      key,
+      direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
+    }));
+  }, []);
+
+  const parseUtc = (dateStr: string): Date => {
+    return new Date(dateStr.endsWith('Z') ? dateStr : dateStr + 'Z');
+  };
+
+  const formatDate = (dateStr: string | null): string => {
+    if (!dateStr) return '';
+    return parseUtc(dateStr).toLocaleDateString('es-DO', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  };
+
+  const formatTime = (dateStr: string | null): string => {
+    if (!dateStr) return '';
+    return parseUtc(dateStr).toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  };
+
+  const getPendingAction = (status: string): string => {
+    if (status === 'PendienteAprobacion') return 'Creación';
+    if (status === 'PendienteEliminacion') return 'Eliminación';
+    return status;
+  };
+
+  const getPendingActionColor = (status: string): string => {
+    if (status === 'PendienteAprobacion') return '#1976d2';
+    if (status === 'PendienteEliminacion') return '#e65100';
+    return '#757575';
+  };
+
+  const getTotalDebit = (group: TransactionGroupAPI): number => {
+    return (group.lines ?? []).reduce((sum, l) => sum + l.debit, 0);
+  };
+
+  const getTotalCredit = (group: TransactionGroupAPI): number => {
+    return (group.lines ?? []).reduce((sum, l) => sum + l.credit, 0);
+  };
+
   const filteredAndSortedData = useMemo(() => {
-    let filtered = mockupData;
+    let filtered = groups;
 
     if (quickFilter) {
+      const lower = quickFilter.toLowerCase();
       filtered = filtered.filter((item) =>
-        Object.values(item).some((val) =>
-          String(val).toLowerCase().includes(quickFilter.toLowerCase())
-        )
+        item.groupNumber.toLowerCase().includes(lower) ||
+        (item.createdByName && item.createdByName.toLowerCase().includes(lower)) ||
+        (item.notes && item.notes.toLowerCase().includes(lower)) ||
+        (item.entities && item.entities.toLowerCase().includes(lower)) ||
+        getPendingAction(item.status).toLowerCase().includes(lower)
       );
     }
 
     if (sortConfig.key) {
+      const key = sortConfig.key;
       filtered = [...filtered].sort((a, b) => {
-        const aVal = a[sortConfig.key!];
-        const bVal = b[sortConfig.key!];
+        let aVal: string = '';
+        let bVal: string = '';
 
-        if (aVal === null) return 1;
-        if (bVal === null) return -1;
+        switch (key) {
+          case 'groupNumber': aVal = a.groupNumber; bVal = b.groupNumber; break;
+          case 'createdAt': aVal = a.createdAt ?? ''; bVal = b.createdAt ?? ''; break;
+          case 'createdByName': aVal = a.createdByName ?? ''; bVal = b.createdByName ?? ''; break;
+          case 'status': aVal = a.status; bVal = b.status; break;
+          case 'entities': aVal = a.entities ?? ''; bVal = b.entities ?? ''; break;
+        }
+
         if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
         if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
         return 0;
@@ -121,176 +171,231 @@ const TransactionApprovals = (): React.ReactElement => {
     }
 
     return filtered;
-  }, [quickFilter, sortConfig]);
+  }, [groups, quickFilter, sortConfig]);
 
-  const getEstadoChip = (estado: TransactionStatus): 'warning' | 'success' | 'error' | 'default' => {
-    const colors: Record<TransactionStatus, 'warning' | 'success' | 'error'> = {
-      'PENDIENTE': 'warning',
-      'APROBADO': 'success',
-      'RECHAZADO': 'error'
-    };
-    return colors[estado] || 'default';
-  };
+  const handleApprove = useCallback(async (id: number) => {
+    try {
+      setActionLoading(id);
+      await approveTransactionGroup(id);
+      setSnackbar({ open: true, message: 'Transacción aprobada exitosamente', severity: 'success' });
+      await loadGroups(startDate, endDate);
+    } catch (err) {
+      console.error('Error approving group:', err);
+      setSnackbar({ open: true, message: 'Error al aprobar la transacción', severity: 'error' });
+    } finally {
+      setActionLoading(null);
+    }
+  }, [loadGroups, startDate, endDate]);
 
-  const handleApprove = useCallback((id: number) => {
+  const openRejectDialog = useCallback((id: number) => {
+    setRejectGroupId(id);
+    setRejectReason('');
+    setRejectDialogOpen(true);
   }, []);
 
-  const handleReject = useCallback((id: number) => {
-  }, []);
+  const handleRejectConfirm = useCallback(async () => {
+    if (!rejectGroupId || !rejectReason.trim()) return;
+    try {
+      setActionLoading(rejectGroupId);
+      setRejectDialogOpen(false);
+      await rejectTransactionGroup(rejectGroupId, rejectReason.trim());
+      setSnackbar({ open: true, message: 'Transacción rechazada exitosamente', severity: 'success' });
+      await loadGroups(startDate, endDate);
+    } catch (err) {
+      console.error('Error rejecting group:', err);
+      setSnackbar({ open: true, message: 'Error al rechazar la transacción', severity: 'error' });
+    } finally {
+      setActionLoading(null);
+      setRejectGroupId(null);
+      setRejectReason('');
+    }
+  }, [rejectGroupId, rejectReason, loadGroups, startDate, endDate]);
 
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h4" sx={{ mb: 3, textAlign: 'center', fontWeight: 600, color: '#2c2c2c' }}>
-        Lista de aprobaciones
+        Aprobaciones de transacciones
       </Typography>
 
       <Card elevation={1}>
         <CardContent sx={{ p: 3 }}>
-          <Box sx={{ textAlign: 'center', mb: 2 }}>
-            <Button
-              variant="contained"
-              onClick={() => setShowFilters(!showFilters)}
-              endIcon={showFilters ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-              sx={{ bgcolor: '#8b5cf6', '&:hover': { bgcolor: '#45b5b8' }, fontWeight: 600, textTransform: 'uppercase', px: 4 }}
-            >
-              FILTROS
-            </Button>
-          </Box>
-
-          <Collapse in={showFilters}>
-            <Paper variant="outlined" sx={{ p: 3, mb: 3, bgcolor: '#f9f9f9' }}>
-              <Grid container spacing={3}>
-                <Grid item xs={12} md={4}>
-                  <TextField
-                    fullWidth size="small" label="Fecha inicial" type="date"
-                    value={startDate} onChange={(e: ChangeEvent<HTMLInputElement>) => setStartDate(e.target.value)}
-                    InputLabelProps={{ shrink: true }}
-                    InputProps={{ startAdornment: <InputAdornment position="start"><CalendarIcon fontSize="small" /></InputAdornment> }}
-                  />
-                </Grid>
-                <Grid item xs={12} md={4}>
-                  <TextField
-                    fullWidth size="small" label="Fecha final" type="date"
-                    value={endDate} onChange={(e: ChangeEvent<HTMLInputElement>) => setEndDate(e.target.value)}
-                    InputLabelProps={{ shrink: true }}
-                    InputProps={{ startAdornment: <InputAdornment position="start"><CalendarIcon fontSize="small" /></InputAdornment> }}
-                  />
-                </Grid>
-                <Grid item xs={12} md={4}>
-                  <FormControl fullWidth size="small">
-                    <InputLabel>Zona</InputLabel>
-                    <Select value={selectedZone} onChange={(e: SelectChangeEvent) => setSelectedZone(e.target.value)} label="Zona">
-                      <MenuItem value="">Todas las zonas</MenuItem>
-                      <MenuItem value="norte">Zona Norte</MenuItem>
-                      <MenuItem value="sur">Zona Sur</MenuItem>
-                      <MenuItem value="este">Zona Este</MenuItem>
-                      <MenuItem value="oeste">Zona Oeste</MenuItem>
-                    </Select>
-                  </FormControl>
-                </Grid>
-                <Grid item xs={12} md={4}>
-                  <FormControl fullWidth size="small">
-                    <InputLabel>Banco</InputLabel>
-                    <Select value={selectedBank} onChange={(e: SelectChangeEvent) => setSelectedBank(e.target.value)} label="Banco">
-                      <MenuItem value="">Todos los bancos</MenuItem>
-                      <MenuItem value="principal">Banco Principal</MenuItem>
-                      <MenuItem value="secundario">Banco Secundario</MenuItem>
-                    </Select>
-                  </FormControl>
-                </Grid>
-                <Grid item xs={12} md={4}>
-                  <TextField
-                    fullWidth size="small" label="Cobrador" placeholder="Nombre del cobrador"
-                    value={selectedCollector} onChange={(e: ChangeEvent<HTMLInputElement>) => setSelectedCollector(e.target.value)}
-                  />
-                </Grid>
-                <Grid item xs={12} md={4}>
-                  <FormControl fullWidth size="small">
-                    <InputLabel>Tipo</InputLabel>
-                    <Select value={selectedType} onChange={(e: SelectChangeEvent) => setSelectedType(e.target.value)} label="Tipo">
-                      <MenuItem value="">Todos</MenuItem>
-                      <MenuItem value="COBRO">COBRO</MenuItem>
-                      <MenuItem value="PAGO">PAGO</MenuItem>
-                    </Select>
-                  </FormControl>
-                </Grid>
-              </Grid>
-              <Box sx={{ textAlign: 'center', mt: 3 }}>
-                <Button variant="contained" onClick={handleFilter} sx={{ bgcolor: '#8b5cf6', '&:hover': { bgcolor: '#45b5b8' }, fontWeight: 600, textTransform: 'uppercase', px: 4 }}>
-                  Filtrar
-                </Button>
-              </Box>
-            </Paper>
-          </Collapse>
+          <Grid container spacing={3} sx={{ mb: 3 }}>
+            <Grid item xs={12} md={4}>
+              <TextField
+                fullWidth size="small" label="Fecha inicial" type="date"
+                value={startDate} onChange={(e: ChangeEvent<HTMLInputElement>) => setStartDate(e.target.value)}
+                InputLabelProps={{ shrink: true }}
+                InputProps={{ startAdornment: <InputAdornment position="start"><CalendarIcon fontSize="small" /></InputAdornment> }}
+              />
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <TextField
+                fullWidth size="small" label="Fecha final" type="date"
+                value={endDate} onChange={(e: ChangeEvent<HTMLInputElement>) => setEndDate(e.target.value)}
+                InputLabelProps={{ shrink: true }}
+                InputProps={{ startAdornment: <InputAdornment position="start"><CalendarIcon fontSize="small" /></InputAdornment> }}
+              />
+            </Grid>
+            <Grid item xs={12} md={4} sx={{ display: 'flex', alignItems: 'flex-end' }}>
+              <Button fullWidth variant="contained" onClick={handleFilter} sx={{ bgcolor: '#8b5cf6', '&:hover': { bgcolor: '#45b5b8' }, fontWeight: 600, textTransform: 'uppercase' }}>
+                Filtrar
+              </Button>
+            </Grid>
+          </Grid>
 
           <TextField
-            fullWidth size="small" placeholder="Filtrado rápido"
+            fullWidth size="small" placeholder="Filtro rápido"
             value={quickFilter} onChange={(e: ChangeEvent<HTMLInputElement>) => setQuickFilter(e.target.value)}
             sx={{ mb: 2 }}
             InputProps={{ endAdornment: <InputAdornment position="end"><IconButton size="small"><SearchIcon fontSize="small" /></IconButton></InputAdornment> }}
           />
 
-          <TableContainer component={Paper} variant="outlined">
-            <Table size="small">
-              <TableHead sx={{ bgcolor: '#f8f9fa' }}>
-                <TableRow>
-                  <TableCell><TableSortLabel active={sortConfig.key === 'cobrador'} direction={sortConfig.key === 'cobrador' ? sortConfig.direction : 'asc'} onClick={() => handleSort('cobrador')} sx={{ fontWeight: 600 }}>Cobrador</TableSortLabel></TableCell>
-                  <TableCell><TableSortLabel active={sortConfig.key === 'revisadoPor'} direction={sortConfig.key === 'revisadoPor' ? sortConfig.direction : 'asc'} onClick={() => handleSort('revisadoPor')} sx={{ fontWeight: 600 }}>Revisado por</TableSortLabel></TableCell>
-                  <TableCell><TableSortLabel active={sortConfig.key === 'tipo'} direction={sortConfig.key === 'tipo' ? sortConfig.direction : 'asc'} onClick={() => handleSort('tipo')} sx={{ fontWeight: 600 }}>Tipo</TableSortLabel></TableCell>
-                  <TableCell><TableSortLabel active={sortConfig.key === 'fecha'} direction={sortConfig.key === 'fecha' ? sortConfig.direction : 'asc'} onClick={() => handleSort('fecha')} sx={{ fontWeight: 600 }}>Fecha</TableSortLabel></TableCell>
-                  <TableCell><TableSortLabel active={sortConfig.key === 'numero'} direction={sortConfig.key === 'numero' ? sortConfig.direction : 'asc'} onClick={() => handleSort('numero')} sx={{ fontWeight: 600 }}>#</TableSortLabel></TableCell>
-                  <TableCell><TableSortLabel active={sortConfig.key === 'banca'} direction={sortConfig.key === 'banca' ? sortConfig.direction : 'asc'} onClick={() => handleSort('banca')} sx={{ fontWeight: 600 }}>Banca</TableSortLabel></TableCell>
-                  <TableCell><TableSortLabel active={sortConfig.key === 'zonaPrimaria'} direction={sortConfig.key === 'zonaPrimaria' ? sortConfig.direction : 'asc'} onClick={() => handleSort('zonaPrimaria')} sx={{ fontWeight: 600 }}>Zona primaria</TableSortLabel></TableCell>
-                  <TableCell><TableSortLabel active={sortConfig.key === 'banco'} direction={sortConfig.key === 'banco' ? sortConfig.direction : 'asc'} onClick={() => handleSort('banco')} sx={{ fontWeight: 600 }}>Banco</TableSortLabel></TableCell>
-                  <TableCell align="right"><TableSortLabel active={sortConfig.key === 'credito'} direction={sortConfig.key === 'credito' ? sortConfig.direction : 'asc'} onClick={() => handleSort('credito')} sx={{ fontWeight: 600 }}>Crédito</TableSortLabel></TableCell>
-                  <TableCell align="right"><TableSortLabel active={sortConfig.key === 'debito'} direction={sortConfig.key === 'debito' ? sortConfig.direction : 'asc'} onClick={() => handleSort('debito')} sx={{ fontWeight: 600 }}>Débito</TableSortLabel></TableCell>
-                  <TableCell align="right"><TableSortLabel active={sortConfig.key === 'balance'} direction={sortConfig.key === 'balance' ? sortConfig.direction : 'asc'} onClick={() => handleSort('balance')} sx={{ fontWeight: 600 }}>Balance</TableSortLabel></TableCell>
-                  <TableCell align="center" sx={{ fontWeight: 600, width: '140px' }}>Actions</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {filteredAndSortedData.length === 0 ? (
+          {loading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+              <CircularProgress />
+            </Box>
+          ) : (
+            <TableContainer component={Paper} variant="outlined">
+              <Table size="small">
+                <TableHead sx={{ bgcolor: '#f8f9fa' }}>
                   <TableRow>
-                    <TableCell colSpan={12} align="center" sx={{ py: 3 }}>
-                      <Typography variant="body2" color="text.secondary">No hay entradas disponibles</Typography>
-                    </TableCell>
+                    <TableCell><TableSortLabel active={sortConfig.key === 'groupNumber'} direction={sortConfig.key === 'groupNumber' ? sortConfig.direction : 'asc'} onClick={() => handleSort('groupNumber')} sx={{ fontWeight: 600 }}>Número</TableSortLabel></TableCell>
+                    <TableCell><TableSortLabel active={sortConfig.key === 'status'} direction={sortConfig.key === 'status' ? sortConfig.direction : 'asc'} onClick={() => handleSort('status')} sx={{ fontWeight: 600 }}>Tipo</TableSortLabel></TableCell>
+                    <TableCell><TableSortLabel active={sortConfig.key === 'createdAt'} direction={sortConfig.key === 'createdAt' ? sortConfig.direction : 'asc'} onClick={() => handleSort('createdAt')} sx={{ fontWeight: 600 }}>Fecha</TableSortLabel></TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>Hora</TableCell>
+                    <TableCell><TableSortLabel active={sortConfig.key === 'createdByName'} direction={sortConfig.key === 'createdByName' ? sortConfig.direction : 'asc'} onClick={() => handleSort('createdByName')} sx={{ fontWeight: 600 }}>Creado por</TableSortLabel></TableCell>
+                    <TableCell><TableSortLabel active={sortConfig.key === 'entities'} direction={sortConfig.key === 'entities' ? sortConfig.direction : 'asc'} onClick={() => handleSort('entities')} sx={{ fontWeight: 600 }}>Entidades</TableSortLabel></TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 600 }}>Total Débito</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 600 }}>Total Crédito</TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>Notas</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 600, width: '120px' }}>Acciones</TableCell>
                   </TableRow>
-                ) : (
-                  filteredAndSortedData.map((item) => (
-                    <TableRow key={item.id} hover>
-                      <TableCell>{item.cobrador}</TableCell>
-                      <TableCell>{item.revisadoPor || '-'}</TableCell>
-                      <TableCell><Chip label={item.tipo} color={item.tipo === 'COBRO' ? 'info' : 'warning'} size="small" sx={{ fontSize: '12px' }} /></TableCell>
-                      <TableCell>{item.fecha}</TableCell>
-                      <TableCell>{item.numero}</TableCell>
-                      <TableCell>{item.banca}</TableCell>
-                      <TableCell>{item.zonaPrimaria}</TableCell>
-                      <TableCell>{item.banco}</TableCell>
-                      <TableCell align="right">${item.credito.toFixed(2)}</TableCell>
-                      <TableCell align="right">${item.debito.toFixed(2)}</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 600 }}>${item.balance.toFixed(2)}</TableCell>
-                      <TableCell align="center">
-                        {item.estado === 'PENDIENTE' ? (
-                          <Box sx={{ display: 'flex', justifyContent: 'center', gap: 0.5 }}>
-                            <IconButton size="small" onClick={() => handleApprove(item.id)} title="Aprobar" sx={{ color: '#28a745' }}><CheckIcon fontSize="small" /></IconButton>
-                            <IconButton size="small" onClick={() => handleReject(item.id)} title="Rechazar" sx={{ color: '#dc3545' }}><CloseIcon fontSize="small" /></IconButton>
-                          </Box>
-                        ) : (
-                          <Chip label={item.estado} color={getEstadoChip(item.estado)} size="small" sx={{ fontSize: '11px' }} />
-                        )}
+                </TableHead>
+                <TableBody>
+                  {filteredAndSortedData.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={10} align="center" sx={{ py: 3 }}>
+                        <Typography variant="body2" color="text.secondary">No hay aprobaciones pendientes</Typography>
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                  ) : (
+                    filteredAndSortedData.map((item) => (
+                      <TableRow key={item.groupId} hover>
+                        <TableCell>{item.groupNumber}</TableCell>
+                        <TableCell>
+                          <Chip
+                            label={getPendingAction(item.status)}
+                            size="small"
+                            sx={{
+                              fontSize: '12px',
+                              fontWeight: 600,
+                              bgcolor: item.status === 'PendienteEliminacion' ? '#fff3e0' : '#e3f2fd',
+                              color: getPendingActionColor(item.status)
+                            }}
+                          />
+                        </TableCell>
+                        <TableCell>{formatDate(item.createdAt)}</TableCell>
+                        <TableCell>{formatTime(item.createdAt)}</TableCell>
+                        <TableCell>{item.createdByName ?? ''}</TableCell>
+                        <TableCell sx={{ fontSize: '13px' }}>
+                          {(() => {
+                            if (!item.entities) return '';
+                            const refs = item.entities.split(',').map(r => r.trim()).filter(Boolean);
+                            const visible = refs.slice(0, 3);
+                            const remaining = refs.slice(3);
+                            return (
+                              <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', alignItems: 'center' }}>
+                                {visible.map((ref, i) => (
+                                  <Chip key={i} label={ref} size="small" sx={{ fontSize: '12px' }} />
+                                ))}
+                                {remaining.length > 0 && (
+                                  <Tooltip title={remaining.join(', ')} arrow>
+                                    <Chip label={`+${remaining.length}`} size="small" sx={{ fontSize: '12px', cursor: 'pointer', bgcolor: '#e0e0e0' }} />
+                                  </Tooltip>
+                                )}
+                              </Box>
+                            );
+                          })()}
+                        </TableCell>
+                        <TableCell align="right">${getTotalDebit(item).toFixed(2)}</TableCell>
+                        <TableCell align="right">${getTotalCredit(item).toFixed(2)}</TableCell>
+                        <TableCell>{item.notes ?? ''}</TableCell>
+                        <TableCell align="center">
+                          {!canApprove ? (
+                            <Typography variant="caption" color="text.secondary">Sin permiso</Typography>
+                          ) : actionLoading === item.groupId ? (
+                            <CircularProgress size={20} />
+                          ) : (
+                            <Box sx={{ display: 'flex', justifyContent: 'center', gap: 0.5 }}>
+                              <Tooltip title="Aprobar" arrow>
+                                <IconButton size="small" onClick={() => handleApprove(item.groupId)} sx={{ color: '#28a745' }}>
+                                  <CheckIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                              <Tooltip title="Rechazar" arrow>
+                                <IconButton size="small" onClick={() => openRejectDialog(item.groupId)} sx={{ color: '#dc3545' }}>
+                                  <CloseIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                            </Box>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
 
           <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-            Mostrando {filteredAndSortedData.length} de {mockupData.length} entradas
+            Mostrando {filteredAndSortedData.length} entradas pendientes
           </Typography>
         </CardContent>
       </Card>
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+          severity={snackbar.severity}
+          variant="filled"
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+
+      {/* Reject reason dialog */}
+      <Dialog open={rejectDialogOpen} onClose={() => setRejectDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Rechazar transacción</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            fullWidth
+            multiline
+            rows={3}
+            label="Razón del rechazo"
+            value={rejectReason}
+            onChange={(e) => setRejectReason(e.target.value)}
+            sx={{ mt: 1 }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setRejectDialogOpen(false)}>Cancelar</Button>
+          <Button
+            onClick={handleRejectConfirm}
+            variant="contained"
+            color="error"
+            disabled={!rejectReason.trim()}
+          >
+            Rechazar
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

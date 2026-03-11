@@ -20,7 +20,8 @@ import {
   IconButton,
   Chip,
   Grid,
-  CircularProgress
+  CircularProgress,
+  Tooltip
 } from '@mui/material';
 import { Search as SearchIcon, CalendarToday as CalendarIcon } from '@mui/icons-material';
 import { getTransactionGroups, type TransactionGroupAPI } from '@services/transactionGroupService';
@@ -32,6 +33,28 @@ interface SortConfig {
   key: SortKey;
   direction: SortDirection;
 }
+
+const getStatusLabel = (status: string): string => {
+  switch (status) {
+    case 'PendienteAprobacion': return 'Pend. aprobación';
+    case 'PendienteEliminacion': return 'Pend. eliminación';
+    case 'Aprobado': return 'Aprobado';
+    case 'Rechazado': return 'Rechazado';
+    case 'Eliminado': return 'Eliminado';
+    default: return status;
+  }
+};
+
+const getStatusChipStyle = (status: string): Record<string, string> => {
+  switch (status) {
+    case 'PendienteAprobacion': return { bgcolor: '#fff8e1', color: '#f57f17' };
+    case 'PendienteEliminacion': return { bgcolor: '#fff3e0', color: '#e65100' };
+    case 'Aprobado': return { bgcolor: '#e8f5e9', color: '#2e7d32' };
+    case 'Rechazado': return { bgcolor: '#ffebee', color: '#c62828' };
+    case 'Eliminado': return { bgcolor: '#ffebee', color: '#c62828' };
+    default: return { bgcolor: '#e0e0e0', color: '#616161' };
+  }
+};
 
 const TransactionGroupsList = (): React.ReactElement => {
   const today = new Date().toLocaleDateString('en-CA');
@@ -220,16 +243,34 @@ const TransactionGroupsList = (): React.ReactElement => {
                         <TableCell align="center">
                           <Chip label={item.isAutomatic ? 'Sí' : 'No'} color={item.isAutomatic ? 'success' : 'default'} size="small" sx={{ fontSize: '12px' }} />
                         </TableCell>
-                        <TableCell sx={{ fontSize: '13px' }}>{item.entities ?? ''}</TableCell>
+                        <TableCell sx={{ fontSize: '13px' }}>
+                          {(() => {
+                            if (!item.entities) return '';
+                            const refs = item.entities.split(',').map(r => r.trim()).filter(Boolean);
+                            const visible = refs.slice(0, 3);
+                            const remaining = refs.slice(3);
+                            return (
+                              <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', alignItems: 'center' }}>
+                                {visible.map((ref, i) => (
+                                  <Chip key={i} label={ref} size="small" sx={{ fontSize: '12px' }} />
+                                ))}
+                                {remaining.length > 0 && (
+                                  <Tooltip title={remaining.join(', ')} arrow>
+                                    <Chip label={`+${remaining.length}`} size="small" sx={{ fontSize: '12px', cursor: 'pointer', bgcolor: '#e0e0e0' }} />
+                                  </Tooltip>
+                                )}
+                              </Box>
+                            );
+                          })()}
+                        </TableCell>
                         <TableCell align="center">
                           <Chip
-                            label={item.status}
+                            label={getStatusLabel(item.status)}
                             size="small"
                             sx={{
                               fontSize: '12px',
                               fontWeight: 600,
-                              bgcolor: item.status === 'Eliminado' ? '#ffebee' : '#e8f5e9',
-                              color: item.status === 'Eliminado' ? '#c62828' : '#2e7d32'
+                              ...getStatusChipStyle(item.status)
                             }}
                           />
                         </TableCell>

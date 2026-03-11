@@ -1,7 +1,8 @@
-import React, { useState, useMemo, useCallback, type ChangeEvent } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, type ChangeEvent } from 'react';
 import {
   Box,
-  Paper,
+  Card,
+  CardContent,
   Typography,
   TextField,
   Button,
@@ -12,225 +13,362 @@ import {
   TableHead,
   TableRow,
   TableSortLabel,
+  Paper,
   Select,
   MenuItem,
   FormControl,
   InputLabel,
-  IconButton,
   OutlinedInput,
-  Chip,
+  IconButton,
+  InputAdornment,
+  CircularProgress,
+  Grid,
   type SelectChangeEvent
 } from '@mui/material';
-import { Search as SearchIcon, FilterList as FilterListIcon } from '@mui/icons-material';
+import {
+  Search as SearchIcon,
+  CalendarToday as CalendarIcon
+} from '@mui/icons-material';
+import {
+  getTransactionSummary,
+  type TransactionSummaryItemAPI,
+  type OtherTransactionsSummaryAPI
+} from '@services/transactionGroupService';
+import { getAllZones } from '@services/zoneService';
 
 type SortDirection = 'asc' | 'desc';
+type SortKey = 'code' | 'bettingPoolName' | 'zoneName' | 'collections' | 'payments' | 'cashFlowNet' | 'drawDebit' | 'drawCredit' | 'drawNet' | 'fall' | null;
 
-interface TransactionSummaryItem {
-  id: number;
-  codigo: string;
-  banca: string;
-  zona: string;
-  cobros: number;
-  pagos: number;
-  netoFlujo: number;
-  debito: number;
-  credito: number;
-  netoSorteo: number;
-  caida: string;
+interface SortConfig {
+  key: SortKey;
+  direction: SortDirection;
 }
 
-interface OtherTransactions {
-  retirosEfectivo: number;
-  debito: number;
-  credito: number;
+interface ZoneOption {
+  zoneId: number;
+  zoneName: string;
 }
+
+const formatCurrency = (val: number): string => {
+  if (val < 0) return `-$${Math.abs(val).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return `$${val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+};
+
+const getNetColor = (val: number): string => {
+  if (val > 0) return '#28a745';
+  if (val < 0) return '#dc3545';
+  return '#2c2c2c';
+};
 
 const TransactionsSummary = (): React.ReactElement => {
-  const [startDate, setStartDate] = useState<string>('');
-  const [endDate, setEndDate] = useState<string>('');
-  const [selectedZones, setSelectedZones] = useState<string[]>([]);
+  const today = new Date().toLocaleDateString('en-CA');
+  const [startDate, setStartDate] = useState<string>(today);
+  const [endDate, setEndDate] = useState<string>(today);
+  const [selectedZoneIds, setSelectedZoneIds] = useState<number[]>([]);
   const [quickFilter, setQuickFilter] = useState<string>('');
-  const [orderBy, setOrderBy] = useState<keyof TransactionSummaryItem | ''>('');
-  const [order, setOrder] = useState<SortDirection>('asc');
+  const [sortConfig, setSortConfig] = useState<SortConfig>({ key: null, direction: 'asc' });
+  const [loading, setLoading] = useState(false);
 
-  const mockupData: TransactionSummaryItem[] = [
-    { id: 1, codigo: 'LAN-0009', banca: 'admin', zona: 'Zona Norte', cobros: 5000.00, pagos: 2000.00, netoFlujo: 3000.00, debito: 1500.00, credito: 4500.00, netoSorteo: 3000.00, caida: 'DIARIA' },
-    { id: 2, codigo: 'LAN-0010', banca: 'LA CENTRAL 01', zona: 'Zona Sur', cobros: 7500.00, pagos: 3000.00, netoFlujo: 4500.00, debito: 2000.00, credito: 6000.00, netoSorteo: 4000.00, caida: 'MENSUAL' },
-    { id: 3, codigo: 'LAN-0020', banca: 'LA ESTRELLA 02', zona: 'Zona Este', cobros: 6000.00, pagos: 2500.00, netoFlujo: 3500.00, debito: 1800.00, credito: 5200.00, netoSorteo: 3400.00, caida: 'SEMANAL' },
-    { id: 4, codigo: 'LAN-0021', banca: 'LA SUERTE 03', zona: 'Zona Oeste', cobros: 8000.00, pagos: 3500.00, netoFlujo: 4500.00, debito: 2200.00, credito: 6800.00, netoSorteo: 4600.00, caida: 'DIARIA' },
-    { id: 5, codigo: 'LAN-0022', banca: 'LA FORTUNA 04', zona: 'Zona Norte', cobros: 9000.00, pagos: 4000.00, netoFlujo: 5000.00, debito: 2500.00, credito: 7500.00, netoSorteo: 5000.00, caida: 'MENSUAL' },
-  ];
+  const [items, setItems] = useState<TransactionSummaryItemAPI[]>([]);
+  const [otherTransactions, setOtherTransactions] = useState<OtherTransactionsSummaryAPI>({ cashWithdrawals: 0, debit: 0, credit: 0 });
+  const [zones, setZones] = useState<ZoneOption[]>([]);
 
-  const otherTransactions: OtherTransactions = { retirosEfectivo: 1500.00, debito: 500.00, credito: 2000.00 };
-
-  const zones = ['Zona Norte', 'Zona Sur', 'Zona Este', 'Zona Oeste'];
-
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- mockupData is stable
-  const filteredData = useMemo(() => {
-    return mockupData.filter(item => {
-      return quickFilter === '' || Object.values(item).some(val => String(val).toLowerCase().includes(quickFilter.toLowerCase()));
-    });
-  }, [quickFilter]);
-
-  const sortedData = useMemo(() => {
-    if (!orderBy) return filteredData;
-
-    const sorted = [...filteredData].sort((a, b) => {
-      const aVal = a[orderBy];
-      const bVal = b[orderBy];
-
-      if (typeof aVal === 'number' && typeof bVal === 'number') {
-        return order === 'asc' ? aVal - bVal : bVal - aVal;
+  // Load zones on mount
+  useEffect(() => {
+    const loadZones = async () => {
+      try {
+        const response = await getAllZones({ isActive: true, pageSize: 1000 });
+        const data = (response as { data?: ZoneOption[] }).data ?? (response as ZoneOption[]);
+        if (Array.isArray(data)) {
+          setZones(data.map((z: ZoneOption) => ({ zoneId: z.zoneId, zoneName: z.zoneName })));
+        }
+      } catch (err) {
+        console.error('Error loading zones:', err);
       }
+    };
+    loadZones();
+  }, []);
 
-      const aStr = String(aVal).toLowerCase();
-      const bStr = String(bVal).toLowerCase();
-
-      if (aStr < bStr) return order === 'asc' ? -1 : 1;
-      if (aStr > bStr) return order === 'asc' ? 1 : -1;
-      return 0;
-    });
-
-    return sorted;
-  }, [filteredData, orderBy, order]);
-
-  const totals = useMemo(() => {
-    return sortedData.reduce((acc, item) => ({
-      cobros: acc.cobros + item.cobros,
-      pagos: acc.pagos + item.pagos,
-      netoFlujo: acc.netoFlujo + item.netoFlujo,
-      debito: acc.debito + item.debito,
-      credito: acc.credito + item.credito,
-      netoSorteo: acc.netoSorteo + item.netoSorteo,
-      caida: acc.caida + (item.caida === 'DIARIA' ? 1 : 0)
-    }), { cobros: 0, pagos: 0, netoFlujo: 0, debito: 0, credito: 0, netoSorteo: 0, caida: 0 });
-  }, [sortedData]);
-
-  const handleRequestSort = useCallback((property: keyof TransactionSummaryItem) => {
-    const isAsc = orderBy === property && order === 'asc';
-    setOrder(isAsc ? 'desc' : 'asc');
-    setOrderBy(property);
-  }, [orderBy, order]);
+  const loadSummary = useCallback(async () => {
+    if (selectedZoneIds.length === 0) return;
+    setLoading(true);
+    try {
+      const data = await getTransactionSummary({
+        startDate,
+        endDate,
+        zoneIds: selectedZoneIds
+      });
+      setItems(data.items ?? []);
+      setOtherTransactions(data.otherTransactions ?? { cashWithdrawals: 0, debit: 0, credit: 0 });
+    } catch (err) {
+      console.error('Error loading summary:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [startDate, endDate, selectedZoneIds]);
 
   const handleFilter = useCallback(() => {
-  }, [startDate, endDate, selectedZones]);
+    loadSummary();
+  }, [loadSummary]);
+
+  const handleSort = useCallback((key: SortKey) => {
+    setSortConfig(prev => ({
+      key,
+      direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
+    }));
+  }, []);
+
+  const handleZoneChange = useCallback((e: SelectChangeEvent<number[]>) => {
+    const value = e.target.value;
+    if (typeof value === 'string') return;
+
+    // Handle "all" toggle
+    if (value.includes(-1)) {
+      if (selectedZoneIds.length === zones.length) {
+        setSelectedZoneIds([]);
+      } else {
+        setSelectedZoneIds(zones.map(z => z.zoneId));
+      }
+    } else {
+      setSelectedZoneIds(value);
+    }
+  }, [zones, selectedZoneIds]);
+
+  const filteredAndSortedData = useMemo(() => {
+    let filtered = items;
+
+    if (quickFilter) {
+      const lower = quickFilter.toLowerCase();
+      filtered = filtered.filter(item =>
+        item.code.toLowerCase().includes(lower) ||
+        item.bettingPoolName.toLowerCase().includes(lower) ||
+        item.zoneName.toLowerCase().includes(lower)
+      );
+    }
+
+    if (sortConfig.key) {
+      const key = sortConfig.key;
+      filtered = [...filtered].sort((a, b) => {
+        const aVal = a[key];
+        const bVal = b[key];
+
+        if (typeof aVal === 'number' && typeof bVal === 'number') {
+          return sortConfig.direction === 'asc' ? aVal - bVal : bVal - aVal;
+        }
+
+        const aStr = String(aVal).toLowerCase();
+        const bStr = String(bVal).toLowerCase();
+        if (aStr < bStr) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (aStr > bStr) return sortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+
+    return filtered;
+  }, [items, quickFilter, sortConfig]);
+
+  const totals = useMemo(() => {
+    return filteredAndSortedData.reduce(
+      (acc, item) => ({
+        collections: acc.collections + item.collections,
+        payments: acc.payments + item.payments,
+        cashFlowNet: acc.cashFlowNet + item.cashFlowNet,
+        drawDebit: acc.drawDebit + item.drawDebit,
+        drawCredit: acc.drawCredit + item.drawCredit,
+        drawNet: acc.drawNet + item.drawNet,
+        fall: acc.fall + item.fall
+      }),
+      { collections: 0, payments: 0, cashFlowNet: 0, drawDebit: 0, drawCredit: 0, drawNet: 0, fall: 0 }
+    );
+  }, [filteredAndSortedData]);
+
+  const renderSortHeader = (key: SortKey, label: string, align: 'left' | 'right' | 'center' = 'left', extraSx?: Record<string, unknown>) => (
+    <TableCell align={align} sx={{ ...extraSx }}>
+      <TableSortLabel
+        active={sortConfig.key === key}
+        direction={sortConfig.key === key ? sortConfig.direction : 'asc'}
+        onClick={() => handleSort(key)}
+        sx={{ fontWeight: 600 }}
+      >
+        {label}
+      </TableSortLabel>
+    </TableCell>
+  );
 
   return (
     <Box sx={{ p: 3 }}>
-      <Typography variant="h4" sx={{ mb: 3, textAlign: 'center', fontWeight: 600 }}>
+      <Typography variant="h4" sx={{ mb: 3, textAlign: 'center', fontWeight: 600, color: '#2c2c2c' }}>
         Resumen de transacciones
       </Typography>
 
-      <Paper sx={{ p: 3, mb: 3 }}>
-        <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-end', flexWrap: 'wrap' }}>
-          <TextField label="Fecha inicial" type="date" value={startDate} onChange={(e: ChangeEvent<HTMLInputElement>) => setStartDate(e.target.value)} InputLabelProps={{ shrink: true }} sx={{ flex: 1, minWidth: 200 }} />
-          <TextField label="Fecha final" type="date" value={endDate} onChange={(e: ChangeEvent<HTMLInputElement>) => setEndDate(e.target.value)} InputLabelProps={{ shrink: true }} sx={{ flex: 1, minWidth: 200 }} />
-          <FormControl sx={{ flex: 1, minWidth: 200 }}>
-            <InputLabel>Zonas</InputLabel>
-            <Select
-              multiple value={selectedZones}
-              onChange={(e: SelectChangeEvent<string[]>) => setSelectedZones(e.target.value as string[])}
-              input={<OutlinedInput label="Zonas" />}
-              renderValue={(selected) => (
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                  {selected.map((value) => <Chip key={value} label={value} size="small" />)}
-                </Box>
-              )}
-            >
-              {zones.map((zone) => <MenuItem key={zone} value={zone}>{zone}</MenuItem>)}
-            </Select>
-          </FormControl>
-          <Button variant="contained" startIcon={<FilterListIcon />} onClick={handleFilter} sx={{ bgcolor: '#8b5cf6', '&:hover': { bgcolor: '#3fa7aa' } }}>Filtrar</Button>
+      <Card elevation={1} sx={{ mb: 3 }}>
+        <CardContent sx={{ p: 3 }}>
+          <Grid container spacing={2} sx={{ mb: 2 }}>
+            <Grid item xs={12} md={3}>
+              <TextField
+                fullWidth size="small" label="Fecha inicial" type="date"
+                value={startDate} onChange={(e: ChangeEvent<HTMLInputElement>) => setStartDate(e.target.value)}
+                InputLabelProps={{ shrink: true }}
+                InputProps={{ startAdornment: <InputAdornment position="start"><CalendarIcon fontSize="small" /></InputAdornment> }}
+              />
+            </Grid>
+            <Grid item xs={12} md={3}>
+              <TextField
+                fullWidth size="small" label="Fecha final" type="date"
+                value={endDate} onChange={(e: ChangeEvent<HTMLInputElement>) => setEndDate(e.target.value)}
+                InputLabelProps={{ shrink: true }}
+                InputProps={{ startAdornment: <InputAdornment position="start"><CalendarIcon fontSize="small" /></InputAdornment> }}
+              />
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <FormControl fullWidth size="small">
+                <InputLabel>Zonas</InputLabel>
+                <Select
+                  multiple
+                  value={selectedZoneIds}
+                  onChange={handleZoneChange}
+                  input={<OutlinedInput label="Zonas" />}
+                  renderValue={(selected) => {
+                    if (selected.length === zones.length && zones.length > 0) return 'Todas';
+                    return `${selected.length} seleccionada${selected.length !== 1 ? 's' : ''}`;
+                  }}
+                >
+                  <MenuItem value={-1}>
+                    <em>{selectedZoneIds.length === zones.length ? 'Deseleccionar todas' : 'Seleccionar todas'}</em>
+                  </MenuItem>
+                  {zones.map((zone) => (
+                    <MenuItem key={zone.zoneId} value={zone.zoneId}>{zone.zoneName}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} md={2} sx={{ display: 'flex', alignItems: 'flex-end' }}>
+              <Button
+                fullWidth variant="contained" onClick={handleFilter}
+                disabled={selectedZoneIds.length === 0}
+                sx={{ bgcolor: '#8b5cf6', '&:hover': { bgcolor: '#45b5b8' }, fontWeight: 600, textTransform: 'uppercase' }}
+              >
+                Filtrar
+              </Button>
+            </Grid>
+          </Grid>
+
+          <TextField
+            fullWidth size="small" placeholder="Filtro rápido"
+            value={quickFilter} onChange={(e: ChangeEvent<HTMLInputElement>) => setQuickFilter(e.target.value)}
+            InputProps={{ endAdornment: <InputAdornment position="end"><IconButton size="small"><SearchIcon fontSize="small" /></IconButton></InputAdornment> }}
+          />
+        </CardContent>
+      </Card>
+
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+          <CircularProgress />
         </Box>
-      </Paper>
-
-      <Box sx={{ mb: 3, display: 'flex', gap: 1, alignItems: 'center' }}>
-        <TextField placeholder="Filtro rápido" value={quickFilter} onChange={(e: ChangeEvent<HTMLInputElement>) => setQuickFilter(e.target.value)} size="small" sx={{ maxWidth: 300 }} />
-        <IconButton sx={{ bgcolor: '#8b5cf6', color: 'white', '&:hover': { bgcolor: '#3fa7aa' } }}><SearchIcon /></IconButton>
-      </Box>
-
-      <TableContainer component={Paper} sx={{ mb: 5 }}>
-        <Table size="small">
-          <TableHead>
-            <TableRow sx={{ bgcolor: '#e3e3e3' }}>
-              <TableCell rowSpan={2} align="center" sx={{ fontWeight: 'bold', verticalAlign: 'middle' }}>Código</TableCell>
-              <TableCell rowSpan={2} align="center" sx={{ fontWeight: 'bold', verticalAlign: 'middle' }}>Banca</TableCell>
-              <TableCell rowSpan={2} align="center" sx={{ fontWeight: 'bold', verticalAlign: 'middle' }}>Zona</TableCell>
-              <TableCell colSpan={3} align="center" sx={{ fontWeight: 'bold', borderBottom: '1px solid #dee2e6' }}>Flujo de caja</TableCell>
-              <TableCell colSpan={3} align="center" sx={{ fontWeight: 'bold', borderBottom: '1px solid #dee2e6' }}>Resultados de Sorteo</TableCell>
-              <TableCell rowSpan={2} align="center" sx={{ fontWeight: 'bold', verticalAlign: 'middle' }}>Caída</TableCell>
-            </TableRow>
-            <TableRow sx={{ bgcolor: '#e3e3e3' }}>
-              <TableCell align="center"><TableSortLabel active={orderBy === 'cobros'} direction={orderBy === 'cobros' ? order : 'asc'} onClick={() => handleRequestSort('cobros')}>Cobros</TableSortLabel></TableCell>
-              <TableCell align="center"><TableSortLabel active={orderBy === 'pagos'} direction={orderBy === 'pagos' ? order : 'asc'} onClick={() => handleRequestSort('pagos')}>Pagos</TableSortLabel></TableCell>
-              <TableCell align="center" sx={{ bgcolor: '#d1ecf1' }}><TableSortLabel active={orderBy === 'netoFlujo'} direction={orderBy === 'netoFlujo' ? order : 'asc'} onClick={() => handleRequestSort('netoFlujo')}>Neto</TableSortLabel></TableCell>
-              <TableCell align="center"><TableSortLabel active={orderBy === 'debito'} direction={orderBy === 'debito' ? order : 'asc'} onClick={() => handleRequestSort('debito')}>Débito</TableSortLabel></TableCell>
-              <TableCell align="center"><TableSortLabel active={orderBy === 'credito'} direction={orderBy === 'credito' ? order : 'asc'} onClick={() => handleRequestSort('credito')}>Crédito</TableSortLabel></TableCell>
-              <TableCell align="center" sx={{ bgcolor: '#d1ecf1' }}><TableSortLabel active={orderBy === 'netoSorteo'} direction={orderBy === 'netoSorteo' ? order : 'asc'} onClick={() => handleRequestSort('netoSorteo')}>Neto</TableSortLabel></TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {sortedData.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={10} align="center" sx={{ py: 3, color: '#666' }}>No hay entradas disponibles</TableCell>
-              </TableRow>
-            ) : (
-              <>
-                {sortedData.map((item) => (
-                  <TableRow key={item.id} hover>
-                    <TableCell>{item.codigo}</TableCell>
-                    <TableCell>{item.banca}</TableCell>
-                    <TableCell>{item.zona}</TableCell>
-                    <TableCell align="right">${item.cobros.toFixed(2)}</TableCell>
-                    <TableCell align="right">${item.pagos.toFixed(2)}</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 'bold', bgcolor: '#d1ecf1' }}>${item.netoFlujo.toFixed(2)}</TableCell>
-                    <TableCell align="right">${item.debito.toFixed(2)}</TableCell>
-                    <TableCell align="right">${item.credito.toFixed(2)}</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 'bold', bgcolor: '#d1ecf1' }}>${item.netoSorteo.toFixed(2)}</TableCell>
-                    <TableCell>{item.caida}</TableCell>
-                  </TableRow>
-                ))}
-                <TableRow sx={{ bgcolor: '#f8f9fa' }}>
-                  <TableCell colSpan={3} sx={{ fontWeight: 'bold' }}>Totales</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 'bold' }}>${totals.cobros.toFixed(2)}</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 'bold' }}>${totals.pagos.toFixed(2)}</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 'bold', bgcolor: '#d1ecf1' }}>${totals.netoFlujo.toFixed(2)}</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 'bold' }}>${totals.debito.toFixed(2)}</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 'bold' }}>${totals.credito.toFixed(2)}</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 'bold', bgcolor: '#d1ecf1' }}>${totals.netoSorteo.toFixed(2)}</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 'bold' }}>${totals.caida.toFixed(2)}</TableCell>
+      ) : (
+        <>
+          <TableContainer component={Paper} variant="outlined" sx={{ mb: 3 }}>
+            <Table size="small">
+              <TableHead>
+                <TableRow sx={{ bgcolor: '#f5f5f5' }}>
+                  <TableCell rowSpan={2} sx={{ fontWeight: 600, verticalAlign: 'middle', borderRight: '1px solid #e0e0e0' }}>Código</TableCell>
+                  <TableCell rowSpan={2} sx={{ fontWeight: 600, verticalAlign: 'middle', borderRight: '1px solid #e0e0e0' }}>Banca</TableCell>
+                  <TableCell rowSpan={2} sx={{ fontWeight: 600, verticalAlign: 'middle', borderRight: '1px solid #e0e0e0' }}>Zona</TableCell>
+                  <TableCell colSpan={3} align="center" sx={{ fontWeight: 600, borderBottom: '2px solid #51cbce', borderRight: '1px solid #e0e0e0' }}>Flujo de caja</TableCell>
+                  <TableCell colSpan={3} align="center" sx={{ fontWeight: 600, borderBottom: '2px solid #51cbce', borderRight: '1px solid #e0e0e0' }}>Resultados de Sorteo</TableCell>
+                  <TableCell rowSpan={2} sx={{ fontWeight: 600, verticalAlign: 'middle' }}>Caída</TableCell>
                 </TableRow>
-              </>
-            )}
-          </TableBody>
-        </Table>
-        <Box sx={{ p: 2, color: '#666', fontSize: '14px' }}>Mostrando {sortedData.length} de {sortedData.length} entradas</Box>
-      </TableContainer>
+                <TableRow sx={{ bgcolor: '#f5f5f5' }}>
+                  {renderSortHeader('collections', 'Cobros', 'right')}
+                  {renderSortHeader('payments', 'Pagos', 'right')}
+                  {renderSortHeader('cashFlowNet', 'Neto', 'right', { borderRight: '1px solid #e0e0e0', bgcolor: '#e8f5e9' })}
+                  {renderSortHeader('drawDebit', 'Débito', 'right')}
+                  {renderSortHeader('drawCredit', 'Crédito', 'right')}
+                  {renderSortHeader('drawNet', 'Neto', 'right', { borderRight: '1px solid #e0e0e0', bgcolor: '#e8f5e9' })}
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {filteredAndSortedData.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={10} align="center" sx={{ py: 3 }}>
+                      <Typography variant="body2" color="text.secondary">
+                        {items.length === 0 ? 'Seleccione zonas y haga clic en Filtrar' : 'No hay datos que coincidan con el filtro'}
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  <>
+                    {filteredAndSortedData.map((item, idx) => (
+                      <TableRow key={`${item.code}-${idx}`} hover>
+                        <TableCell sx={{ borderRight: '1px solid #f0f0f0' }}>{item.code}</TableCell>
+                        <TableCell sx={{ borderRight: '1px solid #f0f0f0' }}>{item.bettingPoolName}</TableCell>
+                        <TableCell sx={{ borderRight: '1px solid #f0f0f0' }}>{item.zoneName}</TableCell>
+                        <TableCell align="right">{formatCurrency(item.collections)}</TableCell>
+                        <TableCell align="right">{formatCurrency(item.payments)}</TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 600, color: getNetColor(item.cashFlowNet), bgcolor: '#f9fdf9', borderRight: '1px solid #f0f0f0' }}>
+                          {formatCurrency(item.cashFlowNet)}
+                        </TableCell>
+                        <TableCell align="right">{formatCurrency(item.drawDebit)}</TableCell>
+                        <TableCell align="right">{formatCurrency(item.drawCredit)}</TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 600, color: getNetColor(item.drawNet), bgcolor: '#f9fdf9', borderRight: '1px solid #f0f0f0' }}>
+                          {formatCurrency(item.drawNet)}
+                        </TableCell>
+                        <TableCell align="right">{formatCurrency(item.fall)}</TableCell>
+                      </TableRow>
+                    ))}
+                    <TableRow sx={{ bgcolor: '#f8f9fa' }}>
+                      <TableCell sx={{ fontWeight: 700 }}>Totales</TableCell>
+                      <TableCell>-</TableCell>
+                      <TableCell sx={{ borderRight: '1px solid #e0e0e0' }}>-</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 700 }}>{formatCurrency(totals.collections)}</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 700 }}>{formatCurrency(totals.payments)}</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 700, color: getNetColor(totals.cashFlowNet), bgcolor: '#e8f5e9', borderRight: '1px solid #e0e0e0' }}>
+                        {formatCurrency(totals.cashFlowNet)}
+                      </TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 700 }}>{formatCurrency(totals.drawDebit)}</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 700 }}>{formatCurrency(totals.drawCredit)}</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 700, color: getNetColor(totals.drawNet), bgcolor: '#e8f5e9', borderRight: '1px solid #e0e0e0' }}>
+                        {formatCurrency(totals.drawNet)}
+                      </TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 700 }}>{formatCurrency(totals.fall)}</TableCell>
+                    </TableRow>
+                  </>
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
 
-      <Box sx={{ mt: 5 }}>
-        <Typography variant="h5" sx={{ mb: 2, fontWeight: 600 }}>Resumen otras transacciones</Typography>
-        <TableContainer component={Paper}>
-          <Table>
-            <TableHead>
-              <TableRow sx={{ bgcolor: '#e3e3e3' }}>
-                <TableCell colSpan={3} align="center" sx={{ fontWeight: 'bold', borderBottom: '1px solid #dee2e6' }}>Ajustes</TableCell>
-              </TableRow>
-              <TableRow sx={{ bgcolor: '#e3e3e3' }}>
-                <TableCell align="center" sx={{ fontWeight: 'bold' }}>Retiros de efectivo</TableCell>
-                <TableCell align="center" sx={{ fontWeight: 'bold' }}>Débito</TableCell>
-                <TableCell align="center" sx={{ fontWeight: 'bold' }}>Crédito</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              <TableRow>
-                <TableCell align="right">${otherTransactions.retirosEfectivo.toFixed(2)}</TableCell>
-                <TableCell align="right">${otherTransactions.debito.toFixed(2)}</TableCell>
-                <TableCell align="right">${otherTransactions.credito.toFixed(2)}</TableCell>
-              </TableRow>
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Box>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 4 }}>
+            Mostrando {filteredAndSortedData.length} de {items.length} entradas
+          </Typography>
+
+          {/* Other transactions summary */}
+          <Typography variant="h5" sx={{ mb: 2, textAlign: 'center', fontWeight: 600, color: '#2c2c2c' }}>
+            Resumen otras transacciones
+          </Typography>
+          <TableContainer component={Paper} variant="outlined">
+            <Table size="small">
+              <TableHead>
+                <TableRow sx={{ bgcolor: '#f5f5f5' }}>
+                  <TableCell colSpan={3} align="center" sx={{ fontWeight: 600, borderBottom: '2px solid #51cbce' }}>Ajustes</TableCell>
+                </TableRow>
+                <TableRow sx={{ bgcolor: '#f5f5f5' }}>
+                  <TableCell align="center" sx={{ fontWeight: 600 }}>Retiros de efectivo</TableCell>
+                  <TableCell align="center" sx={{ fontWeight: 600 }}>Débito</TableCell>
+                  <TableCell align="center" sx={{ fontWeight: 600 }}>Crédito</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                <TableRow>
+                  <TableCell align="right">{formatCurrency(otherTransactions.cashWithdrawals)}</TableCell>
+                  <TableCell align="right">{formatCurrency(otherTransactions.debit)}</TableCell>
+                  <TableCell align="right">{formatCurrency(otherTransactions.credit)}</TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </>
+      )}
     </Box>
   );
 };

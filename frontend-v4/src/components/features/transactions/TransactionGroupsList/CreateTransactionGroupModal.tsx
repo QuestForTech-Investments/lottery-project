@@ -25,7 +25,8 @@ import {
   Autocomplete,
   Box,
   Alert,
-  ListSubheader
+  ListSubheader,
+  Snackbar
 } from '@mui/material';
 import type { SelectChangeEvent } from '@mui/material/Select';
 import { Delete as DeleteIcon } from '@mui/icons-material';
@@ -250,8 +251,24 @@ const CreateTransactionGroupModal = ({ open, onClose, onCreated }: CreateTransac
     return filterByZone(options);
   }, [transactionType, bettingPools, bancos, otros, filterByZone]);
 
-  const initialBalance1 = entity1?.balance ?? 0;
-  const initialBalance2 = entity2?.balance ?? 0;
+  // Compute accumulated balance adjustments from existing lines
+  const getAccumulatedAdjustment = useCallback((entityId: number | undefined, entitySource: string | undefined): number => {
+    if (!entityId || !entitySource) return 0;
+    return lines.reduce((adj, l) => {
+      // Entity appears as entity1: balance changed by +debit -credit
+      if (l.entity1Id === entityId && l.entity1Type === entitySource) {
+        return adj + l.debit - l.credit;
+      }
+      // Entity appears as entity2: balance changed by -debit +credit
+      if (l.entity2Id === entityId && l.entity2Type === entitySource) {
+        return adj - l.debit + l.credit;
+      }
+      return adj;
+    }, 0);
+  }, [lines]);
+
+  const initialBalance1 = (entity1?.balance ?? 0) + getAccumulatedAdjustment(entity1?.id, entity1?.source);
+  const initialBalance2 = (entity2?.balance ?? 0) + getAccumulatedAdjustment(entity2?.id, entity2?.source);
   const debitNum = parseFloat(debit) || 0;
   const creditNum = parseFloat(credit) || 0;
   // Entity1: debit adds to balance, credit subtracts from balance
@@ -280,14 +297,20 @@ const CreateTransactionGroupModal = ({ open, onClose, onCreated }: CreateTransac
 
   const sameEntitySelected = entity1 && entity2 && entity1.id === entity2.id && entity1.source === entity2.source;
 
+  const entity1AlreadyInLines = useMemo(() => {
+    if (!entity1) return false;
+    return lines.some(l => l.entity1Id === entity1.id && l.entity1Type === entity1.source);
+  }, [entity1, lines]);
+
   const canAddLine = useMemo(() => {
     if (!transactionType || (debitNum === 0 && creditNum === 0)) return false;
     if (!entity1) return false;
     if (sameEntitySelected) return false;
+    if (entity1AlreadyInLines) return false;
     if (typeConfig.entity2Optional) return true;
     if (typeConfig.entity2IsText) return entity2Text.trim().length > 0;
     return !!entity2;
-  }, [transactionType, debitNum, creditNum, entity1, entity2, entity2Text, typeConfig.entity2IsText, typeConfig.entity2Optional, sameEntitySelected]);
+  }, [transactionType, debitNum, creditNum, entity1, entity2, entity2Text, typeConfig.entity2IsText, typeConfig.entity2Optional, sameEntitySelected, entity1AlreadyInLines]);
 
   const handleAddLine = useCallback(() => {
     if (!canAddLine || !entity1) return;
@@ -364,6 +387,9 @@ const CreateTransactionGroupModal = ({ open, onClose, onCreated }: CreateTransac
   }, [onClose]);
 
   const [creating, setCreating] = useState(false);
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
+    open: false, message: '', severity: 'success'
+  });
 
   const handleCreate = useCallback(async () => {
     if (lines.length === 0 || creating) return;
@@ -396,17 +422,19 @@ const CreateTransactionGroupModal = ({ open, onClose, onCreated }: CreateTransac
       };
 
       await api.post('/transaction-groups', payload);
+      setSnackbar({ open: true, message: 'Grupo de transacciones creado exitosamente', severity: 'success' });
       handleClose();
       onCreated?.();
     } catch (err) {
       console.error('Error creating transaction group:', err);
-      alert('Error al crear grupo de transacciones');
+      setSnackbar({ open: true, message: 'Error al crear grupo de transacciones', severity: 'error' });
     } finally {
       setCreating(false);
     }
   }, [lines, creating, zoneId, groupNotes, handleClose, onCreated]);
 
   return (
+    <>
     <Dialog open={open} onClose={handleClose} maxWidth="xl" fullWidth>
       <DialogTitle sx={{ fontWeight: 600, color: '#2c2c2c', fontFamily: 'Montserrat, sans-serif' }}>
         Crear grupo de transacciones
@@ -587,6 +615,17 @@ const CreateTransactionGroupModal = ({ open, onClose, onCreated }: CreateTransac
                   sx={{ mb: 2 }}
                 />
               </>
+            )}
+
+            {sameEntitySelected && (
+              <Alert severity="error" sx={{ mb: 2 }}>
+                No se puede realizar una transacción con la misma entidad en ambos campos.
+              </Alert>
+            )}
+            {entity1AlreadyInLines && (
+              <Alert severity="warning" sx={{ mb: 2 }}>
+                Ya existe una transacción para esta banca en la tabla.
+              </Alert>
             )}
 
             {/* Notas */}
@@ -799,6 +838,22 @@ const CreateTransactionGroupModal = ({ open, onClose, onCreated }: CreateTransac
         </Button>
       </DialogActions>
     </Dialog>
+
+    <Snackbar
+      open={snackbar.open}
+      autoHideDuration={4000}
+      onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+      anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+    >
+      <Alert
+        onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+        severity={snackbar.severity}
+        variant="filled"
+      >
+        {snackbar.message}
+      </Alert>
+    </Snackbar>
+    </>
   );
 };
 

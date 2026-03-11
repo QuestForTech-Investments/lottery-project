@@ -15,6 +15,10 @@ public class TransactionGroupDto
     public int? CreatedBy { get; set; }
     public string? CreatedByName { get; set; }
     public string? Entities { get; set; }
+    public int? ApprovedBy { get; set; }
+    public string? ApprovedByName { get; set; }
+    public DateTime? ApprovedAt { get; set; }
+    public string? RejectionReason { get; set; }
     public List<TransactionGroupLineDto> Lines { get; set; } = new();
 }
 
@@ -107,4 +111,37 @@ public class CreateTransactionGroupLineDto
     public string? ExpenseCategory { get; set; }
     public string? Notes { get; set; }
     public bool ShowInBanca { get; set; }
+}
+
+public class RejectTransactionGroupDto
+{
+    [Required(ErrorMessage = "La razón de rechazo es requerida")]
+    public string RejectionReason { get; set; } = string.Empty;
+}
+
+public class TransactionSummaryResponseDto
+{
+    public List<TransactionSummaryItemDto> Items { get; set; } = new();
+    public OtherTransactionsSummaryDto OtherTransactions { get; set; } = new();
+}
+
+public class TransactionSummaryItemDto
+{
+    public string Code { get; set; } = string.Empty;
+    public string BettingPoolName { get; set; } = string.Empty;
+    public string ZoneName { get; set; } = string.Empty;
+    public decimal Collections { get; set; }
+    public decimal Payments { get; set; }
+    public decimal CashFlowNet { get; set; }
+    public decimal DrawDebit { get; set; }
+    public decimal DrawCredit { get; set; }
+    public decimal DrawNet { get; set; }
+    public decimal Fall { get; set; }
+}
+
+public class OtherTransactionsSummaryDto
+{
+    public decimal CashWithdrawals { get; set; }
+    public decimal Debit { get; set; }
+    public decimal Credit { get; set; }
 }

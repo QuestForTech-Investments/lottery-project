@@ -12,6 +12,10 @@ export interface TransactionGroupAPI {
   createdBy: number | null;
   createdByName: string | null;
   entities: string | null;
+  approvedBy: number | null;
+  approvedByName: string | null;
+  approvedAt: string | null;
+  rejectionReason: string | null;
   lines?: TransactionGroupLineAPI[];
 }
 
@@ -154,4 +158,66 @@ export const getTransactionLines = async (params?: {
 
   const query = searchParams.toString();
   return await api.get(`/transaction-groups/lines${query ? `?${query}` : ''}`) as TransactionLineReportAPI[];
+};
+
+export const getPendingApprovals = async (params?: {
+  startDate?: string;
+  endDate?: string;
+}): Promise<TransactionGroupAPI[]> => {
+  const searchParams = new URLSearchParams();
+  if (params?.startDate) searchParams.set('startDate', params.startDate);
+  if (params?.endDate) searchParams.set('endDate', params.endDate);
+  searchParams.set('tzOffset', getTzOffset());
+
+  const query = searchParams.toString();
+  return await api.get(`/transaction-groups/pending-approvals${query ? `?${query}` : ''}`) as TransactionGroupAPI[];
+};
+
+export const approveTransactionGroup = async (id: number): Promise<void> => {
+  await api.put(`/transaction-groups/${id}/approve`);
+};
+
+export const rejectTransactionGroup = async (id: number, rejectionReason: string): Promise<void> => {
+  await api.put(`/transaction-groups/${id}/reject`, { rejectionReason });
+};
+
+export interface TransactionSummaryItemAPI {
+  code: string;
+  bettingPoolName: string;
+  zoneName: string;
+  collections: number;
+  payments: number;
+  cashFlowNet: number;
+  drawDebit: number;
+  drawCredit: number;
+  drawNet: number;
+  fall: number;
+}
+
+export interface OtherTransactionsSummaryAPI {
+  cashWithdrawals: number;
+  debit: number;
+  credit: number;
+}
+
+export interface TransactionSummaryResponseAPI {
+  items: TransactionSummaryItemAPI[];
+  otherTransactions: OtherTransactionsSummaryAPI;
+}
+
+export const getTransactionSummary = async (params?: {
+  startDate?: string;
+  endDate?: string;
+  zoneIds?: number[];
+  bettingPoolId?: number;
+}): Promise<TransactionSummaryResponseAPI> => {
+  const searchParams = new URLSearchParams();
+  if (params?.startDate) searchParams.set('startDate', params.startDate);
+  if (params?.endDate) searchParams.set('endDate', params.endDate);
+  if (params?.zoneIds && params.zoneIds.length > 0) searchParams.set('zoneIds', params.zoneIds.join(','));
+  if (params?.bettingPoolId) searchParams.set('bettingPoolId', params.bettingPoolId.toString());
+  searchParams.set('tzOffset', getTzOffset());
+
+  const query = searchParams.toString();
+  return await api.get(`/transaction-groups/summary${query ? `?${query}` : ''}`) as TransactionSummaryResponseAPI;
 };

@@ -17,7 +17,9 @@ import {
   Button,
   Chip,
   DialogActions,
-  DialogContentText
+  DialogContentText,
+  Snackbar,
+  Alert
 } from '@mui/material';
 import {
   Close as CloseIcon,
@@ -41,11 +43,40 @@ interface Props {
 
 const formatCurrency = (val: number): string => `$${val.toFixed(2)}`;
 
+const getStatusLabel = (status: string): string => {
+  switch (status) {
+    case 'PendienteAprobacion': return 'Pendiente de aprobación';
+    case 'PendienteEliminacion': return 'Pendiente de eliminación';
+    case 'Aprobado': return 'Aprobado';
+    case 'Rechazado': return 'Rechazado';
+    case 'Eliminado': return 'Eliminado';
+    default: return status;
+  }
+};
+
+const getStatusChipStyle = (status: string): Record<string, string> => {
+  switch (status) {
+    case 'PendienteAprobacion': return { bgcolor: '#fff8e1', color: '#f57f17' };
+    case 'PendienteEliminacion': return { bgcolor: '#fff3e0', color: '#e65100' };
+    case 'Aprobado': return { bgcolor: '#e8f5e9', color: '#2e7d32' };
+    case 'Rechazado': return { bgcolor: '#ffebee', color: '#c62828' };
+    case 'Eliminado': return { bgcolor: '#ffebee', color: '#c62828' };
+    default: return { bgcolor: '#e0e0e0', color: '#616161' };
+  }
+};
+
+const canDelete = (status?: string): boolean => {
+  return status === 'Aprobado' || status === 'PendienteAprobacion';
+};
+
 const TransactionGroupDetailModal: React.FC<Props> = ({ open, groupId, onClose, onDeleted }) => {
   const [loading, setLoading] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [group, setGroup] = useState<TransactionGroupAPI | null>(null);
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
+    open: false, message: '', severity: 'success'
+  });
 
   useEffect(() => {
     if (!open || !groupId) {
@@ -76,10 +107,12 @@ const TransactionGroupDetailModal: React.FC<Props> = ({ open, groupId, onClose, 
     setDeleting(true);
     try {
       await deleteTransactionGroup(groupId);
+      setSnackbar({ open: true, message: 'Grupo eliminado exitosamente', severity: 'success' });
       onClose();
       onDeleted?.();
     } catch (err) {
       console.error('Error deleting transaction group:', err);
+      setSnackbar({ open: true, message: 'Error al eliminar el grupo', severity: 'error' });
     } finally {
       setDeleting(false);
     }
@@ -165,6 +198,28 @@ const TransactionGroupDetailModal: React.FC<Props> = ({ open, groupId, onClose, 
             </Box>
           ) : (
             <>
+              {/* Status and approval info */}
+              <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+                <Chip
+                  label={getStatusLabel(group?.status ?? '')}
+                  size="small"
+                  sx={{
+                    fontWeight: 600,
+                    ...getStatusChipStyle(group?.status ?? '')
+                  }}
+                />
+                {group?.approvedByName && (
+                  <Typography variant="body2" color="text.secondary">
+                    {group.status === 'Rechazado' ? 'Rechazado' : 'Aprobado'} por: <strong>{group.approvedByName}</strong>
+                  </Typography>
+                )}
+                {group?.rejectionReason && (
+                  <Typography variant="body2" color="error">
+                    Razón: {group.rejectionReason}
+                  </Typography>
+                )}
+              </Box>
+
               <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
                 <Button variant="contained" size="small" startIcon={<PdfIcon />} onClick={exportPdf}
                   sx={{ bgcolor: '#dc3545', '&:hover': { bgcolor: '#c82333' }, textTransform: 'none', fontWeight: 600 }}>
@@ -175,15 +230,13 @@ const TransactionGroupDetailModal: React.FC<Props> = ({ open, groupId, onClose, 
                   CSV
                 </Button>
                 <Box sx={{ flex: 1 }} />
-                {group?.status !== 'Eliminado' ? (
+                {canDelete(group?.status) ? (
                   <Button variant="contained" size="small" startIcon={<DeleteIcon />} onClick={() => setConfirmDeleteOpen(true)}
                     disabled={deleting}
                     sx={{ bgcolor: '#dc3545', '&:hover': { bgcolor: '#c82333' }, textTransform: 'none', fontWeight: 600 }}>
                     {deleting ? <CircularProgress size={20} color="inherit" /> : 'Eliminar'}
                   </Button>
-                ) : (
-                  <Chip label="Eliminado" size="small" sx={{ bgcolor: '#ffebee', color: '#c62828', fontWeight: 600 }} />
-                )}
+                ) : null}
               </Box>
 
               <TableContainer component={Paper} variant="outlined">
@@ -255,7 +308,10 @@ const TransactionGroupDetailModal: React.FC<Props> = ({ open, groupId, onClose, 
         <DialogTitle>Confirmar eliminación</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            ¿Está seguro que desea eliminar el grupo <strong>{group?.groupNumber}</strong>? Los balances de las entidades serán revertidos. Esta acción no se puede deshacer.
+            {group?.status === 'PendienteAprobacion'
+              ? <>¿Está seguro que desea eliminar el grupo <strong>{group?.groupNumber}</strong>? Esta transacción aún no ha sido aprobada, por lo que no afectará los balances.</>
+              : <>¿Está seguro que desea eliminar el grupo <strong>{group?.groupNumber}</strong>? Los balances de las entidades serán revertidos o se enviará para aprobación.</>
+            }
           </DialogContentText>
         </DialogContent>
         <DialogActions>
@@ -263,6 +319,21 @@ const TransactionGroupDetailModal: React.FC<Props> = ({ open, groupId, onClose, 
           <Button onClick={handleDelete} color="error" variant="contained">Eliminar</Button>
         </DialogActions>
       </Dialog>
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+          severity={snackbar.severity}
+          variant="filled"
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </>
   );
 };

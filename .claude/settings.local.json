@@ -86,7 +86,14 @@
       "mcp__plugin_playwright_playwright__browser_snapshot",
       "mcp__plugin_playwright_playwright__browser_evaluate",
       "mcp__plugin_playwright_playwright__browser_take_screenshot",
-      "mcp__plugin_playwright_playwright__browser_close"
+      "mcp__plugin_playwright_playwright__browser_close",
+      "mcp__plugin_playwright_playwright__browser_type",
+      "mcp__plugin_playwright_playwright__browser_hover",
+      "Bash(find /c/Users/olive/Documents/GitHub/lottery-project/frontend-v4/src -type f \\\\\\(-name *context* -o -name *Context* \\\\\\))",
+      "Bash(xargs grep:*)",
+      "Bash(find /c/Users/olive/Documents/GitHub/lottery-project -type f \\\\\\(-name *PERMISSION* -o -name *permission* -o -name *AUTH* -o -name *auth* \\\\\\))",
+      "Bash(grep -E \"\\\\.\\(md|txt|doc\\)$\")",
+      "mcp__plugin_playwright_playwright__browser_run_code"
     ]
   }
 }

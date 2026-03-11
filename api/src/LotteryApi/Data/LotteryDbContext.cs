@@ -467,5 +467,12 @@ public class LotteryDbContext : DbContext
             .WithMany()
             .HasForeignKey(g => g.CreatedBy)
             .OnDelete(DeleteBehavior.Restrict);
+
+        // TransactionGroup -> User (ApprovedBy)
+        modelBuilder.Entity<TransactionGroup>()
+            .HasOne(g => g.ApprovedByUser)
+            .WithMany()
+            .HasForeignKey(g => g.ApprovedBy)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

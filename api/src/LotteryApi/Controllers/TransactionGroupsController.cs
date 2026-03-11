@@ -70,7 +70,11 @@ public class TransactionGroupsController : ControllerBase
                     CreatedAt = g.CreatedAt,
                     CreatedBy = g.CreatedBy,
                     CreatedByName = g.CreatedByUser != null ? g.CreatedByUser.Username : null,
-                    Entities = string.Join(", ", g.Lines.Select(l => l.Entity1Code).Distinct())
+                    Entities = string.Join(", ", g.Lines.Select(l => l.Entity1Code).Distinct()),
+                    ApprovedBy = g.ApprovedBy,
+                    ApprovedByName = g.ApprovedByUser != null ? g.ApprovedByUser.Username : null,
+                    ApprovedAt = g.ApprovedAt,
+                    RejectionReason = g.RejectionReason
                 })
                 .ToListAsync();
 
@@ -80,6 +84,81 @@ public class TransactionGroupsController : ControllerBase
         {
             _logger.LogError(ex, "Error getting transaction groups");
             return StatusCode(500, new { error = "Error al obtener grupos de transacciones" });
+        }
+    }
+
+    [HttpGet("pending-approvals")]
+    public async Task<ActionResult<List<TransactionGroupDto>>> GetPendingApprovals(
+        [FromQuery] string? startDate = null,
+        [FromQuery] string? endDate = null,
+        [FromQuery] int? tzOffset = null)
+    {
+        try
+        {
+            var query = _context.TransactionGroups
+                .AsNoTracking()
+                .Where(g => g.Status == "PendienteAprobacion" || g.Status == "PendienteEliminacion");
+
+            var offset = TimeSpan.FromMinutes(tzOffset ?? 0);
+
+            if (DateTime.TryParse(startDate, out var start))
+            {
+                var startUtc = start.Date.Add(offset);
+                query = query.Where(g => g.CreatedAt >= startUtc);
+            }
+
+            if (DateTime.TryParse(endDate, out var end))
+            {
+                var endUtc = end.Date.AddDays(1).Add(offset);
+                query = query.Where(g => g.CreatedAt < endUtc);
+            }
+
+            var results = await query
+                .OrderByDescending(g => g.CreatedAt)
+                .Select(g => new TransactionGroupDto
+                {
+                    GroupId = g.GroupId,
+                    GroupNumber = g.GroupNumber,
+                    ZoneId = g.ZoneId,
+                    ZoneName = g.Zone != null ? g.Zone.ZoneName : null,
+                    Notes = g.Notes,
+                    IsAutomatic = g.IsAutomatic,
+                    Status = g.Status,
+                    CreatedAt = g.CreatedAt,
+                    CreatedBy = g.CreatedBy,
+                    CreatedByName = g.CreatedByUser != null ? g.CreatedByUser.Username : null,
+                    Entities = string.Join(", ", g.Lines.Select(l => l.Entity1Code).Distinct()),
+                    Lines = g.Lines.Select(l => new TransactionGroupLineDto
+                    {
+                        LineId = l.LineId,
+                        TransactionType = l.TransactionType,
+                        Entity1Type = l.Entity1Type,
+                        Entity1Id = l.Entity1Id,
+                        Entity1Name = l.Entity1Name,
+                        Entity1Code = l.Entity1Code,
+                        Entity1InitialBalance = l.Entity1InitialBalance,
+                        Entity1FinalBalance = l.Entity1FinalBalance,
+                        Entity2Type = l.Entity2Type,
+                        Entity2Id = l.Entity2Id,
+                        Entity2Name = l.Entity2Name,
+                        Entity2Code = l.Entity2Code,
+                        Entity2InitialBalance = l.Entity2InitialBalance,
+                        Entity2FinalBalance = l.Entity2FinalBalance,
+                        Debit = l.Debit,
+                        Credit = l.Credit,
+                        ExpenseCategory = l.ExpenseCategory,
+                        Notes = l.Notes,
+                        ShowInBanca = l.ShowInBanca
+                    }).ToList()
+                })
+                .ToListAsync();
+
+            return Ok(results);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting pending approvals");
+            return StatusCode(500, new { error = "Error al obtener aprobaciones pendientes" });
         }
     }
 
@@ -103,6 +182,10 @@ public class TransactionGroupsController : ControllerBase
                     CreatedAt = g.CreatedAt,
                     CreatedBy = g.CreatedBy,
                     CreatedByName = g.CreatedByUser != null ? g.CreatedByUser.Username : null,
+                    ApprovedBy = g.ApprovedBy,
+                    ApprovedByName = g.ApprovedByUser != null ? g.ApprovedByUser.Username : null,
+                    ApprovedAt = g.ApprovedAt,
+                    RejectionReason = g.RejectionReason,
                     Lines = g.Lines.Select(l => new TransactionGroupLineDto
                     {
                         LineId = l.LineId,
@@ -335,6 +418,208 @@ public class TransactionGroupsController : ControllerBase
         }
     }
 
+    [HttpGet("summary")]
+    public async Task<ActionResult<TransactionSummaryResponseDto>> GetSummary(
+        [FromQuery] string? startDate = null,
+        [FromQuery] string? endDate = null,
+        [FromQuery] string? zoneIds = null,
+        [FromQuery] int? bettingPoolId = null,
+        [FromQuery] int? tzOffset = null)
+    {
+        try
+        {
+            var offset = TimeSpan.FromMinutes(tzOffset ?? 0);
+
+            // Parse zone IDs
+            var zoneIdList = new List<int>();
+            if (!string.IsNullOrWhiteSpace(zoneIds))
+            {
+                zoneIdList = zoneIds.Split(',')
+                    .Select(s => int.TryParse(s.Trim(), out var id) ? id : 0)
+                    .Where(id => id > 0)
+                    .ToList();
+            }
+
+            // --- 1. Aggregate transaction lines (Cobros/Pagos) per BettingPool ---
+            var txQuery = _context.TransactionGroupLines
+                .AsNoTracking()
+                .Where(l => l.Group!.Status == "Aprobado" || l.Group!.Status == "Eliminado")
+                .Where(l => l.Entity1Type == "bettingPool")
+                .Where(l => l.TransactionType == "Cobro" || l.TransactionType == "Pago");
+
+            if (DateTime.TryParse(startDate, out var txStart))
+            {
+                var startUtc = txStart.Date.Add(offset);
+                txQuery = txQuery.Where(l => l.Group!.CreatedAt >= startUtc);
+            }
+            if (DateTime.TryParse(endDate, out var txEnd))
+            {
+                var endUtc = txEnd.Date.AddDays(1).Add(offset);
+                txQuery = txQuery.Where(l => l.Group!.CreatedAt < endUtc);
+            }
+
+            if (bettingPoolId.HasValue)
+            {
+                txQuery = txQuery.Where(l => l.Entity1Id == bettingPoolId.Value);
+            }
+            else if (zoneIdList.Count > 0)
+            {
+                txQuery = txQuery.Where(l =>
+                    _context.BettingPools.Any(bp => bp.BettingPoolId == l.Entity1Id && zoneIdList.Contains(bp.ZoneId)));
+            }
+
+            var txData = await txQuery
+                .GroupBy(l => l.Entity1Id)
+                .Select(g => new
+                {
+                    BettingPoolId = g.Key,
+                    Collections = g.Where(l => l.TransactionType == "Cobro").Sum(l => l.Credit),
+                    Payments = g.Where(l => l.TransactionType == "Pago").Sum(l => l.Debit)
+                })
+                .ToListAsync();
+
+            var txMap = txData.ToDictionary(t => t.BettingPoolId);
+
+            // --- 2. Aggregate ticket sales (Resultados de Sorteo) per BettingPool ---
+            var ticketQuery = _context.Tickets
+                .AsNoTracking()
+                .Where(t => !t.IsCancelled);
+
+            if (DateTime.TryParse(startDate, out var saleStart))
+            {
+                var startUtc = saleStart.Date.Add(offset);
+                ticketQuery = ticketQuery.Where(t => t.CreatedAt >= startUtc);
+            }
+            if (DateTime.TryParse(endDate, out var saleEnd))
+            {
+                var endUtc = saleEnd.Date.AddDays(1).Add(offset);
+                ticketQuery = ticketQuery.Where(t => t.CreatedAt < endUtc);
+            }
+
+            if (bettingPoolId.HasValue)
+            {
+                ticketQuery = ticketQuery.Where(t => t.BettingPoolId == bettingPoolId.Value);
+            }
+            else if (zoneIdList.Count > 0)
+            {
+                ticketQuery = ticketQuery.Where(t =>
+                    _context.BettingPools.Any(bp => bp.BettingPoolId == t.BettingPoolId && zoneIdList.Contains(bp.ZoneId)));
+            }
+
+            var salesData = await ticketQuery
+                .GroupBy(t => t.BettingPoolId)
+                .Select(g => new
+                {
+                    BettingPoolId = g.Key,
+                    TotalSold = g.Sum(t => t.GrandTotal),
+                    TotalPrizes = g.Sum(t => t.TotalPrize)
+                })
+                .ToListAsync();
+
+            var salesMap = salesData.ToDictionary(s => s.BettingPoolId);
+
+            // --- 3. Get all relevant betting pool IDs and pool info ---
+            var allBpIds = txMap.Keys.Union(salesMap.Keys).ToList();
+            // When filtering by single BP, always include it even if no data
+            if (bettingPoolId.HasValue && !allBpIds.Contains(bettingPoolId.Value))
+                allBpIds.Add(bettingPoolId.Value);
+
+            var bpInfo = await _context.BettingPools
+                .AsNoTracking()
+                .Where(bp => allBpIds.Contains(bp.BettingPoolId))
+                .Select(bp => new
+                {
+                    bp.BettingPoolId,
+                    bp.BettingPoolCode,
+                    bp.BettingPoolName,
+                    ZoneName = bp.Zone != null ? bp.Zone.ZoneName : ""
+                })
+                .ToListAsync();
+
+            // --- 4. Build summary items ---
+            var items = bpInfo
+                .Select(bp =>
+                {
+                    var hasTx = txMap.TryGetValue(bp.BettingPoolId, out var tx);
+                    var hasSales = salesMap.TryGetValue(bp.BettingPoolId, out var sales);
+
+                    var collections = hasTx ? tx!.Collections : 0m;
+                    var payments = hasTx ? tx!.Payments : 0m;
+                    var drawDebit = hasSales ? sales!.TotalSold : 0m;
+                    var drawCredit = hasSales ? sales!.TotalPrizes : 0m;
+                    var drawNet = drawDebit - drawCredit;
+                    var fall = 0m; // TODO: implement caída calculation later
+
+                    return new TransactionSummaryItemDto
+                    {
+                        Code = bp.BettingPoolCode,
+                        BettingPoolName = bp.BettingPoolName,
+                        ZoneName = bp.ZoneName,
+                        Collections = collections,
+                        Payments = payments,
+                        CashFlowNet = collections - payments,
+                        DrawDebit = drawDebit,
+                        DrawCredit = drawCredit,
+                        DrawNet = drawNet,
+                        Fall = fall
+                    };
+                })
+                .OrderBy(i => i.Code)
+                .ToList();
+
+            // --- 5. Other transactions (Ajustes, Retiros) ---
+            var otherQuery = _context.TransactionGroupLines
+                .AsNoTracking()
+                .Where(l => l.Group!.Status == "Aprobado" || l.Group!.Status == "Eliminado")
+                .Where(l => l.TransactionType == "Ajuste" || l.TransactionType == "Retiro");
+
+            if (DateTime.TryParse(startDate, out var otherStart))
+            {
+                var startUtc = otherStart.Date.Add(offset);
+                otherQuery = otherQuery.Where(l => l.Group!.CreatedAt >= startUtc);
+            }
+            if (DateTime.TryParse(endDate, out var otherEnd))
+            {
+                var endUtc = otherEnd.Date.AddDays(1).Add(offset);
+                otherQuery = otherQuery.Where(l => l.Group!.CreatedAt < endUtc);
+            }
+
+            if (bettingPoolId.HasValue)
+            {
+                otherQuery = otherQuery.Where(l =>
+                    (l.Entity1Type == "bettingPool" && l.Entity1Id == bettingPoolId.Value) ||
+                    (l.Entity2Type == "bettingPool" && l.Entity2Id == bettingPoolId.Value));
+            }
+            else if (zoneIdList.Count > 0)
+            {
+                otherQuery = otherQuery.Where(l =>
+                    (l.Entity1Type == "bettingPool" && _context.BettingPools.Any(bp => bp.BettingPoolId == l.Entity1Id && zoneIdList.Contains(bp.ZoneId))) ||
+                    (l.Entity2Type == "bettingPool" && l.Entity2Id.HasValue && _context.BettingPools.Any(bp => bp.BettingPoolId == l.Entity2Id.Value && zoneIdList.Contains(bp.ZoneId))));
+            }
+
+            var otherData = await otherQuery
+                .GroupBy(l => 1)
+                .Select(g => new OtherTransactionsSummaryDto
+                {
+                    CashWithdrawals = g.Where(l => l.TransactionType == "Retiro").Sum(l => l.Credit),
+                    Debit = g.Sum(l => l.Debit),
+                    Credit = g.Sum(l => l.Credit)
+                })
+                .FirstOrDefaultAsync() ?? new OtherTransactionsSummaryDto();
+
+            return Ok(new TransactionSummaryResponseDto
+            {
+                Items = items,
+                OtherTransactions = otherData
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting transaction summary");
+            return StatusCode(500, new { error = "Error al obtener resumen de transacciones" });
+        }
+    }
+
     [HttpPost]
     public async Task<ActionResult<TransactionGroupDto>> CreateGroup([FromBody] CreateTransactionGroupDto dto)
     {
@@ -342,9 +627,10 @@ public class TransactionGroupsController : ControllerBase
         try
         {
             // Get current user
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
-                ?? User.FindFirst("userId")?.Value;
-            int? userId = int.TryParse(userIdClaim, out var uid) ? uid : null;
+            var userId = GetCurrentUserId();
+
+            // Check if user has auto-approve permission
+            var hasAutoApprove = userId.HasValue && await HasPermission(userId.Value, "TRANSACTION_AUTO_APPROVE");
 
             // Generate group number
             var lastGroup = await _context.TransactionGroups
@@ -359,9 +645,11 @@ public class TransactionGroupsController : ControllerBase
                 ZoneId = dto.ZoneId,
                 Notes = dto.Notes,
                 IsAutomatic = false,
-                Status = "Pendiente",
+                Status = hasAutoApprove ? "Aprobado" : "PendienteAprobacion",
                 CreatedAt = DateTime.UtcNow,
-                CreatedBy = userId
+                CreatedBy = userId,
+                ApprovedBy = hasAutoApprove ? userId : null,
+                ApprovedAt = hasAutoApprove ? DateTime.UtcNow : null
             };
 
             _context.TransactionGroups.Add(group);
@@ -396,17 +684,19 @@ public class TransactionGroupsController : ControllerBase
 
                 _context.TransactionGroupLines.Add(line);
 
-                // Update Entity1 balance
-                // Entity1: +debit -credit
-                var entity1Delta = lineDto.Debit - lineDto.Credit;
-                await UpdateEntityBalance(lineDto.Entity1Type, lineDto.Entity1Id, entity1Delta);
-
-                // Update Entity2 balance (if it's a real entity, not text)
-                // Entity2: -debit +credit
-                if (lineDto.Entity2Id.HasValue && !string.IsNullOrEmpty(lineDto.Entity2Type))
+                // Only apply balances if auto-approved
+                if (hasAutoApprove)
                 {
-                    var entity2Delta = lineDto.Credit - lineDto.Debit;
-                    await UpdateEntityBalance(lineDto.Entity2Type, lineDto.Entity2Id.Value, entity2Delta);
+                    // Entity1: +debit -credit
+                    var entity1Delta = lineDto.Debit - lineDto.Credit;
+                    await UpdateEntityBalance(lineDto.Entity1Type, lineDto.Entity1Id, entity1Delta);
+
+                    // Entity2: -debit +credit
+                    if (lineDto.Entity2Id.HasValue && !string.IsNullOrEmpty(lineDto.Entity2Type))
+                    {
+                        var entity2Delta = lineDto.Credit - lineDto.Debit;
+                        await UpdateEntityBalance(lineDto.Entity2Type, lineDto.Entity2Id.Value, entity2Delta);
+                    }
                 }
             }
 
@@ -448,32 +738,196 @@ public class TransactionGroupsController : ControllerBase
             if (group == null)
                 return NotFound(new { message = "Grupo no encontrado" });
 
-            // Reverse balance changes for each line
-            foreach (var line in group.Lines)
-            {
-                decimal entity1Delta = line.Debit - line.Credit;
-                decimal entity2Delta = line.Credit - line.Debit;
+            if (group.Status == "Eliminado" || group.Status == "PendienteEliminacion" || group.Status == "Rechazado")
+                return BadRequest(new { message = "No se puede eliminar un grupo con estado " + group.Status });
 
-                // Reverse: subtract what was added
-                await UpdateEntityBalance(line.Entity1Type, line.Entity1Id, -entity1Delta);
-                if (line.Entity2Type != null && line.Entity2Id.HasValue)
-                {
-                    await UpdateEntityBalance(line.Entity2Type, line.Entity2Id.Value, -entity2Delta);
-                }
+            // Get current user
+            var userId = GetCurrentUserId();
+
+            // Check auto-approve permission
+            var hasAutoApprove = userId.HasValue && await HasPermission(userId.Value, "TRANSACTION_AUTO_APPROVE");
+
+            if (group.Status == "PendienteAprobacion")
+            {
+                // No balances were applied, just delete directly
+                group.Status = "Eliminado";
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+                return Ok(new { message = "Grupo eliminado exitosamente" });
             }
 
-            // Soft delete: mark as Eliminado instead of removing
-            group.Status = "Eliminado";
-            await _context.SaveChangesAsync();
-            await transaction.CommitAsync();
+            // Group is "Aprobado" — balances are applied
+            if (hasAutoApprove)
+            {
+                // Reverse balance changes immediately
+                foreach (var line in group.Lines)
+                {
+                    decimal entity1Delta = line.Debit - line.Credit;
+                    decimal entity2Delta = line.Credit - line.Debit;
 
-            return Ok(new { message = "Grupo eliminado exitosamente" });
+                    await UpdateEntityBalance(line.Entity1Type, line.Entity1Id, -entity1Delta);
+                    if (line.Entity2Type != null && line.Entity2Id.HasValue)
+                    {
+                        await UpdateEntityBalance(line.Entity2Type, line.Entity2Id.Value, -entity2Delta);
+                    }
+                }
+
+                group.Status = "Eliminado";
+                group.ApprovedBy = userId;
+                group.ApprovedAt = DateTime.UtcNow;
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+                return Ok(new { message = "Grupo eliminado exitosamente" });
+            }
+            else
+            {
+                // Request deletion approval
+                group.Status = "PendienteEliminacion";
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+                return Ok(new { message = "Solicitud de eliminación enviada para aprobación" });
+            }
         }
         catch (Exception ex)
         {
             await transaction.RollbackAsync();
             _logger.LogError(ex, "Error deleting transaction group {Id}", id);
             return StatusCode(500, new { error = "Error al eliminar grupo de transacciones" });
+        }
+    }
+
+    [HttpPut("{id}/approve")]
+    public async Task<ActionResult> ApproveGroup(int id)
+    {
+        using var transaction = await _context.Database.BeginTransactionAsync();
+        try
+        {
+            var userId = GetCurrentUserId();
+            if (!userId.HasValue || !await HasPermission(userId.Value, "TRANSACTION_APPROVE"))
+                return StatusCode(403, new { message = "No tiene permiso para aprobar transacciones" });
+
+            var group = await _context.TransactionGroups
+                .Include(g => g.Lines)
+                .FirstOrDefaultAsync(g => g.GroupId == id);
+
+            if (group == null)
+                return NotFound(new { message = "Grupo no encontrado" });
+
+            if (group.Status == "PendienteAprobacion")
+            {
+                // Approve creation: recalculate current balances and apply
+                foreach (var line in group.Lines)
+                {
+                    // Get current balance for entity1
+                    var currentBalance1 = await GetCurrentEntityBalance(line.Entity1Type, line.Entity1Id);
+                    line.Entity1InitialBalance = currentBalance1;
+                    var entity1Delta = line.Debit - line.Credit;
+                    line.Entity1FinalBalance = currentBalance1 + entity1Delta;
+                    await UpdateEntityBalance(line.Entity1Type, line.Entity1Id, entity1Delta);
+
+                    // Get current balance for entity2
+                    if (line.Entity2Id.HasValue && !string.IsNullOrEmpty(line.Entity2Type))
+                    {
+                        var currentBalance2 = await GetCurrentEntityBalance(line.Entity2Type, line.Entity2Id.Value);
+                        line.Entity2InitialBalance = currentBalance2;
+                        var entity2Delta = line.Credit - line.Debit;
+                        line.Entity2FinalBalance = currentBalance2 + entity2Delta;
+                        await UpdateEntityBalance(line.Entity2Type, line.Entity2Id.Value, entity2Delta);
+                    }
+                }
+
+                group.Status = "Aprobado";
+                group.ApprovedBy = userId;
+                group.ApprovedAt = DateTime.UtcNow;
+                group.RejectionReason = null;
+
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+                return Ok(new { message = "Grupo aprobado exitosamente" });
+            }
+            else if (group.Status == "PendienteEliminacion")
+            {
+                // Approve deletion: reverse balances
+                foreach (var line in group.Lines)
+                {
+                    decimal entity1Delta = line.Debit - line.Credit;
+                    decimal entity2Delta = line.Credit - line.Debit;
+
+                    await UpdateEntityBalance(line.Entity1Type, line.Entity1Id, -entity1Delta);
+                    if (line.Entity2Type != null && line.Entity2Id.HasValue)
+                    {
+                        await UpdateEntityBalance(line.Entity2Type, line.Entity2Id.Value, -entity2Delta);
+                    }
+                }
+
+                group.Status = "Eliminado";
+                group.ApprovedBy = userId;
+                group.ApprovedAt = DateTime.UtcNow;
+                group.RejectionReason = null;
+
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+                return Ok(new { message = "Eliminación aprobada exitosamente" });
+            }
+            else
+            {
+                return BadRequest(new { message = $"No se puede aprobar un grupo con estado '{group.Status}'" });
+            }
+        }
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync();
+            _logger.LogError(ex, "Error approving transaction group {Id}", id);
+            return StatusCode(500, new { error = "Error al aprobar grupo de transacciones" });
+        }
+    }
+
+    [HttpPut("{id}/reject")]
+    public async Task<ActionResult> RejectGroup(int id, [FromBody] RejectTransactionGroupDto dto)
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            if (!userId.HasValue || !await HasPermission(userId.Value, "TRANSACTION_APPROVE"))
+                return StatusCode(403, new { message = "No tiene permiso para rechazar transacciones" });
+
+            var group = await _context.TransactionGroups
+                .FirstOrDefaultAsync(g => g.GroupId == id);
+
+            if (group == null)
+                return NotFound(new { message = "Grupo no encontrado" });
+
+            if (group.Status == "PendienteAprobacion")
+            {
+                // Reject creation: no balance changes needed
+                group.Status = "Rechazado";
+                group.RejectionReason = dto.RejectionReason;
+                group.ApprovedBy = userId;
+                group.ApprovedAt = DateTime.UtcNow;
+
+                await _context.SaveChangesAsync();
+                return Ok(new { message = "Grupo rechazado exitosamente" });
+            }
+            else if (group.Status == "PendienteEliminacion")
+            {
+                // Reject deletion: restore to Aprobado, no balance changes
+                group.Status = "Aprobado";
+                group.RejectionReason = dto.RejectionReason;
+                group.ApprovedBy = userId;
+                group.ApprovedAt = DateTime.UtcNow;
+
+                await _context.SaveChangesAsync();
+                return Ok(new { message = "Solicitud de eliminación rechazada" });
+            }
+            else
+            {
+                return BadRequest(new { message = $"No se puede rechazar un grupo con estado '{group.Status}'" });
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error rejecting transaction group {Id}", id);
+            return StatusCode(500, new { error = "Error al rechazar grupo de transacciones" });
         }
     }
 
@@ -501,5 +955,45 @@ public class TransactionGroupsController : ControllerBase
                 entity.UpdatedAt = DateTime.UtcNow;
             }
         }
+    }
+
+    private async Task<bool> HasPermission(int userId, string permissionCode)
+    {
+        var hasUserPerm = await _context.UserPermissions
+            .AnyAsync(up => up.UserId == userId
+                && up.Permission!.PermissionCode == permissionCode
+                && up.IsActive);
+        if (hasUserPerm) return true;
+
+        return await _context.RolePermissions
+            .AnyAsync(rp => rp.Permission!.PermissionCode == permissionCode
+                && rp.IsActive
+                && _context.Users.Any(u => u.UserId == userId && u.RoleId == rp.RoleId));
+    }
+
+    private int? GetCurrentUserId()
+    {
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+            ?? User.FindFirst("userId")?.Value;
+        return int.TryParse(userIdClaim, out var uid) ? uid : null;
+    }
+
+    private async Task<decimal> GetCurrentEntityBalance(string entityType, int entityId)
+    {
+        if (entityType == "bettingPool")
+        {
+            var balance = await _context.Balances
+                .AsNoTracking()
+                .FirstOrDefaultAsync(b => b.BettingPoolId == entityId);
+            return balance?.CurrentBalance ?? 0;
+        }
+        else if (entityType == "accountableEntity")
+        {
+            var entity = await _context.AccountableEntities
+                .AsNoTracking()
+                .FirstOrDefaultAsync(e => e.EntityId == entityId);
+            return entity?.CurrentBalance ?? 0;
+        }
+        return 0;
     }
 }
