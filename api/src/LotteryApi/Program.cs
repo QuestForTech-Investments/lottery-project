@@ -17,6 +17,7 @@ using LotteryApi.Middleware;
 using LotteryApi.Repositories;
 using LotteryApi.Services;
 using LotteryApi.Services.BalanceCutoff;
+using LotteryApi.Services.Loans;
 using LotteryApi.Services.ExternalResults;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -119,6 +120,9 @@ builder.Services.AddExternalResultsServices(builder.Configuration);
 
 // Register Balance Cutoff Services (daily balance snapshots)
 builder.Services.AddBalanceCutoffServices(builder.Configuration);
+
+// Register Loan Payment Services (automatic loan installment processing)
+builder.Services.AddLoanPaymentServices(builder.Configuration);
 
 // Register Memory Cache for performance
 builder.Services.AddMemoryCache();

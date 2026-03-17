@@ -597,6 +597,14 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
       : parseFloat(amount) || 0;
     const boxAmount = isSplitAmount ? parseFloat(amountParts[1]) || 0 : 0;
 
+    // Validate amount is not zero
+    const totalAmount = isSplitAmount ? numericAmount + boxAmount : numericAmount;
+    if (totalAmount <= 0) {
+      setBetError('El monto no puede ser 0');
+      setTimeout(() => amountInputRef.current?.focus(), 100);
+      return;
+    }
+
     setBetError('');
     setBetWarning('');
 
