@@ -1,4 +1,5 @@
 import api from './api';
+import { getCaidaStatus, type CaidaStatusItem } from './caidaService';
 
 export interface BettingPoolBalanceAPI {
   bettingPoolId: number;
@@ -23,6 +24,7 @@ export interface BettingPoolBalanceData {
   zoneId: number;
   balance: number;
   prestamos: number;
+  caidaAcumulada: number | null;
 }
 
 export interface BalanceZone {
@@ -36,7 +38,14 @@ export interface BalanceZone {
  */
 export const getBettingPoolBalances = async (date?: string): Promise<BettingPoolBalanceData[]> => {
   const params = date ? `?date=${date}` : '';
-  const apiData = await api.get(`/balances/betting-pools${params}`) as BettingPoolBalanceAPI[];
+  const [apiData, caidaData] = await Promise.all([
+    api.get(`/balances/betting-pools${params}`) as Promise<BettingPoolBalanceAPI[]>,
+    getCaidaStatus().catch((): CaidaStatusItem[] => [])
+  ]);
+
+  // Build caída map: bettingPoolId -> accumulatedFall (only for bancas with caída enabled)
+  const caidaMap = new Map<number, number>();
+  caidaData.forEach(item => caidaMap.set(item.bettingPoolId, item.accumulatedFall));
 
   return apiData.map(item => ({
     id: item.bettingPoolId,
@@ -48,6 +57,7 @@ export const getBettingPoolBalances = async (date?: string): Promise<BettingPool
     zoneId: item.zoneId,
     balance: item.balance,
     prestamos: item.loans,
+    caidaAcumulada: caidaMap.has(item.bettingPoolId) ? caidaMap.get(item.bettingPoolId)! : null,
   }));
 };
 

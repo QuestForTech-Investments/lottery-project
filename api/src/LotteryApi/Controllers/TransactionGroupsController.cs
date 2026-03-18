@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using LotteryApi.Data;
 using LotteryApi.DTOs;
 using LotteryApi.Models;
+using LotteryApi.Services.Caida;
 using System.Security.Claims;
 
 namespace LotteryApi.Controllers;
@@ -15,11 +16,13 @@ public class TransactionGroupsController : ControllerBase
 {
     private readonly LotteryDbContext _context;
     private readonly ILogger<TransactionGroupsController> _logger;
+    private readonly ICaidaCalculationService _caidaService;
 
-    public TransactionGroupsController(LotteryDbContext context, ILogger<TransactionGroupsController> logger)
+    public TransactionGroupsController(LotteryDbContext context, ILogger<TransactionGroupsController> logger, ICaidaCalculationService caidaService)
     {
         _context = context;
         _logger = logger;
+        _caidaService = caidaService;
     }
 
     [HttpGet]
@@ -537,6 +540,19 @@ public class TransactionGroupsController : ControllerBase
                 })
                 .ToListAsync();
 
+            // --- 3b. Aggregate caída per BettingPool for the period ---
+            var caidaQuery = _context.CaidaHistory.AsNoTracking();
+            if (DateTime.TryParse(startDate, out var caidaStart))
+                caidaQuery = caidaQuery.Where(h => h.CalculationDate >= caidaStart.Date);
+            if (DateTime.TryParse(endDate, out var caidaEnd))
+                caidaQuery = caidaQuery.Where(h => h.CalculationDate <= caidaEnd.Date);
+
+            var caidaData = await caidaQuery
+                .GroupBy(h => h.BettingPoolId)
+                .Select(g => new { BettingPoolId = g.Key, TotalCaida = g.Sum(h => h.CaidaAmount) })
+                .ToListAsync();
+            var caidaMap = caidaData.ToDictionary(c => c.BettingPoolId, c => c.TotalCaida);
+
             // --- 4. Build summary items ---
             var items = bpInfo
                 .Select(bp =>
@@ -549,7 +565,7 @@ public class TransactionGroupsController : ControllerBase
                     var drawDebit = hasSales ? sales!.TotalSold : 0m;
                     var drawCredit = hasSales ? sales!.TotalPrizes : 0m;
                     var drawNet = drawDebit - drawCredit;
-                    var fall = 0m; // TODO: implement caída calculation later
+                    caidaMap.TryGetValue(bp.BettingPoolId, out var fall);
 
                     return new TransactionSummaryItemDto
                     {
@@ -704,6 +720,12 @@ public class TransactionGroupsController : ControllerBase
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
 
+            // Process COBRO caída for auto-approved cobros
+            if (hasAutoApprove)
+            {
+                await ProcessCobroCaidaForLinesAsync(dto.Lines, userId);
+            }
+
             var result = new TransactionGroupDto
             {
                 GroupId = group.GroupId,
@@ -844,6 +866,10 @@ public class TransactionGroupsController : ControllerBase
 
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
+
+                // Process COBRO caída for approved cobro lines
+                await ProcessCobroCaidaForApprovedGroupAsync(group, userId);
+
                 return Ok(new { message = "Grupo aprobado exitosamente" });
             }
             else if (group.Status == "PendienteEliminacion")
@@ -996,5 +1022,47 @@ public class TransactionGroupsController : ControllerBase
             return entity?.CurrentBalance ?? 0;
         }
         return 0;
+    }
+
+    /// <summary>
+    /// Process COBRO caída for auto-approved transaction lines (CreateGroup path).
+    /// </summary>
+    private async Task ProcessCobroCaidaForLinesAsync(IEnumerable<CreateTransactionGroupLineDto> lines, int? userId)
+    {
+        foreach (var line in lines)
+        {
+            if (line.TransactionType == "Cobro" && line.Entity1Type == "bettingPool" && line.Credit > 0)
+            {
+                try
+                {
+                    await _caidaService.ProcessCobroCaidaAsync(line.Entity1Id, line.Credit, userId);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error processing COBRO caída for bettingPool {Id}", line.Entity1Id);
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Process COBRO caída for manually approved transaction group.
+    /// </summary>
+    private async Task ProcessCobroCaidaForApprovedGroupAsync(TransactionGroup group, int? userId)
+    {
+        foreach (var line in group.Lines)
+        {
+            if (line.TransactionType == "Cobro" && line.Entity1Type == "bettingPool" && line.Credit > 0)
+            {
+                try
+                {
+                    await _caidaService.ProcessCobroCaidaAsync(line.Entity1Id, line.Credit, userId);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error processing COBRO caída for bettingPool {Id}", line.Entity1Id);
+                }
+            }
+        }
     }
 }

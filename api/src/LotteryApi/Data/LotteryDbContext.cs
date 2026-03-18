@@ -100,6 +100,9 @@ public class LotteryDbContext : DbContext
     public DbSet<Loan> Loans { get; set; }
     public DbSet<LoanPayment> LoanPayments { get; set; }
 
+    // Caída
+    public DbSet<CaidaHistory> CaidaHistory { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

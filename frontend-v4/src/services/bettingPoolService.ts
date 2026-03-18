@@ -68,6 +68,7 @@ export interface BettingPoolUpdateData {
 export interface BettingPoolConfigData {
   config?: {
     fallType?: string;
+    fallPercentage?: number;
     deactivationBalance?: number | null;
     dailySaleLimit?: number | null;
     dailyBalanceLimit?: number | null;

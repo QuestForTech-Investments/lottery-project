@@ -30,6 +30,7 @@ interface FormData {
   printEnabled: boolean;
   printTicketCopy: boolean;
   fallType: string;
+  fallPercentage: string;
   printMode: string;
   discountMode: string;
   discountAmount: string;
@@ -99,6 +100,7 @@ const useCreateBettingPoolForm = (): UseCreateBettingPoolFormReturn => {
 
     // Dropdown settings
     fallType: 'OFF',
+    fallPercentage: '0',
     printMode: 'DRIVER',
     discountMode: 'OFF',
     discountAmount: '',
@@ -254,6 +256,7 @@ const useCreateBettingPoolForm = (): UseCreateBettingPoolFormReturn => {
 
         // Settings
         fallType: formData.fallType,
+        fallPercentage: formData.fallPercentage ? parseFloat(formData.fallPercentage) : 0,
         printMode: formData.printMode,
         discountMode: formData.discountMode,
         discountAmount: formData.discountAmount ? parseFloat(formData.discountAmount) : null,

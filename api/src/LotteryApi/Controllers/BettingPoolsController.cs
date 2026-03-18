@@ -770,6 +770,7 @@ public class BettingPoolsController : ControllerBase
                 Config = bettingPool.Config != null ? new BettingPoolConfigDto
                 {
                     FallType = bettingPool.Config.FallType,
+                    FallPercentage = bettingPool.Config.FallPercentage,
                     DeactivationBalance = bettingPool.Config.DeactivationBalance,
                     DailySaleLimit = bettingPool.Config.DailySaleLimit,
                     DailyBalanceLimit = bettingPool.Config.DailyBalanceLimit,
@@ -866,6 +867,7 @@ public class BettingPoolsController : ControllerBase
                 }
 
                 bettingPool.Config.FallType = dto.Config.FallType;
+                bettingPool.Config.FallPercentage = dto.Config.FallPercentage;
                 bettingPool.Config.DeactivationBalance = dto.Config.DeactivationBalance;
                 bettingPool.Config.DailySaleLimit = dto.Config.DailySaleLimit;
                 bettingPool.Config.DailyBalanceLimit = dto.Config.DailyBalanceLimit;
@@ -1118,6 +1120,7 @@ public class BettingPoolsController : ControllerBase
                 {
                     BettingPoolId = bettingPool.BettingPoolId,
                     FallType = dto.Config.FallType,
+                    FallPercentage = dto.Config.FallPercentage,
                     DeactivationBalance = dto.Config.DeactivationBalance,
                     DailySaleLimit = dto.Config.DailySaleLimit,
                     DailyBalanceLimit = dto.Config.DailyBalanceLimit,

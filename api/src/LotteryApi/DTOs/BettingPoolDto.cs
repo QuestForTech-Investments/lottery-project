@@ -151,6 +151,7 @@ public class BettingPoolUserDto
 public class BettingPoolConfigDto
 {
     public string FallType { get; set; } = "OFF";
+    public decimal FallPercentage { get; set; } = 0;
     public decimal? DeactivationBalance { get; set; }
     public decimal? DailySaleLimit { get; set; }
     public decimal? DailyBalanceLimit { get; set; }

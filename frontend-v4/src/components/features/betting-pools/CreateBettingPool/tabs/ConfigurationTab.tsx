@@ -25,6 +25,7 @@ import { clearContactsByBettingPool } from '@services/contactService';
 
 interface ConfigFormData {
   fallType: string;
+  fallPercentage: string;
   deactivationBalance: string;
   dailySaleLimit: string;
   dailyBalanceLimit: string;
@@ -131,6 +132,22 @@ const ConfigurationTab: React.FC<ConfigTabProps> = ({ formData, handleChange, be
             </RadioGroup>
           </FormControl>
         </Grid>
+
+        {/* Porcentaje de Caída */}
+        {formData.fallType !== '1' && (
+          <Grid item xs={12} sm={6} md={4}>
+            <TextField
+              fullWidth
+              label="Porcentaje de caída"
+              name="fallPercentage"
+              type="number"
+              value={formData.fallPercentage}
+              onChange={handleChange}
+              size="small"
+              inputProps={{ min: 0, max: 100, step: 0.01 }}
+            />
+          </Grid>
+        )}
 
         {/* Financial Settings */}
         <Grid item xs={12}>

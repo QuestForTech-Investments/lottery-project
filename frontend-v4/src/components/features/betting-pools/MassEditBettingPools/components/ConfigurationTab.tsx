@@ -64,6 +64,22 @@ const ConfigurationTab: FC<ConfigurationTabProps> = memo(({ formData, zones, onI
           </ToggleButtonGroup>
         </Box>
 
+        {/* Porcentaje de caída */}
+        {formData.fallType && formData.fallType !== 'OFF' && (
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 2 }}>
+            <Typography sx={{ minWidth: 200 }}>Porcentaje de caída</Typography>
+            <TextField
+              placeholder="Porcentaje de caída"
+              value={formData.fallPercentage ?? ''}
+              onChange={(e) => onInputChange('fallPercentage', e.target.value)}
+              type="number"
+              size="small"
+              sx={{ width: 200 }}
+              inputProps={{ min: 0, max: 100, step: 0.01 }}
+            />
+          </Box>
+        )}
+
         {/* Balance de desactivación */}
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 2 }}>
           <Typography sx={{ minWidth: 200 }}>Balance de desactivación</Typography>

@@ -50,6 +50,7 @@ export const mapConfigToFormData = (configResponse: ConfigResponse): Partial<For
   return {
     // Config fields
     fallType: (config.fallType ? FALL_TYPE_REVERSE_MAP[config.fallType] : null) || '1',
+    fallPercentage: String(config.fallPercentage ?? '0'),
     deactivationBalance: String(config.deactivationBalance ?? ''),
     dailySaleLimit: String(config.dailySaleLimit ?? ''),
     dailyBalanceLimit: String(config.dailyBalanceLimit ?? ''),

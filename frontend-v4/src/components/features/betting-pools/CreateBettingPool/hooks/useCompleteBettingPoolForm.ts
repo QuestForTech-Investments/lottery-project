@@ -28,6 +28,7 @@ interface FormData {
   comment: string;
   zoneId: string;
   fallType: string;
+  fallPercentage: string;
   deactivationBalance: string;
   dailySaleLimit: string;
   todayBalanceLimit: string;
@@ -194,6 +195,7 @@ const getInitialFormData = (branchCode = ''): FormData => ({
   // Configuration
   zoneId: '',
   fallType: '1', // 1=Off, 2=Cobro, 3=Diaria, 4=Mensual, 5=Semanal
+  fallPercentage: '0',
   deactivationBalance: '',
   dailySaleLimit: '',
   todayBalanceLimit: '',
@@ -658,6 +660,7 @@ const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
             const paymentModeMap: Record<string, string> = { 'BANCA': '1', 'ZONA': '2', 'ZONE': '2', 'GRUPO': '3', 'GROUP': '3' };
 
             updates.fallType = fallTypeMap[configData.config.fallType || 'OFF'] || '1';
+            updates.fallPercentage = String(configData.config.fallPercentage ?? '0');
             updates.discountMode = discountModeMap[configData.discountConfig?.discountMode || 'OFF'] || '1';
             updates.discountAmount = String(configData.discountConfig?.discountAmount ?? '');
             updates.discountPerEvery = String(configData.discountConfig?.discountPerEvery ?? '');
@@ -1470,6 +1473,7 @@ const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
 
         // Configuration mapped to API
         fallType: fallTypeMap[formData.fallType] || 'OFF',
+        fallPercentage: formData.fallPercentage ? parseFloat(formData.fallPercentage) : 0,
         printMode: printModeMap[formData.printerType] || 'DRIVER',
         discountMode: discountModeMap[formData.discountMode] || 'OFF',
         discountAmount: formData.discountAmount ? parseFloat(formData.discountAmount) : null,

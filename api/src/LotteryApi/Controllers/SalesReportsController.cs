@@ -192,13 +192,20 @@ public class SalesReportsController : ControllerBase
                 balance = await _context.Balances.SumAsync(b => b.CurrentBalance);
             }
 
+            // Caída for the day
+            var caidaQuery = _context.CaidaHistory.AsNoTracking()
+                .Where(h => h.CalculationDate == targetDate);
+            if (bettingPoolId.HasValue)
+                caidaQuery = caidaQuery.Where(h => h.BettingPoolId == bettingPoolId.Value);
+            var totalFall = await caidaQuery.SumAsync(h => (decimal?)h.CaidaAmount) ?? 0;
+
             var summary = new SalesSummaryDto
             {
                 TotalSold = totalSold,
                 TotalPrizes = totalPrizes,
                 TotalCommissions = totalCommissions,
                 TotalDiscounts = totalDiscounts,
-                Fall = 0,
+                Fall = totalFall,
                 TotalNet = totalNet,
                 Balance = balance,
                 Credits = 0,
@@ -277,6 +284,14 @@ public class SalesReportsController : ControllerBase
 
             var tickets = await query.ToListAsync();
 
+            // Pre-fetch caída data for the date range
+            var caidaByDate = await _context.CaidaHistory
+                .AsNoTracking()
+                .Where(h => h.CalculationDate >= startDate.Date && h.CalculationDate <= endDate.Date)
+                .GroupBy(h => h.CalculationDate)
+                .Select(g => new { Date = g.Key, TotalCaida = g.Sum(h => h.CaidaAmount) })
+                .ToDictionaryAsync(x => x.Date, x => x.TotalCaida);
+
             // Group by date and calculate summaries
             var dailySummaries = new List<DailySalesSummaryDto>();
             var currentDate = startDate.Date;
@@ -295,6 +310,8 @@ public class SalesReportsController : ControllerBase
                 var riferoDiscount = dayTickets.Where(t => t.DiscountMode == "RIFERO").Sum(t => t.TotalDiscount);
                 var totalNet = totalSold + riferoDiscount - totalCommissions - totalPrizes;
 
+                caidaByDate.TryGetValue(currentDate, out var dayFall);
+
                 dailySummaries.Add(new DailySalesSummaryDto
                 {
                     Date = currentDate,
@@ -302,7 +319,7 @@ public class SalesReportsController : ControllerBase
                     TotalPrizes = totalPrizes,
                     TotalCommissions = totalCommissions,
                     TotalDiscounts = totalDiscounts,
-                    Fall = 0, // TODO: Calculate based on business rules
+                    Fall = dayFall,
                     TotalNet = totalNet
                 });
 
@@ -582,6 +599,13 @@ public class SalesReportsController : ControllerBase
                     .Where(b => distinctPoolIds.Contains(b.BettingPoolId))
                     .SumAsync(b => b.CurrentBalance);
 
+                var zoneFall = await _context.CaidaHistory
+                    .AsNoTracking()
+                    .Where(h => distinctPoolIds.Contains(h.BettingPoolId)
+                        && h.CalculationDate >= startDate.Date
+                        && h.CalculationDate <= endDate.Date)
+                    .SumAsync(h => (decimal?)h.CaidaAmount) ?? 0;
+
                 zoneSales.Add(new ZoneSalesDto
                 {
                     ZoneId = zone.ZoneId,
@@ -595,8 +619,8 @@ public class SalesReportsController : ControllerBase
                     TotalCommissions = tickets.Sum(t => t.TotalCommission),
                     TotalDiscounts = tickets.Sum(t => t.TotalDiscount),
                     TotalNet = zoneTotalNet,
-                    Fall = 0,
-                    Final = zoneTotalNet,
+                    Fall = zoneFall,
+                    Final = zoneTotalNet - zoneFall,
                     Balance = zoneBalance
                 });
             }

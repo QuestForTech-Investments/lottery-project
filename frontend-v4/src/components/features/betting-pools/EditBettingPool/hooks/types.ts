@@ -25,6 +25,7 @@ export interface FormData {
   selectedZone: string;
   zoneId: string;
   fallType: string;
+  fallPercentage: string;
   deactivationBalance: string;
   dailySaleLimit: string;
   dailyBalanceLimit: string;
@@ -223,6 +224,7 @@ export interface BettingPoolData {
 export interface ConfigResponse {
   config?: {
     fallType?: string;
+    fallPercentage?: number;
     deactivationBalance?: number;
     dailySaleLimit?: number;
     dailyBalanceLimit?: number;

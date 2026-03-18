@@ -1107,6 +1107,7 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
       const configData = {
         config: {
           fallType: fallTypeMap[formData.fallType] || 'OFF',
+          fallPercentage: formData.fallPercentage ? parseFloat(formData.fallPercentage) : 0,
           deactivationBalance: formData.deactivationBalance ? parseFloat(formData.deactivationBalance) : null,
           dailySaleLimit: formData.dailySaleLimit ? parseFloat(formData.dailySaleLimit) : null,
           dailyBalanceLimit: formData.dailyBalanceLimit ? parseFloat(formData.dailyBalanceLimit) : null,

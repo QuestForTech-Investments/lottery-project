@@ -18,6 +18,9 @@ public class BettingPoolConfig
     [Column("fall_type")]
     public string FallType { get; set; } = "OFF";
 
+    [Column("fall_percentage", TypeName = "decimal(5,2)")]
+    public decimal FallPercentage { get; set; } = 0;
+
     [Column("deactivation_balance", TypeName = "decimal(10,2)")]
     public decimal? DeactivationBalance { get; set; }
 
@@ -89,6 +92,9 @@ public class BettingPoolConfig
     [MaxLength(500)]
     [Column("stats_panel_config")]
     public string? StatsPanelConfig { get; set; }
+
+    [Column("accumulated_fall", TypeName = "decimal(18,2)")]
+    public decimal AccumulatedFall { get; set; } = 0;
 
     [Column("created_at")]
     public DateTime? CreatedAt { get; set; }

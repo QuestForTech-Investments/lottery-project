@@ -17,6 +17,7 @@ using LotteryApi.Middleware;
 using LotteryApi.Repositories;
 using LotteryApi.Services;
 using LotteryApi.Services.BalanceCutoff;
+using LotteryApi.Services.Caida;
 using LotteryApi.Services.Loans;
 using LotteryApi.Services.ExternalResults;
 
@@ -123,6 +124,9 @@ builder.Services.AddBalanceCutoffServices(builder.Configuration);
 
 // Register Loan Payment Services (automatic loan installment processing)
 builder.Services.AddLoanPaymentServices(builder.Configuration);
+
+// Register Caída (Cashback) Services (scheduled caída calculations)
+builder.Services.AddCaidaServices(builder.Configuration);
 
 // Register Memory Cache for performance
 builder.Services.AddMemoryCache();

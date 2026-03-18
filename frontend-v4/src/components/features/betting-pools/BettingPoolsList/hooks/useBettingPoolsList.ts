@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo, type ChangeEvent } from 'rea
 import { getBettingPools, handleBettingPoolError } from '@/services/bettingPoolService';
 import { getAllZones } from '@/services/zoneService';
 import { getLoans } from '@/services/loanService';
+import { getCaidaStatus } from '@/services/caidaService';
 
 interface TransformedBettingPool {
   id: number;
@@ -13,9 +14,9 @@ interface TransformedBettingPool {
   zone: string;
   zoneId: number;
   balance: number;
-  accumulatedFall: number;
+  accumulatedFall: number | null;
   loans: number;
-  [key: string]: string | number | boolean | string[];
+  [key: string]: string | number | boolean | string[] | null;
 }
 
 interface ZonesMap {
@@ -81,15 +82,16 @@ const useBettingPoolsList = (): UseBettingPoolsListReturn => {
       // ⚡ Performance tracking
       const startTime = performance.now();
 
-      // ⚡ OPTIMIZATION: Load zones, betting pools, and loans in parallel
-      const [zonesResponse, response, loansData] = await Promise.all([
+      // ⚡ OPTIMIZATION: Load zones, betting pools, loans, and caída in parallel
+      const [zonesResponse, response, loansData, caidaData] = await Promise.all([
         getAllZones(),
         getBettingPools({
           page: 1,
           pageSize: 1000 // Load all betting pools for client-side filtering
         }),
-        getLoans({ status: 'active' }).catch(() => [])
-      ]) as [
+        getLoans({ status: 'active' }).catch(() => []),
+        getCaidaStatus().catch(() => [])
+      ]) as unknown as [
         { success: boolean; data?: Array<{ zoneId: number; name: string }> },
         { items?: Array<{
           bettingPoolId: number;
@@ -101,8 +103,10 @@ const useBettingPoolsList = (): UseBettingPoolsListReturn => {
           isActive: boolean;
           zoneName?: string;
           zoneId: number;
+          balance?: number;
         }> },
-        Array<{ entityId: number; remainingBalance: number }>
+        Array<{ entityId: number; remainingBalance: number }>,
+        Array<{ bettingPoolId: number; accumulatedFall: number }>
       ];
 
       // Build loan totals map by entity
@@ -110,6 +114,14 @@ const useBettingPoolsList = (): UseBettingPoolsListReturn => {
       if (Array.isArray(loansData)) {
         loansData.forEach(loan => {
           loanTotals[loan.entityId] = (loanTotals[loan.entityId] || 0) + loan.remainingBalance;
+        });
+      }
+
+      // Build caída acumulada map (only bancas with caída enabled appear)
+      const caidaMap = new Map<number, number>();
+      if (Array.isArray(caidaData)) {
+        caidaData.forEach(item => {
+          caidaMap.set(item.bettingPoolId, item.accumulatedFall);
         });
       }
 
@@ -151,7 +163,7 @@ const useBettingPoolsList = (): UseBettingPoolsListReturn => {
           zone: bettingPool.zoneName || 'Sin zona',
           zoneId: bettingPool.zoneId,
           balance: bettingPool.balance || 0,
-          accumulatedFall: 0,
+          accumulatedFall: caidaMap.has(bettingPool.bettingPoolId) ? caidaMap.get(bettingPool.bettingPoolId)! : null,
           loans: loanTotals[bettingPool.bettingPoolId] || 0
         };
       });
@@ -214,8 +226,8 @@ const useBettingPoolsList = (): UseBettingPoolsListReturn => {
     const sorted = [...filteredBettingPools];
 
     sorted.sort((a, b) => {
-      let aValue: string | number | boolean | string[] = a[orderBy];
-      let bValue: string | number | boolean | string[] = b[orderBy];
+      let aValue: string | number | boolean | string[] | null = a[orderBy];
+      let bValue: string | number | boolean | string[] | null = b[orderBy];
 
       // Handle different data types
       if (typeof aValue === 'string' && typeof bValue === 'string') {

@@ -19,6 +19,7 @@ export const INITIAL_FORM_DATA: FormData = {
   selectedZone: '',
   zoneId: '',
   fallType: '1',
+  fallPercentage: '0',
   deactivationBalance: '',
   dailySaleLimit: '',
   dailyBalanceLimit: '',

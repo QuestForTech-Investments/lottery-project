@@ -48,6 +48,7 @@ const COLUMNS: ColumnDefinition[] = [
   { key: 'referencia', label: 'Referencia', sortable: true },
   { key: 'zona', label: 'Zona', sortable: true },
   { key: 'balance', label: 'Balance', sortable: true, format: 'currency', align: 'right' },
+  { key: 'caidaAcumulada', label: 'Caída Acum.', sortable: true, format: 'currency', align: 'right' },
   { key: 'prestamos', label: 'Préstamos', sortable: true, format: 'currency', align: 'right' },
 ];
 
