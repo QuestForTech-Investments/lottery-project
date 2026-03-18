@@ -540,18 +540,16 @@ public class TransactionGroupsController : ControllerBase
                 })
                 .ToListAsync();
 
-            // --- 3b. Aggregate caída per BettingPool for the period ---
-            var caidaQuery = _context.CaidaHistory.AsNoTracking();
-            if (DateTime.TryParse(startDate, out var caidaStart))
-                caidaQuery = caidaQuery.Where(h => h.CalculationDate >= caidaStart.Date);
-            if (DateTime.TryParse(endDate, out var caidaEnd))
-                caidaQuery = caidaQuery.Where(h => h.CalculationDate <= caidaEnd.Date);
-
-            var caidaData = await caidaQuery
-                .GroupBy(h => h.BettingPoolId)
-                .Select(g => new { BettingPoolId = g.Key, TotalCaida = g.Sum(h => h.CaidaAmount) })
-                .ToListAsync();
-            var caidaMap = caidaData.ToDictionary(c => c.BettingPoolId, c => c.TotalCaida);
+            // --- 3b. Pre-compute real-time caída per banca (correct period per fall type) ---
+            var bpIds = bpInfo.Select(bp => bp.BettingPoolId).ToList();
+            var txTargetDate = Helpers.DateTimeHelper.TodayInBusinessTimezone();
+            var txCaidaValues = new Dictionary<int, (decimal fall, decimal accumulatedFall)>();
+            foreach (var bpId in bpIds)
+            {
+                var (f, a) = await _caidaService.GetRealtimeCaidaAsync(bpId, txTargetDate);
+                if (f != 0 || a != 0)
+                    txCaidaValues[bpId] = (f, a);
+            }
 
             // --- 4. Build summary items ---
             var items = bpInfo
@@ -565,7 +563,8 @@ public class TransactionGroupsController : ControllerBase
                     var drawDebit = hasSales ? sales!.TotalSold : 0m;
                     var drawCredit = hasSales ? sales!.TotalPrizes : 0m;
                     var drawNet = drawDebit - drawCredit;
-                    caidaMap.TryGetValue(bp.BettingPoolId, out var fall);
+
+                    txCaidaValues.TryGetValue(bp.BettingPoolId, out var caida);
 
                     return new TransactionSummaryItemDto
                     {
@@ -578,7 +577,8 @@ public class TransactionGroupsController : ControllerBase
                         DrawDebit = drawDebit,
                         DrawCredit = drawCredit,
                         DrawNet = drawNet,
-                        Fall = fall
+                        Fall = caida.fall,
+                        AccumulatedFall = caida.accumulatedFall
                     };
                 })
                 .OrderBy(i => i.Code)

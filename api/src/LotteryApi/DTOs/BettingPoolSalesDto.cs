@@ -33,6 +33,16 @@ public class BettingPoolSalesDto
     public int LoserCount { get; set; }
 
     /// <summary>
+    /// Caída (cashback) amount for the period
+    /// </summary>
+    public decimal Fall { get; set; }
+
+    /// <summary>
+    /// Accumulated fall (debt carried over from previous periods)
+    /// </summary>
+    public decimal AccumulatedFall { get; set; }
+
+    /// <summary>
     /// Current running balance for this betting pool
     /// </summary>
     public decimal Balance { get; set; }

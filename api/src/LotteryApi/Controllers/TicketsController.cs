@@ -4,6 +4,7 @@ using LotteryApi.DTOs;
 using LotteryApi.Helpers;
 using LotteryApi.Models;
 using LotteryApi.Services;
+using LotteryApi.Services.Caida;
 using LotteryApi.Services.ExternalResults;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -22,17 +23,20 @@ public class TicketsController : ControllerBase
     private readonly ILogger<TicketsController> _logger;
     private readonly IExternalResultsService _externalResultsService;
     private readonly ILimitReservationService _limitReservationService;
+    private readonly ICaidaCalculationService _caidaService;
 
     public TicketsController(
         LotteryDbContext context,
         ILogger<TicketsController> logger,
         IExternalResultsService externalResultsService,
-        ILimitReservationService limitReservationService)
+        ILimitReservationService limitReservationService,
+        ICaidaCalculationService caidaService)
     {
         _context = context;
         _logger = logger;
         _limitReservationService = limitReservationService;
         _externalResultsService = externalResultsService;
+        _caidaService = caidaService;
     }
 
     [HttpGet]
@@ -861,6 +865,16 @@ public class TicketsController : ControllerBase
                 ticket.TicketId,
                 ticket.TotalLines,
                 ticket.GrandTotal);
+
+            // 10.0.2 Update real-time caída display values
+            try
+            {
+                await _caidaService.UpdateRealtimeCaidaAsync(dto.BettingPoolId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to update real-time caída for banca {Id}", dto.BettingPoolId);
+            }
 
             // 10.1 Check if any draws already have results and process ticket immediately
             try

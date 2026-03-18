@@ -266,4 +266,125 @@ public class CaidaCalculationService : ICaidaCalculationService
                 return (false, "", default, default);
         }
     }
+
+    public async Task UpdateRealtimeCaidaAsync(int bettingPoolId, CancellationToken ct = default)
+    {
+        var config = await _context.BettingPoolConfigs
+            .FirstOrDefaultAsync(c => c.BettingPoolId == bettingPoolId, ct);
+
+        if (config == null || config.FallType == "OFF" || config.FallType == "COLLECTION" || config.FallPercentage <= 0)
+            return;
+
+        var today = DateTimeHelper.TodayInBusinessTimezone();
+        var (periodStart, periodEnd) = GetCurrentPeriodRange(config, today);
+
+        var (caida, accumulatedFall) = await CalculateRealtimeValues(config, periodStart, periodEnd, ct);
+
+        // Update the display value (no balance credit)
+        config.AccumulatedFall = accumulatedFall;
+        await _context.SaveChangesAsync(ct);
+    }
+
+    public async Task<(decimal caida, decimal accumulatedFall)> GetRealtimeCaidaAsync(int bettingPoolId, DateTime date, CancellationToken ct = default)
+    {
+        var config = await _context.BettingPoolConfigs
+            .AsNoTracking()
+            .FirstOrDefaultAsync(c => c.BettingPoolId == bettingPoolId, ct);
+
+        if (config == null || config.FallType == "OFF" || config.FallType == "COLLECTION" || config.FallPercentage <= 0)
+            return (0, config?.AccumulatedFall ?? 0);
+
+        var (periodStart, periodEnd) = GetCurrentPeriodRange(config, date);
+        return await CalculateRealtimeValues(config, periodStart, periodEnd, ct);
+    }
+
+    /// <summary>
+    /// Calculate caída and accumulated_fall without persisting or crediting balance.
+    /// </summary>
+    private async Task<(decimal caida, decimal accumulatedFall)> CalculateRealtimeValues(
+        BettingPoolConfig config, DateTime periodStart, DateTime periodEnd, CancellationToken ct)
+    {
+        var bpId = config.BettingPoolId;
+
+        // Get net for current period
+        var tickets = await _context.Tickets
+            .AsNoTracking()
+            .Where(t => t.BettingPoolId == bpId && !t.IsCancelled)
+            .Where(t => t.TicketLines.Any(tl => tl.DrawDate.Date >= periodStart && tl.DrawDate.Date <= periodEnd))
+            .ToListAsync(ct);
+
+        var totalSold = tickets.Sum(t => t.GrandTotal);
+        var totalPrizes = tickets.Sum(t => t.TotalPrize);
+        var totalCommissions = tickets.Sum(t => t.TotalCommission);
+        var riferoDiscount = tickets.Where(t => t.DiscountMode == "RIFERO").Sum(t => t.TotalDiscount);
+        var netAmount = totalSold + riferoDiscount - totalCommissions - totalPrizes;
+
+        // Get the accumulated_fall at the start of the current period
+        // (from the last caida_history entry before this period)
+        var lastHistory = await _context.CaidaHistory
+            .AsNoTracking()
+            .Where(h => h.BettingPoolId == bpId && h.PeriodEnd < periodStart)
+            .OrderByDescending(h => h.PeriodEnd)
+            .FirstOrDefaultAsync(ct);
+
+        var accumulatedBefore = lastHistory?.AccumulatedFallAfter ?? 0;
+        var isWithAccumulation = config.FallType != "WEEKLY_NO_ACCUMULATED";
+
+        decimal caida;
+        decimal accumulatedAfter;
+
+        if (isWithAccumulation)
+        {
+            if (netAmount >= 0)
+            {
+                var effectiveNet = netAmount + accumulatedBefore;
+                if (effectiveNet > 0)
+                {
+                    caida = Math.Round(effectiveNet * config.FallPercentage / 100, 2);
+                    accumulatedAfter = 0;
+                }
+                else
+                {
+                    caida = 0;
+                    accumulatedAfter = effectiveNet;
+                }
+            }
+            else
+            {
+                caida = 0;
+                accumulatedAfter = accumulatedBefore + netAmount;
+            }
+        }
+        else
+        {
+            caida = netAmount > 0 ? Math.Round(netAmount * config.FallPercentage / 100, 2) : 0;
+            accumulatedAfter = 0;
+        }
+
+        return (caida, accumulatedAfter);
+    }
+
+    /// <summary>
+    /// Get the start/end of the current period based on fall type.
+    /// </summary>
+    private static (DateTime periodStart, DateTime periodEnd) GetCurrentPeriodRange(BettingPoolConfig config, DateTime date)
+    {
+        return config.FallType switch
+        {
+            "DAILY" => (date, date),
+            "WEEKLY" or "WEEKLY_ACCUMULATED" or "WEEKLY_NO_ACCUMULATED" => (
+                date.AddDays(-(int)date.DayOfWeek + 1), // Monday
+                date.AddDays(7 - (int)date.DayOfWeek)   // Sunday
+            ),
+            "MONTHLY" => (
+                new DateTime(date.Year, date.Month, 1),
+                new DateTime(date.Year, date.Month, DateTime.DaysInMonth(date.Year, date.Month))
+            ),
+            "ANNUAL" => (
+                new DateTime(date.Year, 1, 1),
+                new DateTime(date.Year, 12, 31)
+            ),
+            _ => (date, date)
+        };
+    }
 }

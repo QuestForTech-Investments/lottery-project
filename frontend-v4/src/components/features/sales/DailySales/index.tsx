@@ -87,10 +87,10 @@ const DailySales = (): React.ReactElement => {
         discounts: item.totalDiscounts,
         prizes: item.totalPrizes,
         net: item.totalNet,
-        fall: 0,
-        final: item.totalNet,
+        fall: item.fall || 0,
+        final: item.totalNet - (item.fall || 0),
         balance: item.balance || 0,
-        accumulatedFall: 0,
+        accumulatedFall: item.accumulatedFall || 0,
       }));
 
       setSalesData(mappedData);

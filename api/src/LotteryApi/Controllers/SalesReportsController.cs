@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using LotteryApi.Data;
 using LotteryApi.DTOs;
 using LotteryApi.Helpers;
+using LotteryApi.Services.Caida;
 
 namespace LotteryApi.Controllers;
 
@@ -13,11 +14,13 @@ public class SalesReportsController : ControllerBase
 {
     private readonly LotteryDbContext _context;
     private readonly ILogger<SalesReportsController> _logger;
+    private readonly ICaidaCalculationService _caidaService;
 
-    public SalesReportsController(LotteryDbContext context, ILogger<SalesReportsController> logger)
+    public SalesReportsController(LotteryDbContext context, ILogger<SalesReportsController> logger, ICaidaCalculationService caidaService)
     {
         _context = context;
         _logger = logger;
+        _caidaService = caidaService;
     }
 
     /// <summary>
@@ -71,6 +74,17 @@ public class SalesReportsController : ControllerBase
                 .ToListAsync();
 
             // Calculate aggregated sales per betting pool
+            // Pre-compute real-time caída for each banca (uses correct period per fall type)
+            var allBpIds = salesData.Where(x => x.Tickets.Any()).Select(x => x.BettingPool.BettingPoolId).ToList();
+            var targetDate = filter.EndDate.Date;
+            var caidaValues = new Dictionary<int, (decimal fall, decimal accumulatedFall)>();
+            foreach (var bpId in allBpIds)
+            {
+                var (fall, acc) = await _caidaService.GetRealtimeCaidaAsync(bpId, targetDate);
+                if (fall != 0 || acc != 0)
+                    caidaValues[bpId] = (fall, acc);
+            }
+
             var bettingPoolSales = salesData
                 .Where(x => x.Tickets.Any()) // Only include betting pools with sales
                 .Select(x =>
@@ -80,6 +94,8 @@ public class SalesReportsController : ControllerBase
                     var totalCommissions = x.Tickets.Sum(t => t.TotalCommission);
                     var riferoDiscount = x.Tickets.Where(t => t.DiscountMode == "RIFERO").Sum(t => t.TotalDiscount);
                     var totalNet = totalSold + riferoDiscount - totalCommissions - totalPrizes;
+
+                    caidaValues.TryGetValue(x.BettingPool.BettingPoolId, out var caida);
 
                     return new BettingPoolSalesDto
                     {
@@ -92,7 +108,9 @@ public class SalesReportsController : ControllerBase
                         TotalSold = totalSold,
                         TotalPrizes = totalPrizes,
                         TotalCommissions = totalCommissions,
-                        TotalNet = totalNet
+                        TotalNet = totalNet,
+                        Fall = caida.fall,
+                        AccumulatedFall = caida.accumulatedFall
                     };
                 })
                 .OrderBy(x => x.BettingPoolCode)
@@ -192,12 +210,21 @@ public class SalesReportsController : ControllerBase
                 balance = await _context.Balances.SumAsync(b => b.CurrentBalance);
             }
 
-            // Caída for the day
-            var caidaQuery = _context.CaidaHistory.AsNoTracking()
-                .Where(h => h.CalculationDate == targetDate);
+            // Caída: use real-time calculation for specific banca, or history for aggregate
+            decimal totalFall = 0;
+            decimal accumulatedFall = 0;
             if (bettingPoolId.HasValue)
-                caidaQuery = caidaQuery.Where(h => h.BettingPoolId == bettingPoolId.Value);
-            var totalFall = await caidaQuery.SumAsync(h => (decimal?)h.CaidaAmount) ?? 0;
+            {
+                var (realtimeCaida, realtimeAcc) = await _caidaService.GetRealtimeCaidaAsync(bettingPoolId.Value, targetDate);
+                totalFall = realtimeCaida;
+                accumulatedFall = realtimeAcc;
+            }
+            else
+            {
+                totalFall = await _context.CaidaHistory.AsNoTracking()
+                    .Where(h => h.CalculationDate == targetDate)
+                    .SumAsync(h => (decimal?)h.CaidaAmount) ?? 0;
+            }
 
             var summary = new SalesSummaryDto
             {
@@ -206,6 +233,7 @@ public class SalesReportsController : ControllerBase
                 TotalCommissions = totalCommissions,
                 TotalDiscounts = totalDiscounts,
                 Fall = totalFall,
+                AccumulatedFall = accumulatedFall,
                 TotalNet = totalNet,
                 Balance = balance,
                 Credits = 0,
@@ -399,6 +427,17 @@ public class SalesReportsController : ControllerBase
                 })
                 .ToListAsync();
 
+            // Pre-compute real-time caída for each banca (uses correct period per fall type)
+            var bpSalesIds = salesData.Where(x => x.Tickets.Any()).Select(x => x.BettingPool.BettingPoolId).ToList();
+            var bpTargetDate = filterEndDate;
+            var bpCaidaValues = new Dictionary<int, (decimal fall, decimal accumulatedFall)>();
+            foreach (var bpId in bpSalesIds)
+            {
+                var (f, a) = await _caidaService.GetRealtimeCaidaAsync(bpId, bpTargetDate);
+                if (f != 0 || a != 0)
+                    bpCaidaValues[bpId] = (f, a);
+            }
+
             var result = salesData
                 .Where(x => x.Tickets.Any())
                 .Select(x =>
@@ -407,11 +446,14 @@ public class SalesReportsController : ControllerBase
                     var totalPrizes = x.Tickets.Sum(t => t.TotalPrize);
                     var totalCommissions = x.Tickets.Sum(t => t.TotalCommission);
                     var totalDiscounts = x.Tickets.Sum(t => t.TotalDiscount);
+                    var totalNet = totalSold - totalDiscounts - totalCommissions - totalPrizes;
 
                     // Count tickets by state
                     var pendingCount = x.Tickets.Count(t => t.TicketState == "P");
                     var winnerCount = x.Tickets.Count(t => t.TicketState == "W");
                     var loserCount = x.Tickets.Count(t => t.TicketState == "L");
+
+                    bpCaidaValues.TryGetValue(x.BettingPool.BettingPoolId, out var caida);
 
                     return new BettingPoolSalesDto
                     {
@@ -425,7 +467,9 @@ public class SalesReportsController : ControllerBase
                         TotalPrizes = totalPrizes,
                         TotalCommissions = totalCommissions,
                         TotalDiscounts = totalDiscounts,
-                        TotalNet = totalSold - totalDiscounts - totalCommissions - totalPrizes,
+                        TotalNet = totalNet,
+                        Fall = caida.fall,
+                        AccumulatedFall = caida.accumulatedFall,
                         PendingCount = pendingCount,
                         WinnerCount = winnerCount,
                         LoserCount = loserCount,

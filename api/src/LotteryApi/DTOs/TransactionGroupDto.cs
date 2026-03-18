@@ -137,6 +137,7 @@ public class TransactionSummaryItemDto
     public decimal DrawCredit { get; set; }
     public decimal DrawNet { get; set; }
     public decimal Fall { get; set; }
+    public decimal AccumulatedFall { get; set; }
 }
 
 public class OtherTransactionsSummaryDto

@@ -7,6 +7,7 @@ public class SalesSummaryDto
     public decimal TotalCommissions { get; set; }
     public decimal TotalDiscounts { get; set; }
     public decimal Fall { get; set; }
+    public decimal AccumulatedFall { get; set; }
     public decimal TotalNet { get; set; }
     public decimal BenefitPercentage { get; set; }
     public decimal Credits { get; set; }
