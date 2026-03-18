@@ -231,6 +231,16 @@ public class CaidaCalculationService : ICaidaCalculationService
             entity.CurrentBalance += amount;
             entity.UpdatedAt = DateTime.UtcNow;
         }
+
+        // Also update the balances table (used for display)
+        var balance = await _context.Balances
+            .FirstOrDefaultAsync(b => b.BettingPoolId == bettingPoolId, ct);
+
+        if (balance != null)
+        {
+            balance.CurrentBalance += amount;
+            balance.LastUpdated = DateTime.UtcNow;
+        }
     }
 
     private static (bool shouldProcess, string periodType, DateTime periodStart, DateTime periodEnd) ShouldProcessForDate(

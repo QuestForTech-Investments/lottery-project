@@ -357,12 +357,22 @@ public class LoansController : ControllerBase
 
         if (entityType == "bettingPool")
         {
+            // Update accountable entity balance
             var entity = await _context.AccountableEntities
                 .FirstOrDefaultAsync(e => e.EntityType == "bettingPool" && e.EntityId == entityId);
             if (entity != null)
             {
                 entity.CurrentBalance += delta;
                 entity.UpdatedAt = DateTime.UtcNow;
+            }
+
+            // Also update the balances table (used for display)
+            var balance = await _context.Balances
+                .FirstOrDefaultAsync(b => b.BettingPoolId == entityId);
+            if (balance != null)
+            {
+                balance.CurrentBalance += delta;
+                balance.LastUpdated = DateTime.UtcNow;
             }
         }
     }

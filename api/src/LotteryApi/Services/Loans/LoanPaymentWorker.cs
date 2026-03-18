@@ -152,6 +152,15 @@ public class LoanPaymentWorker : BackgroundService
                         entity.CurrentBalance += amountToPay;
                         entity.UpdatedAt = DateTime.UtcNow;
                     }
+
+                    // Also update the balances table (used for display)
+                    var balance = await context.Balances
+                        .FirstOrDefaultAsync(b => b.BettingPoolId == loan.EntityId, stoppingToken);
+                    if (balance != null)
+                    {
+                        balance.CurrentBalance += amountToPay;
+                        balance.LastUpdated = DateTime.UtcNow;
+                    }
                 }
 
                 await context.SaveChangesAsync(stoppingToken);
