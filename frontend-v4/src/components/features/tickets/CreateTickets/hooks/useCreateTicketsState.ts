@@ -827,6 +827,23 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
     }
   }, [directBets, paleBets, cash3Bets, play4Bets, selectedPool, discountActive, getBetTypeId, effectiveTicketDate, ticketDateMode]);
 
+  const handlePoolChange = useCallback((pool: BettingPool | null): void => {
+    setSelectedPool(pool);
+    // Clear all bets and inputs when switching banca
+    setDirectBets([]);
+    setPaleBets([]);
+    setCash3Bets([]);
+    setPlay4Bets([]);
+    setBetNumber('');
+    setAmount('');
+    setBetError('');
+    setBetWarning('');
+    setSelectedBetType('');
+    setMultiLotteryMode(false);
+    setTicketDateMode('today');
+    setSelectedFutureDate('');
+  }, []);
+
   const handleDuplicate = useCallback((): void => {
     alert('Función de duplicar pendiente de implementar');
   }, []);
@@ -856,7 +873,7 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
     amountInputRef,
     selectedPool,
     pools,
-    setSelectedPool,
+    setSelectedPool: handlePoolChange,
     selectedDraw,
     selectedDraws,
     draws: drawsWithClosingInfo,
