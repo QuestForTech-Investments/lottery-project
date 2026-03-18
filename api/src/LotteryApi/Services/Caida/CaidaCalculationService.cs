@@ -304,12 +304,15 @@ public class CaidaCalculationService : ICaidaCalculationService
         if (config == null || config.FallType == "OFF" || config.FallType == "COLLECTION" || config.FallPercentage <= 0)
             return (0, config?.AccumulatedFall ?? 0);
 
-        // Only show caída on the processing day for the period type
-        if (!IsShowDay(config.FallType, date))
-            return (0, config.AccumulatedFall);
-
+        // Always calculate real-time accumulated fall
         var (periodStart, periodEnd) = GetCurrentPeriodRange(config, date);
-        return await CalculateRealtimeValues(config, periodStart, periodEnd, ct);
+        var (caida, accumulatedFall) = await CalculateRealtimeValues(config, periodStart, periodEnd, ct);
+
+        // Only show caída value on the processing day; accumulated fall shows every day
+        if (!IsShowDay(config.FallType, date))
+            return (0, accumulatedFall);
+
+        return (caida, accumulatedFall);
     }
 
     /// <summary>
