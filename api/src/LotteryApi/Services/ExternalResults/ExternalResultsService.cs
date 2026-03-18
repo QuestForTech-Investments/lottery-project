@@ -299,7 +299,9 @@ public class ExternalResultsService : IExternalResultsService
             totalPrize += line.PrizeAmount;
         }
 
-        // Update ticket totals
+        // Update ticket totals and betting pool balances
+        var bettingPoolPrizeDeltas = new Dictionary<int, decimal>();
+
         foreach (var (ticketId, prize) in ticketPrizes)
         {
             var ticket = await _context.Set<Ticket>()
@@ -307,8 +309,30 @@ public class ExternalResultsService : IExternalResultsService
 
             if (ticket != null)
             {
+                var prizeDelta = prize - ticket.TotalPrize; // difference from previous prize
                 ticket.TotalPrize = prize;
+
+                if (prizeDelta != 0)
+                {
+                    bettingPoolPrizeDeltas.TryGetValue(ticket.BettingPoolId, out var current);
+                    bettingPoolPrizeDeltas[ticket.BettingPoolId] = current + prizeDelta;
+                }
+
                 _logger.LogInformation("Updated ticket {TicketId} total prize: {Prize}", ticketId, prize);
+            }
+        }
+
+        // Update balances table for affected betting pools (prizes reduce balance)
+        foreach (var (bpId, prizeDelta) in bettingPoolPrizeDeltas)
+        {
+            var balance = await _context.Balances
+                .FirstOrDefaultAsync(b => b.BettingPoolId == bpId, cancellationToken);
+            if (balance != null)
+            {
+                balance.CurrentBalance -= prizeDelta;
+                balance.LastUpdated = DateTime.UtcNow;
+                _logger.LogInformation("Updated balance for bettingPool {BpId}: prize delta {Delta}, new balance {Balance}",
+                    bpId, -prizeDelta, balance.CurrentBalance);
             }
         }
 

@@ -304,8 +304,28 @@ public class CaidaCalculationService : ICaidaCalculationService
         if (config == null || config.FallType == "OFF" || config.FallType == "COLLECTION" || config.FallPercentage <= 0)
             return (0, config?.AccumulatedFall ?? 0);
 
+        // Only show caída on the processing day for the period type
+        if (!IsShowDay(config.FallType, date))
+            return (0, config.AccumulatedFall);
+
         var (periodStart, periodEnd) = GetCurrentPeriodRange(config, date);
         return await CalculateRealtimeValues(config, periodStart, periodEnd, ct);
+    }
+
+    /// <summary>
+    /// Determines if caída should be shown for this fall type on the given date.
+    /// DAILY: every day. WEEKLY: only Sunday. MONTHLY: last day of month. ANNUAL: Dec 31.
+    /// </summary>
+    private static bool IsShowDay(string fallType, DateTime date)
+    {
+        return fallType switch
+        {
+            "DAILY" => true,
+            "WEEKLY" or "WEEKLY_ACCUMULATED" or "WEEKLY_NO_ACCUMULATED" => date.DayOfWeek == DayOfWeek.Sunday,
+            "MONTHLY" => date.Day == DateTime.DaysInMonth(date.Year, date.Month),
+            "ANNUAL" => date.Month == 12 && date.Day == 31,
+            _ => false
+        };
     }
 
     /// <summary>

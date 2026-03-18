@@ -92,9 +92,11 @@ public class BalancesController : ControllerBase
             var todayUtcEnd = DateTimeHelper.GetUtcEndOfDay(today);
 
             // Get net transaction effects for bancas as entity1: debit increases balance, credit decreases
+            // Only include Aprobado transactions (exclude Eliminado, Rechazado, PendienteAprobacion, PendienteEliminacion)
             var entity1Adjustments = await _context.TransactionGroupLines
                 .AsNoTracking()
                 .Where(l => l.Entity1Type == "bettingPool"
+                    && l.Group!.Status == "Aprobado"
                     && l.Group!.CreatedAt >= todayUtcStart
                     && l.Group!.CreatedAt <= todayUtcEnd)
                 .GroupBy(l => l.Entity1Id)
@@ -105,6 +107,7 @@ public class BalancesController : ControllerBase
             var entity2Adjustments = await _context.TransactionGroupLines
                 .AsNoTracking()
                 .Where(l => l.Entity2Type == "bettingPool"
+                    && l.Group!.Status == "Aprobado"
                     && l.Group!.CreatedAt >= todayUtcStart
                     && l.Group!.CreatedAt <= todayUtcEnd)
                 .GroupBy(l => l.Entity2Id!.Value)
