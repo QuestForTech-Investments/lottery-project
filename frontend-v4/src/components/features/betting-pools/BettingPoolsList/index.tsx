@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import api from '@/services/api';
 import {
   Box,
   Paper,
@@ -107,9 +108,16 @@ const BancasListMUI: React.FC = () => {
   /**
    * Handle toggle active status
    */
-  const handleToggleActive = (bettingPoolId: number): void => {
-    // TODO: Implement API call to update betting pool status
-  };
+  const handleToggleActive = useCallback(async (bettingPoolId: number): Promise<void> => {
+    const pool = bettingPools.find(p => p.id === bettingPoolId);
+    if (!pool) return;
+    try {
+      await api.put(`/betting-pools/${bettingPoolId}`, { isActive: !pool.isActive });
+      handleRefresh();
+    } catch (err) {
+      console.error('Error toggling active status:', err);
+    }
+  }, [bettingPools, handleRefresh]);
 
   /**
    * Create sort handler for table columns

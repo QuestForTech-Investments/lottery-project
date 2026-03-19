@@ -30,12 +30,12 @@ public class LimitsController : ControllerBase
     // Limit type names in Spanish
     private static readonly Dictionary<LimitType, string> LimitTypeNames = new()
     {
-        { LimitType.GeneralForGroup, "General para Grupo" },
+        { LimitType.GeneralForGroup, "Limite Global" },
         { LimitType.ByNumberForGroup, "Por Número para Grupo" },
-        { LimitType.GeneralForBettingPool, "General para Banca" },
+        { LimitType.GeneralForBettingPool, "Limite Banca" },
         { LimitType.ByNumberForBettingPool, "Por Número para Banca (Línea)" },
-        { LimitType.LocalForBettingPool, "Local para Banca" },
-        { LimitType.GeneralForZone, "General para Zona" },
+        { LimitType.LocalForBettingPool, "Limite Local Banca" },
+        { LimitType.GeneralForZone, "Limite Zona" },
         { LimitType.ByNumberForZone, "Por Número para Zona" },
         { LimitType.GeneralForExternalGroup, "General para Grupo Externo" },
         { LimitType.ByNumberForExternalGroup, "Por Número para Grupo Externo" },
@@ -171,9 +171,12 @@ public class LimitsController : ControllerBase
                     EffectiveFrom = lr.EffectiveFrom,
                     EffectiveTo = lr.EffectiveTo,
                     CreatedAt = lr.CreatedAt,
-                    UpdatedAt = lr.UpdatedAt
+                    UpdatedAt = lr.UpdatedAt,
+                    Amounts = null // populated below
                 })
                 .ToListAsync();
+
+            await PopulateAmountsAsync(limits);
 
             var response = new PagedResponse<LimitRuleDto>
             {
@@ -231,7 +234,8 @@ public class LimitsController : ControllerBase
                     EffectiveFrom = lr.EffectiveFrom,
                     EffectiveTo = lr.EffectiveTo,
                     CreatedAt = lr.CreatedAt,
-                    UpdatedAt = lr.UpdatedAt
+                    UpdatedAt = lr.UpdatedAt,
+                    Amounts = null // populated below
                 })
                 .FirstOrDefaultAsync();
 
@@ -239,6 +243,8 @@ public class LimitsController : ControllerBase
             {
                 return NotFound(new { message = "Límite no encontrado" });
             }
+
+            await PopulateAmountsAsync(limitRule);
 
             return Ok(limitRule);
         }
@@ -326,26 +332,239 @@ public class LimitsController : ControllerBase
             }
 
             var createdRules = new List<LimitRule>();
+            var limitType = (LimitType)dto.LimitType;
 
-            // If multiple draws specified, create a rule for each
+            // Require Global limits to exist before creating any other type
+            if (limitType != LimitType.GeneralForGroup)
+            {
+                var hasGlobal = await _context.LimitRules
+                    .AnyAsync(r => r.LimitType == LimitType.GeneralForGroup && r.IsActive);
+                if (!hasGlobal)
+                {
+                    return BadRequest(new { message = "Debe crear primero un Limite Global antes de crear otros tipos de límites" });
+                }
+            }
+
+            // Check for duplicate limits (same type + draw + entity)
             if (validDrawIds.Count > 0)
             {
-                foreach (var drawId in validDrawIds)
+                var existingQuery = _context.LimitRules
+                    .AsNoTracking()
+                    .Where(r => r.LimitType == limitType && r.IsActive && r.DrawId.HasValue && validDrawIds.Contains(r.DrawId.Value));
+
+                // Scope by entity type
+                if (limitType == LimitType.GeneralForGroup)
                 {
-                    var rule = CreateLimitRuleFromDto(dto, daysOfWeek, drawId);
+                    // Global: just check draw
+                }
+                else if (limitType == LimitType.GeneralForZone)
+                {
+                    var zoneIds = dto.ZoneIds ?? (dto.ZoneId.HasValue ? new List<int> { dto.ZoneId.Value } : new List<int>());
+                    if (zoneIds.Count > 0)
+                        existingQuery = existingQuery.Where(r => r.ZoneId.HasValue && zoneIds.Contains(r.ZoneId.Value));
+                }
+                else if (limitType == LimitType.GeneralForBettingPool || limitType == LimitType.LocalForBettingPool)
+                {
+                    // Will check per-banca after resolving entities below
+                }
+
+                if (limitType == LimitType.GeneralForGroup || limitType == LimitType.GeneralForZone)
+                {
+                    var duplicateDraws = await existingQuery
+                        .Select(r => r.Draw != null ? r.Draw.DrawName : $"Draw #{r.DrawId}")
+                        .Distinct()
+                        .ToListAsync();
+
+                    if (duplicateDraws.Count > 0)
+                    {
+                        return BadRequest(new
+                        {
+                            message = $"Ya existen límites para los siguientes sorteos: {string.Join(", ", duplicateDraws.Take(5))}{(duplicateDraws.Count > 5 ? $" y {duplicateDraws.Count - 5} más" : "")}"
+                        });
+                    }
+                }
+            }
+
+            // Resolve target entities based on limit type
+            var targetEntities = await ResolveTargetEntities(dto, limitType);
+
+            // Per-banca duplicate check
+            if ((limitType == LimitType.GeneralForBettingPool || limitType == LimitType.LocalForBettingPool) && validDrawIds.Count > 0)
+            {
+                var bpIds = targetEntities.Where(e => e.Id > 0).Select(e => e.Id).ToList();
+                if (bpIds.Count > 0)
+                {
+                    var duplicateBancas = await _context.LimitRules
+                        .AsNoTracking()
+                        .Where(r => r.LimitType == limitType && r.IsActive
+                            && r.BettingPoolId.HasValue && bpIds.Contains(r.BettingPoolId.Value)
+                            && r.DrawId.HasValue && validDrawIds.Contains(r.DrawId.Value))
+                        .Select(r => r.BettingPool != null ? r.BettingPool.BettingPoolName : $"Banca #{r.BettingPoolId}")
+                        .Distinct()
+                        .ToListAsync();
+
+                    if (duplicateBancas.Count > 0)
+                    {
+                        return BadRequest(new
+                        {
+                            message = $"Ya existen límites para las siguientes bancas: {string.Join(", ", duplicateBancas.Take(5))}{(duplicateBancas.Count > 5 ? $" y {duplicateBancas.Count - 5} más" : "")}"
+                        });
+                    }
+                }
+            }
+
+            // Parent validation
+            if (dto.Amounts != null && dto.Amounts.Count > 0)
+            {
+                var parentViolations = await ValidateParentAmounts(limitType, validDrawIds, targetEntities, dto.Amounts);
+                if (parentViolations.Count > 0)
+                {
+                    return BadRequest(new
+                    {
+                        message = "Los montos exceden los límites del nivel superior",
+                        violations = parentViolations
+                    });
+                }
+            }
+
+            // Validate mutual exclusion: Limite Banca and Limite Local Banca cannot coexist for same banca
+            if (limitType == LimitType.GeneralForBettingPool || limitType == LimitType.LocalForBettingPool)
+            {
+                var conflictType = limitType == LimitType.GeneralForBettingPool
+                    ? LimitType.LocalForBettingPool
+                    : LimitType.GeneralForBettingPool;
+                var conflictTypeName = limitType == LimitType.GeneralForBettingPool
+                    ? "Limite Local Banca"
+                    : "Limite Banca";
+
+                var entityBpIds = targetEntities.Where(e => e.Id > 0).Select(e => e.Id).ToList();
+                if (entityBpIds.Count > 0)
+                {
+                    var conflicting = await _context.LimitRules
+                        .AsNoTracking()
+                        .Where(r => r.LimitType == conflictType && r.IsActive
+                            && r.BettingPoolId.HasValue && entityBpIds.Contains(r.BettingPoolId.Value))
+                        .Select(r => r.BettingPool != null ? r.BettingPool.BettingPoolName : $"Banca #{r.BettingPoolId}")
+                        .Distinct()
+                        .ToListAsync();
+
+                    if (conflicting.Count > 0)
+                    {
+                        return BadRequest(new
+                        {
+                            message = $"Las siguientes bancas ya tienen {conflictTypeName} y no pueden tener ambos tipos: {string.Join(", ", conflicting)}"
+                        });
+                    }
+                }
+            }
+
+            // Create rules: outer loop = entities, inner loop = draws
+            foreach (var entity in targetEntities)
+            {
+                var drawIds = validDrawIds.Count > 0 ? validDrawIds : new List<int> { 0 }; // 0 = no specific draw
+                foreach (var drawId in drawIds)
+                {
+                    var rule = CreateLimitRuleFromDto(dto, daysOfWeek, drawId == 0 ? null : drawId);
+
+                    // Set entity-specific fields
+                    if (limitType == LimitType.GeneralForZone)
+                    {
+                        rule.ZoneId = entity.Id;
+                    }
+                    else if (limitType == LimitType.GeneralForBettingPool || limitType == LimitType.LocalForBettingPool)
+                    {
+                        rule.BettingPoolId = entity.Id;
+                        rule.ZoneId = entity.ZoneId; // Store zone for hierarchy lookup
+                    }
+
                     _context.LimitRules.Add(rule);
                     createdRules.Add(rule);
                 }
             }
-            else
-            {
-                // Create a single rule without draw
-                var rule = CreateLimitRuleFromDto(dto, daysOfWeek, null);
-                _context.LimitRules.Add(rule);
-                createdRules.Add(rule);
-            }
 
             await _context.SaveChangesAsync();
+
+            // Persist per-game-type amounts, filtered by what each draw allows
+            if (dto.Amounts != null && dto.Amounts.Count > 0)
+            {
+                // Map frontend camelCase keys to game_type_id
+                var gameTypes = await _context.GameTypes
+                    .AsNoTracking()
+                    .Where(gt => gt.IsActive)
+                    .Select(gt => new { gt.GameTypeId, gt.GameTypeCode })
+                    .ToListAsync();
+
+                var frontendToGameTypeId = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+                var codeToId = gameTypes.ToDictionary(gt => gt.GameTypeCode, gt => gt.GameTypeId, StringComparer.OrdinalIgnoreCase);
+
+                // Frontend key -> DB code -> game_type_id
+                var keyMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["directo"] = "DIRECTO", ["pale"] = "PALE", ["tripleta"] = "TRIPLETA",
+                    ["cash3Straight"] = "CASH3_STRAIGHT", ["cash3Box"] = "CASH3_BOX",
+                    ["cash3FrontStraight"] = "CASH3_FRONT_STRAIGHT", ["cash3FrontBox"] = "CASH3_FRONT_BOX",
+                    ["cash3BackStraight"] = "CASH3_BACK_STRAIGHT", ["cash3BackBox"] = "CASH3_BACK_BOX",
+                    ["play4Straight"] = "PLAY4_STRAIGHT", ["play4Box"] = "PLAY4_BOX",
+                    ["pick5Straight"] = "PICK5_STRAIGHT", ["pick5Box"] = "PICK5_BOX",
+                    ["superPale"] = "SUPER_PALE", ["pickTwo"] = "PICK2",
+                    ["pickTwoFront"] = "PICK2_FRONT", ["pickTwoBack"] = "PICK2_BACK",
+                    ["pickTwoMiddle"] = "PICK2_MIDDLE",
+                    ["bolita1"] = "BOLITA", ["bolita2"] = "BOLITA",
+                    ["singulacion1"] = "SINGULACION", ["singulacion2"] = "SINGULACION", ["singulacion3"] = "SINGULACION"
+                };
+
+                foreach (var (feKey, dbCode) in keyMap)
+                {
+                    if (codeToId.TryGetValue(dbCode, out var gtId))
+                        frontendToGameTypeId[feKey] = gtId;
+                }
+
+                // Pre-fetch allowed game_type_ids per draw
+                var drawIdsUsed = createdRules.Where(r => r.DrawId.HasValue).Select(r => r.DrawId!.Value).Distinct().ToList();
+                var allowedByDraw = new Dictionary<int, HashSet<int>>();
+                if (drawIdsUsed.Count > 0)
+                {
+                    var compatData = await _context.Set<DrawGameCompatibility>()
+                        .AsNoTracking()
+                        .Where(dgc => drawIdsUsed.Contains(dgc.DrawId) && dgc.IsActive)
+                        .Select(dgc => new { dgc.DrawId, dgc.GameTypeId })
+                        .ToListAsync();
+
+                    foreach (var item in compatData)
+                    {
+                        if (!allowedByDraw.ContainsKey(item.DrawId))
+                            allowedByDraw[item.DrawId] = new HashSet<int>();
+                        allowedByDraw[item.DrawId].Add(item.GameTypeId);
+                    }
+                }
+
+                // Track which game_type_ids are already added per rule (to avoid duplicates for bolita1/2, singulacion1/2/3)
+                foreach (var rule in createdRules)
+                {
+                    var drawAllowed = rule.DrawId.HasValue && allowedByDraw.TryGetValue(rule.DrawId.Value, out var allowed)
+                        ? allowed : null;
+                    var addedGameTypes = new HashSet<int>();
+
+                    foreach (var (feKey, amount) in dto.Amounts)
+                    {
+                        if (amount <= 0) continue;
+                        if (!frontendToGameTypeId.TryGetValue(feKey, out var gameTypeId)) continue;
+                        if (addedGameTypes.Contains(gameTypeId)) continue; // Skip duplicate (e.g. bolita1 and bolita2 both map to BOLITA)
+
+                        // Check if this game type is allowed for the draw
+                        if (drawAllowed != null && !drawAllowed.Contains(gameTypeId)) continue;
+
+                        _context.LimitRuleAmounts.Add(new LimitRuleAmount
+                        {
+                            LimitRuleId = rule.LimitRuleId,
+                            GameTypeId = gameTypeId,
+                            MaxAmount = amount
+                        });
+                        addedGameTypes.Add(gameTypeId);
+                    }
+                }
+                await _context.SaveChangesAsync();
+            }
 
             // Load navigation properties for response
             var createdIds = createdRules.Select(r => r.LimitRuleId).ToList();
@@ -380,9 +599,12 @@ public class LimitsController : ControllerBase
                     EffectiveFrom = lr.EffectiveFrom,
                     EffectiveTo = lr.EffectiveTo,
                     CreatedAt = lr.CreatedAt,
-                    UpdatedAt = lr.UpdatedAt
+                    UpdatedAt = lr.UpdatedAt,
+                    Amounts = null // populated below
                 })
                 .ToListAsync();
+
+            await PopulateAmountsAsync(result);
 
             _logger.LogInformation("Created {Count} limit rules", result.Count);
 
@@ -704,6 +926,55 @@ public class LimitsController : ControllerBase
     }
 
     /// <summary>
+    /// Get allowed game type codes for given draw IDs.
+    /// Returns the union of game types across all selected draws.
+    /// </summary>
+    [HttpGet("draw-game-types")]
+    public async Task<ActionResult> GetDrawGameTypes([FromQuery] string? drawIds)
+    {
+        try
+        {
+            var ids = new List<int>();
+            if (!string.IsNullOrWhiteSpace(drawIds))
+            {
+                ids = drawIds.Split(',')
+                    .Select(s => int.TryParse(s.Trim(), out var id) ? id : 0)
+                    .Where(id => id > 0)
+                    .ToList();
+            }
+
+            if (ids.Count == 0 || ids.Count > 50)
+            {
+                // No draws or too many — return all game types
+                var allCodes = await _context.GameTypes
+                    .AsNoTracking()
+                    .Where(gt => gt.IsActive && gt.GameTypeCode != "PANAMA")
+                    .OrderBy(gt => gt.DisplayOrder)
+                    .Select(gt => gt.GameTypeCode)
+                    .ToListAsync();
+                return Ok(allCodes);
+            }
+
+            // Get the union of game types across all selected draws
+            // (any game type supported by at least one selected draw)
+            var codes = await _context.Set<DrawGameCompatibility>()
+                .AsNoTracking()
+                .Where(dgc => ids.Contains(dgc.DrawId) && dgc.IsActive)
+                .Where(dgc => dgc.GameType != null && dgc.GameType.GameTypeCode != "PANAMA")
+                .Select(dgc => dgc.GameType!.GameTypeCode)
+                .Distinct()
+                .ToListAsync();
+
+            return Ok(codes);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting draw game types");
+            return StatusCode(500, new { message = "Error al obtener tipos de juego" });
+        }
+    }
+
+    /// <summary>
     /// Get form parameters for creating/editing limits
     /// </summary>
     [HttpGet("params")]
@@ -758,14 +1029,17 @@ public class LimitsController : ControllerBase
                 })
                 .ToListAsync();
 
-            // Get betting pools
+            // Get betting pools with zone info
             var bettingPools = await _context.BettingPools
-                .Where(bp => bp.IsActive)
+                .Where(bp => bp.IsActive && bp.DeletedAt == null)
                 .OrderBy(bp => bp.BettingPoolName)
-                .Select(bp => new SelectOption
+                .Select(bp => new BettingPoolSelectOption
                 {
                     Value = bp.BettingPoolId,
-                    Label = bp.BettingPoolName
+                    Label = bp.BettingPoolName,
+                    Code = bp.BettingPoolCode,
+                    ZoneId = bp.ZoneId,
+                    ZoneName = bp.Zone != null ? bp.Zone.ZoneName : null
                 })
                 .ToListAsync();
 
@@ -803,6 +1077,105 @@ public class LimitsController : ControllerBase
         {
             _logger.LogError(ex, "Error getting limit params");
             return StatusCode(500, new { message = "Error al obtener los parámetros" });
+        }
+    }
+
+    /// <summary>
+    /// Delete a single game type amount from a limit rule.
+    /// If no amounts remain, the rule itself is deleted.
+    /// </summary>
+    [HttpDelete("{id}/amounts/{gameTypeId}")]
+    public async Task<ActionResult> DeleteAmount(int id, int gameTypeId)
+    {
+        try
+        {
+            var amount = await _context.LimitRuleAmounts
+                .FirstOrDefaultAsync(a => a.LimitRuleId == id && a.GameTypeId == gameTypeId);
+            if (amount == null)
+                return NotFound(new { message = "Monto no encontrado" });
+
+            _context.LimitRuleAmounts.Remove(amount);
+            await _context.SaveChangesAsync();
+
+            // If no amounts left, delete the rule too
+            var remaining = await _context.LimitRuleAmounts.CountAsync(a => a.LimitRuleId == id);
+            if (remaining == 0)
+            {
+                var rule = await _context.LimitRules.FindAsync(id);
+                if (rule != null)
+                {
+                    _context.LimitRules.Remove(rule);
+                    await _context.SaveChangesAsync();
+                }
+            }
+
+            return Ok(new { message = "Monto eliminado" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting amount for rule {Id}, gameType {GameTypeId}", id, gameTypeId);
+            return StatusCode(500, new { message = "Error al eliminar monto" });
+        }
+    }
+
+    /// <summary>
+    /// Update a single game type amount on a limit rule
+    /// </summary>
+    [HttpPut("{id}/amounts/{gameTypeId}")]
+    public async Task<ActionResult> UpdateAmount(int id, int gameTypeId, [FromBody] UpdateAmountDto dto)
+    {
+        try
+        {
+            var amount = await _context.LimitRuleAmounts
+                .FirstOrDefaultAsync(a => a.LimitRuleId == id && a.GameTypeId == gameTypeId);
+            if (amount == null)
+                return NotFound(new { message = "Monto no encontrado" });
+
+            amount.MaxAmount = dto.Amount;
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Monto actualizado", amount = amount.MaxAmount });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating amount for rule {Id}, gameType {GameTypeId}", id, gameTypeId);
+            return StatusCode(500, new { message = "Error al actualizar monto" });
+        }
+    }
+
+    /// <summary>
+    /// Delete all limit rules for a specific draw + type combination
+    /// </summary>
+    [HttpDelete("by-draw")]
+    public async Task<ActionResult> DeleteByDraw(
+        [FromQuery] int drawId,
+        [FromQuery] int limitType,
+        [FromQuery] int? zoneId = null,
+        [FromQuery] int? bettingPoolId = null)
+    {
+        try
+        {
+            var query = _context.LimitRules
+                .Where(r => r.DrawId == drawId && r.LimitType == (LimitType)limitType && r.IsActive);
+
+            if (zoneId.HasValue)
+                query = query.Where(r => r.ZoneId == zoneId.Value);
+            if (bettingPoolId.HasValue)
+                query = query.Where(r => r.BettingPoolId == bettingPoolId.Value);
+
+            var rules = await query.ToListAsync();
+            if (rules.Count == 0)
+                return NotFound(new { message = "No se encontraron límites" });
+
+            _context.LimitRules.RemoveRange(rules);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = $"{rules.Count} límites eliminados", deletedCount = rules.Count });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting limits by draw");
+            return StatusCode(500, new { message = "Error al eliminar límites" });
         }
     }
 
@@ -885,6 +1258,293 @@ public class LimitsController : ControllerBase
         }
 
         return mask > 0 ? mask : null;
+    }
+
+    /// <summary>
+    /// Validate that proposed limit amounts don't exceed parent limits
+    /// </summary>
+    // Frontend camelCase key -> game_type_id mapping
+    private static readonly Dictionary<string, string> FrontendKeyToDbCode = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["directo"] = "DIRECTO", ["pale"] = "PALE", ["tripleta"] = "TRIPLETA",
+        ["cash3Straight"] = "CASH3_STRAIGHT", ["cash3Box"] = "CASH3_BOX",
+        ["cash3FrontStraight"] = "CASH3_FRONT_STRAIGHT", ["cash3FrontBox"] = "CASH3_FRONT_BOX",
+        ["cash3BackStraight"] = "CASH3_BACK_STRAIGHT", ["cash3BackBox"] = "CASH3_BACK_BOX",
+        ["play4Straight"] = "PLAY4_STRAIGHT", ["play4Box"] = "PLAY4_BOX",
+        ["pick5Straight"] = "PICK5_STRAIGHT", ["pick5Box"] = "PICK5_BOX",
+        ["superPale"] = "SUPER_PALE", ["pickTwo"] = "PICK2",
+        ["pickTwoFront"] = "PICK2_FRONT", ["pickTwoBack"] = "PICK2_BACK",
+        ["pickTwoMiddle"] = "PICK2_MIDDLE",
+        ["bolita1"] = "BOLITA", ["bolita2"] = "BOLITA",
+        ["singulacion1"] = "SINGULACION", ["singulacion2"] = "SINGULACION", ["singulacion3"] = "SINGULACION"
+    };
+
+    private async Task<Dictionary<int, string>> GetGameTypeCodeToIdMapAsync()
+    {
+        var gameTypes = await _context.GameTypes.AsNoTracking()
+            .Where(gt => gt.IsActive)
+            .Select(gt => new { gt.GameTypeId, gt.GameTypeCode })
+            .ToListAsync();
+        return gameTypes.ToDictionary(gt => gt.GameTypeId, gt => gt.GameTypeCode);
+    }
+
+    /// <summary>
+    /// Resolve frontend camelCase key to game_type_id
+    /// </summary>
+    private int? ResolveFrontendKeyToGameTypeId(string feKey, Dictionary<string, int> codeToId)
+    {
+        if (FrontendKeyToDbCode.TryGetValue(feKey, out var dbCode) && codeToId.TryGetValue(dbCode, out var gtId))
+            return gtId;
+        return null;
+    }
+
+    [HttpPost("validate")]
+    public async Task<ActionResult<ValidateLimitResultDto>> ValidateParentLimits([FromBody] ValidateLimitDto dto)
+    {
+        try
+        {
+            var limitType = (LimitType)dto.LimitType;
+            var violations = new List<LimitViolationDto>();
+
+            if (dto.Amounts == null || dto.Amounts.Count == 0)
+                return Ok(new ValidateLimitResultDto { IsValid = true });
+
+            // Build code -> id map
+            var gameTypes = await _context.GameTypes.AsNoTracking()
+                .Where(gt => gt.IsActive)
+                .Select(gt => new { gt.GameTypeId, gt.GameTypeCode, gt.GameName })
+                .ToListAsync();
+            var codeToId = gameTypes.ToDictionary(gt => gt.GameTypeCode, gt => gt.GameTypeId, StringComparer.OrdinalIgnoreCase);
+            var idToName = gameTypes.ToDictionary(gt => gt.GameTypeId, gt => gt.GameName);
+
+            // Get parent amounts keyed by game_type_id
+            var parentAmounts = await GetParentAmountsByGameTypeId(limitType, dto.DrawId, dto.ZoneId, dto.BettingPoolId);
+
+            if (parentAmounts != null)
+            {
+                foreach (var (feKey, childAmount) in dto.Amounts)
+                {
+                    var gtId = ResolveFrontendKeyToGameTypeId(feKey, codeToId);
+                    if (gtId == null) continue;
+
+                    if (parentAmounts.TryGetValue(gtId.Value, out var parentAmount) && childAmount > parentAmount)
+                    {
+                        violations.Add(new LimitViolationDto
+                        {
+                            GameType = idToName.GetValueOrDefault(gtId.Value, feKey),
+                            ChildAmount = childAmount,
+                            ParentAmount = parentAmount,
+                            ParentType = GetParentTypeName(limitType)
+                        });
+                    }
+                }
+            }
+
+            return Ok(new ValidateLimitResultDto
+            {
+                IsValid = violations.Count == 0,
+                Violations = violations
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error validating parent limits");
+            return StatusCode(500, new { message = "Error al validar límites" });
+        }
+    }
+
+    /// <summary>
+    /// Get parent limit amounts keyed by game_type_id
+    /// </summary>
+    private async Task<Dictionary<int, decimal>?> GetParentAmountsByGameTypeId(LimitType childType, int drawId, int? zoneId, int? bettingPoolId)
+    {
+        LimitType parentType;
+        int? parentZoneId = null;
+
+        switch (childType)
+        {
+            case LimitType.GeneralForZone:
+                parentType = LimitType.GeneralForGroup;
+                break;
+            case LimitType.GeneralForBettingPool:
+                parentType = LimitType.GeneralForZone;
+                if (bettingPoolId.HasValue)
+                {
+                    parentZoneId = await _context.BettingPools
+                        .Where(bp => bp.BettingPoolId == bettingPoolId.Value)
+                        .Select(bp => (int?)bp.ZoneId)
+                        .FirstOrDefaultAsync();
+                }
+                else if (zoneId.HasValue)
+                {
+                    parentZoneId = zoneId;
+                }
+                break;
+            case LimitType.LocalForBettingPool:
+                parentType = LimitType.GeneralForGroup;
+                break;
+            default:
+                return null;
+        }
+
+        var parentQuery = _context.LimitRules
+            .AsNoTracking()
+            .Where(r => r.LimitType == parentType && r.IsActive)
+            .Where(r => r.DrawId == drawId || r.DrawId == null)
+            .Where(r => r.EffectiveTo == null || r.EffectiveTo >= DateTime.UtcNow);
+
+        if (parentType == LimitType.GeneralForZone && parentZoneId.HasValue)
+        {
+            parentQuery = parentQuery.Where(r => r.ZoneId == parentZoneId.Value);
+        }
+
+        var parentRule = await parentQuery.FirstOrDefaultAsync();
+        if (parentRule == null) return null;
+
+        var amounts = await _context.LimitRuleAmounts
+            .AsNoTracking()
+            .Where(a => a.LimitRuleId == parentRule.LimitRuleId)
+            .ToListAsync();
+
+        return amounts.ToDictionary(a => a.GameTypeId, a => a.MaxAmount);
+    }
+
+    private static string GetParentTypeName(LimitType childType)
+    {
+        return childType switch
+        {
+            LimitType.GeneralForZone => "Limite Global",
+            LimitType.GeneralForBettingPool => "Limite Zona",
+            LimitType.LocalForBettingPool => "Limite Global",
+            _ => "Limite Superior"
+        };
+    }
+
+    private record TargetEntity(int Id, int? ZoneId = null);
+
+    private async Task<List<TargetEntity>> ResolveTargetEntities(CreateLimitDto dto, LimitType limitType)
+    {
+        switch (limitType)
+        {
+            case LimitType.GeneralForGroup:
+                return new List<TargetEntity> { new(0) }; // Single global rule
+
+            case LimitType.GeneralForZone:
+            {
+                var zoneIds = dto.ZoneIds ?? (dto.ZoneId.HasValue ? new List<int> { dto.ZoneId.Value } : new List<int>());
+                return zoneIds.Select(z => new TargetEntity(z)).ToList();
+            }
+
+            case LimitType.GeneralForBettingPool:
+            case LimitType.LocalForBettingPool:
+            {
+                var mode = dto.BancaSelectionMode ?? "specific";
+                switch (mode)
+                {
+                    case "all":
+                        return await _context.BettingPools
+                            .Where(bp => bp.IsActive && bp.DeletedAt == null)
+                            .Select(bp => new TargetEntity(bp.BettingPoolId, bp.ZoneId))
+                            .ToListAsync();
+
+                    case "byZone":
+                        var zoneIds = dto.BancaZoneIds ?? new List<int>();
+                        return await _context.BettingPools
+                            .Where(bp => bp.IsActive && bp.DeletedAt == null && zoneIds.Contains(bp.ZoneId))
+                            .Select(bp => new TargetEntity(bp.BettingPoolId, bp.ZoneId))
+                            .ToListAsync();
+
+                    default: // "specific"
+                        var bpIds = dto.BettingPoolIds ?? (dto.BettingPoolId.HasValue ? new List<int> { dto.BettingPoolId.Value } : new List<int>());
+                        return await _context.BettingPools
+                            .Where(bp => bpIds.Contains(bp.BettingPoolId))
+                            .Select(bp => new TargetEntity(bp.BettingPoolId, bp.ZoneId))
+                            .ToListAsync();
+                }
+            }
+
+            default:
+                return new List<TargetEntity> { new(0) };
+        }
+    }
+
+    private async Task<List<LimitViolationDto>> ValidateParentAmounts(
+        LimitType limitType, List<int> drawIds, List<TargetEntity> entities, Dictionary<string, decimal> amounts)
+    {
+        var violations = new List<LimitViolationDto>();
+        if (limitType == LimitType.GeneralForGroup) return violations;
+
+        var drawId = drawIds.FirstOrDefault();
+        if (drawId == 0) return violations;
+
+        // Build code -> id map
+        var gameTypes = await _context.GameTypes.AsNoTracking()
+            .Where(gt => gt.IsActive)
+            .Select(gt => new { gt.GameTypeId, gt.GameTypeCode, gt.GameName })
+            .ToListAsync();
+        var codeToId = gameTypes.ToDictionary(gt => gt.GameTypeCode, gt => gt.GameTypeId, StringComparer.OrdinalIgnoreCase);
+        var idToName = gameTypes.ToDictionary(gt => gt.GameTypeId, gt => gt.GameName);
+
+        int? sampleZoneId = entities.FirstOrDefault()?.ZoneId;
+        int? sampleBpId = entities.FirstOrDefault()?.Id;
+
+        var parentAmounts = await GetParentAmountsByGameTypeId(limitType, drawId,
+            sampleZoneId, sampleBpId > 0 ? sampleBpId : null);
+
+        if (parentAmounts == null) return violations;
+
+        foreach (var (feKey, childAmount) in amounts)
+        {
+            var gtId = ResolveFrontendKeyToGameTypeId(feKey, codeToId);
+            if (gtId == null) continue;
+
+            if (parentAmounts.TryGetValue(gtId.Value, out var parentAmount) && childAmount > parentAmount)
+            {
+                violations.Add(new LimitViolationDto
+                {
+                    GameType = idToName.GetValueOrDefault(gtId.Value, feKey),
+                    ChildAmount = childAmount,
+                    ParentAmount = parentAmount,
+                    ParentType = GetParentTypeName(limitType)
+                });
+            }
+        }
+
+        return violations;
+    }
+
+    private async Task PopulateAmountsAsync(List<LimitRuleDto> dtos)
+    {
+        var ids = dtos.Select(d => d.LimitRuleId).ToList();
+        if (ids.Count == 0) return;
+
+        var amounts = await _context.LimitRuleAmounts
+            .AsNoTracking()
+            .Where(a => ids.Contains(a.LimitRuleId))
+            .Include(a => a.GameType)
+            .ToListAsync();
+
+        var grouped = amounts.GroupBy(a => a.LimitRuleId)
+            .ToDictionary(
+                g => g.Key,
+                g => g.Select(a => new LimitAmountDto
+                {
+                    GameTypeId = a.GameTypeId,
+                    GameTypeName = a.GameType?.GameName ?? $"GameType#{a.GameTypeId}",
+                    Amount = a.MaxAmount
+                }).ToList());
+
+        foreach (var dto in dtos)
+        {
+            if (grouped.TryGetValue(dto.LimitRuleId, out var amts) && amts.Count > 0)
+                dto.Amounts = amts;
+        }
+    }
+
+    private async Task PopulateAmountsAsync(LimitRuleDto? dto)
+    {
+        if (dto == null) return;
+        await PopulateAmountsAsync(new List<LimitRuleDto> { dto });
     }
 
     private LimitRule CreateLimitRuleFromDto(CreateLimitDto dto, int? daysOfWeek, int? drawId)

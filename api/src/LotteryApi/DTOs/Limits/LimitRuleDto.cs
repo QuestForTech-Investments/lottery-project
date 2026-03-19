@@ -33,4 +33,12 @@ public class LimitRuleDto
     public DateTime? EffectiveTo { get; set; }
     public DateTime? CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
+    public List<LimitAmountDto>? Amounts { get; set; }
+}
+
+public class LimitAmountDto
+{
+    public int GameTypeId { get; set; }
+    public string GameTypeName { get; set; } = string.Empty;
+    public decimal Amount { get; set; }
 }

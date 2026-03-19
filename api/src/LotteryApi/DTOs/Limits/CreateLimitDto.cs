@@ -37,9 +37,14 @@ public class CreateLimitDto
     public int? GameTypeId { get; set; }
 
     /// <summary>
-    /// Optional zone ID (for zone-level limits)
+    /// Optional zone ID (for zone-level limits, single zone)
     /// </summary>
     public int? ZoneId { get; set; }
+
+    /// <summary>
+    /// Optional list of zone IDs (for multi-zone limits)
+    /// </summary>
+    public List<int>? ZoneIds { get; set; }
 
     /// <summary>
     /// Optional group ID (for group-level limits)
@@ -47,9 +52,24 @@ public class CreateLimitDto
     public int? GroupId { get; set; }
 
     /// <summary>
-    /// Optional betting pool ID (for betting pool-level limits)
+    /// Optional betting pool ID (for betting pool-level limits, single banca)
     /// </summary>
     public int? BettingPoolId { get; set; }
+
+    /// <summary>
+    /// Optional list of betting pool IDs (for multi-banca limits)
+    /// </summary>
+    public List<int>? BettingPoolIds { get; set; }
+
+    /// <summary>
+    /// Banca selection mode: "specific", "all", "byZone"
+    /// </summary>
+    public string? BancaSelectionMode { get; set; }
+
+    /// <summary>
+    /// Zone IDs to select bancas from (when BancaSelectionMode = "byZone")
+    /// </summary>
+    public List<int>? BancaZoneIds { get; set; }
 
     /// <summary>
     /// Optional pattern for specific numbers (e.g., "1234", "12*", "**34")

@@ -12,7 +12,8 @@ import type {
   LimitParams,
   LimitsListResponse,
   BatchDeleteResponse,
-  LimitType
+  LimitType,
+  ParentValidationResult
 } from '../types/limits';
 
 const BASE_URL = '/limits';
@@ -62,19 +63,29 @@ export const limitService = {
   async getLimits(filter?: LimitFilter): Promise<LimitRule[]> {
     try {
       const queryString = buildFilterQueryString(filter);
-      const url = queryString ? `${BASE_URL}?${queryString}` : BASE_URL;
+      const allItems: LimitRule[] = [];
+      let page = 1;
+      const pageSize = 200;
 
-      const response = await api.get<LimitRule[] | LimitsListResponse>(url);
+      // Fetch all pages
+      while (true) {
+        const separator = queryString ? '&' : '';
+        const url = `${BASE_URL}?page=${page}&pageSize=${pageSize}${separator}${queryString}`;
+        const response = await api.get<LimitRule[] | LimitsListResponse>(url);
 
-      // Handle both array and paginated response
-      if (response && Array.isArray(response)) {
-        return response;
+        if (response && Array.isArray(response)) {
+          allItems.push(...response);
+          if (response.length < pageSize) break;
+        } else if (response && 'items' in response) {
+          allItems.push(...response.items);
+          if (response.items.length < pageSize) break;
+        } else {
+          break;
+        }
+        page++;
       }
-      if (response && 'items' in response) {
-        return response.items;
-      }
 
-      return [];
+      return allItems;
     } catch (error) {
       console.error('Error in getLimits:', error);
       throw error;
@@ -173,6 +184,20 @@ export const limitService = {
   },
 
   /**
+   * Get allowed game type codes for given draw IDs (union of all draws)
+   */
+  async getDrawGameTypes(drawIds: number[]): Promise<string[]> {
+    try {
+      // If too many draws, let API return all (it handles >50 as "all")
+      const idsParam = drawIds.length > 50 ? '' : `?drawIds=${drawIds.join(',')}`;
+      return await api.get(`${BASE_URL}/draw-game-types${idsParam}`) as string[];
+    } catch (error) {
+      console.error('Error in getDrawGameTypes:', error);
+      return [];
+    }
+  },
+
+  /**
    * Create a new limit rule
    * @param data - Limit creation data
    * @returns Promise with created limit rule
@@ -206,6 +231,25 @@ export const limitService = {
   },
 
   /**
+   * Validate that proposed child limit amounts don't exceed parent limits
+   */
+  async validateParentLimits(data: {
+    limitType: number;
+    drawId: number;
+    zoneId?: number;
+    bettingPoolId?: number;
+    amounts: Record<string, number>;
+  }): Promise<{ isValid: boolean; violations: Array<{ gameType: string; childAmount: number; parentAmount: number; parentType: string }> }> {
+    try {
+      const response = await api.post(`${BASE_URL}/validate`, data);
+      return response as { isValid: boolean; violations: Array<{ gameType: string; childAmount: number; parentAmount: number; parentType: string }> };
+    } catch (error) {
+      console.error('Error in validateParentLimits:', error);
+      return { isValid: true, violations: [] }; // Fail open
+    }
+  },
+
+  /**
    * Update an existing limit rule
    * @param id - Limit rule ID
    * @param data - Updated limit data
@@ -235,6 +279,30 @@ export const limitService = {
       console.error('Error in deleteLimit:', error);
       throw error;
     }
+  },
+
+  /**
+   * Delete a single game type amount from a limit rule
+   */
+  async deleteAmount(ruleId: number, gameTypeId: number): Promise<void> {
+    await api.delete(`${BASE_URL}/${ruleId}/amounts/${gameTypeId}`);
+  },
+
+  /**
+   * Update a single game type amount on a limit rule
+   */
+  async updateAmount(ruleId: number, gameTypeId: number, amount: number): Promise<void> {
+    await api.put(`${BASE_URL}/${ruleId}/amounts/${gameTypeId}`, { amount });
+  },
+
+  /**
+   * Delete all limits for a draw + type combo
+   */
+  async deleteByDraw(drawId: number, limitType: number, zoneId?: number, bettingPoolId?: number): Promise<{ deletedCount: number }> {
+    const params = new URLSearchParams({ drawId: drawId.toString(), limitType: limitType.toString() });
+    if (zoneId) params.append('zoneId', zoneId.toString());
+    if (bettingPoolId) params.append('bettingPoolId', bettingPoolId.toString());
+    return await api.delete(`${BASE_URL}/by-draw?${params.toString()}`) as { deletedCount: number };
   },
 
   /**

@@ -46,6 +46,7 @@ import DrawsTab from '@components/features/betting-pools/CreateBettingPool/tabs/
 import UsersTab from '@components/features/betting-pools/CreateBettingPool/tabs/UsersTab';
 import StylesTab from '@components/features/betting-pools/CreateBettingPool/tabs/StylesTab';
 import AutoExpensesTab from '@components/features/betting-pools/CreateBettingPool/tabs/AutoExpensesTab';
+import LimitsTab from '@components/features/betting-pools/CreateBettingPool/tabs/LimitsTab';
 
 /**
  * EditBettingPoolMUI Component
@@ -158,6 +159,7 @@ const EditBettingPoolMUI: React.FC = () => {
                   </Box>
                 }
               />
+              <Tab label="Límites" />
               <Tab label="Horarios" />
               <Tab label="Sorteos" />
               <Tab label="Usuarios" />
@@ -219,13 +221,20 @@ const EditBettingPoolMUI: React.FC = () => {
             )}
 
             {activeTab === 4 && (
+              <LimitsTab
+                bettingPoolId={id ? parseInt(id) : 0}
+                bettingPoolName={formData.bettingPoolName}
+              />
+            )}
+
+            {activeTab === 5 && (
               <SchedulesTab
                 formData={formData as unknown as Parameters<typeof SchedulesTab>[0]['formData']}
                 handleChange={handleChange as unknown as Parameters<typeof SchedulesTab>[0]['handleChange']}
               />
             )}
 
-            {activeTab === 5 && (
+            {activeTab === 6 && (
               <DrawsTab
                 formData={formData as unknown as Parameters<typeof DrawsTab>[0]['formData']}
                 handleChange={handleChange as unknown as Parameters<typeof DrawsTab>[0]['handleChange']}
@@ -234,7 +243,7 @@ const EditBettingPoolMUI: React.FC = () => {
               />
             )}
 
-            {activeTab === 6 && (
+            {activeTab === 7 && (
               <UsersTab
                 formData={formData as unknown as Parameters<typeof UsersTab>[0]['formData']}
                 handleChange={handleChange as unknown as Parameters<typeof UsersTab>[0]['handleChange']}
@@ -242,14 +251,14 @@ const EditBettingPoolMUI: React.FC = () => {
               />
             )}
 
-            {activeTab === 7 && (
+            {activeTab === 8 && (
               <StylesTab
                 formData={formData as unknown as Parameters<typeof StylesTab>[0]['formData']}
                 handleChange={handleChange as unknown as Parameters<typeof StylesTab>[0]['handleChange']}
               />
             )}
 
-            {activeTab === 8 && (
+            {activeTab === 9 && (
               <AutoExpensesTab
                 formData={formData as unknown as Parameters<typeof AutoExpensesTab>[0]['formData']}
                 handleChange={handleChange as unknown as Parameters<typeof AutoExpensesTab>[0]['handleChange']}

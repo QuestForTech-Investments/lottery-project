@@ -100,4 +100,5 @@ public class LimitRule
     public virtual BettingPool? BettingPool { get; set; }
 
     public virtual ICollection<LimitConsumption> LimitConsumptions { get; set; } = new List<LimitConsumption>();
+    public virtual ICollection<LimitRuleAmount> LimitRuleAmounts { get; set; } = new List<LimitRuleAmount>();
 }

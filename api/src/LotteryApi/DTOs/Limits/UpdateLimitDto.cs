@@ -100,3 +100,8 @@ public class UpdateLimitDto
     /// </summary>
     public bool? IsActive { get; set; }
 }
+
+public class UpdateAmountDto
+{
+    public decimal Amount { get; set; }
+}

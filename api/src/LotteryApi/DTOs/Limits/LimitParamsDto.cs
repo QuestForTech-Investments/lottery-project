@@ -26,9 +26,9 @@ public class LimitParamsDto
     public List<SelectOption> GameTypes { get; set; } = new();
 
     /// <summary>
-    /// Available betting pools
+    /// Available betting pools (includes zone info)
     /// </summary>
-    public List<SelectOption> BettingPools { get; set; } = new();
+    public List<BettingPoolSelectOption> BettingPools { get; set; } = new();
 
     /// <summary>
     /// Available zones
@@ -60,6 +60,18 @@ public class DrawSelectOption
     public int LotteryId { get; set; }
     public string? LotteryName { get; set; }
     public string? DisplayColor { get; set; }
+}
+
+/// <summary>
+/// Betting pool option with zone info for filtering
+/// </summary>
+public class BettingPoolSelectOption
+{
+    public int Value { get; set; }
+    public string Label { get; set; } = string.Empty;
+    public string? Code { get; set; }
+    public int ZoneId { get; set; }
+    public string? ZoneName { get; set; }
 }
 
 /// <summary>

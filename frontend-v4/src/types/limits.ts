@@ -26,19 +26,29 @@ export enum LimitType {
 }
 
 /**
- * Labels in Spanish for UI display
+ * Labels in Spanish for UI display (all types)
  */
 export const LimitTypeLabels: Record<LimitType, string> = {
-  [LimitType.GeneralForGroup]: 'General para grupo',
+  [LimitType.GeneralForGroup]: 'Limite Global',
   [LimitType.ByNumberForGroup]: 'General por número para grupo',
-  [LimitType.GeneralForBettingPool]: 'General para banca',
+  [LimitType.GeneralForBettingPool]: 'Limite Banca',
   [LimitType.ByNumberForBettingPool]: 'Por número para banca (Línea)',
-  [LimitType.LocalForBettingPool]: 'Local para banca',
-  [LimitType.GeneralForZone]: 'General para zona',
+  [LimitType.LocalForBettingPool]: 'Limite Local Banca',
+  [LimitType.GeneralForZone]: 'Limite Zona',
   [LimitType.ByNumberForZone]: 'Por número para zona',
   [LimitType.GeneralForExternalGroup]: 'General para grupo externo',
   [LimitType.ByNumberForExternalGroup]: 'Por número para grupo externo',
   [LimitType.Absolute]: 'Absoluto'
+};
+
+/**
+ * Labels for the 4 core limit types used in create form
+ */
+export const CreateLimitTypeLabels: Partial<Record<LimitType, string>> = {
+  [LimitType.GeneralForGroup]: 'Limite Global',
+  [LimitType.GeneralForZone]: 'Limite Zona',
+  [LimitType.GeneralForBettingPool]: 'Limite Banca',
+  [LimitType.LocalForBettingPool]: 'Limite Local Banca',
 };
 
 /**
@@ -85,6 +95,44 @@ export interface LimitRule {
   effectiveTo?: string;
   createdAt?: string;
   updatedAt?: string;
+  amounts?: LimitAmountItem[];
+}
+
+export interface LimitAmountItem {
+  gameTypeId: number;
+  gameTypeName: string;
+  amount: number;
+}
+
+/**
+ * Banca selection mode for creating limits
+ */
+export type BancaSelectionMode = 'specific' | 'all' | 'byZone';
+
+/**
+ * Betting pool option with zone info
+ */
+export interface BettingPoolOption {
+  value: number;
+  label: string;
+  code?: string;
+  zoneId: number;
+  zoneName?: string;
+}
+
+/**
+ * Parent limit validation result
+ */
+export interface ParentValidationResult {
+  isValid: boolean;
+  violations: ParentValidationViolation[];
+}
+
+export interface ParentValidationViolation {
+  gameType: string;
+  childAmount: number;
+  parentAmount: number;
+  parentType: string;
 }
 
 /**
@@ -96,7 +144,11 @@ export interface CreateLimitRequest {
   drawIds?: number[];
   gameTypeId?: number;
   zoneId?: number;
+  zoneIds?: number[];
   bettingPoolId?: number;
+  bettingPoolIds?: number[];
+  bancaSelectionMode?: BancaSelectionMode;
+  bancaZoneIds?: number[];
   betNumberPattern?: string;
   amounts?: BetTypeAmounts;
   daysOfWeek?: number;
@@ -138,7 +190,6 @@ export interface BetTypeAmounts {
   pickTwoFront?: number;
   pickTwoBack?: number;
   pickTwoMiddle?: number;
-  panama?: number;
   [key: string]: number | undefined;
 }
 
@@ -182,7 +233,7 @@ export interface LimitParams {
   draws: LimitSelectOption[];
   lotteries: LimitSelectOption[];
   gameTypes: LimitSelectOption[];
-  bettingPools: LimitSelectOption[];
+  bettingPools: BettingPoolOption[];
   zones: LimitSelectOption[];
   groups: LimitSelectOption[];
   daysOfWeek: DayOfWeekOption[];
@@ -226,8 +277,7 @@ export const BetTypes: readonly BetTypeDefinition[] = [
   { key: 'cash3BackBox', label: 'Cash3 Back Box' },
   { key: 'pickTwoFront', label: 'Pick Two Front' },
   { key: 'pickTwoBack', label: 'Pick Two Back' },
-  { key: 'pickTwoMiddle', label: 'Pick Two Middle' },
-  { key: 'panama', label: 'Panama' }
+  { key: 'pickTwoMiddle', label: 'Pick Two Middle' }
 ] as const;
 
 // ============================================================================
