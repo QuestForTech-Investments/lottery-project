@@ -346,14 +346,20 @@ public class LotteryHub : Hub<ILotteryHubClient>
             .Select(a => a.MaxAmount)
             .FirstOrDefaultAsync();
 
-        // Sum ALL consumption for this game type on this draw today (across all numbers)
-        var currentAmount = await _context.LimitConsumptions
+        // Sum consumption: for zona limits, sum ALL bancas in that zone
+        var consumptionQuery = _context.LimitConsumptions
             .AsNoTracking()
             .Where(lc => lc.DrawId == drawId
                 && lc.DrawDate == today
-                && lc.LimitRuleId == limitRule.LimitRuleId
-                && (lc.BettingPoolId == bettingPoolId || lc.BettingPoolId == null))
-            .SumAsync(lc => (decimal?)lc.CurrentAmount) ?? 0;
+                && lc.LimitRuleId == limitRule.LimitRuleId);
+
+        // Zona limits aggregate across all bancas; banca limits only for this banca
+        if (limitRule.LimitType != LimitType.GeneralForZone)
+        {
+            consumptionQuery = consumptionQuery.Where(lc => lc.BettingPoolId == bettingPoolId);
+        }
+
+        var currentAmount = await consumptionQuery.SumAsync(lc => (decimal?)lc.CurrentAmount) ?? 0;
 
         var reservedAmount = _limitReservationService.GetReservedAmount(drawId, gameTypeId);
         var totalUsed = currentAmount + reservedAmount;
