@@ -90,6 +90,9 @@ const CreateTickets: React.FC = () => {
     creatingTicket,
     cancelMinutes,
     allowSplitAmount,
+    limitAvailable,
+    signalRConnected,
+    handleBetNumberBlur,
   } = useCreateTicketsState();
 
   const { hasPermission } = useUserPermissions();
@@ -172,6 +175,8 @@ const CreateTickets: React.FC = () => {
         onAddBet={handleAddBet}
         onBetNumberKeyDown={handleBetNumberKeyDown}
         onAmountKeyDown={handleAmountKeyDown}
+        onBetNumberBlur={handleBetNumberBlur}
+        limitAvailable={limitAvailable}
         allowSplitAmount={allowSplitAmount}
         ticketsDropdown={<TicketsDropdown selectedPool={selectedPool} cancelMinutes={cancelMinutes} />}
       />

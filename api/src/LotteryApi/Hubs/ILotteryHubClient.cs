@@ -340,12 +340,19 @@ public class PlayLimitUpdateRequest
 }
 
 /// <summary>
-/// Response with play availability across draws.
+/// Response for a single play limit check.
 /// </summary>
 public class PlayLimitAvailabilityResponse : BaseNotification
 {
-    public string Play { get; set; } = string.Empty;
-    public List<DrawAvailability> DrawsAvailability { get; set; } = new();
+    public string BetNumber { get; set; } = string.Empty;
+    public int GameTypeId { get; set; }
+    public int DrawId { get; set; }
+    public string DrawName { get; set; } = string.Empty;
+    public decimal AvailableAmount { get; set; }
+    public decimal LimitAmount { get; set; }
+    public decimal CurrentAmount { get; set; }
+    public decimal PercentageUsed { get; set; }
+    public bool IsBlocked { get; set; }
 
     public PlayLimitAvailabilityResponse()
     {
@@ -354,7 +361,7 @@ public class PlayLimitAvailabilityResponse : BaseNotification
 }
 
 /// <summary>
-/// Availability info for a specific draw.
+/// Legacy: Availability info for a specific draw (kept for compat).
 /// </summary>
 public class DrawAvailability
 {

@@ -17,15 +17,12 @@ interface BetInputRowProps {
   onAddBet: () => void;
   onBetNumberKeyDown: (e: KeyboardEvent<HTMLInputElement>) => void;
   onAmountKeyDown: (e: KeyboardEvent<HTMLInputElement>) => void;
+  onBetNumberBlur?: () => void;
+  limitAvailable?: number | null;
   ticketsDropdown?: ReactNode;
   allowSplitAmount?: boolean;
 }
 
-/**
- * BetInputRow Component
- *
- * Input fields for bet number, amount, and bet type selection.
- */
 const BetInputRow: React.FC<BetInputRowProps> = memo(({
   betNumber,
   amount,
@@ -41,11 +38,12 @@ const BetInputRow: React.FC<BetInputRowProps> = memo(({
   onAddBet,
   onBetNumberKeyDown,
   onAmountKeyDown,
+  onBetNumberBlur,
+  limitAvailable,
   ticketsDropdown,
   allowSplitAmount = false,
 }) => {
   const handleAmountChange = (value: string) => {
-    // Allow split syntax (e.g. "5+2") only for non-Dominican draws
     const pattern = allowSplitAmount
       ? /^\d*\.?\d*(\+\d*\.?\d*)?$/
       : /^\d*\.?\d*$/;
@@ -54,63 +52,81 @@ const BetInputRow: React.FC<BetInputRowProps> = memo(({
     }
   };
 
+  // Determine what to show in the middle field
+  const hasError = !!betError;
+  const hasWarning = !!betWarning;
+  const hasLimit = limitAvailable !== null && limitAvailable !== undefined;
+
+  let middleText = '';
+  let middleBgColor = 'white';
+  let middleTextColor = '#999';
+  let middleFontSize = '24px';
+
+  if (hasError) {
+    middleText = betError;
+    middleBgColor = '#c62828';
+    middleTextColor = '#fff';
+    middleFontSize = '14px';
+  } else if (hasWarning) {
+    middleText = betWarning;
+    middleBgColor = '#e65100';
+    middleTextColor = '#fff';
+    middleFontSize = '14px';
+  } else if (hasLimit) {
+    if (limitAvailable === -1) {
+      middleText = 'Sin Límite';
+      middleBgColor = '#e8f5e9';
+      middleTextColor = '#2e7d32';
+      middleFontSize = '18px';
+    } else if (limitAvailable === 0) {
+      middleText = 'BLOQUEADO';
+      middleBgColor = '#c62828';
+      middleTextColor = '#fff';
+      middleFontSize = '18px';
+    } else {
+      middleText = `$${limitAvailable.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+      middleBgColor = limitAvailable < 100 ? '#fff3e0' : '#e8f5e9';
+      middleTextColor = limitAvailable < 100 ? '#e65100' : '#2e7d32';
+      middleFontSize = '24px';
+    }
+  }
+
   return (
   <>
-    {/* Main input row */}
     <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
       <TextField
         placeholder="JUGADA"
         value={betNumber}
         onChange={(e) => onBetNumberChange(e.target.value)}
         onKeyDown={onBetNumberKeyDown}
+        onBlur={onBetNumberBlur}
         disabled={!selectedDraw}
         autoFocus={!!selectedDraw}
         inputRef={betNumberInputRef}
         inputProps={{ tabIndex: 1 }}
         sx={{
-          flex: 1,
-          bgcolor: 'white',
-          '& input': {
-            fontSize: '24px',
-            fontWeight: 'bold',
-            textAlign: 'center',
-            py: 2,
-            color: '#333',
-          },
-          '& input::placeholder': {
-            color: '#999',
-            opacity: 1,
-          },
+          flex: 1, bgcolor: 'white',
+          '& input': { fontSize: '24px', fontWeight: 'bold', textAlign: 'center', py: 2, color: '#333' },
+          '& input::placeholder': { color: '#999', opacity: 1 },
         }}
       />
       <TextField
         placeholder="N/A"
-        value={betError || betWarning}
+        value={middleText}
         disabled
         sx={{
           flex: 1,
-          '& .MuiOutlinedInput-root': {
-            bgcolor: betError ? '#c62828' : betWarning ? '#e65100' : 'white',
-            height: '100%',
-          },
+          '& .MuiOutlinedInput-root': { bgcolor: middleBgColor, height: '100%' },
           '& .MuiOutlinedInput-notchedOutline': {
-            borderColor: betError ? '#c62828' : betWarning ? '#e65100' : 'rgba(0, 0, 0, 0.23)',
+            borderColor: hasError ? '#c62828' : hasWarning ? '#e65100' : 'rgba(0, 0, 0, 0.23)',
           },
           '& input': {
-            fontSize: (betError || betWarning) ? '14px' : '24px',
-            fontWeight: 'bold',
-            textAlign: 'center',
-            py: 2,
-            color: (betError || betWarning) ? '#fff' : '#333',
-            WebkitTextFillColor: (betError || betWarning) ? '#fff' : '#999',
-            '&.Mui-disabled': {
-              WebkitTextFillColor: (betError || betWarning) ? '#fff' : '#999',
-            },
+            fontSize: middleFontSize, fontWeight: 'bold', textAlign: 'center', py: 2,
+            color: middleTextColor,
+            WebkitTextFillColor: middleTextColor,
+            '&.Mui-disabled': { WebkitTextFillColor: middleTextColor },
           },
-          '& input::placeholder': {
-            color: '#999',
-            opacity: 1,
-          },
+          '& input::placeholder': { color: '#999', opacity: 1 },
         }}
       />
       <TextField
@@ -123,24 +139,13 @@ const BetInputRow: React.FC<BetInputRowProps> = memo(({
         inputRef={amountInputRef}
         inputProps={{ tabIndex: 2, inputMode: 'decimal' }}
         sx={{
-          flex: 1,
-          bgcolor: 'white',
-          '& input': {
-            fontSize: '24px',
-            fontWeight: 'bold',
-            textAlign: 'center',
-            py: 2,
-            color: '#333',
-          },
-          '& input::placeholder': {
-            color: '#999',
-            opacity: 1,
-          },
+          flex: 1, bgcolor: 'white',
+          '& input': { fontSize: '24px', fontWeight: 'bold', textAlign: 'center', py: 2, color: '#333' },
+          '& input::placeholder': { color: '#999', opacity: 1 },
         }}
       />
     </Box>
 
-    {/* Tickets dropdown + Counter row */}
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2, flexWrap: 'wrap' }}>
       {ticketsDropdown}
       <IconButton

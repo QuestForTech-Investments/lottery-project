@@ -10,6 +10,7 @@ import api from '@services/api';
 import { getCurrentUser } from '@services/authService';
 import { getBettingPoolConfig } from '@services/bettingPoolService';
 import { useUserPermissions } from '@hooks/useUserPermissions';
+import { useSignalR, type LimitAvailability } from '@hooks/useSignalR';
 import type {
   BettingPool, Draw, Bet, ColumnType, VisibleColumns,
   BettingPoolDrawResponse, DrawApiResponse, TicketData,
@@ -96,6 +97,11 @@ interface UseCreateTicketsStateReturn {
   // Cancel config
   cancelMinutes: number;
 
+  // Limits
+  limitAvailable: number | null; // null = not checked, -1 = unlimited, 0+ = amount
+  signalRConnected: boolean;
+  handleBetNumberBlur: () => void;
+
   // Handlers
   handleDrawClick: (draw: Draw) => void;
   handleAddBet: () => void;
@@ -145,6 +151,34 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
   const [selectedBetType, setSelectedBetType] = useState<string>('');
   const [betError, setBetError] = useState<string>('');
   const [betWarning, setBetWarning] = useState<string>('');
+
+  // Limit state
+  const [limitAvailable, setLimitAvailable] = useState<number | null>(null);
+  const recheckLimitRef = useRef<(() => void) | null>(null);
+  const { connected: signalRConnected, checkPlayLimit, reservePlay, releaseReservation, onLimitAvailability, onPlayReserved } = useSignalR();
+
+  // Pending reservation callback
+  const pendingReserveRef = useRef<{ drawId: number; resolve: (id: string) => void } | null>(null);
+
+  // Register SignalR callbacks
+  useEffect(() => {
+    onLimitAvailability((data: LimitAvailability) => {
+      // Keep minimum available across draws (for multi-lottery)
+      setLimitAvailable(prev => {
+        if (prev === null) return data.availableAmount;
+        if (data.availableAmount === -1) return prev === -1 ? -1 : prev; // unlimited doesn't reduce
+        if (prev === -1) return data.availableAmount;
+        return Math.min(prev, data.availableAmount);
+      });
+    });
+
+    onPlayReserved((data) => {
+      if (pendingReserveRef.current && pendingReserveRef.current.drawId === data.drawId) {
+        pendingReserveRef.current.resolve(data.reservationId);
+        pendingReserveRef.current = null;
+      }
+    });
+  }, [onLimitAvailability, onPlayReserved]);
 
   // Bets by column
   const [directBets, setDirectBets] = useState<Bet[]>([]);
@@ -731,27 +765,61 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
     if (newCash3Bets.length > 0)  setCash3Bets(prev => [...prev, ...newCash3Bets]);
     if (newPlay4Bets.length > 0)  setPlay4Bets(prev => [...prev, ...newPlay4Bets]);
 
+    // Reserve limit capacity for each new bet (fire-and-forget)
+    if (selectedPool) {
+      const allNewBets = [...newDirectBets, ...newPaleBets, ...newCash3Bets, ...newPlay4Bets];
+      allNewBets.forEach(bet => {
+        if (bet.gameTypeId && bet.drawId) {
+          reservePlay(bet.drawId, bet.gameTypeId, selectedPool.bettingPoolId, bet.betAmount);
+        }
+      });
+    }
+
+    // Reset limit display
+    setLimitAvailable(null);
     setBetNumber('');
     setTimeout(() => betNumberInputRef.current?.focus(), 0);
-  }, [multiLotteryMode, selectedDraws, selectedDraw, betNumber, amount, selectedBetType, drawGameTypes, determineBetType, allowSplitAmount]);
+  }, [multiLotteryMode, selectedDraws, selectedDraw, betNumber, amount, selectedBetType, drawGameTypes, determineBetType, allowSplitAmount, selectedPool, reservePlay]);
+
+  // Release reservations for a bet
+  const releaseBetReservation = useCallback((bet: Bet): void => {
+    if (bet.reservationId) {
+      releaseReservation(bet.reservationId);
+    }
+  }, [releaseReservation]);
 
   const handleDeleteBet = useCallback((column: ColumnType, id: number): void => {
+    // Release reservation before removing
+    const allBets = [...directBets, ...paleBets, ...cash3Bets, ...play4Bets];
+    const bet = allBets.find(b => b.id === id);
+    if (bet) releaseBetReservation(bet);
+
     switch (column) {
       case 'directo': setDirectBets(prev => prev.filter(bet => bet.id !== id)); break;
       case 'pale': setPaleBets(prev => prev.filter(bet => bet.id !== id)); break;
       case 'cash3': setCash3Bets(prev => prev.filter(bet => bet.id !== id)); break;
       case 'play4': setPlay4Bets(prev => prev.filter(bet => bet.id !== id)); break;
     }
-  }, []);
+
+    // Re-check limit after release (small delay for server to process)
+    setTimeout(() => recheckLimitRef.current?.(), 300);
+  }, [directBets, paleBets, cash3Bets, play4Bets, releaseBetReservation]);
 
   const handleDeleteAll = useCallback((column: ColumnType): void => {
+    // Release all reservations in the column
+    const betsMap: Record<string, Bet[]> = { directo: directBets, pale: paleBets, cash3: cash3Bets, play4: play4Bets };
+    (betsMap[column] || []).forEach(bet => releaseBetReservation(bet));
+
     switch (column) {
       case 'directo': setDirectBets([]); break;
       case 'pale': setPaleBets([]); break;
       case 'cash3': setCash3Bets([]); break;
       case 'play4': setPlay4Bets([]); break;
     }
-  }, []);
+
+    // Re-check limit after release
+    setTimeout(() => recheckLimitRef.current?.(), 300);
+  }, [directBets, paleBets, cash3Bets, play4Bets, releaseBetReservation]);
 
   // getBetTypeId now uses stored gameTypeId from detection, with fallback
   const getBetTypeId = useCallback((bet: Bet): number => {
@@ -826,6 +894,40 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
       setCreatingTicket(false);
     }
   }, [directBets, paleBets, cash3Bets, play4Bets, selectedPool, discountActive, getBetTypeId, effectiveTicketDate, ticketDateMode]);
+
+  // Check limit availability when user leaves number input
+  const handleBetNumberBlur = useCallback((): void => {
+    if (!betNumber.trim() || !selectedPool) {
+      setLimitAvailable(null);
+      return;
+    }
+
+    const drawsToCheck = multiLotteryMode && selectedDraws.length > 0
+      ? selectedDraws
+      : selectedDraw ? [selectedDraw] : [];
+
+    if (drawsToCheck.length === 0) {
+      setLimitAvailable(null);
+      return;
+    }
+
+    // Detect game type from the input
+    const allowedGameTypes = selectedDraw ? (drawGameTypes.get(selectedDraw.id) || []) : [];
+    const detection = determineBetType(betNumber, selectedBetType, allowedGameTypes);
+    if (!detection) {
+      setLimitAvailable(null);
+      return;
+    }
+
+    // Reset and check each draw
+    setLimitAvailable(null);
+    for (const draw of drawsToCheck) {
+      checkPlayLimit(betNumber.trim(), detection.gameTypeId, draw.id, selectedPool.bettingPoolId);
+    }
+  }, [betNumber, selectedPool, multiLotteryMode, selectedDraws, selectedDraw, selectedBetType, drawGameTypes, determineBetType, checkPlayLimit]);
+
+  // Keep ref in sync for use by delete handlers
+  recheckLimitRef.current = handleBetNumberBlur;
 
   const handlePoolChange = useCallback((pool: BettingPool | null): void => {
     setSelectedPool(pool);
@@ -932,6 +1034,9 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
     creatingTicket,
     cancelMinutes,
     allowSplitAmount,
+    limitAvailable,
+    signalRConnected,
+    handleBetNumberBlur,
   };
 };
 

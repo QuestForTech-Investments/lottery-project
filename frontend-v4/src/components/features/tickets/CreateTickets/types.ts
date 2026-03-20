@@ -36,6 +36,7 @@ export interface Bet {
   selectedBetType?: string;
   gameTypeId?: number;   // Resolved game type ID (1-21)
   position?: number;     // For Bolita/Singulacion (API Position field)
+  reservationId?: string; // SignalR limit reservation ID
 }
 
 export interface BetType {

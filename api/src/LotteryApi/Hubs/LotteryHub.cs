@@ -1,6 +1,7 @@
 using LotteryApi.Data;
 using LotteryApi.DTOs;
 using LotteryApi.Models;
+using LotteryApi.Models.Enums;
 using LotteryApi.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
@@ -164,134 +165,186 @@ public class LotteryHub : Hub<ILotteryHubClient>
     }
 
     /// <summary>
-    /// Request play limit availability for specific draws.
-    /// Client sends: {"target": "PlayLimitUpdate", "arguments": [{"play": "n"}, {"draws": [drawId] }] }
+    /// Reserve limit availability for a play (3-min TTL).
+    /// Call this when a bet is added to the ticket (before printing).
     /// </summary>
-    /// <param name="playRequest">Object containing the play number</param>
-    /// <param name="drawsRequest">Object containing the draw IDs</param>
-    public async Task PlayLimitUpdate(PlayLimitUpdatePlayParam playRequest, PlayLimitUpdateDrawsParam drawsRequest)
+    public async Task ReservePlay(ReservePlayRequest request)
+    {
+        var reservationId = _limitReservationService.Reserve(
+            request.DrawId, request.GameTypeId, request.BettingPoolId, request.Amount);
+
+        _logger.LogInformation(
+            "ReservePlay: Draw={DrawId}, GameType={GameTypeId}, Pool={BettingPoolId}, Amount={Amount} -> {ReservationId}",
+            request.DrawId, request.GameTypeId, request.BettingPoolId, request.Amount, reservationId);
+
+        await Clients.Caller.Notify(new GenericNotification
+        {
+            EventName = "PlayReserved",
+            Data = new Dictionary<string, object>
+            {
+                ["reservationId"] = reservationId,
+                ["drawId"] = request.DrawId,
+                ["gameTypeId"] = request.GameTypeId,
+                ["amount"] = request.Amount
+            }
+        });
+    }
+
+    /// <summary>
+    /// Release a previously made reservation (e.g., when bet is removed from ticket).
+    /// </summary>
+    public async Task ReleaseReservation(string reservationId)
+    {
+        var released = _limitReservationService.Release(reservationId);
+        _logger.LogDebug("ReleaseReservation: {Id} -> {Released}", reservationId, released);
+
+        await Clients.Caller.Notify(new GenericNotification
+        {
+            EventName = "ReservationReleased",
+            Data = new Dictionary<string, object>
+            {
+                ["reservationId"] = reservationId,
+                ["released"] = released
+            }
+        });
+    }
+
+    /// <summary>
+    /// Check play limit availability for a single bet.
+    /// Client sends: { "target": "CheckPlayLimit", "arguments": [{ "betNumber": "12", "gameTypeId": 1, "drawId": 167, "bettingPoolId": 9 }] }
+    /// Response: PlayLimitAvailability
+    /// </summary>
+    public async Task CheckPlayLimit(CheckPlayLimitRequest request)
     {
         var userId = Context.User?.FindFirst("sub")?.Value
             ?? Context.User?.FindFirst("userId")?.Value;
-        var bettingPoolIdStr = Context.User?.FindFirst("bettingPoolId")?.Value;
 
-        if (string.IsNullOrEmpty(bettingPoolIdStr) || !int.TryParse(bettingPoolIdStr, out var bettingPoolId))
+        var bettingPoolId = request.BettingPoolId;
+        if (bettingPoolId <= 0)
         {
-            _logger.LogWarning("PlayLimitUpdate: No valid bettingPoolId found for user {UserId}", userId);
+            var bpClaim = Context.User?.FindFirst("bettingPoolId")?.Value;
+            if (!string.IsNullOrEmpty(bpClaim) && int.TryParse(bpClaim, out var bpFromClaim))
+                bettingPoolId = bpFromClaim;
+        }
+
+        var betNumber = request.BetNumber.Trim();
+        var gameTypeId = request.GameTypeId;
+        var drawId = request.DrawId;
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        var now = DateTime.UtcNow;
+
+        _logger.LogInformation(
+            "CheckPlayLimit: User={UserId}, Bet={BetNumber}, GameType={GameTypeId}, Draw={DrawId}, Pool={BettingPoolId}",
+            userId, betNumber, gameTypeId, drawId, bettingPoolId);
+
+        var draw = await _context.Draws
+            .AsNoTracking()
+            .Where(d => d.DrawId == drawId)
+            .FirstOrDefaultAsync();
+
+        if (draw == null)
+        {
+            await Clients.Caller.PlayLimitAvailability(new PlayLimitAvailabilityResponse
+            {
+                BetNumber = betNumber,
+                GameTypeId = gameTypeId,
+                DrawId = drawId
+            });
             return;
         }
 
-        _logger.LogInformation(
-            "PlayLimitUpdate requested: ConnectionId={ConnectionId}, UserId={UserId}, Play={Play}, Draws={Draws}",
-            Context.ConnectionId, userId, playRequest.Play, string.Join(",", drawsRequest.Draws));
+        // Find the most specific limit rule: Banca > Local > Zona > Global
+        var limitRule = await _context.LimitRules
+            .AsNoTracking()
+            .Where(lr => lr.IsActive
+                && (lr.DrawId == drawId || lr.DrawId == null)
+                && (lr.EffectiveFrom == null || lr.EffectiveFrom <= now)
+                && (lr.EffectiveTo == null || lr.EffectiveTo >= now)
+                && lr.LimitRuleAmounts.Any(a => a.GameTypeId == gameTypeId))
+            .OrderByDescending(lr => lr.BettingPoolId == bettingPoolId ? 4 : 0)
+            .ThenByDescending(lr => lr.LimitType == LimitType.GeneralForBettingPool || lr.LimitType == LimitType.LocalForBettingPool ? 3 : 0)
+            .ThenByDescending(lr => lr.LimitType == LimitType.GeneralForZone ? 2 : 0)
+            .ThenByDescending(lr => lr.LimitType == LimitType.GeneralForGroup ? 1 : 0)
+            .ThenByDescending(lr => lr.DrawId != null ? 1 : 0)
+            .FirstOrDefaultAsync();
 
-        // Convert play number to pattern (e.g., "123" -> "###", "12" -> "##")
-        var playNumber = playRequest.Play.Trim();
-        var playPattern = new string('#', playNumber.Length);
-        var today = DateOnly.FromDateTime(DateTime.Today);
-
-        var drawsAvailability = new List<DrawAvailability>();
-
-        foreach (var drawId in drawsRequest.Draws)
+        if (limitRule == null)
         {
-            // Get the draw with its limit rules
-            var draw = await _context.Draws
-                .Where(d => d.DrawId == drawId
-                    && d.BettingPoolDraws!.Any(bpd => bpd.BettingPoolId == bettingPoolId))
-                .FirstOrDefaultAsync();
-
-            if (draw == null)
+            await Clients.Caller.PlayLimitAvailability(new PlayLimitAvailabilityResponse
             {
-                continue;
-            }
-
-            // Find the applicable limit rule for this play pattern
-            // Priority: specific number > pattern > global (null pattern)
-            var limitRule = await _context.LimitRules
-                .Where(lr => lr.IsActive
-                    && (lr.DrawId == drawId || lr.DrawId == null)
-                    && (lr.BetNumberPattern == playNumber || lr.BetNumberPattern == playPattern || lr.BetNumberPattern == null)
-                    && (lr.EffectiveFrom == null || lr.EffectiveFrom <= DateTime.Now)
-                    && (lr.EffectiveTo == null || lr.EffectiveTo >= DateTime.Now))
-                .OrderByDescending(lr => lr.BetNumberPattern == playNumber ? 3 : lr.BetNumberPattern == playPattern ? 2 : 1)
-                .ThenByDescending(lr => lr.DrawId != null ? 1 : 0)
-                .ThenByDescending(lr => lr.Priority ?? 0)
-                .FirstOrDefaultAsync();
-
-            if (limitRule == null)
-            {
-                // No limit rule found, unlimited availability
-                drawsAvailability.Add(new DrawAvailability
-                {
-                    DrawId = drawId,
-                    DrawName = draw.DrawName,
-                    AvailableAmount = -1, // -1 indicates unlimited
-                    LimitAmount = 0,
-                    CurrentAmount = 0,
-                    PercentageUsed = 0,
-                    IsBlocked = false
-                });
-                continue;
-            }
-
-            // Get current consumption for this play number
-            var consumption = await _context.LimitConsumptions
-                .Where(lc => lc.DrawId == drawId
-                    && lc.DrawDate == today
-                    && lc.BetNumber == playNumber
-                    && (lc.BettingPoolId == bettingPoolId || lc.BettingPoolId == null))
-                .FirstOrDefaultAsync();
-
-            // Determine the applicable limit based on the limit rule
-            var maxLimit = limitRule.MaxBetPerNumber
-                ?? limitRule.MaxBetPerBettingPool
-                ?? limitRule.MaxBetGlobal
-                ?? 0;
-
-            var currentAmount = consumption?.CurrentAmount ?? 0;
-            var reservedAmount = _limitReservationService.GetReservedAmount(drawId, playNumber);
-            var totalUsed = currentAmount + reservedAmount;
-            var availableAmount = maxLimit > 0 ? maxLimit - totalUsed : 0;
-            var percentageUsed = maxLimit > 0 ? (totalUsed / maxLimit) * 100 : 0;
-            var isBlocked = consumption?.IsAtLimit ?? false || (maxLimit > 0 && totalUsed > maxLimit);
-
-            drawsAvailability.Add(new DrawAvailability
-            {
+                BetNumber = betNumber,
+                GameTypeId = gameTypeId,
                 DrawId = drawId,
                 DrawName = draw.DrawName,
-                AvailableAmount = Math.Max(0, availableAmount),
-                LimitAmount = maxLimit,
-                CurrentAmount = currentAmount,
-                PercentageUsed = Math.Round(percentageUsed, 2),
-                IsBlocked = isBlocked
+                AvailableAmount = -1,
+                LimitAmount = 0,
+                CurrentAmount = 0,
+                PercentageUsed = 0,
+                IsBlocked = false
             });
+            return;
         }
 
-        var response = new PlayLimitAvailabilityResponse
-        {
-            Play = playRequest.Play,
-            DrawsAvailability = drawsAvailability
-        };
+        var limitAmount = await _context.LimitRuleAmounts
+            .AsNoTracking()
+            .Where(a => a.LimitRuleId == limitRule.LimitRuleId && a.GameTypeId == gameTypeId)
+            .Select(a => a.MaxAmount)
+            .FirstOrDefaultAsync();
 
-        // Send response only to the caller
-        await Clients.Caller.PlayLimitAvailability(response);
+        // Sum ALL consumption for this game type on this draw today (across all numbers)
+        var currentAmount = await _context.LimitConsumptions
+            .AsNoTracking()
+            .Where(lc => lc.DrawId == drawId
+                && lc.DrawDate == today
+                && lc.LimitRuleId == limitRule.LimitRuleId
+                && (lc.BettingPoolId == bettingPoolId || lc.BettingPoolId == null))
+            .SumAsync(lc => (decimal?)lc.CurrentAmount) ?? 0;
+
+        var reservedAmount = _limitReservationService.GetReservedAmount(drawId, gameTypeId);
+        var totalUsed = currentAmount + reservedAmount;
+        var availableAmount = limitAmount > 0 ? limitAmount - totalUsed : 0;
+        var percentageUsed = limitAmount > 0 ? (totalUsed / limitAmount) * 100 : 0;
+        var isBlocked = limitAmount > 0 && totalUsed >= limitAmount;
+
+        await Clients.Caller.PlayLimitAvailability(new PlayLimitAvailabilityResponse
+        {
+            BetNumber = betNumber,
+            GameTypeId = gameTypeId,
+            DrawId = drawId,
+            DrawName = draw.DrawName,
+            AvailableAmount = Math.Max(0, availableAmount),
+            LimitAmount = limitAmount,
+            CurrentAmount = currentAmount,
+            PercentageUsed = Math.Round(percentageUsed, 2),
+            IsBlocked = isBlocked
+        });
     }
 }
 
-// ==================== PLAY LIMIT UPDATE PARAMETER CLASSES ====================
+// ==================== REQUEST/RESPONSE CLASSES ====================
 
 /// <summary>
-/// Parameter class for play in PlayLimitUpdate.
+/// Request for CheckPlayLimit hub method.
 /// </summary>
-public class PlayLimitUpdatePlayParam
+public class ReservePlayRequest
 {
-    public string Play { get; set; } = string.Empty;
+    public int DrawId { get; set; }
+    public int GameTypeId { get; set; }
+    public int BettingPoolId { get; set; }
+    public decimal Amount { get; set; }
 }
 
-/// <summary>
-/// Parameter class for draws in PlayLimitUpdate.
-/// </summary>
-public class PlayLimitUpdateDrawsParam
+public class CheckPlayLimitRequest
 {
-    public List<int> Draws { get; set; } = new();
+    /// <summary>The bet number (e.g., "12", "1234", "101")</summary>
+    public string BetNumber { get; set; } = string.Empty;
+
+    /// <summary>Game type ID from game_types table</summary>
+    public int GameTypeId { get; set; }
+
+    /// <summary>Draw ID to check</summary>
+    public int DrawId { get; set; }
+
+    /// <summary>Betting pool ID making the request</summary>
+    public int BettingPoolId { get; set; }
 }

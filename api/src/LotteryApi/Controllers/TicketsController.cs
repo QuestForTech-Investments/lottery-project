@@ -1972,6 +1972,22 @@ public class TicketsController : ControllerBase
     /// <param name="bettingPoolId">Betting pool ID</param>
     /// <param name="betAmount">Amount to add to consumption</param>
     /// <param name="timestamp">Current timestamp</param>
+    /// <summary>
+    /// Determine game type ID from bet number length
+    /// </summary>
+    private static int GetGameTypeIdFromBetNumber(string betNumber)
+    {
+        return betNumber.Length switch
+        {
+            2 => 1,  // Directo
+            4 => 2,  // Pale
+            6 => 3,  // Tripleta
+            3 => 4,  // Cash3 Straight
+            5 => 12, // Pick5 Straight
+            _ => 1   // Default to Directo
+        };
+    }
+
     private async Task UpdateLimitConsumption(
         int drawId,
         DateTime drawDate,
@@ -1981,26 +1997,35 @@ public class TicketsController : ControllerBase
         DateTime timestamp)
     {
         var today = DateOnly.FromDateTime(drawDate);
-        var playPattern = new string('#', betNumber.Length);
+        var gameTypeId = GetGameTypeIdFromBetNumber(betNumber);
 
-        // Find the applicable limit rule for this bet
+        // Find the most specific limit rule that has an amount for this game type
+        // Priority: Banca > Local Banca > Zona > Global
         var limitRule = await _context.LimitRules
             .Where(lr => lr.IsActive
                 && (lr.DrawId == drawId || lr.DrawId == null)
-                && (lr.BetNumberPattern == betNumber || lr.BetNumberPattern == playPattern || lr.BetNumberPattern == null)
                 && (lr.EffectiveFrom == null || lr.EffectiveFrom <= timestamp)
-                && (lr.EffectiveTo == null || lr.EffectiveTo >= timestamp))
-            .OrderByDescending(lr => lr.BetNumberPattern == betNumber ? 3 : lr.BetNumberPattern == playPattern ? 2 : 1)
+                && (lr.EffectiveTo == null || lr.EffectiveTo >= timestamp)
+                && lr.LimitRuleAmounts.Any(a => a.GameTypeId == gameTypeId))
+            .OrderByDescending(lr => lr.BettingPoolId == bettingPoolId ? 4 : 0)
+            .ThenByDescending(lr => lr.LimitType == Models.Enums.LimitType.GeneralForBettingPool || lr.LimitType == Models.Enums.LimitType.LocalForBettingPool ? 3 : 0)
+            .ThenByDescending(lr => lr.LimitType == Models.Enums.LimitType.GeneralForZone ? 2 : 0)
+            .ThenByDescending(lr => lr.LimitType == Models.Enums.LimitType.GeneralForGroup ? 1 : 0)
             .ThenByDescending(lr => lr.DrawId != null ? 1 : 0)
-            .ThenByDescending(lr => lr.Priority ?? 0)
             .FirstOrDefaultAsync();
 
         if (limitRule == null)
         {
-            // No limit rule applies, no consumption tracking needed
-            _logger.LogInformation("NO LIMIT FOUND");
             return;
         }
+
+        // Get the max limit from limit_rule_amounts
+        var maxLimit = await _context.LimitRuleAmounts
+            .Where(a => a.LimitRuleId == limitRule.LimitRuleId && a.GameTypeId == gameTypeId)
+            .Select(a => a.MaxAmount)
+            .FirstOrDefaultAsync();
+
+        if (maxLimit <= 0) return;
 
         // Check local change tracker first (handles duplicate numbers in same ticket)
         var consumption = _context.LimitConsumptions.Local
@@ -2010,7 +2035,6 @@ public class TicketsController : ControllerBase
                 && lc.BetNumber == betNumber
                 && lc.BettingPoolId == bettingPoolId);
 
-        // Then check the database
         consumption ??= await _context.LimitConsumptions
             .Where(lc => lc.LimitRuleId == limitRule.LimitRuleId
                 && lc.DrawId == drawId
@@ -2019,15 +2043,20 @@ public class TicketsController : ControllerBase
                 && lc.BettingPoolId == bettingPoolId)
             .FirstOrDefaultAsync();
 
-        // Determine the max limit for this rule
-        var maxLimit = limitRule.MaxBetPerNumber
-            ?? limitRule.MaxBetPerBettingPool
-            ?? limitRule.MaxBetGlobal
-            ?? 0;
+        // Get total consumed across ALL numbers for this rule today
+        var totalBefore = _context.LimitConsumptions.Local
+            .Where(lc => lc.LimitRuleId == limitRule.LimitRuleId && lc.DrawId == drawId && lc.DrawDate == today && lc.BettingPoolId == bettingPoolId)
+            .Sum(lc => lc.CurrentAmount);
+
+        totalBefore += await _context.LimitConsumptions
+            .Where(lc => lc.LimitRuleId == limitRule.LimitRuleId && lc.DrawId == drawId && lc.DrawDate == today && lc.BettingPoolId == bettingPoolId)
+            .Where(lc => !_context.LimitConsumptions.Local.Select(x => x.ConsumptionId).Contains(lc.ConsumptionId))
+            .SumAsync(lc => (decimal?)lc.CurrentAmount) ?? 0;
+
+        var totalAfter = totalBefore + betAmount;
 
         if (consumption == null)
         {
-            // Create new consumption record
             consumption = new LimitConsumption
             {
                 LimitRuleId = limitRule.LimitRuleId,
@@ -2038,8 +2067,8 @@ public class TicketsController : ControllerBase
                 CurrentAmount = betAmount,
                 BetCount = 1,
                 LastBetAt = timestamp,
-                IsNearLimit = maxLimit > 0 && betAmount >= (maxLimit * 0.8m),
-                IsAtLimit = maxLimit > 0 && betAmount >= maxLimit,
+                IsNearLimit = totalAfter >= (maxLimit * 0.8m),
+                IsAtLimit = totalAfter >= maxLimit,
                 CreatedAt = timestamp,
                 UpdatedAt = timestamp
             };
@@ -2047,76 +2076,67 @@ public class TicketsController : ControllerBase
         }
         else
         {
-            // Update existing consumption record
             consumption.CurrentAmount += betAmount;
             consumption.BetCount += 1;
             consumption.LastBetAt = timestamp;
-            consumption.IsNearLimit = maxLimit > 0 && consumption.CurrentAmount >= (maxLimit * 0.8m);
-            consumption.IsAtLimit = maxLimit > 0 && consumption.CurrentAmount >= maxLimit;
+            consumption.IsNearLimit = totalAfter >= (maxLimit * 0.8m);
+            consumption.IsAtLimit = totalAfter >= maxLimit;
             consumption.UpdatedAt = timestamp;
         }
 
         _logger.LogDebug(
-            "Updated limit consumption: DrawId={DrawId}, BetNumber={BetNumber}, BettingPoolId={BettingPoolId}, CurrentAmount={CurrentAmount}, IsAtLimit={IsAtLimit}",
-            drawId, betNumber, bettingPoolId, consumption.CurrentAmount, consumption.IsAtLimit);
+            "Limit consumption: DrawId={DrawId}, BetNumber={BetNumber}, GameTypeId={GameTypeId}, ThisNumber={ThisAmount}, TotalForType={Total}/{MaxLimit}",
+            drawId, betNumber, gameTypeId, consumption.CurrentAmount, totalAfter, maxLimit);
     }
 
-    private async Task<bool> CheckIfPlayIsOnLimits(int drawId, int bettingPool, string betNumber, decimal bet)
+    private async Task<bool> CheckIfPlayIsOnLimits(int drawId, int bettingPoolId, string betNumber, decimal bet)
     {
-        var timestamp = DateTime.Today;
-        var playPattern = new string('#', betNumber.Length);
+        var now = DateTime.UtcNow;
+        var today = DateOnly.FromDateTime(Helpers.DateTimeHelper.TodayInBusinessTimezone());
+        var gameTypeId = GetGameTypeIdFromBetNumber(betNumber);
 
-        // Find the applicable limit rule for this bet
+        // Find the most specific limit rule with an amount for this game type
         var limitRule = await _context.LimitRules
             .Where(lr => lr.IsActive
                 && (lr.DrawId == drawId || lr.DrawId == null)
-                && (lr.BetNumberPattern == betNumber || lr.BetNumberPattern == playPattern || lr.BetNumberPattern == null)
-                && (lr.EffectiveFrom == null || lr.EffectiveFrom <= timestamp)
-                && (lr.EffectiveTo == null || lr.EffectiveTo >= timestamp))
-            .OrderByDescending(lr => lr.BetNumberPattern == betNumber ? 3 : lr.BetNumberPattern == playPattern ? 2 : 1)
+                && (lr.EffectiveFrom == null || lr.EffectiveFrom <= now)
+                && (lr.EffectiveTo == null || lr.EffectiveTo >= now)
+                && lr.LimitRuleAmounts.Any(a => a.GameTypeId == gameTypeId))
+            .OrderByDescending(lr => lr.BettingPoolId == bettingPoolId ? 4 : 0)
+            .ThenByDescending(lr => lr.LimitType == Models.Enums.LimitType.GeneralForBettingPool || lr.LimitType == Models.Enums.LimitType.LocalForBettingPool ? 3 : 0)
+            .ThenByDescending(lr => lr.LimitType == Models.Enums.LimitType.GeneralForZone ? 2 : 0)
+            .ThenByDescending(lr => lr.LimitType == Models.Enums.LimitType.GeneralForGroup ? 1 : 0)
             .ThenByDescending(lr => lr.DrawId != null ? 1 : 0)
-            .ThenByDescending(lr => lr.Priority ?? 0)
             .FirstOrDefaultAsync();
 
         if (limitRule == null)
         {
-            // No limit rule applies - allow the bet (no restrictions)
-            _logger.LogInformation("NO LIMIT FOUND - allowing bet");
-            return true;
+            return true; // No limit = allow
         }
 
-        // Find existing consumption record
-        var consumption = await _context.LimitConsumptions
-            .Where(lc => lc.LimitRuleId == limitRule.LimitRuleId
-                && lc.DrawId == drawId
-                && lc.DrawDate == DateOnly.FromDateTime(timestamp)
-                && lc.BetNumber == betNumber
-                && lc.BettingPoolId == bettingPool || lc.BettingPoolId == null)
+        // Get max limit from limit_rule_amounts
+        var maxLimit = await _context.LimitRuleAmounts
+            .Where(a => a.LimitRuleId == limitRule.LimitRuleId && a.GameTypeId == gameTypeId)
+            .Select(a => a.MaxAmount)
             .FirstOrDefaultAsync();
 
-        var limit = (decimal?)-1;
+        if (maxLimit <= 0) return true;
 
-        if (limitRule!.MaxBetPerNumber.HasValue)
-            limit = limitRule.MaxBetPerNumber;
-        else if (limitRule!.MaxBetPerBettingPool.HasValue)
-            limit = limitRule.MaxBetPerBettingPool;
-        else if (limitRule!.MaxBetPerTicket.HasValue)
-            limit = limitRule.MaxBetPerTicket;
+        // Sum ALL consumption for this rule today (across all numbers for this game type)
+        var currentAmount = await _context.LimitConsumptions
+            .Where(lc => lc.LimitRuleId == limitRule.LimitRuleId
+                && lc.DrawId == drawId
+                && lc.DrawDate == today
+                && (lc.BettingPoolId == bettingPoolId || lc.BettingPoolId == null))
+            .SumAsync(lc => (decimal?)lc.CurrentAmount) ?? 0;
 
-        bool isAtLimit = false;
-        decimal currentAmount = 0;
-        if (consumption != null)
-        {
-            isAtLimit = consumption.IsAtLimit;
-            currentAmount = consumption.CurrentAmount;
-        }
-
-        // Include in-memory reservations from other terminals
-        var reservedAmount = _limitReservationService.GetReservedAmount(drawId, betNumber);
+        var reservedAmount = _limitReservationService.GetReservedAmount(drawId, gameTypeId);
         var totalUsed = currentAmount + reservedAmount;
 
-        _logger.LogInformation($"LIMIT FOUND: d{drawId}, l{limit}, b{bet}, bn{betNumber}, bp{bettingPool}, il{isAtLimit}, ca{currentAmount}, ra{reservedAmount}, t{DateOnly.FromDateTime(timestamp)}");
+        _logger.LogDebug(
+            "Limit check: draw={DrawId}, bet={BetNumber}, gameType={GameTypeId}, limit={MaxLimit}, used={TotalUsed}, bet={Bet}",
+            drawId, betNumber, gameTypeId, maxLimit, totalUsed, bet);
 
-        return limit == -1 || (!isAtLimit && totalUsed + bet <= limit);
+        return totalUsed + bet <= maxLimit;
     }
 }
