@@ -436,4 +436,36 @@ export const handleLimitError = (error: unknown, operation: string = 'operacion'
   return `Error en ${operation}: ${errorMessage}`;
 };
 
+// ==================== LIMIT DEFAULTS ====================
+
+export interface LimitDefaultItem {
+  limitDefaultId: number;
+  defaultType: string; // "zona" or "banca"
+  gameTypeId: number;
+  gameTypeName: string;
+  maxAmount: number;
+  updatedAt: string | null;
+}
+
+export interface UpdateLimitDefaultItem {
+  defaultType: string;
+  gameTypeId: number;
+  maxAmount: number;
+}
+
+/**
+ * Get limit defaults for zona and banca
+ */
+export const getLimitDefaults = async (): Promise<LimitDefaultItem[]> => {
+  const data = await api.get(`${BASE_URL}/defaults`);
+  return data as LimitDefaultItem[];
+};
+
+/**
+ * Update limit defaults (requires MANAGE_LIMIT_DEFAULTS permission)
+ */
+export const updateLimitDefaults = async (defaults: UpdateLimitDefaultItem[]): Promise<void> => {
+  await api.put(`${BASE_URL}/defaults`, { defaults });
+};
+
 export default limitService;

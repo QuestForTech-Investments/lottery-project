@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using LotteryApi.Data;
 using LotteryApi.DTOs;
 using LotteryApi.Models;
+using LotteryApi.Models.Enums;
 using LotteryApi.Services;
 
 namespace LotteryApi.Controllers;
@@ -184,6 +185,9 @@ public class ZonesController : ControllerBase
 
             _context.Zones.Add(zone);
             await _context.SaveChangesAsync();
+
+            // Auto-create zona limit rules from defaults for all draws that have global limits
+            await AutoCreateZonaLimits(zone.ZoneId);
 
             // Invalidate zones cache
             await _cache.RemoveByPrefixAsync("zones:");
@@ -465,6 +469,83 @@ public class ZonesController : ControllerBase
         {
             _logger.LogError(ex, "Error removing user {UserId} from zone {ZoneId}", userId, id);
             return StatusCode(500, new { message = "Error removing user from zone" });
+        }
+    }
+
+    /// <summary>
+    /// Auto-create zona limit rules from defaults for all draws that have global limits.
+    /// Called when a new zone is created.
+    /// </summary>
+    private async Task AutoCreateZonaLimits(int zoneId)
+    {
+        try
+        {
+            // Get zona defaults
+            var zonaDefaults = await _context.LimitDefaults
+                .Where(d => d.DefaultType == "zona")
+                .ToListAsync();
+
+            if (zonaDefaults.Count == 0) return;
+
+            // Get all draws that have active global limits (limit_type = 1)
+            var globalDrawIds = await _context.LimitRules
+                .Where(r => r.LimitType == LimitType.GeneralForGroup && r.IsActive && r.DrawId.HasValue)
+                .Select(r => r.DrawId!.Value)
+                .Distinct()
+                .ToListAsync();
+
+            if (globalDrawIds.Count == 0) return;
+
+            // Get draw game type compatibility to only save relevant amounts
+            var drawGameTypes = await _context.Set<DrawGameCompatibility>()
+                .Where(dgc => dgc.IsActive && globalDrawIds.Contains(dgc.DrawId))
+                .GroupBy(dgc => dgc.DrawId)
+                .Select(g => new { DrawId = g.Key, GameTypeIds = g.Select(x => x.GameTypeId).ToList() })
+                .ToListAsync();
+
+            var drawGameTypeMap = drawGameTypes.ToDictionary(x => x.DrawId, x => new HashSet<int>(x.GameTypeIds));
+
+            var timestamp = DateTime.UtcNow.ToString("yyyyMMddHHmmss");
+
+            foreach (var drawId in globalDrawIds)
+            {
+                drawGameTypeMap.TryGetValue(drawId, out var allowedGameTypes);
+
+                var rule = new LimitRule
+                {
+                    RuleName = $"Límite Zona (auto) - {timestamp}",
+                    LimitType = LimitType.GeneralForZone,
+                    DrawId = drawId,
+                    ZoneId = zoneId,
+                    DaysOfWeek = 127, // All days
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow
+                };
+                _context.LimitRules.Add(rule);
+                await _context.SaveChangesAsync(); // Save to get the ID
+
+                foreach (var def in zonaDefaults)
+                {
+                    // Only save if draw supports this game type (or no restrictions)
+                    if (allowedGameTypes != null && !allowedGameTypes.Contains(def.GameTypeId))
+                        continue;
+
+                    _context.LimitRuleAmounts.Add(new LimitRuleAmount
+                    {
+                        LimitRuleId = rule.LimitRuleId,
+                        GameTypeId = def.GameTypeId,
+                        MaxAmount = def.MaxAmount
+                    });
+                }
+                await _context.SaveChangesAsync();
+            }
+
+            _logger.LogInformation("Auto-created zona limits for zone {ZoneId} across {DrawCount} draws", zoneId, globalDrawIds.Count);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error auto-creating zona limits for zone {ZoneId}", zoneId);
+            // Don't throw — zone creation should succeed even if limit auto-creation fails
         }
     }
 }

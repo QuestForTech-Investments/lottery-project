@@ -157,25 +157,29 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
   const recheckLimitRef = useRef<(() => void) | null>(null);
   const { connected: signalRConnected, checkPlayLimit, reservePlay, releaseReservation, onLimitAvailability, onPlayReserved } = useSignalR();
 
-  // Pending reservation callback
-  const pendingReserveRef = useRef<{ drawId: number; resolve: (id: string) => void } | null>(null);
+  // Map of betId -> reservationId for releasing on delete
+  const reservationMapRef = useRef<Map<number, string>>(new Map());
+  // Queue of betIds waiting for reservationId from server
+  const pendingReservationsRef = useRef<Map<string, number>>(new Map()); // "drawId-gameTypeId" -> betId
 
   // Register SignalR callbacks
   useEffect(() => {
     onLimitAvailability((data: LimitAvailability) => {
-      // Keep minimum available across draws (for multi-lottery)
       setLimitAvailable(prev => {
         if (prev === null) return data.availableAmount;
-        if (data.availableAmount === -1) return prev === -1 ? -1 : prev; // unlimited doesn't reduce
+        if (data.availableAmount === -1) return prev === -1 ? -1 : prev;
         if (prev === -1) return data.availableAmount;
         return Math.min(prev, data.availableAmount);
       });
     });
 
     onPlayReserved((data) => {
-      if (pendingReserveRef.current && pendingReserveRef.current.drawId === data.drawId) {
-        pendingReserveRef.current.resolve(data.reservationId);
-        pendingReserveRef.current = null;
+      // Match to pending bet and store the reservationId
+      const key = `${data.drawId}-${data.gameTypeId}`;
+      const betId = pendingReservationsRef.current.get(key);
+      if (betId !== undefined) {
+        reservationMapRef.current.set(betId, data.reservationId);
+        pendingReservationsRef.current.delete(key);
       }
     });
   }, [onLimitAvailability, onPlayReserved]);
@@ -765,11 +769,14 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
     if (newCash3Bets.length > 0)  setCash3Bets(prev => [...prev, ...newCash3Bets]);
     if (newPlay4Bets.length > 0)  setPlay4Bets(prev => [...prev, ...newPlay4Bets]);
 
-    // Reserve limit capacity for each new bet (fire-and-forget)
+    // Reserve limit capacity for each new bet
     if (selectedPool) {
       const allNewBets = [...newDirectBets, ...newPaleBets, ...newCash3Bets, ...newPlay4Bets];
       allNewBets.forEach(bet => {
         if (bet.gameTypeId && bet.drawId) {
+          // Track which betId is waiting for this reservation
+          const key = `${bet.drawId}-${bet.gameTypeId}`;
+          pendingReservationsRef.current.set(key, bet.id);
           reservePlay(bet.drawId, bet.gameTypeId, selectedPool.bettingPoolId, bet.betAmount);
         }
       });
@@ -783,8 +790,10 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
 
   // Release reservations for a bet
   const releaseBetReservation = useCallback((bet: Bet): void => {
-    if (bet.reservationId) {
-      releaseReservation(bet.reservationId);
+    const resId = reservationMapRef.current.get(bet.id);
+    if (resId) {
+      releaseReservation(resId);
+      reservationMapRef.current.delete(bet.id);
     }
   }, [releaseReservation]);
 
@@ -886,6 +895,10 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
       setCash3Bets([]);
       setPlay4Bets([]);
       setMultiLotteryMode(false);
+      // Clear reservations — server releases them on ticket save
+      reservationMapRef.current.clear();
+      pendingReservationsRef.current.clear();
+      setLimitAvailable(null);
       setSuccessMessage(`Ticket creado: ${response.ticketCode || 'OK'}`);
     } catch (error) {
       console.error('Error creating ticket:', error);
@@ -944,7 +957,12 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
     setMultiLotteryMode(false);
     setTicketDateMode('today');
     setSelectedFutureDate('');
-  }, []);
+    // Release all reservations and clear map
+    reservationMapRef.current.forEach(resId => releaseReservation(resId));
+    reservationMapRef.current.clear();
+    pendingReservationsRef.current.clear();
+    setLimitAvailable(null);
+  }, [releaseReservation]);
 
   const handleDuplicate = useCallback((): void => {
     alert('Función de duplicar pendiente de implementar');

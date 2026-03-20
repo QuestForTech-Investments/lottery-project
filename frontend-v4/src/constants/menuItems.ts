@@ -141,6 +141,7 @@ export const MENU_ITEMS: MenuItem[] = [
     submenu: [
       { id: 'limits-list', label: 'Lista', shortcut: 'L', path: '/limits/list' },
       { id: 'create-limit', label: 'Crear', shortcut: 'C', path: '/limits/new' },
+      { id: 'limit-defaults', label: 'Configuración', shortcut: 'C', path: '/limits/defaults' },
       { id: 'automatic-limits', label: 'Límites automáticos', shortcut: 'L', path: '/limits/automatic' },
       { id: 'delete-limit', label: 'Eliminar', shortcut: 'E', path: '/limits/delete' },
       { id: 'hot-numbers', label: 'Números calientes', shortcut: 'N', path: '/limits/hot-numbers' }

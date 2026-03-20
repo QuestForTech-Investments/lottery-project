@@ -253,20 +253,75 @@ public class LotteryHub : Hub<ILotteryHubClient>
             return;
         }
 
-        // Find the most specific limit rule: Banca > Local > Zona > Global
-        var limitRule = await _context.LimitRules
+        // Find the most specific limit rule: Banca > Local Banca > Zona > Global
+        // Must filter by the correct entity at each level
+        var bettingPool = await _context.BettingPools
             .AsNoTracking()
-            .Where(lr => lr.IsActive
-                && (lr.DrawId == drawId || lr.DrawId == null)
+            .Where(bp => bp.BettingPoolId == bettingPoolId)
+            .Select(bp => new { bp.BettingPoolId, bp.ZoneId })
+            .FirstOrDefaultAsync();
+
+        var zoneId = bettingPool?.ZoneId ?? 0;
+
+        // Check day bitmask for today
+        var todayDow = (int)now.DayOfWeek; // 0=Sun, 1=Mon...6=Sat
+        var dayBit = todayDow switch
+        {
+            1 => 1,   // Monday
+            2 => 2,   // Tuesday
+            3 => 4,   // Wednesday
+            4 => 8,   // Thursday
+            5 => 16,  // Friday
+            6 => 32,  // Saturday
+            0 => 64,  // Sunday
+            _ => 0
+        };
+
+        // Try each level in priority order
+        LimitRule? limitRule = null;
+
+        // 1. Limite Banca (GeneralForBettingPool) — for this specific banca
+        limitRule = await _context.LimitRules.AsNoTracking()
+            .Where(lr => lr.IsActive && lr.DrawId == drawId
+                && lr.LimitType == LimitType.GeneralForBettingPool
+                && lr.BettingPoolId == bettingPoolId
+                && (lr.DaysOfWeek & dayBit) != 0
                 && (lr.EffectiveFrom == null || lr.EffectiveFrom <= now)
                 && (lr.EffectiveTo == null || lr.EffectiveTo >= now)
                 && lr.LimitRuleAmounts.Any(a => a.GameTypeId == gameTypeId))
-            .OrderByDescending(lr => lr.BettingPoolId == bettingPoolId ? 4 : 0)
-            .ThenByDescending(lr => lr.LimitType == LimitType.GeneralForBettingPool || lr.LimitType == LimitType.LocalForBettingPool ? 3 : 0)
-            .ThenByDescending(lr => lr.LimitType == LimitType.GeneralForZone ? 2 : 0)
-            .ThenByDescending(lr => lr.LimitType == LimitType.GeneralForGroup ? 1 : 0)
-            .ThenByDescending(lr => lr.DrawId != null ? 1 : 0)
             .FirstOrDefaultAsync();
+
+        // 2. Limite Local Banca (LocalForBettingPool) — for this specific banca
+        if (limitRule == null)
+        {
+            limitRule = await _context.LimitRules.AsNoTracking()
+                .Where(lr => lr.IsActive && lr.DrawId == drawId
+                    && lr.LimitType == LimitType.LocalForBettingPool
+                    && lr.BettingPoolId == bettingPoolId
+                    && (lr.DaysOfWeek & dayBit) != 0
+                    && (lr.EffectiveFrom == null || lr.EffectiveFrom <= now)
+                    && (lr.EffectiveTo == null || lr.EffectiveTo >= now)
+                    && lr.LimitRuleAmounts.Any(a => a.GameTypeId == gameTypeId))
+                .FirstOrDefaultAsync();
+        }
+
+        // 3. Limite Zona (GeneralForZone) — for this banca's zone
+        // Only check zona if no banca-level limit was found
+        if (limitRule == null && zoneId > 0)
+        {
+            limitRule = await _context.LimitRules.AsNoTracking()
+                .Where(lr => lr.IsActive && lr.DrawId == drawId
+                    && lr.LimitType == LimitType.GeneralForZone
+                    && lr.ZoneId == zoneId
+                    && (lr.DaysOfWeek & dayBit) != 0
+                    && (lr.EffectiveFrom == null || lr.EffectiveFrom <= now)
+                    && (lr.EffectiveTo == null || lr.EffectiveTo >= now)
+                    && lr.LimitRuleAmounts.Any(a => a.GameTypeId == gameTypeId))
+                .FirstOrDefaultAsync();
+        }
+
+        // No banca or zona limit found — banca cannot sell (no limit configured = blocked)
+        // Global is only consumed through zona/banca, not directly
 
         if (limitRule == null)
         {
@@ -276,11 +331,11 @@ public class LotteryHub : Hub<ILotteryHubClient>
                 GameTypeId = gameTypeId,
                 DrawId = drawId,
                 DrawName = draw.DrawName,
-                AvailableAmount = -1,
+                AvailableAmount = 0,
                 LimitAmount = 0,
                 CurrentAmount = 0,
-                PercentageUsed = 0,
-                IsBlocked = false
+                PercentageUsed = 100,
+                IsBlocked = true
             });
             return;
         }

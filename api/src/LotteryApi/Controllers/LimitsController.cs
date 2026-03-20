@@ -341,7 +341,34 @@ public class LimitsController : ControllerBase
                     .AnyAsync(r => r.LimitType == LimitType.GeneralForGroup && r.IsActive);
                 if (!hasGlobal)
                 {
-                    return BadRequest(new { message = "Debe crear primero un Limite Global antes de crear otros tipos de límites" });
+                    return BadRequest(new { message = "Debe crear primero un Límite Global antes de crear otros tipos de límites" });
+                }
+            }
+
+            // Require Zona limits to exist for Limite Banca (not Local Banca)
+            if (limitType == LimitType.GeneralForBettingPool)
+            {
+                var targetEntitiesForCheck = await ResolveTargetEntities(dto, limitType);
+                var bpIds = targetEntitiesForCheck.Where(e => e.Id > 0).Select(e => e.Id).ToList();
+                if (bpIds.Count > 0)
+                {
+                    // Get zone IDs for target bancas
+                    var bpZoneIds = await _context.BettingPools
+                        .Where(bp => bpIds.Contains(bp.BettingPoolId) && bp.ZoneId > 0)
+                        .Select(bp => bp.ZoneId)
+                        .Distinct()
+                        .ToListAsync();
+
+                    foreach (var zId in bpZoneIds)
+                    {
+                        var hasZonaLimit = await _context.LimitRules
+                            .AnyAsync(r => r.LimitType == LimitType.GeneralForZone && r.ZoneId == zId && r.IsActive);
+                        if (!hasZonaLimit)
+                        {
+                            var zoneName = await _context.Zones.Where(z => z.ZoneId == zId).Select(z => z.ZoneName).FirstOrDefaultAsync();
+                            return BadRequest(new { message = $"Debe crear primero un Límite Zona para '{zoneName ?? $"Zona {zId}"}' antes de crear Límite Banca" });
+                        }
+                    }
                 }
             }
 
@@ -1580,4 +1607,87 @@ public class LimitsController : ControllerBase
             CreatedAt = DateTime.UtcNow
         };
     }
+
+    // ==================== LIMIT DEFAULTS ====================
+
+    /// <summary>
+    /// Get limit defaults for zona and banca.
+    /// </summary>
+    [HttpGet("defaults")]
+    public async Task<ActionResult> GetLimitDefaults()
+    {
+        var defaults = await _context.LimitDefaults
+            .AsNoTracking()
+            .Include(d => d.GameType)
+            .OrderBy(d => d.DefaultType)
+            .ThenBy(d => d.GameTypeId)
+            .ToListAsync();
+
+        var result = defaults.Select(d => new
+        {
+            d.LimitDefaultId,
+            d.DefaultType,
+            d.GameTypeId,
+            gameTypeName = d.GameType?.GameName ?? "",
+            d.MaxAmount,
+            d.UpdatedAt
+        });
+
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Update limit defaults. Requires MANAGE_LIMIT_DEFAULTS permission.
+    /// </summary>
+    [HttpPut("defaults")]
+    public async Task<ActionResult> UpdateLimitDefaults([FromBody] UpdateLimitDefaultsDto dto)
+    {
+        // Permission check
+        var userIdClaim = User.FindFirst("userId")?.Value ?? User.FindFirst("sub")?.Value;
+        if (!string.IsNullOrEmpty(userIdClaim) && int.TryParse(userIdClaim, out var userId))
+        {
+            var hasPermission = await _context.UserPermissions
+                .AnyAsync(up => up.UserId == userId && up.IsActive &&
+                    up.Permission != null && up.Permission.PermissionCode == "MANAGE_LIMIT_DEFAULTS");
+            if (!hasPermission)
+                return Forbid();
+        }
+
+        foreach (var item in dto.Defaults)
+        {
+            var existing = await _context.LimitDefaults
+                .FirstOrDefaultAsync(d => d.DefaultType == item.DefaultType && d.GameTypeId == item.GameTypeId);
+
+            if (existing != null)
+            {
+                existing.MaxAmount = item.MaxAmount;
+                existing.UpdatedAt = DateTime.UtcNow;
+            }
+            else
+            {
+                _context.LimitDefaults.Add(new LimitDefault
+                {
+                    DefaultType = item.DefaultType,
+                    GameTypeId = item.GameTypeId,
+                    MaxAmount = item.MaxAmount,
+                    CreatedAt = DateTime.UtcNow
+                });
+            }
+        }
+
+        await _context.SaveChangesAsync();
+        return Ok(new { message = "Valores por defecto actualizados" });
+    }
+}
+
+public class UpdateLimitDefaultsDto
+{
+    public List<LimitDefaultItemDto> Defaults { get; set; } = new();
+}
+
+public class LimitDefaultItemDto
+{
+    public string DefaultType { get; set; } = string.Empty;
+    public int GameTypeId { get; set; }
+    public decimal MaxAmount { get; set; }
 }

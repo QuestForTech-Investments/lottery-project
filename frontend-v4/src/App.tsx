@@ -89,6 +89,7 @@ const ExcessesReportMUI = lazy(() => import('@components/features/excesses/Exces
 // Limits feature components
 const LimitsListMUI = lazy(() => import('@components/features/limits/LimitsList'))
 const CreateLimitMUI = lazy(() => import('@components/features/limits/CreateLimit'))
+const LimitDefaultsMUI = lazy(() => import('@components/features/limits/LimitDefaults'))
 const AutomaticLimitsMUI = lazy(() => import('@components/features/limits/AutomaticLimits'))
 const DeleteLimitsMUI = lazy(() => import('@components/features/limits/DeleteLimits'))
 const HotNumbersMUI = lazy(() => import('@components/features/limits/HotNumbers'))
@@ -234,6 +235,7 @@ function App() {
                           {/* Limits */}
                           <Route path="/limits/list" element={<LazyRoute component={LimitsListMUI} />} />
                           <Route path="/limits/new" element={<LazyRoute component={CreateLimitMUI} />} />
+                          <Route path="/limits/defaults" element={<LazyRoute component={LimitDefaultsMUI} />} />
                           <Route path="/limits/automatic" element={<LazyRoute component={AutomaticLimitsMUI} />} />
                           <Route path="/limits/delete" element={<LazyRoute component={DeleteLimitsMUI} />} />
                           <Route path="/limits/hot-numbers" element={<LazyRoute component={HotNumbersMUI} />} />

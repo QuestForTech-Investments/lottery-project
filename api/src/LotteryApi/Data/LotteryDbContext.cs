@@ -85,6 +85,7 @@ public class LotteryDbContext : DbContext
     public DbSet<LimitRule> LimitRules { get; set; }
     public DbSet<LimitConsumption> LimitConsumptions { get; set; }
     public DbSet<LimitRuleAmount> LimitRuleAmounts { get; set; }
+    public DbSet<LimitDefault> LimitDefaults { get; set; }
 
     // Automatic Limits Configuration
     public DbSet<AutomaticLimitConfig> AutomaticLimitConfigs { get; set; }
