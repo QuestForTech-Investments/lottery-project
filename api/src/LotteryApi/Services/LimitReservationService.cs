@@ -5,9 +5,9 @@ namespace LotteryApi.Services;
 public interface ILimitReservationService
 {
     /// <summary>
-    /// Reserve an amount for a specific draw + game type combination.
+    /// Reserve an amount for a specific draw + game type + bet number combination.
     /// </summary>
-    string Reserve(int drawId, int gameTypeId, int bettingPoolId, decimal amount);
+    string Reserve(int drawId, int gameTypeId, int bettingPoolId, decimal amount, string? betNumber = null);
 
     /// <summary>
     /// Release a specific reservation by ID.
@@ -21,14 +21,20 @@ public interface ILimitReservationService
     int ReleaseAllForBettingPool(int bettingPoolId, List<(int DrawId, string BetNumber)>? plays = null);
 
     /// <summary>
-    /// Get total reserved amount for a draw + game type (across all numbers and pools).
+    /// Get total reserved amount for a draw + game type + bet number.
     /// </summary>
-    decimal GetReservedAmount(int drawId, int gameTypeId, string? excludeReservationId = null);
+    decimal GetReservedAmount(int drawId, int gameTypeId, string betNumber, string? excludeReservationId = null);
 
     /// <summary>
-    /// Legacy: Get reserved amount by draw + betNumber.
+    /// Get reserved amount scoped to a specific betting pool (for banca-level limits).
     /// </summary>
-    decimal GetReservedAmount(int drawId, string betNumber, string? excludeReservationId = null);
+    decimal GetReservedAmountForPool(int drawId, int gameTypeId, string betNumber, int bettingPoolId);
+
+    /// <summary>
+    /// Get reserved amount for all pools in a zone (for zona-level limits).
+    /// </summary>
+    decimal GetReservedAmountForZone(int drawId, int gameTypeId, string betNumber, HashSet<int>? zonePoolIds);
+
 }
 
 public class LimitReservationService : ILimitReservationService, IDisposable
@@ -45,7 +51,7 @@ public class LimitReservationService : ILimitReservationService, IDisposable
         _cleanupTimer = new Timer(CleanupExpired, null, CleanupInterval, CleanupInterval);
     }
 
-    public string Reserve(int drawId, int gameTypeId, int bettingPoolId, decimal amount)
+    public string Reserve(int drawId, int gameTypeId, int bettingPoolId, decimal amount, string? betNumber = null)
     {
         var reservation = new Reservation
         {
@@ -53,6 +59,7 @@ public class LimitReservationService : ILimitReservationService, IDisposable
             DrawId = drawId,
             GameTypeId = gameTypeId,
             BettingPoolId = bettingPoolId,
+            BetNumber = betNumber ?? "",
             Amount = amount,
             ExpiresAt = DateTime.UtcNow.Add(ReservationTtl)
         };
@@ -103,37 +110,49 @@ public class LimitReservationService : ILimitReservationService, IDisposable
     /// <summary>
     /// Get reserved amount by draw + game type (the primary method for limit checking).
     /// </summary>
-    public decimal GetReservedAmount(int drawId, int gameTypeId, string? excludeReservationId = null)
+    public decimal GetReservedAmount(int drawId, int gameTypeId, string betNumber, string? excludeReservationId = null)
     {
         var now = DateTime.UtcNow;
         var total = 0m;
-
         foreach (var kvp in _reservations)
         {
             var r = kvp.Value;
-            if (r.DrawId == drawId
-                && r.GameTypeId == gameTypeId
-                && r.ExpiresAt > now
-                && kvp.Key != excludeReservationId)
-            {
+            if (r.DrawId == drawId && r.GameTypeId == gameTypeId && r.BetNumber == betNumber
+                && r.ExpiresAt > now && kvp.Key != excludeReservationId)
                 total += r.Amount;
-            }
         }
-
         return total;
     }
 
-    /// <summary>
-    /// Legacy: get reserved amount by draw + betNumber (maps to game type by number length).
-    /// </summary>
-    public decimal GetReservedAmount(int drawId, string betNumber, string? excludeReservationId = null)
+    public decimal GetReservedAmountForPool(int drawId, int gameTypeId, string betNumber, int bettingPoolId)
     {
-        var gameTypeId = betNumber.Length switch
+        var now = DateTime.UtcNow;
+        var total = 0m;
+        foreach (var kvp in _reservations)
         {
-            2 => 1, 4 => 2, 6 => 3, 3 => 4, 5 => 12, _ => 1
-        };
-        return GetReservedAmount(drawId, gameTypeId, excludeReservationId);
+            var r = kvp.Value;
+            if (r.DrawId == drawId && r.GameTypeId == gameTypeId && r.BetNumber == betNumber
+                && r.BettingPoolId == bettingPoolId && r.ExpiresAt > now)
+                total += r.Amount;
+        }
+        return total;
     }
+
+    public decimal GetReservedAmountForZone(int drawId, int gameTypeId, string betNumber, HashSet<int>? zonePoolIds)
+    {
+        if (zonePoolIds == null) return GetReservedAmount(drawId, gameTypeId, betNumber);
+        var now = DateTime.UtcNow;
+        var total = 0m;
+        foreach (var kvp in _reservations)
+        {
+            var r = kvp.Value;
+            if (r.DrawId == drawId && r.GameTypeId == gameTypeId && r.BetNumber == betNumber
+                && zonePoolIds.Contains(r.BettingPoolId) && r.ExpiresAt > now)
+                total += r.Amount;
+        }
+        return total;
+    }
+
 
     private void CleanupExpired(object? state)
     {
@@ -164,6 +183,7 @@ public class LimitReservationService : ILimitReservationService, IDisposable
         public int DrawId { get; set; }
         public int GameTypeId { get; set; }
         public int BettingPoolId { get; set; }
+        public string BetNumber { get; set; } = string.Empty;
         public decimal Amount { get; set; }
         public DateTime ExpiresAt { get; set; }
     }

@@ -77,7 +77,7 @@ public class LimitReservationsController : ControllerBase
                     && (lc.BettingPoolId == request.BettingPoolId || lc.BettingPoolId == null))
                 .SumAsync(lc => (decimal?)lc.CurrentAmount) ?? 0;
 
-            var existingReserved = _reservationService.GetReservedAmount(request.DrawId, request.GameTypeId);
+            var existingReserved = _reservationService.GetReservedAmount(request.DrawId, request.GameTypeId, request.BetNumber ?? "");
             var totalUsed = dbAmount + existingReserved + request.Amount;
 
             if (totalUsed > maxLimit)
@@ -140,6 +140,8 @@ public class ReserveLimitRequest
 
     [Range(0.01, 999999.99)]
     public decimal Amount { get; set; }
+
+    public string BetNumber { get; set; } = string.Empty;
 }
 
 public class ReserveLimitResponse

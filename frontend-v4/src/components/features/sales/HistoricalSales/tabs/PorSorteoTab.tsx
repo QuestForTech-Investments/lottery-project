@@ -1,6 +1,12 @@
-import { memo, type FC, useMemo } from 'react';
+import { memo, type FC, useMemo, type ReactNode } from 'react';
 import { Box, Typography, Button, CircularProgress } from '@mui/material';
 import { formatCurrency } from '@/utils/formatCurrency';
+
+const coloredCurrency = (v: unknown): ReactNode => {
+  const n = v as number;
+  const color = n > 0 ? '#2e7d32' : n < 0 ? '#c62828' : '#1565c0';
+  return <span style={{ color, fontWeight: 600 }}>{formatCurrency(n)}</span>;
+};
 import {
   DateRangePicker,
   ZoneMultiSelect,
@@ -78,7 +84,7 @@ export const PorSorteoTab: FC<PorSorteoTabProps> = memo(({
       { id: 'venta', label: 'Total Vendido', align: 'right', format: (v) => formatCurrency(v as number) },
       { id: 'premios', label: 'Total premios', align: 'right', format: (v) => formatCurrency(v as number) },
       { id: 'comisiones', label: 'Total comisiones', align: 'right', format: (v) => formatCurrency(v as number) },
-      { id: 'neto', label: 'Total neto', align: 'right', format: (v) => formatCurrency(v as number) },
+      { id: 'neto', label: 'Total neto', align: 'right', format: coloredCurrency },
     ],
     []
   );

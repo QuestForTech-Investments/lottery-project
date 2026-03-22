@@ -402,12 +402,14 @@ public class CaidaCalculationService : ICaidaCalculationService
     /// </summary>
     private static (DateTime periodStart, DateTime periodEnd) GetCurrentPeriodRange(BettingPoolConfig config, DateTime date)
     {
+        // For weekly: DayOfWeek 0=Sunday needs to be treated as 7 so Monday is start of week
+        var dow = date.DayOfWeek == DayOfWeek.Sunday ? 7 : (int)date.DayOfWeek;
         return config.FallType switch
         {
             "DAILY" => (date, date),
             "WEEKLY" or "WEEKLY_ACCUMULATED" or "WEEKLY_NO_ACCUMULATED" => (
-                date.AddDays(-(int)date.DayOfWeek + 1), // Monday
-                date.AddDays(7 - (int)date.DayOfWeek)   // Sunday
+                date.AddDays(-(dow - 1)),   // Monday of this week
+                date.AddDays(7 - dow)       // Sunday of this week
             ),
             "MONTHLY" => (
                 new DateTime(date.Year, date.Month, 1),

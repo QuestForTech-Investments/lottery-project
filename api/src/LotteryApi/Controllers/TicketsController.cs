@@ -2078,6 +2078,7 @@ public class TicketsController : ControllerBase
                 .FirstOrDefault(lc => lc.LimitRuleId == rule.LimitRuleId
                     && lc.DrawId == drawId
                     && lc.DrawDate == today
+                    && lc.GameTypeId == gameTypeId
                     && lc.BetNumber == betNumber
                     && lc.BettingPoolId == bettingPoolId);
 
@@ -2085,6 +2086,7 @@ public class TicketsController : ControllerBase
                 .Where(lc => lc.LimitRuleId == rule.LimitRuleId
                     && lc.DrawId == drawId
                     && lc.DrawDate == today
+                    && lc.GameTypeId == gameTypeId
                     && lc.BetNumber == betNumber
                     && lc.BettingPoolId == bettingPoolId)
                 .FirstOrDefaultAsync();
@@ -2096,6 +2098,7 @@ public class TicketsController : ControllerBase
                     LimitRuleId = rule.LimitRuleId,
                     DrawId = drawId,
                     DrawDate = today,
+                    GameTypeId = gameTypeId,
                     BetNumber = betNumber,
                     BettingPoolId = bettingPoolId,
                     CurrentAmount = betAmount,
@@ -2193,11 +2196,13 @@ public class TicketsController : ControllerBase
 
         if (maxLimit <= 0) return false;
 
-        // Consumption: for zona limits, sum ALL bancas in that zone (not just this banca)
+        // Consumption for THIS specific number + game type
         var consumptionQuery = _context.LimitConsumptions
             .Where(lc => lc.LimitRuleId == limitRule.LimitRuleId
                 && lc.DrawId == drawId
-                && lc.DrawDate == today);
+                && lc.DrawDate == today
+                && lc.GameTypeId == gameTypeId
+                && lc.BetNumber == betNumber);
 
         // Zona limits aggregate across all bancas in the zone
         if (limitRule.LimitType != Models.Enums.LimitType.GeneralForZone)
@@ -2206,8 +2211,8 @@ public class TicketsController : ControllerBase
         }
 
         var currentAmount = await consumptionQuery.SumAsync(lc => (decimal?)lc.CurrentAmount) ?? 0;
-        var reservedAmount = _limitReservationService.GetReservedAmount(drawId, gameTypeId);
-        var totalUsed = currentAmount + reservedAmount;
+        // Don't count reservations during ticket creation — the bet itself replaces the reservation
+        var totalUsed = currentAmount;
 
         _logger.LogDebug(
             "Limit check: draw={DrawId}, bet={BetNumber}, gameType={GameTypeId}, limit={MaxLimit}, used={TotalUsed}, bet={Bet}, ruleType={RuleType}",

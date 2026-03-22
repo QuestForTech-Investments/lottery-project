@@ -1,6 +1,17 @@
-import { memo, type FC, useMemo } from 'react';
+import { memo, type FC, useMemo, type ReactNode } from 'react';
 import { Box, Typography, Button, CircularProgress } from '@mui/material';
 import { formatCurrency } from '@/utils/formatCurrency';
+
+const coloredCurrency = (v: unknown): ReactNode => {
+  const n = v as number;
+  const color = n > 0 ? '#2e7d32' : n < 0 ? '#c62828' : '#1565c0';
+  return <span style={{ color, fontWeight: 600 }}>{formatCurrency(n)}</span>;
+};
+
+const greenIfPositive = (v: unknown): ReactNode => {
+  const n = v as number;
+  return <span style={{ color: n > 0 ? '#2e7d32' : 'inherit' }}>{formatCurrency(n)}</span>;
+};
 import {
   DateRangePicker,
   ZoneMultiSelect,
@@ -113,10 +124,10 @@ export const PorZonaTab: FC<PorZonaTabProps> = memo(({
       { id: 'comisiones', label: 'Comisiones', align: 'right', format: (v) => formatCurrency(v as number) },
       { id: 'descuentos', label: 'Descuentos', align: 'right', format: (v) => formatCurrency(v as number) },
       { id: 'premios', label: 'Premios', align: 'right', format: (v) => formatCurrency(v as number) },
-      { id: 'neto', label: 'Neto', align: 'right', format: (v) => formatCurrency(v as number) },
-      { id: 'caida', label: 'Caída', align: 'right', format: (v) => formatCurrency(v as number) },
-      { id: 'final', label: 'Final', align: 'right', format: (v) => formatCurrency(v as number) },
-      { id: 'balance', label: 'Balance', align: 'right', format: (v) => formatCurrency(v as number) },
+      { id: 'neto', label: 'Neto', align: 'right', format: coloredCurrency },
+      { id: 'caida', label: 'Caída', align: 'right', format: greenIfPositive },
+      { id: 'final', label: 'Final', align: 'right', format: coloredCurrency },
+      { id: 'balance', label: 'Balance', align: 'right', format: coloredCurrency },
     ],
     []
   );

@@ -23,6 +23,9 @@ public class LimitConsumption
     [Column("bet_number")]
     public string? BetNumber { get; set; }
 
+    [Column("game_type_id")]
+    public int? GameTypeId { get; set; }
+
     [Column("betting_pool_id")]
     public int? BettingPoolId { get; set; }
 

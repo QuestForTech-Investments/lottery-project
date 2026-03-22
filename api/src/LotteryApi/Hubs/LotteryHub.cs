@@ -171,7 +171,7 @@ public class LotteryHub : Hub<ILotteryHubClient>
     public async Task ReservePlay(ReservePlayRequest request)
     {
         var reservationId = _limitReservationService.Reserve(
-            request.DrawId, request.GameTypeId, request.BettingPoolId, request.Amount);
+            request.DrawId, request.GameTypeId, request.BettingPoolId, request.Amount, request.BetNumber);
 
         _logger.LogInformation(
             "ReservePlay: Draw={DrawId}, GameType={GameTypeId}, Pool={BettingPoolId}, Amount={Amount} -> {ReservationId}",
@@ -346,12 +346,14 @@ public class LotteryHub : Hub<ILotteryHubClient>
             .Select(a => a.MaxAmount)
             .FirstOrDefaultAsync();
 
-        // Sum consumption: for zona limits, sum ALL bancas in that zone
+        // Sum consumption for THIS specific number + game type
         var consumptionQuery = _context.LimitConsumptions
             .AsNoTracking()
             .Where(lc => lc.DrawId == drawId
                 && lc.DrawDate == today
-                && lc.LimitRuleId == limitRule.LimitRuleId);
+                && lc.LimitRuleId == limitRule.LimitRuleId
+                && lc.GameTypeId == gameTypeId
+                && lc.BetNumber == betNumber);
 
         // Zona limits aggregate across all bancas; banca limits only for this banca
         if (limitRule.LimitType != LimitType.GeneralForZone)
@@ -361,7 +363,26 @@ public class LotteryHub : Hub<ILotteryHubClient>
 
         var currentAmount = await consumptionQuery.SumAsync(lc => (decimal?)lc.CurrentAmount) ?? 0;
 
-        var reservedAmount = _limitReservationService.GetReservedAmount(drawId, gameTypeId);
+        // Scope reservations to match consumption scope
+        decimal reservedAmount;
+        if (limitRule.LimitType == LimitType.GeneralForBettingPool || limitRule.LimitType == LimitType.LocalForBettingPool)
+        {
+            // Banca limit: only count this banca's reservations
+            reservedAmount = _limitReservationService.GetReservedAmountForPool(drawId, gameTypeId, betNumber, bettingPoolId);
+        }
+        else if (limitRule.LimitType == LimitType.GeneralForZone)
+        {
+            // Zona limit: count reservations from all bancas in this zone
+            var zonePoolIds = await _context.BettingPools.AsNoTracking()
+                .Where(bp => bp.ZoneId == zoneId)
+                .Select(bp => bp.BettingPoolId)
+                .ToListAsync();
+            reservedAmount = _limitReservationService.GetReservedAmountForZone(drawId, gameTypeId, betNumber, new HashSet<int>(zonePoolIds));
+        }
+        else
+        {
+            reservedAmount = _limitReservationService.GetReservedAmount(drawId, gameTypeId, betNumber);
+        }
         var totalUsed = currentAmount + reservedAmount;
         var availableAmount = limitAmount > 0 ? limitAmount - totalUsed : 0;
         var percentageUsed = limitAmount > 0 ? (totalUsed / limitAmount) * 100 : 0;
@@ -393,6 +414,7 @@ public class ReservePlayRequest
     public int GameTypeId { get; set; }
     public int BettingPoolId { get; set; }
     public decimal Amount { get; set; }
+    public string BetNumber { get; set; } = string.Empty;
 }
 
 public class CheckPlayLimitRequest

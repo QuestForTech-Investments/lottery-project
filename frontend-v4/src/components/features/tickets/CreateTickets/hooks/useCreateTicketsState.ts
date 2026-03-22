@@ -643,6 +643,20 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
       return;
     }
 
+    // Validate against limit availability
+    if (limitAvailable !== null && limitAvailable !== -1) {
+      if (limitAvailable <= 0) {
+        setBetError('Límite agotado para este número');
+        setTimeout(() => amountInputRef.current?.focus(), 100);
+        return;
+      }
+      if (totalAmount > limitAvailable) {
+        setBetError(`Monto excede el límite disponible ($${limitAvailable.toFixed(2)})`);
+        setTimeout(() => amountInputRef.current?.focus(), 100);
+        return;
+      }
+    }
+
     setBetError('');
     setBetWarning('');
 
@@ -777,7 +791,7 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
           // Track which betId is waiting for this reservation
           const key = `${bet.drawId}-${bet.gameTypeId}`;
           pendingReservationsRef.current.set(key, bet.id);
-          reservePlay(bet.drawId, bet.gameTypeId, selectedPool.bettingPoolId, bet.betAmount);
+          reservePlay(bet.drawId, bet.gameTypeId, selectedPool.bettingPoolId, bet.betAmount, bet.cleanNumber || bet.betNumber.replace(/[^0-9]/g, ''));
         }
       });
     }
@@ -900,9 +914,17 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
       pendingReservationsRef.current.clear();
       setLimitAvailable(null);
       setSuccessMessage(`Ticket creado: ${response.ticketCode || 'OK'}`);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error creating ticket:', error);
-      alert('Error al crear el ticket');
+      // Check for limit exceeded response
+      const err = error as { response?: { data?: { code?: string; invalidBets?: Array<{ betNumber?: string; drawName?: string }> } } };
+      if (err?.response?.data?.code === 'ticket/invalid-bets-exceed-limits') {
+        const bets = err.response.data.invalidBets || [];
+        const details = bets.map(b => `${b.betNumber || ''} (${b.drawName || ''})`).join(', ');
+        setBetError(`Límite excedido: ${details || 'una o más jugadas exceden el límite disponible'}`);
+      } else {
+        setBetError('Error al crear el ticket');
+      }
     } finally {
       setCreatingTicket(false);
     }

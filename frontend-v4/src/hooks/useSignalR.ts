@@ -90,11 +90,11 @@ export const useSignalR = (): UseSignalRReturn => {
       .catch(err => console.warn('[SignalR] CheckPlayLimit error:', err));
   }, []);
 
-  const reservePlay = useCallback((drawId: number, gameTypeId: number, bettingPoolId: number, amount: number) => {
+  const reservePlay = useCallback((drawId: number, gameTypeId: number, bettingPoolId: number, amount: number, betNumber?: string) => {
     const conn = connectionRef.current;
     if (!conn || conn.state !== signalR.HubConnectionState.Connected) return;
 
-    conn.invoke('ReservePlay', { drawId, gameTypeId, bettingPoolId, amount })
+    conn.invoke('ReservePlay', { drawId, gameTypeId, bettingPoolId, amount, betNumber: betNumber || '' })
       .catch(err => console.warn('[SignalR] ReservePlay error:', err));
   }, []);
 
