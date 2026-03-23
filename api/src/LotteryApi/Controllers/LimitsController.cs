@@ -332,6 +332,7 @@ public class LimitsController : ControllerBase
             }
 
             var createdRules = new List<LimitRule>();
+            var existingRuleIds = new HashSet<int>();
             var limitType = (LimitType)dto.LimitType;
 
             // Require Global limits to exist before creating any other type
@@ -453,12 +454,7 @@ public class LimitsController : ControllerBase
                         if (dto.EffectiveTo.HasValue) existingRule.EffectiveTo = dto.EffectiveTo;
                         existingRule.UpdatedAt = DateTime.UtcNow;
 
-                        // Delete old amounts — will be replaced below
-                        var oldAmounts = await _context.LimitRuleAmounts
-                            .Where(a => a.LimitRuleId == existingRule.LimitRuleId)
-                            .ToListAsync();
-                        _context.LimitRuleAmounts.RemoveRange(oldAmounts);
-
+                        existingRuleIds.Add(existingRule.LimitRuleId);
                         createdRules.Add(existingRule);
                         updatedCount++;
                     }
@@ -538,29 +534,54 @@ public class LimitsController : ControllerBase
                     }
                 }
 
-                // Track which game_type_ids are already added per rule (to avoid duplicates for bolita1/2, singulacion1/2/3)
+                // Track which game_type_ids are already processed per rule (to avoid duplicates for bolita1/2, singulacion1/2/3)
                 foreach (var rule in createdRules)
                 {
+                    var isExisting = existingRuleIds.Contains(rule.LimitRuleId);
+
                     var drawAllowed = rule.DrawId.HasValue && allowedByDraw.TryGetValue(rule.DrawId.Value, out var allowed)
                         ? allowed : null;
-                    var addedGameTypes = new HashSet<int>();
+                    var processedGameTypes = new HashSet<int>();
+
+                    // Load existing amounts for merge
+                    var existingAmounts = isExisting
+                        ? await _context.LimitRuleAmounts
+                            .Where(a => a.LimitRuleId == rule.LimitRuleId)
+                            .ToListAsync()
+                        : new List<LimitRuleAmount>();
 
                     foreach (var (feKey, amount) in dto.Amounts)
                     {
-                        if (amount <= 0) continue;
                         if (!frontendToGameTypeId.TryGetValue(feKey, out var gameTypeId)) continue;
-                        if (addedGameTypes.Contains(gameTypeId)) continue; // Skip duplicate (e.g. bolita1 and bolita2 both map to BOLITA)
+                        if (processedGameTypes.Contains(gameTypeId)) continue;
 
                         // Check if this game type is allowed for the draw
                         if (drawAllowed != null && !drawAllowed.Contains(gameTypeId)) continue;
 
-                        _context.LimitRuleAmounts.Add(new LimitRuleAmount
+                        var existingAmount = existingAmounts.FirstOrDefault(a => a.GameTypeId == gameTypeId);
+
+                        if (amount <= 0)
                         {
-                            LimitRuleId = rule.LimitRuleId,
-                            GameTypeId = gameTypeId,
-                            MaxAmount = amount
-                        });
-                        addedGameTypes.Add(gameTypeId);
+                            // Remove this game type if it exists
+                            if (existingAmount != null)
+                                _context.LimitRuleAmounts.Remove(existingAmount);
+                        }
+                        else if (existingAmount != null)
+                        {
+                            // Update existing amount
+                            existingAmount.MaxAmount = amount;
+                        }
+                        else
+                        {
+                            // Add new amount
+                            _context.LimitRuleAmounts.Add(new LimitRuleAmount
+                            {
+                                LimitRuleId = rule.LimitRuleId,
+                                GameTypeId = gameTypeId,
+                                MaxAmount = amount
+                            });
+                        }
+                        processedGameTypes.Add(gameTypeId);
                     }
                 }
                 await _context.SaveChangesAsync();
