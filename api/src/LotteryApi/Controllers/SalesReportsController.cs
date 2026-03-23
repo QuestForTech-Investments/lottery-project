@@ -379,6 +379,7 @@ public class SalesReportsController : ControllerBase
         [FromQuery] DateTime startDate,
         [FromQuery] DateTime endDate,
         [FromQuery] int? zoneId = null,
+        [FromQuery] string? zoneIds = null,
         [FromQuery] int? lotteryId = null)
     {
         try
@@ -396,7 +397,13 @@ public class SalesReportsController : ControllerBase
             var query = _context.BettingPools.AsQueryable();
 
             // Apply zone filter if specified
-            if (zoneId.HasValue)
+            if (!string.IsNullOrEmpty(zoneIds))
+            {
+                var zoneIdList = zoneIds.Split(',').Select(s => int.TryParse(s.Trim(), out var id) ? id : 0).Where(id => id > 0).ToList();
+                if (zoneIdList.Count > 0)
+                    query = query.Where(bp => zoneIdList.Contains(bp.ZoneId));
+            }
+            else if (zoneId.HasValue)
             {
                 query = query.Where(bp => bp.ZoneId == zoneId.Value);
             }

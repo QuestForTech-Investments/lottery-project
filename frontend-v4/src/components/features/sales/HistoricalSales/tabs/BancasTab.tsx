@@ -76,14 +76,39 @@ export const BancasTab: FC<BancasTabProps> = memo(({
   setFilterType,
   setFiltroRapido,
 }) => {
-  // Filter data based on search
+  // Filter data based on type filter and search
   const filteredData = useMemo(() => {
-    if (!filtroRapido) return bancasData;
-    const term = filtroRapido.toLowerCase();
-    return bancasData.filter(
-      (d) => d.ref?.toLowerCase().includes(term) || d.codigo?.toLowerCase().includes(term)
-    );
-  }, [bancasData, filtroRapido]);
+    let result = bancasData;
+
+    // Apply type filter
+    switch (filterType) {
+      case 'con_ventas':
+        result = result.filter(d => d.venta > 0);
+        break;
+      case 'con_premios':
+        result = result.filter(d => d.premios > 0);
+        break;
+      case 'con_tickets_pendientes':
+        result = result.filter(d => d.tickets > 0);
+        break;
+      case 'ventas_negativas':
+        result = result.filter(d => d.neto < 0);
+        break;
+      case 'ventas_positivas':
+        result = result.filter(d => d.neto > 0);
+        break;
+    }
+
+    // Apply text search
+    if (filtroRapido) {
+      const term = filtroRapido.toLowerCase();
+      result = result.filter(
+        (d) => d.ref?.toLowerCase().includes(term) || d.codigo?.toLowerCase().includes(term)
+      );
+    }
+
+    return result;
+  }, [bancasData, filterType, filtroRapido]);
 
   // Table columns
   const columns: Column<BancaData>[] = useMemo(

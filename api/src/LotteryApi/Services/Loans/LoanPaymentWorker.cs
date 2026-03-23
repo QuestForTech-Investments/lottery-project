@@ -183,10 +183,15 @@ public class LoanPaymentWorker : BackgroundService
 
     private static bool ShouldProcessToday(Loan loan, DateTime today, int dayOfWeek)
     {
+        // Frontend stores: 0=Mon, 1=Tue, ..., 6=Sun
+        // C# DayOfWeek: 0=Sun, 1=Mon, ..., 6=Sat
+        // Convert C# dayOfWeek to frontend format: Sun(0)->6, Mon(1)->0, Tue(2)->1, ...
+        var frontendDow = dayOfWeek == 0 ? 6 : dayOfWeek - 1;
+
         return loan.Frequency switch
         {
             "daily" => true,
-            "weekly" => loan.PaymentDay.HasValue && loan.PaymentDay.Value == dayOfWeek,
+            "weekly" => loan.PaymentDay.HasValue && loan.PaymentDay.Value == frontendDow,
             "monthly" => today.Day == loan.StartDate.Day
                 || (today.Day == DateTime.DaysInMonth(today.Year, today.Month)
                     && loan.StartDate.Day > DateTime.DaysInMonth(today.Year, today.Month)),

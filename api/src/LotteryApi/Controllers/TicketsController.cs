@@ -1409,6 +1409,29 @@ public class TicketsController : ControllerBase
                 await UpdateBettingPoolBalanceAsync(ticket.BettingPoolId, balanceReversal, dto.CancelledBy);
             }
 
+            // 8.2 Reverse limit consumption for each line
+            foreach (var line in ticket.TicketLines)
+            {
+                var gameTypeId = GetGameTypeIdFromBetNumber(line.BetNumber);
+                var drawDate = DateOnly.FromDateTime(line.DrawDate.Date);
+
+                // Find all consumption records for this line across all rule levels
+                var consumptions = await _context.LimitConsumptions
+                    .Where(lc => lc.DrawId == line.DrawId
+                        && lc.DrawDate == drawDate
+                        && lc.GameTypeId == gameTypeId
+                        && lc.BetNumber == line.BetNumber
+                        && lc.BettingPoolId == ticket.BettingPoolId)
+                    .ToListAsync();
+
+                foreach (var lc in consumptions)
+                {
+                    lc.CurrentAmount = Math.Max(0, lc.CurrentAmount - line.BetAmount);
+                    lc.BetCount = Math.Max(0, lc.BetCount - 1);
+                    lc.UpdatedAt = now;
+                }
+            }
+
             await _context.SaveChangesAsync();
 
             _logger.LogInformation(

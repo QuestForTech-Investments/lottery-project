@@ -377,6 +377,96 @@ public class LoansController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Manually trigger loan payment processing for today.
+    /// </summary>
+    [HttpPost("process-payments")]
+    public async Task<ActionResult> ProcessPayments()
+    {
+        var today = Helpers.DateTimeHelper.TodayInBusinessTimezone();
+        var dayOfWeek = (int)today.DayOfWeek;
+        var frontendDow = dayOfWeek == 0 ? 6 : dayOfWeek - 1;
+
+        var activeLoans = await _context.Loans
+            .Where(l => l.Status == "active" && l.StartDate <= today)
+            .ToListAsync();
+
+        var processedCount = 0;
+
+        // Check today and up to 7 days back for missed payments
+        foreach (var loan in activeLoans)
+        {
+            for (var daysBack = 0; daysBack <= 7; daysBack++)
+            {
+                var checkDate = today.AddDays(-daysBack);
+                if (checkDate < loan.StartDate) break;
+                if (loan.RemainingBalance <= 0) break;
+
+                var checkDow = (int)checkDate.DayOfWeek;
+                var checkFrontendDow = checkDow == 0 ? 6 : checkDow - 1;
+
+                var shouldProcess = loan.Frequency switch
+                {
+                    "daily" => true,
+                    "weekly" => loan.PaymentDay.HasValue && loan.PaymentDay.Value == checkFrontendDow,
+                    "monthly" => checkDate.Day == loan.StartDate.Day
+                        || (checkDate.Day == DateTime.DaysInMonth(checkDate.Year, checkDate.Month)
+                            && loan.StartDate.Day > DateTime.DaysInMonth(checkDate.Year, checkDate.Month)),
+                    "annual" => checkDate.Month == loan.StartDate.Month && checkDate.Day == loan.StartDate.Day,
+                    _ => false
+                };
+                if (!shouldProcess) continue;
+
+                var alreadyPaid = await _context.LoanPayments
+                    .AnyAsync(p => p.LoanId == loan.LoanId && p.PaymentDate >= checkDate && p.PaymentDate < checkDate.AddDays(1));
+                if (alreadyPaid) continue;
+
+                var amountToPay = Math.Min(loan.InstallmentAmount, loan.RemainingBalance);
+                if (amountToPay <= 0) continue;
+
+                var payment = new LoanPayment
+                {
+                    LoanId = loan.LoanId,
+                    PaymentDate = checkDate.Date.AddHours(12), // Use the missed date, not today
+                    AmountPaid = amountToPay,
+                    Notes = daysBack == 0
+                        ? $"Pago automático - {loan.Frequency}"
+                        : $"Pago automático (recuperado {checkDate:yyyy-MM-dd}) - {loan.Frequency}",
+                    CreatedAt = DateTime.UtcNow,
+                    CreatedBy = GetCurrentUserId()
+                };
+
+                _context.LoanPayments.Add(payment);
+                loan.TotalPaid += amountToPay;
+                loan.RemainingBalance -= amountToPay;
+                loan.UpdatedAt = DateTime.UtcNow;
+
+                if (loan.RemainingBalance <= 0)
+                {
+                    loan.RemainingBalance = 0;
+                    loan.Status = "completed";
+                }
+
+                // Credit banca balance
+                if (loan.EntityType == "bettingPool")
+                {
+                    var balance = await _context.Balances
+                        .FirstOrDefaultAsync(b => b.BettingPoolId == loan.EntityId);
+                    if (balance != null)
+                    {
+                        balance.CurrentBalance += amountToPay;
+                        balance.LastUpdated = DateTime.UtcNow;
+                    }
+                }
+
+                await _context.SaveChangesAsync();
+                processedCount++;
+            }
+        }
+
+        return Ok(new { message = $"Procesados {processedCount} pagos de préstamos", processed = processedCount });
+    }
+
     private int? GetCurrentUserId()
     {
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value

@@ -4,7 +4,7 @@
  * Manages all state and logic for the HistoricalSales component.
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import api from '@services/api';
 import { getTodayDate } from '@/utils/formatters';
 import type {
@@ -23,11 +23,8 @@ import type {
 import { DEFAULT_TOTALS } from '../types';
 
 interface UseHistoricalSalesReturn {
-  // Tab state
   mainTab: number;
   setMainTab: (tab: number) => void;
-
-  // Filter state
   fechaInicial: string;
   fechaFinal: string;
   zonas: Zona[];
@@ -41,49 +38,36 @@ interface UseHistoricalSalesReturn {
   setGrupo: (grupo: string | number) => void;
   setFilterType: (type: string) => void;
   setFiltroRapido: (filtro: string) => void;
-
-  // Reference data
   zonasList: Zona[];
   gruposList: Grupo[];
-
-  // Tab data
   bancasData: BancaData[];
   sorteoData: SorteoData[];
   combinacionesData: CombinacionData[];
   zonasData: ZonaData[];
   totals: Totals;
-
-  // Actions
   handleSearch: () => void;
 }
 
 export const useHistoricalSales = (): UseHistoricalSalesReturn => {
-  // Tab state
   const [mainTab, setMainTab] = useState<number>(0);
-
-  // Filter state
-  const [fechaInicial, setFechaInicial] = useState<string>(
-    getTodayDate()
-  );
-  const [fechaFinal, setFechaFinal] = useState<string>(
-    getTodayDate()
-  );
+  const [fechaInicial, setFechaInicial] = useState<string>(getTodayDate());
+  const [fechaFinal, setFechaFinal] = useState<string>(getTodayDate());
   const [zonas, setZonas] = useState<Zona[]>([]);
   const [grupo, setGrupo] = useState<string | number>('');
   const [filterType, setFilterType] = useState<string>('todos');
   const [filtroRapido, setFiltroRapido] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
 
-  // Reference data
   const [zonasList, setZonasList] = useState<Zona[]>([]);
   const [gruposList] = useState<Grupo[]>([]);
 
-  // Tab data
   const [bancasData, setBancasData] = useState<BancaData[]>([]);
   const [sorteoData, setSorteoData] = useState<SorteoData[]>([]);
   const [combinacionesData, setCombinacionesData] = useState<CombinacionData[]>([]);
   const [zonasData, setZonasData] = useState<ZonaData[]>([]);
   const [totals, setTotals] = useState<Totals>(DEFAULT_TOTALS);
+
+  const initialLoadDone = useRef(false);
 
   // Load zones on mount
   useEffect(() => {
@@ -99,7 +83,7 @@ export const useHistoricalSales = (): UseHistoricalSalesReturn => {
           name: z.zoneName || z.name
         }));
         setZonasList(normalizedZones);
-        setZonas(normalizedZones); // Select all by default
+        setZonas(normalizedZones);
       } catch (error) {
         console.error('Error loading zones:', error);
       }
@@ -107,27 +91,32 @@ export const useHistoricalSales = (): UseHistoricalSalesReturn => {
     loadZones();
   }, []);
 
-  // Load sales by betting pool (General tab)
+  // Build zone query param
+  const getZoneParam = useCallback(() => {
+    const ids = zonas.map(z => z.id).join(',');
+    return ids ? `&zoneIds=${ids}` : '';
+  }, [zonas]);
+
+  // Load bancas data (General tab)
   const loadBancasData = useCallback(async () => {
     setLoading(true);
     try {
-      const zoneIds = zonas.map(z => z.id).join(',');
       const response = await api.get<BettingPoolSalesDto[]>(
-        `/reports/sales/by-betting-pool?startDate=${fechaInicial}&endDate=${fechaFinal}${zoneIds ? `&zoneIds=${zoneIds}` : ''}`
+        `/reports/sales/by-betting-pool?startDate=${fechaInicial}&endDate=${fechaFinal}${getZoneParam()}`
       );
 
       const mapped: BancaData[] = (response || []).map(item => ({
         ref: item.reference || '',
         codigo: item.bettingPoolCode,
-        tickets: 0,
+        tickets: (item.pendingCount || 0) + (item.winnerCount || 0) + (item.loserCount || 0),
         venta: item.totalSold,
         comisiones: item.totalCommissions,
-        descuentos: 0,
+        descuentos: item.totalDiscounts || 0,
         premios: item.totalPrizes,
         neto: item.totalNet,
-        caida: 0,
+        caida: item.fall || 0,
         gastos: 0,
-        final: item.totalNet
+        final: item.totalNet - (item.fall || 0)
       }));
 
       setBancasData(mapped);
@@ -146,22 +135,20 @@ export const useHistoricalSales = (): UseHistoricalSalesReturn => {
         }),
         DEFAULT_TOTALS
       );
-
       setTotals(newTotals);
     } catch (error) {
       console.error('Error loading bancas data:', error);
     } finally {
       setLoading(false);
     }
-  }, [zonas, fechaInicial, fechaFinal]);
+  }, [fechaInicial, fechaFinal, getZoneParam]);
 
   // Load sales by draw (Por sorteo tab)
   const loadSorteoData = useCallback(async () => {
     setLoading(true);
     try {
-      const zoneIds = zonas.map(z => z.id).join(',');
       const response = await api.get<DrawSalesResponse>(
-        `/reports/sales/by-draw?date=${fechaInicial}${zoneIds ? `&zoneIds=${zoneIds}` : ''}`
+        `/reports/sales/by-draw?date=${fechaInicial}${getZoneParam()}`
       );
 
       const mapped: SorteoData[] = (response?.draws || []).map(item => ({
@@ -182,15 +169,14 @@ export const useHistoricalSales = (): UseHistoricalSalesReturn => {
     } finally {
       setLoading(false);
     }
-  }, [zonas, fechaInicial]);
+  }, [fechaInicial, getZoneParam]);
 
   // Load combinations (Combinaciones tab)
   const loadCombinacionesData = useCallback(async () => {
     setLoading(true);
     try {
-      const zoneIds = zonas.map(z => z.id).join(',');
       const response = await api.get<CombinationSalesResponse>(
-        `/reports/sales/combinations?date=${fechaInicial}${zoneIds ? `&zoneIds=${zoneIds}` : ''}`
+        `/reports/sales/combinations?date=${fechaInicial}${getZoneParam()}`
       );
 
       const mapped: CombinacionData[] = (response?.combinations || []).map(item => ({
@@ -211,15 +197,14 @@ export const useHistoricalSales = (): UseHistoricalSalesReturn => {
     } finally {
       setLoading(false);
     }
-  }, [zonas, fechaInicial]);
+  }, [fechaInicial, getZoneParam]);
 
   // Load sales by zone (Por zona tab)
   const loadZonasData = useCallback(async () => {
     setLoading(true);
     try {
-      const zoneIds = zonas.map(z => z.id).join(',');
       const response = await api.get<ZoneSalesResponse>(
-        `/reports/sales/by-zone?date=${fechaInicial}${zoneIds ? `&zoneIds=${zoneIds}` : ''}`
+        `/reports/sales/by-zone?date=${fechaInicial}${getZoneParam()}`
       );
 
       const mapped: ZonaData[] = (response?.zones || []).map(item => ({
@@ -247,25 +232,31 @@ export const useHistoricalSales = (): UseHistoricalSalesReturn => {
     } finally {
       setLoading(false);
     }
-  }, [zonas, fechaInicial]);
+  }, [fechaInicial, getZoneParam]);
 
   // Handle search based on current tab
   const handleSearch = useCallback(() => {
     switch (mainTab) {
-      case 0:
-        loadBancasData();
-        break;
-      case 1:
-        loadSorteoData();
-        break;
-      case 2:
-        loadCombinacionesData();
-        break;
-      case 3:
-        loadZonasData();
-        break;
+      case 0: loadBancasData(); break;
+      case 1: loadSorteoData(); break;
+      case 2: loadCombinacionesData(); break;
+      case 3: loadZonasData(); break;
     }
   }, [mainTab, loadBancasData, loadSorteoData, loadCombinacionesData, loadZonasData]);
+
+  // Auto-load on mount once zones are loaded
+  useEffect(() => {
+    if (zonas.length > 0 && !initialLoadDone.current) {
+      initialLoadDone.current = true;
+      loadBancasData();
+    }
+  }, [zonas.length, loadBancasData]);
+
+  // Auto-load when tab changes
+  useEffect(() => {
+    if (!initialLoadDone.current) return;
+    handleSearch();
+  }, [mainTab]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return {
     mainTab,
