@@ -372,73 +372,8 @@ public class LimitsController : ControllerBase
                 }
             }
 
-            // Check for duplicate limits (same type + draw + entity)
-            if (validDrawIds.Count > 0)
-            {
-                var existingQuery = _context.LimitRules
-                    .AsNoTracking()
-                    .Where(r => r.LimitType == limitType && r.IsActive && r.DrawId.HasValue && validDrawIds.Contains(r.DrawId.Value));
-
-                // Scope by entity type
-                if (limitType == LimitType.GeneralForGroup)
-                {
-                    // Global: just check draw
-                }
-                else if (limitType == LimitType.GeneralForZone)
-                {
-                    var zoneIds = dto.ZoneIds ?? (dto.ZoneId.HasValue ? new List<int> { dto.ZoneId.Value } : new List<int>());
-                    if (zoneIds.Count > 0)
-                        existingQuery = existingQuery.Where(r => r.ZoneId.HasValue && zoneIds.Contains(r.ZoneId.Value));
-                }
-                else if (limitType == LimitType.GeneralForBettingPool || limitType == LimitType.LocalForBettingPool)
-                {
-                    // Will check per-banca after resolving entities below
-                }
-
-                if (limitType == LimitType.GeneralForGroup || limitType == LimitType.GeneralForZone)
-                {
-                    var duplicateDraws = await existingQuery
-                        .Select(r => r.Draw != null ? r.Draw.DrawName : $"Draw #{r.DrawId}")
-                        .Distinct()
-                        .ToListAsync();
-
-                    if (duplicateDraws.Count > 0)
-                    {
-                        return BadRequest(new
-                        {
-                            message = $"Ya existen límites para los siguientes sorteos: {string.Join(", ", duplicateDraws.Take(5))}{(duplicateDraws.Count > 5 ? $" y {duplicateDraws.Count - 5} más" : "")}"
-                        });
-                    }
-                }
-            }
-
             // Resolve target entities based on limit type
             var targetEntities = await ResolveTargetEntities(dto, limitType);
-
-            // Per-banca duplicate check
-            if ((limitType == LimitType.GeneralForBettingPool || limitType == LimitType.LocalForBettingPool) && validDrawIds.Count > 0)
-            {
-                var bpIds = targetEntities.Where(e => e.Id > 0).Select(e => e.Id).ToList();
-                if (bpIds.Count > 0)
-                {
-                    var duplicateBancas = await _context.LimitRules
-                        .AsNoTracking()
-                        .Where(r => r.LimitType == limitType && r.IsActive
-                            && r.BettingPoolId.HasValue && bpIds.Contains(r.BettingPoolId.Value)
-                            && r.DrawId.HasValue && validDrawIds.Contains(r.DrawId.Value))
-                        .Select(r => r.BettingPool != null ? r.BettingPool.BettingPoolName : $"Banca #{r.BettingPoolId}")
-                        .Distinct()
-                        .ToListAsync();
-
-                    if (duplicateBancas.Count > 0)
-                    {
-                        return BadRequest(new
-                        {
-                            message = $"Ya existen límites para las siguientes bancas: {string.Join(", ", duplicateBancas.Take(5))}{(duplicateBancas.Count > 5 ? $" y {duplicateBancas.Count - 5} más" : "")}"
-                        });
-                    }
-                }
-            }
 
             // Parent validation
             if (dto.Amounts != null && dto.Amounts.Count > 0)
@@ -485,27 +420,65 @@ public class LimitsController : ControllerBase
                 }
             }
 
-            // Create rules: outer loop = entities, inner loop = draws
+            // Upsert rules: find existing or create new
+            var updatedCount = 0;
             foreach (var entity in targetEntities)
             {
-                var drawIds = validDrawIds.Count > 0 ? validDrawIds : new List<int> { 0 }; // 0 = no specific draw
+                var drawIds = validDrawIds.Count > 0 ? validDrawIds : new List<int> { 0 };
                 foreach (var drawId in drawIds)
                 {
-                    var rule = CreateLimitRuleFromDto(dto, daysOfWeek, drawId == 0 ? null : drawId);
+                    // Try to find existing rule for this type + draw + entity
+                    var existingQuery = _context.LimitRules
+                        .Where(r => r.LimitType == limitType && r.IsActive && r.DrawId == (drawId == 0 ? null : drawId));
 
-                    // Set entity-specific fields
-                    if (limitType == LimitType.GeneralForZone)
+                    if (limitType == LimitType.GeneralForGroup)
                     {
-                        rule.ZoneId = entity.Id;
+                        // Global: match by draw only
                     }
-                    else if (limitType == LimitType.GeneralForBettingPool || limitType == LimitType.LocalForBettingPool)
+                    else if (limitType == LimitType.GeneralForZone)
                     {
-                        rule.BettingPoolId = entity.Id;
-                        rule.ZoneId = entity.ZoneId; // Store zone for hierarchy lookup
+                        existingQuery = existingQuery.Where(r => r.ZoneId == entity.Id);
+                    }
+                    else
+                    {
+                        existingQuery = existingQuery.Where(r => r.BettingPoolId == entity.Id);
                     }
 
-                    _context.LimitRules.Add(rule);
-                    createdRules.Add(rule);
+                    var existingRule = await existingQuery.FirstOrDefaultAsync();
+
+                    if (existingRule != null)
+                    {
+                        // Update existing rule's days and expiration
+                        existingRule.DaysOfWeek = daysOfWeek ?? existingRule.DaysOfWeek;
+                        if (dto.EffectiveTo.HasValue) existingRule.EffectiveTo = dto.EffectiveTo;
+                        existingRule.UpdatedAt = DateTime.UtcNow;
+
+                        // Delete old amounts — will be replaced below
+                        var oldAmounts = await _context.LimitRuleAmounts
+                            .Where(a => a.LimitRuleId == existingRule.LimitRuleId)
+                            .ToListAsync();
+                        _context.LimitRuleAmounts.RemoveRange(oldAmounts);
+
+                        createdRules.Add(existingRule);
+                        updatedCount++;
+                    }
+                    else
+                    {
+                        var rule = CreateLimitRuleFromDto(dto, daysOfWeek, drawId == 0 ? null : drawId);
+
+                        if (limitType == LimitType.GeneralForZone)
+                        {
+                            rule.ZoneId = entity.Id;
+                        }
+                        else if (limitType == LimitType.GeneralForBettingPool || limitType == LimitType.LocalForBettingPool)
+                        {
+                            rule.BettingPoolId = entity.Id;
+                            rule.ZoneId = entity.ZoneId;
+                        }
+
+                        _context.LimitRules.Add(rule);
+                        createdRules.Add(rule);
+                    }
                 }
             }
 

@@ -2189,35 +2189,58 @@ public class TicketsController : ControllerBase
         // No banca or zona limit = blocked (can't sell without limits)
         if (limitRule == null) return false;
 
-        var maxLimit = await _context.LimitRuleAmounts.AsNoTracking()
-            .Where(a => a.LimitRuleId == limitRule.LimitRuleId && a.GameTypeId == gameTypeId)
-            .Select(a => a.MaxAmount)
+        // Also find global limit (must check separately)
+        var globalRule = await _context.LimitRules.AsNoTracking()
+            .Where(lr => lr.IsActive && lr.DrawId == drawId
+                && lr.LimitType == Models.Enums.LimitType.GeneralForGroup
+                && (lr.DaysOfWeek & dayBit) != 0
+                && (lr.EffectiveFrom == null || lr.EffectiveFrom <= now)
+                && (lr.EffectiveTo == null || lr.EffectiveTo >= now)
+                && lr.LimitRuleAmounts.Any(a => a.GameTypeId == gameTypeId))
             .FirstOrDefaultAsync();
 
-        if (maxLimit <= 0) return false;
+        // Check all applicable limits: the specific one (banca/zona) AND global
+        var rulesToCheck = new List<(LimitRule rule, bool isGlobal)> { (limitRule, false) };
+        if (globalRule != null && globalRule.LimitRuleId != limitRule.LimitRuleId)
+            rulesToCheck.Add((globalRule, true));
 
-        // Consumption for THIS specific number + game type
-        var consumptionQuery = _context.LimitConsumptions
-            .Where(lc => lc.LimitRuleId == limitRule.LimitRuleId
-                && lc.DrawId == drawId
-                && lc.DrawDate == today
-                && lc.GameTypeId == gameTypeId
-                && lc.BetNumber == betNumber);
-
-        // Zona limits aggregate across all bancas in the zone
-        if (limitRule.LimitType != Models.Enums.LimitType.GeneralForZone)
+        foreach (var (rule, isGlobal) in rulesToCheck)
         {
-            consumptionQuery = consumptionQuery.Where(lc => lc.BettingPoolId == bettingPoolId);
+            var maxLimit = await _context.LimitRuleAmounts.AsNoTracking()
+                .Where(a => a.LimitRuleId == rule.LimitRuleId && a.GameTypeId == gameTypeId)
+                .Select(a => a.MaxAmount)
+                .FirstOrDefaultAsync();
+
+            if (maxLimit <= 0) return false;
+
+            // Consumption for THIS specific number + game type
+            var consumptionQuery = _context.LimitConsumptions
+                .Where(lc => lc.LimitRuleId == rule.LimitRuleId
+                    && lc.DrawId == drawId
+                    && lc.DrawDate == today
+                    && lc.GameTypeId == gameTypeId
+                    && lc.BetNumber == betNumber);
+
+            // Banca limits: only this banca's consumption
+            // Zona limits: all bancas in the zone
+            // Global limits: all bancas (no filter)
+            if (rule.LimitType == Models.Enums.LimitType.GeneralForBettingPool
+                || rule.LimitType == Models.Enums.LimitType.LocalForBettingPool)
+            {
+                consumptionQuery = consumptionQuery.Where(lc => lc.BettingPoolId == bettingPoolId);
+            }
+            // Zona and Global: sum across all bancas (no bettingPoolId filter)
+
+            var currentAmount = await consumptionQuery.SumAsync(lc => (decimal?)lc.CurrentAmount) ?? 0;
+            var totalUsed = currentAmount;
+
+            _logger.LogDebug(
+                "Limit check: draw={DrawId}, bet={BetNumber}, gameType={GameTypeId}, limit={MaxLimit}, used={TotalUsed}, bet={Bet}, ruleType={RuleType}",
+                drawId, betNumber, gameTypeId, maxLimit, totalUsed, bet, rule.LimitType);
+
+            if (totalUsed + bet > maxLimit) return false;
         }
 
-        var currentAmount = await consumptionQuery.SumAsync(lc => (decimal?)lc.CurrentAmount) ?? 0;
-        // Don't count reservations during ticket creation — the bet itself replaces the reservation
-        var totalUsed = currentAmount;
-
-        _logger.LogDebug(
-            "Limit check: draw={DrawId}, bet={BetNumber}, gameType={GameTypeId}, limit={MaxLimit}, used={TotalUsed}, bet={Bet}, ruleType={RuleType}",
-            drawId, betNumber, gameTypeId, maxLimit, totalUsed, bet, limitRule.LimitType);
-
-        return totalUsed + bet <= maxLimit;
+        return true;
     }
 }

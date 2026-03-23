@@ -22,6 +22,7 @@ export interface LimitAvailability {
   currentAmount: number;
   percentageUsed: number;
   isBlocked: boolean;
+  blockedBy?: string | null; // "global", "zona", "banca", "local_banca", "no_limit"
 }
 
 export interface UseSignalRReturn {

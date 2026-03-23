@@ -353,6 +353,7 @@ public class PlayLimitAvailabilityResponse : BaseNotification
     public decimal CurrentAmount { get; set; }
     public decimal PercentageUsed { get; set; }
     public bool IsBlocked { get; set; }
+    public string? BlockedBy { get; set; } // "global", "zona", "banca", "local_banca", "no_limit"
 
     public PlayLimitAvailabilityResponse()
     {

@@ -335,58 +335,81 @@ public class LotteryHub : Hub<ILotteryHubClient>
                 LimitAmount = 0,
                 CurrentAmount = 0,
                 PercentageUsed = 100,
-                IsBlocked = true
+                IsBlocked = true,
+                BlockedBy = "no_limit"
             });
             return;
         }
 
-        var limitAmount = await _context.LimitRuleAmounts
-            .AsNoTracking()
-            .Where(a => a.LimitRuleId == limitRule.LimitRuleId && a.GameTypeId == gameTypeId)
-            .Select(a => a.MaxAmount)
+        // Also find global limit
+        var globalRule = await _context.LimitRules.AsNoTracking()
+            .Where(lr => lr.IsActive && lr.DrawId == drawId
+                && lr.LimitType == LimitType.GeneralForGroup
+                && (lr.DaysOfWeek & dayBit) != 0
+                && (lr.EffectiveFrom == null || lr.EffectiveFrom <= now)
+                && (lr.EffectiveTo == null || lr.EffectiveTo >= now)
+                && lr.LimitRuleAmounts.Any(a => a.GameTypeId == gameTypeId))
             .FirstOrDefaultAsync();
 
-        // Sum consumption for THIS specific number + game type
-        var consumptionQuery = _context.LimitConsumptions
-            .AsNoTracking()
-            .Where(lc => lc.DrawId == drawId
-                && lc.DrawDate == today
-                && lc.LimitRuleId == limitRule.LimitRuleId
-                && lc.GameTypeId == gameTypeId
-                && lc.BetNumber == betNumber);
+        // Check both the specific limit AND global, return the minimum available
+        var rulesToCheck = new List<LimitRule> { limitRule };
+        if (globalRule != null && globalRule.LimitRuleId != limitRule.LimitRuleId)
+            rulesToCheck.Add(globalRule);
 
-        // Zona limits aggregate across all bancas; banca limits only for this banca
-        if (limitRule.LimitType != LimitType.GeneralForZone)
+        decimal minAvailable = decimal.MaxValue;
+        decimal reportLimitAmount = 0;
+        decimal reportCurrentAmount = 0;
+        bool blocked = false;
+        string? blockedBy = null;
+
+        foreach (var rule in rulesToCheck)
         {
-            consumptionQuery = consumptionQuery.Where(lc => lc.BettingPoolId == bettingPoolId);
+            var ruleMax = await _context.LimitRuleAmounts.AsNoTracking()
+                .Where(a => a.LimitRuleId == rule.LimitRuleId && a.GameTypeId == gameTypeId)
+                .Select(a => a.MaxAmount)
+                .FirstOrDefaultAsync();
+
+            if (ruleMax <= 0) { blocked = true; blockedBy = GetBlockedByLabel(rule.LimitType); break; }
+
+            var cQuery = _context.LimitConsumptions.AsNoTracking()
+                .Where(lc => lc.DrawId == drawId && lc.DrawDate == today
+                    && lc.LimitRuleId == rule.LimitRuleId
+                    && lc.GameTypeId == gameTypeId && lc.BetNumber == betNumber);
+
+            if (rule.LimitType == LimitType.GeneralForBettingPool || rule.LimitType == LimitType.LocalForBettingPool)
+                cQuery = cQuery.Where(lc => lc.BettingPoolId == bettingPoolId);
+
+            var consumed = await cQuery.SumAsync(lc => (decimal?)lc.CurrentAmount) ?? 0;
+
+            // Scope reservations
+            decimal reserved;
+            if (rule.LimitType == LimitType.GeneralForBettingPool || rule.LimitType == LimitType.LocalForBettingPool)
+                reserved = _limitReservationService.GetReservedAmountForPool(drawId, gameTypeId, betNumber, bettingPoolId);
+            else if (rule.LimitType == LimitType.GeneralForZone)
+            {
+                var zpIds = await _context.BettingPools.AsNoTracking()
+                    .Where(bp => bp.ZoneId == zoneId).Select(bp => bp.BettingPoolId).ToListAsync();
+                reserved = _limitReservationService.GetReservedAmountForZone(drawId, gameTypeId, betNumber, new HashSet<int>(zpIds));
+            }
+            else
+                reserved = _limitReservationService.GetReservedAmount(drawId, gameTypeId, betNumber);
+
+            var used = consumed + reserved;
+            var avail = ruleMax - used;
+
+            if (avail < minAvailable)
+            {
+                minAvailable = avail;
+                reportLimitAmount = ruleMax;
+                reportCurrentAmount = consumed;
+                blockedBy = GetBlockedByLabel(rule.LimitType);
+            }
+            if (used >= ruleMax) { blocked = true; blockedBy = GetBlockedByLabel(rule.LimitType); break; }
         }
 
-        var currentAmount = await consumptionQuery.SumAsync(lc => (decimal?)lc.CurrentAmount) ?? 0;
-
-        // Scope reservations to match consumption scope
-        decimal reservedAmount;
-        if (limitRule.LimitType == LimitType.GeneralForBettingPool || limitRule.LimitType == LimitType.LocalForBettingPool)
-        {
-            // Banca limit: only count this banca's reservations
-            reservedAmount = _limitReservationService.GetReservedAmountForPool(drawId, gameTypeId, betNumber, bettingPoolId);
-        }
-        else if (limitRule.LimitType == LimitType.GeneralForZone)
-        {
-            // Zona limit: count reservations from all bancas in this zone
-            var zonePoolIds = await _context.BettingPools.AsNoTracking()
-                .Where(bp => bp.ZoneId == zoneId)
-                .Select(bp => bp.BettingPoolId)
-                .ToListAsync();
-            reservedAmount = _limitReservationService.GetReservedAmountForZone(drawId, gameTypeId, betNumber, new HashSet<int>(zonePoolIds));
-        }
-        else
-        {
-            reservedAmount = _limitReservationService.GetReservedAmount(drawId, gameTypeId, betNumber);
-        }
-        var totalUsed = currentAmount + reservedAmount;
-        var availableAmount = limitAmount > 0 ? limitAmount - totalUsed : 0;
-        var percentageUsed = limitAmount > 0 ? (totalUsed / limitAmount) * 100 : 0;
-        var isBlocked = limitAmount > 0 && totalUsed >= limitAmount;
+        if (minAvailable == decimal.MaxValue) minAvailable = 0;
+        var finalAvailable = Math.Max(0, minAvailable);
+        var finalPercentage = reportLimitAmount > 0 ? ((reportLimitAmount - finalAvailable) / reportLimitAmount) * 100 : 0;
 
         await Clients.Caller.PlayLimitAvailability(new PlayLimitAvailabilityResponse
         {
@@ -394,12 +417,25 @@ public class LotteryHub : Hub<ILotteryHubClient>
             GameTypeId = gameTypeId,
             DrawId = drawId,
             DrawName = draw.DrawName,
-            AvailableAmount = Math.Max(0, availableAmount),
-            LimitAmount = limitAmount,
-            CurrentAmount = currentAmount,
-            PercentageUsed = Math.Round(percentageUsed, 2),
-            IsBlocked = isBlocked
+            AvailableAmount = finalAvailable,
+            LimitAmount = reportLimitAmount,
+            CurrentAmount = reportCurrentAmount,
+            PercentageUsed = Math.Round(finalPercentage, 2),
+            IsBlocked = blocked,
+            BlockedBy = blocked ? blockedBy : null
         });
+    }
+
+    private static string GetBlockedByLabel(LimitType limitType)
+    {
+        return limitType switch
+        {
+            LimitType.GeneralForGroup => "global",
+            LimitType.GeneralForZone => "zona",
+            LimitType.GeneralForBettingPool => "banca",
+            LimitType.LocalForBettingPool => "local_banca",
+            _ => "unknown"
+        };
     }
 }
 

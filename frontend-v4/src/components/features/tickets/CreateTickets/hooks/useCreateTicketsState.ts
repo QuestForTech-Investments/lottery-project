@@ -171,6 +171,18 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
         if (prev === -1) return data.availableAmount;
         return Math.min(prev, data.availableAmount);
       });
+
+      // Show blocked message with level info
+      if (data.isBlocked && data.blockedBy) {
+        const labels: Record<string, string> = {
+          global: 'Límite Global alcanzado',
+          zona: 'Límite de Zona alcanzado',
+          banca: 'Límite de Banca alcanzado',
+          local_banca: 'Límite Local de Banca alcanzado',
+          no_limit: 'Banca no tiene límites configurados',
+        };
+        setBetWarning(labels[data.blockedBy] || 'Límite alcanzado');
+      }
     });
 
     onPlayReserved((data) => {
