@@ -480,7 +480,7 @@ public class SalesReportsController : ControllerBase
                         PendingCount = pendingCount,
                         WinnerCount = winnerCount,
                         LoserCount = loserCount,
-                        Balance = x.BettingPool.Balance != null ? x.BettingPool.Balance.CurrentBalance : 0m,
+                        Balance = (snapshots.TryGetValue(x.BettingPool.BettingPoolId, out var snapBal) ? snapBal : 0m) + totalNet,
                         BalanceOfTheDay = snapshots.TryGetValue(x.BettingPool.BettingPoolId, out var snap) ? snap : 0m
                     };
                 })

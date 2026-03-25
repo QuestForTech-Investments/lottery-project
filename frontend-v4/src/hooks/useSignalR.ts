@@ -25,13 +25,25 @@ export interface LimitAvailability {
   blockedBy?: string | null; // "global", "zona", "banca", "local_banca", "no_limit"
 }
 
+export interface PlayStats {
+  betNumber: string;
+  gameTypeId: number;
+  drawId: number;
+  bettingPoolId: number;
+  playCount: number;
+  soldInGroup: number;
+  soldInPool: number;
+}
+
 export interface UseSignalRReturn {
   connected: boolean;
   checkPlayLimit: (betNumber: string, gameTypeId: number, drawId: number, bettingPoolId: number) => void;
-  reservePlay: (drawId: number, gameTypeId: number, bettingPoolId: number, amount: number) => void;
+  getPlayStats: (betNumber: string, gameTypeId: number, drawId: number, bettingPoolId: number) => void;
+  reservePlay: (drawId: number, gameTypeId: number, bettingPoolId: number, amount: number, betNumber?: string) => void;
   releaseReservation: (reservationId: string) => void;
   onLimitAvailability: (callback: (data: LimitAvailability) => void) => void;
   onPlayReserved: (callback: (data: { reservationId: string; drawId: number; gameTypeId: number; amount: number }) => void) => void;
+  onPlayStats: (callback: (data: PlayStats) => void) => void;
 }
 
 export const useSignalR = (): UseSignalRReturn => {
@@ -39,6 +51,7 @@ export const useSignalR = (): UseSignalRReturn => {
   const [connected, setConnected] = useState(false);
   const limitCallbackRef = useRef<((data: LimitAvailability) => void) | null>(null);
   const reserveCallbackRef = useRef<((data: { reservationId: string; drawId: number; gameTypeId: number; amount: number }) => void) | null>(null);
+  const playStatsCallbackRef = useRef<((data: PlayStats) => void) | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem('authToken');
@@ -54,6 +67,11 @@ export const useSignalR = (): UseSignalRReturn => {
     // Listen for limit availability responses
     connection.on('PlayLimitAvailability', (data: LimitAvailability) => {
       limitCallbackRef.current?.(data);
+    });
+
+    // Listen for play stats responses
+    connection.on('PlayStats', (data: PlayStats) => {
+      playStatsCallbackRef.current?.(data);
     });
 
     // Listen for generic notifications (reserve/release)
@@ -81,6 +99,14 @@ export const useSignalR = (): UseSignalRReturn => {
     return () => {
       connection.stop();
     };
+  }, []);
+
+  const getPlayStats = useCallback((betNumber: string, gameTypeId: number, drawId: number, bettingPoolId: number) => {
+    const conn = connectionRef.current;
+    if (!conn || conn.state !== signalR.HubConnectionState.Connected) return;
+
+    conn.invoke('GetPlayStats', { betNumber, gameTypeId, drawId, bettingPoolId })
+      .catch(err => console.warn('[SignalR] GetPlayStats error:', err));
   }, []);
 
   const checkPlayLimit = useCallback((betNumber: string, gameTypeId: number, drawId: number, bettingPoolId: number) => {
@@ -115,12 +141,18 @@ export const useSignalR = (): UseSignalRReturn => {
     reserveCallbackRef.current = callback;
   }, []);
 
+  const onPlayStats = useCallback((callback: (data: PlayStats) => void) => {
+    playStatsCallbackRef.current = callback;
+  }, []);
+
   return {
     connected,
     checkPlayLimit,
+    getPlayStats,
     reservePlay,
     releaseReservation,
     onLimitAvailability,
     onPlayReserved,
+    onPlayStats,
   };
 };

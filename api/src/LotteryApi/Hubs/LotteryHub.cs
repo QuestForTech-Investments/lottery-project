@@ -210,6 +210,53 @@ public class LotteryHub : Hub<ILotteryHubClient>
     }
 
     /// <summary>
+    /// Get play stats: quantity of plays today, amount sold in group, amount sold in banca.
+    /// Client sends: { "target": "GetPlayStats", "arguments": [{ "betNumber": "12", "gameTypeId": 1, "drawId": 167, "bettingPoolId": 9 }] }
+    /// </summary>
+    public async Task GetPlayStats(GetPlayStatsRequest request)
+    {
+        var betNumber = request.BetNumber?.Trim() ?? "";
+        var gameTypeId = request.GameTypeId;
+        var drawId = request.DrawId;
+        var bettingPoolId = request.BettingPoolId;
+
+        var today = DateOnly.FromDateTime(Helpers.DateTimeHelper.TodayInBusinessTimezone());
+
+        // Query ticket lines for today matching this number + game type + draw
+        var query = _context.Set<Models.TicketLine>()
+            .AsNoTracking()
+            .Where(tl => tl.BetNumber == betNumber
+                && tl.BetTypeId == gameTypeId
+                && tl.DrawId == drawId
+                && tl.DrawDate.Date == today.ToDateTime(TimeOnly.MinValue)
+                && tl.Ticket != null && !tl.Ticket.IsCancelled);
+
+        // Global level: all bancas
+        var groupStats = await query
+            .GroupBy(tl => 1)
+            .Select(g => new { Count = g.Count(), Total = g.Sum(tl => tl.BetAmount) })
+            .FirstOrDefaultAsync();
+
+        // Banca level: just this banca
+        var bancaStats = await query
+            .Where(tl => tl.Ticket!.BettingPoolId == bettingPoolId)
+            .GroupBy(tl => 1)
+            .Select(g => new { Count = g.Count(), Total = g.Sum(tl => tl.BetAmount) })
+            .FirstOrDefaultAsync();
+
+        await Clients.Caller.PlayStats(new PlayStatsResponse
+        {
+            BetNumber = betNumber,
+            GameTypeId = gameTypeId,
+            DrawId = drawId,
+            BettingPoolId = bettingPoolId,
+            PlayCount = groupStats?.Count ?? 0,
+            SoldInGroup = groupStats?.Total ?? 0,
+            SoldInPool = bancaStats?.Total ?? 0
+        });
+    }
+
+    /// <summary>
     /// Check play limit availability for a single bet.
     /// Client sends: { "target": "CheckPlayLimit", "arguments": [{ "betNumber": "12", "gameTypeId": 1, "drawId": 167, "bettingPoolId": 9 }] }
     /// Response: PlayLimitAvailability
@@ -451,6 +498,30 @@ public class ReservePlayRequest
     public int BettingPoolId { get; set; }
     public decimal Amount { get; set; }
     public string BetNumber { get; set; } = string.Empty;
+}
+
+public class GetPlayStatsRequest
+{
+    public string BetNumber { get; set; } = string.Empty;
+    public int GameTypeId { get; set; }
+    public int DrawId { get; set; }
+    public int BettingPoolId { get; set; }
+}
+
+public class PlayStatsResponse : BaseNotification
+{
+    public string BetNumber { get; set; } = string.Empty;
+    public int GameTypeId { get; set; }
+    public int DrawId { get; set; }
+    public int BettingPoolId { get; set; }
+    public int PlayCount { get; set; }
+    public decimal SoldInGroup { get; set; }
+    public decimal SoldInPool { get; set; }
+
+    public PlayStatsResponse()
+    {
+        Type = "PlayStats";
+    }
 }
 
 public class CheckPlayLimitRequest

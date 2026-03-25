@@ -126,7 +126,12 @@ public class CaidaCalculationService : ICaidaCalculationService
         DateTime calculationDate, CancellationToken ct)
     {
         var bpId = config.BettingPoolId;
-        var adjustedEnd = periodEnd.AddDays(1).AddTicks(-1);
+
+        // Check if already processed for this period (prevent duplicates)
+        var alreadyProcessed = await _context.CaidaHistory
+            .AnyAsync(h => h.BettingPoolId == bpId
+                && h.PeriodStart == periodStart && h.PeriodEnd == periodEnd, ct);
+        if (alreadyProcessed) return;
 
         // Calculate net for the period (same formula as SalesReportsController)
         var tickets = await _context.Tickets
@@ -141,7 +146,13 @@ public class CaidaCalculationService : ICaidaCalculationService
         var riferoDiscount = tickets.Where(t => t.DiscountMode == "RIFERO").Sum(t => t.TotalDiscount);
         var netAmount = totalSold + riferoDiscount - totalCommissions - totalPrizes;
 
-        var accumulatedBefore = config.AccumulatedFall;
+        // Read accumulated from last history entry (not config, which may be stale from real-time updates)
+        var lastHistory = await _context.CaidaHistory
+            .AsNoTracking()
+            .Where(h => h.BettingPoolId == bpId && h.PeriodEnd < periodStart)
+            .OrderByDescending(h => h.PeriodEnd)
+            .FirstOrDefaultAsync(ct);
+        var accumulatedBefore = lastHistory?.AccumulatedFallAfter ?? 0;
         decimal caidaAmount = 0;
         decimal accumulatedAfter;
         var isWithAccumulation = config.FallType != "WEEKLY_NO_ACCUMULATED";

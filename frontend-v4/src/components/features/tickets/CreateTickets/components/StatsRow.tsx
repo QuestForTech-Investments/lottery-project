@@ -45,7 +45,7 @@ const StatsRow: React.FC<StatsRowProps> = memo(({
       />
     </Box>
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-      <Typography sx={{ fontSize: '14px', color: '#666', fontWeight: 500 }}>Vendido en grupo</Typography>
+      <Typography sx={{ fontSize: '14px', color: '#666', fontWeight: 500 }}>Vendido global</Typography>
       <TextField
         size="medium"
         value={soldInGroup}

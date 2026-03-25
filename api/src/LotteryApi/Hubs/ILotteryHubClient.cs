@@ -109,6 +109,11 @@ public interface ILotteryHubClient
     /// Response with play availability across requested draws.
     /// </summary>
     Task PlayLimitAvailability(PlayLimitAvailabilityResponse response);
+
+    /// <summary>
+    /// Response with play stats (count, sold in group, sold in pool).
+    /// </summary>
+    Task PlayStats(PlayStatsResponse response);
 }
 
 // ==================== NOTIFICATION DTOs ====================

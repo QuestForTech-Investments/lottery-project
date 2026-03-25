@@ -93,6 +93,7 @@ const CreateTickets: React.FC = () => {
     limitAvailable,
     signalRConnected,
     handleBetNumberBlur,
+    playStats,
   } = useCreateTicketsState();
 
   const { hasPermission } = useUserPermissions();
@@ -150,9 +151,9 @@ const CreateTickets: React.FC = () => {
 
       {/* Stats Row */}
       <StatsRow
-        dailyBets={dailyBets}
-        soldInGroup={soldInGroup}
-        soldInPool={soldInPool}
+        dailyBets={playStats?.playCount ?? dailyBets}
+        soldInGroup={playStats ? `$${playStats.soldInGroup.toFixed(2)}` : soldInGroup}
+        soldInPool={playStats ? `$${playStats.soldInPool.toFixed(2)}` : soldInPool}
         discountActive={discountActive}
         multiLotteryMode={multiLotteryMode}
         onDiscountChange={setDiscountActive}

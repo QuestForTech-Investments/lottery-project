@@ -10,7 +10,7 @@ import api from '@services/api';
 import { getCurrentUser } from '@services/authService';
 import { getBettingPoolConfig } from '@services/bettingPoolService';
 import { useUserPermissions } from '@hooks/useUserPermissions';
-import { useSignalR, type LimitAvailability } from '@hooks/useSignalR';
+import { useSignalR, type LimitAvailability, type PlayStats } from '@hooks/useSignalR';
 import type {
   BettingPool, Draw, Bet, ColumnType, VisibleColumns,
   BettingPoolDrawResponse, DrawApiResponse, TicketData,
@@ -101,6 +101,7 @@ interface UseCreateTicketsStateReturn {
   limitAvailable: number | null; // null = not checked, -1 = unlimited, 0+ = amount
   signalRConnected: boolean;
   handleBetNumberBlur: () => void;
+  playStats: { playCount: number; soldInGroup: number; soldInPool: number } | null;
 
   // Handlers
   handleDrawClick: (draw: Draw) => void;
@@ -154,8 +155,9 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
 
   // Limit state
   const [limitAvailable, setLimitAvailable] = useState<number | null>(null);
+  const [playStats, setPlayStats] = useState<{ playCount: number; soldInGroup: number; soldInPool: number } | null>(null);
   const recheckLimitRef = useRef<(() => void) | null>(null);
-  const { connected: signalRConnected, checkPlayLimit, reservePlay, releaseReservation, onLimitAvailability, onPlayReserved } = useSignalR();
+  const { connected: signalRConnected, checkPlayLimit, getPlayStats, reservePlay, releaseReservation, onLimitAvailability, onPlayReserved, onPlayStats } = useSignalR();
 
   // Map of betId -> reservationId for releasing on delete
   const reservationMapRef = useRef<Map<number, string>>(new Map());
@@ -182,7 +184,12 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
           no_limit: 'Banca no tiene límites configurados',
         };
         setBetWarning(labels[data.blockedBy] || 'Límite alcanzado');
+        setTimeout(() => setBetWarning(''), 5000);
       }
+    });
+
+    onPlayStats((data: PlayStats) => {
+      setPlayStats({ playCount: data.playCount, soldInGroup: data.soldInGroup, soldInPool: data.soldInPool });
     });
 
     onPlayReserved((data) => {
@@ -194,7 +201,7 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
         pendingReservationsRef.current.delete(key);
       }
     });
-  }, [onLimitAvailability, onPlayReserved]);
+  }, [onLimitAvailability, onPlayReserved, onPlayStats]);
 
   // Bets by column
   const [directBets, setDirectBets] = useState<Bet[]>([]);
@@ -808,8 +815,9 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
       });
     }
 
-    // Reset limit display
+    // Reset limit display and play stats
     setLimitAvailable(null);
+    setPlayStats(null);
     setBetNumber('');
     setTimeout(() => betNumberInputRef.current?.focus(), 0);
   }, [multiLotteryMode, selectedDraws, selectedDraw, betNumber, amount, selectedBetType, drawGameTypes, determineBetType, allowSplitAmount, selectedPool, reservePlay]);
@@ -925,6 +933,7 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
       reservationMapRef.current.clear();
       pendingReservationsRef.current.clear();
       setLimitAvailable(null);
+      setPlayStats(null);
       setSuccessMessage(`Ticket creado: ${response.ticketCode || 'OK'}`);
     } catch (error: unknown) {
       console.error('Error creating ticket:', error);
@@ -946,6 +955,7 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
   const handleBetNumberBlur = useCallback((): void => {
     if (!betNumber.trim() || !selectedPool) {
       setLimitAvailable(null);
+      setPlayStats(null);
       return;
     }
 
@@ -955,6 +965,7 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
 
     if (drawsToCheck.length === 0) {
       setLimitAvailable(null);
+      setPlayStats(null);
       return;
     }
 
@@ -963,15 +974,26 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
     const detection = determineBetType(betNumber, selectedBetType, allowedGameTypes);
     if (!detection) {
       setLimitAvailable(null);
+      setPlayStats(null);
       return;
     }
 
     // Reset and check each draw
     setLimitAvailable(null);
+    setPlayStats(null);
+    const firstDraw = drawsToCheck[0];
     for (const draw of drawsToCheck) {
       checkPlayLimit(betNumber.trim(), detection.gameTypeId, draw.id, selectedPool.bettingPoolId);
     }
-  }, [betNumber, selectedPool, multiLotteryMode, selectedDraws, selectedDraw, selectedBetType, drawGameTypes, determineBetType, checkPlayLimit]);
+    // Get play stats for the first draw
+    getPlayStats(betNumber.trim(), detection.gameTypeId, firstDraw.id, selectedPool.bettingPoolId);
+  }, [betNumber, selectedPool, multiLotteryMode, selectedDraws, selectedDraw, selectedBetType, drawGameTypes, determineBetType, checkPlayLimit, getPlayStats]);
+
+  // Clear warnings/errors instantly when bet number changes
+  useEffect(() => {
+    setBetWarning('');
+    setBetError('');
+  }, [betNumber]);
 
   // Keep ref in sync for use by delete handlers
   recheckLimitRef.current = handleBetNumberBlur;
@@ -996,6 +1018,7 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
     reservationMapRef.current.clear();
     pendingReservationsRef.current.clear();
     setLimitAvailable(null);
+    setPlayStats(null);
   }, [releaseReservation]);
 
   const handleDuplicate = useCallback((): void => {
@@ -1089,6 +1112,7 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
     limitAvailable,
     signalRConnected,
     handleBetNumberBlur,
+    playStats,
   };
 };
 
