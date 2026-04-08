@@ -583,13 +583,71 @@ public class BettingPoolPrizesCommissionsController : ControllerBase
             int updatedCount = 0;
             var errors = new List<string>();
 
+            // Normalize gameType: remove accents for consistent matching
+            // DB has both PALÉ/PALE, SINGULACIÓN/SINGULACION — treat them as equivalent
+            static string NormalizeGameType(string gameType)
+            {
+                if (string.IsNullOrEmpty(gameType)) return gameType;
+                var normalized = gameType.Normalize(System.Text.NormalizationForm.FormD);
+                var sb = new System.Text.StringBuilder();
+                foreach (var c in normalized)
+                {
+                    if (System.Globalization.CharUnicodeInfo.GetUnicodeCategory(c) != System.Globalization.UnicodeCategory.NonSpacingMark)
+                        sb.Append(c);
+                }
+                return sb.ToString().Normalize(System.Text.NormalizationForm.FormC)
+                    .Replace(" ", "_").ToUpperInvariant();
+            }
+
+            // Deduplicate: merge accented variants (e.g. PALÉ + PALE → keep one PALE)
+            var grouped = existingRecords
+                .GroupBy(r => new { NormalizedGameType = NormalizeGameType(r.GameType), r.LotteryId })
+                .Where(g => g.Count() > 1);
+
+            foreach (var group in grouped)
+            {
+                // Keep the record with the most data; prefer the one with non-zero commissions
+                var ordered = group.OrderByDescending(r =>
+                    (r.CommissionDiscount1 ?? 0) + (r.Commission2Discount1 ?? 0) +
+                    (r.PrizePayment1 ?? 0) + (r.PrizePayment2 ?? 0) +
+                    (r.PrizePayment3 ?? 0) + (r.PrizePayment4 ?? 0))
+                    .ToList();
+
+                var keep = ordered.First();
+                keep.GameType = group.Key.NormalizedGameType;
+
+                // Merge non-null values from duplicates into the keeper
+                foreach (var dup in ordered.Skip(1))
+                {
+                    keep.CommissionDiscount1 ??= dup.CommissionDiscount1;
+                    keep.CommissionDiscount2 ??= dup.CommissionDiscount2;
+                    keep.CommissionDiscount3 ??= dup.CommissionDiscount3;
+                    keep.CommissionDiscount4 ??= dup.CommissionDiscount4;
+                    keep.Commission2Discount1 ??= dup.Commission2Discount1;
+                    keep.Commission2Discount2 ??= dup.Commission2Discount2;
+                    keep.Commission2Discount3 ??= dup.Commission2Discount3;
+                    keep.Commission2Discount4 ??= dup.Commission2Discount4;
+                    keep.PrizePayment1 ??= dup.PrizePayment1;
+                    keep.PrizePayment2 ??= dup.PrizePayment2;
+                    keep.PrizePayment3 ??= dup.PrizePayment3;
+                    keep.PrizePayment4 ??= dup.PrizePayment4;
+                    _context.BettingPoolPrizesCommissions.Remove(dup);
+                    existingRecords.Remove(dup);
+                }
+            }
+
+            // Persist dedup before processing new items (avoids unique constraint violations)
+            await _context.SaveChangesAsync();
+
             foreach (var item in dto.Items)
             {
                 try
                 {
-                    // Find existing record by lotteryId + gameType
+                    var normalizedGameType = NormalizeGameType(item.GameType);
+
+                    // Find existing record by lotteryId + gameType (accent-insensitive)
                     var existing = existingRecords.FirstOrDefault(r =>
-                        r.GameType == item.GameType &&
+                        NormalizeGameType(r.GameType) == normalizedGameType &&
                         ((item.LotteryId == null && r.LotteryId == null) ||
                          (item.LotteryId != null && r.LotteryId == item.LotteryId)));
 
@@ -600,24 +658,25 @@ public class BettingPoolPrizesCommissionsController : ControllerBase
                             existing.CommissionDiscount1 = item.CommissionDiscount1.Value;
                         if (item.Commission2Discount1.HasValue)
                             existing.Commission2Discount1 = item.Commission2Discount1.Value;
+                        existing.GameType = normalizedGameType;
                         existing.UpdatedAt = DateTime.UtcNow;
                         updatedCount++;
                     }
                     else
                     {
-                        // Create new record
+                        // Create new record with normalized gameType
                         var newRecord = new BettingPoolPrizesCommission
                         {
                             BettingPoolId = bettingPoolId,
                             LotteryId = item.LotteryId,
-                            GameType = item.GameType,
+                            GameType = normalizedGameType,
                             CommissionDiscount1 = item.CommissionDiscount1,
                             Commission2Discount1 = item.Commission2Discount1,
                             IsActive = true,
                             CreatedAt = DateTime.UtcNow
                         };
                         _context.BettingPoolPrizesCommissions.Add(newRecord);
-                        existingRecords.Add(newRecord); // Track for subsequent items with same key
+                        existingRecords.Add(newRecord);
                         createdCount++;
                     }
                 }

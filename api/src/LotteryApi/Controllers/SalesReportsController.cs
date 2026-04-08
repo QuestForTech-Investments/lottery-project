@@ -445,6 +445,42 @@ public class SalesReportsController : ControllerBase
                     bpCaidaValues[bpId] = (f, a);
             }
 
+            // Adjust balances with today's approved transactions (PAGOs, COBROs, etc.)
+            var todayUtcStart = DateTimeHelper.GetUtcStartOfDay(filterEndDate);
+            var todayUtcEnd = DateTimeHelper.GetUtcEndOfDay(filterEndDate);
+
+            var entity1Adjustments = await _context.TransactionGroupLines
+                .AsNoTracking()
+                .Where(l => l.Entity1Type == "bettingPool"
+                    && l.Group!.Status == "Aprobado"
+                    && l.Group!.CreatedAt >= todayUtcStart
+                    && l.Group!.CreatedAt <= todayUtcEnd)
+                .GroupBy(l => l.Entity1Id)
+                .Select(g => new { BettingPoolId = g.Key, Net = g.Sum(l => l.Debit - l.Credit) })
+                .ToListAsync();
+
+            var entity2Adjustments = await _context.TransactionGroupLines
+                .AsNoTracking()
+                .Where(l => l.Entity2Type == "bettingPool"
+                    && l.Group!.Status == "Aprobado"
+                    && l.Group!.CreatedAt >= todayUtcStart
+                    && l.Group!.CreatedAt <= todayUtcEnd)
+                .GroupBy(l => l.Entity2Id!.Value)
+                .Select(g => new { BettingPoolId = g.Key, Net = g.Sum(l => l.Credit - l.Debit) })
+                .ToListAsync();
+
+            var txAdjustmentMap = new Dictionary<int, decimal>();
+            foreach (var adj in entity1Adjustments)
+            {
+                txAdjustmentMap.TryGetValue(adj.BettingPoolId, out var current);
+                txAdjustmentMap[adj.BettingPoolId] = current + adj.Net;
+            }
+            foreach (var adj in entity2Adjustments)
+            {
+                txAdjustmentMap.TryGetValue(adj.BettingPoolId, out var current);
+                txAdjustmentMap[adj.BettingPoolId] = current + adj.Net;
+            }
+
             var result = salesData
                 .Where(x => x.Tickets.Any())
                 .Select(x =>
@@ -461,6 +497,9 @@ public class SalesReportsController : ControllerBase
                     var loserCount = x.Tickets.Count(t => t.TicketState == "L");
 
                     bpCaidaValues.TryGetValue(x.BettingPool.BettingPoolId, out var caida);
+
+                    var snapBal = snapshots.TryGetValue(x.BettingPool.BettingPoolId, out var s) ? s : 0m;
+                    txAdjustmentMap.TryGetValue(x.BettingPool.BettingPoolId, out var txAdj);
 
                     return new BettingPoolSalesDto
                     {
@@ -480,8 +519,8 @@ public class SalesReportsController : ControllerBase
                         PendingCount = pendingCount,
                         WinnerCount = winnerCount,
                         LoserCount = loserCount,
-                        Balance = (snapshots.TryGetValue(x.BettingPool.BettingPoolId, out var snapBal) ? snapBal : 0m) + totalNet,
-                        BalanceOfTheDay = snapshots.TryGetValue(x.BettingPool.BettingPoolId, out var snap) ? snap : 0m
+                        Balance = snapBal + totalNet + txAdj,
+                        BalanceOfTheDay = snapBal
                     };
                 })
                 .OrderBy(x => x.BettingPoolCode)

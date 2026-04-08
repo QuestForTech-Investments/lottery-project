@@ -3,6 +3,8 @@ import { getBettingPools, handleBettingPoolError } from '@/services/bettingPoolS
 import { getAllZones } from '@/services/zoneService';
 import { getLoans } from '@/services/loanService';
 import { getCaidaStatus } from '@/services/caidaService';
+import api from '@/services/api';
+import type { BettingPoolBalanceAPI } from '@/services/balanceService';
 
 interface TransformedBettingPool {
   id: number;
@@ -82,15 +84,16 @@ const useBettingPoolsList = (): UseBettingPoolsListReturn => {
       // ⚡ Performance tracking
       const startTime = performance.now();
 
-      // ⚡ OPTIMIZATION: Load zones, betting pools, loans, and caída in parallel
-      const [zonesResponse, response, loansData, caidaData] = await Promise.all([
+      // ⚡ OPTIMIZATION: Load zones, betting pools, loans, caída, and balances in parallel
+      const [zonesResponse, response, loansData, caidaData, balancesData] = await Promise.all([
         getAllZones(),
         getBettingPools({
           page: 1,
           pageSize: 1000 // Load all betting pools for client-side filtering
         }),
         getLoans({ status: 'active' }).catch(() => []),
-        getCaidaStatus().catch(() => [])
+        getCaidaStatus().catch(() => []),
+        api.get<BettingPoolBalanceAPI[]>('/balances/betting-pools').catch(() => [])
       ]) as unknown as [
         { success: boolean; data?: Array<{ zoneId: number; name: string }> },
         { items?: Array<{
@@ -106,7 +109,8 @@ const useBettingPoolsList = (): UseBettingPoolsListReturn => {
           balance?: number;
         }> },
         Array<{ entityId: number; remainingBalance: number }>,
-        Array<{ bettingPoolId: number; accumulatedFall: number }>
+        Array<{ bettingPoolId: number; accumulatedFall: number }>,
+        BettingPoolBalanceAPI[]
       ];
 
       // Build loan totals map by entity
@@ -122,6 +126,14 @@ const useBettingPoolsList = (): UseBettingPoolsListReturn => {
       if (Array.isArray(caidaData)) {
         caidaData.forEach(item => {
           caidaMap.set(item.bettingPoolId, item.accumulatedFall);
+        });
+      }
+
+      // Build balances map from snapshot-based balances endpoint
+      const balanceMap = new Map<number, number>();
+      if (Array.isArray(balancesData)) {
+        balancesData.forEach(item => {
+          balanceMap.set(item.bettingPoolId, item.balance);
         });
       }
 
@@ -162,7 +174,7 @@ const useBettingPoolsList = (): UseBettingPoolsListReturn => {
           // Use zoneName directly from API response instead of looking up from map
           zone: bettingPool.zoneName || 'Sin zona',
           zoneId: bettingPool.zoneId,
-          balance: bettingPool.balance || 0,
+          balance: balanceMap.get(bettingPool.bettingPoolId) ?? bettingPool.balance ?? 0,
           accumulatedFall: caidaMap.has(bettingPool.bettingPoolId) ? caidaMap.get(bettingPool.bettingPoolId)! : null,
           loans: loanTotals[bettingPool.bettingPoolId] || 0
         };
