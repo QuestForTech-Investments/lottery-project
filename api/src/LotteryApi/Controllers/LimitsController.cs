@@ -335,6 +335,18 @@ public class LimitsController : ControllerBase
             var existingRuleIds = new HashSet<int>();
             var limitType = (LimitType)dto.LimitType;
 
+            // Validate BetNumberPattern is required for ByNumber types
+            var isByNumberType = limitType == LimitType.ByNumberForGroup
+                || limitType == LimitType.ByNumberForZone
+                || limitType == LimitType.ByNumberForBettingPool;
+
+            var hasPatterns = (dto.BetNumberPatterns != null && dto.BetNumberPatterns.Any(p => !string.IsNullOrWhiteSpace(p)))
+                || !string.IsNullOrWhiteSpace(dto.BetNumberPattern);
+            if (isByNumberType && !hasPatterns)
+            {
+                return BadRequest(new { message = "El número es requerido para límites por número" });
+            }
+
             // Require Global limits to exist before creating any other type
             if (limitType != LimitType.GeneralForGroup)
             {
@@ -343,6 +355,38 @@ public class LimitsController : ControllerBase
                 if (!hasGlobal)
                 {
                     return BadRequest(new { message = "Debe crear primero un Límite Global antes de crear otros tipos de límites" });
+                }
+            }
+
+            // Require parent general limits for ByNumber types
+            if (limitType == LimitType.ByNumberForZone)
+            {
+                var targetEntitiesForCheck = await ResolveTargetEntities(dto, limitType);
+                foreach (var entity in targetEntitiesForCheck.Where(e => e.Id > 0))
+                {
+                    var hasZonaLimit = await _context.LimitRules
+                        .AnyAsync(r => r.LimitType == LimitType.GeneralForZone && r.ZoneId == entity.Id && r.IsActive);
+                    if (!hasZonaLimit)
+                    {
+                        var zoneName = await _context.Zones.Where(z => z.ZoneId == entity.Id).Select(z => z.ZoneName).FirstOrDefaultAsync();
+                        return BadRequest(new { message = $"Debe crear primero un Límite Zona para '{zoneName ?? $"Zona {entity.Id}"}' antes de crear Límite por Número de Zona" });
+                    }
+                }
+            }
+
+            if (limitType == LimitType.ByNumberForBettingPool)
+            {
+                var targetEntitiesForCheck = await ResolveTargetEntities(dto, limitType);
+                var bpIds = targetEntitiesForCheck.Where(e => e.Id > 0).Select(e => e.Id).ToList();
+                foreach (var bpId in bpIds)
+                {
+                    var hasBancaLimit = await _context.LimitRules
+                        .AnyAsync(r => r.LimitType == LimitType.GeneralForBettingPool && r.BettingPoolId == bpId && r.IsActive);
+                    if (!hasBancaLimit)
+                    {
+                        var bpName = await _context.BettingPools.Where(bp => bp.BettingPoolId == bpId).Select(bp => bp.BettingPoolName).FirstOrDefaultAsync();
+                        return BadRequest(new { message = $"Debe crear primero un Límite Banca para '{bpName ?? $"Banca {bpId}"}' antes de crear Límite por Número de Banca" });
+                    }
                 }
             }
 
@@ -421,6 +465,16 @@ public class LimitsController : ControllerBase
                 }
             }
 
+            // Resolve bet number patterns for ByNumber types
+            var betNumberPatterns = new List<string> { "" }; // default: single empty pattern (non-ByNumber)
+            if (isByNumberType)
+            {
+                if (dto.BetNumberPatterns != null && dto.BetNumberPatterns.Count > 0)
+                    betNumberPatterns = dto.BetNumberPatterns.Where(p => !string.IsNullOrWhiteSpace(p)).Distinct().ToList();
+                else if (!string.IsNullOrWhiteSpace(dto.BetNumberPattern))
+                    betNumberPatterns = new List<string> { dto.BetNumberPattern };
+            }
+
             // Upsert rules: find existing or create new
             var updatedCount = 0;
             foreach (var entity in targetEntities)
@@ -428,52 +482,63 @@ public class LimitsController : ControllerBase
                 var drawIds = validDrawIds.Count > 0 ? validDrawIds : new List<int> { 0 };
                 foreach (var drawId in drawIds)
                 {
-                    // Try to find existing rule for this type + draw + entity
-                    var existingQuery = _context.LimitRules
-                        .Where(r => r.LimitType == limitType && r.IsActive && r.DrawId == (drawId == 0 ? null : drawId));
-
-                    if (limitType == LimitType.GeneralForGroup)
+                    foreach (var pattern in betNumberPatterns)
                     {
-                        // Global: match by draw only
-                    }
-                    else if (limitType == LimitType.GeneralForZone)
-                    {
-                        existingQuery = existingQuery.Where(r => r.ZoneId == entity.Id);
-                    }
-                    else
-                    {
-                        existingQuery = existingQuery.Where(r => r.BettingPoolId == entity.Id);
-                    }
+                        // Try to find existing rule for this type + draw + entity
+                        var existingQuery = _context.LimitRules
+                            .Where(r => r.LimitType == limitType && r.IsActive && r.DrawId == (drawId == 0 ? null : drawId));
 
-                    var existingRule = await existingQuery.FirstOrDefaultAsync();
-
-                    if (existingRule != null)
-                    {
-                        // Update existing rule's days and expiration
-                        existingRule.DaysOfWeek = daysOfWeek ?? existingRule.DaysOfWeek;
-                        if (dto.EffectiveTo.HasValue) existingRule.EffectiveTo = dto.EffectiveTo;
-                        existingRule.UpdatedAt = DateTime.UtcNow;
-
-                        existingRuleIds.Add(existingRule.LimitRuleId);
-                        createdRules.Add(existingRule);
-                        updatedCount++;
-                    }
-                    else
-                    {
-                        var rule = CreateLimitRuleFromDto(dto, daysOfWeek, drawId == 0 ? null : drawId);
-
-                        if (limitType == LimitType.GeneralForZone)
+                        if (limitType == LimitType.GeneralForGroup || limitType == LimitType.ByNumberForGroup)
                         {
-                            rule.ZoneId = entity.Id;
+                            // Global: match by draw only (+ betNumberPattern for ByNumber)
                         }
-                        else if (limitType == LimitType.GeneralForBettingPool || limitType == LimitType.LocalForBettingPool)
+                        else if (limitType == LimitType.GeneralForZone || limitType == LimitType.ByNumberForZone)
                         {
-                            rule.BettingPoolId = entity.Id;
-                            rule.ZoneId = entity.ZoneId;
+                            existingQuery = existingQuery.Where(r => r.ZoneId == entity.Id);
+                        }
+                        else
+                        {
+                            existingQuery = existingQuery.Where(r => r.BettingPoolId == entity.Id);
                         }
 
-                        _context.LimitRules.Add(rule);
-                        createdRules.Add(rule);
+                        // ByNumber types must also match on BetNumberPattern
+                        if (isByNumberType)
+                        {
+                            existingQuery = existingQuery.Where(r => r.BetNumberPattern == pattern);
+                        }
+
+                        var existingRule = await existingQuery.FirstOrDefaultAsync();
+
+                        if (existingRule != null)
+                        {
+                            // Update existing rule's days and expiration
+                            existingRule.DaysOfWeek = daysOfWeek ?? existingRule.DaysOfWeek;
+                            if (dto.EffectiveTo.HasValue) existingRule.EffectiveTo = dto.EffectiveTo;
+                            existingRule.UpdatedAt = DateTime.UtcNow;
+
+                            existingRuleIds.Add(existingRule.LimitRuleId);
+                            createdRules.Add(existingRule);
+                            updatedCount++;
+                        }
+                        else
+                        {
+                            var rule = CreateLimitRuleFromDto(dto, daysOfWeek, drawId == 0 ? null : drawId);
+                            if (isByNumberType) rule.BetNumberPattern = pattern;
+
+                            if (limitType == LimitType.GeneralForZone || limitType == LimitType.ByNumberForZone)
+                            {
+                                rule.ZoneId = entity.Id;
+                            }
+                            else if (limitType == LimitType.GeneralForBettingPool || limitType == LimitType.LocalForBettingPool
+                                || limitType == LimitType.ByNumberForBettingPool)
+                            {
+                                rule.BettingPoolId = entity.Id;
+                                rule.ZoneId = entity.ZoneId;
+                            }
+
+                            _context.LimitRules.Add(rule);
+                            createdRules.Add(rule);
+                        }
                     }
                 }
             }
@@ -585,6 +650,22 @@ public class LimitsController : ControllerBase
                     }
                 }
                 await _context.SaveChangesAsync();
+
+                // Clean up rules that ended up with no amounts (e.g., game type not supported by draw)
+                var rulesWithNoAmounts = new List<LimitRule>();
+                foreach (var rule in createdRules)
+                {
+                    var hasAmounts = await _context.LimitRuleAmounts
+                        .AnyAsync(a => a.LimitRuleId == rule.LimitRuleId);
+                    if (!hasAmounts)
+                        rulesWithNoAmounts.Add(rule);
+                }
+                if (rulesWithNoAmounts.Count > 0)
+                {
+                    _context.LimitRules.RemoveRange(rulesWithNoAmounts);
+                    await _context.SaveChangesAsync();
+                    foreach (var r in rulesWithNoAmounts) createdRules.Remove(r);
+                }
             }
 
             // Load navigation properties for response
@@ -1385,6 +1466,7 @@ public class LimitsController : ControllerBase
         switch (childType)
         {
             case LimitType.GeneralForZone:
+            case LimitType.ByNumberForGroup:
                 parentType = LimitType.GeneralForGroup;
                 break;
             case LimitType.GeneralForBettingPool:
@@ -1404,6 +1486,13 @@ public class LimitsController : ControllerBase
             case LimitType.LocalForBettingPool:
                 parentType = LimitType.GeneralForGroup;
                 break;
+            case LimitType.ByNumberForZone:
+                parentType = LimitType.GeneralForZone;
+                parentZoneId = zoneId;
+                break;
+            case LimitType.ByNumberForBettingPool:
+                parentType = LimitType.GeneralForBettingPool;
+                break;
             default:
                 return null;
         }
@@ -1417,6 +1506,10 @@ public class LimitsController : ControllerBase
         if (parentType == LimitType.GeneralForZone && parentZoneId.HasValue)
         {
             parentQuery = parentQuery.Where(r => r.ZoneId == parentZoneId.Value);
+        }
+        else if (parentType == LimitType.GeneralForBettingPool && bettingPoolId.HasValue)
+        {
+            parentQuery = parentQuery.Where(r => r.BettingPoolId == bettingPoolId.Value);
         }
 
         var parentRule = await parentQuery.FirstOrDefaultAsync();
@@ -1437,6 +1530,9 @@ public class LimitsController : ControllerBase
             LimitType.GeneralForZone => "Limite Global",
             LimitType.GeneralForBettingPool => "Limite Zona",
             LimitType.LocalForBettingPool => "Limite Global",
+            LimitType.ByNumberForGroup => "Limite Global",
+            LimitType.ByNumberForZone => "Limite Zona",
+            LimitType.ByNumberForBettingPool => "Limite Banca",
             _ => "Limite Superior"
         };
     }
@@ -1448,9 +1544,11 @@ public class LimitsController : ControllerBase
         switch (limitType)
         {
             case LimitType.GeneralForGroup:
+            case LimitType.ByNumberForGroup:
                 return new List<TargetEntity> { new(0) }; // Single global rule
 
             case LimitType.GeneralForZone:
+            case LimitType.ByNumberForZone:
             {
                 var zoneIds = dto.ZoneIds ?? (dto.ZoneId.HasValue ? new List<int> { dto.ZoneId.Value } : new List<int>());
                 return zoneIds.Select(z => new TargetEntity(z)).ToList();
@@ -1458,6 +1556,7 @@ public class LimitsController : ControllerBase
 
             case LimitType.GeneralForBettingPool:
             case LimitType.LocalForBettingPool:
+            case LimitType.ByNumberForBettingPool:
             {
                 var mode = dto.BancaSelectionMode ?? "specific";
                 switch (mode)

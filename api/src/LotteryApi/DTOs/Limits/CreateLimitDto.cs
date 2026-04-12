@@ -78,6 +78,12 @@ public class CreateLimitDto
     public string? BetNumberPattern { get; set; }
 
     /// <summary>
+    /// Optional list of bet number patterns (creates one rule per pattern).
+    /// If both BetNumberPattern and BetNumberPatterns are set, BetNumberPatterns takes precedence.
+    /// </summary>
+    public List<string>? BetNumberPatterns { get; set; }
+
+    /// <summary>
     /// Dictionary of amounts by game type code (e.g., {"directo": 1000, "pale": 500})
     /// </summary>
     public Dictionary<string, decimal>? Amounts { get; set; }

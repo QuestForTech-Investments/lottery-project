@@ -52,6 +52,15 @@ export const CreateLimitTypeLabels: Partial<Record<LimitType, string>> = {
 };
 
 /**
+ * Labels for the 3 by-number limit types used in by-number create form
+ */
+export const CreateByNumberLimitTypeLabels: Partial<Record<LimitType, string>> = {
+  [LimitType.ByNumberForGroup]: 'Limite Global por Número',
+  [LimitType.ByNumberForZone]: 'Limite Zona por Número',
+  [LimitType.ByNumberForBettingPool]: 'Limite Banca por Número',
+};
+
+/**
  * Get all limit types as options for select components
  */
 export const getLimitTypeOptions = (): { value: LimitType; label: string }[] => {
@@ -150,6 +159,7 @@ export interface CreateLimitRequest {
   bancaSelectionMode?: BancaSelectionMode;
   bancaZoneIds?: number[];
   betNumberPattern?: string;
+  betNumberPatterns?: string[];
   amounts?: BetTypeAmounts;
   daysOfWeek?: number;
   effectiveFrom?: string;

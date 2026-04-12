@@ -2087,6 +2087,47 @@ public class TicketsController : ControllerBase
             .FirstOrDefaultAsync();
         if (globalRule != null) applicableRules.Add(globalRule);
 
+        // ByNumber Banca limit
+        var byNumBancaRule = await _context.LimitRules.AsNoTracking()
+            .Where(lr => lr.IsActive && lr.DrawId == drawId
+                && lr.LimitType == Models.Enums.LimitType.ByNumberForBettingPool
+                && lr.BettingPoolId == bettingPoolId
+                && lr.BetNumberPattern == betNumber
+                && (lr.DaysOfWeek & dayBit) != 0
+                && (lr.EffectiveFrom == null || lr.EffectiveFrom <= timestamp)
+                && (lr.EffectiveTo == null || lr.EffectiveTo >= timestamp)
+                && lr.LimitRuleAmounts.Any(a => a.GameTypeId == gameTypeId))
+            .FirstOrDefaultAsync();
+        if (byNumBancaRule != null) applicableRules.Add(byNumBancaRule);
+
+        // ByNumber Zona limit
+        if (zoneId > 0)
+        {
+            var byNumZonaRule = await _context.LimitRules.AsNoTracking()
+                .Where(lr => lr.IsActive && lr.DrawId == drawId
+                    && lr.LimitType == Models.Enums.LimitType.ByNumberForZone
+                    && lr.ZoneId == zoneId
+                    && lr.BetNumberPattern == betNumber
+                    && (lr.DaysOfWeek & dayBit) != 0
+                    && (lr.EffectiveFrom == null || lr.EffectiveFrom <= timestamp)
+                    && (lr.EffectiveTo == null || lr.EffectiveTo >= timestamp)
+                    && lr.LimitRuleAmounts.Any(a => a.GameTypeId == gameTypeId))
+                .FirstOrDefaultAsync();
+            if (byNumZonaRule != null) applicableRules.Add(byNumZonaRule);
+        }
+
+        // ByNumber Global limit
+        var byNumGlobalRule = await _context.LimitRules.AsNoTracking()
+            .Where(lr => lr.IsActive && lr.DrawId == drawId
+                && lr.LimitType == Models.Enums.LimitType.ByNumberForGroup
+                && lr.BetNumberPattern == betNumber
+                && (lr.DaysOfWeek & dayBit) != 0
+                && (lr.EffectiveFrom == null || lr.EffectiveFrom <= timestamp)
+                && (lr.EffectiveTo == null || lr.EffectiveTo >= timestamp)
+                && lr.LimitRuleAmounts.Any(a => a.GameTypeId == gameTypeId))
+            .FirstOrDefaultAsync();
+        if (byNumGlobalRule != null) applicableRules.Add(byNumGlobalRule);
+
         // Record consumption at EVERY applicable level
         foreach (var rule in applicableRules)
         {
@@ -2222,10 +2263,33 @@ public class TicketsController : ControllerBase
                 && lr.LimitRuleAmounts.Any(a => a.GameTypeId == gameTypeId))
             .FirstOrDefaultAsync();
 
-        // Check all applicable limits: the specific one (banca/zona) AND global
+        // Check all applicable limits: the specific one (banca/zona) AND global AND per-number
         var rulesToCheck = new List<(LimitRule rule, bool isGlobal)> { (limitRule, false) };
         if (globalRule != null && globalRule.LimitRuleId != limitRule.LimitRuleId)
             rulesToCheck.Add((globalRule, true));
+
+        // Add per-number limits (most specific — tighter constraints)
+        var byNumberRules = await _context.LimitRules.AsNoTracking()
+            .Where(lr => lr.IsActive && lr.DrawId == drawId
+                && lr.BetNumberPattern == betNumber
+                && (lr.LimitType == Models.Enums.LimitType.ByNumberForBettingPool
+                    || lr.LimitType == Models.Enums.LimitType.ByNumberForZone
+                    || lr.LimitType == Models.Enums.LimitType.ByNumberForGroup)
+                && (lr.DaysOfWeek & dayBit) != 0
+                && (lr.EffectiveFrom == null || lr.EffectiveFrom <= now)
+                && (lr.EffectiveTo == null || lr.EffectiveTo >= now)
+                && lr.LimitRuleAmounts.Any(a => a.GameTypeId == gameTypeId))
+            .Where(lr =>
+                (lr.LimitType == Models.Enums.LimitType.ByNumberForBettingPool && lr.BettingPoolId == bettingPoolId)
+                || (lr.LimitType == Models.Enums.LimitType.ByNumberForZone && lr.ZoneId == zoneId)
+                || lr.LimitType == Models.Enums.LimitType.ByNumberForGroup)
+            .ToListAsync();
+
+        foreach (var byNumRule in byNumberRules)
+        {
+            if (rulesToCheck.All(r => r.rule.LimitRuleId != byNumRule.LimitRuleId))
+                rulesToCheck.Add((byNumRule, false));
+        }
 
         foreach (var (rule, isGlobal) in rulesToCheck)
         {

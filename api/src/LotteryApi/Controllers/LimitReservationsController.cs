@@ -35,13 +35,14 @@ public class LimitReservationsController : ControllerBase
             var now = DateTime.UtcNow;
             var today = DateOnly.FromDateTime(Helpers.DateTimeHelper.TodayInBusinessTimezone());
 
-            // Find applicable limit rule (game type based)
+            // Find applicable general limit rule (game type based)
             var limitRule = await _context.LimitRules
                 .AsNoTracking()
                 .Where(lr => lr.IsActive
                     && (lr.DrawId == request.DrawId || lr.DrawId == null)
                     && (lr.EffectiveFrom == null || lr.EffectiveFrom <= now)
                     && (lr.EffectiveTo == null || lr.EffectiveTo >= now)
+                    && lr.BetNumberPattern == null
                     && lr.LimitRuleAmounts.Any(a => a.GameTypeId == request.GameTypeId))
                 .OrderByDescending(lr => lr.BettingPoolId == request.BettingPoolId ? 4 : 0)
                 .ThenByDescending(lr => lr.LimitType == LimitType.GeneralForBettingPool || lr.LimitType == LimitType.LocalForBettingPool ? 3 : 0)
@@ -50,7 +51,37 @@ public class LimitReservationsController : ControllerBase
                 .ThenByDescending(lr => lr.DrawId != null ? 1 : 0)
                 .FirstOrDefaultAsync();
 
-            if (limitRule == null)
+            // Check for per-number limit (tighter constraint, takes priority)
+            Models.LimitRule? byNumberRule = null;
+            if (!string.IsNullOrEmpty(request.BetNumber))
+            {
+                var bettingPool = await _context.BettingPools.AsNoTracking()
+                    .Where(bp => bp.BettingPoolId == request.BettingPoolId)
+                    .Select(bp => new { bp.ZoneId })
+                    .FirstOrDefaultAsync();
+
+                byNumberRule = await _context.LimitRules
+                    .AsNoTracking()
+                    .Where(lr => lr.IsActive
+                        && lr.DrawId == request.DrawId
+                        && lr.BetNumberPattern == request.BetNumber
+                        && (lr.EffectiveFrom == null || lr.EffectiveFrom <= now)
+                        && (lr.EffectiveTo == null || lr.EffectiveTo >= now)
+                        && lr.LimitRuleAmounts.Any(a => a.GameTypeId == request.GameTypeId))
+                    .Where(lr =>
+                        (lr.LimitType == LimitType.ByNumberForBettingPool && lr.BettingPoolId == request.BettingPoolId)
+                        || (lr.LimitType == LimitType.ByNumberForZone && lr.ZoneId == (bettingPool != null ? bettingPool.ZoneId : 0))
+                        || lr.LimitType == LimitType.ByNumberForGroup)
+                    .OrderByDescending(lr => lr.LimitType == LimitType.ByNumberForBettingPool ? 3 : 0)
+                    .ThenByDescending(lr => lr.LimitType == LimitType.ByNumberForZone ? 2 : 0)
+                    .ThenByDescending(lr => lr.LimitType == LimitType.ByNumberForGroup ? 1 : 0)
+                    .FirstOrDefaultAsync();
+            }
+
+            // Use the most restrictive rule: per-number if exists, otherwise general
+            var effectiveRule = byNumberRule ?? limitRule;
+
+            if (effectiveRule == null)
             {
                 var unlimitedId = _reservationService.Reserve(request.DrawId, request.GameTypeId, request.BettingPoolId, request.Amount);
                 return Ok(new ReserveLimitResponse { ReservationId = unlimitedId, Remaining = -1 });
@@ -58,7 +89,7 @@ public class LimitReservationsController : ControllerBase
 
             var maxLimit = await _context.LimitRuleAmounts
                 .AsNoTracking()
-                .Where(a => a.LimitRuleId == limitRule.LimitRuleId && a.GameTypeId == request.GameTypeId)
+                .Where(a => a.LimitRuleId == effectiveRule.LimitRuleId && a.GameTypeId == request.GameTypeId)
                 .Select(a => a.MaxAmount)
                 .FirstOrDefaultAsync();
 
@@ -71,9 +102,10 @@ public class LimitReservationsController : ControllerBase
             // Sum consumption for this game type today
             var dbAmount = await _context.LimitConsumptions
                 .AsNoTracking()
-                .Where(lc => lc.LimitRuleId == limitRule.LimitRuleId
+                .Where(lc => lc.LimitRuleId == effectiveRule.LimitRuleId
                     && lc.DrawId == request.DrawId
                     && lc.DrawDate == today
+                    && lc.BetNumber == request.BetNumber
                     && (lc.BettingPoolId == request.BettingPoolId || lc.BettingPoolId == null))
                 .SumAsync(lc => (decimal?)lc.CurrentAmount) ?? 0;
 

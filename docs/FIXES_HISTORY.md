@@ -1,5 +1,42 @@
 # Historial de Fixes
 
+## 2026-04-12
+
+### Feature: Per-Number Limits (Límites por Número)
+Adds the ability to set bet limits for specific number combinations (e.g., Directo "10" max 5, Palé "10-10" max 2) within the existing limit hierarchy. Per-number limits are always tighter than the parent general limit and cannot exceed it.
+
+**Limit types added to UI (already existed in backend enum):**
+- `ByNumberForGroup` (2) — Limite Global por Número
+- `ByNumberForZone` (7) — Limite Zona por Número
+- `ByNumberForBettingPool` (4) — Limite Banca por Número
+
+**Backend changes:**
+- `LimitsController.cs` — Added ByNumber types to `ResolveTargetEntities`, upsert lookup (matches `BetNumberPattern`), entity assignment, parent validation (`GetParentAmountsByGameTypeId`), parent type names, prerequisite checks, `BetNumberPattern` required validation. Supports `BetNumberPatterns` (list) for creating multiple number rules in one request. Auto-cleans rules with no amounts (game type not supported by draw).
+- `TicketsController.cs` — `CheckIfPlayIsOnLimits` and `UpdateLimitConsumption` now query ByNumber rules (Banca/Zona/Global) by matching `BetNumberPattern == betNumber`. Per-number rules are checked alongside general rules — both must pass.
+- `LimitReservationsController.cs` — `Reserve` endpoint now checks for ByNumber limits matching the exact `BetNumber`, uses the most restrictive rule (per-number > general).
+- `LotteryHub.cs` — `CheckPlayLimit` SignalR method now queries ByNumber rules and includes them in `rulesToCheck`. Returns the minimum available across general + per-number limits.
+- `CreateLimitDto.cs` — Added `BetNumberPatterns: List<string>` field for multi-number creation.
+
+**Frontend changes:**
+- `CreateLimit/index.tsx` — Added 3 ByNumber types to the type dropdown (with divider). When a ByNumber type is selected: shows game type chip selector (single-select), number input with auto-dash formatting based on game type (e.g., `##-##` for Palé), multiple numbers as tagged chips showing game type (e.g., "10 (Directo)"), "Agregar dobles" button for Directo/Cash3 types. On submit, groups numbers by game type and sends separate requests with matching amounts.
+- `LimitsList/index.tsx` — Added ByNumber types to type order, filter dropdown, and entity grouping logic. Added "Numero" column to the amounts table showing `betNumberPattern`.
+- `types/limits.ts` — Added `CreateByNumberLimitTypeLabels` constant and `betNumberPatterns` to `CreateLimitRequest`.
+
+**Number format per game type:**
+| Game Type | Format | Example |
+|-----------|--------|---------|
+| Directo | ## | 25 |
+| Palé | ##-## | 01-02 |
+| Tripleta | ##-##-## | 01-02-03 |
+| Cash3 | ### | 123 |
+| Play4 | #### | 1234 |
+| Pick5 | ##### | 12345 |
+
+**Enforcement flow:**
+1. User types a number on ticket creation → SignalR `CheckPlayLimit` checks general + per-number limits → returns lowest available
+2. Ticket saved → `CheckIfPlayIsOnLimits` verifies both general and per-number rules → blocks if either exceeded
+3. `UpdateLimitConsumption` records consumption for all applicable rules (general + per-number)
+
 ## 2026-04-07
 
 ### Fix: Daily sales balance not accounting for transactions (PAGOs/COBROs)

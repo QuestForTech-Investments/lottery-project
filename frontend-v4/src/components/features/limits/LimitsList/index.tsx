@@ -38,6 +38,7 @@ import {
   LimitType,
   LimitTypeLabels,
   CreateLimitTypeLabels,
+  CreateByNumberLimitTypeLabels,
   LimitParams,
   DaysOfWeek,
 } from '@/types/limits';
@@ -50,6 +51,9 @@ const LIMIT_TYPE_ORDER = [
   LimitType.GeneralForZone,
   LimitType.GeneralForBettingPool,
   LimitType.LocalForBettingPool,
+  LimitType.ByNumberForGroup,
+  LimitType.ByNumberForZone,
+  LimitType.ByNumberForBettingPool,
 ];
 
 const ACCENT = '#6366f1';
@@ -167,7 +171,7 @@ const LimitsList = (): React.ReactElement => {
   }
 
   const entityGroups = useMemo((): EntityGroup[] => {
-    if (currentType === LimitType.GeneralForGroup) {
+    if (currentType === LimitType.GeneralForGroup || currentType === LimitType.ByNumberForGroup) {
       // Global: single group, no entity
       const drawMap = new Map<number, string>();
       typeLimits.forEach(l => { if (l.drawId && l.drawName) drawMap.set(l.drawId, l.drawName); });
@@ -175,7 +179,7 @@ const LimitsList = (): React.ReactElement => {
       return [{ key: 'global', label: '', limits: typeLimits, draws }];
     }
 
-    if (currentType === LimitType.GeneralForZone) {
+    if (currentType === LimitType.GeneralForZone || currentType === LimitType.ByNumberForZone) {
       // Group by zone
       const zoneMap = new Map<number, { name: string; limits: LimitRule[] }>();
       typeLimits.forEach(l => {
@@ -278,7 +282,10 @@ const LimitsList = (): React.ReactElement => {
     catch { return d; }
   };
 
-  const limitTypeOptions = Object.entries(CreateLimitTypeLabels).map(([v, l]) => ({ value: v, label: l as string }));
+  const limitTypeOptions = [
+    ...Object.entries(CreateLimitTypeLabels).map(([v, l]) => ({ value: v, label: l as string })),
+    ...Object.entries(CreateByNumberLimitTypeLabels).map(([v, l]) => ({ value: v, label: l as string }))
+  ];
 
   const renderAmountsTable = (entityGroup: EntityGroup) => {
     const selectedDraw = getSelectedDraw(entityGroup.key, entityGroup.draws);
@@ -333,6 +340,7 @@ const LimitsList = (): React.ReactElement => {
             <TableHead>
               <TableRow sx={styles.tableHeader}>
                 <TableCell>Tipo de jugada</TableCell>
+                <TableCell>Numero</TableCell>
                 <TableCell>Monto</TableCell>
                 <TableCell>Fecha de expiración</TableCell>
                 <TableCell align="right" width={50}></TableCell>
@@ -347,6 +355,9 @@ const LimitsList = (): React.ReactElement => {
                     return (
                       <TableRow key={amtKey} hover>
                         <TableCell sx={{ ...styles.tableCell, color: ACCENT, fontWeight: 500 }}>{amt.gameTypeName}</TableCell>
+                        <TableCell sx={{ ...styles.tableCell, fontWeight: 600, color: limit.betNumberPattern ? ACCENT : '#ccc' }}>
+                          {limit.betNumberPattern || '-'}
+                        </TableCell>
                         <TableCell sx={styles.tableCell}>
                           <TextField
                             type="number"
@@ -376,6 +387,9 @@ const LimitsList = (): React.ReactElement => {
                 return (
                   <TableRow key={limit.limitRuleId} hover>
                     <TableCell sx={styles.tableCell}>{limit.gameTypeName || 'General'}</TableCell>
+                    <TableCell sx={{ ...styles.tableCell, fontWeight: 600, color: limit.betNumberPattern ? ACCENT : '#ccc' }}>
+                      {limit.betNumberPattern || '-'}
+                    </TableCell>
                     <TableCell sx={styles.tableCell}>
                       <TextField type="number" defaultValue={limit.maxBetPerNumber || 0} size="small" disabled
                         sx={{ width: 120, '& .MuiOutlinedInput-root': { fontSize: '14px', height: '36px' } }} />

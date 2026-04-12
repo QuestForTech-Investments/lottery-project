@@ -398,10 +398,32 @@ public class LotteryHub : Hub<ILotteryHubClient>
                 && lr.LimitRuleAmounts.Any(a => a.GameTypeId == gameTypeId))
             .FirstOrDefaultAsync();
 
-        // Check both the specific limit AND global, return the minimum available
+        // Check for per-number limits (ByNumber types — tighter constraints)
+        var byNumberRules = await _context.LimitRules.AsNoTracking()
+            .Where(lr => lr.IsActive && lr.DrawId == drawId
+                && lr.BetNumberPattern == betNumber
+                && (lr.LimitType == LimitType.ByNumberForBettingPool
+                    || lr.LimitType == LimitType.ByNumberForZone
+                    || lr.LimitType == LimitType.ByNumberForGroup)
+                && (lr.DaysOfWeek & dayBit) != 0
+                && (lr.EffectiveFrom == null || lr.EffectiveFrom <= now)
+                && (lr.EffectiveTo == null || lr.EffectiveTo >= now)
+                && lr.LimitRuleAmounts.Any(a => a.GameTypeId == gameTypeId))
+            .Where(lr =>
+                (lr.LimitType == LimitType.ByNumberForBettingPool && lr.BettingPoolId == bettingPoolId)
+                || (lr.LimitType == LimitType.ByNumberForZone && lr.ZoneId == zoneId)
+                || lr.LimitType == LimitType.ByNumberForGroup)
+            .ToListAsync();
+
+        // Check both the specific limit AND global AND per-number, return the minimum available
         var rulesToCheck = new List<LimitRule> { limitRule };
         if (globalRule != null && globalRule.LimitRuleId != limitRule.LimitRuleId)
             rulesToCheck.Add(globalRule);
+        foreach (var bnr in byNumberRules)
+        {
+            if (rulesToCheck.All(r => r.LimitRuleId != bnr.LimitRuleId))
+                rulesToCheck.Add(bnr);
+        }
 
         decimal minAvailable = decimal.MaxValue;
         decimal reportLimitAmount = 0;
@@ -423,16 +445,22 @@ public class LotteryHub : Hub<ILotteryHubClient>
                     && lc.LimitRuleId == rule.LimitRuleId
                     && lc.GameTypeId == gameTypeId && lc.BetNumber == betNumber);
 
-            if (rule.LimitType == LimitType.GeneralForBettingPool || rule.LimitType == LimitType.LocalForBettingPool)
+            var isBancaScope = rule.LimitType == LimitType.GeneralForBettingPool
+                || rule.LimitType == LimitType.LocalForBettingPool
+                || rule.LimitType == LimitType.ByNumberForBettingPool;
+            var isZoneScope = rule.LimitType == LimitType.GeneralForZone
+                || rule.LimitType == LimitType.ByNumberForZone;
+
+            if (isBancaScope)
                 cQuery = cQuery.Where(lc => lc.BettingPoolId == bettingPoolId);
 
             var consumed = await cQuery.SumAsync(lc => (decimal?)lc.CurrentAmount) ?? 0;
 
             // Scope reservations
             decimal reserved;
-            if (rule.LimitType == LimitType.GeneralForBettingPool || rule.LimitType == LimitType.LocalForBettingPool)
+            if (isBancaScope)
                 reserved = _limitReservationService.GetReservedAmountForPool(drawId, gameTypeId, betNumber, bettingPoolId);
-            else if (rule.LimitType == LimitType.GeneralForZone)
+            else if (isZoneScope)
             {
                 var zpIds = await _context.BettingPools.AsNoTracking()
                     .Where(bp => bp.ZoneId == zoneId).Select(bp => bp.BettingPoolId).ToListAsync();
@@ -481,6 +509,9 @@ public class LotteryHub : Hub<ILotteryHubClient>
             LimitType.GeneralForZone => "zona",
             LimitType.GeneralForBettingPool => "banca",
             LimitType.LocalForBettingPool => "local_banca",
+            LimitType.ByNumberForGroup => "numero_global",
+            LimitType.ByNumberForZone => "numero_zona",
+            LimitType.ByNumberForBettingPool => "numero_banca",
             _ => "unknown"
         };
     }

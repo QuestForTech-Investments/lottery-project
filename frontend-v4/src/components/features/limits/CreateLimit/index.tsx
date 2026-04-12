@@ -17,12 +17,17 @@ import {
   SelectChangeEvent,
   RadioGroup,
   FormControlLabel,
-  Radio
+  Radio,
+  Chip,
+  InputAdornment,
+  IconButton
 } from '@mui/material';
+import { Add as AddIcon } from '@mui/icons-material';
 import limitService, { handleLimitError } from '@/services/limitService';
 import {
   LimitType,
   CreateLimitTypeLabels,
+  CreateByNumberLimitTypeLabels,
   LimitParams,
   CreateLimitRequest,
   BetTypes,
@@ -49,6 +54,78 @@ const BET_TYPE_CODE_MAP: Record<string, string> = {
   pickTwoFront: 'PICK2_FRONT', pickTwoBack: 'PICK2_BACK', pickTwoMiddle: 'PICK2_MIDDLE',
   bolita1: 'BOLITA', bolita2: 'BOLITA',
   singulacion1: 'SINGULACION', singulacion2: 'SINGULACION', singulacion3: 'SINGULACION'
+};
+
+// Number format per game type: how many digit groups, digits per group, separator
+const GAME_TYPE_NUMBER_FORMAT: Record<string, { groups: number; digitsPerGroup: number; placeholder: string }> = {
+  directo: { groups: 1, digitsPerGroup: 2, placeholder: '##' },
+  pale: { groups: 2, digitsPerGroup: 2, placeholder: '##-##' },
+  tripleta: { groups: 3, digitsPerGroup: 2, placeholder: '##-##-##' },
+  superPale: { groups: 2, digitsPerGroup: 2, placeholder: '##-##' },
+  cash3Straight: { groups: 1, digitsPerGroup: 3, placeholder: '###' },
+  cash3Box: { groups: 1, digitsPerGroup: 3, placeholder: '###' },
+  cash3FrontStraight: { groups: 1, digitsPerGroup: 3, placeholder: '###' },
+  cash3FrontBox: { groups: 1, digitsPerGroup: 3, placeholder: '###' },
+  cash3BackStraight: { groups: 1, digitsPerGroup: 3, placeholder: '###' },
+  cash3BackBox: { groups: 1, digitsPerGroup: 3, placeholder: '###' },
+  play4Straight: { groups: 1, digitsPerGroup: 4, placeholder: '####' },
+  play4Box: { groups: 1, digitsPerGroup: 4, placeholder: '####' },
+  pick5Straight: { groups: 1, digitsPerGroup: 5, placeholder: '#####' },
+  pick5Box: { groups: 1, digitsPerGroup: 5, placeholder: '#####' },
+  pickTwo: { groups: 1, digitsPerGroup: 2, placeholder: '##' },
+  pickTwoFront: { groups: 1, digitsPerGroup: 2, placeholder: '##' },
+  pickTwoBack: { groups: 1, digitsPerGroup: 2, placeholder: '##' },
+  pickTwoMiddle: { groups: 1, digitsPerGroup: 2, placeholder: '##' },
+  bolita1: { groups: 1, digitsPerGroup: 2, placeholder: '##' },
+  bolita2: { groups: 1, digitsPerGroup: 2, placeholder: '##' },
+  singulacion1: { groups: 1, digitsPerGroup: 2, placeholder: '##' },
+  singulacion2: { groups: 1, digitsPerGroup: 2, placeholder: '##' },
+  singulacion3: { groups: 1, digitsPerGroup: 2, placeholder: '##' },
+  panama: { groups: 1, digitsPerGroup: 3, placeholder: '###' },
+};
+
+const formatBetNumber = (rawDigits: string, format: { groups: number; digitsPerGroup: number }): string => {
+  const digits = rawDigits.replace(/\D/g, '');
+  const maxDigits = format.groups * format.digitsPerGroup;
+  const truncated = digits.slice(0, maxDigits);
+  if (format.groups === 1) return truncated;
+  // Insert dashes between groups
+  const parts: string[] = [];
+  for (let i = 0; i < truncated.length; i += format.digitsPerGroup) {
+    parts.push(truncated.slice(i, i + format.digitsPerGroup));
+  }
+  return parts.join('-');
+};
+
+const isNumberComplete = (value: string, format: { groups: number; digitsPerGroup: number }): boolean => {
+  const digits = value.replace(/\D/g, '');
+  return digits.length === format.groups * format.digitsPerGroup;
+};
+
+const generateDoubles = (format: { groups: number; digitsPerGroup: number }): string[] => {
+  const doubles: string[] = [];
+  if (format.digitsPerGroup === 2) {
+    for (let i = 0; i <= 99; i++) {
+      const n = i.toString().padStart(2, '0');
+      if (format.groups === 1) {
+        // Directo doubles: 00, 11, 22, ..., 99
+        const d1 = Math.floor(i / 10), d2 = i % 10;
+        if (d1 === d2) doubles.push(n);
+      } else {
+        // Pale/Tripleta doubles: same group repeated
+        doubles.push(Array(format.groups).fill(n).join('-'));
+      }
+    }
+  } else if (format.digitsPerGroup === 3) {
+    for (let i = 0; i <= 9; i++) {
+      doubles.push(String(i).repeat(3));
+    }
+  } else if (format.digitsPerGroup === 4) {
+    for (let i = 0; i <= 9; i++) {
+      doubles.push(String(i).repeat(4));
+    }
+  }
+  return doubles;
 };
 
 interface SnackbarState {
@@ -118,6 +195,9 @@ const CreateLimit = (): React.ReactElement => {
 
   // Form state
   const [limitType, setLimitType] = useState<string>('');
+  const [selectedGameType, setSelectedGameType] = useState<string>('');
+  const [betNumbers, setBetNumbers] = useState<Array<{ number: string; gameType: string; label: string }>>([]);
+  const [betNumberInput, setBetNumberInput] = useState<string>('');
   const [expirationDate, setExpirationDate] = useState<string>('');
   const [selectedDraws, setSelectedDraws] = useState<number[]>([]);
   const [selectedDays, setSelectedDays] = useState<number[]>([]);
@@ -192,11 +272,17 @@ const CreateLimit = (): React.ReactElement => {
   }, []);
 
   const limitTypeNum = limitType ? parseInt(limitType) : 0;
-  const isZoneType = limitTypeNum === LimitType.GeneralForZone;
-  const isBancaType = limitTypeNum === LimitType.GeneralForBettingPool || limitTypeNum === LimitType.LocalForBettingPool;
+  const isZoneType = limitTypeNum === LimitType.GeneralForZone || limitTypeNum === LimitType.ByNumberForZone;
+  const isBancaType = limitTypeNum === LimitType.GeneralForBettingPool || limitTypeNum === LimitType.LocalForBettingPool || limitTypeNum === LimitType.ByNumberForBettingPool;
+  const isByNumberType = limitTypeNum === LimitType.ByNumberForGroup || limitTypeNum === LimitType.ByNumberForZone || limitTypeNum === LimitType.ByNumberForBettingPool;
 
   const handleLimitTypeChange = useCallback((value: string) => {
     setLimitType(value);
+    setSelectedGameType('');
+    setBetNumbers([]);
+    setBetNumberInput('');
+    // Reset amounts when switching to/from ByNumber
+    setAmounts(() => { const initial: Amounts = {}; BetTypes.forEach(bt => { initial[bt.key] = ''; }); return initial; });
     setSelectedZones([]);
     setSelectedBettingPool(null);
     setBancaSelectionMode('specific');
@@ -226,6 +312,17 @@ const CreateLimit = (): React.ReactElement => {
 
   const validateForm = (): boolean => {
     if (!limitType) { setError('Debe seleccionar un tipo de limite'); return false; }
+    if (isByNumberType && betNumbers.length === 0) { setError('Debe agregar al menos un numero'); return false; }
+    if (isByNumberType) {
+      // Check that each number's game type has an amount set
+      const gameTypesUsed = [...new Set(betNumbers.map(b => b.gameType))];
+      const missing = gameTypesUsed.filter(gt => !amounts[gt] || parseFloat(amounts[gt]) <= 0);
+      if (missing.length > 0) {
+        const labels = missing.map(gt => BetTypes.find(bt => bt.key === gt)?.label || gt);
+        setError(`Falta configurar monto para: ${labels.join(', ')}`);
+        return false;
+      }
+    }
     if (selectedDraws.length === 0) { setError('Debe seleccionar al menos un sorteo'); return false; }
     if (selectedDays.length === 0) { setError('Debe seleccionar al menos un dia'); return false; }
 
@@ -281,29 +378,49 @@ const CreateLimit = (): React.ReactElement => {
         }
       }
 
-      const request: CreateLimitRequest = {
+      // Build base request fields
+      const baseRequest: Partial<CreateLimitRequest> = {
         limitType: limitTypeNum as LimitType,
         drawIds: selectedDraws,
         daysOfWeek: daysToBitmask(selectedDays),
-        amounts: amountsPayload,
         effectiveTo: expirationDate || undefined,
       };
 
-      // Add entity-specific fields
       if (isZoneType) {
-        request.zoneIds = selectedZones;
+        baseRequest.zoneIds = selectedZones;
       }
-
       if (isBancaType) {
-        request.bancaSelectionMode = bancaSelectionMode;
+        baseRequest.bancaSelectionMode = bancaSelectionMode;
         if (bancaSelectionMode === 'specific' && selectedBettingPool) {
-          request.bettingPoolIds = [selectedBettingPool.value];
+          baseRequest.bettingPoolIds = [selectedBettingPool.value];
         } else if (bancaSelectionMode === 'byZone') {
-          request.bancaZoneIds = selectedBancaZones;
+          baseRequest.bancaZoneIds = selectedBancaZones;
         }
       }
 
-      await limitService.createLimit(request);
+      if (isByNumberType) {
+        // Group numbers by game type, send one request per group with only its matching amount
+        const groups = new Map<string, string[]>();
+        betNumbers.forEach(({ number, gameType }) => {
+          if (!groups.has(gameType)) groups.set(gameType, []);
+          groups.get(gameType)!.push(number);
+        });
+
+        for (const [gameTypeKey, numbers] of groups) {
+          const amt = parseFloat(amounts[gameTypeKey] || '0');
+          if (amt <= 0) continue;
+          await limitService.createLimit({
+            ...baseRequest,
+            amounts: { [gameTypeKey]: amt },
+            betNumberPatterns: numbers,
+          } as CreateLimitRequest);
+        }
+      } else {
+        await limitService.createLimit({
+          ...baseRequest,
+          amounts: amountsPayload,
+        } as CreateLimitRequest);
+      }
 
       setSnackbar({ open: true, message: 'Limites creados exitosamente', severity: 'success' });
       setTimeout(() => navigate('/limits/list'), 1500);
@@ -361,6 +478,15 @@ const CreateLimit = (): React.ReactElement => {
                 {Object.entries(CreateLimitTypeLabels).map(([value, label]) => {
                   const isGlobal = value === String(LimitType.GeneralForGroup);
                   const disabled = !hasGlobalLimits && !isGlobal;
+                  return (
+                    <MenuItem key={value} value={value} disabled={disabled}>
+                      {label}{disabled ? ' (requiere Limite Global)' : ''}
+                    </MenuItem>
+                  );
+                })}
+                <Divider />
+                {Object.entries(CreateByNumberLimitTypeLabels).map(([value, label]) => {
+                  const disabled = !hasGlobalLimits;
                   return (
                     <MenuItem key={value} value={value} disabled={disabled}>
                       {label}{disabled ? ' (requiere Limite Global)' : ''}
@@ -467,6 +593,117 @@ const CreateLimit = (): React.ReactElement => {
               {params && selectedDraws.length === params.draws.length ? 'Deseleccionar todos' : 'Seleccionar todos'}
             </Button>
           </Box>
+
+          {/* Game type + Numbers (for ByNumber types) */}
+          {isByNumberType && (
+            <>
+              {/* Game type selector — single select */}
+              <Box sx={{ mb: 2 }}>
+                <Typography component="label" sx={styles.label}>Jugada</Typography>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                  {BetTypes.filter(({ key }) => {
+                    if (!allowedGameTypes) return true;
+                    const dbCode = BET_TYPE_CODE_MAP[key as string];
+                    return dbCode ? allowedGameTypes.includes(dbCode) : true;
+                  }).map(({ key, label }) => (
+                    <Box
+                      key={key}
+                      onClick={() => {
+                        setSelectedGameType(prev => prev === key ? '' : key as string);
+                        setBetNumberInput('');
+                      }}
+                      sx={selectedGameType === key ? styles.chipSelected : styles.chip}
+                    >
+                      {label}
+                    </Box>
+                  ))}
+                </Box>
+              </Box>
+
+              {/* Numbers input — only when a game type is selected */}
+              {selectedGameType && GAME_TYPE_NUMBER_FORMAT[selectedGameType] && (() => {
+                const fmt = GAME_TYPE_NUMBER_FORMAT[selectedGameType];
+                const gameTypeLabel = BetTypes.find(bt => bt.key === selectedGameType)?.label || selectedGameType;
+                const addNumber = () => {
+                  const val = betNumberInput.trim();
+                  if (val && isNumberComplete(val, fmt) && !betNumbers.some(b => b.number === val && b.gameType === selectedGameType)) {
+                    setBetNumbers(prev => [...prev, { number: val, gameType: selectedGameType, label: gameTypeLabel }]);
+                    setBetNumberInput('');
+                  }
+                };
+                return (
+                  <Box sx={{ mb: 2 }}>
+                    <Typography component="label" sx={styles.label}>Numeros</Typography>
+                    <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
+                      <TextField
+                        size="small"
+                        value={betNumberInput}
+                        onChange={(e) => {
+                          setBetNumberInput(formatBetNumber(e.target.value, fmt));
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            addNumber();
+                          }
+                        }}
+                        placeholder={fmt.placeholder}
+                        sx={{ flex: 1 }}
+                        inputProps={{ inputMode: 'numeric' }}
+                        InputProps={{
+                          endAdornment: (
+                            <InputAdornment position="end">
+                              <IconButton size="small" onClick={addNumber}>
+                                <AddIcon fontSize="small" />
+                              </IconButton>
+                            </InputAdornment>
+                          )
+                        }}
+                      />
+                      {['directo', 'cash3Straight', 'cash3FrontStraight', 'cash3BackStraight'].includes(selectedGameType) && (
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          onClick={() => {
+                            const existing = new Set(betNumbers.filter(b => b.gameType === selectedGameType).map(b => b.number));
+                            const doubles = generateDoubles(fmt)
+                              .filter(d => !existing.has(d))
+                              .map(d => ({ number: d, gameType: selectedGameType, label: gameTypeLabel }));
+                            setBetNumbers(prev => [...prev, ...doubles]);
+                          }}
+                          sx={{ ...styles.selectAllButton, whiteSpace: 'nowrap', fontSize: '11px' }}
+                        >
+                          Agregar dobles
+                        </Button>
+                      )}
+                    </Box>
+                    {betNumbers.length > 0 && (
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                        {betNumbers.map((item, idx) => (
+                          <Chip
+                            key={`${item.gameType}-${item.number}-${idx}`}
+                            label={`${item.number} (${item.label})`}
+                            size="small"
+                            onDelete={() => setBetNumbers(prev => prev.filter((_, i) => i !== idx))}
+                            sx={{ bgcolor: ACCENT, color: 'white', fontWeight: 600, '& .MuiChip-deleteIcon': { color: 'rgba(255,255,255,0.7)', '&:hover': { color: 'white' } } }}
+                          />
+                        ))}
+                        {betNumbers.length > 3 && (
+                          <Chip
+                            label="Limpiar todos"
+                            size="small"
+                            variant="outlined"
+                            onClick={() => setBetNumbers([])}
+                            sx={{ color: '#ef8157', borderColor: '#ef8157' }}
+                          />
+                        )}
+                      </Box>
+                    )}
+                  </Box>
+                );
+              })()}
+            </>
+          )}
         </Box>
 
         {/* Right Column - MONTO */}
