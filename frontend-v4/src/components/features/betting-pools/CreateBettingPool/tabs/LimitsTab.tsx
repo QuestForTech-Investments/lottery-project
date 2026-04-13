@@ -9,6 +9,20 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import limitService, { handleLimitError } from '@/services/limitService';
 import { LimitRule, LimitType, LimitTypeLabels, LimitAmountItem } from '@/types/limits';
 
+// Format raw bet number (no dashes) back to display format based on game type
+const formatBetNumberDisplay = (pattern: string | undefined, gameTypeName: string | undefined): string => {
+  if (!pattern) return '-';
+  const digits = pattern.replace(/\D/g, '');
+  const gt = (gameTypeName || '').toLowerCase();
+  if (gt.includes('palé') || gt.includes('pale') || gt.includes('super')) {
+    if (digits.length === 4) return `${digits.slice(0, 2)}-${digits.slice(2)}`;
+  }
+  if (gt.includes('tripleta')) {
+    if (digits.length === 6) return `${digits.slice(0, 2)}-${digits.slice(2, 4)}-${digits.slice(4)}`;
+  }
+  return digits || pattern;
+};
+
 interface LimitsTabProps {
   bettingPoolId: number;
   bettingPoolName?: string;
@@ -20,6 +34,7 @@ const DAY_BITMASKS = [1, 2, 4, 8, 16, 32, 64];
 
 const LimitsTab: React.FC<LimitsTabProps> = ({ bettingPoolId, bettingPoolName }) => {
   const [limits, setLimits] = useState<LimitRule[]>([]);
+  const [byNumberLimits, setByNumberLimits] = useState<LimitRule[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentType, setCurrentType] = useState<'banca' | 'local' | 'none'>('none');
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({ open: false, message: '', severity: 'success' });
@@ -33,20 +48,28 @@ const LimitsTab: React.FC<LimitsTabProps> = ({ bettingPoolId, bettingPoolName })
 
   // Filter by day, then group by draw
   const dayLimits = limits.filter(l => !l.daysOfWeek || (l.daysOfWeek & selectedDayBitmask) !== 0);
-  const drawMap = new Map<number, { name: string; limits: LimitRule[] }>();
+  const dayByNumberLimits = byNumberLimits.filter(l => !l.daysOfWeek || (l.daysOfWeek & selectedDayBitmask) !== 0);
+
+  const drawMap = new Map<number, { name: string; limits: LimitRule[]; byNumberLimits: LimitRule[] }>();
   dayLimits.forEach(l => {
     if (!l.drawId || !l.drawName) return;
-    if (!drawMap.has(l.drawId)) drawMap.set(l.drawId, { name: l.drawName, limits: [] });
+    if (!drawMap.has(l.drawId)) drawMap.set(l.drawId, { name: l.drawName, limits: [], byNumberLimits: [] });
     drawMap.get(l.drawId)!.limits.push(l);
+  });
+  dayByNumberLimits.forEach(l => {
+    if (!l.drawId || !l.drawName) return;
+    if (!drawMap.has(l.drawId)) drawMap.set(l.drawId, { name: l.drawName, limits: [], byNumberLimits: [] });
+    drawMap.get(l.drawId)!.byNumberLimits.push(l);
   });
   const draws = Array.from(drawMap.entries()).map(([id, data]) => ({ id, ...data })).sort((a, b) => a.name.localeCompare(b.name));
 
   const loadLimits = useCallback(async () => {
     try {
       setLoading(true);
-      const [bancaLimits, localLimits] = await Promise.all([
+      const [bancaLimits, localLimits, byNumLimits] = await Promise.all([
         limitService.getLimits({ limitTypes: [LimitType.GeneralForBettingPool], bettingPoolId }).catch(() => []),
-        limitService.getLimits({ limitTypes: [LimitType.LocalForBettingPool], bettingPoolId }).catch(() => [])
+        limitService.getLimits({ limitTypes: [LimitType.LocalForBettingPool], bettingPoolId }).catch(() => []),
+        limitService.getLimits({ limitTypes: [LimitType.ByNumberForBettingPool], bettingPoolId }).catch(() => [])
       ]);
 
       if (bancaLimits.length > 0) {
@@ -59,6 +82,7 @@ const LimitsTab: React.FC<LimitsTabProps> = ({ bettingPoolId, bettingPoolName })
         setLimits([]);
         setCurrentType('none');
       }
+      setByNumberLimits(byNumLimits);
     } catch (err) {
       console.error('Error loading limits:', err);
     } finally {
@@ -73,18 +97,10 @@ const LimitsTab: React.FC<LimitsTabProps> = ({ bettingPoolId, bettingPoolName })
     try {
       if (deleteDialog.gameTypeId) {
         await limitService.deleteAmount(deleteDialog.ruleId, deleteDialog.gameTypeId);
-        setLimits(prev => prev.map(l => {
-          if (l.limitRuleId !== deleteDialog.ruleId) return l;
-          const newAmounts = l.amounts?.filter(a => a.gameTypeId !== deleteDialog.gameTypeId);
-          if (!newAmounts || newAmounts.length === 0) return null as unknown as LimitRule;
-          return { ...l, amounts: newAmounts };
-        }).filter(Boolean));
       } else {
         await limitService.deleteLimit(deleteDialog.ruleId);
-        setLimits(prev => prev.filter(l => l.limitRuleId !== deleteDialog.ruleId));
       }
       setSnackbar({ open: true, message: 'Eliminado correctamente', severity: 'success' });
-      // Reload to check if type changed
       loadLimits();
     } catch (err) {
       setSnackbar({ open: true, message: handleLimitError(err, 'eliminar'), severity: 'error' });
@@ -110,10 +126,10 @@ const LimitsTab: React.FC<LimitsTabProps> = ({ bettingPoolId, bettingPoolName })
     setUpdatingAmount(key);
     try {
       await limitService.updateAmount(ruleId, gameTypeId, newAmount);
-      setLimits(prev => prev.map(l => {
-        if (l.limitRuleId !== ruleId) return l;
-        return { ...l, amounts: l.amounts?.map(a => a.gameTypeId === gameTypeId ? { ...a, amount: newAmount } : a) };
-      }));
+      const updateRule = (l: LimitRule): LimitRule =>
+        l.limitRuleId !== ruleId ? l : { ...l, amounts: l.amounts?.map(a => a.gameTypeId === gameTypeId ? { ...a, amount: newAmount } : a) };
+      setLimits(prev => prev.map(updateRule));
+      setByNumberLimits(prev => prev.map(updateRule));
       setSnackbar({ open: true, message: 'Monto actualizado', severity: 'success' });
     } catch (err) {
       setSnackbar({ open: true, message: handleLimitError(err, 'actualizar'), severity: 'error' });
@@ -150,6 +166,7 @@ const LimitsTab: React.FC<LimitsTabProps> = ({ bettingPoolId, bettingPoolName })
 
   const selectedDraw = draws[selectedDrawIdx];
   const visibleLimits = selectedDraw ? selectedDraw.limits : [];
+  const visibleByNumberLimits = selectedDraw ? selectedDraw.byNumberLimits : [];
 
   return (
     <Box sx={{ p: 2 }}>
@@ -183,7 +200,7 @@ const LimitsTab: React.FC<LimitsTabProps> = ({ bettingPoolId, bettingPoolName })
         </Alert>
       )}
 
-      {limits.length === 0 && currentType !== 'none' && (
+      {limits.length === 0 && byNumberLimits.length === 0 && currentType !== 'none' && (
         <Alert severity="info">
           No hay límites configurados. Cree límites desde la sección de Límites.
         </Alert>
@@ -196,7 +213,7 @@ const LimitsTab: React.FC<LimitsTabProps> = ({ bettingPoolId, bettingPoolName })
       )}
 
       {/* Day tabs */}
-      {limits.length > 0 && (
+      {(limits.length > 0 || byNumberLimits.length > 0) && (
         <Box sx={{ bgcolor: 'white', borderRadius: '8px 8px 0 0', border: '1px solid #eee', borderBottom: 'none', mb: 0 }}>
           <Tabs
             value={selectedDayIdx}
@@ -250,6 +267,63 @@ const LimitsTab: React.FC<LimitsTabProps> = ({ bettingPoolId, bettingPoolName })
                       return (
                         <TableRow key={key} hover>
                           <TableCell sx={{ fontSize: '14px', color: ACCENT, fontWeight: 500 }}>{amt.gameTypeName}</TableCell>
+                          <TableCell>
+                            <TextField
+                              type="number" defaultValue={amt.amount} size="small"
+                              disabled={updatingAmount === key}
+                              onBlur={(e) => {
+                                const val = parseFloat(e.target.value);
+                                if (!isNaN(val) && val !== amt.amount) handleUpdateAmount(limit.limitRuleId, amt.gameTypeId, val);
+                              }}
+                              sx={{ width: 120, '& .MuiOutlinedInput-root': { fontSize: '14px', height: '36px' } }}
+                              inputProps={{ min: 0 }}
+                            />
+                          </TableCell>
+                          <TableCell sx={{ fontSize: '13px', color: '#666' }}>{formatDate(limit.effectiveTo)}</TableCell>
+                          <TableCell align="right">
+                            <IconButton size="small" sx={{ color: '#ef8157' }}
+                              onClick={() => setDeleteDialog({ open: true, ruleId: limit.limitRuleId, gameTypeId: amt.gameTypeId })}>
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    }))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </>
+          )}
+
+          {/* Per-Number limits section */}
+          {selectedDraw && visibleByNumberLimits.length > 0 && (
+            <>
+              <Divider sx={{ my: 1 }} />
+              <Box sx={{ px: 2, py: 1 }}>
+                <Typography variant="subtitle2" sx={{ color: ACCENT, fontWeight: 600, fontSize: '13px' }}>
+                  Límites por Número
+                </Typography>
+              </Box>
+              <TableContainer>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow sx={{ '& th': { fontSize: '12px', fontWeight: 600, color: '#787878', bgcolor: '#f5f5f5' } }}>
+                      <TableCell>Tipo de jugada</TableCell>
+                      <TableCell>Numero</TableCell>
+                      <TableCell>Monto</TableCell>
+                      <TableCell>Expiración</TableCell>
+                      <TableCell align="right" width={50}></TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {visibleByNumberLimits.map(limit => (limit.amounts || []).map(amt => {
+                      const key = `${limit.limitRuleId}-${amt.gameTypeId}`;
+                      return (
+                        <TableRow key={key} hover>
+                          <TableCell sx={{ fontSize: '14px', color: ACCENT, fontWeight: 500 }}>{amt.gameTypeName}</TableCell>
+                          <TableCell sx={{ fontSize: '14px', fontWeight: 600, color: ACCENT }}>
+                            {formatBetNumberDisplay(limit.betNumberPattern, amt.gameTypeName)}
+                          </TableCell>
                           <TableCell>
                             <TextField
                               type="number" defaultValue={amt.amount} size="small"

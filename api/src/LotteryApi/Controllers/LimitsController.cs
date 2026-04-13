@@ -358,37 +358,9 @@ public class LimitsController : ControllerBase
                 }
             }
 
-            // Require parent general limits for ByNumber types
-            if (limitType == LimitType.ByNumberForZone)
-            {
-                var targetEntitiesForCheck = await ResolveTargetEntities(dto, limitType);
-                foreach (var entity in targetEntitiesForCheck.Where(e => e.Id > 0))
-                {
-                    var hasZonaLimit = await _context.LimitRules
-                        .AnyAsync(r => r.LimitType == LimitType.GeneralForZone && r.ZoneId == entity.Id && r.IsActive);
-                    if (!hasZonaLimit)
-                    {
-                        var zoneName = await _context.Zones.Where(z => z.ZoneId == entity.Id).Select(z => z.ZoneName).FirstOrDefaultAsync();
-                        return BadRequest(new { message = $"Debe crear primero un Límite Zona para '{zoneName ?? $"Zona {entity.Id}"}' antes de crear Límite por Número de Zona" });
-                    }
-                }
-            }
-
-            if (limitType == LimitType.ByNumberForBettingPool)
-            {
-                var targetEntitiesForCheck = await ResolveTargetEntities(dto, limitType);
-                var bpIds = targetEntitiesForCheck.Where(e => e.Id > 0).Select(e => e.Id).ToList();
-                foreach (var bpId in bpIds)
-                {
-                    var hasBancaLimit = await _context.LimitRules
-                        .AnyAsync(r => r.LimitType == LimitType.GeneralForBettingPool && r.BettingPoolId == bpId && r.IsActive);
-                    if (!hasBancaLimit)
-                    {
-                        var bpName = await _context.BettingPools.Where(bp => bp.BettingPoolId == bpId).Select(bp => bp.BettingPoolName).FirstOrDefaultAsync();
-                        return BadRequest(new { message = $"Debe crear primero un Límite Banca para '{bpName ?? $"Banca {bpId}"}' antes de crear Límite por Número de Banca" });
-                    }
-                }
-            }
+            // ByNumber types do NOT require parent general limits — they can be created independently.
+            // Parent validation (when a parent exists) still ensures per-number amounts cannot
+            // exceed the parent general amount; if no parent exists, no upper bound applies.
 
             // Require Zona limits to exist for Limite Banca (not Local Banca)
             if (limitType == LimitType.GeneralForBettingPool)
