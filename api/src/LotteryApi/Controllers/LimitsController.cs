@@ -466,8 +466,8 @@ public class LimitsController : ControllerBase
             }
 
             // Resolve bet number patterns for ByNumber types
-            // Strip dashes to match ticket line storage format (e.g., "02-20" -> "0220")
-            static string NormalizeBetNumber(string pattern) => pattern.Replace("-", "").Trim();
+            // Strip all non-digit chars to match ticket line storage format (e.g., "02-20" -> "0220")
+            static string NormalizeBetNumber(string pattern) => new string(pattern.Where(char.IsDigit).ToArray());
 
             var betNumberPatterns = new List<string> { "" }; // default: single empty pattern (non-ByNumber)
             if (isByNumberType)
@@ -817,7 +817,8 @@ public class LimitsController : ControllerBase
 
             if (dto.BetNumberPattern != null)
             {
-                limitRule.BetNumberPattern = dto.BetNumberPattern;
+                // Strip all non-digit chars to match ticket line storage format
+                limitRule.BetNumberPattern = new string(dto.BetNumberPattern.Where(char.IsDigit).ToArray());
             }
 
             if (dto.MaxBetPerNumber.HasValue)

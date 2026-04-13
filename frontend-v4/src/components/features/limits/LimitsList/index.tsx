@@ -102,6 +102,23 @@ const styles = {
 // Cycle through shades of turquoise for entity bars
 const ENTITY_COLORS = ['#6366f1', '#6366f1', '#6366f1', '#6366f1', '#6366f1', '#6366f1'];
 
+// Format raw bet number (no dashes) back to display format based on game type
+// e.g. "0220" + "Palé" -> "02-20", "010203" + "Tripleta" -> "01-02-03"
+const formatBetNumberDisplay = (pattern: string | undefined, gameTypeName: string | undefined): string => {
+  if (!pattern) return '-';
+  const digits = pattern.replace(/\D/g, '');
+  const gt = (gameTypeName || '').toLowerCase();
+  if (gt.includes('palé') || gt.includes('pale') || gt.includes('super')) {
+    // 4 digits: ##-##
+    if (digits.length === 4) return `${digits.slice(0, 2)}-${digits.slice(2)}`;
+  }
+  if (gt.includes('tripleta')) {
+    // 6 digits: ##-##-##
+    if (digits.length === 6) return `${digits.slice(0, 2)}-${digits.slice(2, 4)}-${digits.slice(4)}`;
+  }
+  return digits || pattern;
+};
+
 const LimitsList = (): React.ReactElement => {
   const [filterLimitType, setFilterLimitType] = useState<string>('');
   const [filterDrawId, setFilterDrawId] = useState<string>('');
@@ -356,7 +373,7 @@ const LimitsList = (): React.ReactElement => {
                       <TableRow key={amtKey} hover>
                         <TableCell sx={{ ...styles.tableCell, color: ACCENT, fontWeight: 500 }}>{amt.gameTypeName}</TableCell>
                         <TableCell sx={{ ...styles.tableCell, fontWeight: 600, color: limit.betNumberPattern ? ACCENT : '#ccc' }}>
-                          {limit.betNumberPattern || '-'}
+                          {formatBetNumberDisplay(limit.betNumberPattern, amt.gameTypeName)}
                         </TableCell>
                         <TableCell sx={styles.tableCell}>
                           <TextField
@@ -388,7 +405,7 @@ const LimitsList = (): React.ReactElement => {
                   <TableRow key={limit.limitRuleId} hover>
                     <TableCell sx={styles.tableCell}>{limit.gameTypeName || 'General'}</TableCell>
                     <TableCell sx={{ ...styles.tableCell, fontWeight: 600, color: limit.betNumberPattern ? ACCENT : '#ccc' }}>
-                      {limit.betNumberPattern || '-'}
+                      {formatBetNumberDisplay(limit.betNumberPattern, limit.gameTypeName)}
                     </TableCell>
                     <TableCell sx={styles.tableCell}>
                       <TextField type="number" defaultValue={limit.maxBetPerNumber || 0} size="small" disabled
