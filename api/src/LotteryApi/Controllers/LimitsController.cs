@@ -466,13 +466,20 @@ public class LimitsController : ControllerBase
             }
 
             // Resolve bet number patterns for ByNumber types
+            // Strip dashes to match ticket line storage format (e.g., "02-20" -> "0220")
+            static string NormalizeBetNumber(string pattern) => pattern.Replace("-", "").Trim();
+
             var betNumberPatterns = new List<string> { "" }; // default: single empty pattern (non-ByNumber)
             if (isByNumberType)
             {
                 if (dto.BetNumberPatterns != null && dto.BetNumberPatterns.Count > 0)
-                    betNumberPatterns = dto.BetNumberPatterns.Where(p => !string.IsNullOrWhiteSpace(p)).Distinct().ToList();
+                    betNumberPatterns = dto.BetNumberPatterns
+                        .Where(p => !string.IsNullOrWhiteSpace(p))
+                        .Select(NormalizeBetNumber)
+                        .Distinct()
+                        .ToList();
                 else if (!string.IsNullOrWhiteSpace(dto.BetNumberPattern))
-                    betNumberPatterns = new List<string> { dto.BetNumberPattern };
+                    betNumberPatterns = new List<string> { NormalizeBetNumber(dto.BetNumberPattern) };
             }
 
             // Upsert rules: find existing or create new
