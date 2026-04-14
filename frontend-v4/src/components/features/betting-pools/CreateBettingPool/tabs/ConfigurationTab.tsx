@@ -378,43 +378,12 @@ const ConfigurationTab: React.FC<ConfigTabProps> = ({ formData, handleChange, be
           <Divider sx={{ mb: 2 }} />
         </Grid>
 
-        <Grid item xs={12} md={6}>
-          <FormControlLabel
-            control={
-              <Switch
-                checked={formData.enableRecharges}
-                onChange={handleChange}
-                name="enableRecharges"
-              />
-            }
-            label="Habilitar Recargas"
-          />
-        </Grid>
-
-        <Grid item xs={12} md={6}>
-          <FormControlLabel
-            control={
-              <Switch
-                checked={formData.printRechargeReceipt}
-                onChange={handleChange}
-                name="printRechargeReceipt"
-              />
-            }
-            label="Imprimir Recibo de Recargas"
-          />
-        </Grid>
-
-        <Grid item xs={12} md={6}>
-          <TextField
-            fullWidth
-            type="number"
-            label="Monto Máximo Diario de Recargas"
-            name="dailyPhoneRechargeLimit"
-            value={formData.dailyPhoneRechargeLimit}
-            onChange={handleChange}
-            inputProps={{ step: "0.01", min: "0" }}
-            helperText="Límite diario para recargas telefónicas"
-          />
+        <Grid item xs={12}>
+          <Alert severity="info" icon={false} sx={{ bgcolor: '#f0f4ff', border: '1px solid #d0d9f0' }}>
+            <Typography variant="body2" sx={{ fontWeight: 500, color: '#555' }}>
+              Próximamente — Esta funcionalidad estará disponible en una futura actualización.
+            </Typography>
+          </Alert>
         </Grid>
 
         {/* Other Settings */}
