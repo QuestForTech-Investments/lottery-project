@@ -31,6 +31,11 @@ import {
   Checkbox,
   ListItemText,
   type SelectChangeEvent,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Snackbar,
 } from '@mui/material';
 import {
   Edit as EditIcon,
@@ -42,6 +47,8 @@ import {
 import useBettingPoolsList from './hooks/useBettingPoolsList';
 import PasswordModal from '@components/modals/PasswordModal';
 import { formatCurrency } from '@/utils/formatCurrency';
+import { updateAccumulatedFall } from '@/services/caidaService';
+import { useUserPermissions } from '@/hooks/useUserPermissions';
 
 interface TableColumn {
   id: string;
@@ -78,9 +85,43 @@ const BancasListMUI: React.FC = () => {
     handleRefresh,
   } = useBettingPoolsList();
 
+  const { hasPermission } = useUserPermissions();
+  const canEditCaida = hasPermission('EDIT_ACCUMULATED_FALL');
+
   // Password modal state
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState<boolean>(false);
   const [selectedUsername, setSelectedUsername] = useState<string>('');
+
+  // Caída acumulada modal state
+  const [caidaModal, setCaidaModal] = useState<{ open: boolean; poolId: number; poolName: string; currentValue: number }>({ open: false, poolId: 0, poolName: '', currentValue: 0 });
+  const [caidaNewValue, setCaidaNewValue] = useState<string>('');
+  const [caidaSaving, setCaidaSaving] = useState(false);
+  const [caidaError, setCaidaError] = useState<string>('');
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string }>({ open: false, message: '' });
+
+  const handleOpenCaidaModal = (poolId: number, poolName: string, currentValue: number | null): void => {
+    setCaidaModal({ open: true, poolId, poolName, currentValue: currentValue ?? 0 });
+    setCaidaNewValue('');
+    setCaidaError('');
+  };
+
+  const handleSaveCaida = async (): Promise<void> => {
+    const val = parseFloat(caidaNewValue);
+    if (isNaN(val)) { setCaidaError('Ingrese un valor válido'); return; }
+    if (val > 0) { setCaidaError('La caída acumulada debe ser negativa o cero'); return; }
+
+    setCaidaSaving(true);
+    try {
+      await updateAccumulatedFall(caidaModal.poolId, val);
+      setCaidaModal({ open: false, poolId: 0, poolName: '', currentValue: 0 });
+      setSnackbar({ open: true, message: 'Caída acumulada actualizada' });
+      handleRefresh();
+    } catch {
+      setCaidaError('Error al actualizar la caída acumulada');
+    } finally {
+      setCaidaSaving(false);
+    }
+  };
 
   /**
    * Handle edit betting pool
@@ -365,7 +406,11 @@ const BancasListMUI: React.FC = () => {
                             {formatCurrency(pool.balance)}
                           </Typography>
                         </TableCell>
-                        <TableCell align="right">
+                        <TableCell
+                          align="right"
+                          onClick={canEditCaida ? () => handleOpenCaidaModal(pool.id, pool.name, pool.accumulatedFall) : undefined}
+                          sx={canEditCaida ? { cursor: 'pointer', '&:hover': { bgcolor: 'action.hover' } } : {}}
+                        >
                           {pool.accumulatedFall === null ? (
                             <Typography variant="body2" color="text.secondary">
                               -
@@ -374,6 +419,7 @@ const BancasListMUI: React.FC = () => {
                             <Typography
                               variant="body2"
                               color={pool.accumulatedFall >= 0 ? 'success.main' : 'error.main'}
+                              sx={{}}
                             >
                               {formatCurrency(pool.accumulatedFall)}
                             </Typography>
@@ -430,6 +476,69 @@ const BancasListMUI: React.FC = () => {
         onClose={handleClosePasswordModal}
         userId={0} // TODO: Get actual userId from user data when available
         username={selectedUsername}
+      />
+
+      {/* Edit Caída Acumulada Modal */}
+      <Dialog
+        open={caidaModal.open}
+        onClose={() => setCaidaModal({ open: false, poolId: 0, poolName: '', currentValue: 0 })}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle sx={{ pb: 1 }}>Editar caída acumulada</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+            {caidaModal.poolName}
+          </Typography>
+
+          <TextField
+            label="Caída acumulada actual"
+            value={formatCurrency(caidaModal.currentValue)}
+            fullWidth
+            size="small"
+            disabled
+            sx={{ mb: 2, mt: 1 }}
+          />
+
+          <TextField
+            label="Nueva caída acumulada"
+            type="number"
+            value={caidaNewValue}
+            onChange={(e) => { setCaidaNewValue(e.target.value); setCaidaError(''); }}
+            onKeyDown={(e) => { if (e.key === 'Enter') handleSaveCaida(); }}
+            fullWidth
+            size="small"
+            autoFocus
+            error={!!caidaError}
+            helperText={caidaError || 'Solo valores negativos o cero'}
+            inputProps={{ max: 0, step: 0.01 }}
+          />
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button
+            onClick={() => setCaidaModal({ open: false, poolId: 0, poolName: '', currentValue: 0 })}
+            sx={{ color: '#666' }}
+          >
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleSaveCaida}
+            disabled={caidaSaving || !caidaNewValue}
+            variant="contained"
+            sx={{ bgcolor: '#51cbce', '&:hover': { bgcolor: '#45b8bb' } }}
+          >
+            {caidaSaving ? 'Guardando...' : 'OK'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Snackbar */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={3000}
+        onClose={() => setSnackbar({ open: false, message: '' })}
+        message={snackbar.message}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       />
     </Box>
   );

@@ -141,24 +141,14 @@ public class LoanPaymentWorker : BackgroundService
                     loan.Status = "completed";
                 }
 
-                // Credit entity balance (payment returns money to the entity)
+                // Deduct installment from banca balance (banca is paying back what they owe)
                 if (loan.EntityType == "bettingPool")
                 {
-                    var entity = await context.AccountableEntities
-                        .FirstOrDefaultAsync(e => e.EntityType == "bettingPool" && e.EntityId == loan.EntityId,
-                            stoppingToken);
-                    if (entity != null)
-                    {
-                        entity.CurrentBalance += amountToPay;
-                        entity.UpdatedAt = DateTime.UtcNow;
-                    }
-
-                    // Also update the balances table (used for display)
                     var balance = await context.Balances
                         .FirstOrDefaultAsync(b => b.BettingPoolId == loan.EntityId, stoppingToken);
                     if (balance != null)
                     {
-                        balance.CurrentBalance += amountToPay;
+                        balance.CurrentBalance -= amountToPay;
                         balance.LastUpdated = DateTime.UtcNow;
                     }
                 }

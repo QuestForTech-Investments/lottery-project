@@ -93,7 +93,9 @@
       "Bash(xargs grep:*)",
       "Bash(find /c/Users/olive/Documents/GitHub/lottery-project -type f \\\\\\(-name *PERMISSION* -o -name *permission* -o -name *AUTH* -o -name *auth* \\\\\\))",
       "Bash(grep -E \"\\\\.\\(md|txt|doc\\)$\")",
-      "mcp__plugin_playwright_playwright__browser_run_code"
+      "mcp__plugin_playwright_playwright__browser_run_code",
+      "Bash(export DOTNET_ROOT=\"/opt/homebrew/opt/dotnet@8/libexec\")",
+      "Bash(export PATH=\"/opt/homebrew/opt/dotnet@8/bin:$PATH\")"
     ]
   }
 }

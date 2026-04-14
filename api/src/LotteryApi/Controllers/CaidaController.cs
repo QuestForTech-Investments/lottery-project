@@ -114,6 +114,31 @@ public class CaidaController : ControllerBase
     }
 
     /// <summary>
+    /// Update accumulated fall for a specific betting pool.
+    /// </summary>
+    [HttpPut("{bettingPoolId}/accumulated-fall")]
+    public async Task<ActionResult> UpdateAccumulatedFall(int bettingPoolId, [FromBody] UpdateAccumulatedFallDto dto)
+    {
+        var config = await _context.BettingPoolConfigs
+            .FirstOrDefaultAsync(c => c.BettingPoolId == bettingPoolId);
+
+        if (config == null)
+            return NotFound(new { message = "Configuración de banca no encontrada" });
+
+        var previousValue = config.AccumulatedFall;
+        config.AccumulatedFall = dto.AccumulatedFall;
+        config.UpdatedAt = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync();
+
+        _logger.LogInformation(
+            "AccumulatedFall updated for pool {PoolId}: {Previous} -> {New}",
+            bettingPoolId, previousValue, dto.AccumulatedFall);
+
+        return Ok(new { bettingPoolId, previousValue, newValue = dto.AccumulatedFall });
+    }
+
+    /// <summary>
     /// Manually trigger caída calculation for a specific date (admin use).
     /// </summary>
     [HttpPost("calculate")]
@@ -127,4 +152,9 @@ public class CaidaController : ControllerBase
 
         return Ok(new { message = $"Caída calculada para {targetDate:yyyy-MM-dd}" });
     }
+}
+
+public class UpdateAccumulatedFallDto
+{
+    public decimal AccumulatedFall { get; set; }
 }

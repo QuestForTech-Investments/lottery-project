@@ -268,8 +268,8 @@ public class LoansController : ControllerBase
                 loan.Status = "completed";
             }
 
-            // Credit entity balance (payment returns money)
-            await UpdateEntityBalance(loan.EntityType, loan.EntityId, dto.AmountPaid);
+            // Deduct installment from banca balance (banca is paying back what they owe)
+            await UpdateEntityBalance(loan.EntityType, loan.EntityId, -dto.AmountPaid);
 
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
@@ -447,14 +447,14 @@ public class LoansController : ControllerBase
                     loan.Status = "completed";
                 }
 
-                // Credit banca balance
+                // Deduct installment from banca balance (banca is paying back)
                 if (loan.EntityType == "bettingPool")
                 {
                     var balance = await _context.Balances
                         .FirstOrDefaultAsync(b => b.BettingPoolId == loan.EntityId);
                     if (balance != null)
                     {
-                        balance.CurrentBalance += amountToPay;
+                        balance.CurrentBalance -= amountToPay;
                         balance.LastUpdated = DateTime.UtcNow;
                     }
                 }

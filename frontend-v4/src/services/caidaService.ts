@@ -13,3 +13,7 @@ export const getCaidaStatus = async (zoneId?: number): Promise<CaidaStatusItem[]
   const params = zoneId ? `?zoneId=${zoneId}` : '';
   return await api.get(`/caida/status${params}`) as CaidaStatusItem[];
 };
+
+export const updateAccumulatedFall = async (bettingPoolId: number, accumulatedFall: number): Promise<void> => {
+  await api.put(`/caida/${bettingPoolId}/accumulated-fall`, { accumulatedFall });
+};
