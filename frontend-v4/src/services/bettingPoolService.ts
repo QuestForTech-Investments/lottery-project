@@ -350,6 +350,30 @@ export const handleBettingPoolError = (error: unknown, operation: string = 'oper
   return `Error en ${operation}: ${errorMessage}`;
 };
 
+// === Auto Expenses ===
+
+interface AutoExpenseApiItem {
+  expenseId?: number;
+  description: string;
+  amount: number;
+  frequency: string;
+  dayOfWeek?: number | null;
+  dayOfMonth?: number | null;
+  isActive: boolean;
+}
+
+export const getAutoExpenses = async (bettingPoolId: number | string): Promise<AutoExpenseApiItem[]> => {
+  try {
+    return await api.get(`/betting-pools/${bettingPoolId}/auto-expenses`) as AutoExpenseApiItem[] || [];
+  } catch {
+    return [];
+  }
+};
+
+export const saveAutoExpenses = async (bettingPoolId: number | string, expenses: AutoExpenseApiItem[]): Promise<void> => {
+  await api.post(`/betting-pools/${bettingPoolId}/auto-expenses`, { expenses });
+};
+
 export default {
   getBettingPools,
   getBettingPoolById,
@@ -360,5 +384,7 @@ export default {
   updateBettingPoolConfig,
   deleteBettingPool,
   getBettingPoolUsers,
-  handleBettingPoolError
+  handleBettingPoolError,
+  getAutoExpenses,
+  saveAutoExpenses
 };

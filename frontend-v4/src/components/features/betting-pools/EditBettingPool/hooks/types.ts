@@ -6,6 +6,8 @@ export interface AutoExpense {
   description: string;
   amount: string;
   frequency: string;
+  dayOfWeek?: number;
+  dayOfMonth?: number;
   active: boolean;
 }
 

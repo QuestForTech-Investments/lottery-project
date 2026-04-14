@@ -29,6 +29,12 @@ public class BettingPoolAutomaticExpense
     [Column("frequency")]
     public string Frequency { get; set; } = string.Empty;
 
+    [Column("day_of_week")]
+    public int? DayOfWeek { get; set; }
+
+    [Column("day_of_month")]
+    public int? DayOfMonth { get; set; }
+
     [Column("is_active")]
     public bool IsActive { get; set; } = true;
 

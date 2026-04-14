@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef, type ChangeEvent, type Synthe
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
 import { useNavigate, useParams } from 'react-router-dom';
-import { getBettingPoolById, getBettingPoolConfig, updateBettingPool, updateBettingPoolConfig, handleBettingPoolError, getBettingPools } from '@/services/bettingPoolService';
+import { getBettingPoolById, getBettingPoolConfig, updateBettingPool, updateBettingPoolConfig, handleBettingPoolError, getBettingPools, getAutoExpenses, saveAutoExpenses } from '@/services/bettingPoolService';
 import { getAllZones } from '@/services/zoneService';
 import { savePrizeConfig, getAllBetTypesWithFields, getMergedPrizeData, getBettingPoolPrizeConfigs } from '@/services/prizeService';
 import { saveBettingPoolSchedules, transformSchedulesToApiFormat, getBettingPoolSchedules, transformSchedulesToFormFormat } from '@/services/scheduleService';
@@ -115,24 +115,39 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
         // ⚡ PERFORMANCE: Parallelize all API calls (including draws for tabs)
         const apiStartTime = performance.now();
 
-        const [zonesResponse, bettingPoolResponse, configResponse, schedulesResponse, drawsResponse, allDrawsResponse] = await Promise.all([
+        const [zonesResponse, bettingPoolResponse, configResponse, schedulesResponse, drawsResponse, allDrawsResponse, autoExpensesData] = await Promise.all([
           getAllZones(),
           getBettingPoolById(id),
           getBettingPoolConfig(id),
           getBettingPoolSchedules(id),
           getBettingPoolDraws(id),  // Returns betting pool draws config
-          getAllDraws({ loadAll: true }) // ⚡ Load all draws once for both DrawsTab and PrizesTab
+          getAllDraws({ loadAll: true }), // ⚡ Load all draws once for both DrawsTab and PrizesTab
+          getAutoExpenses(id)
         ]) as unknown as [
           ApiResponse<Zone[]>,
           ApiResponse<BettingPoolData>,
           ApiResponse<ConfigResponse>,
           { success: boolean; data: Array<{ dayOfWeek: number; openingTime: string | null; closingTime: string | null }> },
           ApiResponse<DrawApiData[]>,
-          ApiResponse<Draw[]>
+          ApiResponse<Draw[]>,
+          Array<{ description: string; amount: number; frequency: string; dayOfWeek?: number; dayOfMonth?: number; isActive: boolean }>
         ];
 
         const apiEndTime = performance.now();
         const apiDuration = apiEndTime - apiStartTime;
+
+        // Process auto expenses
+        if (Array.isArray(autoExpensesData) && autoExpensesData.length > 0) {
+          const mappedExpenses = autoExpensesData.map(e => ({
+            description: e.description || '',
+            amount: String(e.amount || 0),
+            frequency: e.frequency || 'semanal',
+            dayOfWeek: e.dayOfWeek,
+            dayOfMonth: e.dayOfMonth,
+            active: e.isActive !== false,
+          }));
+          setFormData(prev => ({ ...prev, autoExpenses: mappedExpenses }));
+        }
 
         // Start processing data
         const processingStartTime = performance.now();
@@ -1229,6 +1244,23 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
             // Don't fail the whole operation if schedules fail to save
           }
         } else {
+        }
+
+        // ========================================
+        // 🎯 PASO 5.5: SAVE AUTO EXPENSES
+        // ========================================
+        try {
+          const expensesToSave = (formData.autoExpenses || []).map(e => ({
+            description: e.description,
+            amount: parseFloat(e.amount) || 0,
+            frequency: e.frequency,
+            dayOfWeek: e.dayOfWeek ?? null,
+            dayOfMonth: e.dayOfMonth ?? null,
+            isActive: e.active,
+          }));
+          await saveAutoExpenses(id || '', expensesToSave);
+        } catch (autoExpError) {
+          console.error('[ERROR] Error saving auto expenses:', autoExpError);
         }
 
         // ========================================

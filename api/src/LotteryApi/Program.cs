@@ -19,6 +19,7 @@ using LotteryApi.Services;
 using LotteryApi.Services.BalanceCutoff;
 using LotteryApi.Services.Caida;
 using LotteryApi.Services.Loans;
+using LotteryApi.Services.AutoExpenses;
 using LotteryApi.Services.ExternalResults;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -124,6 +125,9 @@ builder.Services.AddBalanceCutoffServices(builder.Configuration);
 
 // Register Loan Payment Services (automatic loan installment processing)
 builder.Services.AddLoanPaymentServices(builder.Configuration);
+
+// Register Auto Expense Services (automatic expense deductions)
+builder.Services.AddAutoExpenseServices(builder.Configuration);
 
 // Register Caída (Cashback) Services (scheduled caída calculations)
 builder.Services.AddCaidaServices(builder.Configuration);

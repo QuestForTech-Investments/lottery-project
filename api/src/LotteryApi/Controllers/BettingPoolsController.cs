@@ -1349,6 +1349,88 @@ public class BettingPoolsController : ControllerBase
     }
 
     // ============================================
+    // AUTO EXPENSES ENDPOINTS
+    // ============================================
+
+    /// <summary>
+    /// Get auto expenses for a betting pool
+    /// </summary>
+    [HttpGet("{bettingPoolId}/auto-expenses")]
+    public async Task<ActionResult<List<AutoExpenseDto>>> GetAutoExpenses(int bettingPoolId)
+    {
+        try
+        {
+            var expenses = await _context.BettingPoolAutomaticExpenses
+                .AsNoTracking()
+                .Where(e => e.BettingPoolId == bettingPoolId)
+                .Select(e => new AutoExpenseDto
+                {
+                    ExpenseId = e.ExpenseId,
+                    Description = e.ExpenseType,
+                    Amount = e.Amount ?? 0,
+                    Frequency = e.Frequency,
+                    DayOfWeek = e.DayOfWeek,
+                    DayOfMonth = e.DayOfMonth,
+                    IsActive = e.IsActive
+                })
+                .ToListAsync();
+
+            return Ok(expenses);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting auto expenses for betting pool {BettingPoolId}", bettingPoolId);
+            return StatusCode(500, new { message = "Error al obtener gastos automáticos" });
+        }
+    }
+
+    /// <summary>
+    /// Save auto expenses for a betting pool (replace all)
+    /// </summary>
+    [HttpPost("{bettingPoolId}/auto-expenses")]
+    public async Task<ActionResult<List<AutoExpenseDto>>> SaveAutoExpenses(
+        int bettingPoolId, [FromBody] SaveAutoExpensesRequest request)
+    {
+        try
+        {
+            var bettingPool = await _context.BettingPools.FindAsync(bettingPoolId);
+            if (bettingPool == null)
+                return NotFound(new { message = "Banca no encontrada" });
+
+            // Delete existing
+            var existing = await _context.BettingPoolAutomaticExpenses
+                .Where(e => e.BettingPoolId == bettingPoolId)
+                .ToListAsync();
+            if (existing.Any())
+                _context.BettingPoolAutomaticExpenses.RemoveRange(existing);
+
+            // Create new
+            foreach (var dto in request.Expenses)
+            {
+                _context.BettingPoolAutomaticExpenses.Add(new BettingPoolAutomaticExpense
+                {
+                    BettingPoolId = bettingPoolId,
+                    ExpenseType = dto.Description,
+                    Amount = dto.Amount,
+                    Frequency = dto.Frequency,
+                    DayOfWeek = dto.DayOfWeek,
+                    DayOfMonth = dto.DayOfMonth,
+                    IsActive = dto.IsActive,
+                    CreatedAt = DateTime.UtcNow
+                });
+            }
+
+            await _context.SaveChangesAsync();
+            return await GetAutoExpenses(bettingPoolId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error saving auto expenses for betting pool {BettingPoolId}", bettingPoolId);
+            return StatusCode(500, new { message = "Error al guardar gastos automáticos" });
+        }
+    }
+
+    // ============================================
     // MASS UPDATE ENDPOINT
     // ============================================
 

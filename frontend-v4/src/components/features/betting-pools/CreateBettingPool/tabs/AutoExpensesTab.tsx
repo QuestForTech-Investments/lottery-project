@@ -33,8 +33,26 @@ interface AutoExpense {
   description: string;
   amount: string;
   frequency: string;
+  dayOfWeek?: number;
+  dayOfMonth?: number;
   active: boolean;
 }
+
+const DAY_OF_WEEK_OPTIONS = [
+  { value: 0, label: 'Lunes' },
+  { value: 1, label: 'Martes' },
+  { value: 2, label: 'Miércoles' },
+  { value: 3, label: 'Jueves' },
+  { value: 4, label: 'Viernes' },
+  { value: 5, label: 'Sábado' },
+  { value: 6, label: 'Domingo' },
+];
+
+const frequencyHelperText: Record<string, string> = {
+  semanal: 'Sera aplicado a las 12:00 AM del día de la semana especificado',
+  quincenal: 'Sera aplicado a las 12:00 AM los días 15 y 30 (o ultimo día del mes) de cada mes',
+  mensual: 'Sera aplicado cada mes a las 12:00 AM de la fecha especificada (o ultimo día del mes)',
+};
 
 interface AutoExpensesFormData {
   autoExpenses: AutoExpense[];
@@ -72,6 +90,7 @@ const AutoExpensesTab: React.FC<AutoExpensesTabProps> = ({ formData, handleChang
     description: '',
     amount: '',
     frequency: 'semanal',
+    dayOfWeek: 0,
     active: true,
   });
 
@@ -83,6 +102,7 @@ const AutoExpensesTab: React.FC<AutoExpensesTabProps> = ({ formData, handleChang
       description: '',
       amount: '',
       frequency: 'semanal',
+      dayOfWeek: 0,
       active: true,
     });
     setEditingIndex(null);
@@ -149,8 +169,16 @@ const AutoExpensesTab: React.FC<AutoExpensesTabProps> = ({ formData, handleChang
   /**
    * Get frequency label
    */
-  const getFrequencyLabel = (frequency: string): string => {
-    return frequencyLabels[frequency as FrequencyType] || frequency;
+  const getFrequencyLabel = (expense: AutoExpense): string => {
+    const base = frequencyLabels[expense.frequency as FrequencyType] || expense.frequency;
+    if (expense.frequency === 'semanal' && expense.dayOfWeek != null) {
+      const day = DAY_OF_WEEK_OPTIONS.find(d => d.value === expense.dayOfWeek);
+      return `${base} (${day?.label || ''})`;
+    }
+    if (expense.frequency === 'mensual' && expense.dayOfMonth != null) {
+      return `${base} (Día ${expense.dayOfMonth})`;
+    }
+    return base;
   };
 
   return (
@@ -206,7 +234,7 @@ const AutoExpensesTab: React.FC<AutoExpensesTabProps> = ({ formData, handleChang
                       <TableCell align="right">
                         ${parseFloat(expense.amount || '0').toFixed(2)}
                       </TableCell>
-                      <TableCell>{getFrequencyLabel(expense.frequency)}</TableCell>
+                      <TableCell>{getFrequencyLabel(expense)}</TableCell>
                       <TableCell>
                         <Typography
                           variant="body2"
@@ -290,15 +318,61 @@ const AutoExpensesTab: React.FC<AutoExpensesTabProps> = ({ formData, handleChang
                   <Select
                     name="frequency"
                     value={currentExpense.frequency}
-                    onChange={handleExpenseFieldChange}
+                    onChange={(e) => {
+                      handleExpenseFieldChange(e);
+                      // Reset day fields when frequency changes
+                      setCurrentExpense(prev => ({
+                        ...prev,
+                        frequency: e.target.value as string,
+                        dayOfWeek: e.target.value === 'semanal' ? 0 : undefined,
+                        dayOfMonth: e.target.value === 'mensual' ? 1 : undefined,
+                      }));
+                    }}
                     label="Frecuencia"
                   >
                     <MenuItem value="semanal">Semanal</MenuItem>
                     <MenuItem value="quincenal">Quincenal</MenuItem>
                     <MenuItem value="mensual">Mensual</MenuItem>
                   </Select>
+                  <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
+                    {frequencyHelperText[currentExpense.frequency] || ''}
+                  </Typography>
                 </FormControl>
               </Grid>
+
+              {/* Day of week selector (for semanal) */}
+              {currentExpense.frequency === 'semanal' && (
+                <Grid item xs={12} md={6}>
+                  <FormControl fullWidth required>
+                    <InputLabel>Día de la semana</InputLabel>
+                    <Select
+                      value={currentExpense.dayOfWeek ?? 0}
+                      onChange={(e) => setCurrentExpense(prev => ({ ...prev, dayOfWeek: Number(e.target.value) }))}
+                      label="Día de la semana"
+                    >
+                      {DAY_OF_WEEK_OPTIONS.map(d => (
+                        <MenuItem key={d.value} value={d.value}>{d.label}</MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+              )}
+
+              {/* Day of month selector (for mensual) */}
+              {currentExpense.frequency === 'mensual' && (
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    required
+                    type="number"
+                    label="Día del mes"
+                    value={currentExpense.dayOfMonth ?? 1}
+                    onChange={(e) => setCurrentExpense(prev => ({ ...prev, dayOfMonth: Math.min(31, Math.max(1, Number(e.target.value))) }))}
+                    inputProps={{ min: 1, max: 31 }}
+                    helperText="Si el mes no tiene este día, se usará el último día del mes"
+                  />
+                </Grid>
+              )}
             </Grid>
           </Box>
         </DialogContent>

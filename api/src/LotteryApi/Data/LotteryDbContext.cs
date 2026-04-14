@@ -53,6 +53,7 @@ public class LotteryDbContext : DbContext
     public DbSet<BettingPoolDrawGameType> BettingPoolDrawGameTypes { get; set; }
     public DbSet<BettingPoolStyle> BettingPoolStyles { get; set; }
     public DbSet<BettingPoolAutomaticExpense> BettingPoolAutomaticExpenses { get; set; }
+    public DbSet<AutoExpenseHistory> AutoExpenseHistories { get; set; }
 
     // Expense Categories
     public DbSet<ExpenseCategory> ExpenseCategories { get; set; }
