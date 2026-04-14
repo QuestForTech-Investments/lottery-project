@@ -57,6 +57,10 @@ export const INITIAL_FORM_DATA: FormData = {
   // Central logo
   useCentralLogo: false,
 
+  // Auto logout
+  enableAutoLogout: false,
+  autoLogoutMinutes: '30',
+
   // Stats panel
   showStatsPanel: true,
   statCredit: true,

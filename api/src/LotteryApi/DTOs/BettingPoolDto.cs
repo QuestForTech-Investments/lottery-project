@@ -175,6 +175,8 @@ public class BettingPoolConfigDto
     public bool UseCentralLogo { get; set; } = false;
     public bool ShowStatsPanel { get; set; } = true;
     public string? StatsPanelConfig { get; set; }
+    public bool EnableAutoLogout { get; set; } = false;
+    public int AutoLogoutMinutes { get; set; } = 30;
 }
 
 /// <summary>

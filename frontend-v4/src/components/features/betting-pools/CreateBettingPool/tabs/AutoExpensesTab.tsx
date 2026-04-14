@@ -53,13 +53,12 @@ interface AutoExpensesTabProps {
   handleChange: (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | SyntheticEventLike) => void;
 }
 
-type FrequencyType = 'diaria' | 'semanal' | 'mensual' | 'anual';
+type FrequencyType = 'semanal' | 'quincenal' | 'mensual';
 
 const frequencyLabels: Record<FrequencyType, string> = {
-  diaria: 'Diaria',
   semanal: 'Semanal',
+  quincenal: 'Quincenal',
   mensual: 'Mensual',
-  anual: 'Anual',
 };
 
 /**
@@ -72,7 +71,7 @@ const AutoExpensesTab: React.FC<AutoExpensesTabProps> = ({ formData, handleChang
   const [currentExpense, setCurrentExpense] = useState<AutoExpense>({
     description: '',
     amount: '',
-    frequency: 'diaria',
+    frequency: 'semanal',
     active: true,
   });
 
@@ -83,7 +82,7 @@ const AutoExpensesTab: React.FC<AutoExpensesTabProps> = ({ formData, handleChang
     setCurrentExpense({
       description: '',
       amount: '',
-      frequency: 'diaria',
+      frequency: 'semanal',
       active: true,
     });
     setEditingIndex(null);
@@ -294,10 +293,9 @@ const AutoExpensesTab: React.FC<AutoExpensesTabProps> = ({ formData, handleChang
                     onChange={handleExpenseFieldChange}
                     label="Frecuencia"
                   >
-                    <MenuItem value="diaria">Diaria</MenuItem>
                     <MenuItem value="semanal">Semanal</MenuItem>
+                    <MenuItem value="quincenal">Quincenal</MenuItem>
                     <MenuItem value="mensual">Mensual</MenuItem>
-                    <MenuItem value="anual">Anual</MenuItem>
                   </Select>
                 </FormControl>
               </Grid>

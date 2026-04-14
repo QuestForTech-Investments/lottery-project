@@ -830,6 +830,19 @@ public class TicketsController : ControllerBase
                 totalDiscount = Math.Floor(totalBetAmount / discountPerEvery) * discountAmount;
             }
 
+            // 9b. Validate max ticket amount
+            if (bpConfig?.MaxTicketAmount != null && bpConfig.MaxTicketAmount > 0
+                && totalBetAmount > bpConfig.MaxTicketAmount)
+            {
+                await transaction.RollbackAsync();
+                return UnprocessableEntity(new
+                {
+                    code = "MAX_TICKET_AMOUNT_EXCEEDED",
+                    ticketAmount = totalBetAmount,
+                    maxAmount = bpConfig.MaxTicketAmount
+                });
+            }
+
             // 10. Set ticket totals
             ticket.TotalLines = dto.Lines.Count;
             ticket.TotalBetAmount = totalBetAmount;
@@ -1356,6 +1369,45 @@ public class TicketsController : ControllerBase
                         code = "CANCELLATION_TIME_EXPIRED",
                         maxMinutes = cancelMinutes
                     });
+                }
+            }
+
+            // 4b. Validate max cancel amount and daily cancel count
+            if (!canCancelAnytime)
+            {
+                var bpConfig = await _context.BettingPoolConfigs
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(c => c.BettingPoolId == ticket.BettingPoolId);
+
+                if (bpConfig?.MaxCancelAmount != null && bpConfig.MaxCancelAmount > 0
+                    && ticket.TotalBetAmount > bpConfig.MaxCancelAmount)
+                {
+                    return UnprocessableEntity(new
+                    {
+                        code = "CANCEL_AMOUNT_EXCEEDED",
+                        ticketAmount = ticket.TotalBetAmount,
+                        maxAmount = bpConfig.MaxCancelAmount
+                    });
+                }
+
+                if (bpConfig?.DailyCancelTickets != null && bpConfig.DailyCancelTickets > 0)
+                {
+                    var todayStart = DateTime.UtcNow.Date;
+                    var cancelledToday = await _context.Tickets
+                        .CountAsync(t => t.BettingPoolId == ticket.BettingPoolId
+                            && t.IsCancelled
+                            && t.CancelledAt != null
+                            && t.CancelledAt >= todayStart);
+
+                    if (cancelledToday >= bpConfig.DailyCancelTickets)
+                    {
+                        return UnprocessableEntity(new
+                        {
+                            code = "DAILY_CANCEL_LIMIT_REACHED",
+                            cancelledToday,
+                            maxPerDay = bpConfig.DailyCancelTickets
+                        });
+                    }
                 }
             }
 

@@ -100,6 +100,10 @@ export const mapConfigToFormData = (configResponse: ConfigResponse): Partial<For
     // Central logo
     useCentralLogo: config.useCentralLogo || false,
 
+    // Auto logout
+    enableAutoLogout: config.enableAutoLogout || false,
+    autoLogoutMinutes: String(config.autoLogoutMinutes ?? 30),
+
     // Stats panel
     showStatsPanel: config.showStatsPanel !== undefined ? config.showStatsPanel : true,
     ...parseStatsPanelConfig(config.statsPanelConfig)

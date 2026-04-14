@@ -447,10 +447,52 @@ public class BettingPoolsController : ControllerBase
             if (dto.Comment != null) bettingPool.Comment = dto.Comment;
             if (dto.Username != null) bettingPool.Username = dto.Username;
 
-            // Update password if provided
+            // Update password if provided — sync to both banca and POS user
             if (!string.IsNullOrWhiteSpace(dto.Password))
             {
-                bettingPool.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password);
+                var hashedPassword = BCrypt.Net.BCrypt.HashPassword(dto.Password);
+                bettingPool.PasswordHash = hashedPassword;
+
+                // Sync password to the POS user (find by username match or user_betting_pools link)
+                var posUser = await _context.UserBettingPools
+                    .Where(ubp => ubp.BettingPoolId == id && ubp.IsActive)
+                    .Select(ubp => ubp.User)
+                    .FirstOrDefaultAsync();
+
+                if (posUser == null && !string.IsNullOrWhiteSpace(bettingPool.Username))
+                {
+                    // POS user doesn't exist yet — create it
+                    var posRole = await _context.Roles.FirstOrDefaultAsync(r => r.RoleName == "POS");
+                    if (posRole != null)
+                    {
+                        var newUser = new User
+                        {
+                            Username = bettingPool.Username,
+                            PasswordHash = hashedPassword,
+                            FullName = bettingPool.BettingPoolName,
+                            Email = $"{bettingPool.Username}@pos.local",
+                            RoleId = posRole.RoleId,
+                            IsActive = true,
+                            CreatedAt = DateTime.UtcNow
+                        };
+                        _context.Users.Add(newUser);
+                        await _context.SaveChangesAsync();
+
+                        _context.UserBettingPools.Add(new UserBettingPool
+                        {
+                            UserId = newUser.UserId,
+                            BettingPoolId = id,
+                            IsActive = true,
+                            CreatedAt = DateTime.UtcNow
+                        });
+                        _logger.LogInformation("Created POS user {Username} for banca {BettingPoolId} during password update", bettingPool.Username, id);
+                    }
+                }
+                else if (posUser != null)
+                {
+                    posUser.PasswordHash = hashedPassword;
+                    posUser.UpdatedAt = DateTime.UtcNow;
+                }
             }
 
             if (dto.IsActive.HasValue)
@@ -793,7 +835,9 @@ public class BettingPoolsController : ControllerBase
                     FutureSalesMode = bettingPool.Config.FutureSalesMode,
                     UseCentralLogo = bettingPool.Config.UseCentralLogo,
                     ShowStatsPanel = bettingPool.Config.ShowStatsPanel,
-                    StatsPanelConfig = bettingPool.Config.StatsPanelConfig
+                    StatsPanelConfig = bettingPool.Config.StatsPanelConfig,
+                    EnableAutoLogout = bettingPool.Config.EnableAutoLogout,
+                    AutoLogoutMinutes = bettingPool.Config.AutoLogoutMinutes
                 } : null,
                 DiscountConfig = bettingPool.DiscountConfig != null ? new BettingPoolDiscountConfigDto
                 {
@@ -891,6 +935,8 @@ public class BettingPoolsController : ControllerBase
                 bettingPool.Config.UseCentralLogo = dto.Config.UseCentralLogo;
                 bettingPool.Config.ShowStatsPanel = dto.Config.ShowStatsPanel;
                 bettingPool.Config.StatsPanelConfig = dto.Config.StatsPanelConfig;
+                bettingPool.Config.EnableAutoLogout = dto.Config.EnableAutoLogout;
+                bettingPool.Config.AutoLogoutMinutes = dto.Config.AutoLogoutMinutes;
                 bettingPool.Config.UpdatedAt = DateTime.UtcNow;
             }
 
@@ -1143,6 +1189,8 @@ public class BettingPoolsController : ControllerBase
                     UseCentralLogo = dto.Config.UseCentralLogo,
                     ShowStatsPanel = dto.Config.ShowStatsPanel,
                     StatsPanelConfig = dto.Config.StatsPanelConfig,
+                    EnableAutoLogout = dto.Config.EnableAutoLogout,
+                    AutoLogoutMinutes = dto.Config.AutoLogoutMinutes,
                     CreatedAt = DateTime.UtcNow
                 };
                 _context.BettingPoolConfigs.Add(config);

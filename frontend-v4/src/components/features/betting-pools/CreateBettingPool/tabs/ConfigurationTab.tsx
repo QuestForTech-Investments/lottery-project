@@ -53,6 +53,8 @@ interface ConfigFormData {
   futureSalesMode: string;
   maxFutureDays: string;
   useCentralLogo: boolean;
+  enableAutoLogout: boolean;
+  autoLogoutMinutes: string;
   showStatsPanel: boolean;
   statCredit: boolean;
   statSales: boolean;
@@ -260,19 +262,6 @@ const ConfigurationTab: React.FC<ConfigTabProps> = ({ formData, handleChange, be
           <FormControlLabel
             control={
               <Switch
-                checked={formData.allowJackpot}
-                onChange={handleChange}
-                name="allowJackpot"
-              />
-            }
-            label="Permitir Pasar Bote"
-          />
-        </Grid>
-
-        <Grid item xs={12} md={6}>
-          <FormControlLabel
-            control={
-              <Switch
                 checked={formData.printEnabled}
                 onChange={handleChange}
                 name="printEnabled"
@@ -299,19 +288,6 @@ const ConfigurationTab: React.FC<ConfigTabProps> = ({ formData, handleChange, be
           <FormControlLabel
             control={
               <Switch
-                checked={formData.smsOnly}
-                onChange={handleChange}
-                name="smsOnly"
-              />
-            }
-            label="Sólo SMS"
-          />
-        </Grid>
-
-        <Grid item xs={12} md={6}>
-          <FormControlLabel
-            control={
-              <Switch
                 checked={formData.useCentralLogo}
                 onChange={handleChange}
                 name="useCentralLogo"
@@ -319,6 +295,33 @@ const ConfigurationTab: React.FC<ConfigTabProps> = ({ formData, handleChange, be
             }
             label="Usar Logo Central"
           />
+        </Grid>
+
+        <Grid item xs={12} md={6}>
+          <FormControlLabel
+            control={
+              <Switch
+                checked={formData.enableAutoLogout}
+                onChange={handleChange}
+                name="enableAutoLogout"
+              />
+            }
+            label="Auto Log Out"
+          />
+          {formData.enableAutoLogout && (
+            <TextField
+              fullWidth
+              type="number"
+              label="Minutos para Auto Log Out"
+              name="autoLogoutMinutes"
+              value={formData.autoLogoutMinutes}
+              onChange={handleChange}
+              inputProps={{ min: "1" }}
+              size="small"
+              sx={{ mt: 1 }}
+              helperText="Tiempo de inactividad antes de cerrar sesión en el POS"
+            />
+          )}
         </Grid>
 
         {/* Ticket Cancellation Settings */}

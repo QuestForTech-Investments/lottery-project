@@ -60,6 +60,9 @@ export interface FormData {
   maxFutureDays: string;
   // Central logo
   useCentralLogo: boolean;
+  // Auto logout
+  enableAutoLogout: boolean;
+  autoLogoutMinutes: string;
   // Stats panel
   showStatsPanel: boolean;
   statCredit: boolean;
@@ -245,6 +248,8 @@ export interface ConfigResponse {
     maxFutureDays?: number;
     futureSalesMode?: string;
     useCentralLogo?: boolean;
+    enableAutoLogout?: boolean;
+    autoLogoutMinutes?: number;
     showStatsPanel?: boolean;
     statsPanelConfig?: string;
   };

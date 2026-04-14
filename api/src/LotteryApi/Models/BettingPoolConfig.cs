@@ -93,6 +93,12 @@ public class BettingPoolConfig
     [Column("stats_panel_config")]
     public string? StatsPanelConfig { get; set; }
 
+    [Column("enable_auto_logout")]
+    public bool EnableAutoLogout { get; set; } = false;
+
+    [Column("auto_logout_minutes")]
+    public int AutoLogoutMinutes { get; set; } = 30;
+
     [Column("accumulated_fall", TypeName = "decimal(18,2)")]
     public decimal AccumulatedFall { get; set; } = 0;
 

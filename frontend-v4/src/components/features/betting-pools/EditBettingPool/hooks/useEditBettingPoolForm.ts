@@ -1131,6 +1131,8 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
           allowFutureSales: formData.futureSalesMode !== 'OFF',
           maxFutureDays: formData.maxFutureDays ? parseInt(formData.maxFutureDays) : 7,
           useCentralLogo: formData.useCentralLogo || false,
+          enableAutoLogout: formData.enableAutoLogout || false,
+          autoLogoutMinutes: formData.autoLogoutMinutes ? parseInt(formData.autoLogoutMinutes) : 30,
           showStatsPanel: formData.showStatsPanel !== undefined ? formData.showStatsPanel : true,
           statsPanelConfig: JSON.stringify({
             credit: formData.statCredit !== undefined ? formData.statCredit : true,
