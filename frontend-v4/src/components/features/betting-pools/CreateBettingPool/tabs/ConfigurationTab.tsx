@@ -168,7 +168,7 @@ const ConfigurationTab: React.FC<ConfigTabProps> = ({ formData, handleChange, be
             value={formData.deactivationBalance}
             onChange={handleChange}
             inputProps={{ step: "0.01" }}
-            helperText="Balance mínimo para desactivar"
+            helperText="Crédito disponible para vender. Se descuenta con cada ticket. Cuando llega a 0, se bloquean las ventas."
           />
         </Grid>
 
@@ -182,19 +182,6 @@ const ConfigurationTab: React.FC<ConfigTabProps> = ({ formData, handleChange, be
             onChange={handleChange}
             inputProps={{ step: "0.01", min: "0" }}
             helperText="Límite máximo de venta por día"
-          />
-        </Grid>
-
-        <Grid item xs={12} md={6}>
-          <TextField
-            fullWidth
-            type="number"
-            label="Balance Límite al Día"
-            name="dailyBalanceLimit"
-            value={formData.dailyBalanceLimit}
-            onChange={handleChange}
-            inputProps={{ step: "0.01" }}
-            helperText="Límite de balance por día"
           />
         </Grid>
 

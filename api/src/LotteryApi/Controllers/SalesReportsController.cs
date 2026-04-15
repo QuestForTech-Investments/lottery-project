@@ -198,16 +198,28 @@ public class SalesReportsController : ControllerBase
 
             // Get balance for the betting pool(s)
             decimal balance = 0m;
+            decimal credito = 0m;
             if (bettingPoolId.HasValue)
             {
                 balance = await _context.Balances
                     .Where(b => b.BettingPoolId == bettingPoolId.Value)
                     .Select(b => b.CurrentBalance)
                     .FirstOrDefaultAsync();
+
+                // Credito = DeactivationBalance - CurrentBalance (remaining room until banca gets disabled)
+                var deactivation = await _context.BettingPoolConfigs
+                    .AsNoTracking()
+                    .Where(c => c.BettingPoolId == bettingPoolId.Value)
+                    .Select(c => c.DeactivationBalance ?? 0m)
+                    .FirstOrDefaultAsync();
+                credito = deactivation - balance;
             }
             else
             {
                 balance = await _context.Balances.SumAsync(b => b.CurrentBalance);
+                var totalDeactivation = await _context.BettingPoolConfigs.AsNoTracking()
+                    .SumAsync(c => c.DeactivationBalance ?? 0m);
+                credito = totalDeactivation - balance;
             }
 
             // Caída: use real-time calculation for specific banca, or history for aggregate
@@ -236,7 +248,7 @@ public class SalesReportsController : ControllerBase
                 AccumulatedFall = accumulatedFall,
                 TotalNet = totalNet,
                 Balance = balance,
-                Credits = 0,
+                Credits = credito,
                 BenefitPercentage = totalSold > 0 ? (totalNet / totalSold) * 100 : 0
             };
 

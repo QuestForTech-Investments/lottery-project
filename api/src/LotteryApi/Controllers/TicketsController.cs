@@ -859,6 +859,33 @@ public class TicketsController : ControllerBase
 
             // 10. Update betting pool balance (totalNet - totalDiscount)
             var balanceAmount = totalNet - totalDiscount;
+
+            // 10.1 Check deactivation threshold (credit limit)
+            // Credito = DeactivationBalance - CurrentBalance (calculated on the fly)
+            // If new balance would exceed DeactivationBalance, block the sale
+            if (bpConfig?.DeactivationBalance != null)
+            {
+                var currentBalanceRow = await _context.Balances
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(b => b.BettingPoolId == dto.BettingPoolId);
+                var currentBalance = currentBalanceRow?.CurrentBalance ?? 0m;
+                var projectedBalance = currentBalance + balanceAmount;
+                var deactivation = bpConfig.DeactivationBalance.Value;
+
+                if (projectedBalance > deactivation)
+                {
+                    await transaction.RollbackAsync();
+                    return UnprocessableEntity(new
+                    {
+                        code = "CREDIT_EXHAUSTED",
+                        message = "La banca ha alcanzado su límite de crédito",
+                        currentCredit = deactivation - currentBalance,
+                        ticketAmount = balanceAmount,
+                        deactivationBalance = deactivation
+                    });
+                }
+            }
+
             await UpdateBettingPoolBalanceAsync(dto.BettingPoolId, balanceAmount, dto.UserId);
 
             // 11. Save to database
@@ -1460,6 +1487,7 @@ public class TicketsController : ControllerBase
             {
                 await UpdateBettingPoolBalanceAsync(ticket.BettingPoolId, balanceReversal, dto.CancelledBy);
             }
+
 
             // 8.2 Reverse limit consumption for each line
             foreach (var line in ticket.TicketLines)

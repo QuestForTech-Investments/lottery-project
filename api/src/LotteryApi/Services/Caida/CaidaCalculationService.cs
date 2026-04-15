@@ -369,6 +369,7 @@ public class CaidaCalculationService : ICaidaCalculationService
             .AsNoTracking()
             .Where(h => h.BettingPoolId == bpId && h.PeriodEnd < periodStart)
             .OrderByDescending(h => h.PeriodEnd)
+            .ThenByDescending(h => h.CreatedAt)
             .FirstOrDefaultAsync(ct);
 
         var accumulatedBefore = lastHistory?.AccumulatedFallAfter ?? 0;
@@ -411,7 +412,7 @@ public class CaidaCalculationService : ICaidaCalculationService
     /// <summary>
     /// Get the start/end of the current period based on fall type.
     /// </summary>
-    private static (DateTime periodStart, DateTime periodEnd) GetCurrentPeriodRange(BettingPoolConfig config, DateTime date)
+    public static (DateTime periodStart, DateTime periodEnd) GetCurrentPeriodRange(BettingPoolConfig config, DateTime date)
     {
         // For weekly: DayOfWeek 0=Sunday needs to be treated as 7 so Monday is start of week
         var dow = date.DayOfWeek == DayOfWeek.Sunday ? 7 : (int)date.DayOfWeek;

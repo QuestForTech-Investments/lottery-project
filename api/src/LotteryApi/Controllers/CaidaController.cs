@@ -126,13 +126,43 @@ public class CaidaController : ControllerBase
             return NotFound(new { message = "Configuración de banca no encontrada" });
 
         var previousValue = config.AccumulatedFall;
+        var now = DateTime.UtcNow;
+
+        // Update config
         config.AccumulatedFall = dto.AccumulatedFall;
-        config.UpdatedAt = DateTime.UtcNow;
+        config.UpdatedAt = now;
+
+        // Insert a CaidaHistory entry so future realtime calculations use this new value
+        // as the starting point (CalculateRealtimeValues reads last history where PeriodEnd < currentPeriodStart)
+        // Set PeriodEnd to just before the current period start so it's picked up as the latest history
+        var today = Helpers.DateTimeHelper.TodayInBusinessTimezone();
+        var (periodStart, _) = Services.Caida.CaidaCalculationService.GetCurrentPeriodRange(config, today);
+        var manualPeriodEnd = periodStart.AddTicks(-1);
+
+        _context.CaidaHistory.Add(new Models.CaidaHistory
+        {
+            BettingPoolId = bettingPoolId,
+            CalculationDate = now,
+            PeriodType = "MANUAL_ADJUSTMENT",
+            PeriodStart = manualPeriodEnd,
+            PeriodEnd = manualPeriodEnd,
+            TotalSales = 0,
+            TotalPrizes = 0,
+            TotalCommissions = 0,
+            TotalDiscounts = 0,
+            NetAmount = 0,
+            FallPercentage = config.FallPercentage,
+            AccumulatedFallBefore = previousValue,
+            AccumulatedFallAfter = dto.AccumulatedFall,
+            CaidaAmount = dto.AccumulatedFall - previousValue,
+            Notes = "Ajuste manual desde listado de bancas",
+            CreatedAt = now
+        });
 
         await _context.SaveChangesAsync();
 
         _logger.LogInformation(
-            "AccumulatedFall updated for pool {PoolId}: {Previous} -> {New}",
+            "AccumulatedFall updated for pool {PoolId}: {Previous} -> {New} (manual adjustment, snapshot created)",
             bettingPoolId, previousValue, dto.AccumulatedFall);
 
         return Ok(new { bettingPoolId, previousValue, newValue = dto.AccumulatedFall });

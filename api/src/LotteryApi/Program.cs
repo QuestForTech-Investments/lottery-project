@@ -40,6 +40,9 @@ builder.Services.AddControllers()
     {
         // Configure JSON serialization to use camelCase (JavaScript standard)
         options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+        // Serialize all DateTimes as UTC with 'Z' suffix so JS parses as UTC, not local time
+        options.JsonSerializerOptions.Converters.Add(new LotteryApi.Helpers.UtcDateTimeConverter());
+        options.JsonSerializerOptions.Converters.Add(new LotteryApi.Helpers.NullableUtcDateTimeConverter());
     });
 
 // Configure FluentValidation
