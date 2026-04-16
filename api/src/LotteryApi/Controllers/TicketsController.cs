@@ -525,10 +525,15 @@ public class TicketsController : ControllerBase
             var dailySaleLimit = bpConfig?.DailySaleLimit;
             if (dailySaleLimit.HasValue && dailySaleLimit.Value > 0)
             {
+                // Use UTC range matching business day (same logic as daily-summary endpoint)
+                var utcDayStart = DateTimeHelper.GetUtcStartOfDay(todayBusiness);
+                var utcDayEnd = DateTimeHelper.GetUtcEndOfDay(todayBusiness);
+
                 var currentDailySales = await _context.Tickets
                     .Where(t => t.BettingPoolId == dto.BettingPoolId
-                              && t.CreatedAt.Date == todayBusiness
-                              && !t.IsCancelled)
+                              && !t.IsCancelled
+                              && ((t.CreatedAt >= utcDayStart && t.CreatedAt < utcDayEnd)
+                                  || t.TicketLines.Any(tl => tl.DrawDate.Date == todayBusiness)))
                     .SumAsync(t => (decimal?)t.GrandTotal) ?? 0m;
 
                 var newTicketEstimate = dto.Lines.Sum(l => l.BetAmount);
@@ -874,14 +879,16 @@ public class TicketsController : ControllerBase
 
                 if (projectedBalance > deactivation)
                 {
+                    var remainingCredit = Math.Max(0, deactivation - currentBalance);
                     await transaction.RollbackAsync();
                     return UnprocessableEntity(new
                     {
                         code = "CREDIT_EXHAUSTED",
                         message = "La banca ha alcanzado su límite de crédito",
-                        currentCredit = deactivation - currentBalance,
+                        currentCredit = remainingCredit,
                         ticketAmount = balanceAmount,
-                        deactivationBalance = deactivation
+                        deactivationBalance = deactivation,
+                        currentBalance
                     });
                 }
             }

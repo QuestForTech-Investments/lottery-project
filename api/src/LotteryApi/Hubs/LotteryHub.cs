@@ -486,6 +486,63 @@ public class LotteryHub : Hub<ILotteryHubClient>
         var finalAvailable = Math.Max(0, minAvailable);
         var finalPercentage = reportLimitAmount > 0 ? ((reportLimitAmount - finalAvailable) / reportLimitAmount) * 100 : 0;
 
+        // Check daily sale limit and credit limit
+        decimal? dailySaleLimit = null;
+        decimal? dailySaleRemaining = null;
+        decimal? creditLimit = null;
+        decimal? creditRemaining = null;
+
+        var bpConfig = await _context.BettingPoolConfigs
+            .AsNoTracking()
+            .FirstOrDefaultAsync(c => c.BettingPoolId == bettingPoolId);
+
+        if (bpConfig != null)
+        {
+            // Daily sale limit
+            if (bpConfig.DailySaleLimit.HasValue && bpConfig.DailySaleLimit.Value > 0)
+            {
+                var todayBusiness = Helpers.DateTimeHelper.TodayInBusinessTimezone();
+                var utcDayStart = Helpers.DateTimeHelper.GetUtcStartOfDay(todayBusiness);
+                var utcDayEnd = Helpers.DateTimeHelper.GetUtcEndOfDay(todayBusiness);
+
+                var currentDailySales = await _context.Tickets
+                    .AsNoTracking()
+                    .Where(t => t.BettingPoolId == bettingPoolId
+                        && !t.IsCancelled
+                        && ((t.CreatedAt >= utcDayStart && t.CreatedAt < utcDayEnd)
+                            || t.TicketLines.Any(tl => tl.DrawDate.Date == todayBusiness)))
+                    .SumAsync(t => (decimal?)t.GrandTotal) ?? 0m;
+
+                dailySaleLimit = bpConfig.DailySaleLimit.Value;
+                dailySaleRemaining = Math.Max(0, dailySaleLimit.Value - currentDailySales);
+
+                if (dailySaleRemaining <= 0 && !blocked)
+                {
+                    blocked = true;
+                    blockedBy = "daily_sale_limit";
+                }
+            }
+
+            // Credit limit (deactivation balance)
+            if (bpConfig.DeactivationBalance.HasValue && bpConfig.DeactivationBalance.Value > 0)
+            {
+                var currentBalance = await _context.Balances
+                    .AsNoTracking()
+                    .Where(b => b.BettingPoolId == bettingPoolId)
+                    .Select(b => b.CurrentBalance)
+                    .FirstOrDefaultAsync();
+
+                creditLimit = bpConfig.DeactivationBalance.Value;
+                creditRemaining = Math.Max(0, creditLimit.Value - currentBalance);
+
+                if (creditRemaining <= 0 && !blocked)
+                {
+                    blocked = true;
+                    blockedBy = "credit_limit";
+                }
+            }
+        }
+
         await Clients.Caller.PlayLimitAvailability(new PlayLimitAvailabilityResponse
         {
             BetNumber = betNumber,
@@ -497,7 +554,11 @@ public class LotteryHub : Hub<ILotteryHubClient>
             CurrentAmount = reportCurrentAmount,
             PercentageUsed = Math.Round(finalPercentage, 2),
             IsBlocked = blocked,
-            BlockedBy = blocked ? blockedBy : null
+            BlockedBy = blocked ? blockedBy : null,
+            DailySaleLimit = dailySaleLimit,
+            DailySaleRemaining = dailySaleRemaining,
+            CreditLimit = creditLimit,
+            CreditRemaining = creditRemaining
         });
     }
 

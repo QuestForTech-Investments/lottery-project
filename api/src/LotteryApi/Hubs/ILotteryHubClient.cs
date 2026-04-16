@@ -358,7 +358,15 @@ public class PlayLimitAvailabilityResponse : BaseNotification
     public decimal CurrentAmount { get; set; }
     public decimal PercentageUsed { get; set; }
     public bool IsBlocked { get; set; }
-    public string? BlockedBy { get; set; } // "global", "zona", "banca", "local_banca", "no_limit"
+    public string? BlockedBy { get; set; } // "global", "zona", "banca", "local_banca", "no_limit", "daily_sale_limit", "credit_limit"
+
+    // Daily sale limit info
+    public decimal? DailySaleLimit { get; set; }
+    public decimal? DailySaleRemaining { get; set; }
+
+    // Credit (deactivation balance) info
+    public decimal? CreditLimit { get; set; }
+    public decimal? CreditRemaining { get; set; }
 
     public PlayLimitAvailabilityResponse()
     {
