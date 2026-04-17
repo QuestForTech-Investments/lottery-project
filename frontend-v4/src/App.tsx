@@ -93,6 +93,7 @@ const LimitDefaultsMUI = lazy(() => import('@components/features/limits/LimitDef
 const AutomaticLimitsMUI = lazy(() => import('@components/features/limits/AutomaticLimits'))
 const DeleteLimitsMUI = lazy(() => import('@components/features/limits/DeleteLimits'))
 const HotNumbersMUI = lazy(() => import('@components/features/limits/HotNumbers'))
+const BlockedNumbersMUI = lazy(() => import('@components/features/limits/BlockedNumbersList'))
 
 // Collectors feature components
 const DebtCollectorsMUI = lazy(() => import('@components/features/collectors/DebtCollectors'))
@@ -239,6 +240,7 @@ function App() {
                           <Route path="/limits/automatic" element={<LazyRoute component={AutomaticLimitsMUI} />} />
                           <Route path="/limits/delete" element={<LazyRoute component={DeleteLimitsMUI} />} />
                           <Route path="/limits/hot-numbers" element={<LazyRoute component={HotNumbersMUI} />} />
+                          <Route path="/limits/blocked-numbers" element={<LazyRoute component={BlockedNumbersMUI} />} />
 
                           {/* Collectors */}
                           <Route path="/collectors" element={<LazyRoute component={DebtCollectorsMUI} />} />

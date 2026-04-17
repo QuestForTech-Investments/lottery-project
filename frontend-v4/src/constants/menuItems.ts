@@ -144,7 +144,8 @@ export const MENU_ITEMS: MenuItem[] = [
       { id: 'limit-defaults', label: 'Configuración', shortcut: 'C', path: '/limits/defaults' },
       { id: 'automatic-limits', label: 'Límites automáticos', shortcut: 'L', path: '/limits/automatic' },
       { id: 'delete-limit', label: 'Eliminar', shortcut: 'E', path: '/limits/delete' },
-      { id: 'hot-numbers', label: 'Números calientes', shortcut: 'N', path: '/limits/hot-numbers' }
+      { id: 'hot-numbers', label: 'Números calientes', shortcut: 'N', path: '/limits/hot-numbers' },
+      { id: 'blocked-numbers', label: 'Números bloqueados', shortcut: 'B', path: '/limits/blocked-numbers' }
     ]
   },
   { id: 'collectors', label: 'COBRADORES', icon: Chat, path: '/collectors' },

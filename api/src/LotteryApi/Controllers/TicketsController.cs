@@ -604,12 +604,35 @@ public class TicketsController : ControllerBase
             var validCombinations = new HashSet<(int DrawId, int GameTypeId)>(
                 drawGameCompatibilities.Select(dgc => (dgc.DrawId, dgc.GameTypeId)));
 
+            // Pre-fetch active blocked numbers for the draws in this ticket
+            var drawIdsInTicket = dto.Lines.Select(l => l.DrawId).Distinct().ToList();
+            var blockedLookup = await _context.BlockedNumbers
+                .AsNoTracking()
+                .Where(b => b.IsActive
+                    && drawIdsInTicket.Contains(b.DrawId)
+                    && (b.ExpirationDate == null || b.ExpirationDate > now))
+                .Select(b => new { b.DrawId, b.GameTypeId, b.BetNumber })
+                .ToListAsync();
+            var blockedSet = new HashSet<(int, int, string)>(
+                blockedLookup.Select(b => (b.DrawId, b.GameTypeId, b.BetNumber)));
+
             List<object> invalidBets = new List<object>();
             bool hasClosedDraw = false;
             var closedDrawIds = new HashSet<int>();
 
             foreach (var line in dto.Lines)
             {
+                if (blockedSet.Contains((line.DrawId, line.BetTypeId, line.BetNumber)))
+                {
+                    return UnprocessableEntity(new
+                    {
+                        code = "NUMBER_BLOCKED",
+                        message = $"El número {line.BetNumber} está bloqueado para este sorteo",
+                        drawId = line.DrawId,
+                        gameTypeId = line.BetTypeId,
+                        betNumber = line.BetNumber
+                    });
+                }
                 var draw = draws.FirstOrDefault(d => d.DrawId == line.DrawId);
                 if (draw == null)
                 {

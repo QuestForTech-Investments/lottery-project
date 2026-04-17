@@ -486,6 +486,22 @@ public class LotteryHub : Hub<ILotteryHubClient>
         var finalAvailable = Math.Max(0, minAvailable);
         var finalPercentage = reportLimitAmount > 0 ? ((reportLimitAmount - finalAvailable) / reportLimitAmount) * 100 : 0;
 
+        // Check if the number is globally blocked
+        var nowUtc = DateTime.UtcNow;
+        var isNumberBlocked = await _context.BlockedNumbers
+            .AsNoTracking()
+            .AnyAsync(b => b.IsActive
+                && b.DrawId == drawId
+                && b.GameTypeId == gameTypeId
+                && b.BetNumber == betNumber
+                && (b.ExpirationDate == null || b.ExpirationDate > nowUtc));
+
+        if (isNumberBlocked && !blocked)
+        {
+            blocked = true;
+            blockedBy = "number_blocked";
+        }
+
         // Check daily sale limit and credit limit
         decimal? dailySaleLimit = null;
         decimal? dailySaleRemaining = null;
