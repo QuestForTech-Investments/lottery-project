@@ -2,6 +2,7 @@ import { memo } from 'react';
 import { Box, Paper, Grid, Typography } from '@mui/material';
 import useDashboard from './hooks/useDashboard';
 import SalesBenefitChartWidget from '@components/features/dashboard/SalesBenefitChartWidget';
+import SalesByHourWidget from '@components/features/dashboard/SalesByHourWidget';
 import SalesByLotteryWidget from '@components/features/dashboard/SalesByLotteryWidget';
 import TopPositiveBancasWidget from '@components/features/dashboard/TopPositiveBancasWidget';
 import TopNegativeBancasWidget from '@components/features/dashboard/TopNegativeBancasWidget';
@@ -60,8 +61,8 @@ const DashboardMUI = () => {
           </Grid>
         </Grid>
 
-        {/* Row 3: Two charts */}
-        <Grid container spacing={3}>
+        {/* Row 3: Two charts side by side */}
+        <Grid container spacing={3} sx={{ mb: 3 }}>
           <Grid item xs={12} md={6}>
             <Box sx={{ height: 360 }}>
               <SalesBenefitChartWidget />
@@ -69,8 +70,15 @@ const DashboardMUI = () => {
           </Grid>
           <Grid item xs={12} md={6}>
             <Box sx={{ height: 360 }}>
-              <SalesByLotteryWidget />
+              <SalesByHourWidget />
             </Box>
+          </Grid>
+        </Grid>
+
+        {/* Row 4: Sales by draw full-width */}
+        <Grid container spacing={3}>
+          <Grid item xs={12}>
+            <SalesByLotteryWidget />
           </Grid>
         </Grid>
       </Box>

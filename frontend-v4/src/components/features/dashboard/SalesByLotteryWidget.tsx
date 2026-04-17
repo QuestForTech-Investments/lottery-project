@@ -6,7 +6,7 @@ import { formatCurrency } from '@/utils/formatCurrency';
 
 const ACCENT = '#6366f1';
 
-type SortKey = 'name' | 'tickets' | 'ventas' | 'comision' | 'neto';
+type SortKey = 'name' | 'tickets' | 'ventas' | 'premios' | 'comision' | 'descuento' | 'neto';
 type SortDir = 'asc' | 'desc';
 
 const SalesByDrawWidget: React.FC = () => {
@@ -47,7 +47,9 @@ const SalesByDrawWidget: React.FC = () => {
 
   const totals = useMemo(() => ({
     ventas: data.reduce((s, r) => s + (r.ventas || 0), 0),
+    premios: data.reduce((s, r) => s + (r.premios || 0), 0),
     comision: data.reduce((s, r) => s + (r.comision || 0), 0),
+    descuento: data.reduce((s, r) => s + (r.descuento || 0), 0),
     neto: data.reduce((s, r) => s + (r.neto || 0), 0),
     tickets: data.reduce((s, r) => s + (r.tickets || 0), 0),
   }), [data]);
@@ -74,7 +76,7 @@ const SalesByDrawWidget: React.FC = () => {
   );
 
   return (
-    <Paper elevation={3} sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <Paper elevation={3} sx={{ p: 2, display: 'flex', flexDirection: 'column' }}>
       <Typography variant="subtitle1" fontWeight="bold" align="center" sx={{ mb: 1 }}>
         Ventas por Sorteo del Día
       </Typography>
@@ -87,14 +89,16 @@ const SalesByDrawWidget: React.FC = () => {
           <Typography variant="body2" color="text.secondary">Sin ventas del día</Typography>
         </Box>
       ) : (
-        <TableContainer sx={{ flex: 1 }}>
+        <TableContainer>
           <Table size="small" stickyHeader>
             <TableHead>
               <TableRow>
                 {headerCell('name', 'Nombre')}
                 {headerCell('tickets', 'Tickets', 'right')}
-                {headerCell('ventas', 'Venta Total', 'right')}
+                {headerCell('ventas', 'Venta', 'right')}
                 {headerCell('comision', 'Comisión', 'right')}
+                {headerCell('descuento', 'Descuento', 'right')}
+                {headerCell('premios', 'Premio', 'right')}
                 {headerCell('neto', 'Neto', 'right')}
               </TableRow>
             </TableHead>
@@ -127,6 +131,8 @@ const SalesByDrawWidget: React.FC = () => {
                   <TableCell align="right" sx={{ fontSize: 13 }}>{row.tickets}</TableCell>
                   <TableCell align="right" sx={{ fontSize: 13 }}>{formatCurrency(row.ventas)}</TableCell>
                   <TableCell align="right" sx={{ fontSize: 13 }}>{formatCurrency(row.comision)}</TableCell>
+                  <TableCell align="right" sx={{ fontSize: 13 }}>{formatCurrency(row.descuento)}</TableCell>
+                  <TableCell align="right" sx={{ fontSize: 13 }}>{formatCurrency(row.premios)}</TableCell>
                   <TableCell align="right" sx={{ fontSize: 13 }}>{formatCurrency(row.neto)}</TableCell>
                 </TableRow>
               ))}
@@ -135,6 +141,8 @@ const SalesByDrawWidget: React.FC = () => {
                 <TableCell align="right" sx={{ fontSize: 13, fontWeight: 700 }}>{totals.tickets}</TableCell>
                 <TableCell align="right" sx={{ fontSize: 13, fontWeight: 700 }}>{formatCurrency(totals.ventas)}</TableCell>
                 <TableCell align="right" sx={{ fontSize: 13, fontWeight: 700 }}>{formatCurrency(totals.comision)}</TableCell>
+                <TableCell align="right" sx={{ fontSize: 13, fontWeight: 700 }}>{formatCurrency(totals.descuento)}</TableCell>
+                <TableCell align="right" sx={{ fontSize: 13, fontWeight: 700 }}>{formatCurrency(totals.premios)}</TableCell>
                 <TableCell align="right" sx={{ fontSize: 13, fontWeight: 700 }}>{formatCurrency(totals.neto)}</TableCell>
               </TableRow>
             </TableBody>

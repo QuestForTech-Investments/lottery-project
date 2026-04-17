@@ -29,6 +29,17 @@ export const getSalesBenefitChart = async (days = 7): Promise<SalesBenefitItem[]
   return await api.get(`/dashboard/sales-benefit-chart?days=${days}`) as SalesBenefitItem[] || [];
 };
 
+export interface SalesByHourItem {
+  hour: number;
+  label: string;
+  ventas: number;
+  tickets: number;
+}
+
+export const getSalesByHour = async (): Promise<SalesByHourItem[]> => {
+  return await api.get(`/dashboard/sales-by-hour`) as SalesByHourItem[] || [];
+};
+
 export interface SalesByDrawItem {
   drawId: number;
   name: string;
@@ -36,6 +47,7 @@ export interface SalesByDrawItem {
   ventas: number;
   premios: number;
   comision: number;
+  descuento: number;
   neto: number;
   tickets: number;
 }

@@ -32,18 +32,19 @@ public class DashboardController : ControllerBase
         var utcEnd = DateTimeHelper.GetUtcEndOfDay(today);
 
         // Load tickets in the range, then group by business-timezone date
+        // Use same net formula as daily-summary: TotalBetAmount - TotalDiscount - TotalCommission - TotalPrize
         var tickets = await _context.Tickets
             .AsNoTracking()
             .Where(t => !t.IsCancelled && t.CreatedAt >= utcStart && t.CreatedAt < utcEnd)
-            .Select(t => new { t.CreatedAt, t.GrandTotal, t.TotalNet })
+            .Select(t => new { t.CreatedAt, t.TotalBetAmount, t.TotalDiscount, t.TotalCommission, t.TotalPrize })
             .ToListAsync();
 
         var grouped = tickets
             .GroupBy(t => DateTimeHelper.ToBusinessTimezone(t.CreatedAt).Date)
             .ToDictionary(g => g.Key, g => new
             {
-                Ventas = g.Sum(t => t.GrandTotal),
-                Beneficio = g.Sum(t => t.TotalNet)
+                Ventas = g.Sum(t => t.TotalBetAmount),
+                Beneficio = g.Sum(t => t.TotalBetAmount) - g.Sum(t => t.TotalDiscount) - g.Sum(t => t.TotalCommission) - g.Sum(t => t.TotalPrize)
             });
 
         // Build result array with one entry per day in the range (fill gaps with 0)
@@ -60,6 +61,46 @@ public class DashboardController : ControllerBase
                 Label = label,
                 Ventas = totals?.Ventas ?? 0m,
                 Beneficio = totals?.Beneficio ?? 0m
+            });
+        }
+
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Hourly sales for today (0-23h). Returns ventas and tickets per hour in business timezone.
+    /// </summary>
+    [HttpGet("sales-by-hour")]
+    public async Task<ActionResult> GetSalesByHour()
+    {
+        var today = DateTimeHelper.TodayInBusinessTimezone();
+        var utcStart = DateTimeHelper.GetUtcStartOfDay(today);
+        var utcEnd = DateTimeHelper.GetUtcEndOfDay(today);
+
+        var tickets = await _context.Tickets
+            .AsNoTracking()
+            .Where(t => !t.IsCancelled && t.CreatedAt >= utcStart && t.CreatedAt < utcEnd)
+            .Select(t => new { t.CreatedAt, t.TotalBetAmount })
+            .ToListAsync();
+
+        var grouped = tickets
+            .GroupBy(t => DateTimeHelper.ToBusinessTimezone(t.CreatedAt).Hour)
+            .ToDictionary(g => g.Key, g => new
+            {
+                Ventas = g.Sum(t => t.TotalBetAmount),
+                Tickets = g.Count()
+            });
+
+        var result = new List<object>();
+        for (int h = 0; h < 24; h++)
+        {
+            grouped.TryGetValue(h, out var totals);
+            result.Add(new
+            {
+                Hour = h,
+                Label = $"{h:D2}h",
+                Ventas = totals?.Ventas ?? 0m,
+                Tickets = totals?.Tickets ?? 0
             });
         }
 
@@ -91,6 +132,7 @@ public class DashboardController : ControllerBase
                 Ventas = g.Sum(tl => tl.BetAmount),
                 Premios = g.Sum(tl => (decimal?)tl.PrizeAmount) ?? 0m,
                 Comision = g.Sum(tl => (decimal?)tl.CommissionAmount) ?? 0m,
+                Descuento = g.Sum(tl => (decimal?)tl.DiscountAmount) ?? 0m,
                 Neto = g.Sum(tl => (decimal?)tl.NetAmount) ?? 0m,
                 Tickets = g.Select(tl => tl.TicketId).Distinct().Count()
             })

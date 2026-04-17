@@ -14,7 +14,7 @@ const TopNegativeBancasWidget: React.FC = () => {
     let alive = true;
     (async () => {
       try {
-        const rows = await getTopNegativeBancas(10);
+        const rows = await getTopNegativeBancas(30);
         if (alive) setData(rows);
       } catch {
         if (alive) setData([]);
@@ -28,7 +28,7 @@ const TopNegativeBancasWidget: React.FC = () => {
   return (
     <Paper elevation={3} sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
       <Typography variant="subtitle1" fontWeight="bold" align="center" sx={{ mb: 1 }}>
-        Top 10 Bancas con Balance Negativo
+        Bancas con Balance Negativo
       </Typography>
       {loading ? (
         <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

@@ -303,7 +303,7 @@ const DailySales = (): React.ReactElement => {
               {subTab === 0 && (
                 <>
                   <Typography variant="h5" align="center" gutterBottom sx={{ fontWeight: 400, mb: 3, fontSize: '1.7rem' }}>
-                    Venta Neta del Día: <Box component="span" sx={{
+                    Venta Final del Día: <Box component="span" sx={{
                       backgroundColor: totals.final > 0 ? '#e8f5e9' : totals.final < 0 ? '#ffebee' : '#e3f2fd',
                       px: 2,
                       py: 0.5,

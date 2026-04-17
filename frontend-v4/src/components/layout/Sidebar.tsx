@@ -146,26 +146,11 @@ function Sidebar({ collapsed, hovered, onHoverChange, isMobile = false, mobileOp
           }}
         >
           <Box
-            sx={{
-              width: 64,
-              height: 64,
-              borderRadius: '50%',
-              bgcolor: 'white',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginRight: 2,
-              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.3)',
-              overflow: 'hidden',
-            }}
-          >
-            <Box
-              component="img"
-              src={lottobookLogo}
-              alt="Lottobook"
-              sx={{ width: 44, height: 44, objectFit: 'cover' }}
-            />
-          </Box>
+            component="img"
+            src={lottobookLogo}
+            alt="Lottobook"
+            sx={{ width: 60, height: 60, objectFit: 'contain', marginRight: 2 }}
+          />
           <Typography
             variant="h6"
             sx={{
@@ -371,10 +356,10 @@ function Sidebar({ collapsed, hovered, onHoverChange, isMobile = false, mobileOp
         sx={{
           display: 'flex',
           alignItems: 'center',
-          padding: showExpandedContent ? '8px 20px' : '8px 8px',
-          height: '64px',
-          minHeight: '64px',
-          maxHeight: '64px',
+          padding: showExpandedContent ? '6px 20px' : '6px 8px',
+          height: '72px',
+          minHeight: '72px',
+          maxHeight: '72px',
           borderBottom: '1px solid rgba(148, 163, 184, 0.2)',
           boxSizing: 'border-box',
           transition: 'padding 0.25s cubic-bezier(0.4, 0.0, 0.2, 1)',
@@ -382,27 +367,17 @@ function Sidebar({ collapsed, hovered, onHoverChange, isMobile = false, mobileOp
         }}
       >
         <Box
+          component="img"
+          src={lottobookLogo}
+          alt="Lottobook"
           sx={{
-            width: 44,
-            height: 44,
-            borderRadius: '50%',
-            bgcolor: 'white',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
+            width: 56,
+            height: 56,
+            objectFit: 'contain',
             marginRight: showExpandedContent ? 2 : 0,
-            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.3)',
-            overflow: 'hidden',
             transition: 'margin 0.25s cubic-bezier(0.4, 0.0, 0.2, 1)'
           }}
-        >
-          <Box
-            component="img"
-            src={lottobookLogo}
-            alt="Lottobook"
-            sx={{ width: 30, height: 30, objectFit: 'contain' }}
-          />
-        </Box>
+        />
         {showExpandedContent && (
           <Typography
             variant="h6"
