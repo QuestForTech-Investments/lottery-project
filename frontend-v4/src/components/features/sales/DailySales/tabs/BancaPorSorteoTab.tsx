@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Box,
   Card,
@@ -82,6 +83,7 @@ interface BettingPoolDrawResponse {
 interface Draw {
   drawId: number;
   drawName?: string;
+  lotteryId?: number;
   lotteryName?: string;
 }
 
@@ -94,6 +96,9 @@ interface BancaPorSorteoTabProps {
 }
 
 const BancaPorSorteoTab = ({ selectedDate, setSelectedDate, zones, selectedZones, handleZoneChange }: BancaPorSorteoTabProps): React.ReactElement => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlDrawId = searchParams.get('drawId');
+
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<BettingPoolDrawSales[]>([]);
   const [drawTotals, setDrawTotals] = useState<DrawTotals[]>([]);
@@ -103,6 +108,7 @@ const BancaPorSorteoTab = ({ selectedDate, setSelectedDate, zones, selectedZones
   const [fechaInicial, setFechaInicial] = useState(selectedDate);
   const [fechaFinal, setFechaFinal] = useState(selectedDate);
   const [searchTerm, setSearchTerm] = useState('');
+  const [autoSearch, setAutoSearch] = useState(false);
 
   // Load draws on mount
   useEffect(() => {
@@ -113,13 +119,36 @@ const BancaPorSorteoTab = ({ selectedDate, setSelectedDate, zones, selectedZones
           ? (response.items || [])
           : (response as Draw[] || []);
         setDraws(drawsArray);
-        setSelectedDraws(drawsArray.map(d => d.drawId));
+
+        // If a drawId is in the URL, pre-select only that draw and auto-trigger search
+        if (urlDrawId) {
+          const dId = parseInt(urlDrawId);
+          const match = drawsArray.find(d => d.drawId === dId);
+          setSelectedDraws(match ? [dId] : drawsArray.map(d => d.drawId));
+          // Consume the param so it doesn't re-apply on subsequent renders
+          searchParams.delete('drawId');
+          setSearchParams(searchParams, { replace: true });
+          // Auto-trigger search for today
+          setAutoSearch(true);
+        } else {
+          setSelectedDraws(drawsArray.map(d => d.drawId));
+        }
       } catch (error) {
         console.error('Error loading draws:', error);
       }
     };
     loadDraws();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Trigger auto-search after draws are loaded (e.g., when arriving via a dashboard link)
+  useEffect(() => {
+    if (autoSearch && selectedDraws.length > 0) {
+      setAutoSearch(false);
+      loadData();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoSearch, selectedDraws]);
 
   const loadData = useCallback(async () => {
     setLoading(true);

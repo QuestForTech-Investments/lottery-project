@@ -1,15 +1,17 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Paper, Typography, Box, CircularProgress, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TableSortLabel } from '@mui/material';
-import { getSalesByLottery, type SalesByLotteryItem } from '@/services/dashboardService';
+import { useNavigate } from 'react-router-dom';
+import { Paper, Typography, Box, CircularProgress, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TableSortLabel, Link } from '@mui/material';
+import { getSalesByDraw, type SalesByDrawItem } from '@/services/dashboardService';
 import { formatCurrency } from '@/utils/formatCurrency';
 
 const ACCENT = '#6366f1';
 
-type SortKey = 'name' | 'ventas' | 'premios' | 'tickets';
+type SortKey = 'name' | 'tickets' | 'ventas' | 'comision' | 'neto';
 type SortDir = 'asc' | 'desc';
 
-const SalesByLotteryWidget: React.FC = () => {
-  const [data, setData] = useState<SalesByLotteryItem[]>([]);
+const SalesByDrawWidget: React.FC = () => {
+  const navigate = useNavigate();
+  const [data, setData] = useState<SalesByDrawItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortKey, setSortKey] = useState<SortKey>('ventas');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
@@ -18,7 +20,7 @@ const SalesByLotteryWidget: React.FC = () => {
     let alive = true;
     (async () => {
       try {
-        const rows = await getSalesByLottery();
+        const rows = await getSalesByDraw();
         if (alive) setData(rows);
       } catch {
         if (alive) setData([]);
@@ -45,7 +47,8 @@ const SalesByLotteryWidget: React.FC = () => {
 
   const totals = useMemo(() => ({
     ventas: data.reduce((s, r) => s + (r.ventas || 0), 0),
-    premios: data.reduce((s, r) => s + (r.premios || 0), 0),
+    comision: data.reduce((s, r) => s + (r.comision || 0), 0),
+    neto: data.reduce((s, r) => s + (r.neto || 0), 0),
     tickets: data.reduce((s, r) => s + (r.tickets || 0), 0),
   }), [data]);
 
@@ -73,7 +76,7 @@ const SalesByLotteryWidget: React.FC = () => {
   return (
     <Paper elevation={3} sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
       <Typography variant="subtitle1" fontWeight="bold" align="center" sx={{ mb: 1 }}>
-        Ventas por Lotería del Día
+        Ventas por Sorteo del Día
       </Typography>
       {loading ? (
         <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -89,25 +92,38 @@ const SalesByLotteryWidget: React.FC = () => {
             <TableHead>
               <TableRow>
                 {headerCell('name', 'Nombre')}
-                {headerCell('ventas', 'Venta total', 'right')}
-                {headerCell('premios', 'Premios', 'right')}
                 {headerCell('tickets', 'Tickets', 'right')}
+                {headerCell('ventas', 'Venta Total', 'right')}
+                {headerCell('comision', 'Comisión', 'right')}
+                {headerCell('neto', 'Neto', 'right')}
               </TableRow>
             </TableHead>
             <TableBody>
               {sortedData.map(row => (
-                <TableRow key={row.lotteryId} hover>
-                  <TableCell sx={{ fontSize: 13, color: '#2c2c2c', fontWeight: 500 }}>{row.name}</TableCell>
-                  <TableCell align="right" sx={{ fontSize: 13 }}>{formatCurrency(row.ventas)}</TableCell>
-                  <TableCell align="right" sx={{ fontSize: 13 }}>{formatCurrency(row.premios)}</TableCell>
+                <TableRow key={row.drawId} hover>
+                  <TableCell sx={{ fontSize: 13, textTransform: 'uppercase' }}>
+                    <Link
+                      component="button"
+                      type="button"
+                      underline="hover"
+                      onClick={() => navigate(`/sales/day?tab=1&drawId=${row.drawId}`)}
+                      sx={{ color: ACCENT, fontWeight: 600, textAlign: 'left', textTransform: 'uppercase', fontSize: 13 }}
+                    >
+                      {row.name}
+                    </Link>
+                  </TableCell>
                   <TableCell align="right" sx={{ fontSize: 13 }}>{row.tickets}</TableCell>
+                  <TableCell align="right" sx={{ fontSize: 13 }}>{formatCurrency(row.ventas)}</TableCell>
+                  <TableCell align="right" sx={{ fontSize: 13 }}>{formatCurrency(row.comision)}</TableCell>
+                  <TableCell align="right" sx={{ fontSize: 13 }}>{formatCurrency(row.neto)}</TableCell>
                 </TableRow>
               ))}
               <TableRow sx={{ bgcolor: '#fafafa' }}>
                 <TableCell sx={{ fontSize: 13, fontWeight: 700 }}>Totales</TableCell>
-                <TableCell align="right" sx={{ fontSize: 13, fontWeight: 700 }}>{formatCurrency(totals.ventas)}</TableCell>
-                <TableCell align="right" sx={{ fontSize: 13, fontWeight: 700 }}>{formatCurrency(totals.premios)}</TableCell>
                 <TableCell align="right" sx={{ fontSize: 13, fontWeight: 700 }}>{totals.tickets}</TableCell>
+                <TableCell align="right" sx={{ fontSize: 13, fontWeight: 700 }}>{formatCurrency(totals.ventas)}</TableCell>
+                <TableCell align="right" sx={{ fontSize: 13, fontWeight: 700 }}>{formatCurrency(totals.comision)}</TableCell>
+                <TableCell align="right" sx={{ fontSize: 13, fontWeight: 700 }}>{formatCurrency(totals.neto)}</TableCell>
               </TableRow>
             </TableBody>
           </Table>
@@ -117,4 +133,4 @@ const SalesByLotteryWidget: React.FC = () => {
   );
 };
 
-export default SalesByLotteryWidget;
+export default SalesByDrawWidget;

@@ -5,7 +5,7 @@
  */
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Box,
   Card,
@@ -51,8 +51,10 @@ const DailySales = (): React.ReactElement => {
   const [bettingPools, setBettingPools] = useState<BettingPool[]>([]);
   const [zones, setZones] = useState<Zone[]>([]);
 
-  // Tab state
-  const [mainTab, setMainTab] = useState<number>(0);
+  // Tab state — can be pre-selected via ?tab=<index> in URL
+  const [searchParams] = useSearchParams();
+  const initialTab = parseInt(searchParams.get('tab') || '0', 10);
+  const [mainTab, setMainTab] = useState<number>(isNaN(initialTab) ? 0 : initialTab);
   const [subTab, setSubTab] = useState<number>(0);
 
   // Filter state

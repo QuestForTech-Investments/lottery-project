@@ -29,16 +29,18 @@ export const getSalesBenefitChart = async (days = 7): Promise<SalesBenefitItem[]
   return await api.get(`/dashboard/sales-benefit-chart?days=${days}`) as SalesBenefitItem[] || [];
 };
 
-export interface SalesByLotteryItem {
-  lotteryId: number;
+export interface SalesByDrawItem {
+  drawId: number;
   name: string;
   ventas: number;
   premios: number;
+  comision: number;
+  neto: number;
   tickets: number;
 }
 
-export const getSalesByLottery = async (): Promise<SalesByLotteryItem[]> => {
-  return await api.get(`/dashboard/sales-by-lottery`) as SalesByLotteryItem[] || [];
+export const getSalesByDraw = async (): Promise<SalesByDrawItem[]> => {
+  return await api.get(`/dashboard/sales-by-draw`) as SalesByDrawItem[] || [];
 };
 
 export const getTopPositiveBancas = async (limit = 10): Promise<BancaBalanceItem[]> => {

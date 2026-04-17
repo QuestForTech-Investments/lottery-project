@@ -67,10 +67,10 @@ public class DashboardController : ControllerBase
     }
 
     /// <summary>
-    /// Sales per lottery for today — with prizes and distinct ticket count.
+    /// Sales per draw for today — with prizes, commission, net and distinct ticket count.
     /// </summary>
-    [HttpGet("sales-by-lottery")]
-    public async Task<ActionResult> GetSalesByLottery()
+    [HttpGet("sales-by-draw")]
+    public async Task<ActionResult> GetSalesByDraw()
     {
         var today = DateTimeHelper.TodayInBusinessTimezone();
         var utcStart = DateTimeHelper.GetUtcStartOfDay(today);
@@ -81,14 +81,16 @@ public class DashboardController : ControllerBase
             .Where(tl => tl.Ticket != null && !tl.Ticket.IsCancelled
                 && ((tl.Ticket.CreatedAt >= utcStart && tl.Ticket.CreatedAt < utcEnd)
                     || tl.DrawDate.Date == today))
-            .Where(tl => tl.Draw != null && tl.Draw.Lottery != null)
-            .GroupBy(tl => new { tl.Draw!.LotteryId, tl.Draw.Lottery!.LotteryName })
+            .Where(tl => tl.Draw != null)
+            .GroupBy(tl => new { tl.DrawId, tl.Draw!.DrawName })
             .Select(g => new
             {
-                LotteryId = g.Key.LotteryId,
-                Name = g.Key.LotteryName,
+                DrawId = g.Key.DrawId,
+                Name = g.Key.DrawName,
                 Ventas = g.Sum(tl => tl.BetAmount),
                 Premios = g.Sum(tl => (decimal?)tl.PrizeAmount) ?? 0m,
+                Comision = g.Sum(tl => (decimal?)tl.CommissionAmount) ?? 0m,
+                Neto = g.Sum(tl => (decimal?)tl.NetAmount) ?? 0m,
                 Tickets = g.Select(tl => tl.TicketId).Distinct().Count()
             })
             .OrderByDescending(x => x.Ventas)
