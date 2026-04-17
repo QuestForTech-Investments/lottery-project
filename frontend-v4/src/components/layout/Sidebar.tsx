@@ -1,6 +1,7 @@
 import React, { useState, useCallback, memo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import lottobookLogo from '@/assets/images/lottobook-logo.png';
 import {
   Drawer,
   List,
@@ -135,10 +136,10 @@ function Sidebar({ collapsed, hovered, onHoverChange, isMobile = false, mobileOp
           sx={{
             display: 'flex',
             alignItems: 'center',
-            padding: '14px 20px',
-            height: '64px',
-            minHeight: '64px',
-            maxHeight: '64px',
+            padding: '8px 20px',
+            height: '80px',
+            minHeight: '80px',
+            maxHeight: '80px',
             borderBottom: '1px solid rgba(148, 163, 184, 0.2)',
             boxSizing: 'border-box',
             justifyContent: 'flex-start'
@@ -146,21 +147,24 @@ function Sidebar({ collapsed, hovered, onHoverChange, isMobile = false, mobileOp
         >
           <Box
             sx={{
-              width: 36,
-              height: 36,
+              width: 64,
+              height: 64,
               borderRadius: '50%',
-              background: 'linear-gradient(135deg, #319795 0%, #2c7a7b 100%)',
-              color: 'white',
+              bgcolor: 'white',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: '18px',
-              fontWeight: 'bold',
               marginRight: 2,
               boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.3)',
+              overflow: 'hidden',
             }}
           >
-            L
+            <Box
+              component="img"
+              src={lottobookLogo}
+              alt="Lottobook"
+              sx={{ width: 44, height: 44, objectFit: 'cover' }}
+            />
           </Box>
           <Typography
             variant="h6"
@@ -174,7 +178,7 @@ function Sidebar({ collapsed, hovered, onHoverChange, isMobile = false, mobileOp
               textRendering: 'optimizeLegibility',
             }}
           >
-            LOTTERY
+            ADMIN
           </Typography>
         </Box>
 
@@ -367,7 +371,7 @@ function Sidebar({ collapsed, hovered, onHoverChange, isMobile = false, mobileOp
         sx={{
           display: 'flex',
           alignItems: 'center',
-          padding: showExpandedContent ? '14px 20px' : '14px 8px',
+          padding: showExpandedContent ? '8px 20px' : '8px 8px',
           height: '64px',
           minHeight: '64px',
           maxHeight: '64px',
@@ -379,22 +383,25 @@ function Sidebar({ collapsed, hovered, onHoverChange, isMobile = false, mobileOp
       >
         <Box
           sx={{
-            width: 36,
-            height: 36,
+            width: 44,
+            height: 44,
             borderRadius: '50%',
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            color: 'white',
+            bgcolor: 'white',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontSize: '18px',
-            fontWeight: 'bold',
             marginRight: showExpandedContent ? 2 : 0,
             boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.3)',
+            overflow: 'hidden',
             transition: 'margin 0.25s cubic-bezier(0.4, 0.0, 0.2, 1)'
           }}
         >
-          L
+          <Box
+            component="img"
+            src={lottobookLogo}
+            alt="Lottobook"
+            sx={{ width: 30, height: 30, objectFit: 'contain' }}
+          />
         </Box>
         {showExpandedContent && (
           <Typography
@@ -422,7 +429,7 @@ function Sidebar({ collapsed, hovered, onHoverChange, isMobile = false, mobileOp
               boxSizing: 'border-box'
             }}
           >
-            LOTTERY
+            ADMIN
           </Typography>
         )}
       </Box>

@@ -32,6 +32,7 @@ export const getSalesBenefitChart = async (days = 7): Promise<SalesBenefitItem[]
 export interface SalesByDrawItem {
   drawId: number;
   name: string;
+  imageUrl?: string | null;
   ventas: number;
   premios: number;
   comision: number;

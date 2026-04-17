@@ -82,11 +82,12 @@ public class DashboardController : ControllerBase
                 && ((tl.Ticket.CreatedAt >= utcStart && tl.Ticket.CreatedAt < utcEnd)
                     || tl.DrawDate.Date == today))
             .Where(tl => tl.Draw != null)
-            .GroupBy(tl => new { tl.DrawId, tl.Draw!.DrawName })
+            .GroupBy(tl => new { tl.DrawId, tl.Draw!.DrawName, ImageUrl = tl.Draw.Lottery!.ImageUrl })
             .Select(g => new
             {
                 DrawId = g.Key.DrawId,
                 Name = g.Key.DrawName,
+                ImageUrl = g.Key.ImageUrl,
                 Ventas = g.Sum(tl => tl.BetAmount),
                 Premios = g.Sum(tl => (decimal?)tl.PrizeAmount) ?? 0m,
                 Comision = g.Sum(tl => (decimal?)tl.CommissionAmount) ?? 0m,

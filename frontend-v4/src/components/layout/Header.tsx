@@ -127,18 +127,7 @@ const QuickAccessButton = memo(({ Icon, label, path, index }: QuickAccessButtonP
 
 QuickAccessButton.displayName = 'QuickAccessButton'
 
-const quickAccessButtons: QuickAccessButtonConfig[] = [
-  { Icon: Receipt, label: 'Tickets', path: '/tickets/new' },
-  { Icon: Coins, label: 'Ventas', path: '/sales/day' },
-  { Icon: Tag, label: 'Resultados', path: '/results' },
-  { Icon: Home, label: 'Inicio', path: '/' },
-  { Icon: List, label: 'Bancas', path: '/betting-pools/list' },
-  { Icon: Description, label: 'Balances', path: '/balances/betting-pools' },
-  { Icon: ShoppingCart, label: 'Pagos', path: '/collections-payments/list' },
-  { Icon: AccountBalance, label: 'Sorteos', path: '/draws/list' },
-  { Icon: CreditCard, label: 'Transacciones', path: '/accountable-transactions' },
-  { Icon: CalendarMonth, label: 'Horarios', path: '/draws/schedules' },
-]
+const quickAccessButtons: QuickAccessButtonConfig[] = []
 
 const Header = ({ sidebarCollapsed, sidebarHovered, onToggleSidebar, isMobile = false }: HeaderProps) => {
   const navigate = useNavigate()
@@ -216,28 +205,27 @@ const Header = ({ sidebarCollapsed, sidebarHovered, onToggleSidebar, isMobile = 
           boxSizing: 'border-box',
         }}
       >
-        <IconButton
-          onClick={onToggleSidebar}
-          sx={{
-            background: isMobile
-              ? 'linear-gradient(135deg, #319795 0%, #2c7a7b 100%)'
-              : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            color: 'white',
-            marginLeft: '1px',
-            marginRight: 2,
-            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-            transition: 'all 0.3s ease',
-            '&:hover': {
-              background: isMobile
-                ? 'linear-gradient(135deg, #38b2ac 0%, #319795 100%)'
-                : 'linear-gradient(135deg, #5568d3 0%, #63408a 100%)',
-              boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
-              transform: 'translateY(-2px)',
-            },
-          }}
-        >
-          {isMobile ? <MenuIcon /> : (sidebarCollapsed ? <ChevronRight /> : <ChevronLeft />)}
-        </IconButton>
+        {/* Mobile-only menu toggle button */}
+        {isMobile && (
+          <IconButton
+            onClick={onToggleSidebar}
+            sx={{
+              background: 'linear-gradient(135deg, #319795 0%, #2c7a7b 100%)',
+              color: 'white',
+              marginLeft: '1px',
+              marginRight: 2,
+              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+              transition: 'all 0.3s ease',
+              '&:hover': {
+                background: 'linear-gradient(135deg, #38b2ac 0%, #319795 100%)',
+                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+                transform: 'translateY(-2px)',
+              },
+            }}
+          >
+            <MenuIcon />
+          </IconButton>
+        )}
 
         {/* Quick access buttons - hidden on mobile */}
         {!isMobile && (

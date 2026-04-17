@@ -102,15 +102,27 @@ const SalesByDrawWidget: React.FC = () => {
               {sortedData.map(row => (
                 <TableRow key={row.drawId} hover>
                   <TableCell sx={{ fontSize: 13, textTransform: 'uppercase' }}>
-                    <Link
-                      component="button"
-                      type="button"
-                      underline="hover"
-                      onClick={() => navigate(`/sales/day?tab=1&drawId=${row.drawId}`)}
-                      sx={{ color: ACCENT, fontWeight: 600, textAlign: 'left', textTransform: 'uppercase', fontSize: 13 }}
-                    >
-                      {row.name}
-                    </Link>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      {row.imageUrl ? (
+                        <Box
+                          component="img"
+                          src={row.imageUrl}
+                          alt={row.name}
+                          sx={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, bgcolor: '#f0f0f0' }}
+                        />
+                      ) : (
+                        <Box sx={{ width: 28, height: 28, borderRadius: '50%', bgcolor: '#e0e0e0', flexShrink: 0 }} />
+                      )}
+                      <Link
+                        component="button"
+                        type="button"
+                        underline="hover"
+                        onClick={() => navigate(`/sales/day?tab=1&drawId=${row.drawId}`)}
+                        sx={{ color: ACCENT, fontWeight: 600, textAlign: 'left', textTransform: 'uppercase', fontSize: 13 }}
+                      >
+                        {row.name}
+                      </Link>
+                    </Box>
                   </TableCell>
                   <TableCell align="right" sx={{ fontSize: 13 }}>{row.tickets}</TableCell>
                   <TableCell align="right" sx={{ fontSize: 13 }}>{formatCurrency(row.ventas)}</TableCell>
