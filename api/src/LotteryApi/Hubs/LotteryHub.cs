@@ -284,6 +284,17 @@ public class LotteryHub : Hub<ILotteryHubClient>
             "CheckPlayLimit: User={UserId}, Bet={BetNumber}, GameType={GameTypeId}, Draw={DrawId}, Pool={BettingPoolId}",
             userId, betNumber, gameTypeId, drawId, bettingPoolId);
 
+        // Users with PLAY_WITHOUT_AVAILABILITY permission bypass all availability checks
+        var canBypassLimits = false;
+        if (int.TryParse(userId, out var parsedUserId))
+        {
+            canBypassLimits = await _context.UserPermissions
+                .AsNoTracking()
+                .AnyAsync(up => up.UserId == parsedUserId
+                    && up.Permission!.PermissionCode == "PLAY_WITHOUT_AVAILABILITY"
+                    && up.IsActive);
+        }
+
         var draw = await _context.Draws
             .AsNoTracking()
             .Where(d => d.DrawId == drawId)
@@ -557,6 +568,13 @@ public class LotteryHub : Hub<ILotteryHubClient>
                     blockedBy = "credit_limit";
                 }
             }
+        }
+
+        // Unblock if user has permission to play without availability
+        if (canBypassLimits && blocked)
+        {
+            blocked = false;
+            blockedBy = null;
         }
 
         await Clients.Caller.PlayLimitAvailability(new PlayLimitAvailabilityResponse

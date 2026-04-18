@@ -521,9 +521,15 @@ public class TicketsController : ControllerBase
                 }
             }
 
+            // Check if user can bypass availability limits (admin permission)
+            var canBypassLimits = await _context.UserPermissions
+                .AnyAsync(up => up.UserId == dto.UserId
+                    && up.Permission!.PermissionCode == "PLAY_WITHOUT_AVAILABILITY"
+                    && up.IsActive);
+
             // 1.6 Validate daily sale limit
             var dailySaleLimit = bpConfig?.DailySaleLimit;
-            if (dailySaleLimit.HasValue && dailySaleLimit.Value > 0)
+            if (!canBypassLimits && dailySaleLimit.HasValue && dailySaleLimit.Value > 0)
             {
                 // Use UTC range matching business day (same logic as daily-summary endpoint)
                 var utcDayStart = DateTimeHelper.GetUtcStartOfDay(todayBusiness);
@@ -622,7 +628,7 @@ public class TicketsController : ControllerBase
 
             foreach (var line in dto.Lines)
             {
-                if (blockedSet.Contains((line.DrawId, line.BetTypeId, line.BetNumber)))
+                if (!canBypassLimits && blockedSet.Contains((line.DrawId, line.BetTypeId, line.BetNumber)))
                 {
                     return UnprocessableEntity(new
                     {
@@ -820,7 +826,7 @@ public class TicketsController : ControllerBase
                 totalCommission += line.CommissionAmount;
                 totalNet += line.NetAmount;
 
-                if (await CheckIfPlayIsOnLimits(line.DrawId, dto.BettingPoolId, line.BetNumber, line.BetAmount))
+                if (canBypassLimits || await CheckIfPlayIsOnLimits(line.DrawId, dto.BettingPoolId, line.BetNumber, line.BetAmount))
                 {
                     ticket.TicketLines.Add(line);
 
@@ -859,7 +865,7 @@ public class TicketsController : ControllerBase
             }
 
             // 9b. Validate max ticket amount
-            if (bpConfig?.MaxTicketAmount != null && bpConfig.MaxTicketAmount > 0
+            if (!canBypassLimits && bpConfig?.MaxTicketAmount != null && bpConfig.MaxTicketAmount > 0
                 && totalBetAmount > bpConfig.MaxTicketAmount)
             {
                 await transaction.RollbackAsync();
@@ -891,7 +897,7 @@ public class TicketsController : ControllerBase
             // 10.1 Check deactivation threshold (credit limit)
             // Credito = DeactivationBalance - CurrentBalance (calculated on the fly)
             // If new balance would exceed DeactivationBalance, block the sale
-            if (bpConfig?.DeactivationBalance != null)
+            if (!canBypassLimits && bpConfig?.DeactivationBalance != null)
             {
                 var currentBalanceRow = await _context.Balances
                     .AsNoTracking()
