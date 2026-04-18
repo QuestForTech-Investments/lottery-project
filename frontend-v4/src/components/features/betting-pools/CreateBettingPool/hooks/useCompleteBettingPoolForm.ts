@@ -1497,7 +1497,7 @@ const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
         // Stats panel configuration
         showStatsPanel: formData.showStatsPanel !== undefined ? formData.showStatsPanel : true,
         statsPanelConfig: JSON.stringify({
-          credit: formData.statCredit !== undefined ? formData.statCredit : true,
+          credit: (parseFloat(formData.deactivationBalance || '0') > 0) && (formData.statCredit !== undefined ? formData.statCredit : true),
           sales: formData.statSales !== undefined ? formData.statSales : true,
           percentage: formData.statPercentage !== undefined ? formData.statPercentage : true,
           prize: formData.statPrize !== undefined ? formData.statPrize : true,

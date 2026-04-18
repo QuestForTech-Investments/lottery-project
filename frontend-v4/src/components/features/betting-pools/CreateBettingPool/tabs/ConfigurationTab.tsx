@@ -562,7 +562,15 @@ const ConfigurationTab: React.FC<ConfigTabProps> = ({ formData, handleChange, be
               <Grid container spacing={1}>
                 <Grid item xs={6} sm={4} md={3}>
                   <FormControlLabel
-                    control={<Switch checked={formData.statCredit} onChange={handleChange} name="statCredit" size="small" />}
+                    control={
+                      <Switch
+                        checked={parseFloat(formData.deactivationBalance || '0') > 0 && formData.statCredit}
+                        onChange={handleChange}
+                        name="statCredit"
+                        size="small"
+                        disabled={!(parseFloat(formData.deactivationBalance || '0') > 0)}
+                      />
+                    }
                     label="Crédito"
                   />
                 </Grid>

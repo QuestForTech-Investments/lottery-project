@@ -207,19 +207,22 @@ public class SalesReportsController : ControllerBase
                     .FirstOrDefaultAsync();
 
                 // Credito = DeactivationBalance - CurrentBalance (remaining room until banca gets disabled)
+                // DeactivationBalance == 0 or null means "not configured" (no credit limit)
                 var deactivation = await _context.BettingPoolConfigs
                     .AsNoTracking()
                     .Where(c => c.BettingPoolId == bettingPoolId.Value)
                     .Select(c => c.DeactivationBalance ?? 0m)
                     .FirstOrDefaultAsync();
-                credito = deactivation - balance;
+                credito = deactivation > 0 ? Math.Max(0m, deactivation - balance) : 0m;
             }
             else
             {
                 balance = await _context.Balances.SumAsync(b => b.CurrentBalance);
+                // Only sum configured (> 0) deactivation balances
                 var totalDeactivation = await _context.BettingPoolConfigs.AsNoTracking()
-                    .SumAsync(c => c.DeactivationBalance ?? 0m);
-                credito = totalDeactivation - balance;
+                    .Where(c => c.DeactivationBalance.HasValue && c.DeactivationBalance.Value > 0)
+                    .SumAsync(c => c.DeactivationBalance!.Value);
+                credito = totalDeactivation > 0 ? Math.Max(0m, totalDeactivation - balance) : 0m;
             }
 
             // Caída: use real-time calculation for specific banca, or history for aggregate

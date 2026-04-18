@@ -897,7 +897,8 @@ public class TicketsController : ControllerBase
             // 10.1 Check deactivation threshold (credit limit)
             // Credito = DeactivationBalance - CurrentBalance (calculated on the fly)
             // If new balance would exceed DeactivationBalance, block the sale
-            if (!canBypassLimits && bpConfig?.DeactivationBalance != null)
+            // DeactivationBalance == 0 or null means "not configured" (no credit limit)
+            if (!canBypassLimits && bpConfig?.DeactivationBalance != null && bpConfig.DeactivationBalance.Value > 0)
             {
                 var currentBalanceRow = await _context.Balances
                     .AsNoTracking()
