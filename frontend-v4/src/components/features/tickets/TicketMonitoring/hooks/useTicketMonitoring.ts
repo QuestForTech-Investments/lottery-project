@@ -116,7 +116,7 @@ export const useTicketMonitoring = (): UseTicketMonitoringReturn => {
   const loadBancas = useCallback(async (signal?: AbortSignal): Promise<BettingPool[]> => {
     try {
       const response = await api.get<{ items?: BettingPoolApiResponse[] } | BettingPoolApiResponse[]>(
-        '/betting-pools'
+        '/betting-pools?page=1&pageSize=100'
       );
 
       if (signal?.aborted) return [];

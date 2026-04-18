@@ -433,6 +433,7 @@ public class SalesReportsController : ControllerBase
                 .Where(bh => bh.BalanceDate == snapshotDate)
                 .ToDictionaryAsync(bh => bh.BettingPoolId, bh => bh.BalanceAmount);
 
+            // Filter by DrawDate — tickets count on the day of the draw (including future-sale tickets)
             var salesData = await query
                 .Include(bp => bp.Balance)
                 .Select(bp => new

@@ -28,26 +28,35 @@ public class DashboardController : ControllerBase
     {
         var today = DateTimeHelper.TodayInBusinessTimezone();
         var startDate = today.AddDays(-(days - 1));
-        var utcStart = DateTimeHelper.GetUtcStartOfDay(startDate);
-        var utcEnd = DateTimeHelper.GetUtcEndOfDay(today);
 
-        // Load tickets in the range, then group by business-timezone date
-        // Use same net formula as daily-summary: TotalBetAmount - TotalDiscount - TotalCommission - TotalPrize
-        var tickets = await _context.Tickets
+        // Pull (DrawDate, TicketId, ticket totals) for lines in the range
+        // Filter by DrawDate to match daily sales report (future-sale tickets count on draw day)
+        var lineDays = await _context.TicketLines
             .AsNoTracking()
-            .Where(t => !t.IsCancelled && t.CreatedAt >= utcStart && t.CreatedAt < utcEnd)
-            .Select(t => new { t.CreatedAt, t.TotalBetAmount, t.TotalDiscount, t.TotalCommission, t.TotalPrize })
+            .Where(tl => tl.Ticket != null && !tl.Ticket.IsCancelled
+                && tl.DrawDate.Date >= startDate && tl.DrawDate.Date <= today)
+            .Select(tl => new
+            {
+                DrawDate = tl.DrawDate.Date,
+                TicketId = tl.TicketId,
+                Bet = tl.Ticket!.TotalBetAmount,
+                Discount = tl.Ticket.TotalDiscount,
+                Commission = tl.Ticket.TotalCommission,
+                Prize = tl.Ticket.TotalPrize
+            })
             .ToListAsync();
 
-        var grouped = tickets
-            .GroupBy(t => DateTimeHelper.ToBusinessTimezone(t.CreatedAt).Date)
+        // Deduplicate so a ticket with multiple lines on the same day is only counted once per day
+        var grouped = lineDays
+            .GroupBy(x => new { x.DrawDate, x.TicketId })
+            .Select(g => g.First())
+            .GroupBy(x => x.DrawDate)
             .ToDictionary(g => g.Key, g => new
             {
-                Ventas = g.Sum(t => t.TotalBetAmount),
-                Beneficio = g.Sum(t => t.TotalBetAmount) - g.Sum(t => t.TotalDiscount) - g.Sum(t => t.TotalCommission) - g.Sum(t => t.TotalPrize)
+                Ventas = g.Sum(x => x.Bet),
+                Beneficio = g.Sum(x => x.Bet - x.Discount - x.Commission - x.Prize)
             });
 
-        // Build result array with one entry per day in the range (fill gaps with 0)
         var dayNames = new[] { "Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb" };
         var result = new List<object>();
         for (int i = 0; i < days; i++)
