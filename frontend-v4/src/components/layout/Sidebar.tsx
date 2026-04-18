@@ -151,20 +151,37 @@ function Sidebar({ collapsed, hovered, onHoverChange, isMobile = false, mobileOp
             alt="Lottobook"
             sx={{ width: 60, height: 60, objectFit: 'contain', marginRight: 2 }}
           />
-          <Typography
-            variant="h6"
-            sx={{
-              fontSize: '1rem',
-              fontWeight: 400,
-              textTransform: 'uppercase',
-              color: '#fff',
-              fontFamily: '"Montserrat","Helvetica Neue",Arial,sans-serif',
-              WebkitFontSmoothing: 'antialiased',
-              textRendering: 'optimizeLegibility',
-            }}
-          >
-            ADMIN
-          </Typography>
+          <Box sx={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1 }}>
+            <Typography
+              sx={{
+                fontSize: '0.95rem',
+                fontWeight: 700,
+                textTransform: 'uppercase',
+                color: '#fff',
+                fontFamily: '"Montserrat","Helvetica Neue",Arial,sans-serif',
+                WebkitFontSmoothing: 'antialiased',
+                textRendering: 'optimizeLegibility',
+                lineHeight: 1.1,
+              }}
+            >
+              LOTTOBOOK
+            </Typography>
+            <Typography
+              sx={{
+                fontSize: '0.7rem',
+                fontWeight: 400,
+                textTransform: 'uppercase',
+                color: '#cbd5e1',
+                fontFamily: '"Montserrat","Helvetica Neue",Arial,sans-serif',
+                WebkitFontSmoothing: 'antialiased',
+                textRendering: 'optimizeLegibility',
+                lineHeight: 1.1,
+                letterSpacing: '0.5px',
+              }}
+            >
+              LOTTERY SYSTEM
+            </Typography>
+          </Box>
         </Box>
 
         {/* Menu Items */}
@@ -379,33 +396,39 @@ function Sidebar({ collapsed, hovered, onHoverChange, isMobile = false, mobileOp
           }}
         />
         {showExpandedContent && (
-          <Typography
-            variant="h6"
-            sx={{
-              fontSize: '1rem',
-              fontWeight: 400,
-              textTransform: 'uppercase',
-              color: '#fff',
-              fontFamily: '"Montserrat","Helvetica Neue",Arial,sans-serif',
-              WebkitFontSmoothing: 'antialiased',
-              textRendering: 'optimizeLegibility',
-              lineHeight: '30px',
-              textDecoration: 'none',
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              transition: 'all 300ms ease 0s',
-              display: 'block',
-              opacity: 1,
-              padding: '11px 0 8px',
-              transform: 'translate3d(0px, 0, 0)',
-              WebkitTextSizeAdjust: '100%',
-              WebkitTapHighlightColor: 'rgba(0,0,0,0)',
-              backgroundColor: 'transparent',
-              boxSizing: 'border-box'
-            }}
-          >
-            ADMIN
-          </Typography>
+          <Box sx={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1, overflow: 'hidden' }}>
+            <Typography
+              sx={{
+                fontSize: '0.95rem',
+                fontWeight: 700,
+                textTransform: 'uppercase',
+                color: '#fff',
+                fontFamily: '"Montserrat","Helvetica Neue",Arial,sans-serif',
+                WebkitFontSmoothing: 'antialiased',
+                textRendering: 'optimizeLegibility',
+                lineHeight: 1.1,
+                whiteSpace: 'nowrap',
+              }}
+            >
+              LOTTOBOOK
+            </Typography>
+            <Typography
+              sx={{
+                fontSize: '0.7rem',
+                fontWeight: 400,
+                textTransform: 'uppercase',
+                color: '#cbd5e1',
+                fontFamily: '"Montserrat","Helvetica Neue",Arial,sans-serif',
+                WebkitFontSmoothing: 'antialiased',
+                textRendering: 'optimizeLegibility',
+                lineHeight: 1.1,
+                letterSpacing: '0.5px',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              LOTTERY SYSTEM
+            </Typography>
+          </Box>
         )}
       </Box>
 

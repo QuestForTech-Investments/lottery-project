@@ -93,7 +93,7 @@ const SalesByDrawWidget: React.FC = () => {
           <Table size="small" stickyHeader>
             <TableHead>
               <TableRow>
-                {headerCell('name', 'Nombre')}
+                {headerCell('name', 'Lotería')}
                 {headerCell('tickets', 'Tickets', 'right')}
                 {headerCell('ventas', 'Venta', 'right')}
                 {headerCell('comision', 'Comisión', 'right')}

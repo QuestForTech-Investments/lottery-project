@@ -555,7 +555,8 @@ public class SalesReportsController : ControllerBase
     [HttpGet("by-draw")]
     public async Task<ActionResult<DrawSalesResponseDto>> GetSalesByDraw(
         [FromQuery] DateTime? date,
-        [FromQuery] string? zoneIds)
+        [FromQuery] string? zoneIds,
+        [FromQuery] int? bettingPoolId = null)
     {
         try
         {
@@ -563,7 +564,7 @@ public class SalesReportsController : ControllerBase
             var startDate = targetDate.Date;
             var endDate = startDate.AddDays(1).AddTicks(-1);
 
-            _logger.LogInformation("Getting sales by draw for {Date}", targetDate);
+            _logger.LogInformation("Getting sales by draw for {Date}, BettingPoolId: {BettingPoolId}", targetDate, bettingPoolId);
 
             // Parse zone IDs
             List<int>? zoneIdList = null;
@@ -581,6 +582,11 @@ public class SalesReportsController : ControllerBase
                     .ThenInclude(d => d!.Lottery)
                 .Where(tl => tl.Ticket != null && !tl.Ticket.IsCancelled)
                 .Where(tl => tl.DrawDate.Date >= startDate.Date && tl.DrawDate.Date <= endDate.Date);
+
+            if (bettingPoolId.HasValue)
+            {
+                query = query.Where(tl => tl.Ticket != null && tl.Ticket.BettingPoolId == bettingPoolId.Value);
+            }
 
             if (zoneIdList != null && zoneIdList.Count > 0)
             {
