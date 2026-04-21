@@ -826,7 +826,11 @@ public class TicketsController : ControllerBase
                 totalCommission += line.CommissionAmount;
                 totalNet += line.NetAmount;
 
-                if (canBypassLimits || await CheckIfPlayIsOnLimits(line.DrawId, dto.BettingPoolId, line.BetNumber, line.BetAmount))
+                var limitCheck = canBypassLimits
+                    ? new LimitCheckDetail { Passed = true, Attempted = line.BetAmount }
+                    : await CheckIfPlayIsOnLimitsDetailed(line.DrawId, dto.BettingPoolId, line.BetNumber, line.BetAmount);
+
+                if (limitCheck.Passed)
                 {
                     ticket.TicketLines.Add(line);
 
@@ -847,6 +851,18 @@ public class TicketsController : ControllerBase
                     );
 
                     lineError!["errorType"] = "exceeds-limit";
+
+                    // Attach limit detail for the UI
+                    var drawForLine = draws.FirstOrDefault(d => d.DrawId == line.DrawId);
+                    lineError["drawName"] = drawForLine?.DrawName ?? string.Empty;
+                    lineError["limitScope"] = limitCheck.LimitScope ?? string.Empty;
+                    lineError["limitScopeLabel"] = limitCheck.LimitScopeLabel ?? string.Empty;
+                    if (limitCheck.LimitAmount.HasValue) lineError["limitAmount"] = limitCheck.LimitAmount.Value;
+                    if (limitCheck.CurrentUsed.HasValue) lineError["currentUsed"] = limitCheck.CurrentUsed.Value;
+                    if (limitCheck.Available.HasValue) lineError["available"] = limitCheck.Available.Value;
+                    lineError["attempted"] = limitCheck.Attempted;
+                    if (limitCheck.OverBy.HasValue) lineError["overBy"] = limitCheck.OverBy.Value;
+
                     invalidBets.Add(lineError);
                 }
             }
@@ -2306,7 +2322,37 @@ public class TicketsController : ControllerBase
         }
     }
 
+    private class LimitCheckDetail
+    {
+        public bool Passed { get; set; }
+        public string? LimitScope { get; set; }        // banca | local-banca | zona | global | por-numero-banca | por-numero-zona | por-numero-global
+        public string? LimitScopeLabel { get; set; }   // Spanish label for UI
+        public decimal? LimitAmount { get; set; }
+        public decimal? CurrentUsed { get; set; }
+        public decimal? Available { get; set; }
+        public decimal Attempted { get; set; }
+        public decimal? OverBy { get; set; }
+    }
+
+    private static (string scope, string label) GetLimitScope(Models.Enums.LimitType type) => type switch
+    {
+        Models.Enums.LimitType.GeneralForBettingPool => ("banca", "Límite de banca"),
+        Models.Enums.LimitType.LocalForBettingPool => ("local-banca", "Límite local de banca"),
+        Models.Enums.LimitType.GeneralForZone => ("zona", "Límite de zona"),
+        Models.Enums.LimitType.GeneralForGroup => ("global", "Límite global"),
+        Models.Enums.LimitType.ByNumberForBettingPool => ("por-numero-banca", "Límite por número (banca)"),
+        Models.Enums.LimitType.ByNumberForZone => ("por-numero-zona", "Límite por número (zona)"),
+        Models.Enums.LimitType.ByNumberForGroup => ("por-numero-global", "Límite por número (global)"),
+        _ => ("desconocido", "Límite")
+    };
+
     private async Task<bool> CheckIfPlayIsOnLimits(int drawId, int bettingPoolId, string betNumber, decimal bet)
+    {
+        var detail = await CheckIfPlayIsOnLimitsDetailed(drawId, bettingPoolId, betNumber, bet);
+        return detail.Passed;
+    }
+
+    private async Task<LimitCheckDetail> CheckIfPlayIsOnLimitsDetailed(int drawId, int bettingPoolId, string betNumber, decimal bet)
     {
         var now = DateTime.UtcNow;
         var today = DateOnly.FromDateTime(Helpers.DateTimeHelper.TodayInBusinessTimezone());
@@ -2368,7 +2414,16 @@ public class TicketsController : ControllerBase
         }
 
         // No banca or zona limit = blocked (can't sell without limits)
-        if (limitRule == null) return false;
+        if (limitRule == null)
+        {
+            return new LimitCheckDetail
+            {
+                Passed = false,
+                LimitScope = "no-config",
+                LimitScopeLabel = "Sin límite configurado",
+                Attempted = bet
+            };
+        }
 
         // Also find global limit (must check separately)
         var globalRule = await _context.LimitRules.AsNoTracking()
@@ -2415,7 +2470,21 @@ public class TicketsController : ControllerBase
                 .Select(a => a.MaxAmount)
                 .FirstOrDefaultAsync();
 
-            if (maxLimit <= 0) return false;
+            if (maxLimit <= 0)
+            {
+                var (sc, lb) = GetLimitScope(rule.LimitType);
+                return new LimitCheckDetail
+                {
+                    Passed = false,
+                    LimitScope = sc,
+                    LimitScopeLabel = lb,
+                    LimitAmount = 0m,
+                    CurrentUsed = 0m,
+                    Available = 0m,
+                    Attempted = bet,
+                    OverBy = bet
+                };
+            }
 
             // Consumption for THIS specific number + game type
             var consumptionQuery = _context.LimitConsumptions
@@ -2442,9 +2511,24 @@ public class TicketsController : ControllerBase
                 "Limit check: draw={DrawId}, bet={BetNumber}, gameType={GameTypeId}, limit={MaxLimit}, used={TotalUsed}, bet={Bet}, ruleType={RuleType}",
                 drawId, betNumber, gameTypeId, maxLimit, totalUsed, bet, rule.LimitType);
 
-            if (totalUsed + bet > maxLimit) return false;
+            if (totalUsed + bet > maxLimit)
+            {
+                var (sc, lb) = GetLimitScope(rule.LimitType);
+                var available = Math.Max(0m, maxLimit - totalUsed);
+                return new LimitCheckDetail
+                {
+                    Passed = false,
+                    LimitScope = sc,
+                    LimitScopeLabel = lb,
+                    LimitAmount = maxLimit,
+                    CurrentUsed = totalUsed,
+                    Available = available,
+                    Attempted = bet,
+                    OverBy = (totalUsed + bet) - maxLimit
+                };
+            }
         }
 
-        return true;
+        return new LimitCheckDetail { Passed = true, Attempted = bet };
     }
 }

@@ -422,6 +422,68 @@ public class TransactionGroupsController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Get transaction lines for a specific betting pool on a specific day (business timezone).
+    /// Returns lines where the banca is either entity1 or entity2.
+    /// </summary>
+    [HttpGet("by-betting-pool")]
+    public async Task<ActionResult<List<TransactionLineReportDto>>> GetByBettingPool(
+        [FromQuery] int bettingPoolId,
+        [FromQuery] DateTime? date = null)
+    {
+        try
+        {
+            if (bettingPoolId <= 0)
+            {
+                return BadRequest(new { error = "bettingPoolId es requerido" });
+            }
+
+            var targetDate = (date ?? Helpers.DateTimeHelper.TodayInBusinessTimezone()).Date;
+            var utcStart = Helpers.DateTimeHelper.GetUtcStartOfDay(targetDate);
+            var utcEnd = Helpers.DateTimeHelper.GetUtcEndOfDay(targetDate);
+
+            var results = await _context.TransactionGroupLines
+                .AsNoTracking()
+                .Include(l => l.Group)
+                    .ThenInclude(g => g!.CreatedByUser)
+                .Where(l => l.Group!.Status != "Eliminado" && l.Group!.Status != "Rechazado")
+                .Where(l => l.Group!.CreatedAt >= utcStart && l.Group!.CreatedAt < utcEnd)
+                .Where(l =>
+                    (l.Entity1Type == "bettingPool" && l.Entity1Id == bettingPoolId) ||
+                    (l.Entity2Type == "bettingPool" && l.Entity2Id == bettingPoolId))
+                .OrderByDescending(l => l.Group!.CreatedAt)
+                .ThenBy(l => l.LineId)
+                .Select(l => new TransactionLineReportDto
+                {
+                    LineId = l.LineId,
+                    GroupId = l.GroupId,
+                    GroupNumber = l.Group!.GroupNumber,
+                    TransactionType = l.TransactionType,
+                    CreatedAt = l.Group.CreatedAt,
+                    CreatedByName = l.Group.CreatedByUser != null ? l.Group.CreatedByUser.Username : null,
+                    Entity1Name = l.Entity1Name,
+                    Entity1Code = l.Entity1Code,
+                    Entity2Name = l.Entity2Name,
+                    Entity2Code = l.Entity2Code,
+                    Entity1InitialBalance = l.Entity1InitialBalance,
+                    Entity2InitialBalance = l.Entity2InitialBalance,
+                    Debit = l.Debit,
+                    Credit = l.Credit,
+                    Entity1FinalBalance = l.Entity1FinalBalance,
+                    Entity2FinalBalance = l.Entity2FinalBalance,
+                    Notes = l.Notes
+                })
+                .ToListAsync();
+
+            return Ok(results);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting transactions by betting pool");
+            return StatusCode(500, new { error = "Error al obtener transacciones por banca" });
+        }
+    }
+
     [HttpGet("summary")]
     public async Task<ActionResult<TransactionSummaryResponseDto>> GetSummary(
         [FromQuery] string? startDate = null,
