@@ -146,11 +146,14 @@ public class CaidaCalculationService : ICaidaCalculationService
         var riferoDiscount = tickets.Where(t => t.DiscountMode == "RIFERO").Sum(t => t.TotalDiscount);
         var netAmount = totalSold + riferoDiscount - totalCommissions - totalPrizes;
 
-        // Read accumulated from last history entry (not config, which may be stale from real-time updates)
+        // Read accumulated from the most recently created history entry.
+        // Ordering by CreatedAt (not PeriodEnd) ensures MANUAL_ADJUSTMENT and COBRO entries
+        // made within the current period override the previous period's weekly snapshot.
         var lastHistory = await _context.CaidaHistory
             .AsNoTracking()
-            .Where(h => h.BettingPoolId == bpId && h.PeriodEnd < periodStart)
-            .OrderByDescending(h => h.PeriodEnd)
+            .Where(h => h.BettingPoolId == bpId)
+            .OrderByDescending(h => h.CreatedAt)
+            .ThenByDescending(h => h.CaidaId)
             .FirstOrDefaultAsync(ct);
         var accumulatedBefore = lastHistory?.AccumulatedFallAfter ?? 0;
         decimal caidaAmount = 0;
@@ -363,13 +366,15 @@ public class CaidaCalculationService : ICaidaCalculationService
         var riferoDiscount = tickets.Where(t => t.DiscountMode == "RIFERO").Sum(t => t.TotalDiscount);
         var netAmount = totalSold + riferoDiscount - totalCommissions - totalPrizes;
 
-        // Get the accumulated_fall at the start of the current period
-        // (from the last caida_history entry before this period)
+        // Get the current accumulated_fall state from the most recently created history entry.
+        // Using CreatedAt (not PeriodEnd) respects MANUAL_ADJUSTMENT / COBRO entries made
+        // within the current period.
         var lastHistory = await _context.CaidaHistory
             .AsNoTracking()
-            .Where(h => h.BettingPoolId == bpId && h.PeriodEnd < periodStart)
-            .OrderByDescending(h => h.PeriodEnd)
-            .ThenByDescending(h => h.CreatedAt)
+            .Where(h => h.BettingPoolId == bpId
+                && !(h.PeriodType != "MANUAL_ADJUSTMENT" && h.PeriodStart == periodStart && h.PeriodEnd == periodEnd))
+            .OrderByDescending(h => h.CreatedAt)
+            .ThenByDescending(h => h.CaidaId)
             .FirstOrDefaultAsync(ct);
 
         var accumulatedBefore = lastHistory?.AccumulatedFallAfter ?? 0;
