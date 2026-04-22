@@ -143,6 +143,8 @@ public class TicketListDto
     public string TicketState { get; set; } = "P";
     public bool IsCancelled { get; set; }
     public DateTime? CancelledAt { get; set; }
+    public int? CancelledBy { get; set; }
+    public string? CancelledByName { get; set; }
     public bool IsPaid { get; set; }
     public DateTime? PaidAt { get; set; }
     public string? CustomerName { get; set; }

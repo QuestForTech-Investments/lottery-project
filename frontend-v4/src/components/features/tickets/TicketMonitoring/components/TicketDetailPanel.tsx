@@ -308,6 +308,7 @@ interface PlayRowProps {
   index: number;
   isWinner: boolean;
   isPending: boolean;
+  isCancelled?: boolean;
   onEditPrize: (betNumber: string) => void;
   isOutOfScheduleSale?: boolean;
   isPreviousDay?: boolean;
@@ -323,13 +324,14 @@ const formatBetNumber = (num: string, betTypeName?: string): string => {
   return num;
 };
 
-const PlayRow: FC<PlayRowProps> = memo(({ line, index, isWinner, isPending, onEditPrize, isOutOfScheduleSale, isPreviousDay, isFutureDay }) => {
+const PlayRow: FC<PlayRowProps> = memo(({ line, index, isWinner, isPending, isCancelled, onEditPrize, isOutOfScheduleSale, isPreviousDay, isFutureDay }) => {
   const backgroundColor = useMemo(() => {
     const isEven = index % 2 === 0;
+    if (isCancelled) return isEven ? ROW_COLORS.pendingEven : ROW_COLORS.pendingOdd;
     if (isWinner) return isEven ? ROW_COLORS.winnerEven : ROW_COLORS.winnerOdd;
     if (isPending) return isEven ? ROW_COLORS.pendingEven : ROW_COLORS.pendingOdd;
     return isEven ? ROW_COLORS.loserEven : ROW_COLORS.loserOdd;
-  }, [isWinner, isPending, index]);
+  }, [isWinner, isPending, isCancelled, index]);
 
   const handleEditClick = useCallback(() => {
     onEditPrize(line.betNumber);
@@ -534,6 +536,7 @@ const TicketDetailPanel: FC<TicketDetailPanelProps> = memo(({ ticket, onClose })
                 index={index}
                 isWinner={line.prizeAmount > 0}
                 isPending={line.lineStatus === 'pending' || (!line.lineStatus && ticket.estado === 'Pendiente')}
+                isCancelled={ticket.estado === 'Cancelado'}
                 onEditPrize={handleEditPrize}
                 isOutOfScheduleSale={line.isOutOfScheduleSale}
                 isPreviousDay={ticket.isPreviousDay}

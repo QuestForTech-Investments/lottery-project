@@ -143,7 +143,7 @@ export const COLUMN_WIDTHS: Record<string, number> = {
   'Usuario': 60,
   'Monto': 80,
   'Premio': 60,
-  'Fecha de cancelación': 140,
+  'Fecha de cancelación': 210,
   'Estado': 70,
   'Acciones': 60,
 };

@@ -99,6 +99,9 @@ public class TicketsController : ControllerBase
                 IsCancelled = t.IsCancelled,
                 CancelledAt = t.CancelledAt,
                 CancelledBy = t.CancelledBy,
+                CancelledByName = t.CancelledBy != null
+                    ? _context.Users.Where(u => u.UserId == t.CancelledBy).Select(u => u.Username).FirstOrDefault()
+                    : null,
                 CancellationReason = t.CancellationReason,
                 IsPaid = t.IsPaid,
                 PaidAt = t.PaidAt,
@@ -1284,6 +1287,10 @@ public class TicketsController : ControllerBase
                     TicketState = t.TicketState,
                     IsCancelled = t.IsCancelled,
                     CancelledAt = t.CancelledAt,
+                    CancelledBy = t.CancelledBy,
+                    CancelledByName = t.CancelledBy != null
+                        ? _context.Users.Where(u => u.UserId == t.CancelledBy).Select(u => u.Username).FirstOrDefault()
+                        : null,
                     IsPaid = t.IsPaid,
                     PaidAt = t.PaidAt,
                     CustomerName = t.CustomerName,

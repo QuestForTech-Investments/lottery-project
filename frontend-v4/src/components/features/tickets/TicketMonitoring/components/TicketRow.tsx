@@ -85,7 +85,11 @@ const TicketRow: FC<TicketRowProps> = memo(({ ticket, isSelected, onRowClick, on
       <TableCell>{ticket.usuario}</TableCell>
       <TableCell>{formatCurrency(ticket.monto)}</TableCell>
       <TableCell>{formatCurrency(ticket.premio)}</TableCell>
-      <TableCell>{ticket.fechaCancelacion || '-'}</TableCell>
+      <TableCell sx={{ whiteSpace: 'nowrap' }}>
+        {ticket.fechaCancelacion
+          ? `${ticket.fechaCancelacion}${ticket.canceladoPor ? ` (${ticket.canceladoPor})` : ''}`
+          : '-'}
+      </TableCell>
       <TableCell sx={{ color: getEstadoColor(ticket.estado), textAlign: 'center', px: 0 }}>
         {ticket.estado}
       </TableCell>

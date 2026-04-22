@@ -98,6 +98,8 @@ export interface TicketResponse {
   totalDiscount: number;
   totalPrize: number;
   cancelledAt: string | null;
+  cancelledBy?: number | null;
+  cancelledByName?: string | null;
   isCancelled: boolean;
   isPaid: boolean;
   bettingPoolId: number;
@@ -151,6 +153,7 @@ export interface MappedTicket {
   descuento: number;
   premio: number;
   fechaCancelacion: string | null;
+  canceladoPor: string | null;
   estado: 'Ganador' | 'Cancelado' | 'Pagado' | 'Pendiente' | 'Perdedor';
   isPreviousDay?: boolean;
   isFutureDay?: boolean;
@@ -262,6 +265,7 @@ export const mapTicketResponse = (ticket: TicketResponse): MappedTicket => {
     fechaCancelacion: ticket.cancelledAt
       ? formatDateToSantoDomingo(ticket.cancelledAt)
       : null,
+    canceladoPor: ticket.cancelledByName || null,
     estado,
     isOutOfScheduleSale: ticket.isOutOfScheduleSale || false,
     isCancelledOutOfTime: ticket.isCancelledOutOfTime || false,
