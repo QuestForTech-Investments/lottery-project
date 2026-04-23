@@ -11,6 +11,10 @@ export type GameType =
   | 'tripleta'
   | 'cash3Straight'
   | 'cash3Box'
+  | 'cash3FrontStraight'
+  | 'cash3FrontBox'
+  | 'cash3BackStraight'
+  | 'cash3BackBox'
   | 'play4Straight'
   | 'play4Box'
   | 'superPale'
@@ -20,7 +24,11 @@ export type GameType =
   | 'singulacion2'
   | 'singulacion3'
   | 'pickTwo'
-  | 'pick5Straight';
+  | 'pickTwoFront'
+  | 'pickTwoBack'
+  | 'pickTwoMiddle'
+  | 'pick5Straight'
+  | 'pick5Box';
 
 // Prize data structures
 export interface DirectoPrizes {
@@ -43,6 +51,10 @@ export interface PrizesData {
   tripleta: { primerPago: string; segundoPago: string };
   cash3Straight: { todosSecuencia: string; triples: string };
   cash3Box: { threeWay: string; sixWay: string };
+  cash3FrontStraight: { todosSecuencia: string; triples: string };
+  cash3FrontBox: { threeWay: string; sixWay: string };
+  cash3BackStraight: { todosSecuencia: string; triples: string };
+  cash3BackBox: { threeWay: string; sixWay: string };
   play4Straight: { todosSecuencia: string; dobles: string };
   play4Box: { twentyFourWay: string; twelveWay: string; sixWay: string; fourWay: string };
   superPale: { primerPago: string };
@@ -52,7 +64,11 @@ export interface PrizesData {
   singulacion2: { primerPago: string };
   singulacion3: { primerPago: string };
   pickTwo: { primerPago: string; dobles: string };
+  pickTwoFront: { primerPago: string; dobles: string };
+  pickTwoBack: { primerPago: string; dobles: string };
+  pickTwoMiddle: { primerPago: string; dobles: string };
   pick5Straight: { todosSecuencia: string; dobles: string };
+  pick5Box: { fiveWay: string; tenWay: string; twentyWay: string; thirtyWay: string };
 }
 
 // Commissions
@@ -63,6 +79,10 @@ export interface CommissionsData {
   tripleta: string;
   cash3Straight: string;
   cash3Box: string;
+  cash3FrontStraight: string;
+  cash3FrontBox: string;
+  cash3BackStraight: string;
+  cash3BackBox: string;
   play4Straight: string;
   play4Box: string;
   superPale: string;
@@ -72,7 +92,11 @@ export interface CommissionsData {
   singulacion2: string;
   singulacion3: string;
   pickTwo: string;
+  pickTwoFront: string;
+  pickTwoBack: string;
+  pickTwoMiddle: string;
   pick5Straight: string;
+  pick5Box: string;
   [key: string]: string;
 }
 

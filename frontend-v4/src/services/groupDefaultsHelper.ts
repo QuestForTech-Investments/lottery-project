@@ -1,4 +1,4 @@
-import { getGroupDefaults, getAllowedValues, getFooterDefaults, type GroupDefaultConfig } from './groupConfigService';
+import { getGroupDefaults, getAllowedValues, getFooterDefaults, getBpDefaults, type GroupDefaultConfig } from './groupConfigService';
 import { getAllBetTypesWithFields } from './prizeService';
 import { PRIZE_FIELDS_CONFIG } from '@components/features/my-group/GroupConfiguration/constants';
 
@@ -26,25 +26,42 @@ const normalize = (s: string): string =>
  *
  * Returns a record of `general_*` keys with numeric values.
  */
-export const buildPrefillFromGroupDefaults = async (): Promise<Record<string, number | string>> => {
-  const [defaults, betTypes, footerLines] = await Promise.all([
+const BP_BOOLEAN_KEYS = new Set([
+  'enableTemporaryBalance', 'controlWinningTickets', 'allowJackpot',
+  'printEnabled', 'printTicketCopy', 'smsOnly', 'enableRecharges',
+  'printRechargeReceipt', 'allowPasswordChange', 'useCentralLogo',
+  'enableAutoLogout', 'showStatsPanel',
+  'statCredit', 'statSales', 'statPercentage', 'statPrize', 'statNet',
+  'statDiscount', 'statFinal', 'statBalance', 'statFall', 'statAccumulatedFall',
+]);
+
+export const buildPrefillFromGroupDefaults = async (): Promise<Record<string, number | string | boolean>> => {
+  const [defaults, betTypes, footerLines, bpDefaults] = await Promise.all([
     getGroupDefaults(),
     getAllBetTypesWithFields() as Promise<BetTypeWithFields[]>,
     getFooterDefaults(),
+    getBpDefaults(),
   ]);
 
-  if ((!defaults || defaults.length === 0) && (!footerLines || footerLines.length === 0)) return {};
+  if ((!defaults || defaults.length === 0) && (!footerLines || footerLines.length === 0) && (!bpDefaults || Object.keys(bpDefaults).length === 0)) return {};
 
   const defaultsByNormGameType = new Map<string, GroupDefaultConfig>();
   (defaults || []).forEach(d => defaultsByNormGameType.set(normalize(d.gameType), d));
 
-  const updates: Record<string, number | string> = {};
+  const updates: Record<string, number | string | boolean> = {};
 
   footerLines.forEach(l => {
     if (l.lineNumber >= 1 && l.lineNumber <= 6 && l.lineText) {
       updates[`footerText${l.lineNumber}`] = l.lineText;
     }
   });
+
+  if (bpDefaults) {
+    Object.entries(bpDefaults).forEach(([k, v]) => {
+      if (v === null || v === undefined) return;
+      updates[k] = BP_BOOLEAN_KEYS.has(k) ? v === 'true' : v;
+    });
+  }
 
   betTypes.forEach(bt => {
     const key = normalize(bt.betTypeCode);

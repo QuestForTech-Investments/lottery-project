@@ -183,11 +183,38 @@ const EditBettingPoolMUI: React.FC = () => {
             )}
 
             {activeTab === 1 && (
-              <ConfigurationTab
-                formData={formData as unknown as Parameters<typeof ConfigurationTab>[0]['formData']}
-                handleChange={handleChange as unknown as Parameters<typeof ConfigurationTab>[0]['handleChange']}
-                bettingPoolId={id ? parseInt(id) : undefined}
-              />
+              <>
+                <Box sx={{ px: 2, mb: 2, display: 'flex', justifyContent: 'flex-end' }}>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={async () => {
+                      if (!window.confirm('Esto sobrescribirá la configuración de esta banca con los valores predeterminados del grupo. ¿Continuar?')) return;
+                      try {
+                        const updates = await buildPrefillFromGroupDefaults();
+                        // Only keep BP config keys (skip prize/footer keys)
+                        const configUpdates: Record<string, string | number | boolean> = {};
+                        Object.entries(updates).forEach(([k, v]) => {
+                          if (k.startsWith('general_') || k.startsWith('footerText')) return;
+                          configUpdates[k] = v;
+                        });
+                        if (Object.keys(configUpdates).length > 0) {
+                          handleBatchChange(configUpdates);
+                        }
+                      } catch (err) {
+                        console.error('Error loading group defaults:', err);
+                      }
+                    }}
+                  >
+                    Aplicar defaults del grupo
+                  </Button>
+                </Box>
+                <ConfigurationTab
+                  formData={formData as unknown as Parameters<typeof ConfigurationTab>[0]['formData']}
+                  handleChange={handleChange as unknown as Parameters<typeof ConfigurationTab>[0]['handleChange']}
+                  bettingPoolId={id ? parseInt(id) : undefined}
+                />
+              </>
             )}
 
             {activeTab === 2 && (

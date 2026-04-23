@@ -58,6 +58,7 @@ public class LotteryDbContext : DbContext
     public DbSet<GroupDefaultConfig> GroupDefaultConfigs { get; set; }
     public DbSet<GroupAllowedValue> GroupAllowedValues { get; set; }
     public DbSet<GroupFooterDefault> GroupFooterDefaults { get; set; }
+    public DbSet<GroupDefaultBpConfig> GroupDefaultBpConfigs { get; set; }
 
     // Expense Categories
     public DbSet<ExpenseCategory> ExpenseCategories { get; set; }

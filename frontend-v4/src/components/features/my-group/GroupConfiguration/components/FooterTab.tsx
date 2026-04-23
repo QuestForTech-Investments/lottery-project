@@ -14,7 +14,7 @@ const LINE_KEYS: (keyof FooterData)[] = ['line1', 'line2', 'line3', 'line4', 'li
 const FooterTab: FC<FooterTabProps> = memo(({ footerData, onFooterChange }) => (
   <Box>
     <Typography variant="h5" sx={{ textAlign: 'center', mb: 3, fontSize: '18px', fontWeight: 600 }}>
-      Footer
+      Pie de Página
     </Typography>
 
     <Box sx={{ maxWidth: 600, mx: 'auto' }}>

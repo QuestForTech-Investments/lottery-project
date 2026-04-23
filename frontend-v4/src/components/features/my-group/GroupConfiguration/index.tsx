@@ -37,8 +37,9 @@ import {
   FooterTab,
 } from './components';
 
-import { getGroupDefaults, saveGroupDefaults, getAllowedValues, saveAllowedValues, getFooterDefaults, saveFooterDefaults, type GroupDefaultConfig, type AllowedValuesGroup, type FooterLine } from '@/services/groupConfigService';
+import { getGroupDefaults, saveGroupDefaults, getAllowedValues, saveAllowedValues, getFooterDefaults, saveFooterDefaults, getBpDefaults, saveBpDefaults, type GroupDefaultConfig, type AllowedValuesGroup, type FooterLine, type BpDefaultsMap } from '@/services/groupConfigService';
 import useUserPermissions from '@/hooks/useUserPermissions';
+import ConfigurationTab from '@components/features/betting-pools/CreateBettingPool/tabs/ConfigurationTab';
 import type { AllowedValuesMap } from './components/AllowedValuesTab';
 
 // ============================================================================
@@ -64,6 +65,38 @@ const toConfigs = (prizes: PrizesData, commissions: CommissionsData): GroupDefau
       commission1: toNum(commissions[c.gameType]),
     };
   });
+};
+
+// Boolean-typed BP config keys (the rest are stored as strings)
+const BP_BOOLEAN_KEYS = new Set([
+  'enableTemporaryBalance', 'controlWinningTickets', 'allowJackpot',
+  'printEnabled', 'printTicketCopy', 'smsOnly', 'enableRecharges',
+  'printRechargeReceipt', 'allowPasswordChange', 'useCentralLogo',
+  'enableAutoLogout', 'showStatsPanel',
+  'statCredit', 'statSales', 'statPercentage', 'statPrize', 'statNet',
+  'statDiscount', 'statFinal', 'statBalance', 'statFall', 'statAccumulatedFall',
+]);
+
+// Keys that are banca-specific and never part of group defaults
+const BP_EXCLUDED_KEYS = new Set(['isActive', 'bettingPoolId']);
+
+const mapToFormData = (map: BpDefaultsMap): Record<string, string | boolean | null> => {
+  const result: Record<string, string | boolean | null> = {};
+  Object.entries(map).forEach(([k, v]) => {
+    if (BP_EXCLUDED_KEYS.has(k)) return;
+    result[k] = BP_BOOLEAN_KEYS.has(k) ? v === 'true' : v;
+  });
+  return result;
+};
+
+const formDataToMap = (fd: Record<string, string | boolean | null>): BpDefaultsMap => {
+  const result: BpDefaultsMap = {};
+  Object.entries(fd).forEach(([k, v]) => {
+    if (BP_EXCLUDED_KEYS.has(k)) return;
+    if (v === null || v === undefined) return;
+    result[k] = typeof v === 'boolean' ? String(v) : String(v);
+  });
+  return result;
 };
 
 const fromConfigs = (configs: GroupDefaultConfig[]): { prizes: PrizesData; commissions: CommissionsData } => {
@@ -102,6 +135,7 @@ const GroupConfiguration = (): React.ReactElement => {
   const [commissionsData, setCommissionsData] = useState<CommissionsData>(INITIAL_COMMISSIONS_DATA);
   const [footerData, setFooterData] = useState<FooterData>(INITIAL_FOOTER_DATA);
   const [allowedValues, setAllowedValues] = useState<AllowedValuesMap>({});
+  const [bpConfig, setBpConfig] = useState<Record<string, string | boolean | null>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [snack, setSnack] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({ open: false, message: '', severity: 'success' });
@@ -109,10 +143,11 @@ const GroupConfiguration = (): React.ReactElement => {
   useEffect(() => {
     (async () => {
       try {
-        const [configs, allowed, footerLines] = await Promise.all([
+        const [configs, allowed, footerLines, bpDefaults] = await Promise.all([
           getGroupDefaults(),
           getAllowedValues(),
           getFooterDefaults(),
+          getBpDefaults(),
         ]);
         if (configs.length > 0) {
           const { prizes, commissions } = fromConfigs(configs);
@@ -136,6 +171,8 @@ const GroupConfiguration = (): React.ReactElement => {
           });
           setFooterData(nextFooter);
         }
+
+        setBpConfig(mapToFormData(bpDefaults || {}));
       } catch (err) {
         console.error('Error loading group config:', err);
       } finally {
@@ -212,6 +249,7 @@ const GroupConfiguration = (): React.ReactElement => {
         saveGroupDefaults(toConfigs(prizesData, commissionsData)),
         saveAllowedValues(allowedGroups),
         saveFooterDefaults(footerLines),
+        saveBpDefaults(formDataToMap(bpConfig)),
       ]);
       setSnack({ open: true, message: 'Configuración actualizada', severity: 'success' });
     } catch (err) {
@@ -220,7 +258,7 @@ const GroupConfiguration = (): React.ReactElement => {
     } finally {
       setSaving(false);
     }
-  }, [prizesData, commissionsData, allowedValues, footerData]);
+  }, [prizesData, commissionsData, allowedValues, footerData, bpConfig]);
 
   if (!permLoading && !canManage) {
     return (
@@ -249,17 +287,18 @@ const GroupConfiguration = (): React.ReactElement => {
             sx={TABS_STYLE}
             TabIndicatorProps={TAB_INDICATOR_PROPS}
           >
-            <Tab label="Valores by default" />
+            <Tab label="Premios y Comisiones Predeterminados" />
             <Tab label="Valores permitidos" />
-            <Tab label="Footer" />
+            <Tab label="Configuración Predeterminada" />
+            <Tab label="Pie de Página" />
           </Tabs>
 
           <Box component="form" onSubmit={handleSubmit}>
-            {/* Tab: Valores by default */}
+            {/* Tab: Premios y Comisiones Predeterminados */}
             {activeMainTab === 0 && (
               <Box>
                 <Typography variant="h5" sx={{ textAlign: 'center', mb: 2, fontSize: '18px', fontWeight: 600 }}>
-                  Comisiones y premios by default
+                  Premios y comisiones predeterminados
                 </Typography>
 
                 {/* Sub-tabs */}
@@ -299,8 +338,26 @@ const GroupConfiguration = (): React.ReactElement => {
               />
             )}
 
-            {/* Tab: Footer */}
+            {/* Tab: Configuración Predeterminada */}
             {activeMainTab === 2 && (
+              <Box>
+                <Typography variant="h5" sx={{ textAlign: 'center', mb: 2, fontSize: '18px', fontWeight: 600 }}>
+                  Configuración predeterminada
+                </Typography>
+                <ConfigurationTab
+                  formData={bpConfig as unknown as Parameters<typeof ConfigurationTab>[0]['formData']}
+                  handleChange={(e) => {
+                    const target = e.target as HTMLInputElement;
+                    const name = target.name;
+                    const value = target.type === 'checkbox' ? target.checked : target.value;
+                    setBpConfig(prev => ({ ...prev, [name]: value }));
+                  }}
+                />
+              </Box>
+            )}
+
+            {/* Tab: Footer */}
+            {activeMainTab === 3 && (
               <FooterTab
                 footerData={footerData}
                 onFooterChange={handleFooterChange}

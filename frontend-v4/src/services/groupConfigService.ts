@@ -46,3 +46,13 @@ export const getFooterDefaults = async (): Promise<FooterLine[]> => {
 export const saveFooterDefaults = async (lines: FooterLine[]): Promise<void> => {
   await api.put('/group-config/footer', { lines });
 };
+
+export type BpDefaultsMap = Record<string, string>;
+
+export const getBpDefaults = async (): Promise<BpDefaultsMap> => {
+  return await api.get('/group-config/bp-defaults') as BpDefaultsMap || {};
+};
+
+export const saveBpDefaults = async (values: BpDefaultsMap): Promise<void> => {
+  await api.put('/group-config/bp-defaults', { values });
+};

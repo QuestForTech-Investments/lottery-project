@@ -301,4 +301,78 @@ public class GroupConfigController : ControllerBase
         _logger.LogInformation("Saved {Count} footer lines by user {UserId}", request.Lines.Count, userId);
         return Ok(new { message = "Footer guardado", count = request.Lines.Count });
     }
+
+    // ============================================================================
+    // BP Configuration Defaults (key-value)
+    // ============================================================================
+
+    public class SaveBpDefaultsRequest
+    {
+        public Dictionary<string, string> Values { get; set; } = new();
+    }
+
+    /// <summary>
+    /// Get all betting-pool configuration defaults as a key→value map.
+    /// </summary>
+    [HttpGet("bp-defaults")]
+    public async Task<ActionResult<Dictionary<string, string>>> GetBpDefaults()
+    {
+        var rows = await _context.GroupDefaultBpConfigs
+            .AsNoTracking()
+            .ToListAsync();
+        var map = rows.ToDictionary(r => r.ConfigKey, r => r.ConfigValue);
+        return Ok(map);
+    }
+
+    /// <summary>
+    /// Bulk upsert betting-pool configuration defaults.
+    /// </summary>
+    [HttpPut("bp-defaults")]
+    public async Task<ActionResult> SaveBpDefaults([FromBody] SaveBpDefaultsRequest request)
+    {
+        if (!await CurrentUserCanManageGroup())
+            return StatusCode(403, new { message = "No tiene permiso para manejar el grupo" });
+
+        if (request?.Values == null)
+        {
+            return BadRequest(new { message = "No hay datos para guardar" });
+        }
+
+        var userIdClaim = User.FindFirst("userId")?.Value ?? User.FindFirst("sub")?.Value;
+        int? userId = int.TryParse(userIdClaim, out var uid) ? uid : null;
+        var now = DateTime.UtcNow;
+
+        // Exclude banca-specific keys that should never be group defaults
+        var excludedKeys = new HashSet<string> { "isActive", "bettingPoolId" };
+
+        var existing = await _context.GroupDefaultBpConfigs.ToDictionaryAsync(r => r.ConfigKey);
+
+        foreach (var kv in request.Values)
+        {
+            if (string.IsNullOrWhiteSpace(kv.Key) || excludedKeys.Contains(kv.Key)) continue;
+            var value = kv.Value ?? string.Empty;
+            if (value.Length > 200) value = value.Substring(0, 200);
+
+            if (existing.TryGetValue(kv.Key, out var row))
+            {
+                row.ConfigValue = value;
+                row.UpdatedAt = now;
+                row.UpdatedBy = userId;
+            }
+            else
+            {
+                _context.GroupDefaultBpConfigs.Add(new GroupDefaultBpConfig
+                {
+                    ConfigKey = kv.Key,
+                    ConfigValue = value,
+                    UpdatedAt = now,
+                    UpdatedBy = userId
+                });
+            }
+        }
+
+        await _context.SaveChangesAsync();
+        _logger.LogInformation("Saved {Count} BP config defaults by user {UserId}", request.Values.Count, userId);
+        return Ok(new { message = "Configuración predeterminada guardada", count = request.Values.Count });
+    }
 }
