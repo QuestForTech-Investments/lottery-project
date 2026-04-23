@@ -1,4 +1,4 @@
-import React, { memo, type ChangeEvent } from 'react';
+import React, { memo, type ChangeEvent, type SyntheticEvent } from 'react';
 import {
   Grid,
   TextField,
@@ -7,6 +7,7 @@ import {
   Button,
   Paper,
   CircularProgress,
+  Autocomplete,
 } from '@mui/material';
 import { Save as SaveIcon } from '@mui/icons-material';
 import type { BetType, PrizeField, PrizesFormData, GeneralValues, CommissionField } from '../types';
@@ -30,6 +31,7 @@ interface BetTypeFieldGridProps {
   saving?: boolean;
   onSave?: () => void;
   draws?: Draw[];
+  allowedValuesMap?: Record<string, number[]>;
 }
 
 /**
@@ -50,6 +52,7 @@ const BetTypeFieldGrid: React.FC<BetTypeFieldGridProps> = memo(({
   saving = false,
   onSave,
   draws = [],
+  allowedValuesMap = {},
 }) => {
   /**
    * Generate field key based on field type
@@ -249,6 +252,9 @@ const BetTypeFieldGrid: React.FC<BetTypeFieldGridProps> = memo(({
                       const maxValue = isPrizeField ? (field as PrizeField).maxMultiplier : (fieldType === 'prize' ? 10000 : 100);
                       const showSuffix = fieldType !== 'prize';
 
+                      const allowedKey = `${betType.betTypeCode}__${fieldCode}`;
+                      const allowedOpts = fieldType === 'prize' ? (allowedValuesMap[allowedKey] || []) : [];
+                      const useRestricted = allowedOpts.length > 0;
                       return (
                         <Box key={fieldId}>
                           <Typography
@@ -258,6 +264,32 @@ const BetTypeFieldGrid: React.FC<BetTypeFieldGridProps> = memo(({
                           >
                             {fieldName.includes(' - ') ? fieldName.split(' - ').slice(1).join(' - ') : fieldName}
                           </Typography>
+                          {useRestricted ? (
+                            <Autocomplete
+                              size="small"
+                              fullWidth
+                              disableClearable={false}
+                              autoHighlight
+                              options={allowedOpts.map(String)}
+                              value={String(getFieldValue(betType.betTypeCode, fieldCode, defaultValue) || '')}
+                              onChange={(_: SyntheticEvent, newValue: string | null) => {
+                                const val = newValue ?? '';
+                                const fieldKey = getFieldKey(betType.betTypeCode, fieldCode);
+                                const drawUpdates = buildDrawPropagation(betType.betTypeCode, fieldCode, val);
+                                if (onBatchFieldChange && Object.keys(drawUpdates).length > 0) {
+                                  onBatchFieldChange({ [fieldKey]: val, ...drawUpdates });
+                                } else {
+                                  onFieldChange(fieldKey, val);
+                                }
+                              }}
+                              renderInput={(params) => (
+                                <TextField
+                                  {...params}
+                                  placeholder={getPlaceholder(betType.betTypeCode, fieldCode, defaultValue)}
+                                />
+                              )}
+                            />
+                          ) : (
                           <TextField
                             fullWidth
                             size="small"
@@ -285,6 +317,7 @@ const BetTypeFieldGrid: React.FC<BetTypeFieldGridProps> = memo(({
                               }
                             }}
                           />
+                          )}
                         </Box>
                       );
                     })

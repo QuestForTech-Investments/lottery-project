@@ -30,6 +30,7 @@ import {
   ExpandLess as ExpandLessIcon,
 } from '@mui/icons-material';
 import useEditBettingPoolForm from './hooks/useEditBettingPoolForm';
+import { buildPrefillFromGroupDefaults } from '@services/groupDefaultsHelper';
 
 interface FormErrors {
   submit?: string | null;
@@ -208,6 +209,25 @@ const EditBettingPoolMUI: React.FC = () => {
                     </Alert>
                   </Box>
                 )}
+                <Box sx={{ px: 2, mb: 2, display: 'flex', justifyContent: 'flex-end' }}>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={async () => {
+                      if (!window.confirm('Esto sobrescribirá los valores de premios y comisiones con los defaults del grupo. ¿Continuar?')) return;
+                      try {
+                        const updates = await buildPrefillFromGroupDefaults();
+                        if (Object.keys(updates).length > 0) {
+                          handleBatchChange(updates);
+                        }
+                      } catch (err) {
+                        console.error('Error loading group defaults:', err);
+                      }
+                    }}
+                  >
+                    Aplicar defaults del grupo
+                  </Button>
+                </Box>
                 <PrizesTab
                   formData={formData as unknown as Parameters<typeof PrizesTab>[0]['formData']}
                   handleChange={handleChange as unknown as Parameters<typeof PrizesTab>[0]['handleChange']}

@@ -95,12 +95,14 @@ export const INITIAL_COMMISSIONS_DATA: CommissionsData = {
   pick5Straight: '20'
 };
 
-// Initial footer data
+// Initial footer data (up to 6 lines, 30 chars each)
 export const INITIAL_FOOTER_DATA: FooterData = {
-  primerPie: 'Revise su Ticket Al Recibirlo',
-  segundoPie: 'Jugadas Combinada se Paga una sola vez',
-  tercerPie: 'Buena Suerte en sus Jugadas !',
-  cuartoPie: 'LACENTRALRD.COM'
+  line1: '',
+  line2: '',
+  line3: '',
+  line4: '',
+  line5: '',
+  line6: ''
 };
 
 // Prize fields configuration for each game type

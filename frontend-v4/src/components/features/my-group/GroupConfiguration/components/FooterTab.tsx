@@ -1,13 +1,15 @@
 /**
  * FooterTab Component
  *
- * Tab content for footer configuration.
+ * Tab content for footer default lines (up to 6 lines, 30 chars each).
+ * These defaults pre-populate new banca footers.
  */
 
 import { memo, type FC } from 'react';
-import { Box, Typography, TextField, Button } from '@mui/material';
-import type { FooterTabProps } from '../types';
-import { FOOTER_SHORTCUTS_ROW1, FOOTER_SHORTCUTS_ROW2, GRADIENT_BUTTON_STYLE } from '../constants';
+import { Box, Typography, TextField } from '@mui/material';
+import type { FooterTabProps, FooterData } from '../types';
+
+const LINE_KEYS: (keyof FooterData)[] = ['line1', 'line2', 'line3', 'line4', 'line5', 'line6'];
 
 const FooterTab: FC<FooterTabProps> = memo(({ footerData, onFooterChange }) => (
   <Box>
@@ -15,77 +17,23 @@ const FooterTab: FC<FooterTabProps> = memo(({ footerData, onFooterChange }) => (
       Footer
     </Typography>
 
-    {/* Shortcut buttons */}
-    <Box sx={{ mb: 4 }}>
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, justifyContent: 'center', mb: 1 }}>
-        {FOOTER_SHORTCUTS_ROW1.map((label) => (
-          <Button
-            key={label}
-            variant="contained"
-            size="small"
-            onClick={() => alert(`Atajo: ${label}`)}
-            sx={GRADIENT_BUTTON_STYLE}
-          >
-            {label}
-          </Button>
-        ))}
-      </Box>
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, justifyContent: 'center' }}>
-        {FOOTER_SHORTCUTS_ROW2.map((label) => (
-          <Button
-            key={label}
-            variant="contained"
-            size="small"
-            onClick={() => alert(`Atajo: ${label}`)}
-            sx={GRADIENT_BUTTON_STYLE}
-          >
-            {label}
-          </Button>
-        ))}
-      </Box>
-    </Box>
-
-    {/* Footer fields */}
     <Box sx={{ maxWidth: 600, mx: 'auto' }}>
-      <TextField
-        fullWidth
-        label="Primer pie de pagina"
-        value={footerData.primerPie}
-        onChange={(e) => onFooterChange('primerPie', e.target.value)}
-        size="small"
-        inputProps={{ maxLength: 30 }}
-        helperText={`${(footerData.primerPie || '').length}/30`}
-        sx={{ mb: 2 }}
-      />
-      <TextField
-        fullWidth
-        label="Segundo pie de pagina"
-        value={footerData.segundoPie}
-        onChange={(e) => onFooterChange('segundoPie', e.target.value)}
-        size="small"
-        inputProps={{ maxLength: 30 }}
-        helperText={`${(footerData.segundoPie || '').length}/30`}
-        sx={{ mb: 2 }}
-      />
-      <TextField
-        fullWidth
-        label="Tercer pie de pagina"
-        value={footerData.tercerPie}
-        onChange={(e) => onFooterChange('tercerPie', e.target.value)}
-        size="small"
-        inputProps={{ maxLength: 30 }}
-        helperText={`${(footerData.tercerPie || '').length}/30`}
-        sx={{ mb: 2 }}
-      />
-      <TextField
-        fullWidth
-        label="Cuarto pie de pagina"
-        value={footerData.cuartoPie}
-        onChange={(e) => onFooterChange('cuartoPie', e.target.value)}
-        size="small"
-        inputProps={{ maxLength: 30 }}
-        helperText={`${(footerData.cuartoPie || '').length}/30`}
-      />
+      {LINE_KEYS.map((key, i) => {
+        const value = footerData[key] || '';
+        return (
+          <TextField
+            key={key}
+            fullWidth
+            label={`Línea ${i + 1}`}
+            value={value}
+            onChange={(e) => onFooterChange(key, e.target.value.slice(0, 30))}
+            size="small"
+            inputProps={{ maxLength: 30 }}
+            helperText={`${value.length}/30`}
+            sx={{ mb: 2 }}
+          />
+        );
+      })}
     </Box>
   </Box>
 ));

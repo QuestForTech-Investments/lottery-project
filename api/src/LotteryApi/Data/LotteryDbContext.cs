@@ -55,6 +55,9 @@ public class LotteryDbContext : DbContext
     public DbSet<BettingPoolAutomaticExpense> BettingPoolAutomaticExpenses { get; set; }
     public DbSet<AutoExpenseHistory> AutoExpenseHistories { get; set; }
     public DbSet<BlockedNumber> BlockedNumbers { get; set; }
+    public DbSet<GroupDefaultConfig> GroupDefaultConfigs { get; set; }
+    public DbSet<GroupAllowedValue> GroupAllowedValues { get; set; }
+    public DbSet<GroupFooterDefault> GroupFooterDefaults { get; set; }
 
     // Expense Categories
     public DbSet<ExpenseCategory> ExpenseCategories { get; set; }

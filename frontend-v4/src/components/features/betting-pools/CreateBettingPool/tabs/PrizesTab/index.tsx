@@ -20,6 +20,7 @@ import {
 import { CheckCircle as CheckCircleIcon } from '@mui/icons-material';
 import { getAllBetTypesWithFields } from '@services/prizeService';
 import { filterBetTypesForDraw } from '@services/betTypeCompatibilityService';
+import { buildAllowedValuesMap } from '@services/groupDefaultsHelper';
 
 // Internal imports
 import type {
@@ -70,6 +71,20 @@ const PrizesTab: React.FC<PrizesTabProps> = ({
 
   // General values for fallback
   const [generalValues, setGeneralValues] = useState<GeneralValues>({});
+
+  // Allowed values map keyed by `{betTypeCode}__{fieldCode}` — forces restricted dropdown when non-empty
+  const [allowedValuesMap, setAllowedValuesMap] = useState<Record<string, number[]>>({});
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const map = await buildAllowedValuesMap();
+        setAllowedValuesMap(map);
+      } catch (err) {
+        console.error('Error loading allowed values:', err);
+      }
+    })();
+  }, []);
 
   // Track which draws have been loaded from API (only load once per draw)
   // Also used to prevent API overwrites after batch propagation from General
@@ -379,6 +394,7 @@ const PrizesTab: React.FC<PrizesTabProps> = ({
             saving={saving}
             onSave={onSavePrizeConfig ? handleSave : undefined}
             draws={draws}
+            allowedValuesMap={allowedValuesMap}
           />
         ) : (
           <CommissionFieldList

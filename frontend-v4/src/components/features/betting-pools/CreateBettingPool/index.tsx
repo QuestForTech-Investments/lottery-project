@@ -29,6 +29,7 @@ import {
   ExpandLess as ExpandLessIcon,
 } from '@mui/icons-material';
 import useCompleteBettingPoolForm from './hooks/useCompleteBettingPoolForm';
+import { buildPrefillFromGroupDefaults } from '@services/groupDefaultsHelper';
 import GeneralTab from './tabs/GeneralTab';
 import ConfigurationTab from './tabs/ConfigurationTab';
 import FootersTab from './tabs/FootersTab';
@@ -72,6 +73,20 @@ const CreateBettingPoolMUI: React.FC = () => {
     applyTemplate,
   } = useCompleteBettingPoolForm();
 
+  // Prefill prize/commission fields with group defaults on mount
+  React.useEffect(() => {
+    (async () => {
+      try {
+        const updates = await buildPrefillFromGroupDefaults();
+        if (Object.keys(updates).length > 0) {
+          handleBatchChange(updates);
+        }
+      } catch (err) {
+        console.error('Error loading group defaults:', err);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   /**
    * Render main form

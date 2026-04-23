@@ -4,7 +4,7 @@
  * Main group configuration view with tabs for prizes, commissions, and footer.
  */
 
-import { useState, useCallback, type SyntheticEvent, type FormEvent } from 'react';
+import { useState, useCallback, useEffect, type SyntheticEvent, type FormEvent } from 'react';
 import {
   Box,
   Card,
@@ -13,6 +13,9 @@ import {
   Tabs,
   Tab,
   Button,
+  Snackbar,
+  Alert,
+  CircularProgress,
 } from '@mui/material';
 
 // Types and constants
@@ -23,6 +26,7 @@ import {
   INITIAL_PRIZES_DATA,
   INITIAL_COMMISSIONS_DATA,
   INITIAL_FOOTER_DATA,
+  PRIZE_FIELDS_CONFIG,
 } from './constants';
 
 // Components
@@ -33,11 +37,63 @@ import {
   FooterTab,
 } from './components';
 
+import { getGroupDefaults, saveGroupDefaults, getAllowedValues, saveAllowedValues, getFooterDefaults, saveFooterDefaults, type GroupDefaultConfig, type AllowedValuesGroup, type FooterLine } from '@/services/groupConfigService';
+import useUserPermissions from '@/hooks/useUserPermissions';
+import type { AllowedValuesMap } from './components/AllowedValuesTab';
+
+// ============================================================================
+// Mapping helpers: UI (PrizesData/CommissionsData) ↔ API (GroupDefaultConfig[])
+// Uses positional mapping: field[i] ↔ prizePayment{i+1}
+// ============================================================================
+
+const prizeFieldsByGameType = Object.fromEntries(
+  PRIZE_FIELDS_CONFIG.map(c => [c.gameType, Object.keys(c.fields)])
+);
+
+const toConfigs = (prizes: PrizesData, commissions: CommissionsData): GroupDefaultConfig[] => {
+  return PRIZE_FIELDS_CONFIG.map((c): GroupDefaultConfig => {
+    const fields = prizeFieldsByGameType[c.gameType];
+    const prizeEntry = prizes[c.gameType] as Record<string, string>;
+    const toNum = (v?: string) => v !== undefined && v !== '' ? parseFloat(v) : null;
+    return {
+      gameType: c.gameType,
+      prizePayment1: toNum(prizeEntry?.[fields[0]]),
+      prizePayment2: toNum(prizeEntry?.[fields[1]]),
+      prizePayment3: toNum(prizeEntry?.[fields[2]]),
+      prizePayment4: toNum(prizeEntry?.[fields[3]]),
+      commission1: toNum(commissions[c.gameType]),
+    };
+  });
+};
+
+const fromConfigs = (configs: GroupDefaultConfig[]): { prizes: PrizesData; commissions: CommissionsData } => {
+  const prizes: PrizesData = JSON.parse(JSON.stringify(INITIAL_PRIZES_DATA));
+  const commissions: CommissionsData = { ...INITIAL_COMMISSIONS_DATA };
+
+  configs.forEach(cfg => {
+    const fields = prizeFieldsByGameType[cfg.gameType];
+    if (!fields) return;
+    const slots = [cfg.prizePayment1, cfg.prizePayment2, cfg.prizePayment3, cfg.prizePayment4];
+    const target = (prizes as unknown as Record<string, Record<string, string>>)[cfg.gameType];
+    if (!target) return;
+    fields.forEach((fieldName, i) => {
+      if (slots[i] != null) target[fieldName] = String(slots[i]);
+    });
+    if (cfg.commission1 != null) {
+      commissions[cfg.gameType] = String(cfg.commission1);
+    }
+  });
+
+  return { prizes, commissions };
+};
+
 // ============================================================================
 // Main Component
 // ============================================================================
 
 const GroupConfiguration = (): React.ReactElement => {
+  const { hasPermission, loading: permLoading } = useUserPermissions();
+  const canManage = hasPermission('MANAGE_MY_GROUP');
   const [activeMainTab, setActiveMainTab] = useState<number>(0);
   const [activeSubTab, setActiveSubTab] = useState<number>(0);
 
@@ -45,6 +101,55 @@ const GroupConfiguration = (): React.ReactElement => {
   const [prizesData, setPrizesData] = useState<PrizesData>(INITIAL_PRIZES_DATA);
   const [commissionsData, setCommissionsData] = useState<CommissionsData>(INITIAL_COMMISSIONS_DATA);
   const [footerData, setFooterData] = useState<FooterData>(INITIAL_FOOTER_DATA);
+  const [allowedValues, setAllowedValues] = useState<AllowedValuesMap>({});
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [snack, setSnack] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({ open: false, message: '', severity: 'success' });
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const [configs, allowed, footerLines] = await Promise.all([
+          getGroupDefaults(),
+          getAllowedValues(),
+          getFooterDefaults(),
+        ]);
+        if (configs.length > 0) {
+          const { prizes, commissions } = fromConfigs(configs);
+          setPrizesData(prizes);
+          setCommissionsData(commissions);
+        }
+        const map: AllowedValuesMap = {};
+        allowed.forEach(g => {
+          if (!map[g.gameType]) map[g.gameType] = {};
+          map[g.gameType][g.fieldKey] = g.values;
+        });
+        setAllowedValues(map);
+
+        if (footerLines.length > 0) {
+          const nextFooter: FooterData = { ...INITIAL_FOOTER_DATA };
+          footerLines.forEach(l => {
+            if (l.lineNumber >= 1 && l.lineNumber <= 6) {
+              const key = `line${l.lineNumber}` as keyof FooterData;
+              nextFooter[key] = l.lineText || '';
+            }
+          });
+          setFooterData(nextFooter);
+        }
+      } catch (err) {
+        console.error('Error loading group config:', err);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  const handleAllowedValuesChange = useCallback((gameType: string, fieldKey: string, values: number[]): void => {
+    setAllowedValues(prev => ({
+      ...prev,
+      [gameType]: { ...(prev[gameType] || {}), [fieldKey]: values }
+    }));
+  }, []);
 
   // Handlers
   const handlePrizeChange = useCallback((gameType: keyof PrizesData, field: string, value: string): void => {
@@ -58,10 +163,17 @@ const GroupConfiguration = (): React.ReactElement => {
   }, []);
 
   const handleCommissionChange = useCallback((gameType: string, value: string): void => {
-    setCommissionsData(prev => ({
-      ...prev,
-      [gameType]: value
-    }));
+    setCommissionsData(prev => {
+      if (gameType === 'general') {
+        // Shortcut: propagate to all game type commissions
+        const next: CommissionsData = { ...prev, general: value };
+        Object.keys(next).forEach(k => {
+          if (k !== 'general') next[k] = value;
+        });
+        return next;
+      }
+      return { ...prev, [gameType]: value };
+    });
   }, []);
 
   const handleMainTabChange = useCallback((_event: SyntheticEvent, newValue: number): void => {
@@ -80,10 +192,47 @@ const GroupConfiguration = (): React.ReactElement => {
     }));
   }, []);
 
-  const handleSubmit = useCallback((e: FormEvent<HTMLFormElement>): void => {
+  const handleSubmit = useCallback(async (e: FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
-    alert('Configuracion actualizada (mockup)\n\nEsto enviara los datos al backend cuando este conectado.');
-  }, []);
+    setSaving(true);
+    try {
+      const allowedGroups: AllowedValuesGroup[] = [];
+      Object.entries(allowedValues).forEach(([gt, fields]) => {
+        Object.entries(fields).forEach(([fk, vals]) => {
+          allowedGroups.push({ gameType: gt, fieldKey: fk, values: vals });
+        });
+      });
+
+      const footerLines: FooterLine[] = ([1, 2, 3, 4, 5, 6] as const).map(n => ({
+        lineNumber: n,
+        lineText: footerData[`line${n}` as keyof FooterData] || ''
+      }));
+
+      await Promise.all([
+        saveGroupDefaults(toConfigs(prizesData, commissionsData)),
+        saveAllowedValues(allowedGroups),
+        saveFooterDefaults(footerLines),
+      ]);
+      setSnack({ open: true, message: 'Configuración actualizada', severity: 'success' });
+    } catch (err) {
+      console.error('Error saving group config:', err);
+      setSnack({ open: true, message: 'Error al guardar. Intente nuevamente.', severity: 'error' });
+    } finally {
+      setSaving(false);
+    }
+  }, [prizesData, commissionsData, allowedValues, footerData]);
+
+  if (!permLoading && !canManage) {
+    return (
+      <Box sx={{ bgcolor: '#f5f5f5', minHeight: '100vh', p: 3 }}>
+        <Box sx={{ maxWidth: 600, mx: 'auto', mt: 8 }}>
+          <Alert severity="error">
+            No tiene permiso para acceder a esta sección. Se requiere el permiso <strong>MANAGE_MY_GROUP</strong>.
+          </Alert>
+        </Box>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ bgcolor: '#f5f5f5', minHeight: '100vh', p: 3 }}>
@@ -145,8 +294,8 @@ const GroupConfiguration = (): React.ReactElement => {
             {/* Tab: Valores permitidos */}
             {activeMainTab === 1 && (
               <AllowedValuesTab
-                prizesData={prizesData}
-                onPrizeChange={handlePrizeChange}
+                allowedValues={allowedValues}
+                onChange={handleAllowedValuesChange}
               />
             )}
 
@@ -163,6 +312,8 @@ const GroupConfiguration = (): React.ReactElement => {
               <Button
                 type="submit"
                 variant="contained"
+                disabled={saving || loading}
+                startIcon={saving ? <CircularProgress size={16} sx={{ color: 'white' }} /> : null}
                 sx={{
                   background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                   '&:hover': { background: 'linear-gradient(135deg, #5568d3 0%, #63408a 100%)' },
@@ -175,12 +326,22 @@ const GroupConfiguration = (): React.ReactElement => {
                   textTransform: 'uppercase'
                 }}
               >
-                ACTUALIZAR
+                {saving ? 'GUARDANDO…' : 'ACTUALIZAR'}
               </Button>
             </Box>
           </Box>
         </CardContent>
       </Card>
+      <Snackbar
+        open={snack.open}
+        autoHideDuration={3000}
+        onClose={() => setSnack(s => ({ ...s, open: false }))}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert severity={snack.severity} onClose={() => setSnack(s => ({ ...s, open: false }))}>
+          {snack.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

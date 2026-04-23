@@ -1,65 +1,96 @@
 /**
  * AllowedValuesTab Component
  *
- * Tab content for allowed values selection.
+ * Editable lists of allowed values per (gameType, fieldKey).
+ * Admin can add new values and remove existing ones.
  */
 
-import { memo, useCallback, type FC } from 'react';
-import { Box, Typography, TextField } from '@mui/material';
-import ValueChip from './ValueChip';
-import type { AllowedValuesTabProps, PrizesData } from '../types';
-import { ALLOWED_VALUES } from '../constants';
+import { memo, useState, type FC, type ChangeEvent, type KeyboardEvent } from 'react';
+import { Box, Typography, Chip, TextField, IconButton, Grid } from '@mui/material';
+import AddIcon from '@mui/icons-material/Add';
+import { PRIZE_FIELDS_CONFIG } from '../constants';
 
-// Reusable field section component
-interface ValueFieldSectionProps {
-  label: string;
-  value: string;
-  allowedValues: string[];
-  onSelect: (value: string) => void;
+export type AllowedValuesMap = Record<string, Record<string, number[]>>;
+
+interface AllowedValuesTabProps {
+  allowedValues: AllowedValuesMap;
+  onChange: (gameType: string, fieldKey: string, values: number[]) => void;
 }
 
-const ValueFieldSection = memo<ValueFieldSectionProps>(({ label, value, allowedValues, onSelect }) => (
-  <Box sx={{ mb: 2 }}>
-    <Typography variant="body2" sx={{ fontSize: '12px', mb: 1, color: '#666' }}>
-      {label}
-    </Typography>
-    <TextField
-      size="small"
-      value={value}
-      placeholder="0"
-      sx={{ width: '150px', mb: 1, '& input': { textAlign: 'right' } }}
-      InputProps={{ readOnly: true }}
-    />
-    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-      {allowedValues.map((v) => (
-        <ValueChip
-          key={v}
-          value={v}
-          isSelected={value === v}
-          onClick={() => onSelect(v)}
+interface FieldEditorProps {
+  label: string;
+  values: number[];
+  onAdd: (value: number) => void;
+  onRemove: (value: number) => void;
+}
+
+const FieldEditor = memo<FieldEditorProps>(({ label, values, onAdd, onRemove }) => {
+  const [input, setInput] = useState('');
+
+  const handleAdd = (): void => {
+    const num = parseFloat(input.replace(',', '.'));
+    if (!Number.isFinite(num) || values.includes(num)) {
+      setInput('');
+      return;
+    }
+    onAdd(num);
+    setInput('');
+  };
+
+  const handleKey = (e: KeyboardEvent<HTMLInputElement>): void => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleAdd();
+    }
+  };
+
+  return (
+    <Box sx={{ mb: 2 }}>
+      <Typography sx={{ fontSize: '12px', mb: 0.5, color: '#666' }}>{label}</Typography>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+        <TextField
+          size="small"
+          type="number"
+          value={input}
+          onChange={(e: ChangeEvent<HTMLInputElement>) => setInput(e.target.value)}
+          onKeyDown={handleKey}
+          placeholder="Nuevo valor"
+          sx={{ width: '140px', '& input': { textAlign: 'right' } }}
         />
-      ))}
+        <IconButton size="small" onClick={handleAdd} disabled={!input.trim()} sx={{ color: '#6366f1' }}>
+          <AddIcon />
+        </IconButton>
+      </Box>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+        {values.map(v => (
+          <Chip
+            key={v}
+            label={v}
+            onDelete={() => onRemove(v)}
+            size="small"
+            sx={{ bgcolor: '#6366f1', color: 'white', fontWeight: 600, '&:hover': { bgcolor: '#4f52d4' }, '& .MuiChip-deleteIcon': { color: 'rgba(255,255,255,0.9)', '&:hover': { color: '#fff' } } }}
+          />
+        ))}
+      </Box>
     </Box>
-  </Box>
-));
-
-ValueFieldSection.displayName = 'ValueFieldSection';
-
-const AllowedValuesTab: FC<AllowedValuesTabProps> = memo(({ prizesData, onPrizeChange }) => {
-  const handleDirectoChange = useCallback(
-    (field: string) => (value: string) => onPrizeChange('directo', field, value),
-    [onPrizeChange]
   );
+});
 
-  const handlePaleChange = useCallback(
-    (field: string) => (value: string) => onPrizeChange('pale', field, value),
-    [onPrizeChange]
-  );
+FieldEditor.displayName = 'FieldEditor';
 
-  const handlePickTwoChange = useCallback(
-    (field: string) => (value: string) => onPrizeChange('pickTwo', field, value),
-    [onPrizeChange]
-  );
+const AllowedValuesTab: FC<AllowedValuesTabProps> = memo(({ allowedValues, onChange }) => {
+  const getValues = (gt: string, fk: string): number[] =>
+    allowedValues[gt]?.[fk] ?? [];
+
+  const addValue = (gt: string, fk: string, v: number): void => {
+    const current = getValues(gt, fk);
+    onChange(gt, fk, [...current, v]);
+  };
+
+  const removeValue = (gt: string, fk: string, v: number): void => {
+    const current = getValues(gt, fk);
+    onChange(gt, fk, current.filter(x => x !== v));
+  };
 
   return (
     <Box>
@@ -67,92 +98,26 @@ const AllowedValuesTab: FC<AllowedValuesTabProps> = memo(({ prizesData, onPrizeC
         Valores permitidos
       </Typography>
 
-      <Box sx={{ p: 3 }}>
-        {/* Directo */}
-        <Box sx={{ mb: 4 }}>
-          <Typography variant="h6" sx={{ fontSize: '14px', fontWeight: 600, mb: 2, color: '#2c2c2c' }}>
-            Directo
-          </Typography>
-          <ValueFieldSection
-            label="Primer Pago"
-            value={prizesData.directo?.primerPago || ''}
-            allowedValues={ALLOWED_VALUES.directo.primerPago}
-            onSelect={handleDirectoChange('primerPago')}
-          />
-          <ValueFieldSection
-            label="Segundo Pago"
-            value={prizesData.directo?.segundoPago || ''}
-            allowedValues={ALLOWED_VALUES.directo.segundoPago}
-            onSelect={handleDirectoChange('segundoPago')}
-          />
-          <ValueFieldSection
-            label="Tercer Pago"
-            value={prizesData.directo?.tercerPago || ''}
-            allowedValues={ALLOWED_VALUES.directo.tercerPago}
-            onSelect={handleDirectoChange('tercerPago')}
-          />
-          <ValueFieldSection
-            label="Dobles"
-            value={prizesData.directo?.dobles || ''}
-            allowedValues={ALLOWED_VALUES.directo.dobles}
-            onSelect={handleDirectoChange('dobles')}
-          />
-        </Box>
-
-        {/* Pale */}
-        <Box sx={{ mb: 4 }}>
-          <Typography variant="h6" sx={{ fontSize: '14px', fontWeight: 600, mb: 2, color: '#2c2c2c' }}>
-            Pale
-          </Typography>
-          <ValueFieldSection
-            label="Todos en secuencia"
-            value={prizesData.pale?.todosSecuencia || ''}
-            allowedValues={ALLOWED_VALUES.pale.todosSecuencia}
-            onSelect={handlePaleChange('todosSecuencia')}
-          />
-          <ValueFieldSection
-            label="Primer Pago"
-            value={prizesData.pale?.primerPago || ''}
-            allowedValues={ALLOWED_VALUES.pale.primerPago}
-            onSelect={handlePaleChange('primerPago')}
-          />
-          <ValueFieldSection
-            label="Segundo Pago"
-            value={prizesData.pale?.segundoPago || ''}
-            allowedValues={ALLOWED_VALUES.pale.segundoPago}
-            onSelect={handlePaleChange('segundoPago')}
-          />
-          <ValueFieldSection
-            label="Tercer Pago"
-            value={prizesData.pale?.tercerPago || ''}
-            allowedValues={ALLOWED_VALUES.pale.tercerPago}
-            onSelect={handlePaleChange('tercerPago')}
-          />
-        </Box>
-
-        {/* Pick Two */}
-        <Box sx={{ mb: 4 }}>
-          <Typography variant="h6" sx={{ fontSize: '14px', fontWeight: 600, mb: 2, color: '#2c2c2c' }}>
-            Pick Two
-          </Typography>
-          <ValueFieldSection
-            label="Primer Pago"
-            value={prizesData.pickTwo?.primerPago || ''}
-            allowedValues={ALLOWED_VALUES.pickTwo.primerPago}
-            onSelect={handlePickTwoChange('primerPago')}
-          />
-          <ValueFieldSection
-            label="Dobles"
-            value={prizesData.pickTwo?.dobles || ''}
-            allowedValues={ALLOWED_VALUES.pickTwo.dobles}
-            onSelect={handlePickTwoChange('dobles')}
-          />
-        </Box>
-
-        <Typography variant="body2" sx={{ color: '#666', fontSize: '12px', fontStyle: 'italic', textAlign: 'center', mt: 4 }}>
-          Nota: Haga clic en un valor para seleccionarlo. El valor se aplicara al campo correspondiente.
-        </Typography>
-      </Box>
+      <Grid container spacing={3}>
+        {PRIZE_FIELDS_CONFIG.map(cfg => (
+          <Grid item xs={12} sm={6} md={4} lg={3} key={cfg.gameType}>
+            <Box sx={{ border: '1px solid #e0e0e0', borderRadius: 1, p: 2, height: '100%' }}>
+              <Typography sx={{ fontSize: '14px', fontWeight: 700, mb: 1.5, textAlign: 'center', textTransform: 'uppercase', color: '#2c2c2c' }}>
+                {cfg.title}
+              </Typography>
+              {Object.entries(cfg.fields).map(([fk, label]) => (
+                <FieldEditor
+                  key={fk}
+                  label={label as string}
+                  values={getValues(cfg.gameType, fk)}
+                  onAdd={(v) => addValue(cfg.gameType, fk, v)}
+                  onRemove={(v) => removeValue(cfg.gameType, fk, v)}
+                />
+              ))}
+            </Box>
+          </Grid>
+        ))}
+      </Grid>
     </Box>
   );
 });
