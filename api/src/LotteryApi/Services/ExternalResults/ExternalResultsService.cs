@@ -762,6 +762,26 @@ public class ExternalResultsService : IExternalResultsService
                     ticket.TicketId, ticket.TicketState, newState);
                 ticket.TicketState = newState;
             }
+
+            // Also sync Status: cancelled/paid take precedence; otherwise reflect result
+            string newStatus;
+            if (ticket.IsCancelled) newStatus = "cancelled";
+            else if (ticket.IsPaid) newStatus = "paid";
+            else if (newState == "L") newStatus = "loser";
+            else if (newState == "W") newStatus = "winner";
+            else newStatus = "pending";
+
+            if (ticket.Status != newStatus)
+            {
+                ticket.Status = newStatus;
+            }
+
+            // Keep WinningLines in sync with processed lines
+            var winnerCount = lines.Count(l => l.IsWinner == true);
+            if (ticket.WinningLines != winnerCount)
+            {
+                ticket.WinningLines = winnerCount;
+            }
         }
     }
 
