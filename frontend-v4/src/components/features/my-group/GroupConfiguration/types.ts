@@ -68,7 +68,7 @@ export interface PrizesData {
   pickTwoBack: { primerPago: string; dobles: string };
   pickTwoMiddle: { primerPago: string; dobles: string };
   pick5Straight: { todosSecuencia: string; dobles: string };
-  pick5Box: { fiveWay: string; tenWay: string; twentyWay: string; thirtyWay: string };
+  pick5Box: { fiveWay: string; tenWay: string; twentyWay: string; thirtyWay: string; sixtyWay: string; oneTwentyWay: string };
 }
 
 // Commissions

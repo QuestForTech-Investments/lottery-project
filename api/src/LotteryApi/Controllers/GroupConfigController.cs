@@ -38,6 +38,8 @@ public class GroupConfigController : ControllerBase
         public decimal? PrizePayment2 { get; set; }
         public decimal? PrizePayment3 { get; set; }
         public decimal? PrizePayment4 { get; set; }
+        public decimal? PrizePayment5 { get; set; }
+        public decimal? PrizePayment6 { get; set; }
         public decimal? Commission1 { get; set; }
         public decimal? Commission2 { get; set; }
         public decimal? Commission3 { get; set; }
@@ -64,6 +66,8 @@ public class GroupConfigController : ControllerBase
                 PrizePayment2 = r.PrizePayment2,
                 PrizePayment3 = r.PrizePayment3,
                 PrizePayment4 = r.PrizePayment4,
+                PrizePayment5 = r.PrizePayment5,
+                PrizePayment6 = r.PrizePayment6,
                 Commission1 = r.Commission1,
                 Commission2 = r.Commission2,
                 Commission3 = r.Commission3,
@@ -104,6 +108,8 @@ public class GroupConfigController : ControllerBase
                 row.PrizePayment2 = dto.PrizePayment2;
                 row.PrizePayment3 = dto.PrizePayment3;
                 row.PrizePayment4 = dto.PrizePayment4;
+                row.PrizePayment5 = dto.PrizePayment5;
+                row.PrizePayment6 = dto.PrizePayment6;
                 row.Commission1 = dto.Commission1;
                 row.Commission2 = dto.Commission2;
                 row.Commission3 = dto.Commission3;
@@ -120,6 +126,8 @@ public class GroupConfigController : ControllerBase
                     PrizePayment2 = dto.PrizePayment2,
                     PrizePayment3 = dto.PrizePayment3,
                     PrizePayment4 = dto.PrizePayment4,
+                    PrizePayment5 = dto.PrizePayment5,
+                    PrizePayment6 = dto.PrizePayment6,
                     Commission1 = dto.Commission1,
                     Commission2 = dto.Commission2,
                     Commission3 = dto.Commission3,

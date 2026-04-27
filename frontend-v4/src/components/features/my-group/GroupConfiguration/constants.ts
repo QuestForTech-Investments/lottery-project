@@ -80,7 +80,7 @@ export const INITIAL_PRIZES_DATA: PrizesData = {
   pickTwoBack: { primerPago: '', dobles: '' },
   pickTwoMiddle: { primerPago: '', dobles: '' },
   pick5Straight: { todosSecuencia: '', dobles: '' },
-  pick5Box: { fiveWay: '', tenWay: '', twentyWay: '', thirtyWay: '' }
+  pick5Box: { fiveWay: '', tenWay: '', twentyWay: '', thirtyWay: '', sixtyWay: '', oneTwentyWay: '' }
 };
 
 // Initial commissions data
@@ -140,7 +140,7 @@ export const PRIZE_FIELDS_CONFIG: PrizeFieldConfig[] = [
   { title: 'Pick Two Back', gameType: 'pickTwoBack', fields: { primerPago: 'Primer Pago', dobles: 'Dobles' } },
   { title: 'Pick Two Middle', gameType: 'pickTwoMiddle', fields: { primerPago: 'Primer Pago', dobles: 'Dobles' } },
   { title: 'Pick5 Straight', gameType: 'pick5Straight', fields: { todosSecuencia: 'Todos en secuencia', dobles: 'Dobles' } },
-  { title: 'Pick5 Box', gameType: 'pick5Box', fields: { fiveWay: '5-Way', tenWay: '10-Way', twentyWay: '20-Way', thirtyWay: '30-Way' } },
+  { title: 'Pick5 Box', gameType: 'pick5Box', fields: { fiveWay: '5-Way', tenWay: '10-Way', twentyWay: '20-Way', thirtyWay: '30-Way', sixtyWay: '60-Way', oneTwentyWay: '120-Way' } },
   { title: 'Bolita 1', gameType: 'bolita1', fields: { primerPago: 'Primer Pago' } },
   { title: 'Bolita 2', gameType: 'bolita2', fields: { primerPago: 'Primer Pago' } },
   { title: 'Singulacion 1', gameType: 'singulacion1', fields: { primerPago: 'Primer Pago' } },

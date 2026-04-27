@@ -68,7 +68,7 @@ export const buildPrefillFromGroupDefaults = async (): Promise<Record<string, nu
     const def = defaultsByNormGameType.get(key);
     if (!def) return;
 
-    const prizeSlots = [def.prizePayment1, def.prizePayment2, def.prizePayment3, def.prizePayment4];
+    const prizeSlots = [def.prizePayment1, def.prizePayment2, def.prizePayment3, def.prizePayment4, def.prizePayment5, def.prizePayment6];
     const fields = [...(bt.prizeFields || [])];
     fields.forEach((field, i) => {
       const val = prizeSlots[i];

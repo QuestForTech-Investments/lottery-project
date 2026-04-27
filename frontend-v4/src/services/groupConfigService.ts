@@ -6,6 +6,8 @@ export interface GroupDefaultConfig {
   prizePayment2?: number | null;
   prizePayment3?: number | null;
   prizePayment4?: number | null;
+  prizePayment5?: number | null;
+  prizePayment6?: number | null;
   commission1?: number | null;
   commission2?: number | null;
   commission3?: number | null;

@@ -27,6 +27,12 @@ public class GroupDefaultConfig
     [Column("prize_payment_4", TypeName = "decimal(10,2)")]
     public decimal? PrizePayment4 { get; set; }
 
+    [Column("prize_payment_5", TypeName = "decimal(10,2)")]
+    public decimal? PrizePayment5 { get; set; }
+
+    [Column("prize_payment_6", TypeName = "decimal(10,2)")]
+    public decimal? PrizePayment6 { get; set; }
+
     [Column("commission_1", TypeName = "decimal(10,2)")]
     public decimal? Commission1 { get; set; }
 

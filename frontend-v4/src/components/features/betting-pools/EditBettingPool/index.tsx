@@ -218,10 +218,35 @@ const EditBettingPoolMUI: React.FC = () => {
             )}
 
             {activeTab === 2 && (
-              <FootersTab
-                formData={formData as unknown as Parameters<typeof FootersTab>[0]['formData']}
-                handleChange={handleChange as unknown as Parameters<typeof FootersTab>[0]['handleChange']}
-              />
+              <>
+                <Box sx={{ px: 2, mb: 2, display: 'flex', justifyContent: 'flex-end' }}>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={async () => {
+                      if (!window.confirm('Esto sobrescribirá el pie de página de esta banca con el predeterminado del grupo. ¿Continuar?')) return;
+                      try {
+                        const updates = await buildPrefillFromGroupDefaults();
+                        const footerUpdates: Record<string, string | number | boolean> = {};
+                        Object.entries(updates).forEach(([k, v]) => {
+                          if (k.startsWith('footerText')) footerUpdates[k] = v;
+                        });
+                        if (Object.keys(footerUpdates).length > 0) {
+                          handleBatchChange(footerUpdates);
+                        }
+                      } catch (err) {
+                        console.error('Error loading group footer defaults:', err);
+                      }
+                    }}
+                  >
+                    Aplicar pie de página del grupo
+                  </Button>
+                </Box>
+                <FootersTab
+                  formData={formData as unknown as Parameters<typeof FootersTab>[0]['formData']}
+                  handleChange={handleChange as unknown as Parameters<typeof FootersTab>[0]['handleChange']}
+                />
+              </>
             )}
 
             {activeTab === 3 && (

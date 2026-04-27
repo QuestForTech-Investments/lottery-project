@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef, type ChangeEvent, type SyntheticEvent } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { createBettingPool, getNextBettingPoolCode, handleBettingPoolError, getBettingPools, getBettingPoolById, getBettingPoolConfig, type BettingPool, type BettingPoolConfigData } from '@/services/bettingPoolService';
+import { createBettingPool, getNextBettingPoolCode, handleBettingPoolError, getBettingPools, getBettingPoolById, getBettingPoolConfig, updateBettingPoolConfig, type BettingPool, type BettingPoolConfigData } from '@/services/bettingPoolService';
 import { getActiveZones } from '@/services/zoneService';
 import { savePrizeConfig, getAllBetTypesWithFields, getBettingPoolPrizeConfigs } from '@/services/prizeService';
 import { saveBettingPoolSchedules, transformSchedulesToApiFormat, getBettingPoolSchedules } from '@/services/scheduleService';
@@ -1534,6 +1534,73 @@ const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
 
         // Save prize configurations if betting pool was created successfully
         if (createdBettingPoolId) {
+
+          // Save full configuration (footer, advanced fields, etc.) — same shape as Edit
+          try {
+            const configPayload = {
+              config: {
+                fallType: fallTypeMap[formData.fallType] || 'OFF',
+                fallPercentage: formData.fallPercentage ? parseFloat(formData.fallPercentage) : 0,
+                deactivationBalance: formData.deactivationBalance ? parseFloat(formData.deactivationBalance) : null,
+                dailySaleLimit: formData.dailySaleLimit ? parseFloat(formData.dailySaleLimit) : null,
+                dailyBalanceLimit: formData.dailyBalanceLimit ? parseFloat(formData.dailyBalanceLimit) : null,
+                temporaryAdditionalBalance: formData.enableTemporaryBalance && formData.temporaryAdditionalBalance ? parseFloat(formData.temporaryAdditionalBalance) : null,
+                enableTemporaryBalance: formData.enableTemporaryBalance || false,
+                controlWinningTickets: formData.controlWinningTickets || false,
+                allowJackpot: formData.allowJackpot !== undefined ? formData.allowJackpot : true,
+                enableRecharges: formData.enableRecharges !== undefined ? formData.enableRecharges : true,
+                allowPasswordChange: formData.allowPasswordChange !== undefined ? formData.allowPasswordChange : true,
+                cancelMinutes: formData.minutesToCancelTicket ? parseInt(formData.minutesToCancelTicket) : 30,
+                dailyCancelTickets: formData.ticketsToCancelPerDay ? parseInt(formData.ticketsToCancelPerDay) : null,
+                maxCancelAmount: formData.maximumCancelTicketAmount ? parseFloat(formData.maximumCancelTicketAmount) : null,
+                maxTicketAmount: formData.maxTicketAmount ? parseFloat(formData.maxTicketAmount) : null,
+                maxDailyRecharge: formData.dailyPhoneRechargeLimit ? parseFloat(formData.dailyPhoneRechargeLimit) : null,
+                futureSalesMode: formData.futureSalesMode || 'OFF',
+                allowFutureSales: formData.futureSalesMode !== 'OFF',
+                maxFutureDays: formData.maxFutureDays ? parseInt(formData.maxFutureDays) : 7,
+                useCentralLogo: formData.useCentralLogo || false,
+                enableAutoLogout: formData.enableAutoLogout || false,
+                autoLogoutMinutes: formData.autoLogoutMinutes ? parseInt(formData.autoLogoutMinutes) : 30,
+                showStatsPanel: formData.showStatsPanel !== undefined ? formData.showStatsPanel : true,
+                statsPanelConfig: JSON.stringify({
+                  credit: (parseFloat(formData.deactivationBalance || '0') > 0) && (formData.statCredit !== undefined ? formData.statCredit : true),
+                  sales: formData.statSales !== undefined ? formData.statSales : true,
+                  percentage: formData.statPercentage !== undefined ? formData.statPercentage : true,
+                  prize: formData.statPrize !== undefined ? formData.statPrize : true,
+                  net: formData.statNet !== undefined ? formData.statNet : true,
+                  discount: formData.statDiscount !== undefined ? formData.statDiscount : true,
+                  final: formData.statFinal !== undefined ? formData.statFinal : true,
+                  balance: formData.statBalance !== undefined ? formData.statBalance : true,
+                  fall: formData.statFall !== undefined ? formData.statFall : true,
+                  accumulatedFall: formData.statAccumulatedFall !== undefined ? formData.statAccumulatedFall : true,
+                })
+              },
+              discountConfig: {
+                discountMode: discountModeMap[formData.discountMode] || 'OFF',
+                discountAmount: formData.discountAmount ? parseFloat(formData.discountAmount) : null,
+                discountPerEvery: formData.discountPerEvery ? parseInt(formData.discountPerEvery) : null
+              },
+              printConfig: {
+                printMode: printModeMap[formData.printerType] || 'DRIVER',
+                printEnabled: formData.printEnabled !== undefined ? formData.printEnabled : true,
+                printTicketCopy: formData.printTicketCopy !== undefined ? formData.printTicketCopy : true,
+                printRechargeReceipt: formData.printRechargeReceipt !== undefined ? formData.printRechargeReceipt : true,
+                smsOnly: formData.smsOnly || false
+              },
+              footer: {
+                autoFooter: formData.autoFooter || false,
+                footerLine1: formData.footerText1 || '',
+                footerLine2: formData.footerText2 || '',
+                footerLine3: formData.footerText3 || '',
+                footerLine4: formData.footerText4 || '',
+                footerLine5: formData.footerText5 || '',
+                footerLine6: formData.footerText6 || ''
+              }
+            };
+            await updateBettingPoolConfig(createdBettingPoolId, configPayload as unknown as BettingPoolConfigData);
+          } catch (configErr) {
+            console.error('Error saving full config (footer, etc.) for new banca:', configErr);
+          }
 
           // Save prize configurations
           try {

@@ -62,6 +62,8 @@ const toConfigs = (prizes: PrizesData, commissions: CommissionsData): GroupDefau
       prizePayment2: toNum(prizeEntry?.[fields[1]]),
       prizePayment3: toNum(prizeEntry?.[fields[2]]),
       prizePayment4: toNum(prizeEntry?.[fields[3]]),
+      prizePayment5: toNum(prizeEntry?.[fields[4]]),
+      prizePayment6: toNum(prizeEntry?.[fields[5]]),
       commission1: toNum(commissions[c.gameType]),
     };
   });
@@ -106,7 +108,7 @@ const fromConfigs = (configs: GroupDefaultConfig[]): { prizes: PrizesData; commi
   configs.forEach(cfg => {
     const fields = prizeFieldsByGameType[cfg.gameType];
     if (!fields) return;
-    const slots = [cfg.prizePayment1, cfg.prizePayment2, cfg.prizePayment3, cfg.prizePayment4];
+    const slots = [cfg.prizePayment1, cfg.prizePayment2, cfg.prizePayment3, cfg.prizePayment4, cfg.prizePayment5, cfg.prizePayment6];
     const target = (prizes as unknown as Record<string, Record<string, string>>)[cfg.gameType];
     if (!target) return;
     fields.forEach((fieldName, i) => {
