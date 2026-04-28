@@ -6,6 +6,7 @@ using LotteryApi.DTOs;
 using LotteryApi.Models;
 using LotteryApi.Helpers;
 using LotteryApi.Services.ExternalResults;
+using LotteryApi.Services.Warnings;
 using System.Security.Claims;
 
 namespace LotteryApi.Controllers;
@@ -18,6 +19,7 @@ public class ResultsController : ControllerBase
     private readonly LotteryDbContext _context;
     private readonly ILogger<ResultsController> _logger;
     private readonly IExternalResultsService _externalResultsService;
+    private readonly IWarningService _warningService;
 
     /// <summary>
     /// Super Pale: source draw → (target composite draw, which field it contributes: num1 or num2).
@@ -48,11 +50,13 @@ public class ResultsController : ControllerBase
     public ResultsController(
         LotteryDbContext context,
         ILogger<ResultsController> logger,
-        IExternalResultsService externalResultsService)
+        IExternalResultsService externalResultsService,
+        IWarningService warningService)
     {
         _context = context;
         _logger = logger;
         _externalResultsService = externalResultsService;
+        _warningService = warningService;
     }
 
     /// <summary>
@@ -170,6 +174,18 @@ public class ResultsController : ControllerBase
 
         if (existingResult != null)
         {
+            // Detect "result changed after prizes processed" before we reset lines.
+            var previousNumber = existingResult.WinningNumber;
+            var prizesAlreadyProcessed = false;
+            if (previousNumber != dto.WinningNumber)
+            {
+                prizesAlreadyProcessed = await _context.TicketLines
+                    .AsNoTracking()
+                    .AnyAsync(tl => tl.DrawId == dto.DrawId
+                        && tl.DrawDate.Date == dto.ResultDate.Date
+                        && tl.IsWinner);
+            }
+
             // Update existing result
             existingResult.WinningNumber = dto.WinningNumber;
             existingResult.AdditionalNumber = dto.AdditionalNumber;
@@ -180,6 +196,26 @@ public class ResultsController : ControllerBase
             await _context.SaveChangesAsync();
 
             _logger.LogInformation("Updated result {ResultId} for draw {DrawId}", existingResult.ResultId, dto.DrawId);
+
+            if (prizesAlreadyProcessed)
+            {
+                await _warningService.RecordAsync(
+                    type: WarningTypes.ResultChangedAfterPrizes,
+                    message: $"Resultado del sorteo {draw.DrawName} cambiado después de procesar premios ({previousNumber} → {dto.WinningNumber})",
+                    bettingPoolId: null,
+                    userId: userId,
+                    referenceId: $"{dto.DrawId}_{dto.ResultDate:yyyy-MM-dd}",
+                    referenceType: "result",
+                    severity: "high",
+                    metadata: new
+                    {
+                        drawId = dto.DrawId,
+                        drawName = draw.DrawName,
+                        resultDate = dto.ResultDate.Date,
+                        previousNumber,
+                        newNumber = dto.WinningNumber
+                    });
+            }
 
             // Reset previously processed lines so they can be reprocessed with the new result
             await _externalResultsService.ResetTicketLinesForDrawAsync(dto.DrawId, dto.ResultDate);

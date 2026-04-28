@@ -76,6 +76,7 @@ export const useTicketMonitoring = (): UseTicketMonitoringReturn => {
   const [searchParams] = useSearchParams();
   const urlBettingPoolId = searchParams.get('bettingPoolId');
   const urlDate = searchParams.get('date');
+  const urlTicketId = searchParams.get('ticketId');
 
   // Refs
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -343,6 +344,18 @@ export const useTicketMonitoring = (): UseTicketMonitoringReturn => {
       if (listTicket) setSelectedTicket(listTicket);
     }
   }, [tickets]);
+
+  // Auto-open detail panel when ticketId is in URL (deep link from Warnings).
+  // Runs once after tickets load post-mount; selectedTicket guard prevents re-firing.
+  const ticketIdAutoSelectedRef = useRef<boolean>(false);
+  useEffect(() => {
+    if (ticketIdAutoSelectedRef.current) return;
+    if (!urlTicketId || tickets.length === 0 || isInitialLoad) return;
+    const tid = parseInt(urlTicketId, 10);
+    if (!Number.isFinite(tid)) return;
+    ticketIdAutoSelectedRef.current = true;
+    handleRowClick(tid);
+  }, [urlTicketId, tickets, isInitialLoad, handleRowClick]);
 
   const handleCloseDetail = useCallback(() => setSelectedTicket(null), []);
 

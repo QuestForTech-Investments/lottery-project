@@ -6,6 +6,7 @@ using LotteryApi.Models;
 using LotteryApi.Services;
 using LotteryApi.Services.Caida;
 using LotteryApi.Services.ExternalResults;
+using LotteryApi.Services.Warnings;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -24,19 +25,22 @@ public class TicketsController : ControllerBase
     private readonly IExternalResultsService _externalResultsService;
     private readonly ILimitReservationService _limitReservationService;
     private readonly ICaidaCalculationService _caidaService;
+    private readonly IWarningService _warningService;
 
     public TicketsController(
         LotteryDbContext context,
         ILogger<TicketsController> logger,
         IExternalResultsService externalResultsService,
         ILimitReservationService limitReservationService,
-        ICaidaCalculationService caidaService)
+        ICaidaCalculationService caidaService,
+        IWarningService warningService)
     {
         _context = context;
         _logger = logger;
         _limitReservationService = limitReservationService;
         _externalResultsService = externalResultsService;
         _caidaService = caidaService;
+        _warningService = warningService;
     }
 
     [HttpGet]
@@ -530,9 +534,14 @@ public class TicketsController : ControllerBase
                     && up.Permission!.PermissionCode == "PLAY_WITHOUT_AVAILABILITY"
                     && up.IsActive);
 
+            // Tracks whether canBypassLimits actually saved the ticket from being blocked.
+            // Only when this is true do we record TICKET_BYPASS_VALIDATION.
+            var bypassActuallyUsed = false;
+            var bypassReasons = new List<string>();
+
             // 1.6 Validate daily sale limit
             var dailySaleLimit = bpConfig?.DailySaleLimit;
-            if (!canBypassLimits && dailySaleLimit.HasValue && dailySaleLimit.Value > 0)
+            if (dailySaleLimit.HasValue && dailySaleLimit.Value > 0)
             {
                 // Use UTC range matching business day (same logic as daily-summary endpoint)
                 var utcDayStart = DateTimeHelper.GetUtcStartOfDay(todayBusiness);
@@ -549,16 +558,24 @@ public class TicketsController : ControllerBase
 
                 if (currentDailySales + newTicketEstimate > dailySaleLimit.Value)
                 {
-                    var remaining = dailySaleLimit.Value - currentDailySales;
-                    return UnprocessableEntity(new
+                    if (canBypassLimits)
                     {
-                        code = "ticket/daily-sale-limit-exceeded",
-                        message = "La banca ha alcanzado su límite de venta diaria",
-                        dailySaleLimit = dailySaleLimit.Value,
-                        currentDailySales,
-                        ticketAmount = newTicketEstimate,
-                        remaining = remaining > 0 ? remaining : 0m
-                    });
+                        bypassActuallyUsed = true;
+                        bypassReasons.Add("daily_sale_limit");
+                    }
+                    else
+                    {
+                        var remaining = dailySaleLimit.Value - currentDailySales;
+                        return UnprocessableEntity(new
+                        {
+                            code = "ticket/daily-sale-limit-exceeded",
+                            message = "La banca ha alcanzado su límite de venta diaria",
+                            dailySaleLimit = dailySaleLimit.Value,
+                            currentDailySales,
+                            ticketAmount = newTicketEstimate,
+                            remaining = remaining > 0 ? remaining : 0m
+                        });
+                    }
                 }
             }
 
@@ -631,16 +648,24 @@ public class TicketsController : ControllerBase
 
             foreach (var line in dto.Lines)
             {
-                if (!canBypassLimits && blockedSet.Contains((line.DrawId, line.BetTypeId, line.BetNumber)))
+                if (blockedSet.Contains((line.DrawId, line.BetTypeId, line.BetNumber)))
                 {
-                    return UnprocessableEntity(new
+                    if (canBypassLimits)
                     {
-                        code = "NUMBER_BLOCKED",
-                        message = $"El número {line.BetNumber} está bloqueado para este sorteo",
-                        drawId = line.DrawId,
-                        gameTypeId = line.BetTypeId,
-                        betNumber = line.BetNumber
-                    });
+                        bypassActuallyUsed = true;
+                        if (!bypassReasons.Contains("number_blocked")) bypassReasons.Add("number_blocked");
+                    }
+                    else
+                    {
+                        return UnprocessableEntity(new
+                        {
+                            code = "NUMBER_BLOCKED",
+                            message = $"El número {line.BetNumber} está bloqueado para este sorteo",
+                            drawId = line.DrawId,
+                            gameTypeId = line.BetTypeId,
+                            betNumber = line.BetNumber
+                        });
+                    }
                 }
                 var draw = draws.FirstOrDefault(d => d.DrawId == line.DrawId);
                 if (draw == null)
@@ -829,12 +854,17 @@ public class TicketsController : ControllerBase
                 totalCommission += line.CommissionAmount;
                 totalNet += line.NetAmount;
 
-                var limitCheck = canBypassLimits
-                    ? new LimitCheckDetail { Passed = true, Attempted = line.BetAmount }
-                    : await CheckIfPlayIsOnLimitsDetailed(line.DrawId, dto.BettingPoolId, line.BetNumber, line.BetAmount);
+                var limitCheck = await CheckIfPlayIsOnLimitsDetailed(
+                    line.DrawId, dto.BettingPoolId, line.BetNumber, line.BetAmount);
 
-                if (limitCheck.Passed)
+                if (limitCheck.Passed || canBypassLimits)
                 {
+                    if (!limitCheck.Passed && canBypassLimits)
+                    {
+                        bypassActuallyUsed = true;
+                        if (!bypassReasons.Contains("limit_exceeded")) bypassReasons.Add("limit_exceeded");
+                    }
+
                     ticket.TicketLines.Add(line);
 
                     // Update limit consumption for this line (use full bet amount, not net)
@@ -884,16 +914,24 @@ public class TicketsController : ControllerBase
             }
 
             // 9b. Validate max ticket amount
-            if (!canBypassLimits && bpConfig?.MaxTicketAmount != null && bpConfig.MaxTicketAmount > 0
+            if (bpConfig?.MaxTicketAmount != null && bpConfig.MaxTicketAmount > 0
                 && totalBetAmount > bpConfig.MaxTicketAmount)
             {
-                await transaction.RollbackAsync();
-                return UnprocessableEntity(new
+                if (canBypassLimits)
                 {
-                    code = "MAX_TICKET_AMOUNT_EXCEEDED",
-                    ticketAmount = totalBetAmount,
-                    maxAmount = bpConfig.MaxTicketAmount
-                });
+                    bypassActuallyUsed = true;
+                    if (!bypassReasons.Contains("max_ticket_amount")) bypassReasons.Add("max_ticket_amount");
+                }
+                else
+                {
+                    await transaction.RollbackAsync();
+                    return UnprocessableEntity(new
+                    {
+                        code = "MAX_TICKET_AMOUNT_EXCEEDED",
+                        ticketAmount = totalBetAmount,
+                        maxAmount = bpConfig.MaxTicketAmount
+                    });
+                }
             }
 
             // 10. Set ticket totals
@@ -917,7 +955,7 @@ public class TicketsController : ControllerBase
             // Credito = DeactivationBalance - CurrentBalance (calculated on the fly)
             // If new balance would exceed DeactivationBalance, block the sale
             // DeactivationBalance == 0 or null means "not configured" (no credit limit)
-            if (!canBypassLimits && bpConfig?.DeactivationBalance != null && bpConfig.DeactivationBalance.Value > 0)
+            if (bpConfig?.DeactivationBalance != null && bpConfig.DeactivationBalance.Value > 0)
             {
                 var currentBalanceRow = await _context.Balances
                     .AsNoTracking()
@@ -928,17 +966,25 @@ public class TicketsController : ControllerBase
 
                 if (projectedBalance > deactivation)
                 {
-                    var remainingCredit = Math.Max(0, deactivation - currentBalance);
-                    await transaction.RollbackAsync();
-                    return UnprocessableEntity(new
+                    if (canBypassLimits)
                     {
-                        code = "CREDIT_EXHAUSTED",
-                        message = "La banca ha alcanzado su límite de crédito",
-                        currentCredit = remainingCredit,
-                        ticketAmount = balanceAmount,
-                        deactivationBalance = deactivation,
-                        currentBalance
-                    });
+                        bypassActuallyUsed = true;
+                        if (!bypassReasons.Contains("credit_limit")) bypassReasons.Add("credit_limit");
+                    }
+                    else
+                    {
+                        var remainingCredit = Math.Max(0, deactivation - currentBalance);
+                        await transaction.RollbackAsync();
+                        return UnprocessableEntity(new
+                        {
+                            code = "CREDIT_EXHAUSTED",
+                            message = "La banca ha alcanzado su límite de crédito",
+                            currentCredit = remainingCredit,
+                            ticketAmount = balanceAmount,
+                            deactivationBalance = deactivation,
+                            currentBalance
+                        });
+                    }
                 }
             }
 
@@ -948,6 +994,39 @@ public class TicketsController : ControllerBase
             _context.Tickets.Add(ticket);
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
+
+            // 11.1 Record warnings for notable conditions
+            if (hasClosedDraw)
+            {
+                await _warningService.RecordAsync(
+                    type: WarningTypes.TicketCreatedLate,
+                    message: $"Ticket {ticket.TicketCode} creado fuera de hora ({closedDrawIds.Count} sorteo(s) cerrado(s))",
+                    bettingPoolId: ticket.BettingPoolId,
+                    userId: ticket.UserId,
+                    referenceId: ticket.TicketId.ToString(),
+                    referenceType: "ticket",
+                    severity: "high",
+                    metadata: new { ticketCode = ticket.TicketCode, closedDrawIds = closedDrawIds.ToArray() });
+            }
+
+            if (canBypassLimits && bypassActuallyUsed)
+            {
+                var reasonsLabel = string.Join(", ", bypassReasons);
+                await _warningService.RecordAsync(
+                    type: WarningTypes.TicketBypassValidation,
+                    message: $"Ticket {ticket.TicketCode} creado saltando validaciones ({reasonsLabel})",
+                    bettingPoolId: ticket.BettingPoolId,
+                    userId: ticket.UserId,
+                    referenceId: ticket.TicketId.ToString(),
+                    referenceType: "ticket",
+                    severity: "high",
+                    metadata: new
+                    {
+                        ticketCode = ticket.TicketCode,
+                        totalAmount = ticket.TotalBetAmount,
+                        bypassReasons
+                    });
+            }
 
             // 10.0.1 Release limit reservations for saved plays
             var savedPlays = ticket.TicketLines
@@ -1573,6 +1652,62 @@ public class TicketsController : ControllerBase
             }
 
             await _context.SaveChangesAsync();
+
+            // 8.3 Record warnings for notable cancellation conditions
+            try
+            {
+                var cancelledLate = ticket.SpecialFlags?.Contains("CANCELLED_OUT_OF_TIME") == true;
+                var cancelledAfterDraw = ticket.TicketLines.Any(l =>
+                {
+                    var drawDateTimeUtc = l.DrawDate.Date.Add(l.DrawTime);
+                    return now > drawDateTimeUtc;
+                });
+                var winnerCancelled = ticket.TotalPrize > 0
+                    || ticket.TicketLines.Any(l => l.IsWinner);
+
+                if (cancelledLate)
+                {
+                    await _warningService.RecordAsync(
+                        type: WarningTypes.TicketCancelledLate,
+                        message: $"Ticket {ticket.TicketCode} cancelado fuera de hora",
+                        bettingPoolId: ticket.BettingPoolId,
+                        userId: dto.CancelledBy,
+                        referenceId: ticket.TicketId.ToString(),
+                        referenceType: "ticket",
+                        severity: "high",
+                        metadata: new { ticketCode = ticket.TicketCode, totalAmount = ticket.TotalBetAmount });
+                }
+
+                if (cancelledAfterDraw)
+                {
+                    await _warningService.RecordAsync(
+                        type: WarningTypes.TicketCancelledAfterDraw,
+                        message: $"Ticket {ticket.TicketCode} cancelado después de la hora del sorteo",
+                        bettingPoolId: ticket.BettingPoolId,
+                        userId: dto.CancelledBy,
+                        referenceId: ticket.TicketId.ToString(),
+                        referenceType: "ticket",
+                        severity: "high",
+                        metadata: new { ticketCode = ticket.TicketCode, totalAmount = ticket.TotalBetAmount });
+                }
+
+                if (winnerCancelled)
+                {
+                    await _warningService.RecordAsync(
+                        type: WarningTypes.TicketWinnerCancelled,
+                        message: $"Ticket ganador {ticket.TicketCode} fue cancelado (premio: ${ticket.TotalPrize})",
+                        bettingPoolId: ticket.BettingPoolId,
+                        userId: dto.CancelledBy,
+                        referenceId: ticket.TicketId.ToString(),
+                        referenceType: "ticket",
+                        severity: "high",
+                        metadata: new { ticketCode = ticket.TicketCode, totalPrize = ticket.TotalPrize });
+                }
+            }
+            catch (Exception warnEx)
+            {
+                _logger.LogWarning(warnEx, "Failed to record cancellation warnings for ticket {TicketId}", ticket.TicketId);
+            }
 
             _logger.LogInformation(
                 "Cancelled ticket {TicketCode} (ID: {TicketId}) by user {UserId}, reason: {Reason}",

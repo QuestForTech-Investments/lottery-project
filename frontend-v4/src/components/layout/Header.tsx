@@ -11,6 +11,7 @@ import {
   MenuItem,
   ListItemIcon,
   ListItemText,
+  Badge,
 } from '@mui/material'
 import {
   Home,
@@ -19,7 +20,6 @@ import {
   ChevronRight,
   ChevronLeft,
   Menu as MenuIcon,
-  Settings,
   Lock,
   Logout,
   Receipt,
@@ -30,6 +30,9 @@ import {
   AccountBalance,
   CalendarMonth,
   Schedule,
+  Notifications,
+  NotificationsActive,
+  ArrowDropDown,
 } from '@mui/icons-material'
 import type { SvgIconComponent } from '@mui/icons-material'
 import { useTimezone } from '@hooks/useTimezone'
@@ -37,6 +40,7 @@ import LanguageSelector from '@components/common/LanguageSelector'
 import ChangePasswordModal from '@components/modals/ChangePasswordModal'
 import TimezoneModal from '@components/modals/TimezoneModal'
 import * as authService from '@services/authService'
+import { getWarningCount } from '@services/warningService'
 import * as logger from '@utils/logger'
 
 interface HeaderProps {
@@ -68,7 +72,8 @@ const TimeDisplay = memo(() => {
       <Typography
         variant="body2"
         sx={{
-          fontWeight: 700,
+          fontWeight: 600,
+          fontSize: '13px',
           color: 'text.primary',
           cursor: 'default',
         }}
@@ -136,11 +141,30 @@ const Header = ({ sidebarCollapsed, sidebarHovered, onToggleSidebar, isMobile = 
   const [isTimezoneModalOpen, setIsTimezoneModalOpen] = useState(false)
   const [hoveredIcon, setHoveredIcon] = useState<string | null>(null)
   const [activeIcon, setActiveIcon] = useState<string | null>(null)
+  const [warningCount, setWarningCount] = useState<number>(0)
   const openSettings = Boolean(settingsAnchorEl)
 
-  const handleSettingsClick = (event: MouseEvent<HTMLButtonElement>) => {
+  useEffect(() => {
+    let cancelled = false
+    const fetchCount = async () => {
+      try {
+        const count = await getWarningCount()
+        if (!cancelled) setWarningCount(count)
+      } catch (err) {
+        // Silent fail — badge just stays at last value
+      }
+    }
+    fetchCount()
+    const timer = setInterval(fetchCount, 60_000)
+    return () => {
+      cancelled = true
+      clearInterval(timer)
+    }
+  }, [])
+
+  const handleSettingsClick = (event: MouseEvent<HTMLElement>) => {
     setSettingsAnchorEl(event.currentTarget)
-    setActiveIcon('settings')
+    setActiveIcon('user')
   }
 
   const handleSettingsClose = () => {
@@ -238,11 +262,67 @@ const Header = ({ sidebarCollapsed, sidebarHovered, onToggleSidebar, isMobile = 
 
         <Box sx={{ flexGrow: 1 }} />
 
+        {/* Centered warnings bell */}
+        {!isMobile && (
+          <Box
+            sx={{
+              position: 'absolute',
+              left: '50%',
+              top: '50%',
+              transform: 'translate(-50%, -50%)',
+            }}
+          >
+            <Tooltip title={warningCount > 0 ? `${warningCount} advertencia(s) hoy` : 'Sin advertencias'}>
+              <IconButton
+                onClick={() => navigate('/warnings')}
+                onMouseEnter={() => setHoveredIcon('bell')}
+                onMouseLeave={() => setHoveredIcon(null)}
+                sx={{
+                  p: 0.75,
+                  color:
+                    warningCount > 0
+                      ? '#d32f2f'
+                      : hoveredIcon === 'bell'
+                        ? 'primary.main'
+                        : 'text.primary',
+                  transition: 'all 0.2s ease',
+                  '&:hover': {
+                    backgroundColor:
+                      warningCount > 0 ? 'rgba(211, 47, 47, 0.1)' : 'rgba(99, 102, 241, 0.1)',
+                  },
+                }}
+              >
+                <Badge
+                  badgeContent={warningCount}
+                  max={99}
+                  color="error"
+                  overlap="circular"
+                  sx={{
+                    '& .MuiBadge-badge': {
+                      fontSize: '9px',
+                      height: 16,
+                      minWidth: 16,
+                      padding: '0 4px',
+                      fontWeight: 'bold',
+                    },
+                  }}
+                >
+                  {warningCount > 0 ? (
+                    <NotificationsActive sx={{ fontSize: 20 }} />
+                  ) : (
+                    <Notifications sx={{ fontSize: 20 }} />
+                  )}
+                </Badge>
+              </IconButton>
+            </Tooltip>
+          </Box>
+        )}
+
         <Box
           sx={{
             display: 'flex',
             alignItems: 'center',
-            gap: 2,
+            gap: 1.5,
             animation: 'fadeInRight 0.5s ease-out 0.3s both',
             '@keyframes fadeInRight': {
               '0%': { opacity: 0, transform: 'translateX(20px)' },
@@ -250,102 +330,12 @@ const Header = ({ sidebarCollapsed, sidebarHovered, onToggleSidebar, isMobile = 
             },
           }}
         >
-          <Box
-            sx={{
-              animation: 'fadeIn 0.3s ease-out 0.5s both',
-              '@keyframes fadeIn': {
-                '0%': { opacity: 0 },
-                '100%': { opacity: 1 },
-              },
-            }}
-          >
+          {/* Time */}
+          <Box sx={{ animation: 'fadeIn 0.3s ease-out 0.5s both', '@keyframes fadeIn': { '0%': { opacity: 0 }, '100%': { opacity: 1 } } }}>
             <TimeDisplay />
           </Box>
 
-          <Box
-            sx={{
-              animation: 'fadeIn 0.3s ease-out 0.6s both',
-            }}
-          >
-            <Typography
-              variant="body2"
-              sx={{
-                color: 'text.primary',
-                fontWeight: 'bold',
-                fontSize: '14px',
-              }}
-            >
-              {authService.getCurrentUser()?.username || 'Usuario'}
-            </Typography>
-          </Box>
-
-          {/* Key icon - hidden on mobile */}
-          {!isMobile && (
-            <Box onMouseEnter={() => setHoveredIcon('key')} onMouseLeave={() => setHoveredIcon(null)}>
-              <IconButton
-                onClick={handleChangePassword}
-                sx={{
-                  color: hoveredIcon === 'key' || activeIcon === 'key' ? 'primary.main' : 'text.primary',
-                  transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
-                  '&:hover': {
-                    backgroundColor: 'rgba(99, 102, 241, 0.1)',
-                    color: 'primary.main',
-                    transform: 'scale(1.1) rotate(45deg)',
-                  },
-                  '&:active': {
-                    backgroundColor: 'primary.main',
-                    color: '#ffffff',
-                    transform: 'scale(0.95) rotate(45deg)',
-                    transition: 'transform 0.1s, background-color 0.1s, color 0.1s',
-                  },
-                }}
-              >
-                <i className="fas fa-key" style={{ fontSize: '28px' }} />
-              </IconButton>
-            </Box>
-          )}
-
-          {/* Bell icon - hidden on mobile */}
-          {!isMobile && (
-            <Box
-              onMouseEnter={() => setHoveredIcon('bell')}
-              onMouseLeave={() => setHoveredIcon(null)}
-              sx={{ position: 'relative' }}
-            >
-              <IconButton
-                sx={{
-                  color: hoveredIcon === 'bell' || activeIcon === 'bell' ? 'primary.main' : 'text.primary',
-                  transition: 'all 0.3s ease',
-                  '&:hover': {
-                    backgroundColor: 'rgba(99, 102, 241, 0.1)',
-                    color: 'primary.main',
-                    transform: 'scale(1.1) rotate(10deg)',
-                  },
-                  '&:active': {
-                    transform: 'scale(0.9)',
-                    transition: 'transform 0.1s',
-                  },
-                }}
-              >
-                <i className="fas fa-bell" style={{ fontSize: '14px' }} />
-              </IconButton>
-              <Box
-                sx={{
-                  position: 'absolute',
-                  top: '50%',
-                  right: '-1px',
-                  transform: 'translateY(-50%)',
-                  fontSize: '8px',
-                  color: hoveredIcon === 'bell' || activeIcon === 'bell' ? 'primary.main' : 'text.primary',
-                  fontWeight: 'bold',
-                }}
-              >
-                ▼
-              </Box>
-            </Box>
-          )}
-
-          {/* Language selector - hidden on mobile */}
+          {/* Language selector */}
           {!isMobile && (
             <LanguageSelector
               isHovered={hoveredIcon === 'language'}
@@ -356,47 +346,63 @@ const Header = ({ sidebarCollapsed, sidebarHovered, onToggleSidebar, isMobile = 
             />
           )}
 
-          {/* Settings icon - always visible */}
-          <Box
-            onMouseEnter={() => setHoveredIcon('settings')}
-            onMouseLeave={() => setHoveredIcon(null)}
-            sx={{ position: 'relative' }}
-          >
-            <IconButton
+          {/* User menu */}
+          <Tooltip title="Cuenta">
+            <Box
               onClick={handleSettingsClick}
+              onMouseEnter={() => setHoveredIcon('user')}
+              onMouseLeave={() => setHoveredIcon(null)}
               sx={{
-                color: hoveredIcon === 'settings' || activeIcon === 'settings' ? 'primary.main' : 'text.primary',
-                transition: 'all 0.3s ease',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 0.75,
+                px: 1,
+                py: 0.5,
+                borderRadius: 1,
+                cursor: 'pointer',
+                transition: 'background-color 0.2s',
                 '&:hover': {
-                  backgroundColor: 'rgba(99, 102, 241, 0.1)',
-                  color: 'primary.main',
-                  transform: 'scale(1.1) rotate(45deg)',
-                },
-                '&:active': {
-                  transform: 'scale(0.9)',
-                  transition: 'transform 0.1s',
+                  backgroundColor: 'rgba(99, 102, 241, 0.08)',
                 },
               }}
             >
-              <Settings sx={{ fontSize: 16 }} />
-            </IconButton>
-            {!isMobile && (
               <Box
                 sx={{
-                  position: 'absolute',
-                  top: '50%',
-                  right: '-1px',
-                  transform: 'translateY(-50%)',
-                  fontSize: '8px',
-                  color:
-                    hoveredIcon === 'settings' || activeIcon === 'settings' ? 'primary.main' : 'text.primary',
+                  width: 28,
+                  height: 28,
+                  borderRadius: '50%',
+                  background: 'linear-gradient(135deg, #51cbce 0%, #45b8bb 100%)',
+                  color: 'white',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
                   fontWeight: 'bold',
+                  fontSize: '12px',
+                  textTransform: 'uppercase',
                 }}
               >
-                ▼
+                {(authService.getCurrentUser()?.username || 'U').charAt(0)}
               </Box>
-            )}
-          </Box>
+              <Typography
+                variant="body2"
+                sx={{
+                  color: hoveredIcon === 'user' || openSettings ? 'primary.main' : 'text.primary',
+                  fontWeight: 600,
+                  fontSize: '13px',
+                }}
+              >
+                {authService.getCurrentUser()?.username || 'Usuario'}
+              </Typography>
+              <ArrowDropDown
+                sx={{
+                  fontSize: 18,
+                  color: hoveredIcon === 'user' || openSettings ? 'primary.main' : 'text.primary',
+                  transition: 'transform 0.2s',
+                  transform: openSettings ? 'rotate(180deg)' : 'rotate(0deg)',
+                }}
+              />
+            </Box>
+          </Tooltip>
         </Box>
       </Toolbar>
 

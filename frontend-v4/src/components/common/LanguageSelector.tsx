@@ -1,7 +1,7 @@
 import { useState, MouseEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Menu, MenuItem, ListItemIcon, ListItemText, Box, IconButton } from '@mui/material'
-import { Language as LanguageIcon, ArrowDropDown } from '@mui/icons-material'
+import { ArrowDropDown } from '@mui/icons-material'
 
 const languages = [
   { code: 'es', name: 'language.spanish', flag: '🇪🇸' },
@@ -47,6 +47,7 @@ export default function LanguageSelector({
   const activeColor = '#4dd4d4'
   const defaultColor = '#66615b'
   const isActiveState = isHovered || isActive || open
+  const currentLang = languages.find(l => l.code === i18n.language) ?? languages[0]
 
   return (
     <Box sx={{ position: 'relative' }}>
@@ -59,7 +60,7 @@ export default function LanguageSelector({
           display: 'flex',
           alignItems: 'center',
           gap: 0.5,
-          px: 1,
+          px: 0.75,
           py: 0.5,
           borderRadius: 1,
           transition: 'background-color 0.2s',
@@ -68,21 +69,23 @@ export default function LanguageSelector({
           }
         }}
       >
-        <LanguageIcon sx={{ fontSize: 16, color: isActiveState ? activeColor : defaultColor }} />
+        <Box component="span" sx={{ fontSize: '18px', lineHeight: 1 }}>
+          {currentLang.flag}
+        </Box>
         <Box
           component="span"
           sx={{
-            fontSize: '0.875rem',
-            fontWeight: 500,
+            fontSize: '13px',
+            fontWeight: 600,
             textTransform: 'uppercase',
             color: isActiveState ? activeColor : defaultColor
           }}
         >
-          {i18n.language}
+          {currentLang.code}
         </Box>
         <ArrowDropDown
           sx={{
-            fontSize: 16,
+            fontSize: 18,
             color: isActiveState ? activeColor : defaultColor
           }}
         />

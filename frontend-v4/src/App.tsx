@@ -111,6 +111,9 @@ const EditAccountableEntityMUI = lazy(() => import('@components/features/account
 // My Group feature components
 const GroupConfigurationMUI = lazy(() => import('@components/features/my-group/GroupConfiguration'))
 
+// Warnings feature components
+const WarningsListMUI = lazy(() => import('@components/features/warnings/WarningsList'))
+
 // F8 Monitor feature component
 const F8MonitorMUI = lazy(() => import('@components/features/f8/F8Monitor'))
 
@@ -257,6 +260,9 @@ function App() {
 
                           {/* Configuration */}
                           <Route path="/my-group/configuration" element={<LazyRoute component={GroupConfigurationMUI} />} />
+
+                          {/* Warnings */}
+                          <Route path="/warnings" element={<LazyRoute component={WarningsListMUI} />} />
 
                           {/* Monitoring */}
                           <Route path="/f8" element={<LazyRoute component={F8MonitorMUI} />} />

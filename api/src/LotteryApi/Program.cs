@@ -21,6 +21,7 @@ using LotteryApi.Services.Caida;
 using LotteryApi.Services.Loans;
 using LotteryApi.Services.AutoExpenses;
 using LotteryApi.Services.ExternalResults;
+using LotteryApi.Services.Warnings;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -134,6 +135,9 @@ builder.Services.AddAutoExpenseServices(builder.Configuration);
 
 // Register Caída (Cashback) Services (scheduled caída calculations)
 builder.Services.AddCaidaServices(builder.Configuration);
+
+// Register Warning Services (audit warnings + late-result worker)
+builder.Services.AddWarningServices(builder.Configuration);
 
 // Register Memory Cache for performance
 builder.Services.AddMemoryCache();

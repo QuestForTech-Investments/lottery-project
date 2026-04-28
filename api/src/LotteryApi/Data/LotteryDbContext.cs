@@ -111,6 +111,9 @@ public class LotteryDbContext : DbContext
     // Caída
     public DbSet<CaidaHistory> CaidaHistory { get; set; }
 
+    // Warnings
+    public DbSet<Warning> Warnings { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -220,6 +223,16 @@ public class LotteryDbContext : DbContext
         // Contacts indexes
         modelBuilder.Entity<Contact>()
             .HasIndex(c => c.BettingPoolId);
+
+        // Warnings indexes
+        modelBuilder.Entity<Warning>()
+            .HasIndex(w => w.CreatedAt);
+
+        modelBuilder.Entity<Warning>()
+            .HasIndex(w => new { w.WarningType, w.CreatedAt });
+
+        modelBuilder.Entity<Warning>()
+            .HasIndex(w => new { w.WarningType, w.ReferenceId, w.ReferenceType });
     }
 
     private void ConfigureUniqueConstraints(ModelBuilder modelBuilder)

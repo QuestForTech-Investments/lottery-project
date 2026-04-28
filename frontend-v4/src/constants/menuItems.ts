@@ -13,7 +13,8 @@ import {
   MenuBook,
   List,
   Email,
-  LocationOn
+  LocationOn,
+  Warning as WarningIcon
 } from '@mui/icons-material';
 
 export interface MenuItem {
@@ -177,6 +178,7 @@ export const MENU_ITEMS: MenuItem[] = [
     ]
   },
   { id: 'f8', label: '[F8]', icon: List, path: '/f8' },
+  { id: 'warnings', label: 'ADVERTENCIAS', icon: WarningIcon, path: '/warnings' },
   {
     id: 'zones',
     label: 'ZONAS',
