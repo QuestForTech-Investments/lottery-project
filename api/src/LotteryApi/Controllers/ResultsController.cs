@@ -309,6 +309,20 @@ public class ResultsController : ControllerBase
             return NotFound(new { message = $"Result with ID {id} not found" });
         }
 
+        // Detect "result changed after prizes processed" before we reset lines.
+        var previousNumber = result.WinningNumber;
+        var previousDrawId = result.DrawId;
+        var previousResultDate = result.ResultDate;
+        var prizesAlreadyProcessed = false;
+        if (previousNumber != dto.WinningNumber)
+        {
+            prizesAlreadyProcessed = await _context.TicketLines
+                .AsNoTracking()
+                .AnyAsync(tl => tl.DrawId == previousDrawId
+                    && tl.DrawDate.Date == previousResultDate.Date
+                    && tl.IsWinner);
+        }
+
         result.DrawId = dto.DrawId;
         result.WinningNumber = dto.WinningNumber;
         result.AdditionalNumber = dto.AdditionalNumber;
@@ -320,6 +334,27 @@ public class ResultsController : ControllerBase
         await _context.SaveChangesAsync();
 
         _logger.LogInformation("Updated result {ResultId}", id);
+
+        if (prizesAlreadyProcessed)
+        {
+            var drawNameForWarning = result.Draw?.DrawName ?? $"#{previousDrawId}";
+            await _warningService.RecordAsync(
+                type: WarningTypes.ResultChangedAfterPrizes,
+                message: $"Resultado del sorteo {drawNameForWarning} cambiado después de procesar premios ({previousNumber} → {dto.WinningNumber})",
+                bettingPoolId: null,
+                userId: userId,
+                referenceId: $"{previousDrawId}_{previousResultDate:yyyy-MM-dd}",
+                referenceType: "result",
+                severity: "high",
+                metadata: new
+                {
+                    drawId = previousDrawId,
+                    drawName = drawNameForWarning,
+                    resultDate = previousResultDate.Date,
+                    previousNumber,
+                    newNumber = dto.WinningNumber
+                });
+        }
 
         // Reset previously processed lines so they can be reprocessed with the new result
         await _externalResultsService.ResetTicketLinesForDrawAsync(dto.DrawId, dto.ResultDate);
