@@ -76,7 +76,8 @@ public class ResultLatenessWorker : BackgroundService
         var draws = await context.Draws
             .AsNoTracking()
             .Include(d => d.Lottery)
-            .Where(d => d.IsActive)
+            .Include(d => d.WeeklySchedules)
+            .Where(d => d.IsActive && d.Lottery!.IsActive)
             .ToListAsync(stoppingToken);
 
         var checkedCount = 0;
@@ -93,7 +94,25 @@ public class ResultLatenessWorker : BackgroundService
 
             var nowLocal = TimeZoneInfo.ConvertTimeFromUtc(nowUtc, tz);
             var todayLocal = nowLocal.Date;
-            var scheduledLocal = todayLocal.Add(draw.DrawTime);
+
+            // Resolve today's scheduled time honoring weekly schedules.
+            // If the draw uses a weekly schedule and today has no active entry,
+            // the draw isn't running today — skip.
+            TimeSpan? scheduledTimeOfDay;
+            if (draw.UseWeeklySchedule)
+            {
+                var todayDow = (byte)nowLocal.DayOfWeek;
+                var todaySchedule = draw.WeeklySchedules?
+                    .FirstOrDefault(ws => ws.DayOfWeek == todayDow && ws.IsActive);
+                if (todaySchedule == null) continue;
+                scheduledTimeOfDay = todaySchedule.EndTime;
+            }
+            else
+            {
+                scheduledTimeOfDay = draw.DrawTime;
+            }
+
+            var scheduledLocal = todayLocal.Add(scheduledTimeOfDay.Value);
             var deadlineLocal = scheduledLocal.Add(threshold);
 
             // Has the deadline passed in the draw's timezone?
@@ -116,10 +135,11 @@ public class ResultLatenessWorker : BackgroundService
             if (alreadyRaised) continue;
 
             var minutesLate = (int)Math.Floor((nowLocal - scheduledLocal).TotalMinutes);
+            var scheduledTimeLabel = scheduledLocal.ToString("HH:mm");
 
             await warnings.RecordAsync(
                 type: WarningTypes.ResultPublicationLate,
-                message: $"El sorteo {draw.DrawName} no se ha publicado ({minutesLate} min de retraso)",
+                message: $"El sorteo {draw.DrawName} no se ha publicado (hora programada: {scheduledTimeLabel})",
                 bettingPoolId: null,
                 userId: null,
                 referenceId: refId,
@@ -130,6 +150,7 @@ public class ResultLatenessWorker : BackgroundService
                     drawId = draw.DrawId,
                     drawName = draw.DrawName,
                     scheduledTimeLocal = scheduledLocal,
+                    scheduledTimeLabel,
                     timezone = tzId,
                     minutesLate
                 },

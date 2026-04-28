@@ -52,6 +52,8 @@ const WarningsList: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
 
   const groupNames = useMemo(() => Object.keys(WARNING_GROUPS), []);
+  const activeGroup = groupNames[activeTab];
+  const showTicketColumns = activeGroup === 'Tickets';
 
   const handleTicketClick = (w: Warning) => {
     if (!w.ticketId) return;
@@ -181,11 +183,11 @@ const WarningsList: React.FC = () => {
             <TableHead>
               <TableRow sx={{ bgcolor: '#f5f5f5' }}>
                 <TableCell sx={{ fontWeight: 'bold' }}>Tipo</TableCell>
-                <TableCell sx={{ fontWeight: 'bold' }}>Banca</TableCell>
+                {showTicketColumns && <TableCell sx={{ fontWeight: 'bold' }}>Banca</TableCell>}
                 <TableCell sx={{ fontWeight: 'bold' }}>Usuario</TableCell>
-                <TableCell sx={{ fontWeight: 'bold' }}>Ticket</TableCell>
-                <TableCell sx={{ fontWeight: 'bold' }} align="right">Monto</TableCell>
-                <TableCell sx={{ fontWeight: 'bold' }} align="right">Premio</TableCell>
+                {showTicketColumns && <TableCell sx={{ fontWeight: 'bold' }}>Ticket</TableCell>}
+                {showTicketColumns && <TableCell sx={{ fontWeight: 'bold' }} align="right">Monto</TableCell>}
+                {showTicketColumns && <TableCell sx={{ fontWeight: 'bold' }} align="right">Premio</TableCell>}
                 <TableCell sx={{ fontWeight: 'bold' }}>Mensaje</TableCell>
                 <TableCell sx={{ fontWeight: 'bold' }}>Fecha</TableCell>
               </TableRow>
@@ -193,7 +195,7 @@ const WarningsList: React.FC = () => {
             <TableBody>
               {filteredWarnings.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} align="center" sx={{ py: 4, color: '#888' }}>
+                  <TableCell colSpan={showTicketColumns ? 8 : 4} align="center" sx={{ py: 4, color: '#888' }}>
                     {loading ? 'Cargando...' : 'No hay advertencias para este día'}
                   </TableCell>
                 </TableRow>
@@ -214,42 +216,50 @@ const WarningsList: React.FC = () => {
                           }}
                         />
                       </TableCell>
-                      <TableCell>
-                        {w.bettingPoolCode || w.bettingPoolName || '-'}
-                      </TableCell>
+                      {showTicketColumns && (
+                        <TableCell>
+                          {w.bettingPoolCode || w.bettingPoolName || '-'}
+                        </TableCell>
+                      )}
                       <TableCell>{w.username || '-'}</TableCell>
-                      <TableCell>
-                        {w.ticketId ? (
-                          <MuiLink
-                            component="button"
-                            onClick={() => handleTicketClick(w)}
-                            sx={{
-                              color: '#51cbce',
-                              textDecoration: 'underline',
-                              cursor: 'pointer',
-                              fontWeight: 500,
-                              background: 'none',
-                              border: 'none',
-                              p: 0,
-                              fontFamily: 'inherit',
-                              fontSize: 'inherit',
-                              '&:hover': { color: '#45b8bb' },
-                            }}
-                          >
-                            {w.ticketCode || `#${w.ticketId}`}
-                          </MuiLink>
-                        ) : (
-                          '-'
-                        )}
-                      </TableCell>
-                      <TableCell align="right">
-                        {w.ticketAmount != null ? formatCurrency(w.ticketAmount) : '-'}
-                      </TableCell>
-                      <TableCell align="right">
-                        {w.ticketPrize != null && w.ticketPrize > 0
-                          ? formatCurrency(w.ticketPrize)
-                          : '-'}
-                      </TableCell>
+                      {showTicketColumns && (
+                        <TableCell>
+                          {w.ticketId ? (
+                            <MuiLink
+                              component="button"
+                              onClick={() => handleTicketClick(w)}
+                              sx={{
+                                color: '#51cbce',
+                                textDecoration: 'underline',
+                                cursor: 'pointer',
+                                fontWeight: 500,
+                                background: 'none',
+                                border: 'none',
+                                p: 0,
+                                fontFamily: 'inherit',
+                                fontSize: 'inherit',
+                                '&:hover': { color: '#45b8bb' },
+                              }}
+                            >
+                              {w.ticketCode || `#${w.ticketId}`}
+                            </MuiLink>
+                          ) : (
+                            '-'
+                          )}
+                        </TableCell>
+                      )}
+                      {showTicketColumns && (
+                        <TableCell align="right">
+                          {w.ticketAmount != null ? formatCurrency(w.ticketAmount) : '-'}
+                        </TableCell>
+                      )}
+                      {showTicketColumns && (
+                        <TableCell align="right">
+                          {w.ticketPrize != null && w.ticketPrize > 0
+                            ? formatCurrency(w.ticketPrize)
+                            : '-'}
+                        </TableCell>
+                      )}
                       <TableCell>{w.message || '-'}</TableCell>
                       <TableCell>{formatDateTime(w.createdAt)}</TableCell>
                     </TableRow>
