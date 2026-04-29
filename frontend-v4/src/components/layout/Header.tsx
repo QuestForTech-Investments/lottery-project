@@ -299,18 +299,18 @@ const Header = ({ sidebarCollapsed, sidebarHovered, onToggleSidebar, isMobile = 
                   overlap="circular"
                   sx={{
                     '& .MuiBadge-badge': {
-                      fontSize: '9px',
-                      height: 16,
-                      minWidth: 16,
-                      padding: '0 4px',
+                      fontSize: '10px',
+                      height: 18,
+                      minWidth: 18,
+                      padding: '0 5px',
                       fontWeight: 'bold',
                     },
                   }}
                 >
                   {warningCount > 0 ? (
-                    <NotificationsActive sx={{ fontSize: 20 }} />
+                    <NotificationsActive sx={{ fontSize: 28 }} />
                   ) : (
-                    <Notifications sx={{ fontSize: 20 }} />
+                    <Notifications sx={{ fontSize: 28 }} />
                   )}
                 </Badge>
               </IconButton>

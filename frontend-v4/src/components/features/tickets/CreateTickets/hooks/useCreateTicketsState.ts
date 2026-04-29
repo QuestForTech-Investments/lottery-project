@@ -244,13 +244,26 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
     fetchConfig();
   }, [selectedPool?.bettingPoolId]);
 
-  // Load betting pools on mount
+  // Load betting pools on mount (paginated — fetches all pages)
   useEffect(() => {
     const loadPools = async () => {
       try {
-        const response = await api.get('/betting-pools') as { items?: BettingPool[] } | BettingPool[];
-        const poolList: BettingPool[] = Array.isArray(response) ? response : (response.items || []);
-        setPools(poolList);
+        const pageSize = 100;
+        const all: BettingPool[] = [];
+        let page = 1;
+        // eslint-disable-next-line no-constant-condition
+        while (true) {
+          const response = await api.get(`/betting-pools?page=${page}&pageSize=${pageSize}`) as
+            | { items?: BettingPool[]; totalCount?: number }
+            | BettingPool[];
+          const items: BettingPool[] = Array.isArray(response) ? response : (response.items || []);
+          all.push(...items);
+          if (Array.isArray(response)) break;
+          if (items.length < pageSize) break;
+          if (typeof response.totalCount === 'number' && all.length >= response.totalCount) break;
+          page += 1;
+        }
+        setPools(all);
       } catch (error) {
         console.error('Error loading betting pools:', error);
         setPools([{ bettingPoolId: 9, bettingPoolCode: 'RB003333', bettingPoolName: 'admin' }]);

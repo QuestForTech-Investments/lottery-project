@@ -67,7 +67,7 @@ export const WARNING_TYPE_LABELS: Record<WarningType, string> = {
   TICKET_CANCELLED_AFTER_DRAW: 'Ticket cancelado después del sorteo',
   TICKET_WINNER_CANCELLED: 'Ticket ganador cancelado',
   TICKET_BYPASS_VALIDATION: 'Ticket creado con bypass',
-  RESULT_CHANGED_AFTER_PRIZES: 'Resultado cambiado tras procesar premios',
+  RESULT_CHANGED_AFTER_PRIZES: 'Resultado modificado',
   RESULT_PUBLICATION_LATE: 'Resultado no publicado a tiempo',
 };
 

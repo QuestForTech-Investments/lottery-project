@@ -174,17 +174,8 @@ public class ResultsController : ControllerBase
 
         if (existingResult != null)
         {
-            // Detect "result changed after prizes processed" before we reset lines.
             var previousNumber = existingResult.WinningNumber;
-            var prizesAlreadyProcessed = false;
-            if (previousNumber != dto.WinningNumber)
-            {
-                prizesAlreadyProcessed = await _context.TicketLines
-                    .AsNoTracking()
-                    .AnyAsync(tl => tl.DrawId == dto.DrawId
-                        && tl.DrawDate.Date == dto.ResultDate.Date
-                        && tl.IsWinner);
-            }
+            var numberChanged = previousNumber != dto.WinningNumber;
 
             // Update existing result
             existingResult.WinningNumber = dto.WinningNumber;
@@ -197,11 +188,11 @@ public class ResultsController : ControllerBase
 
             _logger.LogInformation("Updated result {ResultId} for draw {DrawId}", existingResult.ResultId, dto.DrawId);
 
-            if (prizesAlreadyProcessed)
+            if (numberChanged)
             {
                 await _warningService.RecordAsync(
                     type: WarningTypes.ResultChangedAfterPrizes,
-                    message: $"Resultado del sorteo {draw.DrawName} cambiado después de procesar premios ({previousNumber} → {dto.WinningNumber})",
+                    message: $"Resultado del sorteo {draw.DrawName} modificado ({previousNumber} → {dto.WinningNumber})",
                     bettingPoolId: null,
                     userId: userId,
                     referenceId: $"{dto.DrawId}_{dto.ResultDate:yyyy-MM-dd}",
@@ -309,19 +300,10 @@ public class ResultsController : ControllerBase
             return NotFound(new { message = $"Result with ID {id} not found" });
         }
 
-        // Detect "result changed after prizes processed" before we reset lines.
         var previousNumber = result.WinningNumber;
         var previousDrawId = result.DrawId;
         var previousResultDate = result.ResultDate;
-        var prizesAlreadyProcessed = false;
-        if (previousNumber != dto.WinningNumber)
-        {
-            prizesAlreadyProcessed = await _context.TicketLines
-                .AsNoTracking()
-                .AnyAsync(tl => tl.DrawId == previousDrawId
-                    && tl.DrawDate.Date == previousResultDate.Date
-                    && tl.IsWinner);
-        }
+        var numberChanged = previousNumber != dto.WinningNumber;
 
         result.DrawId = dto.DrawId;
         result.WinningNumber = dto.WinningNumber;
@@ -335,12 +317,12 @@ public class ResultsController : ControllerBase
 
         _logger.LogInformation("Updated result {ResultId}", id);
 
-        if (prizesAlreadyProcessed)
+        if (numberChanged)
         {
             var drawNameForWarning = result.Draw?.DrawName ?? $"#{previousDrawId}";
             await _warningService.RecordAsync(
                 type: WarningTypes.ResultChangedAfterPrizes,
-                message: $"Resultado del sorteo {drawNameForWarning} cambiado después de procesar premios ({previousNumber} → {dto.WinningNumber})",
+                message: $"Resultado del sorteo {drawNameForWarning} modificado ({previousNumber} → {dto.WinningNumber})",
                 bettingPoolId: null,
                 userId: userId,
                 referenceId: $"{previousDrawId}_{previousResultDate:yyyy-MM-dd}",
