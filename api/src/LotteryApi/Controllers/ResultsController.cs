@@ -175,7 +175,9 @@ public class ResultsController : ControllerBase
         if (existingResult != null)
         {
             var previousNumber = existingResult.WinningNumber;
-            var numberChanged = previousNumber != dto.WinningNumber;
+            var previousAdditional = existingResult.AdditionalNumber;
+            var numberChanged = previousNumber != dto.WinningNumber
+                || previousAdditional != dto.AdditionalNumber;
 
             // Update existing result
             existingResult.WinningNumber = dto.WinningNumber;
@@ -192,7 +194,7 @@ public class ResultsController : ControllerBase
             {
                 await _warningService.RecordAsync(
                     type: WarningTypes.ResultChangedAfterPrizes,
-                    message: $"Resultado del sorteo {draw.DrawName} modificado ({previousNumber} → {dto.WinningNumber})",
+                    message: $"Resultado del sorteo {draw.DrawName} modificado",
                     bettingPoolId: null,
                     userId: userId,
                     referenceId: $"{dto.DrawId}_{dto.ResultDate:yyyy-MM-dd}",
@@ -204,7 +206,9 @@ public class ResultsController : ControllerBase
                         drawName = draw.DrawName,
                         resultDate = dto.ResultDate.Date,
                         previousNumber,
-                        newNumber = dto.WinningNumber
+                        newNumber = dto.WinningNumber,
+                        previousAdditionalNumber = previousAdditional,
+                        newAdditionalNumber = dto.AdditionalNumber
                     });
             }
 
@@ -301,9 +305,11 @@ public class ResultsController : ControllerBase
         }
 
         var previousNumber = result.WinningNumber;
+        var previousAdditional = result.AdditionalNumber;
         var previousDrawId = result.DrawId;
         var previousResultDate = result.ResultDate;
-        var numberChanged = previousNumber != dto.WinningNumber;
+        var numberChanged = previousNumber != dto.WinningNumber
+            || previousAdditional != dto.AdditionalNumber;
 
         result.DrawId = dto.DrawId;
         result.WinningNumber = dto.WinningNumber;
@@ -322,7 +328,7 @@ public class ResultsController : ControllerBase
             var drawNameForWarning = result.Draw?.DrawName ?? $"#{previousDrawId}";
             await _warningService.RecordAsync(
                 type: WarningTypes.ResultChangedAfterPrizes,
-                message: $"Resultado del sorteo {drawNameForWarning} modificado ({previousNumber} → {dto.WinningNumber})",
+                message: $"Resultado del sorteo {drawNameForWarning} modificado",
                 bettingPoolId: null,
                 userId: userId,
                 referenceId: $"{previousDrawId}_{previousResultDate:yyyy-MM-dd}",
@@ -334,7 +340,9 @@ public class ResultsController : ControllerBase
                     drawName = drawNameForWarning,
                     resultDate = previousResultDate.Date,
                     previousNumber,
-                    newNumber = dto.WinningNumber
+                    newNumber = dto.WinningNumber,
+                    previousAdditionalNumber = previousAdditional,
+                    newAdditionalNumber = dto.AdditionalNumber
                 });
         }
 
