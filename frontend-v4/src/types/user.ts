@@ -21,6 +21,8 @@ export interface User {
   zoneIds?: number[];
   bettingPoolId?: number | null;
   permissions?: Permission[];
+  /** Plaintext password returned only on creation/reset. */
+  temporaryPassword?: string;
 }
 
 /**

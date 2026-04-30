@@ -10,12 +10,15 @@ import type { ApiErrorLike } from '../utils/apiErrorHandler'
 interface AuthResponse {
   token?: string
   expiresAt?: string
+  userId?: number
   username?: string
   email?: string
   fullName?: string
   role?: string
   bettingPoolId?: number
   bettingPoolName?: string
+  mustChangePassword?: boolean
+  mustSetPin?: boolean
   user?: Record<string, unknown>
 }
 
@@ -170,7 +173,13 @@ export const isTokenExpired = (token: string): boolean => {
  * Get current user from token
  * @returns {Object|null} - User data or null
  */
-export const getCurrentUser = (): { id?: string; username?: string } | null => {
+export const getCurrentUser = (): {
+  id?: string
+  username?: string
+  role?: string
+  mustChangePassword?: boolean
+  mustSetPin?: boolean
+} | null => {
   const token = getToken()
   if (!token) {
     return null
@@ -182,12 +191,33 @@ export const getCurrentUser = (): { id?: string; username?: string } | null => {
     return null
   }
 
-  const decoded = decodeToken(token)
-  return decoded ? {
+  const decoded = decodeToken(token) as
+    | (DecodedToken & {
+        role?: string
+        'http://schemas.microsoft.com/ws/2008/06/identity/claims/role'?: string
+        mustChangePassword?: string
+        mustSetPin?: string
+      })
+    | null
+  if (!decoded) return null
+  const role =
+    decoded.role ||
+    decoded['http://schemas.microsoft.com/ws/2008/06/identity/claims/role']
+  return {
     id: decoded.sub,
     username: decoded.unique_name,
-    // Add more fields as needed from your JWT payload
-  } : null
+    role: typeof role === 'string' ? role : undefined,
+    mustChangePassword: decoded.mustChangePassword === 'true',
+    mustSetPin: decoded.mustSetPin === 'true',
+  }
+}
+
+/**
+ * Returns true if the current user is a POS / banca user.
+ */
+export const isPosUser = (): boolean => {
+  const u = getCurrentUser()
+  return u?.role?.toUpperCase() === 'POS'
 }
 
 export default {
@@ -198,5 +228,6 @@ export default {
   getToken,
   decodeToken,
   isTokenExpired,
-  getCurrentUser
+  getCurrentUser,
+  isPosUser
 }

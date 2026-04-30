@@ -73,12 +73,15 @@ interface PaginatedApiResponse {
 
 interface UserCreateData {
   username: string;
-  password: string;
+  /** Optional — server auto-generates if not provided. */
+  password?: string;
   fullName?: string;
   email?: string;
   phone?: string;
   roleId?: number;
+  /** Single-zone form. Prefer zoneIds for multi-zone. */
   zoneId?: number;
+  zoneIds?: number[];
   bettingPoolId?: number;
   commissionRate?: number;
   isActive?: boolean;
@@ -239,6 +242,39 @@ export const changePassword = async (userId: number | string, passwordData: Pass
  */
 export const adminResetPassword = async (userId: number | string, passwordData: AdminPasswordResetData): Promise<unknown> => {
   return api.put(`/users/${userId}/password/admin-reset`, passwordData)
+}
+
+export interface TemporaryCredentialResponse {
+  userId: number
+  username: string
+  temporaryPassword: string
+  isAdminPassword: boolean
+}
+
+/**
+ * Generate a fresh temporary password for a user (admin action).
+ * Returns the plaintext password — show it once and never store it.
+ */
+export const generateTempPassword = async (
+  userId: number | string
+): Promise<TemporaryCredentialResponse> => {
+  return api.post(`/users/${userId}/reset-temp-password`, {}) as Promise<TemporaryCredentialResponse>
+}
+
+/**
+ * Set or change the current admin user's 4-digit PIN.
+ */
+export const setMyPin = async (pin: string): Promise<unknown> => {
+  return api.put('/users/me/pin', { pin })
+}
+
+/**
+ * Verify the current admin user's PIN. Used to gate sensitive actions.
+ */
+export const verifyMyPin = async (
+  pin: string
+): Promise<{ valid: boolean; mustSetPin?: boolean }> => {
+  return api.post('/users/me/verify-pin', { pin }) as Promise<{ valid: boolean; mustSetPin?: boolean }>
 }
 
 /**

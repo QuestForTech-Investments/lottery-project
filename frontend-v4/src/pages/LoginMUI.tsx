@@ -21,6 +21,8 @@ import logoImage from '@/assets/images/lottobook-logo.png';
 // Card background image from public folder
 const cardBackgroundImage = '/images/bannerlotto-02.jpg';
 import useLogin from './hooks/useLogin';
+import ForcePasswordChangeModal from '@components/modals/ForcePasswordChangeModal';
+import ForceSetPinModal from '@components/modals/ForceSetPinModal';
 
 /**
  * LoginMUI Component
@@ -32,10 +34,19 @@ const LoginMUI = () => {
     password,
     errors,
     isLoading,
+    mustChangePassword,
+    mustSetPin,
+    isPosUser,
     handleUsernameChange,
     handlePasswordChange,
     handleSubmit,
+    onPasswordChanged,
+    onPinSet,
   } = useLogin();
+
+  const justChanged =
+    typeof window !== 'undefined' &&
+    new URLSearchParams(window.location.search).get('changed') === '1';
 
   return (
     <Box
@@ -161,6 +172,12 @@ const LoginMUI = () => {
             }}
           >
             {errors.general}
+          </Alert>
+        )}
+
+        {justChanged && !errors.general && (
+          <Alert severity="success" sx={{ mb: 2.5, borderRadius: '12px' }}>
+            Contraseña actualizada. Inicia sesión con tu nueva clave.
           </Alert>
         )}
 
@@ -434,6 +451,16 @@ const LoginMUI = () => {
           Lottobook Version 777
         </Typography>
       </Box>
+
+      <ForcePasswordChangeModal
+        isOpen={mustChangePassword}
+        isPos={isPosUser}
+        onCompleted={onPasswordChanged}
+      />
+      <ForceSetPinModal
+        isOpen={!mustChangePassword && mustSetPin}
+        onCompleted={onPinSet}
+      />
     </Box>
   );
 };

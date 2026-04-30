@@ -45,10 +45,18 @@ import {
   Clear as ClearIcon,
 } from '@mui/icons-material';
 import useBettingPoolsList from './hooks/useBettingPoolsList';
-import PasswordModal from '@components/modals/PasswordModal';
+import TempCredentialDialog from '@components/modals/TempCredentialDialog';
+import ConfirmActionDialog from '@components/modals/ConfirmActionDialog';
+import * as userService from '@services/userService';
+import { handleApiError } from '@utils/index';
 import { formatCurrency } from '@/utils/formatCurrency';
 import { updateAccumulatedFall } from '@/services/caidaService';
 import { useUserPermissions } from '@/hooks/useUserPermissions';
+
+interface BettingPoolUserApi {
+  userId: number;
+  username: string;
+}
 
 interface TableColumn {
   id: string;
@@ -88,9 +96,14 @@ const BancasListMUI: React.FC = () => {
   const { hasPermission } = useUserPermissions();
   const canEditCaida = hasPermission('EDIT_ACCUMULATED_FALL');
 
-  // Password modal state
-  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState<boolean>(false);
-  const [selectedUsername, setSelectedUsername] = useState<string>('');
+  // Temp credential dialog state
+  const [tempDialog, setTempDialog] = useState<{ open: boolean; username: string; password: string }>({
+    open: false,
+    username: '',
+    password: '',
+  });
+  const [confirmTarget, setConfirmTarget] = useState<{ poolId: number; username: string } | null>(null);
+  const [generatingPassword, setGeneratingPassword] = useState<boolean>(false);
 
   // Caída acumulada modal state
   const [caidaModal, setCaidaModal] = useState<{ open: boolean; poolId: number; poolName: string; currentValue: number }>({ open: false, poolId: 0, poolName: '', currentValue: 0 });
@@ -131,19 +144,31 @@ const BancasListMUI: React.FC = () => {
   };
 
   /**
-   * Handle change password
+   * Generate a fresh temp password for a banca user.
+   * Looks up the userId by username via the betting-pool's user list, then calls the API.
    */
-  const handlePassword = (username: string): void => {
-    setSelectedUsername(username);
-    setIsPasswordModalOpen(true);
-  };
-
-  /**
-   * Handle close password modal
-   */
-  const handleClosePasswordModal = (): void => {
-    setIsPasswordModalOpen(false);
-    setSelectedUsername('');
+  const handleConfirmGenerate = async (): Promise<void> => {
+    if (!confirmTarget) return;
+    setGeneratingPassword(true);
+    try {
+      const poolUsers = await api.get<BettingPoolUserApi[]>(`/betting-pools/${confirmTarget.poolId}/users`);
+      const match = (poolUsers || []).find(
+        u => u.username.toLowerCase() === confirmTarget.username.toLowerCase()
+      );
+      if (!match) {
+        alert('No se encontró el usuario en esta banca.');
+        setConfirmTarget(null);
+        return;
+      }
+      const res = await userService.generateTempPassword(match.userId);
+      setTempDialog({ open: true, username: res.username, password: res.temporaryPassword });
+      setConfirmTarget(null);
+    } catch (err) {
+      alert(handleApiError(err) || 'No se pudo generar la clave temporal');
+      setConfirmTarget(null);
+    } finally {
+      setGeneratingPassword(false);
+    }
   };
 
   /**
@@ -369,9 +394,10 @@ const BancasListMUI: React.FC = () => {
                                   key={idx}
                                   label={user}
                                   size="small"
-                                  onClick={() => handlePassword(user)}
+                                  onClick={() => setConfirmTarget({ poolId: pool.id, username: user })}
                                   icon={<KeyIcon />}
                                   sx={{ cursor: 'pointer' }}
+                                  title="Generar clave temporal"
                                 />
                               ))}
                             </Box>
@@ -470,12 +496,22 @@ const BancasListMUI: React.FC = () => {
         )}
       </Paper>
 
-      {/* Password Modal */}
-      <PasswordModal
-        isOpen={isPasswordModalOpen}
-        onClose={handleClosePasswordModal}
-        userId={0} // TODO: Get actual userId from user data when available
-        username={selectedUsername}
+      <ConfirmActionDialog
+        isOpen={!!confirmTarget}
+        title="Generar clave temporal"
+        message={`Se generará una nueva clave de 6 dígitos para el usuario "${confirmTarget?.username}". El usuario deberá cambiarla al iniciar sesión y la actual dejará de funcionar.`}
+        confirmLabel="Generar"
+        severity="warning"
+        loading={generatingPassword}
+        onConfirm={handleConfirmGenerate}
+        onCancel={() => setConfirmTarget(null)}
+      />
+
+      <TempCredentialDialog
+        isOpen={tempDialog.open}
+        username={tempDialog.username}
+        password={tempDialog.password}
+        onClose={() => setTempDialog({ open: false, username: '', password: '' })}
       />
 
       {/* Edit Caída Acumulada Modal */}

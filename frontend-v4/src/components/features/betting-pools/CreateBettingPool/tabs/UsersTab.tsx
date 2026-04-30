@@ -30,6 +30,9 @@ import {
   CheckCircle as CheckCircleIcon,
 } from '@mui/icons-material';
 import api from '@services/api';
+import * as userService from '@services/userService';
+import TempCredentialDialog from '@components/modals/TempCredentialDialog';
+import ConfirmActionDialog from '@components/modals/ConfirmActionDialog';
 
 interface BettingPoolUser {
   userId: number;
@@ -51,7 +54,6 @@ interface UsersTabProps {
 
 interface CreateUserDto {
   username: string;
-  password: string;
   fullName?: string;
   email?: string;
   phone?: string;
@@ -61,6 +63,7 @@ interface ApiResponse {
   success: boolean;
   message: string;
   user?: BettingPoolUser;
+  temporaryPassword?: string;
 }
 
 /**
@@ -73,8 +76,6 @@ const UsersTab: React.FC<UsersTabProps> = ({ formData, handleChange, bettingPool
   const [dialogOpen, setDialogOpen] = useState(false);
   const [newUser, setNewUser] = useState({
     username: '',
-    password: '',
-    confirmPassword: '',
     fullName: '',
     email: '',
   });
@@ -86,15 +87,14 @@ const UsersTab: React.FC<UsersTabProps> = ({ formData, handleChange, bettingPool
   const [userToDelete, setUserToDelete] = useState<BettingPoolUser | null>(null);
   const [deletingUser, setDeletingUser] = useState(false);
 
-  // Password change state
-  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
-  const [userToChangePassword, setUserToChangePassword] = useState<BettingPoolUser | null>(null);
-  const [passwordForm, setPasswordForm] = useState({
-    newPassword: '',
-    confirmPassword: '',
+  // Temporary credential dialog (shown after create or generate)
+  const [tempDialog, setTempDialog] = useState<{ open: boolean; username: string; password: string }>({
+    open: false,
+    username: '',
+    password: '',
   });
-  const [changingPassword, setChangingPassword] = useState(false);
-  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [generatingFor, setGeneratingFor] = useState<number | null>(null);
+  const [confirmGenerate, setConfirmGenerate] = useState<BettingPoolUser | null>(null);
 
   // Success message
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -134,14 +134,14 @@ const UsersTab: React.FC<UsersTabProps> = ({ formData, handleChange, bettingPool
   }, [isEditMode, fetchUsers]);
 
   const handleOpenDialog = () => {
-    setNewUser({ username: '', password: '', confirmPassword: '', fullName: '', email: '' });
+    setNewUser({ username: '', fullName: '', email: '' });
     setError(null);
     setDialogOpen(true);
   };
 
   const handleCloseDialog = () => {
     setDialogOpen(false);
-    setNewUser({ username: '', password: '', confirmPassword: '', fullName: '', email: '' });
+    setNewUser({ username: '', fullName: '', email: '' });
     setError(null);
   };
 
@@ -152,7 +152,7 @@ const UsersTab: React.FC<UsersTabProps> = ({ formData, handleChange, bettingPool
   };
 
   /**
-   * Validate user input
+   * Validate user input. Password is auto-generated server-side.
    */
   const validateUser = (): boolean => {
     if (!newUser.username.trim()) {
@@ -165,32 +165,6 @@ const UsersTab: React.FC<UsersTabProps> = ({ formData, handleChange, bettingPool
       return false;
     }
 
-    if (!newUser.password) {
-      setError('La contraseña es requerida');
-      return false;
-    }
-
-    if (newUser.password !== newUser.confirmPassword) {
-      setError('Las contraseñas no coinciden');
-      return false;
-    }
-
-    if (newUser.password.length < 6) {
-      setError('La contraseña debe tener al menos 6 caracteres');
-      return false;
-    }
-
-    if (!/[a-zA-Z]/.test(newUser.password)) {
-      setError('La contraseña debe contener al menos una letra');
-      return false;
-    }
-
-    if (!/\d/.test(newUser.password)) {
-      setError('La contraseña debe contener al menos un número');
-      return false;
-    }
-
-    // Check for duplicate username in current list
     const existingUser = users.find(
       u => u.username.toLowerCase() === newUser.username.trim().toLowerCase()
     );
@@ -209,24 +183,31 @@ const UsersTab: React.FC<UsersTabProps> = ({ formData, handleChange, bettingPool
     if (!validateUser()) return;
 
     if (isEditMode && bettingPoolId) {
-      // Edit mode: call API to create user
+      // Edit mode: call API to create user (password auto-generated server-side)
       setLoading(true);
       try {
         const dto: CreateUserDto = {
           username: newUser.username.trim(),
-          password: newUser.password,
           fullName: newUser.fullName.trim() || undefined,
           email: newUser.email.trim() || undefined,
         };
 
         const response = await api.post<ApiResponse>(`/betting-pools/${bettingPoolId}/users`, dto);
 
-        if (response.success && response.user) {
+        if (response && response.success && response.user) {
           setApiUsers(prev => [...prev, response.user!]);
           handleCloseDialog();
-          setSuccessMessage(`Usuario ${dto.username} creado exitosamente`);
+          if (response.temporaryPassword) {
+            setTempDialog({
+              open: true,
+              username: response.user.username,
+              password: response.temporaryPassword,
+            });
+          } else {
+            setSuccessMessage(`Usuario ${dto.username} creado exitosamente`);
+          }
         } else {
-          setError(response.message || 'Error al crear el usuario');
+          setError(response?.message || 'Error al crear el usuario');
         }
       } catch (err: unknown) {
         console.error('Error creating user:', err);
@@ -236,17 +217,16 @@ const UsersTab: React.FC<UsersTabProps> = ({ formData, handleChange, bettingPool
         setLoading(false);
       }
     } else {
-      // Create mode: add to local list
+      // Create mode: add to local list (password generated by backend on banca create)
       const updatedUsers = [
         ...localUsers,
         {
           userId: Date.now(), // Temporary ID
           username: newUser.username.trim(),
-          password: newUser.password,
           fullName: newUser.fullName.trim() || undefined,
           email: newUser.email.trim() || undefined,
           isActive: true,
-        } as BettingPoolUser & { password?: string },
+        } as BettingPoolUser,
       ];
 
       handleChange({
@@ -290,12 +270,12 @@ const UsersTab: React.FC<UsersTabProps> = ({ formData, handleChange, bettingPool
           `/betting-pools/${bettingPoolId}/users/${userToDelete.userId}`
         );
 
-        if (response.success) {
+        if (response && response.success) {
           setApiUsers(prev => prev.filter(u => u.userId !== userToDelete.userId));
           handleCloseDeleteConfirm();
           setSuccessMessage(`Usuario ${userToDelete.username} eliminado exitosamente`);
         } else {
-          setError(response.message || 'Error al eliminar el usuario');
+          setError(response?.message || 'Error al eliminar el usuario');
         }
       } catch (err: unknown) {
         console.error('Error deleting user:', err);
@@ -317,89 +297,27 @@ const UsersTab: React.FC<UsersTabProps> = ({ formData, handleChange, bettingPool
     }
   };
 
-  // ========== Password Change Functions ==========
+  // ========== Generate Temporary Password ==========
 
-  /**
-   * Open password change dialog
-   */
-  const handlePasswordClick = (user: BettingPoolUser) => {
-    setUserToChangePassword(user);
-    setPasswordForm({ newPassword: '', confirmPassword: '' });
-    setPasswordError(null);
-    setPasswordDialogOpen(true);
-  };
-
-  /**
-   * Close password change dialog
-   */
-  const handleClosePasswordDialog = () => {
-    setPasswordDialogOpen(false);
-    setUserToChangePassword(null);
-    setPasswordForm({ newPassword: '', confirmPassword: '' });
-    setPasswordError(null);
-  };
-
-  /**
-   * Handle password form change
-   */
-  const handlePasswordFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setPasswordForm(prev => ({ ...prev, [name]: value }));
-    setPasswordError(null);
-  };
-
-  /**
-   * Validate password
-   */
-  const validatePassword = (): boolean => {
-    if (!passwordForm.newPassword) {
-      setPasswordError('La nueva contraseña es requerida');
-      return false;
-    }
-
-    if (passwordForm.newPassword.length < 6) {
-      setPasswordError('La contraseña debe tener al menos 6 caracteres');
-      return false;
-    }
-
-    if (!/[a-zA-Z]/.test(passwordForm.newPassword)) {
-      setPasswordError('La contraseña debe contener al menos una letra');
-      return false;
-    }
-
-    if (!/\d/.test(passwordForm.newPassword)) {
-      setPasswordError('La contraseña debe contener al menos un número');
-      return false;
-    }
-
-    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      setPasswordError('Las contraseñas no coinciden');
-      return false;
-    }
-
-    return true;
-  };
-
-  /**
-   * Change user password via API
-   */
-  const handleChangePassword = async () => {
-    if (!validatePassword() || !userToChangePassword) return;
-
-    setChangingPassword(true);
+  const handleConfirmGenerate = async () => {
+    if (!confirmGenerate) return;
+    const user = confirmGenerate;
+    setGeneratingFor(user.userId);
     try {
-      await api.put(`/users/${userToChangePassword.userId}/password/admin-reset`, {
-        newPassword: passwordForm.newPassword,
+      const res = await userService.generateTempPassword(user.userId);
+      setTempDialog({
+        open: true,
+        username: res.username,
+        password: res.temporaryPassword,
       });
-
-      handleClosePasswordDialog();
-      setSuccessMessage(`Contraseña de ${userToChangePassword.username} cambiada exitosamente`);
+      setConfirmGenerate(null);
     } catch (err: unknown) {
-      console.error('Error changing password:', err);
+      console.error('Error generating temp password:', err);
       const errorObj = err as { response?: { data?: { message?: string } } };
-      setPasswordError(errorObj?.response?.data?.message || 'Error al cambiar la contraseña');
+      setError(errorObj?.response?.data?.message || 'Error al generar la clave temporal');
+      setConfirmGenerate(null);
     } finally {
-      setChangingPassword(false);
+      setGeneratingFor(null);
     }
   };
 
@@ -483,14 +401,19 @@ const UsersTab: React.FC<UsersTabProps> = ({ formData, handleChange, bettingPool
                   <TableCell align="center">
                     <Box sx={{ display: 'flex', justifyContent: 'center', gap: 0.5 }}>
                       {isEditMode && (
-                        <Tooltip title="Cambiar contraseña">
-                          <IconButton
-                            size="small"
-                            color="primary"
-                            onClick={() => handlePasswordClick(user)}
-                          >
-                            <KeyIcon fontSize="small" />
-                          </IconButton>
+                        <Tooltip title="Generar clave temporal">
+                          <span>
+                            <IconButton
+                              size="small"
+                              color="primary"
+                              disabled={generatingFor === user.userId}
+                              onClick={() => setConfirmGenerate(user)}
+                            >
+                              {generatingFor === user.userId
+                                ? <CircularProgress size={16} />
+                                : <KeyIcon fontSize="small" />}
+                            </IconButton>
+                          </span>
                         </Tooltip>
                       )}
                       <Tooltip title="Eliminar usuario">
@@ -550,27 +473,9 @@ const UsersTab: React.FC<UsersTabProps> = ({ formData, handleChange, bettingPool
               onChange={handleNewUserChange}
             />
 
-            <TextField
-              fullWidth
-              label="Contraseña"
-              name="password"
-              type="password"
-              value={newUser.password}
-              onChange={handleNewUserChange}
-              helperText="Mínimo 6 caracteres, al menos una letra y un número"
-              autoComplete="new-password"
-            />
-
-            <TextField
-              fullWidth
-              label="Confirmación"
-              name="confirmPassword"
-              type="password"
-              value={newUser.confirmPassword}
-              onChange={handleNewUserChange}
-              helperText="Repita la contraseña para confirmar"
-              autoComplete="new-password"
-            />
+            <Alert severity="info">
+              La clave temporal de 6 dígitos se genera automáticamente y se mostrará una sola vez al guardar.
+            </Alert>
           </Box>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
@@ -622,61 +527,25 @@ const UsersTab: React.FC<UsersTabProps> = ({ formData, handleChange, bettingPool
         </DialogActions>
       </Dialog>
 
-      {/* Change Password Dialog */}
-      <Dialog open={passwordDialogOpen} onClose={handleClosePasswordDialog} maxWidth="sm" fullWidth>
-        <DialogTitle>
-          Cambiar contraseña de {userToChangePassword?.username}
-        </DialogTitle>
-        <DialogContent>
-          <Box sx={{ pt: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {passwordError && (
-              <Alert severity="error" sx={{ mb: 1 }}>
-                {passwordError}
-              </Alert>
-            )}
+      {/* Confirm dialog for generating temp password */}
+      <ConfirmActionDialog
+        isOpen={!!confirmGenerate}
+        title="Generar clave temporal"
+        message={`Se generará una nueva clave de 6 dígitos para "${confirmGenerate?.username}". El usuario deberá cambiarla al iniciar sesión y la actual dejará de funcionar.`}
+        confirmLabel="Generar"
+        severity="warning"
+        loading={!!generatingFor}
+        onConfirm={handleConfirmGenerate}
+        onCancel={() => setConfirmGenerate(null)}
+      />
 
-            <TextField
-              fullWidth
-              label="Nueva contraseña"
-              name="newPassword"
-              type="password"
-              value={passwordForm.newPassword}
-              onChange={handlePasswordFormChange}
-              autoFocus
-              helperText="Mínimo 6 caracteres, al menos una letra y un número"
-              autoComplete="new-password"
-            />
-
-            <TextField
-              fullWidth
-              label="Confirmar contraseña"
-              name="confirmPassword"
-              type="password"
-              value={passwordForm.confirmPassword}
-              onChange={handlePasswordFormChange}
-              helperText="Repita la contraseña para confirmar"
-              autoComplete="new-password"
-            />
-          </Box>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={handleClosePasswordDialog} color="inherit" disabled={changingPassword}>
-            Cancelar
-          </Button>
-          <Button
-            onClick={handleChangePassword}
-            variant="contained"
-            disabled={changingPassword}
-            startIcon={changingPassword ? <CircularProgress size={16} /> : <KeyIcon />}
-            sx={{
-              bgcolor: '#8b5cf6',
-              '&:hover': { bgcolor: '#7c3aed' },
-            }}
-          >
-            {changingPassword ? 'Cambiando...' : 'Cambiar contraseña'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      {/* Temporary credential dialog (shown after create or generate) */}
+      <TempCredentialDialog
+        isOpen={tempDialog.open}
+        username={tempDialog.username}
+        password={tempDialog.password}
+        onClose={() => setTempDialog({ open: false, username: '', password: '' })}
+      />
 
       {/* Success Snackbar */}
       <Snackbar

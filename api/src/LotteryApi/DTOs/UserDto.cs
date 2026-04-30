@@ -83,6 +83,11 @@ public class UserDetailDto : UserDto
     public List<PermissionDto> Permissions { get; set; } = new();
     public List<int> ZoneIds { get; set; } = new();
     public List<int> BettingPoolIds { get; set; } = new();
+
+    /// <summary>
+    /// Plaintext temporary password — only populated on user creation. Shown once to the admin.
+    /// </summary>
+    public string? TemporaryPassword { get; set; }
 }
 
 /// <summary>
@@ -100,6 +105,34 @@ public class ChangePasswordDto
 public class AdminResetPasswordDto
 {
     public string NewPassword { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// Returned after creating a user or generating a temp password.
+/// The plaintext is only ever returned once; it must be communicated to the user.
+/// </summary>
+public class TemporaryCredentialDto
+{
+    public int UserId { get; set; }
+    public string Username { get; set; } = string.Empty;
+    public string TemporaryPassword { get; set; } = string.Empty;
+    public bool IsAdminPassword { get; set; }
+}
+
+/// <summary>
+/// DTO for setting / changing the 4-digit admin PIN.
+/// </summary>
+public class SetPinDto
+{
+    public string Pin { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// DTO for verifying an admin PIN before a sensitive action.
+/// </summary>
+public class VerifyPinDto
+{
+    public string Pin { get; set; } = string.Empty;
 }
 
 /// <summary>

@@ -13,10 +13,11 @@ public class CreateUserDtoValidator : AbstractValidator<CreateUserDto>
             .MaximumLength(50).WithMessage("El nombre de usuario no puede exceder 50 caracteres")
             .Matches("^[a-zA-Z0-9_.-]+$").WithMessage("El nombre de usuario solo puede contener letras, números y ._-");
 
+        // Password is auto-generated server-side. We only validate length when caller passes one.
         RuleFor(x => x.Password)
-            .NotEmpty().WithMessage("La contraseña es requerida")
             .MinimumLength(6).WithMessage("La contraseña debe tener al menos 6 caracteres")
-            .MaximumLength(100).WithMessage("La contraseña no puede exceder 100 caracteres");
+            .MaximumLength(100).WithMessage("La contraseña no puede exceder 100 caracteres")
+            .When(x => !string.IsNullOrWhiteSpace(x.Password));
 
         RuleFor(x => x.FullName)
             .MaximumLength(200).WithMessage("El nombre completo no puede exceder 200 caracteres")

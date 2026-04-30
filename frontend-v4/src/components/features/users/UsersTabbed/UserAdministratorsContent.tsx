@@ -11,11 +11,6 @@ import {
   Typography,
   IconButton,
   InputAdornment,
-  Button,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   CircularProgress,
   Alert,
 } from '@mui/material';
@@ -26,6 +21,10 @@ import {
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import useUserAdministrators from '../UserAdministrators/hooks/useUserAdministrators';
+import * as userService from '@services/userService';
+import TempCredentialDialog from '@components/modals/TempCredentialDialog';
+import ConfirmActionDialog from '@components/modals/ConfirmActionDialog';
+import { handleApiError } from '@utils/index';
 
 /**
  * UserAdministratorsContent Component
@@ -41,22 +40,19 @@ const UserAdministratorsContent: React.FC = () => {
     error,
     handleSearchChange,
     handleClearSearch,
-    handlePasswordClick,
-    handleClosePasswordModal,
-    passwordModalOpen,
-    selectedUsername,
   } = useUserAdministrators();
 
-  // Local state for quick filter
   const [quickFilter, setQuickFilter] = useState<string>('');
 
-  // Local state for password change
-  const [newPassword, setNewPassword] = useState<string>('');
-  const [confirmPassword, setConfirmPassword] = useState<string>('');
+  // Temporary credential dialog state
+  const [tempDialog, setTempDialog] = useState<{ open: boolean; username: string; password: string }>({
+    open: false,
+    username: '',
+    password: '',
+  });
+  const [generatingFor, setGeneratingFor] = useState<number | null>(null);
+  const [confirmTarget, setConfirmTarget] = useState<{ userId: number; username: string } | null>(null);
 
-  /**
-   * Filter administrators based on both filters
-   */
   const filteredAdministradores = administradores.filter(admin => {
     const matchesUserFilter = !searchText ||
       admin.username.toLowerCase().includes(searchText.toLowerCase());
@@ -65,32 +61,22 @@ const UserAdministratorsContent: React.FC = () => {
     return matchesUserFilter && matchesQuickFilter;
   });
 
-  /**
-   * Handle save password
-   */
-  const handleSavePassword = () => {
-    if (newPassword === confirmPassword && newPassword.length >= 6) {
-      // TODO: Call API to update password
-      setNewPassword('');
-      setConfirmPassword('');
-      handleClosePasswordModal();
-    } else {
-      alert('Las contraseñas no coinciden o son muy cortas (mínimo 6 caracteres)');
+  const handleConfirmGenerate = async () => {
+    if (!confirmTarget) return;
+    const { userId } = confirmTarget;
+    setGeneratingFor(userId);
+    try {
+      const res = await userService.generateTempPassword(userId);
+      setTempDialog({ open: true, username: res.username, password: res.temporaryPassword });
+      setConfirmTarget(null);
+    } catch (err) {
+      alert(handleApiError(err) || 'No se pudo generar la clave temporal');
+      setConfirmTarget(null);
+    } finally {
+      setGeneratingFor(null);
     }
   };
 
-  /**
-   * Handle close modal and reset password fields
-   */
-  const handleClose = () => {
-    setNewPassword('');
-    setConfirmPassword('');
-    handleClosePasswordModal();
-  };
-
-  /**
-   * Handle edit user click
-   */
   const handleEditClick = (userId: number) => {
     navigate(`/users/edit/${userId}`);
   };
@@ -189,14 +175,15 @@ const UserAdministratorsContent: React.FC = () => {
                     <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
                       <IconButton
                         size="small"
-                        onClick={() => handlePasswordClick(admin.userId, admin.username)}
-                        title="Cambiar contraseña"
+                        onClick={() => setConfirmTarget({ userId: admin.userId, username: admin.username })}
+                        disabled={generatingFor === admin.userId}
+                        title="Generar clave temporal"
                         sx={{
                           color: '#6366f1',
                           '&:hover': { bgcolor: 'rgba(99, 102, 241, 0.1)' },
                         }}
                       >
-                        <KeyIcon fontSize="small" />
+                        {generatingFor === admin.userId ? <CircularProgress size={16} /> : <KeyIcon fontSize="small" />}
                       </IconButton>
                       <IconButton
                         size="small"
@@ -225,57 +212,23 @@ const UserAdministratorsContent: React.FC = () => {
         </Typography>
       </Box>
 
-      {/* Password Change Dialog */}
-      <Dialog open={passwordModalOpen} onClose={handleClose} maxWidth="sm" fullWidth>
-        <DialogTitle>
-          Cambiar Contraseña - {selectedUsername}
-        </DialogTitle>
-        <DialogContent>
-          <Box sx={{ pt: 2 }}>
-            <TextField
-              fullWidth
-              type="password"
-              label="Nueva Contraseña"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              helperText="Mínimo 6 caracteres"
-              sx={{ mb: 2 }}
-              autoComplete="new-password"
-            />
-            <TextField
-              fullWidth
-              type="password"
-              label="Confirmar Contraseña"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              error={newPassword !== confirmPassword && confirmPassword !== ''}
-              helperText={
-                newPassword !== confirmPassword && confirmPassword !== ''
-                  ? 'Las contraseñas no coinciden'
-                  : ''
-              }
-              autoComplete="new-password"
-            />
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleClose}>
-            Cancelar
-          </Button>
-          <Button
-            onClick={handleSavePassword}
-            variant="contained"
-            disabled={
-              !newPassword ||
-              !confirmPassword ||
-              newPassword !== confirmPassword ||
-              newPassword.length < 6
-            }
-          >
-            Guardar
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <ConfirmActionDialog
+        isOpen={!!confirmTarget}
+        title="Generar clave temporal"
+        message={`Se generará una nueva clave para "${confirmTarget?.username}". El usuario deberá cambiarla al iniciar sesión y la actual dejará de funcionar.`}
+        confirmLabel="Generar"
+        severity="warning"
+        loading={generatingFor !== null}
+        onConfirm={handleConfirmGenerate}
+        onCancel={() => setConfirmTarget(null)}
+      />
+
+      <TempCredentialDialog
+        isOpen={tempDialog.open}
+        username={tempDialog.username}
+        password={tempDialog.password}
+        onClose={() => setTempDialog({ open: false, username: '', password: '' })}
+      />
     </>
   );
 };

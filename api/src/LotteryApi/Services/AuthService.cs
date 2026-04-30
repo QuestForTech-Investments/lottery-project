@@ -50,18 +50,27 @@ public class AuthService : IAuthService
         // Get user's assigned betting pool (if any)
         var userBettingPool = user.UserBettingPools?.FirstOrDefault(ubp => ubp.IsActive);
 
-        var token = GenerateJwtToken(user.UserId, user.Username, user.Role?.RoleName, userBettingPool?.BettingPoolId);
+        var token = GenerateJwtToken(
+            user.UserId,
+            user.Username,
+            user.Role?.RoleName,
+            userBettingPool?.BettingPoolId,
+            user.MustChangePassword,
+            user.MustSetPin);
 
         return new LoginResponseDto
         {
             Token = token,
+            UserId = user.UserId,
             Username = user.Username,
             Email = user.Email,
             FullName = user.FullName,
             Role = user.Role?.RoleName,
             BettingPoolId = userBettingPool?.BettingPoolId,
             BettingPoolName = userBettingPool?.BettingPool?.BettingPoolName,
-            ExpiresAt = DateTime.UtcNow.AddHours(12)
+            ExpiresAt = DateTime.UtcNow.AddHours(12),
+            MustChangePassword = user.MustChangePassword,
+            MustSetPin = user.MustSetPin
         };
     }
 
@@ -145,7 +154,13 @@ public class AuthService : IAuthService
         };
     }
 
-    public string GenerateJwtToken(int userId, string username, string? role, int? bettingPoolId = null)
+    public string GenerateJwtToken(
+        int userId,
+        string username,
+        string? role,
+        int? bettingPoolId = null,
+        bool mustChangePassword = false,
+        bool mustSetPin = false)
     {
         var jwtKey = _configuration["Jwt:Key"] ?? throw new InvalidOperationException("JWT Key not configured");
         var jwtIssuer = _configuration["Jwt:Issuer"] ?? "LotteryApi";
@@ -160,7 +175,9 @@ public class AuthService : IAuthService
             new Claim(JwtRegisteredClaimNames.UniqueName, username),
             new Claim("userId", userId.ToString()),
             new Claim("username", username),
-            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+            new Claim("mustChangePassword", mustChangePassword ? "true" : "false"),
+            new Claim("mustSetPin", mustSetPin ? "true" : "false")
         };
 
         if (!string.IsNullOrEmpty(role))

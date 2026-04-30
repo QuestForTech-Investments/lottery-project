@@ -2,9 +2,11 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using LotteryApi.DTOs;
+using LotteryApi.Helpers;
 using LotteryApi.Models;
 using LotteryApi.Repositories;
 using LotteryApi.Data;
+using System.Security.Claims;
 
 namespace LotteryApi.Controllers;
 
@@ -459,22 +461,29 @@ public class UsersController : ControllerBase
             return BadRequest(new { message = $"Username '{dto.Username}' already exists" });
         }
 
-        // Validate password
-        if (string.IsNullOrWhiteSpace(dto.Password) || dto.Password.Length < 6)
-        {
-            return BadRequest(new { message = "Password must be at least 6 characters long" });
-        }
+        // Determine if the user is a banca (POS) user based on the role
+        var roleName = dto.RoleId.HasValue
+            ? await _context.Roles.Where(r => r.RoleId == dto.RoleId.Value).Select(r => r.RoleName).FirstOrDefaultAsync()
+            : null;
+        var isPosUser = string.Equals(roleName, "POS", StringComparison.OrdinalIgnoreCase);
+
+        // Auto-generate temp password (POS: 6-digit numeric, admin: complex 8-char)
+        var temporaryPassword = isPosUser
+            ? PasswordHelper.GenerateNumeric6()
+            : PasswordHelper.GenerateAdminTempPassword();
 
         var user = new User
         {
             Username = dto.Username,
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword(temporaryPassword),
             FullName = dto.FullName,
             Email = string.IsNullOrWhiteSpace(dto.Email) ? $"{dto.Username}@lottery.local" : dto.Email,
             Phone = dto.Phone,
             RoleId = dto.RoleId,
             CommissionRate = dto.CommissionRate,
             IsActive = dto.IsActive,
+            MustChangePassword = true,
+            MustSetPin = !isPosUser,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };
@@ -575,7 +584,8 @@ public class UsersController : ControllerBase
                 UpdatedAt = p.UpdatedAt
             }).ToList(),
             ZoneIds = zoneIds,
-            BettingPoolIds = bettingPoolIds
+            BettingPoolIds = bettingPoolIds,
+            TemporaryPassword = temporaryPassword
         };
 
         return CreatedAtAction(nameof(GetById), new { id = user.UserId }, resultDto);
@@ -740,7 +750,8 @@ public class UsersController : ControllerBase
     }
 
     /// <summary>
-    /// Change user password
+    /// Change user password (called by the user themselves).
+    /// Clears the must_change_password flag on success. Validates complexity by role.
     /// </summary>
     [HttpPut("{userId}/password")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
@@ -748,7 +759,10 @@ public class UsersController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> ChangePassword(int userId, [FromBody] ChangePasswordDto dto)
     {
-        var user = await _userRepository.GetByIdAsync(userId);
+        // Load Role explicitly — generic GetByIdAsync doesn't include navs and we need RoleName for the complexity check.
+        var user = await _context.Users
+            .Include(u => u.Role)
+            .FirstOrDefaultAsync(u => u.UserId == userId);
         if (user == null)
         {
             return NotFound(new { message = $"User with ID {userId} not found" });
@@ -757,22 +771,127 @@ public class UsersController : ControllerBase
         // Verify current password
         if (!BCrypt.Net.BCrypt.Verify(dto.CurrentPassword, user.PasswordHash))
         {
-            return BadRequest(new { message = "Current password is incorrect" });
+            return BadRequest(new { message = "La contraseña actual es incorrecta" });
         }
 
-        // Validate new password
-        if (string.IsNullOrWhiteSpace(dto.NewPassword) || dto.NewPassword.Length < 6)
+        var isPosUser = string.Equals(user.Role?.RoleName, "POS", StringComparison.OrdinalIgnoreCase);
+        var (ok, error) = isPosUser
+            ? PasswordHelper.ValidateBancaPassword(dto.NewPassword)
+            : PasswordHelper.ValidateAdminPassword(dto.NewPassword);
+        if (!ok)
         {
-            return BadRequest(new { message = "New password must be at least 6 characters long" });
+            return BadRequest(new { message = error });
         }
 
-        // Update password
+        // Reject re-using the same password they just had
+        if (BCrypt.Net.BCrypt.Verify(dto.NewPassword, user.PasswordHash))
+        {
+            return BadRequest(new { message = "La nueva contraseña no puede ser igual a la actual" });
+        }
+
         user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
+        user.MustChangePassword = false;
         user.UpdatedAt = DateTime.UtcNow;
         await _userRepository.UpdateAsync(user);
         await _context.SaveChangesAsync();
 
         return NoContent();
+    }
+
+    /// <summary>
+    /// Admin generates a fresh temporary password for a user. Returns it in plaintext one-time.
+    /// Sets must_change_password = true so the user is forced to change it on next login.
+    /// </summary>
+    [HttpPost("{userId}/reset-temp-password")]
+    [ProducesResponseType(typeof(TemporaryCredentialDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> ResetTempPassword(int userId)
+    {
+        // Load Role explicitly — needed to pick the right generator (numeric for POS, complex for admin).
+        var user = await _context.Users
+            .Include(u => u.Role)
+            .FirstOrDefaultAsync(u => u.UserId == userId);
+        if (user == null)
+        {
+            return NotFound(new { message = $"User with ID {userId} not found" });
+        }
+
+        var isPosUser = string.Equals(user.Role?.RoleName, "POS", StringComparison.OrdinalIgnoreCase);
+        var temp = isPosUser
+            ? PasswordHelper.GenerateNumeric6()
+            : PasswordHelper.GenerateAdminTempPassword();
+
+        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(temp);
+        user.MustChangePassword = true;
+        user.UpdatedAt = DateTime.UtcNow;
+        await _userRepository.UpdateAsync(user);
+        await _context.SaveChangesAsync();
+
+        _logger.LogInformation("Admin generated temp password for user {UserId} ({Username})", userId, user.Username);
+
+        return Ok(new TemporaryCredentialDto
+        {
+            UserId = user.UserId,
+            Username = user.Username,
+            TemporaryPassword = temp,
+            IsAdminPassword = !isPosUser
+        });
+    }
+
+    /// <summary>
+    /// Set or change the 4-digit PIN for the current admin user.
+    /// Clears must_set_pin on success.
+    /// </summary>
+    [HttpPut("me/pin")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> SetMyPin([FromBody] SetPinDto dto)
+    {
+        var userId = GetCurrentUserId();
+        if (userId == null) return Unauthorized();
+
+        var (ok, error) = PasswordHelper.ValidatePin(dto.Pin);
+        if (!ok) return BadRequest(new { message = error });
+
+        var user = await _userRepository.GetByIdAsync(userId.Value);
+        if (user == null) return NotFound();
+
+        user.PinHash = BCrypt.Net.BCrypt.HashPassword(dto.Pin);
+        user.MustSetPin = false;
+        user.UpdatedAt = DateTime.UtcNow;
+        await _userRepository.UpdateAsync(user);
+        await _context.SaveChangesAsync();
+
+        return NoContent();
+    }
+
+    /// <summary>
+    /// Verify the current admin user's PIN. Used to gate sensitive actions.
+    /// </summary>
+    [HttpPost("me/verify-pin")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> VerifyMyPin([FromBody] VerifyPinDto dto)
+    {
+        var userId = GetCurrentUserId();
+        if (userId == null) return Unauthorized();
+
+        var user = await _userRepository.GetByIdAsync(userId.Value);
+        if (user == null) return Ok(new { valid = false });
+
+        if (string.IsNullOrEmpty(user.PinHash))
+        {
+            return Ok(new { valid = false, mustSetPin = true });
+        }
+
+        var valid = BCrypt.Net.BCrypt.Verify(dto.Pin ?? string.Empty, user.PinHash);
+        return Ok(new { valid });
+    }
+
+    private int? GetCurrentUserId()
+    {
+        var raw = User.FindFirst("userId")?.Value
+            ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        return int.TryParse(raw, out var id) ? id : null;
     }
 
     /// <summary>

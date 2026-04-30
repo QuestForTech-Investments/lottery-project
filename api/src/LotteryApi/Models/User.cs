@@ -71,6 +71,16 @@ public class User
     [Column("last_modified_ip")]
     public string? LastModifiedIp { get; set; }
 
+    [Column("must_change_password")]
+    public bool MustChangePassword { get; set; } = false;
+
+    [Column("must_set_pin")]
+    public bool MustSetPin { get; set; } = false;
+
+    [MaxLength(255)]
+    [Column("pin_hash")]
+    public string? PinHash { get; set; }
+
     // Navigation properties
     [ForeignKey("RoleId")]
     public virtual Role? Role { get; set; }

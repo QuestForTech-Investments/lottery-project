@@ -30,14 +30,12 @@ import {
   Clear as ClearIcon,
 } from '@mui/icons-material';
 import useUserList from './hooks/useUserList';
-import PasswordModal from '@components/modals/PasswordModal';
+import TempCredentialDialog from '@components/modals/TempCredentialDialog';
+import ConfirmActionDialog from '@components/modals/ConfirmActionDialog';
+import * as userService from '@services/userService';
+import { handleApiError } from '@utils/index';
 import * as logger from '@/utils/logger';
 import type { UserSortField } from '@/types/user';
-
-interface SelectedUser {
-  userId: number | null;
-  username: string;
-}
 
 interface TableColumn {
   id: string;
@@ -71,35 +69,38 @@ const UserListMUI = () => {
     handleRefresh,
   } = useUserList();
 
-  // Password modal state
-  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState<boolean>(false);
-  const [selectedUser, setSelectedUser] = useState<SelectedUser>({ userId: null, username: '' });
+  // Temporary credential dialog state
+  const [tempDialog, setTempDialog] = useState<{ open: boolean; username: string; password: string }>({
+    open: false,
+    username: '',
+    password: '',
+  });
+  const [generatingFor, setGeneratingFor] = useState<number | null>(null);
+  const [confirmTarget, setConfirmTarget] = useState<{ userId: number; username: string } | null>(null);
 
-  /**
-   * Handle edit user
-   * useCallback: Prevents recreation on every render
-   */
   const handleEdit = useCallback((userId: number) => {
     logger.info('USER_LIST_MUI', `Editing user ID: ${userId}`);
     navigate(`/users/edit/${userId}`);
   }, [navigate]);
 
-  /**
-   * Handle change password
-   * useCallback: Prevents recreation on every render
-   */
-  const handlePassword = useCallback((userId: number, username: string) => {
-    setSelectedUser({ userId, username });
-    setIsPasswordModalOpen(true);
-  }, []);
+  const handleConfirmGenerate = useCallback(async () => {
+    if (!confirmTarget) return;
+    const { userId } = confirmTarget;
+    setGeneratingFor(userId);
+    try {
+      const res = await userService.generateTempPassword(userId);
+      setTempDialog({ open: true, username: res.username, password: res.temporaryPassword });
+      setConfirmTarget(null);
+    } catch (err) {
+      alert(handleApiError(err) || 'No se pudo generar la clave temporal');
+      setConfirmTarget(null);
+    } finally {
+      setGeneratingFor(null);
+    }
+  }, [confirmTarget]);
 
-  /**
-   * Handle close password modal
-   * useCallback: Prevents recreation on every render
-   */
-  const handleClosePasswordModal = useCallback(() => {
-    setIsPasswordModalOpen(false);
-    setSelectedUser({ userId: null, username: '' });
+  const handleCloseTempDialog = useCallback(() => {
+    setTempDialog({ open: false, username: '', password: '' });
   }, []);
 
   /**
@@ -286,14 +287,17 @@ const UserListMUI = () => {
                         </TableCell>
                         <TableCell align="center">
                           <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1 }}>
-                            <Tooltip title="Cambiar contraseña">
-                              <IconButton
-                                size="small"
-                                color="primary"
-                                onClick={() => handlePassword(user.userId, user.username)}
-                              >
-                                <KeyIcon fontSize="small" />
-                              </IconButton>
+                            <Tooltip title="Generar clave temporal">
+                              <span>
+                                <IconButton
+                                  size="small"
+                                  color="primary"
+                                  disabled={generatingFor === user.userId}
+                                  onClick={() => setConfirmTarget({ userId: user.userId, username: user.username })}
+                                >
+                                  <KeyIcon fontSize="small" />
+                                </IconButton>
+                              </span>
                             </Tooltip>
                             <Tooltip title="Editar usuario">
                               <IconButton
@@ -333,12 +337,22 @@ const UserListMUI = () => {
         )}
       </Paper>
 
-      {/* Password Modal */}
-      <PasswordModal
-        isOpen={isPasswordModalOpen}
-        onClose={handleClosePasswordModal}
-        userId={selectedUser.userId || 0}
-        username={selectedUser.username}
+      <ConfirmActionDialog
+        isOpen={!!confirmTarget}
+        title="Generar clave temporal"
+        message={`Se generará una nueva clave para "${confirmTarget?.username}". El usuario deberá cambiarla al iniciar sesión y la actual dejará de funcionar.`}
+        confirmLabel="Generar"
+        severity="warning"
+        loading={generatingFor !== null}
+        onConfirm={handleConfirmGenerate}
+        onCancel={() => setConfirmTarget(null)}
+      />
+
+      <TempCredentialDialog
+        isOpen={tempDialog.open}
+        username={tempDialog.username}
+        password={tempDialog.password}
+        onClose={handleCloseTempDialog}
       />
     </Box>
   );

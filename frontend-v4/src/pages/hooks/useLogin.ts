@@ -32,6 +32,12 @@ const useLogin = () => {
     general: '',
   });
 
+  // Forced post-login flow state
+  const [mustChangePassword, setMustChangePassword] = useState<boolean>(false);
+  const [mustSetPin, setMustSetPin] = useState<boolean>(false);
+  const [pendingRedirect, setPendingRedirect] = useState<string | null>(null);
+  const [isPosUser, setIsPosUser] = useState<boolean>(false);
+
   /**
    * Handle username change
    */
@@ -130,23 +136,37 @@ const useLogin = () => {
         }
       }
 
-      // Check for redirect parameter (e.g., from POS app)
+      // Compute target redirect URL but don't navigate yet —
+      // forced password change / PIN must complete first.
       const params = new URLSearchParams(window.location.search);
       const redirectUrl = params.get('redirect');
-
-      // Redirect based on user role or redirect parameter
+      const isPos = response.role === 'POS';
+      let target: string;
       if (redirectUrl && redirectUrl.startsWith('https://pos.lottobook.net')) {
-        // Redirect back to POS if coming from there
-        window.location.href = redirectUrl;
-      } else if (response.role === 'POS') {
-        // POS users go to POS site
-        const posUrl = window.location.hostname.includes('lottobook.net')
+        target = redirectUrl;
+      } else if (isPos) {
+        target = window.location.hostname.includes('lottobook.net')
           ? 'https://pos.lottobook.net'
-          : 'http://localhost:5173'; // Local dev POS URL
-        window.location.href = posUrl;
+          : 'http://localhost:5173';
       } else {
-        // Admin and other roles stay on admin dashboard
-        navigate('/dashboard');
+        target = '/dashboard';
+      }
+
+      setIsPosUser(isPos);
+
+      if (response.mustChangePassword || response.mustSetPin) {
+        // Defer redirect — modals run first
+        setPendingRedirect(target);
+        setMustChangePassword(!!response.mustChangePassword);
+        setMustSetPin(!!response.mustSetPin);
+        return;
+      }
+
+      // No forced steps — navigate immediately
+      if (target.startsWith('http')) {
+        window.location.href = target;
+      } else {
+        navigate(target);
       }
     } catch (err) {
       const error = err as ApiError;
@@ -177,17 +197,45 @@ const useLogin = () => {
     }
   }, [username, password, validateForm, navigate]);
 
+  /** After all forced steps done: log out and redirect to login so user re-authenticates with fresh JWT. */
+  const finishForcedFlow = useCallback(() => {
+    // Clear the just-issued token: the JWT still carries the old must_change_password claim,
+    // forcing the user to log back in ensures the next session has a clean token.
+    authService.logout();
+    setPendingRedirect(null);
+    navigate('/login?changed=1');
+  }, [navigate]);
+
+  /** Called by ForcePasswordChangeModal when password change succeeds. */
+  const onPasswordChanged = useCallback(() => {
+    setMustChangePassword(false);
+    if (!mustSetPin) {
+      finishForcedFlow();
+    }
+  }, [mustSetPin, finishForcedFlow]);
+
+  /** Called by ForceSetPinModal when PIN is set. */
+  const onPinSet = useCallback(() => {
+    setMustSetPin(false);
+    finishForcedFlow();
+  }, [finishForcedFlow]);
+
   return {
     // State
     username,
     password,
     errors,
     isLoading,
+    mustChangePassword,
+    mustSetPin,
+    isPosUser,
 
     // Handlers
     handleUsernameChange,
     handlePasswordChange,
     handleSubmit,
+    onPasswordChanged,
+    onPinSet,
   };
 };
 

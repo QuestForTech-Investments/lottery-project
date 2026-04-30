@@ -548,17 +548,14 @@ public class MassUpdateResponseDto
 // =============================================================================
 
 /// <summary>
-/// DTO for creating a new POS user and assigning to a betting pool
+/// DTO for creating a new POS user and assigning to a betting pool.
+/// Password is auto-generated server-side; the field is no longer required.
 /// </summary>
 public class CreateBettingPoolUserDto
 {
     [Required(ErrorMessage = "El nombre de usuario es requerido")]
     [StringLength(100, MinimumLength = 3, ErrorMessage = "El nombre de usuario debe tener entre 3 y 100 caracteres")]
     public string Username { get; set; } = string.Empty;
-
-    [Required(ErrorMessage = "La contraseña es requerida")]
-    [StringLength(255, MinimumLength = 6, ErrorMessage = "La contraseña debe tener entre 6 y 255 caracteres")]
-    public string Password { get; set; } = string.Empty;
 
     [StringLength(255, ErrorMessage = "El nombre completo no puede exceder 255 caracteres")]
     public string? FullName { get; set; }
@@ -571,13 +568,15 @@ public class CreateBettingPoolUserDto
 }
 
 /// <summary>
-/// Response for user assignment operation
+/// Response for user assignment operation.
+/// `TemporaryPassword` is populated only when a fresh password was generated; show it once.
 /// </summary>
 public class BettingPoolUserAssignmentResponse
 {
     public bool Success { get; set; }
     public string Message { get; set; } = string.Empty;
     public BettingPoolUserDto? User { get; set; }
+    public string? TemporaryPassword { get; set; }
 }
 
 // =============================================================================

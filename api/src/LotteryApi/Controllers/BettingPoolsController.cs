@@ -657,16 +657,20 @@ public class BettingPoolsController : ControllerBase
                 });
             }
 
+            // Auto-generate a 6-digit numeric temp password (POS users).
+            var temporaryPassword = Helpers.PasswordHelper.GenerateNumeric6();
+
             // Create the user
             var user = new User
             {
                 Username = dto.Username,
-                PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(temporaryPassword),
                 FullName = dto.FullName,
                 Email = dto.Email ?? $"{dto.Username}@pos.local",
                 Phone = dto.Phone,
                 RoleId = posRole.RoleId,
                 IsActive = true,
+                MustChangePassword = true,
                 CreatedAt = DateTime.UtcNow
             };
 
@@ -692,6 +696,7 @@ public class BettingPoolsController : ControllerBase
             {
                 Success = true,
                 Message = "Usuario creado y asignado exitosamente",
+                TemporaryPassword = temporaryPassword,
                 User = new BettingPoolUserDto
                 {
                     UserId = user.UserId,
