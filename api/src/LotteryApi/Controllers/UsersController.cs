@@ -945,6 +945,9 @@ public class UsersController : ControllerBase
         user.UpdatedAt = DateTime.UtcNow;
         user.DeletedAt = DateTime.UtcNow;
         await _userRepository.UpdateAsync(user);
+        await _context.SaveChangesAsync();
+
+        _logger.LogInformation("Soft-deleted user {UserId} ({Username})", id, user.Username);
 
         return NoContent();
     }

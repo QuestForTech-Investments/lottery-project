@@ -18,6 +18,7 @@ import {
   Clear as ClearIcon,
   VpnKey as KeyIcon,
   Edit as EditIcon,
+  Delete as DeleteIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import useUserAdministrators from '../UserAdministrators/hooks/useUserAdministrators';
@@ -40,6 +41,7 @@ const UserAdministratorsContent: React.FC = () => {
     error,
     handleSearchChange,
     handleClearSearch,
+    refreshData,
   } = useUserAdministrators();
 
   const [quickFilter, setQuickFilter] = useState<string>('');
@@ -52,6 +54,8 @@ const UserAdministratorsContent: React.FC = () => {
   });
   const [generatingFor, setGeneratingFor] = useState<number | null>(null);
   const [confirmTarget, setConfirmTarget] = useState<{ userId: number; username: string } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ userId: number; username: string } | null>(null);
+  const [deletingFor, setDeletingFor] = useState<number | null>(null);
 
   const filteredAdministradores = administradores.filter(admin => {
     const matchesUserFilter = !searchText ||
@@ -79,6 +83,22 @@ const UserAdministratorsContent: React.FC = () => {
 
   const handleEditClick = (userId: number) => {
     navigate(`/users/edit/${userId}`);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return;
+    const { userId } = deleteTarget;
+    setDeletingFor(userId);
+    try {
+      await userService.deactivateUser(userId);
+      setDeleteTarget(null);
+      refreshData();
+    } catch (err) {
+      alert(handleApiError(err) || 'No se pudo eliminar el usuario');
+      setDeleteTarget(null);
+    } finally {
+      setDeletingFor(null);
+    }
   };
 
   return (
@@ -196,6 +216,18 @@ const UserAdministratorsContent: React.FC = () => {
                       >
                         <EditIcon fontSize="small" />
                       </IconButton>
+                      <IconButton
+                        size="small"
+                        onClick={() => setDeleteTarget({ userId: admin.userId, username: admin.username })}
+                        disabled={deletingFor === admin.userId}
+                        title="Eliminar usuario"
+                        sx={{
+                          color: '#d32f2f',
+                          '&:hover': { bgcolor: 'rgba(211, 47, 47, 0.1)' },
+                        }}
+                      >
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
                     </Box>
                   </TableCell>
                 </TableRow>
@@ -221,6 +253,17 @@ const UserAdministratorsContent: React.FC = () => {
         loading={generatingFor !== null}
         onConfirm={handleConfirmGenerate}
         onCancel={() => setConfirmTarget(null)}
+      />
+
+      <ConfirmActionDialog
+        isOpen={!!deleteTarget}
+        title="Eliminar usuario"
+        message={`¿Eliminar al usuario "${deleteTarget?.username}"? El usuario será desactivado y no podrá acceder al sistema.`}
+        confirmLabel="Eliminar"
+        severity="danger"
+        loading={deletingFor !== null}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setDeleteTarget(null)}
       />
 
       <TempCredentialDialog

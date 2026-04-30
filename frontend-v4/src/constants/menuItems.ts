@@ -11,7 +11,6 @@ import {
   BarChart,
   Chat,
   MenuBook,
-  List,
   Email,
   LocationOn,
   Warning as WarningIcon
@@ -127,15 +126,6 @@ export const MENU_ITEMS: MenuItem[] = [
     ]
   },
   {
-    id: 'surpluses',
-    label: 'EXCEDENTES',
-    icon: Description,
-    submenu: [
-      { id: 'manage-surpluses', label: 'Manejar', shortcut: 'M', path: '/surpluses/manage' },
-      { id: 'surpluses-report', label: 'Reporte', shortcut: 'R', path: '/surpluses/report' }
-    ]
-  },
-  {
     id: 'limits',
     label: 'LÍMITES',
     icon: BarChart,
@@ -149,7 +139,6 @@ export const MENU_ITEMS: MenuItem[] = [
       { id: 'blocked-numbers', label: 'Números bloqueados', shortcut: 'B', path: '/limits/blocked-numbers' }
     ]
   },
-  { id: 'collectors', label: 'COBRADORES', icon: Chat, path: '/collectors' },
   {
     id: 'draws',
     label: 'SORTEOS',
@@ -159,7 +148,6 @@ export const MENU_ITEMS: MenuItem[] = [
       { id: 'schedules', label: 'Horario', shortcut: 'H', path: '/draws/schedules' }
     ]
   },
-  { id: 'collector-management', label: 'MANEJO DE COBRADORES', icon: People, path: '/collector-management' },
   {
     id: 'my-group',
     label: 'MI GRUPO',
@@ -168,16 +156,6 @@ export const MENU_ITEMS: MenuItem[] = [
       { id: 'group-configuration', label: 'Configuración', shortcut: 'C', path: '/my-group/configuration' }
     ]
   },
-  {
-    id: 'external-agents',
-    label: 'AGENTES EXTERNOS',
-    icon: Description,
-    submenu: [
-      { id: 'create-agent', label: 'Crear', shortcut: 'C', path: '/external-agents/new' },
-      { id: 'agents-list', label: 'Lista', shortcut: 'L', path: '/external-agents/list' }
-    ]
-  },
-  { id: 'f8', label: '[F8]', icon: List, path: '/f8' },
   { id: 'warnings', label: 'ADVERTENCIAS', icon: WarningIcon, path: '/warnings' },
   {
     id: 'zones',

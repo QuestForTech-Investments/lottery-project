@@ -28,6 +28,7 @@ import {
   Refresh as RefreshIcon,
   Search as SearchIcon,
   Clear as ClearIcon,
+  Delete as DeleteIcon,
 } from '@mui/icons-material';
 import useUserList from './hooks/useUserList';
 import TempCredentialDialog from '@components/modals/TempCredentialDialog';
@@ -77,6 +78,8 @@ const UserListMUI = () => {
   });
   const [generatingFor, setGeneratingFor] = useState<number | null>(null);
   const [confirmTarget, setConfirmTarget] = useState<{ userId: number; username: string } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ userId: number; username: string } | null>(null);
+  const [deletingFor, setDeletingFor] = useState<number | null>(null);
 
   const handleEdit = useCallback((userId: number) => {
     logger.info('USER_LIST_MUI', `Editing user ID: ${userId}`);
@@ -102,6 +105,22 @@ const UserListMUI = () => {
   const handleCloseTempDialog = useCallback(() => {
     setTempDialog({ open: false, username: '', password: '' });
   }, []);
+
+  const handleConfirmDelete = useCallback(async () => {
+    if (!deleteTarget) return;
+    const { userId } = deleteTarget;
+    setDeletingFor(userId);
+    try {
+      await userService.deactivateUser(userId);
+      setDeleteTarget(null);
+      handleRefresh();
+    } catch (err) {
+      alert(handleApiError(err) || 'No se pudo eliminar el usuario');
+      setDeleteTarget(null);
+    } finally {
+      setDeletingFor(null);
+    }
+  }, [deleteTarget, handleRefresh]);
 
   /**
    * Create sort handler for table columns
@@ -308,6 +327,18 @@ const UserListMUI = () => {
                                 <EditIcon fontSize="small" />
                               </IconButton>
                             </Tooltip>
+                            <Tooltip title="Eliminar usuario">
+                              <span>
+                                <IconButton
+                                  size="small"
+                                  color="error"
+                                  disabled={deletingFor === user.userId}
+                                  onClick={() => setDeleteTarget({ userId: user.userId, username: user.username })}
+                                >
+                                  <DeleteIcon fontSize="small" />
+                                </IconButton>
+                              </span>
+                            </Tooltip>
                           </Box>
                         </TableCell>
                       </TableRow>
@@ -346,6 +377,17 @@ const UserListMUI = () => {
         loading={generatingFor !== null}
         onConfirm={handleConfirmGenerate}
         onCancel={() => setConfirmTarget(null)}
+      />
+
+      <ConfirmActionDialog
+        isOpen={!!deleteTarget}
+        title="Eliminar usuario"
+        message={`¿Eliminar al usuario "${deleteTarget?.username}"? El usuario será desactivado y no podrá acceder al sistema.`}
+        confirmLabel="Eliminar"
+        severity="danger"
+        loading={deletingFor !== null}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setDeleteTarget(null)}
       />
 
       <TempCredentialDialog
