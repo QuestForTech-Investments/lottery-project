@@ -262,16 +262,25 @@ const Header = ({ sidebarCollapsed, sidebarHovered, onToggleSidebar, isMobile = 
 
         <Box sx={{ flexGrow: 1 }} />
 
-        {/* Centered warnings bell */}
-        {!isMobile && (
-          <Box
-            sx={{
-              position: 'absolute',
-              left: '50%',
-              top: '50%',
-              transform: 'translate(-50%, -50%)',
-            }}
-          >
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1.5,
+            animation: 'fadeInRight 0.5s ease-out 0.3s both',
+            '@keyframes fadeInRight': {
+              '0%': { opacity: 0, transform: 'translateX(20px)' },
+              '100%': { opacity: 1, transform: 'translateX(0)' },
+            },
+          }}
+        >
+          {/* Time */}
+          <Box sx={{ animation: 'fadeIn 0.3s ease-out 0.5s both', '@keyframes fadeIn': { '0%': { opacity: 0 }, '100%': { opacity: 1 } } }}>
+            <TimeDisplay />
+          </Box>
+
+          {/* Warnings bell — between time and language */}
+          {!isMobile && (
             <Tooltip title={warningCount > 0 ? `${warningCount} advertencia(s) hoy` : 'Sin advertencias'}>
               <IconButton
                 onClick={() => navigate('/warnings')}
@@ -299,41 +308,23 @@ const Header = ({ sidebarCollapsed, sidebarHovered, onToggleSidebar, isMobile = 
                   overlap="circular"
                   sx={{
                     '& .MuiBadge-badge': {
-                      fontSize: '11px',
-                      height: 20,
-                      minWidth: 20,
-                      padding: '0 6px',
+                      fontSize: '9px',
+                      height: 16,
+                      minWidth: 16,
+                      padding: '0 4px',
                       fontWeight: 'bold',
                     },
                   }}
                 >
                   {warningCount > 0 ? (
-                    <NotificationsActive sx={{ fontSize: 36 }} />
+                    <NotificationsActive sx={{ fontSize: 28 }} />
                   ) : (
-                    <Notifications sx={{ fontSize: 36 }} />
+                    <Notifications sx={{ fontSize: 28 }} />
                   )}
                 </Badge>
               </IconButton>
             </Tooltip>
-          </Box>
-        )}
-
-        <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 1.5,
-            animation: 'fadeInRight 0.5s ease-out 0.3s both',
-            '@keyframes fadeInRight': {
-              '0%': { opacity: 0, transform: 'translateX(20px)' },
-              '100%': { opacity: 1, transform: 'translateX(0)' },
-            },
-          }}
-        >
-          {/* Time */}
-          <Box sx={{ animation: 'fadeIn 0.3s ease-out 0.5s both', '@keyframes fadeIn': { '0%': { opacity: 0 }, '100%': { opacity: 1 } } }}>
-            <TimeDisplay />
-          </Box>
+          )}
 
           {/* Language selector */}
           {!isMobile && (
