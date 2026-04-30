@@ -110,11 +110,13 @@ export const register = async (userData: Record<string, unknown>): Promise<AuthR
 
 /**
  * Logout user
- * Clears token from localStorage
+ * Clears token + any session-scoped keys from localStorage
  */
 export const logout = (): void => {
   logger.info('AUTH_LOGOUT', 'User logging out')
   localStorage.removeItem('authToken')
+  localStorage.removeItem('bettingPoolId')
+  localStorage.removeItem('bettingPoolName')
   logger.success('AUTH_LOGOUT_SUCCESS', 'Token removed from localStorage')
 }
 
@@ -213,12 +215,18 @@ export const getCurrentUser = (): {
 }
 
 /**
- * Returns true if the current user is a POS / banca user.
+ * Returns true if the current user is explicitly a POS / banca user
+ * according to the JWT role claim. Anything else (admin role, missing role) is admin.
  */
 export const isPosUser = (): boolean => {
   const u = getCurrentUser()
   return u?.role?.toUpperCase() === 'POS'
 }
+
+/**
+ * Returns true if the current user is an admin (i.e., not POS).
+ */
+export const isAdminUser = (): boolean => !isPosUser()
 
 export default {
   login,
@@ -229,5 +237,6 @@ export default {
   decodeToken,
   isTokenExpired,
   getCurrentUser,
-  isPosUser
+  isPosUser,
+  isAdminUser
 }

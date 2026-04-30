@@ -54,6 +54,7 @@ import {
   ResultsTableSection,
   type StatusFilterType,
 } from './components';
+import ConfirmPinModal from '@components/modals/ConfirmPinModal';
 
 // =============================================================================
 // Main Component
@@ -527,7 +528,9 @@ const Results = (): React.ReactElement => {
   // Publish Handlers
   // ---------------------------------------------------------------------------
 
-  const handlePublishAll = useCallback(async () => {
+  const [pinPending, setPinPending] = useState<null | 'individual' | 'all'>(null);
+
+  const doPublishAll = useCallback(async () => {
     const dirtyRows = computed.dirtyRows;
     if (dirtyRows.length === 0) {
       actions.setError('No hay resultados pendientes de guardar');
@@ -576,7 +579,7 @@ const Results = (): React.ReactElement => {
     actions.setSuccess(`${dirtyRows.length} resultados publicados`);
   }, [computed.dirtyRows, selectedDate, actions]);
 
-  const handlePublishIndividual = useCallback(async () => {
+  const doPublishIndividual = useCallback(async () => {
     if (!individualForm.selectedDrawId) {
       actions.setError('Seleccione un sorteo');
       return;
@@ -741,6 +744,33 @@ const Results = (): React.ReactElement => {
       actions.setSavingIndividual(false);
     }
   }, [individualForm, drawResults, selectedDate, actions]);
+
+  // PIN-gated publish wrappers — every result publication requires admin PIN.
+  const handlePublishIndividual = useCallback(() => {
+    if (!individualForm.selectedDrawId) {
+      actions.setError('Seleccione un sorteo');
+      return;
+    }
+    setPinPending('individual');
+  }, [individualForm.selectedDrawId, actions]);
+
+  const handlePublishAll = useCallback(() => {
+    if (computed.dirtyRows.length === 0) {
+      actions.setError('No hay resultados pendientes de guardar');
+      return;
+    }
+    setPinPending('all');
+  }, [computed.dirtyRows.length, actions]);
+
+  const handlePinConfirmed = useCallback(() => {
+    const pending = pinPending;
+    setPinPending(null);
+    if (pending === 'individual') {
+      doPublishIndividual();
+    } else if (pending === 'all') {
+      doPublishAll();
+    }
+  }, [pinPending, doPublishIndividual, doPublishAll]);
 
   // ---------------------------------------------------------------------------
   // UI Event Handlers
@@ -942,6 +972,18 @@ const Results = (): React.ReactElement => {
         row={viewDetailsRow}
         open={!!viewDetailsRow}
         onClose={handleCloseViewDetails}
+      />
+
+      <ConfirmPinModal
+        isOpen={!!pinPending}
+        title="Confirmar publicación de resultado"
+        description={
+          pinPending === 'all'
+            ? `Publicarás ${computed.dirtyRows.length} resultado(s). Confirma con tu PIN para continuar.`
+            : 'Confirma con tu PIN para publicar el resultado.'
+        }
+        onConfirmed={handlePinConfirmed}
+        onCancel={() => setPinPending(null)}
       />
     </Box>
   );

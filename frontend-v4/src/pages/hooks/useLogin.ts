@@ -114,10 +114,13 @@ const useLogin = () => {
         expiresAt: response.expiresAt
       });
 
-      // Store betting pool info for POS users
+      // Store betting pool info for POS users — clear any stale value when admin logs in
       if (response.bettingPoolId) {
         localStorage.setItem('bettingPoolId', response.bettingPoolId.toString());
         localStorage.setItem('bettingPoolName', response.bettingPoolName || '');
+      } else {
+        localStorage.removeItem('bettingPoolId');
+        localStorage.removeItem('bettingPoolName');
       }
 
       // Set cookie on parent domain for cross-subdomain auth
@@ -203,16 +206,26 @@ const useLogin = () => {
     // forcing the user to log back in ensures the next session has a clean token.
     authService.logout();
     setPendingRedirect(null);
+    // Clear the temp password from the login form so it doesn't leak into the new session.
+    setPassword('');
     navigate('/login?changed=1');
   }, [navigate]);
 
-  /** Called by ForcePasswordChangeModal when password change succeeds. */
+  /**
+   * Called by ForcePasswordChangeModal when password change succeeds.
+   * Admins ALWAYS go through the PIN step next (security policy: keep both
+   * credentials fresh, regardless of the stale must_set_pin flag in DB).
+   * POS users finish here.
+   */
   const onPasswordChanged = useCallback(() => {
     setMustChangePassword(false);
-    if (!mustSetPin) {
+    if (isPosUser) {
       finishForcedFlow();
+    } else {
+      // Force admin into the PIN setup flow even if the server flag is false.
+      setMustSetPin(true);
     }
-  }, [mustSetPin, finishForcedFlow]);
+  }, [isPosUser, finishForcedFlow]);
 
   /** Called by ForceSetPinModal when PIN is set. */
   const onPinSet = useCallback(() => {

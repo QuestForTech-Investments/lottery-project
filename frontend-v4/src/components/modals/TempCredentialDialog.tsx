@@ -103,7 +103,11 @@ export default function TempCredentialDialog({ isOpen, username, password, onClo
       <DialogActions sx={{ px: 3, pb: 2 }}>
         <Button
           variant="contained"
-          onClick={onClose}
+          onClick={async () => {
+            await copy()
+            onClose()
+          }}
+          startIcon={<CopyIcon />}
           fullWidth
           sx={{
             bgcolor: '#6366f1',
@@ -111,7 +115,7 @@ export default function TempCredentialDialog({ isOpen, username, password, onClo
             textTransform: 'none',
           }}
         >
-          Listo
+          Copiar y salir
         </Button>
       </DialogActions>
     </Dialog>

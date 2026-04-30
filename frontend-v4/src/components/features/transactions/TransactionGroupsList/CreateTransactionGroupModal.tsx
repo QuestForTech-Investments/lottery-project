@@ -35,8 +35,12 @@ import { getAllZones } from '../../../../services/zoneService';
 import { getAccountableEntities } from '../../../../services/accountableEntityService';
 import api from '../../../../services/api';
 import type { BettingPoolBalanceAPI } from '../../../../services/balanceService';
+import ConfirmPinModal from '@components/modals/ConfirmPinModal';
 
 const TRANSACTION_TYPES = ['Cobro', 'Pago', 'Ajuste', 'Retiro', 'Gasto'];
+
+/** Above this amount, an admin PIN is required to confirm. */
+const HIGH_AMOUNT_PIN_THRESHOLD = 10000;
 
 interface EntityOption {
   id: number;
@@ -387,13 +391,22 @@ const CreateTransactionGroupModal = ({ open, onClose, onCreated }: CreateTransac
   }, [onClose]);
 
   const [creating, setCreating] = useState(false);
+  const [pinOpen, setPinOpen] = useState(false);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
     open: false, message: '', severity: 'success'
   });
 
-  const handleCreate = useCallback(async () => {
-    if (lines.length === 0 || creating) return;
+  // Total amount of the group = max of total debits / total credits across lines.
+  // In double-entry these should match; we take the max to be defensive.
+  const totalAmount = useMemo(() => {
+    const totalDebit = lines.reduce((s, l) => s + (Number(l.debit) || 0), 0);
+    const totalCredit = lines.reduce((s, l) => s + (Number(l.credit) || 0), 0);
+    return Math.max(totalDebit, totalCredit);
+  }, [lines]);
 
+  const requiresPin = totalAmount > HIGH_AMOUNT_PIN_THRESHOLD;
+
+  const submitCreate = useCallback(async () => {
     setCreating(true);
     try {
       const payload = {
@@ -431,7 +444,16 @@ const CreateTransactionGroupModal = ({ open, onClose, onCreated }: CreateTransac
     } finally {
       setCreating(false);
     }
-  }, [lines, creating, zoneId, groupNotes, handleClose, onCreated]);
+  }, [lines, zoneId, groupNotes, handleClose, onCreated]);
+
+  const attemptCreate = useCallback(() => {
+    if (lines.length === 0 || creating) return;
+    if (requiresPin) {
+      setPinOpen(true);
+    } else {
+      submitCreate();
+    }
+  }, [lines.length, creating, requiresPin, submitCreate]);
 
   return (
     <>
@@ -829,9 +851,9 @@ const CreateTransactionGroupModal = ({ open, onClose, onCreated }: CreateTransac
           Cancelar
         </Button>
         <Button
-          onClick={handleCreate}
+          onClick={attemptCreate}
           variant="contained"
-          disabled={lines.length === 0}
+          disabled={lines.length === 0 || creating}
           sx={{ bgcolor: '#8b5cf6', '&:hover': { bgcolor: '#7c3aed' }, textTransform: 'none', fontWeight: 600 }}
         >
           Crear
@@ -853,6 +875,17 @@ const CreateTransactionGroupModal = ({ open, onClose, onCreated }: CreateTransac
         {snackbar.message}
       </Alert>
     </Snackbar>
+
+    <ConfirmPinModal
+      isOpen={pinOpen}
+      title="Confirmar transacción"
+      description={`Esta transacción supera ${formatCurrency(HIGH_AMOUNT_PIN_THRESHOLD)} (total ${formatCurrency(totalAmount)}). Confirma con tu PIN para continuar.`}
+      onConfirmed={() => {
+        setPinOpen(false);
+        submitCreate();
+      }}
+      onCancel={() => setPinOpen(false)}
+    />
     </>
   );
 };
