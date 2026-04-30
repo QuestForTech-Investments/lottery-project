@@ -48,14 +48,12 @@ export const MENU_ITEMS: MenuItem[] = [
     submenu: [
       { id: 'create-ticket', label: 'Crear', shortcut: 'C', path: '/tickets/new' },
       { id: 'monitoring', label: 'Monitoreo', shortcut: 'M', path: '/tickets/monitoring' },
-      { id: 'external-agents-monitoring', label: 'Monitoreo de agentes externos', shortcut: 'M', path: '/tickets/external-agents' },
       { id: 'plays', label: 'Jugadas', shortcut: 'J', path: '/tickets/plays' },
       { id: 'winning-plays', label: 'Jugadas ganadoras', shortcut: 'J', path: '/tickets/winners' },
-      { id: 'board', label: 'Pizarra', shortcut: 'P', path: '/tickets/board' },
+      { id: 'board', label: 'Pizarra', shortcut: 'P', path: '/tickets/board' }
       // TODO: Habilitar cuando se implementen los endpoints de bote
       // { id: 'imported-pool', label: 'Bote importado', shortcut: 'B', path: '/tickets/imported-pool' },
       // { id: 'exported-pool', label: 'Bote Exportado', shortcut: 'B', path: '/tickets/exported-pool' },
-      { id: 'anomalies', label: 'Anomalías', shortcut: 'A', path: '/tickets/anomalies' }
     ]
   },
   { id: 'results', label: 'RESULTADOS', icon: Description, path: '/results' },
@@ -67,7 +65,6 @@ export const MENU_ITEMS: MenuItem[] = [
       { id: 'betting-pools-list', label: 'Lista', shortcut: 'L', path: '/betting-pools/list' },
       { id: 'create-betting-pool', label: 'Crear', shortcut: 'C', path: '/betting-pools/new' },
       { id: 'bulk-edit', label: 'Edicion masiva', shortcut: 'E', path: '/betting-pools/mass-edit' },
-      { id: 'access', label: 'Acceso', shortcut: 'A', path: '/betting-pools/access' },
       { id: 'clear-pending', label: 'Limpiar pendientes de pago', shortcut: 'L', path: '/betting-pools/clear-pending' },
       { id: 'no-sales-list', label: 'Lista sin ventas', shortcut: 'L', path: '/betting-pools/no-sales' },
       { id: 'days-report', label: 'Reporte de dias sin venta', shortcut: 'R', path: '/betting-pools/days-report' }
@@ -80,8 +77,7 @@ export const MENU_ITEMS: MenuItem[] = [
     submenu: [
       { id: 'balances-betting-pools', label: 'Bancas', shortcut: 'B', path: '/balances/betting-pools' },
       { id: 'balances-banks', label: 'Bancos', shortcut: 'B', path: '/balances/banks' },
-      { id: 'balances-zones', label: 'Zonas', shortcut: 'Z', path: '/balances/zones' },
-      { id: 'balances-groups', label: 'Grupos', shortcut: 'G', path: '/balances/groups' }
+      { id: 'balances-zones', label: 'Zonas', shortcut: 'Z', path: '/balances/zones' }
     ]
   },
   {
