@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react'
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import {
   Box,
   Paper,
@@ -13,16 +13,21 @@ import {
   CircularProgress,
   Chip,
   MenuItem,
+  Popper,
+  Fade,
+  Paper as MuiPaper,
 } from '@mui/material'
 import { getTodayDate } from '@/utils/formatters'
 import { formatCurrency } from '@/utils/formatCurrency'
 import {
   getPlaysByNumber,
+  getPlaysByNumberDetail,
   SINGLE_NUMBER_BET_TYPES,
   formatBetNumber,
   filterPlaceholder,
   expectedDigits,
   type PlayByNumberRow,
+  type PlayByNumberDetailRow,
 } from '@services/blackboardService'
 import { getActiveZones } from '@services/zoneService'
 import { getAllDraws } from '@services/drawService'
@@ -49,7 +54,15 @@ const NUMBERS_00_99: string[] = Array.from({ length: 100 }, (_, i) => String(i).
 
 interface NumberCellData { number: string; amount: number }
 
+// Context for opening the per-banca detail popover from any cell.
+interface HoverDetailContext {
+  show: (anchor: HTMLElement, betTypeCode: string, betNumber: string) => void
+  hide: () => void
+}
+const HoverCtx = React.createContext<HoverDetailContext | null>(null)
+
 const SingleNumberSection: React.FC<{ name: string; betTypeCode: string; rows: PlayByNumberRow[] }> = ({ name, betTypeCode, rows }) => {
+  const hover = React.useContext(HoverCtx)
   const [filter, setFilter] = useState<string>('')
   const maxDigits = expectedDigits(betTypeCode) || 2
 
@@ -66,19 +79,21 @@ const SingleNumberSection: React.FC<{ name: string; betTypeCode: string; rows: P
   const maxAmount = useMemo(() => Math.max(0, ...cells.map(c => c.amount)), [cells])
   const playedCount = useMemo(() => cells.filter(c => c.amount > 0).length, [cells])
 
-  // 5 columns × 20 rows row-major:
-  // row 0: 00..04 — row 1: 05..09 — ... — row 19: 95..99
+  // 5 columns × 20 rows column-major:
+  // column 0: 00..19, column 1: 20..39, ..., column 4: 80..99.
+  // We store one array per column then render row by row.
   const columns = 5
   const rowsCount = 20
-  const grid: NumberCellData[][] = []
-  for (let r = 0; r < rowsCount; r++) {
-    grid.push(cells.slice(r * columns, r * columns + columns))
+  const colData: NumberCellData[][] = []
+  for (let c = 0; c < columns; c++) {
+    colData.push(cells.slice(c * rowsCount, c * rowsCount + rowsCount))
   }
 
-  const colorFor = (amount: number): { bg: string; color: string } => {
+  // Returns the cell background OVERRIDE (or null to inherit row zebra).
+  const colorFor = (amount: number): { bg: string | null; color: string } => {
     if (amount <= 0) return { bg: '#eeeeee', color: '#9e9e9e' }
     if (maxAmount > 0 && amount >= maxAmount * 0.5) return { bg: '#fee2e2', color: '#b91c1c' }
-    return { bg: 'transparent', color: '#2c2c2c' }
+    return { bg: null, color: '#2c2c2c' }
   }
 
   const filterDigits = filter.replace(/\D/g, '')
@@ -96,7 +111,13 @@ const SingleNumberSection: React.FC<{ name: string; betTypeCode: string; rows: P
             ({playedCount})
           </Box>
         </Typography>
-        <Typography sx={{ color: '#c62828', fontWeight: 600, fontSize: '13px' }}>
+        <Typography
+          sx={{
+            color: total < 0 ? '#c62828' : total > 0 ? '#28a745' : '#666',
+            fontWeight: 600,
+            fontSize: '13px',
+          }}
+        >
           {formatCurrency(total)}
         </Typography>
       </Box>
@@ -114,7 +135,7 @@ const SingleNumberSection: React.FC<{ name: string; betTypeCode: string; rows: P
 
       <Box sx={{ border: '1px solid #e0e0e0', borderRadius: 1, overflow: 'hidden', display: 'block', width: 'fit-content' }}>
         {/* Header row */}
-        <Box sx={{ display: 'grid', gridTemplateColumns: `repeat(${columns}, 1fr)`, bgcolor: '#f5f5f5' }}>
+        <Box sx={{ display: 'grid', gridTemplateColumns: `repeat(${columns}, 1fr)`, bgcolor: '#e3f2fd' }}>
           {Array.from({ length: columns }).map((_, i) => (
             <Box
               key={i}
@@ -130,9 +151,9 @@ const SingleNumberSection: React.FC<{ name: string; betTypeCode: string; rows: P
               <Typography sx={{
                 fontSize: '10px',
                 fontWeight: 700,
-                color: '#2c2c2c',
+                color: '#1976d2',
                 letterSpacing: 0.3,
-                borderRight: '1px solid #e0e0e0',
+                borderRight: '1px solid #bbdefb',
                 pr: 1,
               }}>
                 JUGADA
@@ -140,19 +161,21 @@ const SingleNumberSection: React.FC<{ name: string; betTypeCode: string; rows: P
               <Typography sx={{
                 fontSize: '10px',
                 fontWeight: 700,
-                color: '#2c2c2c',
+                color: '#1976d2',
                 textAlign: 'right',
                 letterSpacing: 0.3,
                 pl: 1,
               }}>
-                IMPORTE
+                MONTO
               </Typography>
             </Box>
           ))}
         </Box>
 
-        {/* Body — 5 columns × 20 rows row-major */}
-        {grid.map((row, ri) => (
+        {/* Body — 5 columns × 20 rows column-major (vertical numbering) */}
+        {Array.from({ length: rowsCount }).map((_, ri) => {
+          const zebraBg = ri % 2 === 1 ? '#f9fbfd' : 'transparent'
+          return (
           <Box
             key={ri}
             sx={{
@@ -161,25 +184,32 @@ const SingleNumberSection: React.FC<{ name: string; betTypeCode: string; rows: P
               borderTop: '1px solid #f0f0f0',
             }}
           >
-            {row.map((cell, ci) => {
+            {colData.map((col, ci) => {
+              const cell = col[ri]
+              if (!cell) return <Box key={ci} />
               const { bg, color } = colorFor(cell.amount)
               const matches = !filterDigits || cell.number.startsWith(filterDigits)
+              const hoverable = cell.amount > 0
               return (
                 <Box
                   key={cell.number}
+                  onMouseEnter={hoverable ? (e) => hover?.show(e.currentTarget as HTMLElement, betTypeCode, cell.number) : undefined}
+                  onMouseLeave={hoverable ? () => hover?.hide() : undefined}
                   sx={{
                     display: 'grid',
                     gridTemplateColumns: '1fr 1fr',
                     px: 1,
                     py: 0.45,
-                    bgcolor: bg,
+                    bgcolor: bg ?? zebraBg,
                     borderRight: ci < columns - 1 ? '1px solid #f0f0f0' : 'none',
                     opacity: matches ? 1 : 0.25,
+                    cursor: hoverable ? 'pointer' : 'default',
                   }}
                 >
                   <Typography sx={{
                     fontFamily: 'monospace',
-                    fontSize: '12px',
+                    fontSize: '15px',
+                    fontWeight: 500,
                     color,
                     lineHeight: 1.4,
                     borderRight: '1px solid #e8e8e8',
@@ -189,7 +219,8 @@ const SingleNumberSection: React.FC<{ name: string; betTypeCode: string; rows: P
                   </Typography>
                   <Typography sx={{
                     fontFamily: 'monospace',
-                    fontSize: '12px',
+                    fontSize: '15px',
+                    fontWeight: 500,
                     textAlign: 'right',
                     color,
                     lineHeight: 1.4,
@@ -201,7 +232,8 @@ const SingleNumberSection: React.FC<{ name: string; betTypeCode: string; rows: P
               )
             })}
           </Box>
-        ))}
+          )
+        })}
       </Box>
     </Box>
   )
@@ -213,6 +245,7 @@ const CombinationSection: React.FC<{
   rows: PlayByNumberRow[]
   grandTotal: number
 }> = ({ name, betTypeCode, rows, grandTotal }) => {
+  const hover = React.useContext(HoverCtx)
   const [filter, setFilter] = useState<string>('')
   const maxDigits = expectedDigits(betTypeCode) || 6
 
@@ -243,7 +276,13 @@ const CombinationSection: React.FC<{
             </Box>
           )}
         </Typography>
-        <Typography sx={{ color: '#c62828', fontWeight: 600, fontSize: '15px' }}>
+        <Typography
+          sx={{
+            color: total < 0 ? '#c62828' : total > 0 ? '#28a745' : '#666',
+            fontWeight: 600,
+            fontSize: '15px',
+          }}
+        >
           {formatCurrency(total)}
         </Typography>
       </Box>
@@ -260,12 +299,12 @@ const CombinationSection: React.FC<{
       </Box>
 
       <Box sx={{ border: '1px solid #e0e0e0', borderRadius: 1, overflow: 'hidden', minWidth: 240, display: 'block' }}>
-        <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', bgcolor: '#f5f5f5', px: 1, py: 0.4 }}>
-          <Typography sx={{ fontSize: '10px', fontWeight: 700, color: '#2c2c2c', letterSpacing: 0.3 }}>
-            JUGADA <Box component="span" sx={{ color: '#888', fontWeight: 400 }}>({lineCount})</Box>
+        <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', bgcolor: '#e3f2fd', px: 1, py: 0.4 }}>
+          <Typography sx={{ fontSize: '10px', fontWeight: 700, color: '#1976d2', letterSpacing: 0.3 }}>
+            JUGADA <Box component="span" sx={{ color: '#7eb', fontWeight: 400 }}>({lineCount})</Box>
           </Typography>
-          <Typography sx={{ fontSize: '10px', fontWeight: 700, color: '#2c2c2c', textAlign: 'right', letterSpacing: 0.3 }}>
-            IMPORTE
+          <Typography sx={{ fontSize: '10px', fontWeight: 700, color: '#1976d2', textAlign: 'right', letterSpacing: 0.3 }}>
+            MONTO
           </Typography>
         </Box>
         <Box sx={{ maxHeight: 480, overflowY: 'auto' }}>
@@ -274,21 +313,26 @@ const CombinationSection: React.FC<{
               Sin coincidencias
             </Box>
           )}
-          {visible.map((r) => (
+          {visible.map((r, idx) => (
             <Box
               key={r.betNumber}
+              onMouseEnter={(e) => hover?.show(e.currentTarget as HTMLElement, betTypeCode, r.betNumber)}
+              onMouseLeave={() => hover?.hide()}
               sx={{
                 display: 'grid',
                 gridTemplateColumns: '1fr 1fr',
                 px: 1.5,
                 py: 0.5,
                 borderTop: '1px solid #f0f0f0',
+                bgcolor: idx % 2 === 1 ? '#f9fbfd' : 'transparent',
+                cursor: 'pointer',
+                '&:hover': { bgcolor: '#e3f2fd' },
               }}
             >
-              <Typography sx={{ fontFamily: 'monospace', fontSize: '13px', color: '#2c2c2c' }}>
+              <Typography sx={{ fontFamily: 'monospace', fontSize: '15px', fontWeight: 500, color: '#2c2c2c' }}>
                 {formatBetNumber(betTypeCode, r.betNumber)}
               </Typography>
-              <Typography sx={{ fontFamily: 'monospace', fontSize: '13px', textAlign: 'right', color: '#2c2c2c' }}>
+              <Typography sx={{ fontFamily: 'monospace', fontSize: '15px', fontWeight: 500, textAlign: 'right', color: '#2c2c2c' }}>
                 {r.totalAmount.toLocaleString('es-DO', { maximumFractionDigits: 0 })}
               </Typography>
             </Box>
@@ -311,6 +355,20 @@ const Blackboard: React.FC = () => {
   const [rows, setRows] = useState<PlayByNumberRow[]>([])
   const [loading, setLoading] = useState<boolean>(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Hover popover state for per-banca breakdown
+  const [hoverState, setHoverState] = useState<{
+    anchor: HTMLElement | null
+    betTypeCode: string
+    betNumber: string
+    loading: boolean
+    rows: PlayByNumberDetailRow[]
+    error: string | null
+  }>({ anchor: null, betTypeCode: '', betNumber: '', loading: false, rows: [], error: null })
+
+  const hoverShowTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const hoverHideTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const lastFetchKey = useRef<string>('')
 
   // Load zones & draws on mount
   useEffect(() => {
@@ -451,7 +509,54 @@ const Blackboard: React.FC = () => {
     return draws.find(d => d.drawId === selectedDrawId)?.drawName ?? null
   }, [selectedDrawId, draws])
 
+  // ----- Hover popover handlers -----
+  const showDetail = useCallback((anchor: HTMLElement, betTypeCode: string, betNumber: string) => {
+    if (hoverHideTimer.current) {
+      clearTimeout(hoverHideTimer.current)
+      hoverHideTimer.current = null
+    }
+    if (hoverShowTimer.current) {
+      clearTimeout(hoverShowTimer.current)
+    }
+    hoverShowTimer.current = setTimeout(async () => {
+      // Snapshot filters at fire time
+      const fetchKey = `${betTypeCode}|${betNumber}|${date}|${selectedDrawId ?? ''}|${selectedZoneIds.join(',')}|${selectedBanca?.bettingPoolId ?? ''}`
+      lastFetchKey.current = fetchKey
+      setHoverState({ anchor, betTypeCode, betNumber, loading: true, rows: [], error: null })
+      try {
+        const data = await getPlaysByNumberDetail({
+          date,
+          drawId: selectedDrawId,
+          zoneIds: selectedZoneIds.length > 0 ? selectedZoneIds : null,
+          bettingPoolId: selectedBanca?.bettingPoolId ?? null,
+          betTypeCode,
+          betNumber,
+        })
+        if (lastFetchKey.current !== fetchKey) return
+        setHoverState({ anchor, betTypeCode, betNumber, loading: false, rows: data, error: null })
+      } catch (e) {
+        if (lastFetchKey.current !== fetchKey) return
+        console.error(e)
+        setHoverState({ anchor, betTypeCode, betNumber, loading: false, rows: [], error: 'Error al cargar' })
+      }
+    }, 200)
+  }, [date, selectedDrawId, selectedZoneIds, selectedBanca])
+
+  const hideDetail = useCallback(() => {
+    if (hoverShowTimer.current) {
+      clearTimeout(hoverShowTimer.current)
+      hoverShowTimer.current = null
+    }
+    if (hoverHideTimer.current) clearTimeout(hoverHideTimer.current)
+    hoverHideTimer.current = setTimeout(() => {
+      setHoverState(s => ({ ...s, anchor: null }))
+    }, 100)
+  }, [])
+
+  const hoverCtxValue = useMemo<HoverDetailContext>(() => ({ show: showDetail, hide: hideDetail }), [showDetail, hideDetail])
+
   return (
+   <HoverCtx.Provider value={hoverCtxValue}>
     <Box sx={{ p: 2 }}>
       <Paper elevation={3} sx={{ p: 3 }}>
         {/* Filters */}
@@ -506,7 +611,13 @@ const Blackboard: React.FC = () => {
         <Box sx={{ textAlign: 'center', my: 2 }}>
           <Typography sx={{ fontSize: '22px', fontWeight: 500, fontFamily: 'Montserrat, sans-serif', color: '#2c2c2c' }}>
             {drawLabel ? <>Total para sorteo <b>{drawLabel}</b>: </> : 'Total general: '}
-            <Box component="span" sx={{ color: '#c62828', fontWeight: 700 }}>
+            <Box
+              component="span"
+              sx={{
+                color: grandTotal < 0 ? '#c62828' : grandTotal > 0 ? '#28a745' : '#666',
+                fontWeight: 700,
+              }}
+            >
               {formatCurrency(grandTotal)}
             </Box>
           </Typography>
@@ -547,6 +658,82 @@ const Blackboard: React.FC = () => {
         )}
       </Paper>
     </Box>
+
+    {/* Per-banca breakdown popover */}
+    <Popper
+      open={!!hoverState.anchor}
+      anchorEl={hoverState.anchor}
+      placement="right-start"
+      transition
+      modifiers={[{ name: 'offset', options: { offset: [0, 8] } }]}
+      sx={{ zIndex: 1500, pointerEvents: 'none' }}
+    >
+      {({ TransitionProps }) => (
+        <Fade {...TransitionProps} timeout={150}>
+          <MuiPaper
+            elevation={6}
+            sx={{
+              p: 1.5,
+              minWidth: 280,
+              maxWidth: 360,
+              maxHeight: 400,
+              overflowY: 'auto',
+              border: '1px solid #e0e0e0',
+            }}
+          >
+            <Typography sx={{ fontSize: '12px', color: '#666', mb: 0.5 }}>
+              {hoverState.betTypeCode} · <Box component="span" sx={{ fontFamily: 'monospace', fontWeight: 600, color: '#2c2c2c' }}>{formatBetNumber(hoverState.betTypeCode, hoverState.betNumber)}</Box>
+            </Typography>
+            {hoverState.loading && (
+              <Box sx={{ display: 'flex', justifyContent: 'center', py: 1.5 }}>
+                <CircularProgress size={20} sx={{ color: '#51cbce' }} />
+              </Box>
+            )}
+            {!hoverState.loading && hoverState.error && (
+              <Typography sx={{ color: '#c62828', fontSize: '12px' }}>{hoverState.error}</Typography>
+            )}
+            {!hoverState.loading && !hoverState.error && hoverState.rows.length === 0 && (
+              <Typography sx={{ color: '#888', fontSize: '12px', textAlign: 'center', py: 1 }}>
+                Sin coincidencias
+              </Typography>
+            )}
+            {!hoverState.loading && !hoverState.error && hoverState.rows.length > 0 && (
+              <Table size="small">
+                <TableHead>
+                  <TableRow sx={{ bgcolor: '#e3f2fd' }}>
+                    <TableCell sx={{ fontWeight: 700, fontSize: '11px', py: 0.5, color: '#1976d2', letterSpacing: 0.3 }}>BANCA</TableCell>
+                    <TableCell sx={{ fontWeight: 700, fontSize: '11px', py: 0.5, color: '#1976d2', letterSpacing: 0.3 }}>REFERENCIA</TableCell>
+                    <TableCell sx={{ fontWeight: 700, fontSize: '11px', py: 0.5, color: '#1976d2', letterSpacing: 0.3 }} align="right">IMPORTE</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {hoverState.rows.map((r, idx) => (
+                    <TableRow
+                      key={r.bettingPoolId}
+                      sx={{
+                        bgcolor: idx % 2 === 1 ? '#f9fbfd' : 'transparent',
+                        '&:hover': { bgcolor: '#e3f2fd' },
+                      }}
+                    >
+                      <TableCell sx={{ fontSize: '12px', py: 0.5, fontFamily: 'monospace' }}>
+                        {r.bettingPoolCode || r.bettingPoolName}
+                      </TableCell>
+                      <TableCell sx={{ fontSize: '12px', py: 0.5, color: '#666' }}>
+                        {r.reference || '-'}
+                      </TableCell>
+                      <TableCell sx={{ fontSize: '12px', py: 0.5, textAlign: 'right', fontFamily: 'monospace', fontWeight: 600 }}>
+                        {r.totalAmount.toLocaleString('es-DO', { maximumFractionDigits: 0 })}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </MuiPaper>
+        </Fade>
+      )}
+    </Popper>
+   </HoverCtx.Provider>
   )
 }
 

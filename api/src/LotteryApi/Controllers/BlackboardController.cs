@@ -29,6 +29,16 @@ public class BlackboardController : ControllerBase
         public int LineCount { get; set; }
     }
 
+    public class PlayByNumberDetailRow
+    {
+        public int BettingPoolId { get; set; }
+        public string BettingPoolCode { get; set; } = string.Empty;
+        public string BettingPoolName { get; set; } = string.Empty;
+        public string? Reference { get; set; }
+        public decimal TotalAmount { get; set; }
+        public int LineCount { get; set; }
+    }
+
     /// <summary>
     /// Returns active plays grouped by (betTypeCode, betNumber) for the blackboard.
     /// Filters: date (createdAt of ticket, business timezone), drawId, zoneIds, bettingPoolId.
@@ -116,6 +126,109 @@ public class BlackboardController : ControllerBase
             })
             .OrderBy(r => r.BetTypeCode)
             .ThenByDescending(r => r.TotalAmount)
+            .ToList();
+
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Returns the per-banca breakdown for a single (betTypeCode, betNumber) combo.
+    /// Same filters as plays-by-number; used by the blackboard hover popover.
+    /// </summary>
+    [HttpGet("plays-by-number-detail")]
+    public async Task<ActionResult<List<PlayByNumberDetailRow>>> GetPlaysByNumberDetail(
+        [FromQuery] DateTime date,
+        [FromQuery] string betTypeCode,
+        [FromQuery] string betNumber,
+        [FromQuery] int? drawId = null,
+        [FromQuery] string? zoneIds = null,
+        [FromQuery] int? bettingPoolId = null)
+    {
+        if (string.IsNullOrWhiteSpace(betTypeCode) || string.IsNullOrWhiteSpace(betNumber))
+        {
+            return BadRequest(new { message = "betTypeCode and betNumber are required" });
+        }
+
+        var targetDate = date.Date;
+        var utcStart = DateTimeHelper.GetUtcStartOfDay(targetDate);
+        var utcEnd = DateTimeHelper.GetUtcEndOfDay(targetDate);
+
+        var parsedZoneIds = (zoneIds ?? string.Empty)
+            .Split(',', StringSplitOptions.RemoveEmptyEntries)
+            .Select(s => int.TryParse(s.Trim(), out var v) ? v : 0)
+            .Where(v => v > 0)
+            .Distinct()
+            .ToList();
+
+        var query = _context.TicketLines
+            .AsNoTracking()
+            .Where(tl => !tl.Ticket!.IsCancelled
+                && tl.LineStatus != "cancelled"
+                && tl.Ticket.CreatedAt >= utcStart
+                && tl.Ticket.CreatedAt < utcEnd
+                && tl.BetTypeCode == betTypeCode
+                && tl.BetNumber == betNumber);
+
+        if (drawId.HasValue)
+        {
+            query = query.Where(tl => tl.DrawId == drawId.Value);
+        }
+
+        if (bettingPoolId.HasValue)
+        {
+            query = query.Where(tl => tl.Ticket!.BettingPoolId == bettingPoolId.Value);
+        }
+        else if (parsedZoneIds.Count > 0)
+        {
+            var bpIds = await _context.BettingPools
+                .AsNoTracking()
+                .Where(bp => parsedZoneIds.Contains(bp.ZoneId))
+                .Select(bp => bp.BettingPoolId)
+                .ToListAsync();
+            if (bpIds.Count == 0) return Ok(new List<PlayByNumberDetailRow>());
+            query = query.Where(tl => bpIds.Contains(tl.Ticket!.BettingPoolId));
+        }
+
+        var grouped = await query
+            .GroupBy(tl => tl.Ticket!.BettingPoolId)
+            .Select(g => new
+            {
+                BettingPoolId = g.Key,
+                TotalAmount = g.Sum(x => x.BetAmount),
+                LineCount = g.Count()
+            })
+            .ToListAsync();
+
+        if (grouped.Count == 0) return Ok(new List<PlayByNumberDetailRow>());
+
+        var bpIdList = grouped.Select(g => g.BettingPoolId).ToList();
+        var bpInfo = await _context.BettingPools
+            .AsNoTracking()
+            .Where(bp => bpIdList.Contains(bp.BettingPoolId))
+            .Select(bp => new
+            {
+                bp.BettingPoolId,
+                bp.BettingPoolCode,
+                bp.BettingPoolName,
+                bp.Reference
+            })
+            .ToDictionaryAsync(bp => bp.BettingPoolId);
+
+        var result = grouped
+            .Select(g =>
+            {
+                bpInfo.TryGetValue(g.BettingPoolId, out var info);
+                return new PlayByNumberDetailRow
+                {
+                    BettingPoolId = g.BettingPoolId,
+                    BettingPoolCode = info?.BettingPoolCode ?? string.Empty,
+                    BettingPoolName = info?.BettingPoolName ?? string.Empty,
+                    Reference = info?.Reference,
+                    TotalAmount = g.TotalAmount,
+                    LineCount = g.LineCount
+                };
+            })
+            .OrderByDescending(r => r.TotalAmount)
             .ToList();
 
         return Ok(result);

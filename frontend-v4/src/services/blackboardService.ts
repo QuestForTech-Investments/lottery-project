@@ -38,6 +38,39 @@ export const getPlaysByNumber = async (
   return data ?? []
 }
 
+export interface PlayByNumberDetailRow {
+  bettingPoolId: number
+  bettingPoolCode: string
+  bettingPoolName: string
+  reference?: string | null
+  totalAmount: number
+  lineCount: number
+}
+
+export interface PlaysByNumberDetailFilters extends PlaysByNumberFilters {
+  betTypeCode: string
+  betNumber: string
+}
+
+export const getPlaysByNumberDetail = async (
+  filters: PlaysByNumberDetailFilters
+): Promise<PlayByNumberDetailRow[]> => {
+  const params = new URLSearchParams()
+  params.set('date', filters.date)
+  params.set('betTypeCode', filters.betTypeCode)
+  params.set('betNumber', filters.betNumber)
+  if (filters.drawId) params.set('drawId', String(filters.drawId))
+  if (filters.zoneIds && filters.zoneIds.length > 0) {
+    params.set('zoneIds', filters.zoneIds.join(','))
+  }
+  if (filters.bettingPoolId) params.set('bettingPoolId', String(filters.bettingPoolId))
+
+  const data = (await api.get(`/blackboard/plays-by-number-detail?${params.toString()}`)) as
+    | PlayByNumberDetailRow[]
+    | null
+  return data ?? []
+}
+
 /** Bet types whose betNumber is a single 2-digit number (00-99) — render as 5×20 grid. */
 export const SINGLE_NUMBER_BET_TYPES = new Set<string>([
   'DIRECTO',

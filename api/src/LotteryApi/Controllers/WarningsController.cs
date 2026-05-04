@@ -168,10 +168,21 @@ public class WarningsController : ControllerBase
         var utcStart = DateTimeHelper.GetUtcStartOfDay(targetDay);
         var utcEnd = DateTimeHelper.GetUtcEndOfDay(targetDay);
 
-        var count = await _context.Warnings
-            .AsNoTracking()
-            .CountAsync(w => w.CreatedAt >= utcStart && w.CreatedAt < utcEnd);
+        // The frontend polls this every 60s. On a transient SQL failure (Azure
+        // SQL paused / connection dropped), don't bubble up — return 0 so the
+        // topbar badge stays calm and the next poll will recover.
+        try
+        {
+            var count = await _context.Warnings
+                .AsNoTracking()
+                .CountAsync(w => w.CreatedAt >= utcStart && w.CreatedAt < utcEnd);
 
-        return Ok(new { count, date = targetDay });
+            return Ok(new { count, date = targetDay });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Warnings count query failed; returning 0 for badge");
+            return Ok(new { count = 0, date = targetDay });
+        }
     }
 }

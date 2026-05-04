@@ -95,7 +95,8 @@
       "Bash(grep -E \"\\\\.\\(md|txt|doc\\)$\")",
       "mcp__plugin_playwright_playwright__browser_run_code",
       "Bash(export DOTNET_ROOT=\"/opt/homebrew/opt/dotnet@8/libexec\")",
-      "Bash(export PATH=\"/opt/homebrew/opt/dotnet@8/bin:$PATH\")"
+      "Bash(export PATH=\"/opt/homebrew/opt/dotnet@8/bin:$PATH\")",
+      "Bash(grep -n \"useEffect\\(\\(\\) => {\\\\s*$\\\\|fetchData\\(\\)\\\\|drawLabel\" /Users/oliverjpr/Documents/GitHub/lottery-project/frontend-v4/src/components/features/tickets/Blackboard/index.tsx)"
     ]
   }
 }
