@@ -53,11 +53,12 @@ builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
 // Configure Database
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+// Note: avoid EnableRetryOnFailure here because several endpoints (TicketsController.CreateTicket,
+// LoansController, TransactionGroupsController, the workers) use _context.Database.BeginTransactionAsync()
+// directly, which is incompatible with the retry execution strategy. If retries are wanted later,
+// each transactional block must be wrapped with Database.CreateExecutionStrategy().ExecuteAsync(...).
 builder.Services.AddDbContext<LotteryDbContext>(options =>
-    options.UseSqlServer(connectionString, sql => sql.EnableRetryOnFailure(
-        maxRetryCount: 3,
-        maxRetryDelay: TimeSpan.FromSeconds(5),
-        errorNumbersToAdd: null)));
+    options.UseSqlServer(connectionString));
 
 // Configure JWT Authentication
 var jwtKey = builder.Configuration["Jwt:Key"] ?? throw new InvalidOperationException("JWT Key is not configured");
