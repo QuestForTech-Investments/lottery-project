@@ -89,11 +89,14 @@ const SingleNumberSection: React.FC<{ name: string; betTypeCode: string; rows: P
     colData.push(cells.slice(c * rowsCount, c * rowsCount + rowsCount))
   }
 
-  // Returns the cell background OVERRIDE (or null to inherit row zebra).
-  const colorFor = (amount: number): { bg: string | null; color: string } => {
-    if (amount <= 0) return { bg: '#eeeeee', color: '#9e9e9e' }
-    if (maxAmount > 0 && amount >= maxAmount * 0.5) return { bg: '#fee2e2', color: '#b91c1c' }
-    return { bg: null, color: '#2c2c2c' }
+  // Heatmap palette by intensity (amount / maxAmount).
+  // 0 plays → muted slate; low → blue; mid → amber; high → red.
+  const styleFor = (amount: number): { bg: string; numColor: string; amtColor: string } => {
+    if (amount <= 0) return { bg: '#f8fafc', numColor: '#94a3b8', amtColor: '#cbd5e1' }
+    const ratio = maxAmount > 0 ? amount / maxAmount : 0
+    if (ratio <= 0.33) return { bg: '#dbeafe', numColor: '#1e3a8a', amtColor: '#1d4ed8' }
+    if (ratio <= 0.66) return { bg: '#fef3c7', numColor: '#78350f', amtColor: '#b45309' }
+    return { bg: '#fee2e2', numColor: '#7f1d1d', amtColor: '#b91c1c' }
   }
 
   const filterDigits = filter.replace(/\D/g, '')
@@ -133,107 +136,104 @@ const SingleNumberSection: React.FC<{ name: string; betTypeCode: string; rows: P
         />
       </Box>
 
-      <Box sx={{ border: '1px solid #e0e0e0', borderRadius: 1, overflow: 'hidden', display: 'block', width: 'fit-content' }}>
-        {/* Header row */}
-        <Box sx={{ display: 'grid', gridTemplateColumns: `repeat(${columns}, 1fr)`, bgcolor: '#e3f2fd' }}>
-          {Array.from({ length: columns }).map((_, i) => (
-            <Box
-              key={i}
-              sx={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                px: 1,
-                py: 0.6,
-                borderRight: i < columns - 1 ? '1px solid #e0e0e0' : 'none',
-                minWidth: 100,
-              }}
-            >
-              <Typography sx={{
-                fontSize: '10px',
-                fontWeight: 700,
-                color: '#1976d2',
-                letterSpacing: 0.3,
-                borderRight: '1px solid #bbdefb',
-                pr: 1,
-              }}>
-                JUGADA
-              </Typography>
-              <Typography sx={{
-                fontSize: '10px',
-                fontWeight: 700,
-                color: '#1976d2',
-                textAlign: 'right',
-                letterSpacing: 0.3,
-                pl: 1,
-              }}>
-                MONTO
-              </Typography>
-            </Box>
-          ))}
-        </Box>
-
-        {/* Body — 5 columns × 20 rows column-major (vertical numbering) */}
-        {Array.from({ length: rowsCount }).map((_, ri) => {
-          const zebraBg = ri % 2 === 1 ? '#f9fbfd' : 'transparent'
-          return (
+      {/* Subtle column-label strip — small caps, no bg, light gray */}
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: `repeat(${columns}, minmax(130px, 1fr))`,
+          gap: '6px',
+          px: '6px',
+          pt: '4px',
+          pb: '2px',
+          width: 'fit-content',
+        }}
+      >
+        {Array.from({ length: columns }).map((_, i) => (
           <Box
-            key={ri}
+            key={`hdr-${i}`}
             sx={{
-              display: 'grid',
-              gridTemplateColumns: `repeat(${columns}, 1fr)`,
-              borderTop: '1px solid #f0f0f0',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 2,
+              px: 1.5,
             }}
           >
-            {colData.map((col, ci) => {
-              const cell = col[ri]
-              if (!cell) return <Box key={ci} />
-              const { bg, color } = colorFor(cell.amount)
-              const matches = !filterDigits || cell.number.startsWith(filterDigits)
-              const hoverable = cell.amount > 0
-              return (
-                <Box
-                  key={cell.number}
-                  onMouseEnter={hoverable ? (e) => hover?.show(e.currentTarget as HTMLElement, betTypeCode, cell.number) : undefined}
-                  onMouseLeave={hoverable ? () => hover?.hide() : undefined}
-                  sx={{
-                    display: 'grid',
-                    gridTemplateColumns: '1fr 1fr',
-                    px: 1,
-                    py: 0.45,
-                    bgcolor: bg ?? zebraBg,
-                    borderRight: ci < columns - 1 ? '1px solid #f0f0f0' : 'none',
-                    opacity: matches ? 1 : 0.25,
-                    cursor: hoverable ? 'pointer' : 'default',
-                  }}
-                >
-                  <Typography sx={{
-                    fontFamily: 'monospace',
-                    fontSize: '15px',
-                    fontWeight: 500,
-                    color,
-                    lineHeight: 1.4,
-                    borderRight: '1px solid #e8e8e8',
-                    pr: 1,
-                  }}>
-                    {cell.number}
-                  </Typography>
-                  <Typography sx={{
-                    fontFamily: 'monospace',
-                    fontSize: '15px',
-                    fontWeight: 500,
-                    textAlign: 'right',
-                    color,
-                    lineHeight: 1.4,
-                    pl: 1,
-                  }}>
-                    {cell.amount > 0 ? cell.amount.toLocaleString('es-DO', { maximumFractionDigits: 0 }) : 0}
-                  </Typography>
-                </Box>
-              )
-            })}
+            <Typography sx={{ fontSize: '10px', fontWeight: 600, color: '#94a3b8', letterSpacing: 1 }}>
+              N°
+            </Typography>
+            <Typography sx={{ fontSize: '10px', fontWeight: 600, color: '#94a3b8', letterSpacing: 1 }}>
+              MONTO
+            </Typography>
           </Box>
-          )
-        })}
+        ))}
+      </Box>
+
+      {/* Heatmap grid — borderless cards separated by gap, color by amount intensity */}
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: `repeat(${columns}, minmax(130px, 1fr))`,
+          gap: '6px',
+          p: '6px',
+          borderRadius: 1.5,
+          bgcolor: '#f1f5f9',
+          width: 'fit-content',
+        }}
+      >
+        {/* Render column-major: each row of the visible grid pulls cell[ri] from each column */}
+        {Array.from({ length: rowsCount }).flatMap((_, ri) =>
+          colData.map((col, ci) => {
+            const cell = col[ri]
+            if (!cell) return null
+            const { bg, numColor, amtColor } = styleFor(cell.amount)
+            const matches = !filterDigits || cell.number.startsWith(filterDigits)
+            const hoverable = cell.amount > 0
+            const cellKey = `${ri}-${ci}-${cell.number}`
+            return (
+              <Box
+                key={cellKey}
+                onMouseEnter={hoverable ? (e) => hover?.show(e.currentTarget as HTMLElement, betTypeCode, cell.number) : undefined}
+                onMouseLeave={hoverable ? () => hover?.hide() : undefined}
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 2,
+                  px: 1.5,
+                  py: 0.7,
+                  borderRadius: 1,
+                  bgcolor: bg,
+                  cursor: hoverable ? 'pointer' : 'default',
+                  opacity: matches ? 1 : 0.25,
+                  boxShadow: hoverable ? '0 1px 2px rgba(15, 23, 42, 0.06)' : 'none',
+                  transition: 'transform 0.12s ease, box-shadow 0.12s ease',
+                  '&:hover': hoverable
+                    ? { transform: 'translateY(-1px)', boxShadow: '0 4px 10px rgba(15, 23, 42, 0.18)' }
+                    : undefined,
+                }}
+              >
+                <Typography sx={{
+                  fontFamily: 'monospace',
+                  fontSize: '14px',
+                  fontWeight: 700,
+                  color: numColor,
+                  letterSpacing: 0.5,
+                }}>
+                  {cell.number}
+                </Typography>
+                <Typography sx={{
+                  fontFamily: 'monospace',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  color: amtColor,
+                }}>
+                  {cell.amount > 0 ? cell.amount.toLocaleString('es-DO', { maximumFractionDigits: 0 }) : 0}
+                </Typography>
+              </Box>
+            )
+          })
+        )}
       </Box>
     </Box>
   )
@@ -298,46 +298,70 @@ const CombinationSection: React.FC<{
         />
       </Box>
 
-      <Box sx={{ border: '1px solid #e0e0e0', borderRadius: 1, overflow: 'hidden', minWidth: 240, display: 'block' }}>
-        <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', bgcolor: '#e3f2fd', px: 1, py: 0.4 }}>
-          <Typography sx={{ fontSize: '10px', fontWeight: 700, color: '#1976d2', letterSpacing: 0.3 }}>
-            JUGADA <Box component="span" sx={{ color: '#7eb', fontWeight: 400 }}>({lineCount})</Box>
-          </Typography>
-          <Typography sx={{ fontSize: '10px', fontWeight: 700, color: '#1976d2', textAlign: 'right', letterSpacing: 0.3 }}>
-            MONTO
-          </Typography>
-        </Box>
-        <Box sx={{ maxHeight: 480, overflowY: 'auto' }}>
-          {visible.length === 0 && (
-            <Box sx={{ px: 1.5, py: 1, color: '#999', fontSize: '12px', textAlign: 'center' }}>
-              Sin coincidencias
-            </Box>
-          )}
-          {visible.map((r, idx) => (
+      {/* Subtle column-label strip */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2, px: 1.5, pb: '2px', minWidth: 260 }}>
+        <Typography sx={{ fontSize: '10px', fontWeight: 600, color: '#94a3b8', letterSpacing: 1 }}>
+          N° <Box component="span" sx={{ color: '#cbd5e1', fontWeight: 400 }}>({lineCount})</Box>
+        </Typography>
+        <Typography sx={{ fontSize: '10px', fontWeight: 600, color: '#94a3b8', letterSpacing: 1 }}>
+          MONTO
+        </Typography>
+      </Box>
+
+      {/* Heatmap card list — same visual language as single-number grid */}
+      <Box
+        sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '6px',
+          p: '6px',
+          borderRadius: 1.5,
+          bgcolor: '#f1f5f9',
+          minWidth: 260,
+          maxHeight: 520,
+          overflowY: 'auto',
+        }}
+      >
+        {visible.length === 0 && (
+          <Box sx={{ px: 1.5, py: 1, color: '#94a3b8', fontSize: '12px', textAlign: 'center' }}>
+            Sin coincidencias
+          </Box>
+        )}
+        {visible.map((r) => {
+          const ratio = sorted[0] ? r.totalAmount / sorted[0].totalAmount : 0
+          const cardStyle =
+            ratio > 0.66 ? { bg: '#fee2e2', numColor: '#7f1d1d', amtColor: '#b91c1c' }
+            : ratio > 0.33 ? { bg: '#fef3c7', numColor: '#78350f', amtColor: '#b45309' }
+            : { bg: '#dbeafe', numColor: '#1e3a8a', amtColor: '#1d4ed8' }
+          return (
             <Box
               key={r.betNumber}
               onMouseEnter={(e) => hover?.show(e.currentTarget as HTMLElement, betTypeCode, r.betNumber)}
               onMouseLeave={() => hover?.hide()}
               sx={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 2,
                 px: 1.5,
-                py: 0.5,
-                borderTop: '1px solid #f0f0f0',
-                bgcolor: idx % 2 === 1 ? '#f9fbfd' : 'transparent',
+                py: 0.7,
+                borderRadius: 1,
+                bgcolor: cardStyle.bg,
                 cursor: 'pointer',
-                '&:hover': { bgcolor: '#e3f2fd' },
+                boxShadow: '0 1px 2px rgba(15, 23, 42, 0.06)',
+                transition: 'transform 0.12s ease, box-shadow 0.12s ease',
+                '&:hover': { transform: 'translateY(-1px)', boxShadow: '0 4px 10px rgba(15, 23, 42, 0.18)' },
               }}
             >
-              <Typography sx={{ fontFamily: 'monospace', fontSize: '15px', fontWeight: 500, color: '#2c2c2c' }}>
+              <Typography sx={{ fontFamily: 'monospace', fontSize: '14px', fontWeight: 700, color: cardStyle.numColor, letterSpacing: 0.5 }}>
                 {formatBetNumber(betTypeCode, r.betNumber)}
               </Typography>
-              <Typography sx={{ fontFamily: 'monospace', fontSize: '15px', fontWeight: 500, textAlign: 'right', color: '#2c2c2c' }}>
+              <Typography sx={{ fontFamily: 'monospace', fontSize: '14px', fontWeight: 600, color: cardStyle.amtColor }}>
                 {r.totalAmount.toLocaleString('es-DO', { maximumFractionDigits: 0 })}
               </Typography>
             </Box>
-          ))}
-        </Box>
+          )
+        })}
       </Box>
     </Box>
   )
@@ -430,6 +454,12 @@ const Blackboard: React.FC = () => {
   }, [selectedZoneIds, filteredBancas, selectedBanca])
 
   const fetchData = useCallback(async () => {
+    if (!selectedDrawId) {
+      setRows([])
+      setLoading(false)
+      setError(null)
+      return
+    }
     setLoading(true)
     setError(null)
     try {
@@ -607,39 +637,47 @@ const Blackboard: React.FC = () => {
           />
         </Box>
 
-        {/* Big total header */}
-        <Box sx={{ textAlign: 'center', my: 2 }}>
-          <Typography sx={{ fontSize: '22px', fontWeight: 500, fontFamily: 'Montserrat, sans-serif', color: '#2c2c2c' }}>
-            {drawLabel ? <>Total para sorteo <b>{drawLabel}</b>: </> : 'Total general: '}
-            <Box
-              component="span"
-              sx={{
-                color: grandTotal < 0 ? '#c62828' : grandTotal > 0 ? '#28a745' : '#666',
-                fontWeight: 700,
-              }}
-            >
-              {formatCurrency(grandTotal)}
-            </Box>
-          </Typography>
-        </Box>
+        {/* Big total header — only when a draw is selected */}
+        {selectedDrawId && (
+          <Box sx={{ textAlign: 'center', my: 2 }}>
+            <Typography sx={{ fontSize: '22px', fontWeight: 500, fontFamily: 'Montserrat, sans-serif', color: '#2c2c2c' }}>
+              Total para sorteo <b>{drawLabel}</b>:{' '}
+              <Box
+                component="span"
+                sx={{
+                  color: grandTotal < 0 ? '#c62828' : grandTotal > 0 ? '#28a745' : '#666',
+                  fontWeight: 700,
+                }}
+              >
+                {formatCurrency(grandTotal)}
+              </Box>
+            </Typography>
+          </Box>
+        )}
 
-        {loading && (
+        {!selectedDrawId && (
+          <Typography sx={{ textAlign: 'center', color: '#888', py: 6, fontSize: '15px' }}>
+            Selecciona un <b>sorteo</b> para ver la pizarra.
+          </Typography>
+        )}
+
+        {selectedDrawId && loading && (
           <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
             <CircularProgress sx={{ color: '#51cbce' }} />
           </Box>
         )}
 
-        {error && (
+        {selectedDrawId && error && (
           <Typography sx={{ color: '#c62828', mb: 2 }}>{error}</Typography>
         )}
 
-        {!loading && !error && rows.length === 0 && (
+        {selectedDrawId && !loading && !error && rows.length === 0 && (
           <Typography sx={{ textAlign: 'center', color: '#888', py: 4 }}>
             No hay jugadas registradas para los filtros seleccionados.
           </Typography>
         )}
 
-        {!loading && !error && rows.length > 0 && (
+        {selectedDrawId && !loading && !error && rows.length > 0 && (
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, alignItems: 'flex-start' }}>
             {allGroups.map(({ code, name, rows: groupRows }) =>
               SINGLE_NUMBER_BET_TYPES.has(code) ? (
