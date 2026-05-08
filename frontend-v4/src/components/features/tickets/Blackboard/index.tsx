@@ -16,6 +16,8 @@ import {
   Popper,
   Fade,
   Paper as MuiPaper,
+  Switch,
+  FormControlLabel,
 } from '@mui/material'
 import { getTodayDate } from '@/utils/formatters'
 import { formatCurrency } from '@/utils/formatCurrency'
@@ -92,7 +94,7 @@ const SingleNumberSection: React.FC<{ name: string; betTypeCode: string; rows: P
   // Heatmap palette by intensity (amount / maxAmount).
   // 0 plays → muted slate; low → blue; mid → amber; high → red.
   const styleFor = (amount: number): { bg: string; numColor: string; amtColor: string } => {
-    if (amount <= 0) return { bg: '#f8fafc', numColor: '#94a3b8', amtColor: '#cbd5e1' }
+    if (amount <= 0) return { bg: '#f8fafc', numColor: '#2c2c2c', amtColor: '#2c2c2c' }
     const ratio = maxAmount > 0 ? amount / maxAmount : 0
     if (ratio <= 0.33) return { bg: '#dbeafe', numColor: '#1e3a8a', amtColor: '#1d4ed8' }
     if (ratio <= 0.66) return { bg: '#fef3c7', numColor: '#78350f', amtColor: '#b45309' }
@@ -140,7 +142,7 @@ const SingleNumberSection: React.FC<{ name: string; betTypeCode: string; rows: P
       <Box
         sx={{
           display: 'grid',
-          gridTemplateColumns: `repeat(${columns}, minmax(130px, 1fr))`,
+          gridTemplateColumns: `repeat(${columns}, minmax(160px, 1fr))`,
           gap: '6px',
           px: '6px',
           pt: '4px',
@@ -173,7 +175,7 @@ const SingleNumberSection: React.FC<{ name: string; betTypeCode: string; rows: P
       <Box
         sx={{
           display: 'grid',
-          gridTemplateColumns: `repeat(${columns}, minmax(130px, 1fr))`,
+          gridTemplateColumns: `repeat(${columns}, minmax(160px, 1fr))`,
           gap: '6px',
           p: '6px',
           borderRadius: 1.5,
@@ -200,9 +202,9 @@ const SingleNumberSection: React.FC<{ name: string; betTypeCode: string; rows: P
                   alignItems: 'center',
                   justifyContent: 'space-between',
                   gap: 2,
-                  px: 1.5,
-                  py: 0.7,
-                  borderRadius: 1,
+                  px: 2,
+                  py: 1,
+                  borderRadius: 1.25,
                   bgcolor: bg,
                   cursor: hoverable ? 'pointer' : 'default',
                   opacity: matches ? 1 : 0.25,
@@ -215,7 +217,7 @@ const SingleNumberSection: React.FC<{ name: string; betTypeCode: string; rows: P
               >
                 <Typography sx={{
                   fontFamily: 'monospace',
-                  fontSize: '14px',
+                  fontSize: '16px',
                   fontWeight: 700,
                   color: numColor,
                   letterSpacing: 0.5,
@@ -224,7 +226,7 @@ const SingleNumberSection: React.FC<{ name: string; betTypeCode: string; rows: P
                 </Typography>
                 <Typography sx={{
                   fontFamily: 'monospace',
-                  fontSize: '14px',
+                  fontSize: '16px',
                   fontWeight: 600,
                   color: amtColor,
                 }}>
@@ -317,7 +319,7 @@ const CombinationSection: React.FC<{
           p: '6px',
           borderRadius: 1.5,
           bgcolor: '#f1f5f9',
-          minWidth: 260,
+          minWidth: 300,
           maxHeight: 520,
           overflowY: 'auto',
         }}
@@ -343,9 +345,9 @@ const CombinationSection: React.FC<{
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 gap: 2,
-                px: 1.5,
-                py: 0.7,
-                borderRadius: 1,
+                px: 2,
+                py: 1,
+                borderRadius: 1.25,
                 bgcolor: cardStyle.bg,
                 cursor: 'pointer',
                 boxShadow: '0 1px 2px rgba(15, 23, 42, 0.06)',
@@ -353,10 +355,10 @@ const CombinationSection: React.FC<{
                 '&:hover': { transform: 'translateY(-1px)', boxShadow: '0 4px 10px rgba(15, 23, 42, 0.18)' },
               }}
             >
-              <Typography sx={{ fontFamily: 'monospace', fontSize: '14px', fontWeight: 700, color: cardStyle.numColor, letterSpacing: 0.5 }}>
+              <Typography sx={{ fontFamily: 'monospace', fontSize: '16px', fontWeight: 700, color: cardStyle.numColor, letterSpacing: 0.5 }}>
                 {formatBetNumber(betTypeCode, r.betNumber)}
               </Typography>
-              <Typography sx={{ fontFamily: 'monospace', fontSize: '14px', fontWeight: 600, color: cardStyle.amtColor }}>
+              <Typography sx={{ fontFamily: 'monospace', fontSize: '16px', fontWeight: 600, color: cardStyle.amtColor }}>
                 {r.totalAmount.toLocaleString('es-DO', { maximumFractionDigits: 0 })}
               </Typography>
             </Box>
@@ -379,6 +381,12 @@ const Blackboard: React.FC = () => {
   const [rows, setRows] = useState<PlayByNumberRow[]>([])
   const [loading, setLoading] = useState<boolean>(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Auto-refresh settings — fixed 15s interval, with on/off toggle
+  const REFRESH_INTERVAL_SEC = 15
+  const [autoRefresh, setAutoRefresh] = useState<boolean>(true)
+  const [lastRefreshAt, setLastRefreshAt] = useState<Date | null>(null)
+  const [refreshing, setRefreshing] = useState<boolean>(false)
 
   // Hover popover state for per-banca breakdown
   const [hoverState, setHoverState] = useState<{
@@ -453,14 +461,18 @@ const Blackboard: React.FC = () => {
     }
   }, [selectedZoneIds, filteredBancas, selectedBanca])
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (opts: { silent?: boolean } = {}) => {
     if (!selectedDrawId) {
       setRows([])
       setLoading(false)
       setError(null)
       return
     }
-    setLoading(true)
+    if (opts.silent) {
+      setRefreshing(true)
+    } else {
+      setLoading(true)
+    }
     setError(null)
     try {
       const data = await getPlaysByNumber({
@@ -470,18 +482,58 @@ const Blackboard: React.FC = () => {
         bettingPoolId: selectedBanca?.bettingPoolId ?? null,
       })
       setRows(data)
+      setLastRefreshAt(new Date())
     } catch (e) {
       console.error(e)
-      setError('Error al cargar la pizarra')
-      setRows([])
+      if (!opts.silent) {
+        setError('Error al cargar la pizarra')
+        setRows([])
+      }
     } finally {
-      setLoading(false)
+      if (opts.silent) {
+        setRefreshing(false)
+      } else {
+        setLoading(false)
+      }
     }
   }, [date, selectedDrawId, selectedZoneIds, selectedBanca])
 
   useEffect(() => {
     fetchData()
   }, [fetchData])
+
+  // Pause auto-refresh while hover popover is open (prevents data flicker under cursor)
+  const hoverActiveRef = useRef<boolean>(false)
+  useEffect(() => {
+    hoverActiveRef.current = !!hoverState.anchor
+  }, [hoverState.anchor])
+
+  // Auto-refresh interval — silently re-fetches without showing the big spinner
+  useEffect(() => {
+    if (!selectedDrawId || !autoRefresh) return
+    const id = setInterval(() => {
+      if (hoverActiveRef.current) return
+      fetchData({ silent: true })
+    }, REFRESH_INTERVAL_SEC * 1000)
+    return () => clearInterval(id)
+  }, [selectedDrawId, autoRefresh, fetchData])
+
+  // Tick every second so the "hace Xs" indicator updates live
+  const [nowTick, setNowTick] = useState<number>(0)
+  useEffect(() => {
+    if (!lastRefreshAt) return
+    const id = setInterval(() => setNowTick(t => t + 1), 1000)
+    return () => clearInterval(id)
+  }, [lastRefreshAt])
+
+  const lastRefreshLabel = useMemo(() => {
+    if (!lastRefreshAt) return null
+    const secs = Math.max(0, Math.floor((Date.now() - lastRefreshAt.getTime()) / 1000))
+    if (secs < 5) return 'ahora mismo'
+    if (secs < 60) return `hace ${secs}s`
+    const mins = Math.floor(secs / 60)
+    return `hace ${mins}m`
+  }, [lastRefreshAt, nowTick])
 
   const grouped = useMemo(() => {
     const m = new Map<string, { betTypeName: string; rows: PlayByNumberRow[] }>()
@@ -636,6 +688,50 @@ const Blackboard: React.FC = () => {
             renderInput={(params) => <TextField {...params} label="Banca" placeholder="Todas" />}
           />
         </Box>
+
+        {/* Auto-refresh controls */}
+        {selectedDrawId && (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1, flexWrap: 'wrap' }}>
+            <FormControlLabel
+              control={
+                <Switch
+                  size="small"
+                  checked={autoRefresh}
+                  onChange={(e) => setAutoRefresh(e.target.checked)}
+                  sx={{
+                    '& .MuiSwitch-switchBase.Mui-checked': { color: '#51cbce' },
+                    '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { bgcolor: '#51cbce' },
+                  }}
+                />
+              }
+              label={<Typography sx={{ fontSize: '13px', color: '#2c2c2c' }}>Auto-refresh (15s)</Typography>}
+              sx={{ m: 0 }}
+            />
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, ml: 0.5 }}>
+              <Box
+                sx={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: '50%',
+                  bgcolor: refreshing ? '#51cbce' : autoRefresh ? '#28a745' : '#cbd5e1',
+                  transition: 'background-color 0.2s',
+                  animation: refreshing ? 'pulse 1s ease-in-out infinite' : 'none',
+                  '@keyframes pulse': {
+                    '0%, 100%': { opacity: 1 },
+                    '50%': { opacity: 0.4 },
+                  },
+                }}
+              />
+              <Typography sx={{ fontSize: '12px', color: '#666' }}>
+                {refreshing
+                  ? 'Actualizando…'
+                  : lastRefreshLabel
+                  ? `Actualizado ${lastRefreshLabel}`
+                  : ''}
+              </Typography>
+            </Box>
+          </Box>
+        )}
 
         {/* Big total header — only when a draw is selected */}
         {selectedDrawId && (
