@@ -781,32 +781,33 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
         }
 
         // Create formData keys for each prefix
+        // Load 0 as 0 (don't filter it) so the user can see and re-save it explicitly.
         prefixes.forEach(prefix => {
           // Map commission fields (Comisiones tab)
-          if (record.commissionDiscount1 !== null && record.commissionDiscount1 !== 0) {
+          if (record.commissionDiscount1 !== null) {
             commissionFormData[`${prefix}_COMMISSION_${betTypeCode}_COMMISSION_DISCOUNT_1`] = record.commissionDiscount1;
           }
-          if (record.commissionDiscount2 !== null && record.commissionDiscount2 !== 0) {
+          if (record.commissionDiscount2 !== null) {
             commissionFormData[`${prefix}_COMMISSION_${betTypeCode}_COMMISSION_DISCOUNT_2`] = record.commissionDiscount2;
           }
-          if (record.commissionDiscount3 !== null && record.commissionDiscount3 !== 0) {
+          if (record.commissionDiscount3 !== null) {
             commissionFormData[`${prefix}_COMMISSION_${betTypeCode}_COMMISSION_DISCOUNT_3`] = record.commissionDiscount3;
           }
-          if (record.commissionDiscount4 !== null && record.commissionDiscount4 !== 0) {
+          if (record.commissionDiscount4 !== null) {
             commissionFormData[`${prefix}_COMMISSION_${betTypeCode}_COMMISSION_DISCOUNT_4`] = record.commissionDiscount4;
           }
 
           // Map commission 2 fields (Comisiones 2 tab)
-          if (record.commission2Discount1 !== null && record.commission2Discount1 !== 0) {
+          if (record.commission2Discount1 !== null) {
             commissionFormData[`${prefix}_COMMISSION2_${betTypeCode}_COMMISSION_2_DISCOUNT_1`] = record.commission2Discount1;
           }
-          if (record.commission2Discount2 !== null && record.commission2Discount2 !== 0) {
+          if (record.commission2Discount2 !== null) {
             commissionFormData[`${prefix}_COMMISSION2_${betTypeCode}_COMMISSION_2_DISCOUNT_2`] = record.commission2Discount2;
           }
-          if (record.commission2Discount3 !== null && record.commission2Discount3 !== 0) {
+          if (record.commission2Discount3 !== null) {
             commissionFormData[`${prefix}_COMMISSION2_${betTypeCode}_COMMISSION_2_DISCOUNT_3`] = record.commission2Discount3;
           }
-          if (record.commission2Discount4 !== null && record.commission2Discount4 !== 0) {
+          if (record.commission2Discount4 !== null) {
             commissionFormData[`${prefix}_COMMISSION2_${betTypeCode}_COMMISSION_2_DISCOUNT_4`] = record.commission2Discount4;
           }
         });
@@ -891,7 +892,11 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
 
         Object.keys(currentFormData).forEach(key => {
           const value = currentFormData[key];
-          if (value === '' || value === null || value === undefined) return;
+          if (value === null || value === undefined) return;
+          // An explicitly cleared field ('') means the user wants 0% commission.
+          // Skipping it here would leave the previous DB value untouched.
+          const numericValue = value === '' ? 0 : parseFloat(String(value));
+          if (Number.isNaN(numericValue)) return;
 
           const commissionMatch = key.match(commissionPattern);
           if (commissionMatch) {
@@ -900,7 +905,7 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
             const gameType = betTypeToGameType[betTypeCode] || betTypeCode;
             if (!commissions[gameType]) commissions[gameType] = {};
             const fieldName = `commissionDiscount${discountNum}` as keyof typeof commissions[typeof gameType];
-            (commissions[gameType] as Record<string, number>)[fieldName] = parseFloat(String(value));
+            (commissions[gameType] as Record<string, number>)[fieldName] = numericValue;
             return;
           }
 
@@ -911,7 +916,7 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
             const gameType = betTypeToGameType[betTypeCode] || betTypeCode;
             if (!commissions[gameType]) commissions[gameType] = {};
             const fieldName = `commission2Discount${discountNum}` as keyof typeof commissions[typeof gameType];
-            (commissions[gameType] as Record<string, number>)[fieldName] = parseFloat(String(value));
+            (commissions[gameType] as Record<string, number>)[fieldName] = numericValue;
             return;
           }
         });

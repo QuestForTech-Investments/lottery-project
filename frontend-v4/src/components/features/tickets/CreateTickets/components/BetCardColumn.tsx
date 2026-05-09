@@ -90,7 +90,7 @@ const BetCardColumn: React.FC<BetCardColumnProps> = memo(({
       </Box>
     </Box>
     <Box sx={{ minHeight: 200, maxHeight: 300, overflowY: 'auto', bgcolor: 'white' }}>
-      {bets.map((bet) => (
+      {bets.slice().reverse().map((bet) => (
         <Box key={bet.id} sx={{
           display: 'grid',
           gridTemplateColumns: '40% 20% 25% 15%',
