@@ -125,12 +125,21 @@ const useUserSessions = () => {
   }, []);
 
   /**
-   * Handle zone selection change
+   * Handle zone selection change.
+   * The sentinel value -1 ("TODAS") toggles select-all vs. clear-all.
    */
   const handleZoneChange = useCallback((event: SelectChangeEvent<number[]>) => {
     const value = event.target.value;
-    setSelectedZones(typeof value === 'string' ? value.split(',').map(Number) : value);
-  }, []);
+    const arr = typeof value === 'string' ? value.split(',').map(Number) : value;
+
+    if (arr.includes(-1)) {
+      const allSelected = zones.length > 0 && selectedZones.length === zones.length;
+      setSelectedZones(allSelected ? [] : zones.map(z => z.id));
+      return;
+    }
+
+    setSelectedZones(arr);
+  }, [zones, selectedZones]);
 
   /**
    * Handle tab change

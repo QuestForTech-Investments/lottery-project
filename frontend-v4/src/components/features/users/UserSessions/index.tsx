@@ -27,6 +27,9 @@ import {
   CircularProgress,
   Alert,
   Skeleton,
+  Divider,
+  Checkbox,
+  ListItemText,
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -134,11 +137,23 @@ const UserSessionsMUI = () => {
                   ) : zones.length === 0 ? (
                     <MenuItem disabled>No hay zonas disponibles</MenuItem>
                   ) : (
-                    zones.map((zone) => (
-                      <MenuItem key={zone.id} value={zone.id}>
-                        {zone.name}
-                      </MenuItem>
-                    ))
+                    [
+                      <MenuItem key="__all__" value={-1} sx={{ fontWeight: 600 }}>
+                        <Checkbox
+                          size="small"
+                          checked={selectedZones.length === zones.length && zones.length > 0}
+                          indeterminate={selectedZones.length > 0 && selectedZones.length < zones.length}
+                        />
+                        <ListItemText primary="TODAS" />
+                      </MenuItem>,
+                      <Divider key="__divider__" />,
+                      ...zones.map((zone) => (
+                        <MenuItem key={zone.id} value={zone.id}>
+                          <Checkbox size="small" checked={selectedZones.includes(zone.id)} />
+                          <ListItemText primary={zone.name} />
+                        </MenuItem>
+                      )),
+                    ]
                   )}
                 </Select>
               </FormControl>

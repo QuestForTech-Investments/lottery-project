@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Autocomplete, TextField, Chip, CircularProgress } from '@mui/material'
+import { Autocomplete, TextField, Chip, CircularProgress, Checkbox, Box } from '@mui/material'
 import { getAllZones } from '@/services/zoneService'
 import * as logger from '@/utils/logger'
 
@@ -63,23 +63,50 @@ const ReactMultiselect = ({
     void loadZones()
   }, [])
 
+  // Synthetic "TODAS" option injected at the top of the list.
+  // Selecting it toggles between all-selected and cleared.
+  const ALL_ID = -1
+  const ALL_OPTION: Zone = { zoneId: ALL_ID, zoneName: 'TODAS' }
+
   // Convert value (array of IDs) to zone objects
   const selectedZones = zones.filter((zone) => value.includes(zone.zoneId))
+  const allSelected = zones.length > 0 && selectedZones.length === zones.length
+
+  const options: Zone[] = zones.length > 0 ? [ALL_OPTION, ...zones] : zones
 
   // Handle selection change
   const handleChange = (_event: unknown, newValue: Zone[]) => {
-    // Convert zone objects to array of IDs
-    const newIds = newValue.map((zone) => zone.zoneId)
-    onChange(newIds)
+    if (newValue.some((z) => z.zoneId === ALL_ID)) {
+      onChange(allSelected ? [] : zones.map((z) => z.zoneId))
+      return
+    }
+    onChange(newValue.map((zone) => zone.zoneId))
   }
 
   return (
     <Autocomplete
       multiple
+      disableCloseOnSelect
       id="zones-multiselect"
-      options={zones}
+      options={options}
       value={selectedZones}
       onChange={handleChange}
+      renderOption={(props, option, { selected }) => {
+        const isAll = option.zoneId === ALL_ID
+        const checked = isAll ? allSelected : selected
+        const indeterminate = isAll && !allSelected && selectedZones.length > 0
+        return (
+          <Box component="li" {...props} key={option.zoneId} sx={isAll ? { fontWeight: 600 } : undefined}>
+            <Checkbox
+              size="small"
+              checked={checked}
+              indeterminate={indeterminate}
+              sx={{ mr: 1, p: 0.5 }}
+            />
+            {option.zoneName}
+          </Box>
+        )
+      }}
       loading={loading}
       disabled={loading || !!error}
       getOptionLabel={(option) => option.zoneName || ''}
