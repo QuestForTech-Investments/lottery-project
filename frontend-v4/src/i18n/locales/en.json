@@ -39,6 +39,26 @@
     "french": "Français",
     "creole": "Kreyòl"
   },
+  "login": {
+    "welcome": "Welcome",
+    "subtitle": "Enter your credentials to continue",
+    "username": "Username",
+    "password": "Password",
+    "signIn": "Sign In",
+    "signingIn": "Signing in...",
+    "usernameRequired": "Username is required",
+    "passwordRequired": "Password is required",
+    "passwordUpdated": "Password updated. Sign in with your new password.",
+    "errors": {
+      "invalid": "Invalid username or password.",
+      "locked": "User is locked. Contact your administrator to unlock it.",
+      "ipBlocked": "IP address is blocked. Contact your administrator.",
+      "network": "Could not connect to the server. Check your connection.",
+      "tooMany": "Too many attempts. Wait a moment and try again.",
+      "server": "Server error. Try again in a few minutes.",
+      "generic": "Could not sign in. Please try again."
+    }
+  },
   "menu": {
     "inicio": "HOME"
   }

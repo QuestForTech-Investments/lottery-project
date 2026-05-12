@@ -1,4 +1,5 @@
 import { memo, type SyntheticEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Paper,
@@ -23,12 +24,14 @@ const cardBackgroundImage = '/images/bannerlotto-02.jpg';
 import useLogin from './hooks/useLogin';
 import ForcePasswordChangeModal from '@components/modals/ForcePasswordChangeModal';
 import ForceSetPinModal from '@components/modals/ForceSetPinModal';
+import LanguageSelector from '@components/common/LanguageSelector';
 
 /**
  * LoginMUI Component
  * Casual & Elegant Lottery Login
  */
 const LoginMUI = () => {
+  const { t } = useTranslation();
   const {
     username,
     password,
@@ -70,6 +73,21 @@ const LoginMUI = () => {
         },
       }}
     >
+      {/* Language switcher — floating top-right */}
+      <Box
+        sx={{
+          position: 'absolute',
+          top: { xs: 12, sm: 20 },
+          right: { xs: 12, sm: 24 },
+          zIndex: 2,
+          bgcolor: 'rgba(255, 255, 255, 0.92)',
+          borderRadius: 1,
+          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
+        }}
+      >
+        <LanguageSelector />
+      </Box>
+
       <Paper
         elevation={0}
         sx={{
@@ -145,7 +163,7 @@ const LoginMUI = () => {
             display: { xs: 'none', sm: 'block' },
           }}
         >
-          Welcome
+          {t('login.welcome')}
         </Typography>
         <Typography
           variant="body2"
@@ -156,7 +174,7 @@ const LoginMUI = () => {
             display: { xs: 'none', sm: 'block' },
           }}
         >
-          Enter your credentials to continue
+          {t('login.subtitle')}
         </Typography>
 
         {/* Error Alert */}
@@ -177,7 +195,7 @@ const LoginMUI = () => {
 
         {justChanged && !errors.general && (
           <Alert severity="success" sx={{ mb: 2.5, borderRadius: '12px' }}>
-            Contraseña actualizada. Inicia sesión con tu nueva clave.
+            {t('login.passwordUpdated')}
           </Alert>
         )}
 
@@ -195,7 +213,7 @@ const LoginMUI = () => {
           <TextField
             fullWidth
             id="username"
-            placeholder="Usuario"
+            placeholder={t('login.username')}
             value={username}
             onChange={handleUsernameChange}
             error={!!errors.username}
@@ -263,7 +281,7 @@ const LoginMUI = () => {
             fullWidth
             id="password"
             type="password"
-            placeholder="Contrasena"
+            placeholder={t('login.password')}
             value={password}
             onChange={handlePasswordChange}
             error={!!errors.password}
@@ -382,7 +400,7 @@ const LoginMUI = () => {
               },
             }}
           >
-            {isLoading ? 'Signing In...' : 'Sign In'}
+            {isLoading ? t('login.signingIn') : t('login.signIn')}
           </Button>
         </Box>
       </Paper>

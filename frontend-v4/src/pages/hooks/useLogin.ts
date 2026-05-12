@@ -1,5 +1,6 @@
 import { useState, useCallback, type ChangeEvent, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import * as authService from '../../services/authService';
 import * as logger from '../../utils/logger';
 
@@ -13,14 +14,37 @@ interface ApiError {
   message: string;
   response?: {
     status: number;
+    data?: {
+      message?: string;
+      reason?: string;  // 'invalid' | 'locked' | 'ip_blocked'
+      // ASP.NET Core ValidationProblemDetails shape:
+      title?: string;
+      errors?: Record<string, string[]>;
+    };
   };
 }
+
+type ApiErrorData = NonNullable<NonNullable<ApiError['response']>['data']>;
+
+/**
+ * Pull a readable message out of an ASP.NET ValidationProblemDetails body.
+ * Returns the first per-field error, or the title, or null if neither exists.
+ */
+const extractValidationMessage = (data: ApiErrorData | undefined): string | null => {
+  if (!data) return null;
+  if (data.errors) {
+    const first = Object.values(data.errors).flat().find(Boolean);
+    if (first) return first;
+  }
+  return data.title ?? null;
+};
 
 /**
  * Custom hook for managing Login state and logic
  */
 const useLogin = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   // State
   const [username, setUsername] = useState<string>('');
@@ -72,12 +96,12 @@ const useLogin = () => {
 
     // Validate username
     if (!username.trim()) {
-      newErrors.username = 'Username is required';
+      newErrors.username = t('login.usernameRequired');
     }
 
     // Validate password
     if (!password.trim()) {
-      newErrors.password = 'Password is required';
+      newErrors.password = t('login.passwordRequired');
     }
 
     setErrors(newErrors);
@@ -173,28 +197,47 @@ const useLogin = () => {
       }
     } catch (err) {
       const error = err as ApiError;
+      const status = error.response?.status;
+      const reason = error.response?.data?.reason;
+      const apiMessage = error.response?.data?.message;
+
       logger.error('LOGIN_FAILED', `Login failed for user ${username}`, {
         error: error.message,
-        status: error.response?.status
+        status,
+        reason
       });
 
-      // Handle different error types
-      if (error.response?.status === 401) {
-        setErrors(prev => ({
-          ...prev,
-          general: 'Invalid username or password'
-        }));
-      } else if (error.response?.status === 0) {
-        setErrors(prev => ({
-          ...prev,
-          general: 'Could not connect to server. Please check your connection.'
-        }));
+      // Map backend reason → localized user-facing message.
+      // Locked + ip_blocked must clearly say "contact admin" so the user
+      // knows credentials weren't the problem.
+      let general: string;
+      if (status === 401 && reason === 'locked') {
+        general = t('login.errors.locked');
+      } else if (status === 401 && reason === 'ip_blocked') {
+        general = t('login.errors.ipBlocked');
+      } else if (status === 401) {
+        general = t('login.errors.invalid');
+      } else if (status === 400) {
+        // ASP.NET model validation (e.g. empty body, unparseable JSON).
+        // For login, treat any 400 as "invalid credentials" so we don't leak
+        // server-side validation rules to the client.
+        general = t('login.errors.invalid');
+      } else if (status === 0 || status === undefined) {
+        // status === 0 is set by our fetch wrapper for network errors
+        general = t('login.errors.network');
+      } else if (status === 429) {
+        general = t('login.errors.tooMany');
+      } else if (status >= 500) {
+        general = t('login.errors.server');
       } else {
-        setErrors(prev => ({
-          ...prev,
-          general: error.message || 'Login failed. Please try again.'
-        }));
+        general =
+          apiMessage ||
+          extractValidationMessage(error.response?.data) ||
+          error.message ||
+          t('login.errors.generic');
       }
+
+      setErrors(prev => ({ ...prev, general }));
     } finally {
       setIsLoading(false);
     }

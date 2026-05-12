@@ -1,7 +1,13 @@
-import { useState, useMemo, useCallback, type ChangeEvent, type MouseEvent } from 'react';
+import { useState, useMemo, useCallback, useEffect, type ChangeEvent, type MouseEvent } from 'react';
+import {
+  getBlockedSessions,
+  unblockSession,
+  type BlockedSession,
+  type BlockedType,
+} from '@services/blockedSessionsService';
 
-interface BlockedItem {
-  id: number;
+interface BlockedRow {
+  id: string;
   usuario: string;
   bloqueadoEn: string;
   ip: string;
@@ -9,172 +15,132 @@ interface BlockedItem {
 
 type TabValue = 'contrasena' | 'pin' | 'ip';
 
+const TAB_TO_TYPE: Record<TabValue, BlockedType> = {
+  contrasena: 'password',
+  pin: 'pin',
+  ip: 'ip',
+};
+
+const formatBlockedAt = (iso: string): string => {
+  try {
+    return new Date(iso).toLocaleString('es-DO', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    });
+  } catch {
+    return iso;
+  }
+};
+
+const toRow = (s: BlockedSession): BlockedRow => ({
+  id: s.id,
+  usuario: s.username ?? s.identifier,
+  bloqueadoEn: formatBlockedAt(s.blockedAt),
+  ip: s.ip ?? '',
+});
+
 /**
- * Custom hook for managing UserBlockedSessions state and logic
+ * Custom hook for managing UserBlockedSessions state and logic.
+ * Backed by /api/auth/blocked-sessions.
  */
 const useUserBlockedSessions = () => {
-  // Mock data for blocked by password
-  const bloqueadosPorContrasena = [
-    {
-      id: 1,
-      usuario: 'juan.perez',
-      bloqueadoEn: '2025-10-19 10:30:00',
-      ip: '192.168.1.100',
-    },
-    {
-      id: 2,
-      usuario: 'maria.garcia',
-      bloqueadoEn: '2025-10-19 11:15:00',
-      ip: '192.168.1.101',
-    },
-  ];
-
-  // Mock data for blocked by PIN
-  const bloqueadosPorPin = [
-    {
-      id: 1,
-      usuario: 'carlos.lopez',
-      bloqueadoEn: '2025-10-19 09:45:00',
-      ip: '192.168.1.102',
-    },
-  ];
-
-  // Mock data for blocked IPs
-  const bloqueadosIP = [
-    {
-      id: 1,
-      ip: '192.168.1.200',
-      bloqueadoEn: '2025-10-19 08:00:00',
-      usuario: 'admin',
-    },
-    {
-      id: 2,
-      ip: '10.0.0.50',
-      bloqueadoEn: '2025-10-19 12:30:00',
-      usuario: 'guest',
-    },
-  ];
-
-  // State
   const [activeTab, setActiveTab] = useState<TabValue>('contrasena');
   const [searchText, setSearchText] = useState<string>('');
   const [page, setPage] = useState<number>(0);
   const [rowsPerPage, setRowsPerPage] = useState<number>(20);
+  const [rows, setRows] = useState<BlockedRow[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
 
-  /**
-   * Get current tab data based on active tab
-   */
-  const getCurrentTabData = useCallback(() => {
-    switch (activeTab) {
-      case 'contrasena':
-        return bloqueadosPorContrasena;
-      case 'pin':
-        return bloqueadosPorPin;
-      case 'ip':
-        return bloqueadosIP;
-      default:
-        return [];
+  const loadData = useCallback(async (tab: TabValue) => {
+    setLoading(true);
+    try {
+      const list = await getBlockedSessions(TAB_TO_TYPE[tab]);
+      setRows(list.map(toRow));
+    } catch (err) {
+      console.error('Error loading blocked sessions:', err);
+      setRows([]);
+    } finally {
+      setLoading(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- mock data arrays are stable
-  }, [activeTab]);
+  }, []);
 
-  /**
-   * Get filtered data based on search text
-   */
+  useEffect(() => {
+    loadData(activeTab);
+  }, [activeTab, loadData]);
+
   const filteredData = useMemo(() => {
-    const data = getCurrentTabData();
+    if (!searchText) return rows;
+    const q = searchText.toLowerCase();
+    return rows.filter(
+      r =>
+        r.usuario.toLowerCase().includes(q) ||
+        r.ip.toLowerCase().includes(q) ||
+        r.bloqueadoEn.toLowerCase().includes(q)
+    );
+  }, [rows, searchText]);
 
-    if (!searchText) {
-      return data;
-    }
-
-    const searchLower = searchText.toLowerCase();
-    return data.filter(item => {
-      if (activeTab === 'ip') {
-        return (
-          item.ip.toLowerCase().includes(searchLower) ||
-          item.usuario.toLowerCase().includes(searchLower) ||
-          item.bloqueadoEn.toLowerCase().includes(searchLower)
-        );
-      } else {
-        return (
-          item.usuario.toLowerCase().includes(searchLower) ||
-          item.ip.toLowerCase().includes(searchLower) ||
-          item.bloqueadoEn.toLowerCase().includes(searchLower)
-        );
-      }
-    });
-  }, [activeTab, searchText, getCurrentTabData]);
-
-  /**
-   * Get paginated data
-   */
   const paginatedData = useMemo(() => {
-    const startIndex = page * rowsPerPage;
-    return filteredData.slice(startIndex, startIndex + rowsPerPage);
+    const start = page * rowsPerPage;
+    return filteredData.slice(start, start + rowsPerPage);
   }, [filteredData, page, rowsPerPage]);
 
-  /**
-   * Handle tab change
-   */
   const handleTabChange = useCallback((_event: React.SyntheticEvent, newValue: TabValue) => {
     setActiveTab(newValue);
-    setPage(0); // Reset to first page when switching tabs
-    setSearchText(''); // Clear search when switching tabs
+    setPage(0);
+    setSearchText('');
   }, []);
 
-  /**
-   * Handle search text change
-   */
   const handleSearchChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
     setSearchText(event.target.value);
-    setPage(0); // Reset to first page when search changes
+    setPage(0);
   }, []);
 
-  /**
-   * Handle clear search
-   */
   const handleClearSearch = useCallback(() => {
     setSearchText('');
     setPage(0);
   }, []);
 
-  /**
-   * Handle page change
-   */
-  const handleChangePage = useCallback((_event: MouseEvent<HTMLButtonElement> | null, newPage: number) => {
-    setPage(newPage);
-  }, []);
+  const handleChangePage = useCallback(
+    (_event: MouseEvent<HTMLButtonElement> | null, newPage: number) => {
+      setPage(newPage);
+    },
+    []
+  );
 
-  /**
-   * Handle rows per page change
-   */
   const handleChangeRowsPerPage = useCallback((event: ChangeEvent<HTMLInputElement>) => {
     setRowsPerPage(parseInt(event.target.value, 10));
     setPage(0);
   }, []);
 
-  /**
-   * Handle unlock action
-   */
-  const handleUnlock = useCallback((item: BlockedItem) => {
-    const identifier = activeTab === 'ip' ? item.ip : item.usuario;
-    alert(`Desbloquear ${identifier}`);
-    // TODO: Call API to unlock the user/IP
-  }, [activeTab]);
+  const handleUnlock = useCallback(
+    async (item: BlockedRow) => {
+      try {
+        await unblockSession(item.id, TAB_TO_TYPE[activeTab]);
+        // Optimistic remove
+        setRows(prev => prev.filter(r => r.id !== item.id));
+      } catch (err) {
+        console.error('Error unblocking session:', err);
+        // Reload to stay in sync
+        loadData(activeTab);
+      }
+    },
+    [activeTab, loadData]
+  );
 
   return {
-    // Data
     currentTabData: paginatedData,
     totalRecords: filteredData.length,
+    loading,
 
-    // State
     activeTab,
     searchText,
     page,
     rowsPerPage,
 
-    // Handlers
     handleTabChange,
     handleSearchChange,
     handleClearSearch,

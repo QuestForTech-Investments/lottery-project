@@ -39,6 +39,26 @@
     "french": "Français",
     "creole": "Kreyòl"
   },
+  "login": {
+    "welcome": "Bienvenue",
+    "subtitle": "Entrez vos identifiants pour continuer",
+    "username": "Nom d'utilisateur",
+    "password": "Mot de passe",
+    "signIn": "Se connecter",
+    "signingIn": "Connexion...",
+    "usernameRequired": "Nom d'utilisateur requis",
+    "passwordRequired": "Mot de passe requis",
+    "passwordUpdated": "Mot de passe mis à jour. Connectez-vous avec votre nouveau mot de passe.",
+    "errors": {
+      "invalid": "Nom d'utilisateur ou mot de passe incorrect.",
+      "locked": "Utilisateur verrouillé. Contactez l'administrateur pour le déverrouiller.",
+      "ipBlocked": "Adresse IP bloquée. Contactez l'administrateur.",
+      "network": "Impossible de se connecter au serveur. Vérifiez votre connexion.",
+      "tooMany": "Trop de tentatives. Patientez un instant et réessayez.",
+      "server": "Erreur du serveur. Réessayez dans quelques minutes.",
+      "generic": "Impossible de se connecter. Réessayez."
+    }
+  },
   "menu": {
     "inicio": "ACCUEIL"
   }

@@ -36,12 +36,18 @@ public class AuthController : ControllerBase
 
         var result = await _authService.LoginAsync(loginDto, sessionContext);
 
-        if (result == null)
+        if (result.Data == null)
         {
-            return Unauthorized(new { message = "Invalid username or password" });
+            // Distinguish lockout from bad credentials so the UI can show the right message.
+            return result.Reason switch
+            {
+                "locked" => Unauthorized(new { message = "Usuario bloqueado. Contacte al administrador.", reason = "locked" }),
+                "ip_blocked" => Unauthorized(new { message = "Dirección IP bloqueada. Contacte al administrador.", reason = "ip_blocked" }),
+                _ => Unauthorized(new { message = "Invalid username or password", reason = "invalid" })
+            };
         }
 
-        return Ok(result);
+        return Ok(result.Data);
     }
 
     /// <summary>

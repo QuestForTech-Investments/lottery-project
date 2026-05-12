@@ -81,6 +81,26 @@ public class User
     [Column("pin_hash")]
     public string? PinHash { get; set; }
 
+    [Column("is_password_locked")]
+    public bool IsPasswordLocked { get; set; } = false;
+
+    [Column("is_pin_locked")]
+    public bool IsPinLocked { get; set; } = false;
+
+    [Column("password_locked_at")]
+    public DateTime? PasswordLockedAt { get; set; }
+
+    [Column("pin_locked_at")]
+    public DateTime? PinLockedAt { get; set; }
+
+    [MaxLength(64)]
+    [Column("password_locked_ip")]
+    public string? PasswordLockedIp { get; set; }
+
+    [MaxLength(64)]
+    [Column("pin_locked_ip")]
+    public string? PinLockedIp { get; set; }
+
     // Navigation properties
     [ForeignKey("RoleId")]
     public virtual Role? Role { get; set; }

@@ -867,10 +867,13 @@ public class UsersController : ControllerBase
 
     /// <summary>
     /// Verify the current admin user's PIN. Used to gate sensitive actions.
+    /// Locks the user (admin must unblock) after N consecutive failed PIN attempts.
     /// </summary>
     [HttpPost("me/verify-pin")]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    public async Task<IActionResult> VerifyMyPin([FromBody] VerifyPinDto dto)
+    public async Task<IActionResult> VerifyMyPin(
+        [FromBody] VerifyPinDto dto,
+        [FromServices] IConfiguration configuration)
     {
         var userId = GetCurrentUserId();
         if (userId == null) return Unauthorized();
@@ -878,12 +881,49 @@ public class UsersController : ControllerBase
         var user = await _userRepository.GetByIdAsync(userId.Value);
         if (user == null) return Ok(new { valid = false });
 
+        if (user.IsPinLocked)
+        {
+            return Ok(new { valid = false, locked = true });
+        }
+
         if (string.IsNullOrEmpty(user.PinHash))
         {
             return Ok(new { valid = false, mustSetPin = true });
         }
 
         var valid = BCrypt.Net.BCrypt.Verify(dto.Pin ?? string.Empty, user.PinHash);
+
+        if (!valid)
+        {
+            var ip = HttpContext.Connection.RemoteIpAddress?.ToString();
+
+            _context.AuthFailedAttempts.Add(new AuthFailedAttempt
+            {
+                UserId = user.UserId,
+                Username = user.Username,
+                AttemptType = "pin",
+                IpAddress = ip,
+                AttemptedAt = DateTime.UtcNow
+            });
+            await _context.SaveChangesAsync();
+
+            var threshold = configuration.GetValue<int?>("Lockout:PinFailThreshold") ?? 3;
+            var since = user.LastLoginAt ?? DateTime.UtcNow.AddYears(-1);
+            var count = await _context.AuthFailedAttempts.AsNoTracking()
+                .CountAsync(a => a.UserId == user.UserId && a.AttemptType == "pin" && a.AttemptedAt > since);
+
+            if (count >= threshold && !user.IsPinLocked)
+            {
+                user.IsPinLocked = true;
+                user.PinLockedAt = DateTime.UtcNow;
+                user.PinLockedIp = ip;
+                await _userRepository.UpdateAsync(user);
+                _logger.LogWarning("User {UserId} ({Username}) locked (PIN) after {Count} failed attempts from {Ip}",
+                    user.UserId, user.Username, count, ip);
+                return Ok(new { valid = false, locked = true });
+            }
+        }
+
         return Ok(new { valid });
     }
 

@@ -39,6 +39,26 @@
     "french": "Français",
     "creole": "Kreyòl"
   },
+  "login": {
+    "welcome": "Bienvenido",
+    "subtitle": "Ingresa tus credenciales para continuar",
+    "username": "Usuario",
+    "password": "Contraseña",
+    "signIn": "Iniciar Sesión",
+    "signingIn": "Iniciando...",
+    "usernameRequired": "Usuario requerido",
+    "passwordRequired": "Contraseña requerida",
+    "passwordUpdated": "Contraseña actualizada. Inicia sesión con tu nueva clave.",
+    "errors": {
+      "invalid": "Usuario o contraseña incorrectos.",
+      "locked": "Usuario bloqueado. Contacte al administrador para desbloquearlo.",
+      "ipBlocked": "Dirección IP bloqueada. Contacte al administrador.",
+      "network": "No se pudo conectar al servidor. Verifica tu conexión.",
+      "tooMany": "Demasiados intentos. Espera un momento e intenta de nuevo.",
+      "server": "Error del servidor. Intenta de nuevo en unos minutos.",
+      "generic": "No se pudo iniciar sesión. Intenta de nuevo."
+    }
+  },
   "menu": {
     "inicio": "INICIO"
   }

@@ -87,6 +87,10 @@ public class LotteryDbContext : DbContext
     // Login Sessions (Audit)
     public DbSet<LoginSession> LoginSessions { get; set; }
 
+    // Authentication lockout
+    public DbSet<AuthFailedAttempt> AuthFailedAttempts { get; set; }
+    public DbSet<BlockedIp> BlockedIps { get; set; }
+
     // Limits
     public DbSet<LimitRule> LimitRules { get; set; }
     public DbSet<LimitConsumption> LimitConsumptions { get; set; }

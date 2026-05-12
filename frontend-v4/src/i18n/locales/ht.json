@@ -39,6 +39,26 @@
     "french": "Français",
     "creole": "Kreyòl"
   },
+  "login": {
+    "welcome": "Byenveni",
+    "subtitle": "Antre enfòmasyon w yo pou kontinye",
+    "username": "Non itilizatè",
+    "password": "Modpas",
+    "signIn": "Konekte",
+    "signingIn": "K ap konekte...",
+    "usernameRequired": "Non itilizatè obligatwa",
+    "passwordRequired": "Modpas obligatwa",
+    "passwordUpdated": "Modpas mete ajou. Konekte ak nouvo modpas ou.",
+    "errors": {
+      "invalid": "Non itilizatè oswa modpas pa kòrèk.",
+      "locked": "Itilizatè bloke. Kontakte administratè a pou debloke li.",
+      "ipBlocked": "Adrès IP bloke. Kontakte administratè a.",
+      "network": "Pa kapab konekte ak sèvè a. Verifye koneksyon w.",
+      "tooMany": "Twòp eseye. Tann yon moman epi eseye ankò.",
+      "server": "Erè sèvè. Eseye ankò nan kèk minit.",
+      "generic": "Pa kapab konekte. Eseye ankò."
+    }
+  },
   "menu": {
     "inicio": "KAY"
   }
