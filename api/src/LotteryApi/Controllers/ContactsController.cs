@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using LotteryApi.Data;
 using LotteryApi.DTOs;
 using LotteryApi.Models;
+using LotteryApi.Services;
 
 namespace LotteryApi.Controllers;
 
@@ -14,11 +15,13 @@ public class ContactsController : ControllerBase
 {
     private readonly LotteryDbContext _context;
     private readonly ILogger<ContactsController> _logger;
+    private readonly IZoneScopeService _zoneScope;
 
-    public ContactsController(LotteryDbContext context, ILogger<ContactsController> logger)
+    public ContactsController(LotteryDbContext context, ILogger<ContactsController> logger, IZoneScopeService zoneScope)
     {
         _context = context;
         _logger = logger;
+        _zoneScope = zoneScope;
     }
 
     /// <summary>
@@ -38,8 +41,19 @@ public class ContactsController : ControllerBase
 
             var query = _context.Contacts.AsQueryable();
 
+            // Zone scope by banca.
+            var allowedBpIds = await _zoneScope.GetAllowedBettingPoolIdsAsync();
+            if (allowedBpIds != null)
+            {
+                query = query.Where(c => allowedBpIds.Contains(c.BettingPoolId));
+            }
+
             if (bettingPoolId.HasValue)
             {
+                if (allowedBpIds != null && !allowedBpIds.Contains(bettingPoolId.Value))
+                {
+                    return Ok(new PagedResponse<ContactDto> { Items = new List<ContactDto>(), PageNumber = page, PageSize = pageSize, TotalCount = 0 });
+                }
                 query = query.Where(c => c.BettingPoolId == bettingPoolId.Value);
             }
 
@@ -89,6 +103,7 @@ public class ContactsController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<ContactDto>> CreateContact([FromBody] CreateContactDto createDto)
     {
+        if (!await _zoneScope.IsBettingPoolAllowedAsync(createDto.BettingPoolId)) return Forbid();
         try
         {
             var bettingPoolExists = await _context.BettingPools
@@ -145,6 +160,8 @@ public class ContactsController : ControllerBase
                 return NotFound(new { message = $"Contacto con ID {id} no encontrado" });
             }
 
+            if (!await _zoneScope.IsBettingPoolAllowedAsync(contact.BettingPoolId)) return Forbid();
+
             if (!string.IsNullOrWhiteSpace(updateDto.ContactName))
             {
                 contact.ContactName = updateDto.ContactName;
@@ -190,6 +207,7 @@ public class ContactsController : ControllerBase
     [HttpDelete("by-betting-pool/{bettingPoolId}")]
     public async Task<ActionResult> DeleteContactsByBettingPool(int bettingPoolId)
     {
+        if (!await _zoneScope.IsBettingPoolAllowedAsync(bettingPoolId)) return Forbid();
         try
         {
             var contacts = await _context.Contacts
@@ -226,6 +244,8 @@ public class ContactsController : ControllerBase
             {
                 return NotFound(new { message = $"Contacto con ID {id} no encontrado" });
             }
+
+            if (!await _zoneScope.IsBettingPoolAllowedAsync(contact.BettingPoolId)) return Forbid();
 
             _context.Contacts.Remove(contact);
             await _context.SaveChangesAsync();

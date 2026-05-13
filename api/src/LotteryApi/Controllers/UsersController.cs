@@ -6,6 +6,7 @@ using LotteryApi.Helpers;
 using LotteryApi.Models;
 using LotteryApi.Repositories;
 using LotteryApi.Data;
+using LotteryApi.Services;
 using System.Security.Claims;
 
 namespace LotteryApi.Controllers;
@@ -19,17 +20,33 @@ public class UsersController : ControllerBase
     private readonly IPermissionRepository _permissionRepository;
     private readonly LotteryDbContext _context;
     private readonly ILogger<UsersController> _logger;
+    private readonly IZoneScopeService _zoneScope;
 
     public UsersController(
         IUserRepository userRepository,
         IPermissionRepository permissionRepository,
         LotteryDbContext context,
-        ILogger<UsersController> logger)
+        ILogger<UsersController> logger,
+        IZoneScopeService zoneScope)
     {
         _userRepository = userRepository;
         _permissionRepository = permissionRepository;
         _context = context;
         _logger = logger;
+        _zoneScope = zoneScope;
+    }
+
+    /// <summary>
+    /// Validates that all zones requested in a user write fall within the current admin's scope.
+    /// </summary>
+    private async Task<bool> AreAllZonesAllowedAsync(IEnumerable<int>? zoneIds)
+    {
+        if (zoneIds == null) return true;
+        foreach (var z in zoneIds)
+        {
+            if (!await _zoneScope.IsZoneAllowedAsync(z)) return false;
+        }
+        return true;
     }
 
     /// <summary>
@@ -49,6 +66,14 @@ public class UsersController : ControllerBase
         var query = _context.Users
             .Where(u => u.IsActive)
             .AsQueryable();
+
+        // Zone scope: scoped admin only sees users assigned to at least one of their zones.
+        // Super-admin (no zones assigned) sees everyone, including users with no zones.
+        var allowedZones = await _zoneScope.GetAllowedZoneIdsAsync();
+        if (allowedZones != null)
+        {
+            query = query.Where(u => u.UserZones.Any(uz => uz.IsActive && allowedZones.Contains(uz.ZoneId)));
+        }
 
         // Exclude POS users by default (unless includePosUsers=true)
         if (!includePosUsers)
@@ -454,6 +479,9 @@ public class UsersController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> CreateWithPermissions([FromBody] CreateUserDto dto)
     {
+        // Zone scope — scoped admin can only assign zones inside their own set.
+        if (!await AreAllZonesAllowedAsync(dto.ZoneIds)) return Forbid();
+
         // Check if username already exists
         var existingUser = await _userRepository.GetByUsernameAsync(dto.Username);
         if (existingUser != null)
@@ -671,6 +699,23 @@ public class UsersController : ControllerBase
         if (user == null)
         {
             return NotFound(new { message = $"User with ID {userId} not found" });
+        }
+
+        // Zone scope — the target user's current zones AND any new zones must be in admin's scope.
+        var allowedZones = await _zoneScope.GetAllowedZoneIdsAsync();
+        if (allowedZones != null)
+        {
+            var currentZones = await _context.UserZones
+                .Where(uz => uz.UserId == userId && uz.IsActive)
+                .Select(uz => uz.ZoneId)
+                .ToListAsync();
+            // If the user has existing zones, at least one must be in scope —
+            // otherwise the admin doesn't have rights over this user.
+            if (currentZones.Count > 0 && !currentZones.Any(z => allowedZones.Contains(z)))
+            {
+                return Forbid();
+            }
+            if (!await AreAllZonesAllowedAsync(dto.ZoneIds)) return Forbid();
         }
 
         // Update basic information
@@ -978,6 +1023,20 @@ public class UsersController : ControllerBase
         if (user == null)
         {
             return NotFound(new { message = $"User with ID {id} not found" });
+        }
+
+        // Zone scope — admin can only delete users with at least one zone in their scope.
+        var allowedZones = await _zoneScope.GetAllowedZoneIdsAsync();
+        if (allowedZones != null)
+        {
+            var currentZones = await _context.UserZones
+                .Where(uz => uz.UserId == id && uz.IsActive)
+                .Select(uz => uz.ZoneId)
+                .ToListAsync();
+            if (currentZones.Count > 0 && !currentZones.Any(z => allowedZones.Contains(z)))
+            {
+                return Forbid();
+            }
         }
 
         // Soft delete by setting IsActive to false

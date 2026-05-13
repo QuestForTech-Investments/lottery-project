@@ -5,6 +5,7 @@ using LotteryApi.Data;
 using LotteryApi.DTOs;
 using LotteryApi.Models;
 using LotteryApi.Helpers;
+using LotteryApi.Services;
 using LotteryApi.Services.ExternalResults;
 using LotteryApi.Services.Warnings;
 using System.Security.Claims;
@@ -20,6 +21,7 @@ public class ResultsController : ControllerBase
     private readonly ILogger<ResultsController> _logger;
     private readonly IExternalResultsService _externalResultsService;
     private readonly IWarningService _warningService;
+    private readonly IZoneScopeService _zoneScope;
 
     /// <summary>
     /// Super Pale: source draw → (target composite draw, which field it contributes: num1 or num2).
@@ -51,13 +53,22 @@ public class ResultsController : ControllerBase
         LotteryDbContext context,
         ILogger<ResultsController> logger,
         IExternalResultsService externalResultsService,
-        IWarningService warningService)
+        IWarningService warningService,
+        IZoneScopeService zoneScope)
     {
         _context = context;
         _logger = logger;
         _externalResultsService = externalResultsService;
         _warningService = warningService;
+        _zoneScope = zoneScope;
     }
+
+    /// <summary>
+    /// Publishing/changing lottery results is global config — only super-admin
+    /// (an admin with no zones assigned) may write. Scoped admins can only read.
+    /// </summary>
+    private async Task<bool> IsSuperAdminAsync() =>
+        await _zoneScope.GetAllowedZoneIdsAsync() == null;
 
     /// <summary>
     /// Get all results for a specific date
@@ -150,6 +161,8 @@ public class ResultsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> CreateResult([FromBody] CreateResultDto dto)
     {
+        if (!await IsSuperAdminAsync()) return Forbid();
+
         var userId = GetCurrentUserId();
 
         // Validate winning number format (prevent date-like patterns)
@@ -285,6 +298,8 @@ public class ResultsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UpdateResult(int id, [FromBody] CreateResultDto dto)
     {
+        if (!await IsSuperAdminAsync()) return Forbid();
+
         var userId = GetCurrentUserId();
 
         // Validate winning number format (prevent date-like patterns)
@@ -379,6 +394,8 @@ public class ResultsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeleteResult(int id)
     {
+        if (!await IsSuperAdminAsync()) return Forbid();
+
         var result = await _context.Results.FindAsync(id);
 
         if (result == null)
@@ -402,6 +419,8 @@ public class ResultsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> ApproveResult(int id)
     {
+        if (!await IsSuperAdminAsync()) return Forbid();
+
         var userId = GetCurrentUserId();
 
         var result = await _context.Results
@@ -564,6 +583,8 @@ public class ResultsController : ControllerBase
     [ProducesResponseType(typeof(RefreshResultsResponse), StatusCodes.Status200OK)]
     public async Task<IActionResult> RefreshResults([FromQuery] DateTime? date)
     {
+        if (!await IsSuperAdminAsync()) return Forbid();
+
         var targetDate = date ?? DateTimeHelper.TodayInBusinessTimezone();
 
         _logger.LogInformation("Manual refresh requested for date {Date}", targetDate.ToString("yyyy-MM-dd"));
@@ -605,6 +626,8 @@ public class ResultsController : ControllerBase
     [ProducesResponseType(typeof(RefreshResultsResponse), StatusCodes.Status200OK)]
     public async Task<IActionResult> RefreshResultForDraw(int drawId, [FromQuery] DateTime? date)
     {
+        if (!await IsSuperAdminAsync()) return Forbid();
+
         var targetDate = date ?? DateTimeHelper.TodayInBusinessTimezone();
 
         _logger.LogInformation("Manual refresh requested for draw {DrawId} on {Date}", drawId, targetDate.ToString("yyyy-MM-dd"));
@@ -660,6 +683,8 @@ public class ResultsController : ControllerBase
         [FromQuery] DateTime? startDate,
         [FromQuery] DateTime? endDate)
     {
+        if (!await IsSuperAdminAsync()) return Forbid();
+
         _logger.LogInformation("Reprocess tickets requested from {Start} to {End}",
             startDate?.ToString("yyyy-MM-dd") ?? "7 days ago",
             endDate?.ToString("yyyy-MM-dd") ?? "today");
@@ -697,6 +722,8 @@ public class ResultsController : ControllerBase
     [ProducesResponseType(typeof(SyncResultsResponseDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> SyncResults([FromBody] SyncResultsRequestDto request)
     {
+        if (!await IsSuperAdminAsync()) return Forbid();
+
         var userId = GetCurrentUserId();
         var response = new SyncResultsResponseDto
         {

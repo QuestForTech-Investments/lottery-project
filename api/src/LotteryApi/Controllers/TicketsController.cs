@@ -26,6 +26,7 @@ public class TicketsController : ControllerBase
     private readonly ILimitReservationService _limitReservationService;
     private readonly ICaidaCalculationService _caidaService;
     private readonly IWarningService _warningService;
+    private readonly IZoneScopeService _zoneScope;
 
     public TicketsController(
         LotteryDbContext context,
@@ -33,7 +34,8 @@ public class TicketsController : ControllerBase
         IExternalResultsService externalResultsService,
         ILimitReservationService limitReservationService,
         ICaidaCalculationService caidaService,
-        IWarningService warningService)
+        IWarningService warningService,
+        IZoneScopeService zoneScope)
     {
         _context = context;
         _logger = logger;
@@ -41,6 +43,7 @@ public class TicketsController : ControllerBase
         _externalResultsService = externalResultsService;
         _caidaService = caidaService;
         _warningService = warningService;
+        _zoneScope = zoneScope;
     }
 
     [HttpGet]
@@ -49,6 +52,12 @@ public class TicketsController : ControllerBase
         [FromQuery] DateTime? date = null)
     {
         _logger.LogInformation("Getting tickets for bettingPoolId {BettingPoolId}, date {Date}", bettingPoolId, date);
+
+        // Zone scope — admin cannot see tickets of a banca outside their zones.
+        if (!await _zoneScope.IsBettingPoolAllowedAsync(bettingPoolId))
+        {
+            return Ok(Array.Empty<TicketDetailDto>());
+        }
 
         var query = _context.Tickets
             .AsNoTracking()
@@ -1232,6 +1241,13 @@ public class TicketsController : ControllerBase
                 .Include(t => t.User)
                 .AsQueryable();
 
+            // Zone scope — only tickets from bancas in the admin's assigned zones.
+            var allowedBpIds = await _zoneScope.GetAllowedBettingPoolIdsAsync();
+            if (allowedBpIds != null)
+            {
+                query = query.Where(t => allowedBpIds.Contains(t.BettingPoolId));
+            }
+
             // Apply filters
             // Get timezone from lottery if specified, otherwise use default (Dominican Republic)
             if (filter.Date.HasValue)
@@ -1433,6 +1449,12 @@ public class TicketsController : ControllerBase
                 return NotFound(new { message = "Ticket no encontrado" });
             }
 
+            // Zone scope.
+            if (!await _zoneScope.IsBettingPoolAllowedAsync(ticket.BettingPoolId))
+            {
+                return NotFound(new { message = "Ticket no encontrado" });
+            }
+
             return Ok(ticket);
         }
         catch (Exception ex)
@@ -1455,18 +1477,24 @@ public class TicketsController : ControllerBase
         {
             _logger.LogInformation("Searching ticket by barcode {Barcode}", barcode);
 
-            var ticketId = await _context.Tickets
+            var ticketRef = await _context.Tickets
                 .AsNoTracking()
                 .Where(t => t.Barcode == barcode)
-                .Select(t => (long?)t.TicketId)
+                .Select(t => new { t.TicketId, t.BettingPoolId })
                 .FirstOrDefaultAsync();
 
-            if (ticketId == null)
+            if (ticketRef == null)
             {
                 return NotFound(new { message = "Ticket no encontrado con ese código de barras" });
             }
 
-            var ticket = await GetTicketById(ticketId.Value);
+            // Zone scope — hide cross-zone tickets from scoped admins.
+            if (!await _zoneScope.IsBettingPoolAllowedAsync(ticketRef.BettingPoolId))
+            {
+                return NotFound(new { message = "Ticket no encontrado con ese código de barras" });
+            }
+
+            var ticket = await GetTicketById(ticketRef.TicketId);
             return Ok(ticket);
         }
         catch (Exception ex)
@@ -1498,6 +1526,12 @@ public class TicketsController : ControllerBase
             if (ticket == null)
             {
                 return NotFound(new { code = "TICKET_NOT_FOUND" });
+            }
+
+            // Zone scope — admin cannot cancel tickets of bancas outside their zones.
+            if (!await _zoneScope.IsBettingPoolAllowedAsync(ticket.BettingPoolId))
+            {
+                return Forbid();
             }
 
             // 2. Validate ticket not already cancelled
@@ -1749,6 +1783,12 @@ public class TicketsController : ControllerBase
             if (ticket == null)
             {
                 return NotFound(new { message = "Ticket no encontrado" });
+            }
+
+            // Zone scope — admin cannot pay tickets of bancas outside their zones.
+            if (!await _zoneScope.IsBettingPoolAllowedAsync(ticket.BettingPoolId))
+            {
+                return Forbid();
             }
 
             // 2. Validate ticket is cancelled
@@ -2135,6 +2175,13 @@ public class TicketsController : ControllerBase
                 .Where(tl => tl.DrawId == drawId)
                 .Where(tl => tl.DrawDate.Date == date.Date)
                 .Where(tl => tl.Ticket != null && tl.Ticket.Status != "cancelled");
+
+            // Zone scope.
+            var allowedBpIds = await _zoneScope.GetAllowedBettingPoolIdsAsync();
+            if (allowedBpIds != null)
+            {
+                query = query.Where(tl => tl.Ticket != null && allowedBpIds.Contains(tl.Ticket.BettingPoolId));
+            }
 
             // Filter by zones if provided (zone is on BettingPool, not Ticket)
             if (zoneIdList.Any())

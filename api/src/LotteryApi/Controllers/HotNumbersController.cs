@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using LotteryApi.Data;
 using LotteryApi.Models;
 using LotteryApi.DTOs.HotNumbers;
+using LotteryApi.Services;
 
 namespace LotteryApi.Controllers;
 
@@ -16,12 +17,21 @@ public class HotNumbersController : ControllerBase
 {
     private readonly LotteryDbContext _context;
     private readonly ILogger<HotNumbersController> _logger;
+    private readonly IZoneScopeService _zoneScope;
 
-    public HotNumbersController(LotteryDbContext context, ILogger<HotNumbersController> logger)
+    public HotNumbersController(LotteryDbContext context, ILogger<HotNumbersController> logger, IZoneScopeService zoneScope)
     {
         _context = context;
         _logger = logger;
+        _zoneScope = zoneScope;
     }
+
+    /// <summary>
+    /// Hot-number config is global (no zone column). Only super-admin (no zones assigned)
+    /// can mutate it — scoped admins would inadvertently affect other groups.
+    /// </summary>
+    private async Task<bool> IsSuperAdminAsync() =>
+        await _zoneScope.GetAllowedZoneIdsAsync() == null;
 
     #region Hot Numbers Selection
 
@@ -60,6 +70,8 @@ public class HotNumbersController : ControllerBase
     [HttpPut]
     public async Task<ActionResult<HotNumbersConfigDto>> UpdateHotNumbers([FromBody] UpdateHotNumbersDto dto)
     {
+        if (!await IsSuperAdminAsync()) return Forbid();
+
         try
         {
             // Validate numbers are in valid range (0-99)
@@ -226,6 +238,8 @@ public class HotNumbersController : ControllerBase
     [HttpPost("limits")]
     public async Task<ActionResult<HotNumberLimitDto>> CreateHotNumberLimit([FromBody] CreateHotNumberLimitDto dto)
     {
+        if (!await IsSuperAdminAsync()) return Forbid();
+
         try
         {
             // Validate draw IDs exist
@@ -310,6 +324,8 @@ public class HotNumbersController : ControllerBase
     [HttpPut("limits/{id}")]
     public async Task<ActionResult<HotNumberLimitDto>> UpdateHotNumberLimit(int id, [FromBody] UpdateHotNumberLimitDto dto)
     {
+        if (!await IsSuperAdminAsync()) return Forbid();
+
         try
         {
             var limit = await _context.HotNumberLimits.FindAsync(id);
@@ -388,6 +404,8 @@ public class HotNumbersController : ControllerBase
     [HttpDelete("limits/{id}")]
     public async Task<IActionResult> DeleteHotNumberLimit(int id)
     {
+        if (!await IsSuperAdminAsync()) return Forbid();
+
         try
         {
             var limit = await _context.HotNumberLimits.FindAsync(id);
@@ -420,6 +438,8 @@ public class HotNumbersController : ControllerBase
     [HttpDelete("limits")]
     public async Task<IActionResult> DeleteAllHotNumberLimits()
     {
+        if (!await IsSuperAdminAsync()) return Forbid();
+
         try
         {
             var limits = await _context.HotNumberLimits

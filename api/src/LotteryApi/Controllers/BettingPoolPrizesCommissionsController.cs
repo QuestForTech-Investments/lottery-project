@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using LotteryApi.Data;
 using LotteryApi.Models;
 using LotteryApi.DTOs;
+using LotteryApi.Services;
 
 namespace LotteryApi.Controllers;
 
@@ -12,13 +13,16 @@ public class BettingPoolPrizesCommissionsController : ControllerBase
 {
     private readonly LotteryDbContext _context;
     private readonly ILogger<BettingPoolPrizesCommissionsController> _logger;
+    private readonly IZoneScopeService _zoneScope;
 
     public BettingPoolPrizesCommissionsController(
         LotteryDbContext context,
-        ILogger<BettingPoolPrizesCommissionsController> logger)
+        ILogger<BettingPoolPrizesCommissionsController> logger,
+        IZoneScopeService zoneScope)
     {
         _context = context;
         _logger = logger;
+        _zoneScope = zoneScope;
     }
 
     /// <summary>
@@ -27,6 +31,7 @@ public class BettingPoolPrizesCommissionsController : ControllerBase
     [HttpGet("prizes-commissions")]
     public async Task<ActionResult<List<BettingPoolPrizesCommissionDto>>> GetPrizesCommissions(int bettingPoolId)
     {
+        if (!await _zoneScope.IsBettingPoolAllowedAsync(bettingPoolId)) return NotFound(new { message = "Banca no encontrada" });
         try
         {
             var bettingPoolExists = await _context.BettingPools
@@ -80,6 +85,7 @@ public class BettingPoolPrizesCommissionsController : ControllerBase
         int bettingPoolId,
         int prizeCommissionId)
     {
+        if (!await _zoneScope.IsBettingPoolAllowedAsync(bettingPoolId)) return NotFound(new { message = "Banca no encontrada" });
         try
         {
             var prizeCommission = await _context.BettingPoolPrizesCommissions
@@ -130,6 +136,7 @@ public class BettingPoolPrizesCommissionsController : ControllerBase
         int bettingPoolId,
         [FromBody] CreateBettingPoolPrizesCommissionDto dto)
     {
+        if (!await _zoneScope.IsBettingPoolAllowedAsync(bettingPoolId)) return Forbid();
         try
         {
             var bettingPoolExists = await _context.BettingPools
@@ -231,6 +238,7 @@ public class BettingPoolPrizesCommissionsController : ControllerBase
         int prizeCommissionId,
         [FromBody] UpdateBettingPoolPrizesCommissionDto dto)
     {
+        if (!await _zoneScope.IsBettingPoolAllowedAsync(bettingPoolId)) return Forbid();
         try
         {
             var prizeCommission = await _context.BettingPoolPrizesCommissions
@@ -333,6 +341,7 @@ public class BettingPoolPrizesCommissionsController : ControllerBase
         int bettingPoolId,
         int prizeCommissionId)
     {
+        if (!await _zoneScope.IsBettingPoolAllowedAsync(bettingPoolId)) return Forbid();
         try
         {
             var prizeCommission = await _context.BettingPoolPrizesCommissions
@@ -362,6 +371,7 @@ public class BettingPoolPrizesCommissionsController : ControllerBase
     [HttpGet("prizes-bulk")]
     public async Task<ActionResult<FlatPrizesConfigDto>> GetPrizesCommissionsBulk(int bettingPoolId)
     {
+        if (!await _zoneScope.IsBettingPoolAllowedAsync(bettingPoolId)) return NotFound(new { message = "Banca no encontrada" });
         try
         {
             var bettingPoolExists = await _context.BettingPools
@@ -395,6 +405,7 @@ public class BettingPoolPrizesCommissionsController : ControllerBase
         int bettingPoolId,
         [FromBody] FlatPrizesConfigDto dto)
     {
+        if (!await _zoneScope.IsBettingPoolAllowedAsync(bettingPoolId)) return Forbid();
         try
         {
             var bettingPoolExists = await _context.BettingPools
@@ -554,6 +565,7 @@ public class BettingPoolPrizesCommissionsController : ControllerBase
         int bettingPoolId,
         [FromBody] BatchSaveCommissionsDto dto)
     {
+        if (!await _zoneScope.IsBettingPoolAllowedAsync(bettingPoolId)) return Forbid();
         try
         {
             var bettingPoolExists = await _context.BettingPools

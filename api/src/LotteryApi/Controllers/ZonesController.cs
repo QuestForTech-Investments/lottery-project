@@ -17,14 +17,16 @@ public class ZonesController : ControllerBase
     private readonly LotteryDbContext _context;
     private readonly ILogger<ZonesController> _logger;
     private readonly ICacheService _cache;
+    private readonly IZoneScopeService _zoneScope;
     private const string ZONES_CACHE_KEY = "zones:all";
     private static readonly TimeSpan ZONES_CACHE_TTL = TimeSpan.FromMinutes(30);
 
-    public ZonesController(LotteryDbContext context, ILogger<ZonesController> logger, ICacheService cache)
+    public ZonesController(LotteryDbContext context, ILogger<ZonesController> logger, ICacheService cache, IZoneScopeService zoneScope)
     {
         _context = context;
         _logger = logger;
         _cache = cache;
+        _zoneScope = zoneScope;
     }
 
     /// <summary>
@@ -40,8 +42,13 @@ public class ZonesController : ControllerBase
     {
         try
         {
-            // Build cache key based on parameters
-            var cacheKey = $"zones:p{page}:ps{pageSize}:s{search ?? ""}:c{countryId}:a{isActive}";
+            // Zone scope: scoped admin only sees their assigned zones.
+            // Cache key includes the scope to avoid leaking across users.
+            var allowedZones = await _zoneScope.GetAllowedZoneIdsAsync();
+            var scopeKey = allowedZones == null
+                ? "all"
+                : string.Join(",", allowedZones.OrderBy(z => z));
+            var cacheKey = $"zones:p{page}:ps{pageSize}:s{search ?? ""}:c{countryId}:a{isActive}:scope{scopeKey}";
 
             // Try to get from cache
             var cached = await _cache.GetAsync<PagedResponse<ZoneDto>>(cacheKey);
@@ -54,6 +61,11 @@ public class ZonesController : ControllerBase
             var query = _context.Zones
                 .Include(z => z.Country)
                 .AsQueryable();
+
+            if (allowedZones != null)
+            {
+                query = query.Where(z => allowedZones.Contains(z.ZoneId));
+            }
 
             // Apply filters
             if (!string.IsNullOrWhiteSpace(search))
@@ -117,6 +129,7 @@ public class ZonesController : ControllerBase
     [HttpGet("{id}")]
     public async Task<ActionResult<ZoneDto>> GetZone(int id)
     {
+        if (!await _zoneScope.IsZoneAllowedAsync(id)) return NotFound(new { message = "Zona no encontrada" });
         try
         {
             var zone = await _context.Zones
@@ -156,6 +169,9 @@ public class ZonesController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<ZoneDto>> CreateZone([FromBody] CreateZoneDto createDto)
     {
+        // Creating a zone is admin-level config — a scoped admin must not be able
+        // to grow the set of zones (would let them self-escalate scope).
+        if (await _zoneScope.GetAllowedZoneIdsAsync() != null) return Forbid();
         try
         {
             // Verify country exists only if CountryId is provided
@@ -224,6 +240,7 @@ public class ZonesController : ControllerBase
     [HttpPut("{id}")]
     public async Task<ActionResult<ZoneDto>> UpdateZone(int id, [FromBody] UpdateZoneDto updateDto)
     {
+        if (!await _zoneScope.IsZoneAllowedAsync(id)) return Forbid();
         try
         {
             var zone = await _context.Zones.FindAsync(id);
@@ -293,6 +310,7 @@ public class ZonesController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<ActionResult> DeleteZone(int id)
     {
+        if (!await _zoneScope.IsZoneAllowedAsync(id)) return Forbid();
         try
         {
             var zone = await _context.Zones.FindAsync(id);

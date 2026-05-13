@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using LotteryApi.Data;
 using LotteryApi.DTOs;
 using LotteryApi.Models;
+using LotteryApi.Services;
 
 namespace LotteryApi.Controllers;
 
@@ -14,11 +15,13 @@ public class AccountableEntitiesController : ControllerBase
 {
     private readonly LotteryDbContext _context;
     private readonly ILogger<AccountableEntitiesController> _logger;
+    private readonly IZoneScopeService _zoneScope;
 
-    public AccountableEntitiesController(LotteryDbContext context, ILogger<AccountableEntitiesController> logger)
+    public AccountableEntitiesController(LotteryDbContext context, ILogger<AccountableEntitiesController> logger, IZoneScopeService zoneScope)
     {
         _context = context;
         _logger = logger;
+        _zoneScope = zoneScope;
     }
 
     [HttpGet]
@@ -33,6 +36,14 @@ public class AccountableEntitiesController : ControllerBase
             var query = _context.AccountableEntities
                 .AsNoTracking()
                 .AsQueryable();
+
+            // Zone scope: scoped admin only sees entities in their zones (entities
+            // without a zone — global — also stay visible).
+            var allowedZones = await _zoneScope.GetAllowedZoneIdsAsync();
+            if (allowedZones != null)
+            {
+                query = query.Where(e => e.ZoneId == null || allowedZones.Contains(e.ZoneId.Value));
+            }
 
             if (!string.IsNullOrWhiteSpace(search))
             {
@@ -116,6 +127,8 @@ public class AccountableEntitiesController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<AccountableEntityDto>> CreateEntity([FromBody] CreateAccountableEntityDto dto)
     {
+        // Zone scope — if a zone is set on the new entity, it must be in scope.
+        if (dto.ZoneId.HasValue && !await _zoneScope.IsZoneAllowedAsync(dto.ZoneId.Value)) return Forbid();
         try
         {
             // Check for duplicate code
@@ -168,6 +181,10 @@ public class AccountableEntitiesController : ControllerBase
             if (entity == null)
                 return NotFound(new { message = "Entidad no encontrada" });
 
+            // Zone scope — both the entity's current zone and any new zone must be in scope.
+            if (entity.ZoneId.HasValue && !await _zoneScope.IsZoneAllowedAsync(entity.ZoneId.Value)) return Forbid();
+            if (dto.ZoneId.HasValue && !await _zoneScope.IsZoneAllowedAsync(dto.ZoneId.Value)) return Forbid();
+
             if (dto.EntityName != null) entity.EntityName = dto.EntityName;
             if (dto.EntityCode != null)
             {
@@ -211,6 +228,8 @@ public class AccountableEntitiesController : ControllerBase
             var entity = await _context.AccountableEntities.FindAsync(id);
             if (entity == null)
                 return NotFound(new { message = "Entidad no encontrada" });
+
+            if (entity.ZoneId.HasValue && !await _zoneScope.IsZoneAllowedAsync(entity.ZoneId.Value)) return Forbid();
 
             entity.IsActive = false;
             entity.UpdatedAt = DateTime.UtcNow;

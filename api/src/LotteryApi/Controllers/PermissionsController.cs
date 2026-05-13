@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using LotteryApi.DTOs;
 using LotteryApi.Models;
 using LotteryApi.Repositories;
+using LotteryApi.Services;
 
 namespace LotteryApi.Controllers;
 
@@ -13,12 +14,18 @@ public class PermissionsController : ControllerBase
 {
     private readonly IPermissionRepository _permissionRepository;
     private readonly ILogger<PermissionsController> _logger;
+    private readonly IZoneScopeService _zoneScope;
 
-    public PermissionsController(IPermissionRepository permissionRepository, ILogger<PermissionsController> logger)
+    public PermissionsController(IPermissionRepository permissionRepository, ILogger<PermissionsController> logger, IZoneScopeService zoneScope)
     {
         _permissionRepository = permissionRepository;
         _logger = logger;
+        _zoneScope = zoneScope;
     }
+
+    /// <summary>Permissions are global config — only super-admin mutates.</summary>
+    private async Task<bool> IsSuperAdminAsync() =>
+        await _zoneScope.GetAllowedZoneIdsAsync() == null;
 
     /// <summary>
     /// Get all permissions with pagination
@@ -228,6 +235,7 @@ public class PermissionsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Create([FromBody] CreatePermissionDto dto)
     {
+        if (!await IsSuperAdminAsync()) return Forbid();
         // Check if permission code already exists
         if (await _permissionRepository.PermissionCodeExistsAsync(dto.PermissionCode))
         {
@@ -271,6 +279,7 @@ public class PermissionsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Update(int id, [FromBody] UpdatePermissionDto dto)
     {
+        if (!await IsSuperAdminAsync()) return Forbid();
         var permission = await _permissionRepository.GetByIdAsync(id);
 
         if (permission == null)
@@ -304,6 +313,7 @@ public class PermissionsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(int id)
     {
+        if (!await IsSuperAdminAsync()) return Forbid();
         var permission = await _permissionRepository.GetByIdAsync(id);
 
         if (permission == null)
@@ -327,6 +337,7 @@ public class PermissionsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeletePermanent(int id)
     {
+        if (!await IsSuperAdminAsync()) return Forbid();
         var permission = await _permissionRepository.GetByIdAsync(id);
 
         if (permission == null)

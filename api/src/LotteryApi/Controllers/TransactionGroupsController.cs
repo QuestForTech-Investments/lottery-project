@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using LotteryApi.Data;
 using LotteryApi.DTOs;
 using LotteryApi.Models;
+using LotteryApi.Services;
 using LotteryApi.Services.Caida;
 using System.Security.Claims;
 
@@ -17,12 +18,14 @@ public class TransactionGroupsController : ControllerBase
     private readonly LotteryDbContext _context;
     private readonly ILogger<TransactionGroupsController> _logger;
     private readonly ICaidaCalculationService _caidaService;
+    private readonly IZoneScopeService _zoneScope;
 
-    public TransactionGroupsController(LotteryDbContext context, ILogger<TransactionGroupsController> logger, ICaidaCalculationService caidaService)
+    public TransactionGroupsController(LotteryDbContext context, ILogger<TransactionGroupsController> logger, ICaidaCalculationService caidaService, IZoneScopeService zoneScope)
     {
         _context = context;
         _logger = logger;
         _caidaService = caidaService;
+        _zoneScope = zoneScope;
     }
 
     [HttpGet]
@@ -37,6 +40,13 @@ public class TransactionGroupsController : ControllerBase
             var query = _context.TransactionGroups
                 .AsNoTracking()
                 .AsQueryable();
+
+            // Zone scope — only groups for the admin's assigned zones.
+            var allowedZones = await _zoneScope.GetAllowedZoneIdsAsync();
+            if (allowedZones != null)
+            {
+                query = query.Where(g => g.ZoneId.HasValue && allowedZones.Contains(g.ZoneId.Value));
+            }
 
             var offset = TimeSpan.FromMinutes(tzOffset ?? 0);
 
@@ -101,6 +111,13 @@ public class TransactionGroupsController : ControllerBase
             var query = _context.TransactionGroups
                 .AsNoTracking()
                 .Where(g => g.Status == "PendienteAprobacion" || g.Status == "PendienteEliminacion");
+
+            // Zone scope.
+            var allowedZonesP = await _zoneScope.GetAllowedZoneIdsAsync();
+            if (allowedZonesP != null)
+            {
+                query = query.Where(g => g.ZoneId.HasValue && allowedZonesP.Contains(g.ZoneId.Value));
+            }
 
             var offset = TimeSpan.FromMinutes(tzOffset ?? 0);
 
@@ -702,6 +719,9 @@ public class TransactionGroupsController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<TransactionGroupDto>> CreateGroup([FromBody] CreateTransactionGroupDto dto)
     {
+        // Zone scope — admin can only create transaction groups for their assigned zones.
+        if (dto.ZoneId.HasValue && !await _zoneScope.IsZoneAllowedAsync(dto.ZoneId.Value)) return Forbid();
+
         using var transaction = await _context.Database.BeginTransactionAsync();
         try
         {
@@ -823,6 +843,8 @@ public class TransactionGroupsController : ControllerBase
             if (group == null)
                 return NotFound(new { message = "Grupo no encontrado" });
 
+            if (group.ZoneId.HasValue && !await _zoneScope.IsZoneAllowedAsync(group.ZoneId.Value)) return Forbid();
+
             if (group.Status == "Eliminado" || group.Status == "PendienteEliminacion" || group.Status == "Rechazado")
                 return BadRequest(new { message = "No se puede eliminar un grupo con estado " + group.Status });
 
@@ -897,6 +919,8 @@ public class TransactionGroupsController : ControllerBase
 
             if (group == null)
                 return NotFound(new { message = "Grupo no encontrado" });
+
+            if (group.ZoneId.HasValue && !await _zoneScope.IsZoneAllowedAsync(group.ZoneId.Value)) return Forbid();
 
             if (group.Status == "PendienteAprobacion")
             {
@@ -985,6 +1009,8 @@ public class TransactionGroupsController : ControllerBase
 
             if (group == null)
                 return NotFound(new { message = "Grupo no encontrado" });
+
+            if (group.ZoneId.HasValue && !await _zoneScope.IsZoneAllowedAsync(group.ZoneId.Value)) return Forbid();
 
             if (group.Status == "PendienteAprobacion")
             {

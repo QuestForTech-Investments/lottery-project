@@ -5,6 +5,7 @@ using LotteryApi.Data;
 using LotteryApi.Helpers;
 using LotteryApi.Models;
 using LotteryApi.DTOs;
+using LotteryApi.Services;
 using System.Diagnostics;
 
 namespace LotteryApi.Controllers;
@@ -16,13 +17,16 @@ public class BettingPoolDrawsController : ControllerBase
 {
     private readonly LotteryDbContext _context;
     private readonly ILogger<BettingPoolDrawsController> _logger;
+    private readonly IZoneScopeService _zoneScope;
 
     public BettingPoolDrawsController(
         LotteryDbContext context,
-        ILogger<BettingPoolDrawsController> logger)
+        ILogger<BettingPoolDrawsController> logger,
+        IZoneScopeService zoneScope)
     {
         _context = context;
         _logger = logger;
+        _zoneScope = zoneScope;
     }
 
     /// <summary>
@@ -37,6 +41,11 @@ public class BettingPoolDrawsController : ControllerBase
     {
         try
         {
+            if (!await _zoneScope.IsBettingPoolAllowedAsync(bettingPoolId))
+            {
+                return NotFound(new { message = "Banca no encontrada" });
+            }
+
             // Verify betting pool exists
             var bettingPoolExists = await _context.BettingPools
                 .AnyAsync(bp => bp.BettingPoolId == bettingPoolId);
@@ -213,6 +222,11 @@ public class BettingPoolDrawsController : ControllerBase
     {
         try
         {
+            if (!await _zoneScope.IsBettingPoolAllowedAsync(bettingPoolId))
+            {
+                return NotFound(new { message = "Banca no encontrada" });
+            }
+
             var bettingPoolDraw = await _context.BettingPoolDraws
                 .AsNoTracking()
                 .Where(bpd => bpd.BettingPoolId == bettingPoolId &&
@@ -302,6 +316,11 @@ public class BettingPoolDrawsController : ControllerBase
     {
         try
         {
+            if (!await _zoneScope.IsBettingPoolAllowedAsync(bettingPoolId))
+            {
+                return Forbid();
+            }
+
             // Verify betting pool exists
             var bettingPoolExists = await _context.BettingPools
                 .AnyAsync(bp => bp.BettingPoolId == bettingPoolId);
@@ -436,6 +455,11 @@ public class BettingPoolDrawsController : ControllerBase
     {
         try
         {
+            if (!await _zoneScope.IsBettingPoolAllowedAsync(bettingPoolId))
+            {
+                return Forbid();
+            }
+
             // Verify betting pool exists
             var bettingPoolExists = await _context.BettingPools
                 .AnyAsync(bp => bp.BettingPoolId == bettingPoolId);
@@ -517,6 +541,11 @@ public class BettingPoolDrawsController : ControllerBase
     {
         try
         {
+            if (!await _zoneScope.IsBettingPoolAllowedAsync(bettingPoolId))
+            {
+                return Forbid();
+            }
+
             var bettingPoolDraw = await _context.BettingPoolDraws
                 .FirstOrDefaultAsync(bpd => bpd.BettingPoolId == bettingPoolId &&
                                            bpd.BettingPoolDrawId == bettingPoolDrawId);
@@ -585,6 +614,11 @@ public class BettingPoolDrawsController : ControllerBase
     {
         try
         {
+            if (!await _zoneScope.IsBettingPoolAllowedAsync(bettingPoolId))
+            {
+                return Forbid();
+            }
+
             var bettingPoolDraw = await _context.BettingPoolDraws
                 .FirstOrDefaultAsync(bpd => bpd.BettingPoolId == bettingPoolId &&
                                            bpd.BettingPoolDrawId == bettingPoolDrawId);
@@ -632,6 +666,11 @@ public class BettingPoolDrawsController : ControllerBase
     {
         try
         {
+            if (!await _zoneScope.IsBettingPoolAllowedAsync(bettingPoolId))
+            {
+                return NotFound(new { message = "Banca no encontrada" });
+            }
+
             var bettingPoolExists = await _context.BettingPools
                 .AnyAsync(bp => bp.BettingPoolId == bettingPoolId);
 

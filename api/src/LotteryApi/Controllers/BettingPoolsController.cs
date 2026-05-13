@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using LotteryApi.Data;
 using LotteryApi.Models;
 using LotteryApi.DTOs;
+using LotteryApi.Services;
 using BCrypt.Net;
 
 namespace LotteryApi.Controllers;
@@ -13,11 +14,13 @@ public class BettingPoolsController : ControllerBase
 {
     private readonly LotteryDbContext _context;
     private readonly ILogger<BettingPoolsController> _logger;
+    private readonly IZoneScopeService _zoneScope;
 
-    public BettingPoolsController(LotteryDbContext context, ILogger<BettingPoolsController> logger)
+    public BettingPoolsController(LotteryDbContext context, ILogger<BettingPoolsController> logger, IZoneScopeService zoneScope)
     {
         _context = context;
         _logger = logger;
+        _zoneScope = zoneScope;
     }
 
     /// <summary>
@@ -45,6 +48,14 @@ public class BettingPoolsController : ControllerBase
 
             // Build query - No Include needed, EF will optimize with Select projection
             var query = _context.BettingPools.AsQueryable();
+
+            // Zone scope: admin with assigned zones only sees bancas in those zones.
+            // Super-admin (no zones) → allowedZones is null → no filter.
+            var allowedZones = await _zoneScope.GetAllowedZoneIdsAsync();
+            if (allowedZones != null)
+            {
+                query = query.Where(bp => allowedZones.Contains(bp.ZoneId));
+            }
 
             // Apply filters
             if (!string.IsNullOrWhiteSpace(search))
@@ -121,6 +132,12 @@ public class BettingPoolsController : ControllerBase
     {
         try
         {
+            // Scope check — admin cannot read a banca outside their assigned zones.
+            if (!await _zoneScope.IsBettingPoolAllowedAsync(id))
+            {
+                return NotFound(new { message = "Banca no encontrada" });
+            }
+
             // Direct projection - no Include needed, single optimized SQL query
             var bettingPool = await _context.BettingPools
                 .Where(bp => bp.BettingPoolId == id)
@@ -235,6 +252,12 @@ public class BettingPoolsController : ControllerBase
             if (!zoneExists)
             {
                 return BadRequest(new { message = "La zona especificada no existe" });
+            }
+
+            // Zone scope: admin can only create bancas in their assigned zones.
+            if (!await _zoneScope.IsZoneAllowedAsync(dto.ZoneId))
+            {
+                return Forbid();
             }
 
             // Validate bank if provided
@@ -412,6 +435,12 @@ public class BettingPoolsController : ControllerBase
                 return NotFound(new { message = "Banca no encontrada" });
             }
 
+            // Zone scope: admin cannot edit a banca outside their assigned zones.
+            if (!await _zoneScope.IsZoneAllowedAsync(bettingPool.ZoneId))
+            {
+                return Forbid();
+            }
+
             // Validate zone if changed
             if (dto.ZoneId.HasValue)
             {
@@ -419,6 +448,11 @@ public class BettingPoolsController : ControllerBase
                 if (!zoneExists)
                 {
                     return BadRequest(new { message = "La zona especificada no existe" });
+                }
+                // Block moving a banca to a zone the admin doesn't manage.
+                if (!await _zoneScope.IsZoneAllowedAsync(dto.ZoneId.Value))
+                {
+                    return Forbid();
                 }
                 bettingPool.ZoneId = dto.ZoneId.Value;
             }
@@ -551,6 +585,12 @@ public class BettingPoolsController : ControllerBase
                 return NotFound(new { message = "Banca no encontrada" });
             }
 
+            // Zone scope: admin cannot delete a banca outside their assigned zones.
+            if (!await _zoneScope.IsZoneAllowedAsync(bettingPool.ZoneId))
+            {
+                return Forbid();
+            }
+
             // Check if has associated users
             var hasUsers = await _context.UserBettingPools
                 .AnyAsync(ubp => ubp.BettingPoolId == id);
@@ -581,6 +621,11 @@ public class BettingPoolsController : ControllerBase
     {
         try
         {
+            if (!await _zoneScope.IsBettingPoolAllowedAsync(id))
+            {
+                return NotFound(new { message = "Banca no encontrada" });
+            }
+
             var bettingPoolExists = await _context.BettingPools.AnyAsync(bp => bp.BettingPoolId == id);
             if (!bettingPoolExists)
             {
@@ -623,6 +668,11 @@ public class BettingPoolsController : ControllerBase
     {
         try
         {
+            if (!await _zoneScope.IsBettingPoolAllowedAsync(id))
+            {
+                return Forbid();
+            }
+
             // Validate betting pool exists
             var bettingPool = await _context.BettingPools.FindAsync(id);
             if (bettingPool == null)
@@ -726,6 +776,11 @@ public class BettingPoolsController : ControllerBase
     {
         try
         {
+            if (!await _zoneScope.IsBettingPoolAllowedAsync(id))
+            {
+                return Forbid();
+            }
+
             // Find the user-betting pool association
             var userBettingPool = await _context.UserBettingPools
                 .Include(ubp => ubp.User)
@@ -781,6 +836,11 @@ public class BettingPoolsController : ControllerBase
     {
         try
         {
+            if (!await _zoneScope.IsBettingPoolAllowedAsync(id))
+            {
+                return NotFound(new { message = "Banca no encontrada" });
+            }
+
             var bettingPool = await _context.BettingPools
                 .Include(bp => bp.Zone)
                 .Include(bp => bp.Bank)
@@ -889,6 +949,11 @@ public class BettingPoolsController : ControllerBase
     {
         try
         {
+            if (!await _zoneScope.IsBettingPoolAllowedAsync(id))
+            {
+                return Forbid();
+            }
+
             var bettingPool = await _context.BettingPools
                 .Include(bp => bp.Config)
                 .Include(bp => bp.DiscountConfig)
@@ -1256,6 +1321,11 @@ public class BettingPoolsController : ControllerBase
     {
         try
         {
+            if (!await _zoneScope.IsBettingPoolAllowedAsync(bettingPoolId))
+            {
+                return NotFound(new { message = "Banca no encontrada" });
+            }
+
             var bettingPool = await _context.BettingPools
                 .Include(bp => bp.Schedules)
                 .FirstOrDefaultAsync(bp => bp.BettingPoolId == bettingPoolId);
@@ -1301,6 +1371,11 @@ public class BettingPoolsController : ControllerBase
     {
         try
         {
+            if (!await _zoneScope.IsBettingPoolAllowedAsync(bettingPoolId))
+            {
+                return Forbid();
+            }
+
             var bettingPool = await _context.BettingPools
                 .Include(bp => bp.Schedules)
                 .FirstOrDefaultAsync(bp => bp.BettingPoolId == bettingPoolId);
@@ -1365,6 +1440,11 @@ public class BettingPoolsController : ControllerBase
     {
         try
         {
+            if (!await _zoneScope.IsBettingPoolAllowedAsync(bettingPoolId))
+            {
+                return NotFound(new { message = "Banca no encontrada" });
+            }
+
             var expenses = await _context.BettingPoolAutomaticExpenses
                 .AsNoTracking()
                 .Where(e => e.BettingPoolId == bettingPoolId)
@@ -1398,6 +1478,11 @@ public class BettingPoolsController : ControllerBase
     {
         try
         {
+            if (!await _zoneScope.IsBettingPoolAllowedAsync(bettingPoolId))
+            {
+                return Forbid();
+            }
+
             var bettingPool = await _context.BettingPools.FindAsync(bettingPoolId);
             if (bettingPool == null)
                 return NotFound(new { message = "Banca no encontrada" });

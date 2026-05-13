@@ -1,5 +1,6 @@
 using LotteryApi.Data;
 using LotteryApi.Helpers;
+using LotteryApi.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -13,11 +14,13 @@ public class BlackboardController : ControllerBase
 {
     private readonly LotteryDbContext _context;
     private readonly ILogger<BlackboardController> _logger;
+    private readonly IZoneScopeService _zoneScope;
 
-    public BlackboardController(LotteryDbContext context, ILogger<BlackboardController> logger)
+    public BlackboardController(LotteryDbContext context, ILogger<BlackboardController> logger, IZoneScopeService zoneScope)
     {
         _context = context;
         _logger = logger;
+        _zoneScope = zoneScope;
     }
 
     public class PlayByNumberRow
@@ -71,6 +74,13 @@ public class BlackboardController : ControllerBase
                 && tl.Ticket.CreatedAt < utcEnd
                 && tl.BetTypeCode != null);
 
+        // Zone scope: clamp the user's requested zones/banca to what they're allowed to see.
+        var allowedBpIds = await _zoneScope.GetAllowedBettingPoolIdsAsync();
+        if (allowedBpIds != null)
+        {
+            query = query.Where(tl => allowedBpIds.Contains(tl.Ticket!.BettingPoolId));
+        }
+
         if (drawId.HasValue)
         {
             query = query.Where(tl => tl.DrawId == drawId.Value);
@@ -78,6 +88,10 @@ public class BlackboardController : ControllerBase
 
         if (bettingPoolId.HasValue)
         {
+            if (!await _zoneScope.IsBettingPoolAllowedAsync(bettingPoolId.Value))
+            {
+                return Ok(new List<PlayByNumberRow>());
+            }
             query = query.Where(tl => tl.Ticket!.BettingPoolId == bettingPoolId.Value);
         }
         else if (parsedZoneIds.Count > 0)
@@ -169,6 +183,13 @@ public class BlackboardController : ControllerBase
                 && tl.BetTypeCode == betTypeCode
                 && tl.BetNumber == betNumber);
 
+        // Zone scope.
+        var allowedBpIds = await _zoneScope.GetAllowedBettingPoolIdsAsync();
+        if (allowedBpIds != null)
+        {
+            query = query.Where(tl => allowedBpIds.Contains(tl.Ticket!.BettingPoolId));
+        }
+
         if (drawId.HasValue)
         {
             query = query.Where(tl => tl.DrawId == drawId.Value);
@@ -176,6 +197,10 @@ public class BlackboardController : ControllerBase
 
         if (bettingPoolId.HasValue)
         {
+            if (!await _zoneScope.IsBettingPoolAllowedAsync(bettingPoolId.Value))
+            {
+                return Ok(new List<PlayByNumberDetailRow>());
+            }
             query = query.Where(tl => tl.Ticket!.BettingPoolId == bettingPoolId.Value);
         }
         else if (parsedZoneIds.Count > 0)

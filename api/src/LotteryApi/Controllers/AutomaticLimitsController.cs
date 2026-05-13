@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using LotteryApi.Data;
 using LotteryApi.Models;
 using LotteryApi.DTOs.Limits;
+using LotteryApi.Services;
 
 namespace LotteryApi.Controllers;
 
@@ -16,16 +17,22 @@ public class AutomaticLimitsController : ControllerBase
 {
     private readonly LotteryDbContext _context;
     private readonly ILogger<AutomaticLimitsController> _logger;
+    private readonly IZoneScopeService _zoneScope;
 
     // Configuration type constants
     private const string ConfigTypeGeneral = "general";
     private const string ConfigTypeLine = "line";
 
-    public AutomaticLimitsController(LotteryDbContext context, ILogger<AutomaticLimitsController> logger)
+    public AutomaticLimitsController(LotteryDbContext context, ILogger<AutomaticLimitsController> logger, IZoneScopeService zoneScope)
     {
         _context = context;
         _logger = logger;
+        _zoneScope = zoneScope;
     }
+
+    /// <summary>Global config — only super-admin mutates.</summary>
+    private async Task<bool> IsSuperAdminAsync() =>
+        await _zoneScope.GetAllowedZoneIdsAsync() == null;
 
     /// <summary>
     /// Get current automatic limits configuration
@@ -58,6 +65,7 @@ public class AutomaticLimitsController : ControllerBase
     [HttpPut]
     public async Task<IActionResult> SaveConfig([FromBody] AutomaticLimitConfigDto dto)
     {
+        if (!await IsSuperAdminAsync()) return Forbid();
         try
         {
             await SaveNumberControlSettings(ConfigTypeGeneral, dto.GeneralNumberControls);
@@ -83,6 +91,7 @@ public class AutomaticLimitsController : ControllerBase
     [HttpPut("general")]
     public async Task<IActionResult> SaveGeneralConfig([FromBody] AutomaticLimitConfigDto dto)
     {
+        if (!await IsSuperAdminAsync()) return Forbid();
         try
         {
             await SaveNumberControlSettings(ConfigTypeGeneral, dto.GeneralNumberControls);
@@ -107,6 +116,7 @@ public class AutomaticLimitsController : ControllerBase
     [HttpPut("general-number-controls")]
     public async Task<IActionResult> UpdateGeneralNumberControls([FromBody] NumberControlSettingsDto dto)
     {
+        if (!await IsSuperAdminAsync()) return Forbid();
         try
         {
             await SaveNumberControlSettings(ConfigTypeGeneral, dto);
@@ -130,6 +140,7 @@ public class AutomaticLimitsController : ControllerBase
     [HttpPut("line-controls")]
     public async Task<IActionResult> UpdateLineControls([FromBody] NumberControlSettingsDto dto)
     {
+        if (!await IsSuperAdminAsync()) return Forbid();
         try
         {
             await SaveNumberControlSettings(ConfigTypeLine, dto);
@@ -199,6 +210,7 @@ public class AutomaticLimitsController : ControllerBase
     [HttpPut("random-block")]
     public async Task<IActionResult> SaveRandomBlock([FromBody] RandomBlockConfigDto dto)
     {
+        if (!await IsSuperAdminAsync()) return Forbid();
         try
         {
             var existingConfig = await _context.Set<RandomBlockConfig>().FirstOrDefaultAsync();
@@ -240,8 +252,9 @@ public class AutomaticLimitsController : ControllerBase
     /// <param name="dto">Random block configuration to execute</param>
     /// <returns>Result of blocking action</returns>
     [HttpPost("random-block/execute")]
-    public ActionResult<RandomBlockExecutionResultDto> ExecuteRandomBlock([FromBody] RandomBlockConfigDto dto)
+    public async Task<ActionResult<RandomBlockExecutionResultDto>> ExecuteRandomBlock([FromBody] RandomBlockConfigDto dto)
     {
+        if (!await IsSuperAdminAsync()) return Forbid();
         try
         {
             if (dto.DrawIds == null || dto.DrawIds.Count == 0)
@@ -304,6 +317,7 @@ public class AutomaticLimitsController : ControllerBase
     [HttpPost("reset")]
     public async Task<IActionResult> ResetToDefaults()
     {
+        if (!await IsSuperAdminAsync()) return Forbid();
         try
         {
             // Delete all existing automatic limit configs

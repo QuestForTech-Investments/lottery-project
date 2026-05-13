@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using LotteryApi.Data;
 using LotteryApi.DTOs;
 using LotteryApi.Models;
+using LotteryApi.Services;
 
 namespace LotteryApi.Controllers;
 
@@ -17,13 +18,16 @@ public class BancaPrizeConfigController : ControllerBase
 {
     private readonly LotteryDbContext _context;
     private readonly ILogger<BancaPrizeConfigController> _logger;
+    private readonly IZoneScopeService _zoneScope;
 
     public BancaPrizeConfigController(
         LotteryDbContext context,
-        ILogger<BancaPrizeConfigController> logger)
+        ILogger<BancaPrizeConfigController> logger,
+        IZoneScopeService zoneScope)
     {
         _context = context;
         _logger = logger;
+        _zoneScope = zoneScope;
     }
 
     /// <summary>
@@ -45,6 +49,7 @@ public class BancaPrizeConfigController : ControllerBase
         int bettingPoolId,
         [FromBody] SaveBancaPrizeConfigRequest request)
     {
+        if (!await _zoneScope.IsBettingPoolAllowedAsync(bettingPoolId)) return Forbid();
         try
         {
             // Validar que la banca existe
@@ -177,6 +182,7 @@ public class BancaPrizeConfigController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<List<BancaPrizeConfigDto>>> GetPrizeConfig(int bettingPoolId)
     {
+        if (!await _zoneScope.IsBettingPoolAllowedAsync(bettingPoolId)) return NotFound(new { message = "Banca no encontrada" });
         try
         {
             // Validar que la banca existe
@@ -395,6 +401,7 @@ public class BancaPrizeConfigController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeletePrizeConfig(int bettingPoolId)
     {
+        if (!await _zoneScope.IsBettingPoolAllowedAsync(bettingPoolId)) return Forbid();
         try
         {
             // Validar que la banca existe

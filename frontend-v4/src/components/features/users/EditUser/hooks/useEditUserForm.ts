@@ -354,7 +354,9 @@ const useEditUserForm = (userId: string | undefined) => {
     try {
       const updateData = {
         permissionIds: formData.permissionIds,
-        zoneIds: formData.assignBanca ? formData.zoneIds : [],
+        // Always send the selected zones — zones scope an admin even when no
+        // banca is assigned. assignBanca only gates the betting-pool assignment.
+        zoneIds: formData.zoneIds,
         bettingPoolId: formData.assignBanca && formData.bettingPoolId ? formData.bettingPoolId : undefined,
       };
 

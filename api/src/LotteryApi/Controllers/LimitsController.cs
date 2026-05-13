@@ -5,6 +5,7 @@ using LotteryApi.Models;
 using LotteryApi.Models.Enums;
 using LotteryApi.DTOs;
 using LotteryApi.DTOs.Limits;
+using LotteryApi.Services;
 
 namespace LotteryApi.Controllers;
 
@@ -14,6 +15,7 @@ public class LimitsController : ControllerBase
 {
     private readonly LotteryDbContext _context;
     private readonly ILogger<LimitsController> _logger;
+    private readonly IZoneScopeService _zoneScope;
 
     // Days of week mapping (bitmask values)
     private static readonly Dictionary<int, string> DayOfWeekNames = new()
@@ -42,10 +44,22 @@ public class LimitsController : ControllerBase
         { LimitType.Absolute, "Absoluto" }
     };
 
-    public LimitsController(LotteryDbContext context, ILogger<LimitsController> logger)
+    public LimitsController(LotteryDbContext context, ILogger<LimitsController> logger, IZoneScopeService zoneScope)
     {
         _context = context;
         _logger = logger;
+        _zoneScope = zoneScope;
+    }
+
+    /// <summary>
+    /// Returns true if the given limit-rule scope (zone / banca) falls within the
+    /// current admin's allowed zones. Used to gate writes on limit endpoints.
+    /// </summary>
+    private async Task<bool> IsRuleScopeAllowedAsync(int? zoneId, int? bettingPoolId)
+    {
+        if (zoneId.HasValue && !await _zoneScope.IsZoneAllowedAsync(zoneId.Value)) return false;
+        if (bettingPoolId.HasValue && !await _zoneScope.IsBettingPoolAllowedAsync(bettingPoolId.Value)) return false;
+        return true;
     }
 
     /// <summary>
@@ -68,6 +82,18 @@ public class LimitsController : ControllerBase
             pageSize = Math.Clamp(pageSize, 1, 200);
 
             var query = _context.LimitRules.AsQueryable();
+
+            // Zone scope: admin only sees limit rules whose zone or banca falls in their scope.
+            // Global rules (no zone/banca) are visible to everyone.
+            var allowedZones = await _zoneScope.GetAllowedZoneIdsAsync();
+            var allowedBpIds = await _zoneScope.GetAllowedBettingPoolIdsAsync();
+            if (allowedZones != null)
+            {
+                query = query.Where(lr =>
+                    (lr.ZoneId == null && lr.BettingPoolId == null)
+                    || (lr.ZoneId.HasValue && allowedZones.Contains(lr.ZoneId.Value))
+                    || (lr.BettingPoolId.HasValue && allowedBpIds!.Contains(lr.BettingPoolId.Value)));
+            }
 
             // Apply filters
             if (filter.LimitTypes != null && filter.LimitTypes.Count > 0)
@@ -268,6 +294,19 @@ public class LimitsController : ControllerBase
             {
                 return BadRequest(new { message = "Tipo de límite inválido" });
             }
+
+            // Zone scope — admin cannot create rules targeting zones / bancas outside their assigned set.
+            // Every zone/banca referenced in the DTO must be in scope.
+            if (!await IsRuleScopeAllowedAsync(dto.ZoneId, dto.BettingPoolId)) return Forbid();
+            if (dto.ZoneIds != null)
+                foreach (var z in dto.ZoneIds)
+                    if (!await _zoneScope.IsZoneAllowedAsync(z)) return Forbid();
+            if (dto.BettingPoolIds != null)
+                foreach (var bp in dto.BettingPoolIds)
+                    if (!await _zoneScope.IsBettingPoolAllowedAsync(bp)) return Forbid();
+            if (dto.BancaZoneIds != null)
+                foreach (var z in dto.BancaZoneIds)
+                    if (!await _zoneScope.IsZoneAllowedAsync(z)) return Forbid();
 
             // Validate lottery if provided
             if (dto.LotteryId.HasValue)
@@ -717,6 +756,10 @@ public class LimitsController : ControllerBase
                 return NotFound(new { message = "Límite no encontrado" });
             }
 
+            // Zone scope: cannot touch a rule outside admin's zones, nor move it out.
+            if (!await IsRuleScopeAllowedAsync(limitRule.ZoneId, limitRule.BettingPoolId)) return Forbid();
+            if (!await IsRuleScopeAllowedAsync(dto.ZoneId, dto.BettingPoolId)) return Forbid();
+
             // Update fields if provided
             if (!string.IsNullOrWhiteSpace(dto.RuleName))
             {
@@ -866,6 +909,9 @@ public class LimitsController : ControllerBase
                 return NotFound(new { message = "Límite no encontrado" });
             }
 
+            // Zone scope.
+            if (!await IsRuleScopeAllowedAsync(limitRule.ZoneId, limitRule.BettingPoolId)) return Forbid();
+
             // Check for consumption records
             var hasConsumption = await _context.LimitConsumptions.AnyAsync(lc => lc.LimitRuleId == id);
             if (hasConsumption)
@@ -943,6 +989,19 @@ public class LimitsController : ControllerBase
                 }
 
                 rulesToDelete = await query.ToListAsync();
+            }
+
+            // Zone scope — silently drop rules outside the admin's allowed zones,
+            // so a scoped admin can't batch-delete rules of other groups.
+            var allowedZones = await _zoneScope.GetAllowedZoneIdsAsync();
+            if (allowedZones != null)
+            {
+                var allowedBpIds = await _zoneScope.GetAllowedBettingPoolIdsAsync() ?? new List<int>();
+                rulesToDelete = rulesToDelete
+                    .Where(r =>
+                        (r.ZoneId.HasValue && allowedZones.Contains(r.ZoneId.Value))
+                        || (r.BettingPoolId.HasValue && allowedBpIds.Contains(r.BettingPoolId.Value)))
+                    .ToList();
             }
 
             if (rulesToDelete.Count == 0)
@@ -1176,19 +1235,21 @@ public class LimitsController : ControllerBase
             if (amount == null)
                 return NotFound(new { message = "Monto no encontrado" });
 
+            var rule = await _context.LimitRules.FindAsync(id);
+            if (rule != null && !await IsRuleScopeAllowedAsync(rule.ZoneId, rule.BettingPoolId))
+            {
+                return Forbid();
+            }
+
             _context.LimitRuleAmounts.Remove(amount);
             await _context.SaveChangesAsync();
 
             // If no amounts left, delete the rule too
             var remaining = await _context.LimitRuleAmounts.CountAsync(a => a.LimitRuleId == id);
-            if (remaining == 0)
+            if (remaining == 0 && rule != null)
             {
-                var rule = await _context.LimitRules.FindAsync(id);
-                if (rule != null)
-                {
-                    _context.LimitRules.Remove(rule);
-                    await _context.SaveChangesAsync();
-                }
+                _context.LimitRules.Remove(rule);
+                await _context.SaveChangesAsync();
             }
 
             return Ok(new { message = "Monto eliminado" });
@@ -1212,6 +1273,12 @@ public class LimitsController : ControllerBase
                 .FirstOrDefaultAsync(a => a.LimitRuleId == id && a.GameTypeId == gameTypeId);
             if (amount == null)
                 return NotFound(new { message = "Monto no encontrado" });
+
+            var rule = await _context.LimitRules.FindAsync(id);
+            if (rule != null && !await IsRuleScopeAllowedAsync(rule.ZoneId, rule.BettingPoolId))
+            {
+                return Forbid();
+            }
 
             amount.MaxAmount = dto.Amount;
             await _context.SaveChangesAsync();
@@ -1237,6 +1304,9 @@ public class LimitsController : ControllerBase
     {
         try
         {
+            // Zone scope on the requested target.
+            if (!await IsRuleScopeAllowedAsync(zoneId, bettingPoolId)) return Forbid();
+
             var query = _context.LimitRules
                 .Where(r => r.DrawId == drawId && r.LimitType == (LimitType)limitType && r.IsActive);
 
@@ -1246,6 +1316,19 @@ public class LimitsController : ControllerBase
                 query = query.Where(r => r.BettingPoolId == bettingPoolId.Value);
 
             var rules = await query.ToListAsync();
+
+            // Defense in depth — if no zone/banca filter was passed, clamp by scope.
+            var allowedZones = await _zoneScope.GetAllowedZoneIdsAsync();
+            if (allowedZones != null)
+            {
+                var allowedBpIds = await _zoneScope.GetAllowedBettingPoolIdsAsync() ?? new List<int>();
+                rules = rules
+                    .Where(r =>
+                        (r.ZoneId.HasValue && allowedZones.Contains(r.ZoneId.Value))
+                        || (r.BettingPoolId.HasValue && allowedBpIds.Contains(r.BettingPoolId.Value)))
+                    .ToList();
+            }
+
             if (rules.Count == 0)
                 return NotFound(new { message = "No se encontraron límites" });
 
@@ -1274,6 +1357,8 @@ public class LimitsController : ControllerBase
             {
                 return NotFound(new { message = "Límite no encontrado" });
             }
+
+            if (!await IsRuleScopeAllowedAsync(limitRule.ZoneId, limitRule.BettingPoolId)) return Forbid();
 
             limitRule.IsActive = !limitRule.IsActive;
             limitRule.UpdatedAt = DateTime.UtcNow;

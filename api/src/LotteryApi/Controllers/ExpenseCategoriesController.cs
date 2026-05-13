@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using LotteryApi.Data;
 using LotteryApi.DTOs;
 using LotteryApi.Models;
+using LotteryApi.Services;
 
 namespace LotteryApi.Controllers;
 
@@ -14,12 +15,18 @@ public class ExpenseCategoriesController : ControllerBase
 {
     private readonly LotteryDbContext _context;
     private readonly ILogger<ExpenseCategoriesController> _logger;
+    private readonly IZoneScopeService _zoneScope;
 
-    public ExpenseCategoriesController(LotteryDbContext context, ILogger<ExpenseCategoriesController> logger)
+    public ExpenseCategoriesController(LotteryDbContext context, ILogger<ExpenseCategoriesController> logger, IZoneScopeService zoneScope)
     {
         _context = context;
         _logger = logger;
+        _zoneScope = zoneScope;
     }
+
+    /// <summary>Global config — only super-admin mutates.</summary>
+    private async Task<bool> IsSuperAdminAsync() =>
+        await _zoneScope.GetAllowedZoneIdsAsync() == null;
 
     [HttpGet]
     public async Task<ActionResult<List<ExpenseCategoryDto>>> GetCategories(
@@ -104,6 +111,7 @@ public class ExpenseCategoriesController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<ExpenseCategoryDto>> CreateCategory([FromBody] CreateExpenseCategoryDto dto)
     {
+        if (!await IsSuperAdminAsync()) return Forbid();
         try
         {
             // Validate parent exists if specified
@@ -153,6 +161,7 @@ public class ExpenseCategoriesController : ControllerBase
     [HttpPut("{id}")]
     public async Task<ActionResult<ExpenseCategoryDto>> UpdateCategory(int id, [FromBody] UpdateExpenseCategoryDto dto)
     {
+        if (!await IsSuperAdminAsync()) return Forbid();
         try
         {
             var category = await _context.ExpenseCategories.FindAsync(id);
@@ -205,6 +214,7 @@ public class ExpenseCategoriesController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<ActionResult> DeleteCategory(int id)
     {
+        if (!await IsSuperAdminAsync()) return Forbid();
         try
         {
             var category = await _context.ExpenseCategories.FindAsync(id);

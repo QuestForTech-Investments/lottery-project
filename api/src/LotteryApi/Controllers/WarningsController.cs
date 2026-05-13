@@ -1,5 +1,6 @@
 using LotteryApi.Data;
 using LotteryApi.Helpers;
+using LotteryApi.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -13,11 +14,13 @@ public class WarningsController : ControllerBase
 {
     private readonly LotteryDbContext _context;
     private readonly ILogger<WarningsController> _logger;
+    private readonly IZoneScopeService _zoneScope;
 
-    public WarningsController(LotteryDbContext context, ILogger<WarningsController> logger)
+    public WarningsController(LotteryDbContext context, ILogger<WarningsController> logger, IZoneScopeService zoneScope)
     {
         _context = context;
         _logger = logger;
+        _zoneScope = zoneScope;
     }
 
     public class WarningDto
@@ -69,6 +72,14 @@ public class WarningsController : ControllerBase
         var query = _context.Warnings
             .AsNoTracking()
             .Where(w => w.CreatedAt >= utcStart && w.CreatedAt < utcEnd);
+
+        // Zone scope: admin only sees warnings for bancas in their assigned zones.
+        // Warnings without a betting_pool_id (global warnings) stay visible.
+        var allowedBpIds = await _zoneScope.GetAllowedBettingPoolIdsAsync();
+        if (allowedBpIds != null)
+        {
+            query = query.Where(w => w.BettingPoolId == null || allowedBpIds.Contains(w.BettingPoolId.Value));
+        }
 
         if (!string.IsNullOrWhiteSpace(type))
         {
@@ -173,9 +184,14 @@ public class WarningsController : ControllerBase
         // topbar badge stays calm and the next poll will recover.
         try
         {
-            var count = await _context.Warnings
-                .AsNoTracking()
-                .CountAsync(w => w.CreatedAt >= utcStart && w.CreatedAt < utcEnd);
+            var allowedBpIds = await _zoneScope.GetAllowedBettingPoolIdsAsync();
+            var q = _context.Warnings.AsNoTracking()
+                .Where(w => w.CreatedAt >= utcStart && w.CreatedAt < utcEnd);
+            if (allowedBpIds != null)
+            {
+                q = q.Where(w => w.BettingPoolId == null || allowedBpIds.Contains(w.BettingPoolId.Value));
+            }
+            var count = await q.CountAsync();
 
             return Ok(new { count, date = targetDay });
         }

@@ -17,6 +17,15 @@ public class LoginSessionService : ILoginSessionService
         _logger = logger;
     }
 
+    /// <summary>
+    /// Format a UTC login timestamp in the business timezone (America/Santo_Domingo).
+    /// The DB stores UTC; the UI expects local time.
+    /// </summary>
+    private static string? FormatLocal(DateTime? utc) =>
+        utc.HasValue
+            ? DateTimeHelper.ToBusinessTimezone(utc.Value).ToString("MM/dd/yyyy hh:mm tt")
+            : null;
+
     public async Task<LoginSessionsResponseDto> GetLoginSessionsAsync(LoginSessionQueryDto query)
     {
         var date = query.Date ?? DateTimeHelper.TodayInBusinessTimezone();
@@ -64,12 +73,12 @@ public class LoginSessionService : ILoginSessionService
                     Usuario = first.User?.Username ?? "N/A",
                     BettingPoolId = first.BettingPoolId,
                     ZoneId = first.ZoneId,
-                    PrimeraWeb = webSessions.FirstOrDefault()?.LoginAt.ToString("MM/dd/yyyy hh:mm tt"),
-                    UltimaWeb = webSessions.LastOrDefault()?.LoginAt.ToString("MM/dd/yyyy hh:mm tt"),
-                    PrimeraCelular = mobileSessions.FirstOrDefault()?.LoginAt.ToString("MM/dd/yyyy hh:mm tt"),
-                    UltimaCelular = mobileSessions.LastOrDefault()?.LoginAt.ToString("MM/dd/yyyy hh:mm tt"),
-                    PrimeraApp = appSessions.FirstOrDefault()?.LoginAt.ToString("MM/dd/yyyy hh:mm tt"),
-                    UltimaApp = appSessions.LastOrDefault()?.LoginAt.ToString("MM/dd/yyyy hh:mm tt"),
+                    PrimeraWeb = FormatLocal(webSessions.FirstOrDefault()?.LoginAt),
+                    UltimaWeb = FormatLocal(webSessions.LastOrDefault()?.LoginAt),
+                    PrimeraCelular = FormatLocal(mobileSessions.FirstOrDefault()?.LoginAt),
+                    UltimaCelular = FormatLocal(mobileSessions.LastOrDefault()?.LoginAt),
+                    PrimeraApp = FormatLocal(appSessions.FirstOrDefault()?.LoginAt),
+                    UltimaApp = FormatLocal(appSessions.LastOrDefault()?.LoginAt),
                 };
             })
             .ToList();
@@ -109,12 +118,12 @@ public class LoginSessionService : ILoginSessionService
                             Usuario = first.User?.Username ?? "N/A",
                             BettingPoolId = first.BettingPoolId,
                             ZoneId = first.ZoneId,
-                            PrimeraWeb = webSessions.FirstOrDefault()?.LoginAt.ToString("MM/dd/yyyy hh:mm tt"),
-                            UltimaWeb = webSessions.LastOrDefault()?.LoginAt.ToString("MM/dd/yyyy hh:mm tt"),
-                            PrimeraCelular = mobileSessions.FirstOrDefault()?.LoginAt.ToString("MM/dd/yyyy hh:mm tt"),
-                            UltimaCelular = mobileSessions.LastOrDefault()?.LoginAt.ToString("MM/dd/yyyy hh:mm tt"),
-                            PrimeraApp = appSessions.FirstOrDefault()?.LoginAt.ToString("MM/dd/yyyy hh:mm tt"),
-                            UltimaApp = appSessions.LastOrDefault()?.LoginAt.ToString("MM/dd/yyyy hh:mm tt"),
+                            PrimeraWeb = FormatLocal(webSessions.FirstOrDefault()?.LoginAt),
+                            UltimaWeb = FormatLocal(webSessions.LastOrDefault()?.LoginAt),
+                            PrimeraCelular = FormatLocal(mobileSessions.FirstOrDefault()?.LoginAt),
+                            UltimaCelular = FormatLocal(mobileSessions.LastOrDefault()?.LoginAt),
+                            PrimeraApp = FormatLocal(appSessions.FirstOrDefault()?.LoginAt),
+                            UltimaApp = FormatLocal(appSessions.LastOrDefault()?.LoginAt),
                         };
                     })
                     .ToList()

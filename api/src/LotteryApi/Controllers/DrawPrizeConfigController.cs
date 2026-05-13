@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using LotteryApi.Data;
 using LotteryApi.DTOs;
 using LotteryApi.Models;
+using LotteryApi.Services;
 
 namespace LotteryApi.Controllers;
 
@@ -17,13 +18,16 @@ public class DrawPrizeConfigController : ControllerBase
 {
     private readonly LotteryDbContext _context;
     private readonly ILogger<DrawPrizeConfigController> _logger;
+    private readonly IZoneScopeService _zoneScope;
 
     public DrawPrizeConfigController(
         LotteryDbContext context,
-        ILogger<DrawPrizeConfigController> logger)
+        ILogger<DrawPrizeConfigController> logger,
+        IZoneScopeService zoneScope)
     {
         _context = context;
         _logger = logger;
+        _zoneScope = zoneScope;
     }
 
     /// <summary>
@@ -47,6 +51,7 @@ public class DrawPrizeConfigController : ControllerBase
         int drawId,
         [FromBody] SaveDrawPrizeConfigRequest request)
     {
+        if (!await _zoneScope.IsBettingPoolAllowedAsync(bettingPoolId)) return Forbid();
         try
         {
             // Validar que la banca existe
@@ -202,6 +207,7 @@ public class DrawPrizeConfigController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<List<DrawPrizeConfigDto>>> GetDrawPrizeConfig(int bettingPoolId, int drawId)
     {
+        if (!await _zoneScope.IsBettingPoolAllowedAsync(bettingPoolId)) return NotFound(new { message = "Banca no encontrada" });
         try
         {
             // Validar que la banca existe
@@ -271,6 +277,7 @@ public class DrawPrizeConfigController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<List<DrawPrizeConfigDto>>> GetResolvedDrawPrizeConfig(int bettingPoolId, int drawId)
     {
+        if (!await _zoneScope.IsBettingPoolAllowedAsync(bettingPoolId)) return NotFound(new { message = "Banca no encontrada" });
         try
         {
             // Validar que la banca existe
@@ -406,6 +413,7 @@ public class DrawPrizeConfigController : ControllerBase
         int bettingPoolId,
         [FromBody] BatchDrawPrizeConfigRequest request)
     {
+        if (!await _zoneScope.IsBettingPoolAllowedAsync(bettingPoolId)) return Forbid();
         try
         {
             // Validate betting pool exists
@@ -539,6 +547,7 @@ public class DrawPrizeConfigController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<List<DrawPrizeConfigDto>>> GetAllDrawPrizeConfigs(int bettingPoolId)
     {
+        if (!await _zoneScope.IsBettingPoolAllowedAsync(bettingPoolId)) return NotFound(new { message = "Banca no encontrada" });
         try
         {
             var bettingPoolExists = await _context.BettingPools
@@ -594,6 +603,7 @@ public class DrawPrizeConfigController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeleteDrawPrizeConfig(int bettingPoolId, int drawId)
     {
+        if (!await _zoneScope.IsBettingPoolAllowedAsync(bettingPoolId)) return Forbid();
         try
         {
             // Validar que la banca existe

@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using LotteryApi.Data;
 using LotteryApi.DTOs;
 using LotteryApi.Models;
+using LotteryApi.Services;
 using System.Security.Claims;
 
 namespace LotteryApi.Controllers;
@@ -15,11 +16,23 @@ public class LoansController : ControllerBase
 {
     private readonly LotteryDbContext _context;
     private readonly ILogger<LoansController> _logger;
+    private readonly IZoneScopeService _zoneScope;
 
-    public LoansController(LotteryDbContext context, ILogger<LoansController> logger)
+    public LoansController(LotteryDbContext context, ILogger<LoansController> logger, IZoneScopeService zoneScope)
     {
         _context = context;
         _logger = logger;
+        _zoneScope = zoneScope;
+    }
+
+    /// <summary>
+    /// Returns true if the loan (banca entity) is within the current admin's scope.
+    /// Non-banca entity loans are visible to everyone unless we expand scoping.
+    /// </summary>
+    private async Task<bool> IsLoanAllowedAsync(Loan loan)
+    {
+        if (loan.EntityType != "bettingPool") return true;
+        return await _zoneScope.IsBettingPoolAllowedAsync(loan.EntityId);
     }
 
     [HttpGet]
@@ -36,6 +49,14 @@ public class LoansController : ControllerBase
                 .Include(l => l.CreatedByUser)
                 .Include(l => l.Payments)
                 .AsQueryable();
+
+            // Zone scope: only loans whose banca falls in the admin's zones.
+            // Non-banca loans (other entity types) are unaffected.
+            var allowedBpIds = await _zoneScope.GetAllowedBettingPoolIdsAsync();
+            if (allowedBpIds != null)
+            {
+                query = query.Where(l => l.EntityType != "bettingPool" || allowedBpIds.Contains(l.EntityId));
+            }
 
             if (!string.IsNullOrWhiteSpace(status))
                 query = query.Where(l => l.Status == status);
@@ -112,6 +133,8 @@ public class LoansController : ControllerBase
             if (loan == null)
                 return NotFound(new { error = "Préstamo no encontrado" });
 
+            if (!await IsLoanAllowedAsync(loan)) return NotFound(new { error = "Préstamo no encontrado" });
+
             var dto = new LoanDto
             {
                 LoanId = loan.LoanId,
@@ -159,6 +182,12 @@ public class LoansController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<LoanDto>> CreateLoan([FromBody] CreateLoanDto dto)
     {
+        // Zone scope — admin can only create loans for bancas in their assigned zones.
+        if (dto.EntityType == "bettingPool" && !await _zoneScope.IsBettingPoolAllowedAsync(dto.EntityId))
+        {
+            return Forbid();
+        }
+
         using var transaction = await _context.Database.BeginTransactionAsync();
         try
         {
@@ -239,6 +268,8 @@ public class LoansController : ControllerBase
             if (loan == null)
                 return NotFound(new { error = "Préstamo no encontrado" });
 
+            if (!await IsLoanAllowedAsync(loan)) return Forbid();
+
             if (loan.Status != "active")
                 return BadRequest(new { error = "El préstamo no está activo" });
 
@@ -301,6 +332,8 @@ public class LoansController : ControllerBase
             if (loan == null)
                 return NotFound(new { error = "Préstamo no encontrado" });
 
+            if (!await IsLoanAllowedAsync(loan)) return Forbid();
+
             if (loan.Status != "active")
                 return BadRequest(new { error = "Solo se pueden editar préstamos activos" });
 
@@ -332,6 +365,8 @@ public class LoansController : ControllerBase
             var loan = await _context.Loans.FirstOrDefaultAsync(l => l.LoanId == id);
             if (loan == null)
                 return NotFound(new { error = "Préstamo no encontrado" });
+
+            if (!await IsLoanAllowedAsync(loan)) return Forbid();
 
             if (loan.Status != "active")
                 return BadRequest(new { error = "Solo se pueden cancelar préstamos activos" });

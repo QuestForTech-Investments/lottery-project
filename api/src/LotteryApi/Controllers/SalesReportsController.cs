@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using LotteryApi.Data;
 using LotteryApi.DTOs;
 using LotteryApi.Helpers;
+using LotteryApi.Services;
 using LotteryApi.Services.Caida;
 
 namespace LotteryApi.Controllers;
@@ -15,12 +16,14 @@ public class SalesReportsController : ControllerBase
     private readonly LotteryDbContext _context;
     private readonly ILogger<SalesReportsController> _logger;
     private readonly ICaidaCalculationService _caidaService;
+    private readonly IZoneScopeService _zoneScope;
 
-    public SalesReportsController(LotteryDbContext context, ILogger<SalesReportsController> logger, ICaidaCalculationService caidaService)
+    public SalesReportsController(LotteryDbContext context, ILogger<SalesReportsController> logger, ICaidaCalculationService caidaService, IZoneScopeService zoneScope)
     {
         _context = context;
         _logger = logger;
         _caidaService = caidaService;
+        _zoneScope = zoneScope;
     }
 
     /// <summary>
@@ -51,6 +54,13 @@ public class SalesReportsController : ControllerBase
             // Start with all betting pools
             var bettingPoolsQuery = _context.BettingPools
                 .AsQueryable();
+
+            // Zone scope: admin only sees bancas in their assigned zones.
+            var allowedZones = await _zoneScope.GetAllowedZoneIdsAsync();
+            if (allowedZones != null)
+            {
+                bettingPoolsQuery = bettingPoolsQuery.Where(bp => allowedZones.Contains(bp.ZoneId));
+            }
 
             // Apply zone filter if specified
             if (filter.ZoneIds != null && filter.ZoneIds.Count > 0)
@@ -182,8 +192,19 @@ public class SalesReportsController : ControllerBase
                     && ((t.CreatedAt >= utcStart && t.CreatedAt < utcEnd)
                         || t.TicketLines.Any(tl => tl.DrawDate.Date == targetDate.Date)));
 
+            // Zone scope: admin only sees tickets from bancas in their assigned zones.
+            var allowedBpIds = await _zoneScope.GetAllowedBettingPoolIdsAsync();
+            if (allowedBpIds != null)
+            {
+                query = query.Where(t => allowedBpIds.Contains(t.BettingPoolId));
+            }
+
             if (bettingPoolId.HasValue)
             {
+                if (allowedBpIds != null && !allowedBpIds.Contains(bettingPoolId.Value))
+                {
+                    return Ok(new SalesSummaryDto());
+                }
                 query = query.Where(t => t.BettingPoolId == bettingPoolId.Value);
             }
 
@@ -314,6 +335,13 @@ public class SalesReportsController : ControllerBase
                     && t.CreatedAt >= rangeStart
                     && t.CreatedAt <= rangeEnd);
 
+            // Zone scope.
+            var allowedBpIdsRange = await _zoneScope.GetAllowedBettingPoolIdsAsync();
+            if (allowedBpIdsRange != null)
+            {
+                query = query.Where(t => allowedBpIdsRange.Contains(t.BettingPoolId));
+            }
+
             // Apply filters
             if (zoneIdList != null && zoneIdList.Count > 0)
             {
@@ -410,6 +438,13 @@ public class SalesReportsController : ControllerBase
                 startDate, endDate, zoneId, lotteryId);
 
             var query = _context.BettingPools.AsQueryable();
+
+            // Zone scope: admin only sees bancas in their assigned zones.
+            var allowedZones = await _zoneScope.GetAllowedZoneIdsAsync();
+            if (allowedZones != null)
+            {
+                query = query.Where(bp => allowedZones.Contains(bp.ZoneId));
+            }
 
             // Apply zone filter if specified
             if (!string.IsNullOrEmpty(zoneIds))
@@ -586,6 +621,13 @@ public class SalesReportsController : ControllerBase
                 .Where(tl => tl.Ticket != null && !tl.Ticket.IsCancelled)
                 .Where(tl => tl.DrawDate.Date >= startDate.Date && tl.DrawDate.Date <= endDate.Date);
 
+            // Zone scope.
+            var allowedBpIds = await _zoneScope.GetAllowedBettingPoolIdsAsync();
+            if (allowedBpIds != null)
+            {
+                query = query.Where(tl => tl.Ticket != null && allowedBpIds.Contains(tl.Ticket.BettingPoolId));
+            }
+
             if (bettingPoolId.HasValue)
             {
                 query = query.Where(tl => tl.Ticket != null && tl.Ticket.BettingPoolId == bettingPoolId.Value);
@@ -680,6 +722,14 @@ public class SalesReportsController : ControllerBase
             }
 
             var zonesQuery = _context.Zones.Where(z => z.IsActive);
+
+            // Zone scope: admin only sees their assigned zones.
+            var allowedZones = await _zoneScope.GetAllowedZoneIdsAsync();
+            if (allowedZones != null)
+            {
+                zonesQuery = zonesQuery.Where(z => allowedZones.Contains(z.ZoneId));
+            }
+
             if (zoneIdList != null && zoneIdList.Count > 0)
             {
                 zonesQuery = zonesQuery.Where(z => zoneIdList.Contains(z.ZoneId));
@@ -787,6 +837,14 @@ public class SalesReportsController : ControllerBase
             }
 
             var bettingPoolsQuery = _context.BettingPools.Include(bp => bp.Zone).Where(bp => bp.IsActive);
+
+            // Zone scope.
+            var allowedZonesBpd = await _zoneScope.GetAllowedZoneIdsAsync();
+            if (allowedZonesBpd != null)
+            {
+                bettingPoolsQuery = bettingPoolsQuery.Where(bp => allowedZonesBpd.Contains(bp.ZoneId));
+            }
+
             if (zoneIdList != null && zoneIdList.Count > 0)
             {
                 bettingPoolsQuery = bettingPoolsQuery.Where(bp => zoneIdList.Contains(bp.ZoneId));
@@ -933,6 +991,13 @@ public class SalesReportsController : ControllerBase
                 .Where(tl => tl.Ticket != null && !tl.Ticket.IsCancelled)
                 .Where(tl => tl.DrawDate.Date >= startDate.Date && tl.DrawDate.Date <= endDate.Date);
 
+            // Zone scope.
+            var allowedBpIdsPc = await _zoneScope.GetAllowedBettingPoolIdsAsync();
+            if (allowedBpIdsPc != null)
+            {
+                query = query.Where(tl => tl.Ticket != null && allowedBpIdsPc.Contains(tl.Ticket.BettingPoolId));
+            }
+
             if (drawId.HasValue)
             {
                 query = query.Where(tl => tl.DrawId == drawId.Value);
@@ -1041,6 +1106,13 @@ public class SalesReportsController : ControllerBase
                 .Include(tl => tl.BetType)
                 .Where(tl => tl.Ticket != null && !tl.Ticket.IsCancelled)
                 .Where(tl => tl.DrawDate.Date >= startDate.Date && tl.DrawDate.Date <= endDate.Date);
+
+            // Zone scope.
+            var allowedBpIdsCb = await _zoneScope.GetAllowedBettingPoolIdsAsync();
+            if (allowedBpIdsCb != null)
+            {
+                query = query.Where(tl => tl.Ticket != null && allowedBpIdsCb.Contains(tl.Ticket.BettingPoolId));
+            }
 
             if (drawId.HasValue)
             {

@@ -119,6 +119,8 @@ builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IPermissionRepository, PermissionRepository>();
 
 // Register Services
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<IZoneScopeService, ZoneScopeService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ILoginSessionService, LoginSessionService>();
 builder.Services.AddSingleton<ICacheService, MemoryCacheService>();

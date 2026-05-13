@@ -13,11 +13,26 @@ public class LoginSessionsController : ControllerBase
 {
     private readonly ILoginSessionService _loginSessionService;
     private readonly ILogger<LoginSessionsController> _logger;
+    private readonly IZoneScopeService _zoneScope;
 
-    public LoginSessionsController(ILoginSessionService loginSessionService, ILogger<LoginSessionsController> logger)
+    public LoginSessionsController(ILoginSessionService loginSessionService, ILogger<LoginSessionsController> logger, IZoneScopeService zoneScope)
     {
         _loginSessionService = loginSessionService;
         _logger = logger;
+        _zoneScope = zoneScope;
+    }
+
+    /// <summary>
+    /// Clamps the user-supplied zone filter to the admin's allowed zones.
+    /// If the admin has no scope (super-admin), passes through unchanged.
+    /// </summary>
+    private async Task<List<int>?> ClampZoneIdsAsync(List<int>? requested)
+    {
+        var allowed = await _zoneScope.GetAllowedZoneIdsAsync();
+        if (allowed == null) return requested;
+        if (requested == null || requested.Count == 0) return allowed;
+        var intersected = requested.Where(allowed.Contains).ToList();
+        return intersected.Count > 0 ? intersected : new List<int> { -1 };  // -1 = no match → empty result
     }
 
     /// <summary>
@@ -38,12 +53,14 @@ public class LoginSessionsController : ControllerBase
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 100)
     {
+        var requestedZones = string.IsNullOrWhiteSpace(zoneIds)
+            ? null
+            : zoneIds.Split(',').Select(int.Parse).ToList();
+
         var query = new LoginSessionQueryDto
         {
             Date = date,
-            ZoneIds = string.IsNullOrWhiteSpace(zoneIds)
-                ? null
-                : zoneIds.Split(',').Select(int.Parse).ToList(),
+            ZoneIds = await ClampZoneIdsAsync(requestedZones),
             SearchText = searchText,
             Page = page,
             PageSize = pageSize
@@ -62,12 +79,14 @@ public class LoginSessionsController : ControllerBase
         [FromQuery] string? zoneIds,
         [FromQuery] string? searchText)
     {
+        var requestedZones = string.IsNullOrWhiteSpace(zoneIds)
+            ? null
+            : zoneIds.Split(',').Select(int.Parse).ToList();
+
         var query = new LoginSessionQueryDto
         {
             Date = DateTimeHelper.TodayInBusinessTimezone(),
-            ZoneIds = string.IsNullOrWhiteSpace(zoneIds)
-                ? null
-                : zoneIds.Split(',').Select(int.Parse).ToList(),
+            ZoneIds = await ClampZoneIdsAsync(requestedZones),
             SearchText = searchText,
             Page = 1,
             PageSize = 1000

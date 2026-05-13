@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using LotteryApi.Data;
 using LotteryApi.Helpers;
+using LotteryApi.Services;
 using LotteryApi.Services.Caida;
 
 namespace LotteryApi.Controllers;
@@ -15,12 +16,14 @@ public class CaidaController : ControllerBase
     private readonly LotteryDbContext _context;
     private readonly ICaidaCalculationService _caidaService;
     private readonly ILogger<CaidaController> _logger;
+    private readonly IZoneScopeService _zoneScope;
 
-    public CaidaController(LotteryDbContext context, ICaidaCalculationService caidaService, ILogger<CaidaController> logger)
+    public CaidaController(LotteryDbContext context, ICaidaCalculationService caidaService, ILogger<CaidaController> logger, IZoneScopeService zoneScope)
     {
         _context = context;
         _caidaService = caidaService;
         _logger = logger;
+        _zoneScope = zoneScope;
     }
 
     /// <summary>
@@ -37,6 +40,13 @@ public class CaidaController : ControllerBase
         var query = _context.CaidaHistory
             .AsNoTracking()
             .AsQueryable();
+
+        // Zone scope by banca.
+        var allowedBpIds = await _zoneScope.GetAllowedBettingPoolIdsAsync();
+        if (allowedBpIds != null)
+        {
+            query = query.Where(c => allowedBpIds.Contains(c.BettingPoolId));
+        }
 
         if (bettingPoolId.HasValue)
             query = query.Where(h => h.BettingPoolId == bettingPoolId.Value);
@@ -94,6 +104,13 @@ public class CaidaController : ControllerBase
             .Include(c => c.BettingPool)
             .AsQueryable();
 
+        // Zone scope.
+        var allowedZonesS = await _zoneScope.GetAllowedZoneIdsAsync();
+        if (allowedZonesS != null)
+        {
+            query = query.Where(c => c.BettingPool != null && allowedZonesS.Contains(c.BettingPool.ZoneId));
+        }
+
         if (zoneId.HasValue)
             query = query.Where(c => c.BettingPool != null && c.BettingPool.ZoneId == zoneId.Value);
 
@@ -119,6 +136,8 @@ public class CaidaController : ControllerBase
     [HttpPut("{bettingPoolId}/accumulated-fall")]
     public async Task<ActionResult> UpdateAccumulatedFall(int bettingPoolId, [FromBody] UpdateAccumulatedFallDto dto)
     {
+        if (!await _zoneScope.IsBettingPoolAllowedAsync(bettingPoolId)) return Forbid();
+
         var config = await _context.BettingPoolConfigs
             .FirstOrDefaultAsync(c => c.BettingPoolId == bettingPoolId);
 
@@ -174,6 +193,9 @@ public class CaidaController : ControllerBase
     [HttpPost("calculate")]
     public async Task<ActionResult> TriggerCalculation([FromQuery] DateTime? date)
     {
+        // Manual caída calc runs across all bancas — super-admin only.
+        if (await _zoneScope.GetAllowedZoneIdsAsync() != null) return Forbid();
+
         var targetDate = date?.Date ?? DateTimeHelper.TodayInBusinessTimezone();
 
         _logger.LogInformation("Manual caída calculation triggered for {Date}", targetDate);

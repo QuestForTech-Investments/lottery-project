@@ -1,5 +1,6 @@
 using LotteryApi.Data;
 using LotteryApi.Models;
+using LotteryApi.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -13,12 +14,22 @@ public class BlockedNumbersController : ControllerBase
 {
     private readonly LotteryDbContext _context;
     private readonly ILogger<BlockedNumbersController> _logger;
+    private readonly IZoneScopeService _zoneScope;
 
-    public BlockedNumbersController(LotteryDbContext context, ILogger<BlockedNumbersController> logger)
+    public BlockedNumbersController(LotteryDbContext context, ILogger<BlockedNumbersController> logger, IZoneScopeService zoneScope)
     {
         _context = context;
         _logger = logger;
+        _zoneScope = zoneScope;
     }
+
+    /// <summary>
+    /// Blocked numbers are global config (no zone/banca scope on the row).
+    /// Only super-admin (no zones assigned) can mutate them — a scoped admin
+    /// should not be able to affect bancas outside their group.
+    /// </summary>
+    private async Task<bool> IsSuperAdminAsync() =>
+        await _zoneScope.GetAllowedZoneIdsAsync() == null;
 
     /// <summary>
     /// Get all active blocked numbers (optionally include expired).
@@ -61,6 +72,8 @@ public class BlockedNumbersController : ControllerBase
     [HttpPost]
     public async Task<ActionResult> Create([FromBody] CreateBlockedNumbersRequest dto)
     {
+        if (!await IsSuperAdminAsync()) return Forbid();
+
         if (dto.Items == null || dto.Items.Count == 0)
             return BadRequest(new { message = "Debe enviar al menos un número" });
 
@@ -104,6 +117,8 @@ public class BlockedNumbersController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<ActionResult> Delete(int id)
     {
+        if (!await IsSuperAdminAsync()) return Forbid();
+
         var block = await _context.BlockedNumbers.FirstOrDefaultAsync(b => b.BlockedNumberId == id);
         if (block == null)
             return NotFound(new { message = "Número bloqueado no encontrado" });

@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using LotteryApi.Data;
 using LotteryApi.DTOs;
 using LotteryApi.Helpers;
+using LotteryApi.Services;
 using LotteryApi.Services.BalanceCutoff;
 
 namespace LotteryApi.Controllers;
@@ -16,15 +17,18 @@ public class BalancesController : ControllerBase
     private readonly LotteryDbContext _context;
     private readonly ILogger<BalancesController> _logger;
     private readonly IBalanceCutoffService _cutoffService;
+    private readonly IZoneScopeService _zoneScope;
 
     public BalancesController(
         LotteryDbContext context,
         ILogger<BalancesController> logger,
-        IBalanceCutoffService cutoffService)
+        IBalanceCutoffService cutoffService,
+        IZoneScopeService zoneScope)
     {
         _context = context;
         _logger = logger;
         _cutoffService = cutoffService;
+        _zoneScope = zoneScope;
     }
 
     /// <summary>
@@ -53,8 +57,20 @@ public class BalancesController : ControllerBase
                 .Where(bp => bp.IsActive && bp.DeletedAt == null)
                 .AsQueryable();
 
+            // Zone scope: admin only sees bancas in their assigned zones.
+            var allowedZones = await _zoneScope.GetAllowedZoneIdsAsync();
+            if (allowedZones != null)
+            {
+                query = query.Where(bp => allowedZones.Contains(bp.ZoneId));
+            }
+
             if (zoneId.HasValue)
             {
+                // Block requesting a zone outside scope (silently empty result instead of error).
+                if (allowedZones != null && !allowedZones.Contains(zoneId.Value))
+                {
+                    return Ok(new List<BettingPoolBalanceDto>());
+                }
                 query = query.Where(bp => bp.ZoneId == zoneId.Value);
             }
 

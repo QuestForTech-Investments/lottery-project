@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using LotteryApi.Data;
 using LotteryApi.DTOs;
 using LotteryApi.Helpers;
+using LotteryApi.Services;
 
 namespace LotteryApi.Controllers;
 
@@ -14,11 +15,13 @@ public class WinningPlaysController : ControllerBase
 {
     private readonly LotteryDbContext _context;
     private readonly ILogger<WinningPlaysController> _logger;
+    private readonly IZoneScopeService _zoneScope;
 
-    public WinningPlaysController(LotteryDbContext context, ILogger<WinningPlaysController> logger)
+    public WinningPlaysController(LotteryDbContext context, ILogger<WinningPlaysController> logger, IZoneScopeService zoneScope)
     {
         _context = context;
         _logger = logger;
+        _zoneScope = zoneScope;
     }
 
     /// <summary>
@@ -124,6 +127,13 @@ public class WinningPlaysController : ControllerBase
                 .Where(tl => tl.IsWinner == true)
                 .Where(tl => tl.DrawDate >= start && tl.DrawDate <= end)
                 .Where(tl => tl.Ticket != null && tl.Ticket.IsCancelled == false);
+
+            // Zone scope.
+            var allowedBpIds = await _zoneScope.GetAllowedBettingPoolIdsAsync();
+            if (allowedBpIds != null)
+            {
+                query = query.Where(tl => tl.Ticket != null && allowedBpIds.Contains(tl.Ticket.BettingPoolId));
+            }
 
             // Apply filters
             if (drawId.HasValue)

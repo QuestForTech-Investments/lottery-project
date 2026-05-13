@@ -18,14 +18,20 @@ public class LotteriesController : ControllerBase
     private readonly ICacheService _cache;
     private readonly LotteryDbContext _context;
     private readonly ILogger<LotteriesController> _logger;
+    private readonly IZoneScopeService _zoneScope;
 
-    public LotteriesController(ILotteryRepository lotteryRepository, ICacheService cache, LotteryDbContext context, ILogger<LotteriesController> logger)
+    public LotteriesController(ILotteryRepository lotteryRepository, ICacheService cache, LotteryDbContext context, ILogger<LotteriesController> logger, IZoneScopeService zoneScope)
     {
         _lotteryRepository = lotteryRepository;
         _cache = cache;
         _context = context;
         _logger = logger;
+        _zoneScope = zoneScope;
     }
+
+    /// <summary>Lotteries are global config — only super-admin mutates.</summary>
+    private async Task<bool> IsSuperAdminAsync() =>
+        await _zoneScope.GetAllowedZoneIdsAsync() == null;
 
     /// <summary>
     /// Get all lotteries with pagination (optimized with caching and SQL projection)
@@ -152,6 +158,7 @@ public class LotteriesController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Create([FromBody] CreateLotteryDto dto)
     {
+        if (!await IsSuperAdminAsync()) return Forbid();
         var lottery = new Lottery
         {
             CountryId = dto.CountryId,
@@ -187,6 +194,7 @@ public class LotteriesController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Update(int id, [FromBody] UpdateLotteryDto dto)
     {
+        if (!await IsSuperAdminAsync()) return Forbid();
         var lottery = await _lotteryRepository.GetByIdAsync(id);
 
         if (lottery == null)
@@ -285,6 +293,7 @@ public class LotteriesController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(int id)
     {
+        if (!await IsSuperAdminAsync()) return Forbid();
         var lottery = await _lotteryRepository.GetByIdAsync(id);
 
         if (lottery == null)

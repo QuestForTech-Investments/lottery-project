@@ -1,5 +1,6 @@
 using LotteryApi.Data;
 using LotteryApi.Helpers;
+using LotteryApi.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -13,11 +14,13 @@ public class DashboardController : ControllerBase
 {
     private readonly LotteryDbContext _context;
     private readonly ILogger<DashboardController> _logger;
+    private readonly IZoneScopeService _zoneScope;
 
-    public DashboardController(LotteryDbContext context, ILogger<DashboardController> logger)
+    public DashboardController(LotteryDbContext context, ILogger<DashboardController> logger, IZoneScopeService zoneScope)
     {
         _context = context;
         _logger = logger;
+        _zoneScope = zoneScope;
     }
 
     /// <summary>
@@ -29,12 +32,21 @@ public class DashboardController : ControllerBase
         var today = DateTimeHelper.TodayInBusinessTimezone();
         var startDate = today.AddDays(-(days - 1));
 
+        var allowedBpIds = await _zoneScope.GetAllowedBettingPoolIdsAsync();
+
         // Pull (DrawDate, TicketId, ticket totals) for lines in the range
         // Filter by DrawDate to match daily sales report (future-sale tickets count on draw day)
-        var lineDays = await _context.TicketLines
+        var lineQuery = _context.TicketLines
             .AsNoTracking()
             .Where(tl => tl.Ticket != null && !tl.Ticket.IsCancelled
-                && tl.DrawDate.Date >= startDate && tl.DrawDate.Date <= today)
+                && tl.DrawDate.Date >= startDate && tl.DrawDate.Date <= today);
+
+        if (allowedBpIds != null)
+        {
+            lineQuery = lineQuery.Where(tl => tl.Ticket != null && allowedBpIds.Contains(tl.Ticket.BettingPoolId));
+        }
+
+        var lineDays = await lineQuery
             .Select(tl => new
             {
                 DrawDate = tl.DrawDate.Date,
@@ -86,9 +98,12 @@ public class DashboardController : ControllerBase
         var utcStart = DateTimeHelper.GetUtcStartOfDay(today);
         var utcEnd = DateTimeHelper.GetUtcEndOfDay(today);
 
-        var tickets = await _context.Tickets
-            .AsNoTracking()
-            .Where(t => !t.IsCancelled && t.CreatedAt >= utcStart && t.CreatedAt < utcEnd)
+        var allowedBpIds = await _zoneScope.GetAllowedBettingPoolIdsAsync();
+        var ticketsQuery = _context.Tickets.AsNoTracking()
+            .Where(t => !t.IsCancelled && t.CreatedAt >= utcStart && t.CreatedAt < utcEnd);
+        if (allowedBpIds != null) ticketsQuery = ticketsQuery.Where(t => allowedBpIds.Contains(t.BettingPoolId));
+
+        var tickets = await ticketsQuery
             .Select(t => new { t.CreatedAt, t.TotalBetAmount })
             .ToListAsync();
 
@@ -126,12 +141,16 @@ public class DashboardController : ControllerBase
         var utcStart = DateTimeHelper.GetUtcStartOfDay(today);
         var utcEnd = DateTimeHelper.GetUtcEndOfDay(today);
 
-        var data = await _context.TicketLines
-            .AsNoTracking()
+        var allowedBpIds = await _zoneScope.GetAllowedBettingPoolIdsAsync();
+        var lineQuery = _context.TicketLines.AsNoTracking()
             .Where(tl => tl.Ticket != null && !tl.Ticket.IsCancelled
                 && ((tl.Ticket.CreatedAt >= utcStart && tl.Ticket.CreatedAt < utcEnd)
                     || tl.DrawDate.Date == today))
-            .Where(tl => tl.Draw != null)
+            .Where(tl => tl.Draw != null);
+        if (allowedBpIds != null)
+            lineQuery = lineQuery.Where(tl => tl.Ticket != null && allowedBpIds.Contains(tl.Ticket.BettingPoolId));
+
+        var data = await lineQuery
             .GroupBy(tl => new { tl.DrawId, tl.Draw!.DrawName, ImageUrl = tl.Draw.Lottery!.ImageUrl })
             .Select(g => new
             {
@@ -157,11 +176,14 @@ public class DashboardController : ControllerBase
     [HttpGet("top-positive-bancas")]
     public async Task<ActionResult> GetTopPositiveBancas([FromQuery] int limit = 10)
     {
-        var data = await _context.Balances
-            .AsNoTracking()
+        var allowedBpIds = await _zoneScope.GetAllowedBettingPoolIdsAsync();
+        var q = _context.Balances.AsNoTracking()
             .Include(b => b.BettingPool)
             .Where(b => b.BettingPool != null && b.BettingPool.IsActive && b.BettingPool.DeletedAt == null
-                && b.CurrentBalance > 0)
+                && b.CurrentBalance > 0);
+        if (allowedBpIds != null) q = q.Where(b => allowedBpIds.Contains(b.BettingPoolId));
+
+        var data = await q
             .OrderByDescending(b => b.CurrentBalance)
             .Take(limit)
             .Select(b => new
@@ -183,11 +205,14 @@ public class DashboardController : ControllerBase
     [HttpGet("top-negative-bancas")]
     public async Task<ActionResult> GetTopNegativeBancas([FromQuery] int limit = 10)
     {
-        var data = await _context.Balances
-            .AsNoTracking()
+        var allowedBpIds = await _zoneScope.GetAllowedBettingPoolIdsAsync();
+        var q = _context.Balances.AsNoTracking()
             .Include(b => b.BettingPool)
             .Where(b => b.BettingPool != null && b.BettingPool.IsActive && b.BettingPool.DeletedAt == null
-                && b.CurrentBalance < 0)
+                && b.CurrentBalance < 0);
+        if (allowedBpIds != null) q = q.Where(b => allowedBpIds.Contains(b.BettingPoolId));
+
+        var data = await q
             .OrderBy(b => b.CurrentBalance)
             .Take(limit)
             .Select(b => new
@@ -210,11 +235,14 @@ public class DashboardController : ControllerBase
     public async Task<ActionResult> GetBancasWithoutSales([FromQuery] int limit = 10)
     {
         var today = DateTimeHelper.TodayInBusinessTimezone();
+        var allowedBpIds = await _zoneScope.GetAllowedBettingPoolIdsAsync();
 
         // Get all active bancas with their balance
-        var bancas = await _context.BettingPools
-            .AsNoTracking()
-            .Where(bp => bp.IsActive && bp.DeletedAt == null)
+        var bancasQuery = _context.BettingPools.AsNoTracking()
+            .Where(bp => bp.IsActive && bp.DeletedAt == null);
+        if (allowedBpIds != null) bancasQuery = bancasQuery.Where(bp => allowedBpIds.Contains(bp.BettingPoolId));
+
+        var bancas = await bancasQuery
             .Select(bp => new
             {
                 bp.BettingPoolId,

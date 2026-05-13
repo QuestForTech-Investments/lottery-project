@@ -18,14 +18,20 @@ public class DrawsController : ControllerBase
     private readonly LotteryDbContext _context;
     private readonly ICacheService _cache;
     private readonly ILogger<DrawsController> _logger;
+    private readonly IZoneScopeService _zoneScope;
 
-    public DrawsController(IDrawRepository drawRepository, LotteryDbContext context, ICacheService cache, ILogger<DrawsController> logger)
+    public DrawsController(IDrawRepository drawRepository, LotteryDbContext context, ICacheService cache, ILogger<DrawsController> logger, IZoneScopeService zoneScope)
     {
         _drawRepository = drawRepository;
         _context = context;
         _cache = cache;
         _logger = logger;
+        _zoneScope = zoneScope;
     }
+
+    /// <summary>Draws are global config — only super-admin mutates.</summary>
+    private async Task<bool> IsSuperAdminAsync() =>
+        await _zoneScope.GetAllowedZoneIdsAsync() == null;
 
     /// <summary>
     /// Get all draws with pagination (optimized with caching and SQL projection)
@@ -151,6 +157,7 @@ public class DrawsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> UpdateDrawSchedules([FromBody] UpdateDrawSchedulesDto dto)
     {
+        if (!await IsSuperAdminAsync()) return Forbid();
         try
         {
             foreach (var schedule in dto.Schedules)
@@ -297,6 +304,7 @@ public class DrawsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Create([FromBody] CreateDrawDto dto)
     {
+        if (!await IsSuperAdminAsync()) return Forbid();
         var draw = new Draw
         {
             LotteryId = dto.LotteryId,
@@ -338,6 +346,7 @@ public class DrawsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Update(int id, [FromBody] UpdateDrawDto dto)
     {
+        if (!await IsSuperAdminAsync()) return Forbid();
         // Use direct context access to ensure entity tracking works correctly
         var draw = await _context.Draws.FindAsync(id);
 
@@ -376,6 +385,7 @@ public class DrawsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Reorder([FromBody] List<DrawReorderDto> items)
     {
+        if (!await IsSuperAdminAsync()) return Forbid();
         if (items == null || items.Count == 0)
             return BadRequest("No items provided");
 
@@ -408,6 +418,7 @@ public class DrawsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> ClearCache()
     {
+        if (!await IsSuperAdminAsync()) return Forbid();
         await _cache.RemoveByPrefixAsync("draws:");
         _logger.LogInformation("Draws cache cleared manually");
         return Ok(new { message = "Cache de sorteos limpiado correctamente" });
@@ -421,6 +432,7 @@ public class DrawsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(int id)
     {
+        if (!await IsSuperAdminAsync()) return Forbid();
         var draw = await _drawRepository.GetByIdAsync(id);
 
         if (draw == null)
