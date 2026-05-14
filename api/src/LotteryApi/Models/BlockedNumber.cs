@@ -22,6 +22,13 @@ public class BlockedNumber
     [Column("bet_number")]
     public string BetNumber { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Optional zone scope. Null = global block (affects every banca).
+    /// Set = block only applies to bancas in this zone (used by scoped admins).
+    /// </summary>
+    [Column("zone_id")]
+    public int? ZoneId { get; set; }
+
     [Column("expiration_date")]
     public DateTime? ExpirationDate { get; set; }
 

@@ -750,10 +750,19 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
         }
       });
 
-      // Process each commission record
-      commissions.forEach((record: {
+      // Process each commission record. Three shapes:
+      //   - lotteryId=null, drawId=null → "general" (applies to everything)
+      //   - lotteryId=X,    drawId=null → lottery-wide (applies to every draw of that lottery)
+      //   - lotteryId=X,    drawId=Y    → per-draw override (only that draw)
+      // Per-draw overrides are loaded LAST so they win over the lottery-wide value
+      // for that specific draw.
+      const lotteryWideRecords = commissions.filter((r: { drawId: number | null }) => r.drawId == null);
+      const perDrawRecords = commissions.filter((r: { drawId: number | null }) => r.drawId != null);
+
+      const writeRecord = (record: {
         gameType: string;
         lotteryId: number | null;
+        drawId: number | null;
         commissionDiscount1: number | null;
         commissionDiscount2: number | null;
         commissionDiscount3: number | null;
@@ -766,9 +775,14 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
         // Map GameType to betTypeCode
         const betTypeCode = gameTypeMap[record.gameType] || record.gameType;
 
-        // Build list of prefixes: general or one per drawId matching this lotteryId
+        // Build list of prefixes:
+        //   - per-draw override → just `draw_<drawId>`
+        //   - lottery-wide      → propagate to every draw of that lottery
+        //   - general           → `general` prefix
         const prefixes: string[] = [];
-        if (record.lotteryId === null) {
+        if (record.drawId != null) {
+          prefixes.push(`draw_${record.drawId}`);
+        } else if (record.lotteryId === null) {
           prefixes.push('general');
         } else {
           const drawIds = lotteryToDrawIds[record.lotteryId];
@@ -811,7 +825,12 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
             commissionFormData[`${prefix}_COMMISSION2_${betTypeCode}_COMMISSION_2_DISCOUNT_4`] = record.commission2Discount4;
           }
         });
-      });
+      };
+
+      // Write lottery-wide records first so per-draw overrides applied next can
+      // overwrite the entry for their specific draw.
+      lotteryWideRecords.forEach(writeRecord);
+      perDrawRecords.forEach(writeRecord);
 
       return commissionFormData;
     } catch (error) {
@@ -867,19 +886,22 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
         'PANAMA': 'PANAMA',
       };
 
-      // ⚡ OPTIMIZED: Collect ALL commission items in memory, then send in ONE batch request
+      // Each draw prefix saves as a per-draw record so different draws of the
+      // same lottery can hold different values. The "general" prefix is the
+      // cross-everything default (lotteryId=null, drawId=null).
       interface BatchItem {
         lotteryId: number | null;
+        drawId: number | null;
         gameType: string;
         commissionDiscount1?: number;
         commission2Discount1?: number;
       }
       const batchItems: BatchItem[] = [];
 
-      // Helper to collect commissions for a specific prefix
       const collectCommissionsForPrefix = (
         keyPrefix: string,
-        targetLotteryId: number | null
+        targetLotteryId: number | null,
+        targetDrawId: number | null
       ): void => {
         const commissions: Record<string, {
           commissionDiscount1?: number;
@@ -921,49 +943,35 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
           }
         });
 
-        // Add to batch items
         for (const [gameType, commissionData] of Object.entries(commissions)) {
           batchItems.push({
             lotteryId: targetLotteryId,
+            drawId: targetDrawId,
             gameType,
             ...commissionData
           });
         }
       };
 
-      // Always save general + all draw-specific commissions (ACTUALIZAR saves everything)
-      // IMPORTANT: Only collect ONE draw per lotteryId to avoid duplicate batch items
-      // (multiple draws can share a lotteryId, e.g., NY DAY + NY NIGHT both = lotteryId 10)
-      collectCommissionsForPrefix('general', null);
+      // 1. "general" prefix → cross-everything default.
+      collectCommissionsForPrefix('general', null, null);
 
+      // 2. Each draw prefix → per-draw record. No more lottery-level dedup —
+      //    every draw with edits in formData gets its own row.
       const drawPrefixes = new Set<string>();
       Object.keys(currentFormData).forEach(key => {
         const match = key.match(/^(draw_\d+)_COMMISSION/);
         if (match) drawPrefixes.add(match[1]);
       });
 
-      // When saving from a specific draw tab, process that draw FIRST
-      // so its values take priority for its lotteryId
-      const processedLotteryIds = new Set<number>();
-      if (drawId.startsWith('draw_')) {
-        const activeDrawIdNum = parseInt(drawId.split('_')[1]);
-        const activeDraw = draws.find(d => d.drawId === activeDrawIdNum);
-        const activeLotteryId = activeDraw?.lotteryId ?? null;
-        if (activeLotteryId !== null) {
-          processedLotteryIds.add(activeLotteryId);
-          collectCommissionsForPrefix(drawId, activeLotteryId);
-        }
-      }
-
       for (const drawPrefix of drawPrefixes) {
         const drawIdNum = parseInt(drawPrefix.split('_')[1]);
         const draw = draws.find(d => d.drawId === drawIdNum);
         const lotteryId = draw?.lotteryId ?? null;
-        if (lotteryId !== null && !processedLotteryIds.has(lotteryId)) {
-          processedLotteryIds.add(lotteryId);
-          collectCommissionsForPrefix(drawPrefix, lotteryId);
-        }
+        collectCommissionsForPrefix(drawPrefix, lotteryId, drawIdNum);
       }
+      // Silence unused-variable warning — drawId param now informational only.
+      void drawId;
 
       // ⚡ OPTIMIZED: Send all items in ONE batch request
       if (batchItems.length > 0) {

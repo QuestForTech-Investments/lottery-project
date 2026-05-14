@@ -51,6 +51,7 @@ public class BettingPoolPrizesCommissionsController : ControllerBase
                     BettingPoolId = pc.BettingPoolId,
                     LotteryId = pc.LotteryId,
                     LotteryName = pc.Lottery != null ? pc.Lottery.LotteryName : null,
+                    DrawId = pc.DrawId,
                     GameType = pc.GameType,
                     PrizePayment1 = pc.PrizePayment1,
                     PrizePayment2 = pc.PrizePayment2,
@@ -612,8 +613,9 @@ public class BettingPoolPrizesCommissionsController : ControllerBase
             }
 
             // Deduplicate: merge accented variants (e.g. PALÉ + PALE → keep one PALE)
+            // Dedup key now includes DrawId so per-draw overrides don't get merged into the lottery row.
             var grouped = existingRecords
-                .GroupBy(r => new { NormalizedGameType = NormalizeGameType(r.GameType), r.LotteryId })
+                .GroupBy(r => new { NormalizedGameType = NormalizeGameType(r.GameType), r.LotteryId, r.DrawId })
                 .Where(g => g.Count() > 1);
 
             foreach (var group in grouped)
@@ -657,11 +659,13 @@ public class BettingPoolPrizesCommissionsController : ControllerBase
                 {
                     var normalizedGameType = NormalizeGameType(item.GameType);
 
-                    // Find existing record by lotteryId + gameType (accent-insensitive)
+                    // Find existing record by (lotteryId, drawId, gameType) accent-insensitive.
+                    // DrawId is part of the key so per-draw overrides are tracked separately
+                    // from the lottery-wide default.
                     var existing = existingRecords.FirstOrDefault(r =>
                         NormalizeGameType(r.GameType) == normalizedGameType &&
-                        ((item.LotteryId == null && r.LotteryId == null) ||
-                         (item.LotteryId != null && r.LotteryId == item.LotteryId)));
+                        r.LotteryId == item.LotteryId &&
+                        r.DrawId == item.DrawId);
 
                     if (existing != null)
                     {
@@ -681,6 +685,7 @@ public class BettingPoolPrizesCommissionsController : ControllerBase
                         {
                             BettingPoolId = bettingPoolId,
                             LotteryId = item.LotteryId,
+                            DrawId = item.DrawId,
                             GameType = normalizedGameType,
                             CommissionDiscount1 = item.CommissionDiscount1,
                             Commission2Discount1 = item.Commission2Discount1,
@@ -694,7 +699,7 @@ public class BettingPoolPrizesCommissionsController : ControllerBase
                 }
                 catch (Exception ex)
                 {
-                    errors.Add($"Error processing {item.GameType} (lotteryId={item.LotteryId}): {ex.Message}");
+                    errors.Add($"Error processing {item.GameType} (lotteryId={item.LotteryId}, drawId={item.DrawId}): {ex.Message}");
                 }
             }
 

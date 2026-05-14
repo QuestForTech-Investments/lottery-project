@@ -242,6 +242,8 @@ public class BettingPoolPrizesCommissionDto
     public int BettingPoolId { get; set; }
     public int? LotteryId { get; set; }
     public string? LotteryName { get; set; }
+    /// <summary>Per-draw override id. Null = applies to the whole lottery.</summary>
+    public int? DrawId { get; set; }
     public string GameType { get; set; } = string.Empty;
     public decimal? PrizePayment1 { get; set; }
     public decimal? PrizePayment2 { get; set; }
@@ -589,6 +591,13 @@ public class BettingPoolUserAssignmentResponse
 public class BatchCommissionItemDto
 {
     public int? LotteryId { get; set; }
+
+    /// <summary>
+    /// Optional per-draw override. NULL = applies to all draws of the lottery
+    /// (or globally if LotteryId is also null).
+    /// </summary>
+    public int? DrawId { get; set; }
+
     public string GameType { get; set; } = string.Empty;
     public decimal? CommissionDiscount1 { get; set; }
     public decimal? Commission2Discount1 { get; set; }

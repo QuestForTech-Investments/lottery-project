@@ -639,12 +639,15 @@ public class TicketsController : ControllerBase
             var validCombinations = new HashSet<(int DrawId, int GameTypeId)>(
                 drawGameCompatibilities.Select(dgc => (dgc.DrawId, dgc.GameTypeId)));
 
-            // Pre-fetch active blocked numbers for the draws in this ticket
+            // Pre-fetch active blocked numbers for the draws in this ticket.
+            // A block applies if it's global (zone_id IS NULL) or scoped to this banca's zone.
             var drawIdsInTicket = dto.Lines.Select(l => l.DrawId).Distinct().ToList();
+            var bpZoneId = bettingPool.ZoneId;
             var blockedLookup = await _context.BlockedNumbers
                 .AsNoTracking()
                 .Where(b => b.IsActive
                     && drawIdsInTicket.Contains(b.DrawId)
+                    && (b.ZoneId == null || b.ZoneId == bpZoneId)
                     && (b.ExpirationDate == null || b.ExpirationDate > now))
                 .Select(b => new { b.DrawId, b.GameTypeId, b.BetNumber })
                 .ToListAsync();
@@ -846,12 +849,13 @@ public class TicketsController : ControllerBase
                     LineStatus = "pending"
                 };
 
-                // Get commission percentage from betting pool configuration
-                // Currently uses commission_discount_1 only (see GetCommissionPercentageAsync for future expansion)
+                // Get commission percentage from betting pool configuration.
+                // Lookup priority: per-draw → per-lottery → general (commission_discount_1 only).
                 var commissionPercentage = await GetCommissionPercentageAsync(
                     dto.BettingPoolId,
                     lineDto.BetTypeId,
-                    draw.LotteryId);
+                    draw.LotteryId,
+                    lineDto.DrawId);
 
                 // Calculate line totals with commission (discount is on ticket total)
                 CalculateTicketLine(line, commissionPercentage);
@@ -864,7 +868,7 @@ public class TicketsController : ControllerBase
                 totalNet += line.NetAmount;
 
                 var limitCheck = await CheckIfPlayIsOnLimitsDetailed(
-                    line.DrawId, dto.BettingPoolId, line.BetNumber, line.BetAmount);
+                    line.DrawId, dto.BettingPoolId, line.BetNumber, line.BetAmount, line.BetTypeId);
 
                 if (limitCheck.Passed || canBypassLimits)
                 {
@@ -883,7 +887,8 @@ public class TicketsController : ControllerBase
                         lineDto.BetNumber,
                         dto.BettingPoolId,
                         line.BetAmount,
-                        now);
+                        now,
+                        line.BetTypeId);
                 } else
                 {
                     line.ExceedsLimit = true;
@@ -1665,7 +1670,9 @@ public class TicketsController : ControllerBase
             // 8.2 Reverse limit consumption for each line
             foreach (var line in ticket.TicketLines)
             {
-                var gameTypeId = GetGameTypeIdFromBetNumber(line.BetNumber);
+                // Use the actual bet type stored on the line — inferring from bet number
+                // length is wrong (PICK2 and DIRECTO are both 2 digits, etc.).
+                var gameTypeId = line.BetTypeId;
                 var drawDate = DateOnly.FromDateTime(line.DrawDate.Date);
 
                 // Find all consumption records for this line across all rule levels
@@ -1898,7 +1905,8 @@ public class TicketsController : ControllerBase
     private async Task<decimal> GetCommissionPercentageAsync(
         int bettingPoolId,
         int betTypeId,
-        int? lotteryId)
+        int? lotteryId,
+        int? drawId = null)
     {
         // Get the bet type code to match against configuration
         var betType = await _context.GameTypes
@@ -1911,18 +1919,13 @@ public class TicketsController : ControllerBase
             return 0.00m;
         }
 
-        // Step 1: Look for lottery-specific commission configuration
-        var config = await _context.Set<Models.BettingPoolPrizesCommission>()
-            .AsNoTracking()
-            .Where(c =>
-                c.BettingPoolId == bettingPoolId &&
-                c.GameType == betType.GameTypeCode &&
-                c.IsActive == true &&
-                c.LotteryId == lotteryId)
-            .FirstOrDefaultAsync();
+        // Lookup priority (most specific wins):
+        //   1. (banca, draw, gameType)   — per-draw override
+        //   2. (banca, lottery, gameType) — per-lottery
+        //   3. (banca, NULL, gameType)    — general fallback
+        Models.BettingPoolPrizesCommission? config = null;
 
-        // Step 2: If no lottery-specific config, fallback to general config (lotteryId=null)
-        if (config == null && lotteryId != null)
+        if (drawId.HasValue)
         {
             config = await _context.Set<Models.BettingPoolPrizesCommission>()
                 .AsNoTracking()
@@ -1930,15 +1933,34 @@ public class TicketsController : ControllerBase
                     c.BettingPoolId == bettingPoolId &&
                     c.GameType == betType.GameTypeCode &&
                     c.IsActive == true &&
+                    c.DrawId == drawId.Value)
+                .FirstOrDefaultAsync();
+        }
+
+        if (config == null && lotteryId.HasValue)
+        {
+            config = await _context.Set<Models.BettingPoolPrizesCommission>()
+                .AsNoTracking()
+                .Where(c =>
+                    c.BettingPoolId == bettingPoolId &&
+                    c.GameType == betType.GameTypeCode &&
+                    c.IsActive == true &&
+                    c.DrawId == null &&
+                    c.LotteryId == lotteryId.Value)
+                .FirstOrDefaultAsync();
+        }
+
+        if (config == null)
+        {
+            config = await _context.Set<Models.BettingPoolPrizesCommission>()
+                .AsNoTracking()
+                .Where(c =>
+                    c.BettingPoolId == bettingPoolId &&
+                    c.GameType == betType.GameTypeCode &&
+                    c.IsActive == true &&
+                    c.DrawId == null &&
                     c.LotteryId == null)
                 .FirstOrDefaultAsync();
-
-            if (config != null)
-            {
-                _logger.LogDebug(
-                    "Using general commission for pool {PoolId}, bet type {BetType}: {Commission}%",
-                    bettingPoolId, betType.GameTypeCode, config.CommissionDiscount1);
-            }
         }
 
         if (config != null)
@@ -1946,8 +1968,8 @@ public class TicketsController : ControllerBase
             var commission = config.CommissionDiscount1 ?? 0.00m;
 
             _logger.LogDebug(
-                "Commission for pool {PoolId}, bet type {BetType}, lottery {LotteryId}: {Commission}%",
-                bettingPoolId, betType.GameTypeCode, lotteryId, commission);
+                "Commission for pool {PoolId}, bet type {BetType}, draw {DrawId}, lottery {LotteryId}: {Commission}% (config #{ConfigId})",
+                bettingPoolId, betType.GameTypeCode, drawId, lotteryId, commission, config.PrizeCommissionId);
 
             return commission;
         }
@@ -2333,16 +2355,20 @@ public class TicketsController : ControllerBase
         };
     }
 
+    /// <summary>
+    /// Increment the consumption counters for all applicable limit rules.
+    /// <paramref name="gameTypeId"/> MUST be the actual bet type the user selected.
+    /// </summary>
     private async Task UpdateLimitConsumption(
         int drawId,
         DateTime drawDate,
         string betNumber,
         int bettingPoolId,
         decimal betAmount,
-        DateTime timestamp)
+        DateTime timestamp,
+        int gameTypeId)
     {
         var today = DateOnly.FromDateTime(drawDate);
-        var gameTypeId = GetGameTypeIdFromBetNumber(betNumber);
 
         var bettingPool = await _context.BettingPools.AsNoTracking()
             .Where(bp => bp.BettingPoolId == bettingPoolId)
@@ -2535,17 +2561,22 @@ public class TicketsController : ControllerBase
         _ => ("desconocido", "Límite")
     };
 
-    private async Task<bool> CheckIfPlayIsOnLimits(int drawId, int bettingPoolId, string betNumber, decimal bet)
+    private async Task<bool> CheckIfPlayIsOnLimits(int drawId, int bettingPoolId, string betNumber, decimal bet, int gameTypeId)
     {
-        var detail = await CheckIfPlayIsOnLimitsDetailed(drawId, bettingPoolId, betNumber, bet);
+        var detail = await CheckIfPlayIsOnLimitsDetailed(drawId, bettingPoolId, betNumber, bet, gameTypeId);
         return detail.Passed;
     }
 
-    private async Task<LimitCheckDetail> CheckIfPlayIsOnLimitsDetailed(int drawId, int bettingPoolId, string betNumber, decimal bet)
+    /// <summary>
+    /// Validate that a play is within the configured limits.
+    /// <paramref name="gameTypeId"/> MUST be the actual bet type the user selected (e.g. PICK2, not DIRECTO).
+    /// Inferring it from the bet number length is wrong — many draws have 2-digit
+    /// game types that are not DIRECTO (Pick2 variants, etc.).
+    /// </summary>
+    private async Task<LimitCheckDetail> CheckIfPlayIsOnLimitsDetailed(int drawId, int bettingPoolId, string betNumber, decimal bet, int gameTypeId)
     {
         var now = DateTime.UtcNow;
         var today = DateOnly.FromDateTime(Helpers.DateTimeHelper.TodayInBusinessTimezone());
-        var gameTypeId = GetGameTypeIdFromBetNumber(betNumber);
 
         var bettingPool = await _context.BettingPools.AsNoTracking()
             .Where(bp => bp.BettingPoolId == bettingPoolId)

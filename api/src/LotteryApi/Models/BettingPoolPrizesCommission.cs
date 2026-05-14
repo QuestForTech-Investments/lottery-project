@@ -16,6 +16,13 @@ public class BettingPoolPrizesCommission
     [Column("lottery_id")]
     public int? LotteryId { get; set; }
 
+    /// <summary>
+    /// Optional draw-level override. NULL = applies to all draws of the lottery.
+    /// Lookup priority: (banca, draw) → (banca, lottery) → (banca, NULL).
+    /// </summary>
+    [Column("draw_id")]
+    public int? DrawId { get; set; }
+
     [Required]
     [MaxLength(50)]
     [Column("game_type")]
@@ -78,4 +85,7 @@ public class BettingPoolPrizesCommission
 
     [ForeignKey("LotteryId")]
     public virtual Lottery? Lottery { get; set; }
+
+    [ForeignKey("DrawId")]
+    public virtual Draw? Draw { get; set; }
 }

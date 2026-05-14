@@ -497,7 +497,8 @@ public class LotteryHub : Hub<ILotteryHubClient>
         var finalAvailable = Math.Max(0, minAvailable);
         var finalPercentage = reportLimitAmount > 0 ? ((reportLimitAmount - finalAvailable) / reportLimitAmount) * 100 : 0;
 
-        // Check if the number is globally blocked
+        // Check if the number is blocked. A block applies if it has no zone (global)
+        // or if its zone matches the banca's zone (scoped block by an admin of that zone).
         var nowUtc = DateTime.UtcNow;
         var isNumberBlocked = await _context.BlockedNumbers
             .AsNoTracking()
@@ -505,6 +506,7 @@ public class LotteryHub : Hub<ILotteryHubClient>
                 && b.DrawId == drawId
                 && b.GameTypeId == gameTypeId
                 && b.BetNumber == betNumber
+                && (b.ZoneId == null || b.ZoneId == zoneId)
                 && (b.ExpirationDate == null || b.ExpirationDate > nowUtc));
 
         if (isNumberBlocked && !blocked)
