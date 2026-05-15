@@ -60,21 +60,9 @@ public class ZonesController : ControllerBase
 
         try
         {
-            // Zone scope: scoped admin only sees their assigned zones.
-            // Cache key includes the scope to avoid leaking across users.
+            // Cache disabled — list is small and writes (create/update/delete) need to
+            // be immediately visible after the redirect from the form page.
             var allowedZones = await _zoneScope.GetAllowedZoneIdsAsync();
-            var scopeKey = allowedZones == null
-                ? "all"
-                : string.Join(",", allowedZones.OrderBy(z => z));
-            var cacheKey = $"zones:p{page}:ps{pageSize}:s{search ?? ""}:c{countryId}:a{isActive}:scope{scopeKey}";
-
-            // Try to get from cache
-            var cached = await _cache.GetAsync<PagedResponse<ZoneDto>>(cacheKey);
-            if (cached != null)
-            {
-                _logger.LogDebug("Zones retrieved from cache: {CacheKey}", cacheKey);
-                return Ok(cached);
-            }
 
             var query = _context.Zones
                 .Include(z => z.Country)
@@ -128,9 +116,6 @@ public class ZonesController : ControllerBase
                 PageSize = pageSize,
                 TotalCount = totalCount
             };
-
-            // Store in cache
-            await _cache.SetAsync(cacheKey, result, ZONES_CACHE_TTL);
 
             return Ok(result);
         }
