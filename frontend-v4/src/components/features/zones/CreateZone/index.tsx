@@ -156,12 +156,12 @@ const CreateZoneMUI = (): React.ReactElement => {
                     name="name"
                     placeholder="Nombre"
                     value={zoneName}
-                    onChange={(e: ChangeEvent<HTMLInputElement>) => setZoneName(e.target.value)}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => setZoneName(e.target.value.toUpperCase())}
                     autoFocus
                     fullWidth
                     className="form-field-custom"
                     sx={{
-                      '& .MuiInputBase-input': { fontFamily: 'Montserrat, "Helvetica Neue", Arial, sans-serif', fontSize: '14px', padding: '10px', color: 'rgb(102, 97, 91)' },
+                      '& .MuiInputBase-input': { fontFamily: 'Montserrat, "Helvetica Neue", Arial, sans-serif', fontSize: '14px', padding: '10px', color: 'rgb(102, 97, 91)', textTransform: 'uppercase' },
                       '& .MuiOutlinedInput-root': { borderRadius: '4px', '& fieldset': { borderColor: 'rgb(221, 221, 221)', borderWidth: '1.15px' }, '&:hover fieldset': { borderColor: 'rgb(180, 180, 180)' }, '&.Mui-focused fieldset': { borderColor: 'rgb(81, 188, 218)' } },
                     }}
                   />

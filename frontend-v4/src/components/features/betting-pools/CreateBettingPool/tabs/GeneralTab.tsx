@@ -51,6 +51,17 @@ interface GeneralTabProps {
 }
 
 const GeneralTab: React.FC<GeneralTabProps> = ({ formData, errors, zones, loadingZones, handleChange, isEditMode = false }) => {
+  // Force-uppercase wrapper for free-text fields like Ubicación/Referencia —
+  // the stored value is uppercase regardless of the user's caps lock.
+  const handleUppercaseChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const upper = e.target.value.toUpperCase();
+    handleChange({
+      ...e,
+      target: { ...e.target, name: e.target.name, value: upper },
+    } as ChangeEvent<HTMLInputElement>);
+  };
+  const upperInputSx = { '& input': { textTransform: 'uppercase' as const } };
+
   return (
     <Box sx={{ p: 2 }}>
       {/* Hidden fields to trap browser autocomplete */}
@@ -103,10 +114,11 @@ const GeneralTab: React.FC<GeneralTabProps> = ({ formData, errors, zones, loadin
                 name="username"
                 placeholder="Usuario"
                 value={formData.username}
-                onChange={handleChange}
+                onChange={handleUppercaseChange}
                 error={!!errors.username}
                 helperText={errors.username}
                 autoComplete="off"
+                sx={upperInputSx}
               />
             </Grid>
             <Grid item xs={12} md={6}>
@@ -116,7 +128,8 @@ const GeneralTab: React.FC<GeneralTabProps> = ({ formData, errors, zones, loadin
                 label="Ubicación"
                 name="location"
                 value={formData.location}
-                onChange={handleChange}
+                onChange={handleUppercaseChange}
+                sx={upperInputSx}
               />
             </Grid>
           </>
@@ -129,7 +142,8 @@ const GeneralTab: React.FC<GeneralTabProps> = ({ formData, errors, zones, loadin
                 label="Ubicación"
                 name="location"
                 value={formData.location}
-                onChange={handleChange}
+                onChange={handleUppercaseChange}
+                sx={upperInputSx}
               />
             </Grid>
             <Grid item xs={12} md={6}>
@@ -139,7 +153,8 @@ const GeneralTab: React.FC<GeneralTabProps> = ({ formData, errors, zones, loadin
                 label="Referencia"
                 name="reference"
                 value={formData.reference}
-                onChange={handleChange}
+                onChange={handleUppercaseChange}
+                sx={upperInputSx}
               />
             </Grid>
           </>
@@ -170,7 +185,8 @@ const GeneralTab: React.FC<GeneralTabProps> = ({ formData, errors, zones, loadin
                 label="Referencia"
                 name="reference"
                 value={formData.reference}
-                onChange={handleChange}
+                onChange={handleUppercaseChange}
+                sx={upperInputSx}
               />
             </Grid>
           </>

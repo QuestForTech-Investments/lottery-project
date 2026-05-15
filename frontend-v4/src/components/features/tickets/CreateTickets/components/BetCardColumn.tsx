@@ -8,7 +8,7 @@ import type { Bet, ColumnType } from '../types';
  * Handles all 21 game type suffixes:
  * - s (straight), b (box), fs (front straight), fb (front box),
  *   bs (back straight), bb (back box), f (pick2 front),
- *   bk (pick2 back), m (pick2 middle)
+ *   bk (pick2 back), m1/m2/m3 (pick2 middle positions)
  * - Plain multi-digit numbers: dash-separated pairs (pale/tripleta)
  */
 const formatBetNumber = (number: string): string => {
@@ -17,8 +17,8 @@ const formatBetNumber = (number: string): string => {
   const str = String(number);
 
   // Match known suffixes (longest first to avoid partial matches)
-  // s1-s3 = singulacion, b1-b2 = bolita, fs/fb/bs/bb/bk = cash3/pick2 variants
-  const suffixMatch = str.match(/(fs|fb|bs|bb|bk|s[123]|b[12]|[sbfm])$/);
+  // s1-s3 = singulacion, b1-b2 = bolita, m1-m3 = pick2 middle, fs/fb/bs/bb/bk = cash3/pick2 variants
+  const suffixMatch = str.match(/(fs|fb|bs|bb|bk|s[123]|b[12]|m[123]|[sbfm])$/);
   if (suffixMatch) {
     const suffix = suffixMatch[1];
     const digits = str.slice(0, str.length - suffix.length);
@@ -89,7 +89,7 @@ const BetCardColumn: React.FC<BetCardColumnProps> = memo(({
         </IconButton>
       </Box>
     </Box>
-    <Box sx={{ minHeight: 200, maxHeight: 300, overflowY: 'auto', bgcolor: 'white' }}>
+    <Box sx={{ height: 300, overflowY: 'auto', bgcolor: 'white' }}>
       {bets.slice().reverse().map((bet) => (
         <Box key={bet.id} sx={{
           display: 'grid',

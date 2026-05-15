@@ -392,7 +392,7 @@ const BancasListMUI: React.FC = () => {
                               {pool.users.map((user, idx) => (
                                 <Chip
                                   key={idx}
-                                  label={user}
+                                  label={user.toUpperCase()}
                                   size="small"
                                   onClick={() => setConfirmTarget({ poolId: pool.id, username: user })}
                                   icon={<KeyIcon />}
@@ -499,7 +499,7 @@ const BancasListMUI: React.FC = () => {
       <ConfirmActionDialog
         isOpen={!!confirmTarget}
         title="Generar clave temporal"
-        message={`Se generará una nueva clave de 6 dígitos para el usuario "${confirmTarget?.username}". El usuario deberá cambiarla al iniciar sesión y la actual dejará de funcionar.`}
+        message={`Se generará una nueva clave de 6 dígitos para el usuario "${confirmTarget?.username.toUpperCase() ?? ''}". El usuario deberá cambiarla al iniciar sesión y la actual dejará de funcionar.`}
         confirmLabel="Generar"
         severity="warning"
         loading={generatingPassword}
@@ -509,7 +509,7 @@ const BancasListMUI: React.FC = () => {
 
       <TempCredentialDialog
         isOpen={tempDialog.open}
-        username={tempDialog.username}
+        username={tempDialog.username.toUpperCase()}
         password={tempDialog.password}
         onClose={() => setTempDialog({ open: false, username: '', password: '' })}
       />

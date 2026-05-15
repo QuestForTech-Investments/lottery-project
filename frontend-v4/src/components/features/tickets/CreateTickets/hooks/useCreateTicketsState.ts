@@ -99,9 +99,24 @@ interface UseCreateTicketsStateReturn {
 
   // Limits
   limitAvailable: number | null; // null = not checked, -1 = unlimited, 0+ = amount
+  // True while a limit-availability response is in flight — used to block adds.
+  limitChecking: boolean;
   signalRConnected: boolean;
   handleBetNumberBlur: () => void;
   playStats: { playCount: number; soldInGroup: number; soldInPool: number } | null;
+  // True when the current input is a compound-play command (e.g. "25.") that
+  // skips limit checks and expands into multiple bets on add.
+  isCompoundPlay: boolean;
+  // Convert plays modal (triggered by "+" on empty input)
+  convertModalOpen: boolean;
+  setConvertModalOpen: (open: boolean) => void;
+  handleConvertPlays: (result: {
+    target: 'directo' | 'pale' | 'tripleta';
+    gameTypeId: number;
+    amount: number;
+    combos: string[];
+  }) => void;
+  selectedDrawGameTypes: number[];
 
   // Handlers
   handleDrawClick: (draw: Draw) => void;
@@ -155,9 +170,21 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
 
   // Limit state
   const [limitAvailable, setLimitAvailable] = useState<number | null>(null);
+  // True while waiting for the server's limit-availability response. Blocks the
+  // add button so the user can't bypass the check by adding faster than the
+  // round-trip.
+  const [limitChecking, setLimitChecking] = useState<boolean>(false);
   const [playStats, setPlayStats] = useState<{ playCount: number; soldInGroup: number; soldInPool: number } | null>(null);
   const recheckLimitRef = useRef<(() => void) | null>(null);
   const { connected: signalRConnected, checkPlayLimit, getPlayStats, reservePlay, releaseReservation, onLimitAvailability, onPlayReserved, onPlayStats } = useSignalR();
+
+  // "Convert plays" modal — opens when user types "+" on an empty bet input.
+  const [convertModalOpen, setConvertModalOpen] = useState<boolean>(false);
+  // Resolved allowed game-type ids for the draw currently in focus.
+  const selectedDrawGameTypes = useMemo<number[]>(
+    () => selectedDraw ? (drawGameTypes.get(selectedDraw.id) || []) : [],
+    [selectedDraw, drawGameTypes],
+  );
 
   // Map of betId -> reservationId for releasing on delete
   const reservationMapRef = useRef<Map<number, string>>(new Map());
@@ -167,6 +194,8 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
   // Register SignalR callbacks
   useEffect(() => {
     onLimitAvailability((data: LimitAvailability) => {
+      // Response arrived — the add button can re-enable.
+      setLimitChecking(false);
       setLimitAvailable(prev => {
         if (prev === null) return data.availableAmount;
         if (data.availableAmount === -1) return prev === -1 ? -1 : prev;
@@ -436,9 +465,10 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
 
     const gameTypesArray = Array.from(allGameTypes);
     return {
-      directo: gameTypesArray.some(gt => gt === 1 || (gt >= 15 && gt <= 18) || gt === 19 || gt === 20 || gt === 21) || directBets.length > 0,
+      // Pick2 (15-18) moved to the cash3 column — they share "PICK2 / PICK3".
+      directo: gameTypesArray.some(gt => gt === 1 || gt === 19 || gt === 20 || gt === 21) || directBets.length > 0,
       pale: gameTypesArray.some(gt => gt === 2 || gt === 3 || gt === 14) || paleBets.length > 0,
-      cash3: gameTypesArray.some(gt => gt >= 4 && gt <= 9) || cash3Bets.length > 0,
+      cash3: gameTypesArray.some(gt => (gt >= 4 && gt <= 9) || (gt >= 15 && gt <= 18)) || cash3Bets.length > 0,
       play4: gameTypesArray.some(gt => gt >= 10 && gt <= 13) || play4Bets.length > 0,
     };
   }, [selectedDraw?.id, selectedDraws, multiLotteryMode, drawGameTypes, directBets.length, paleBets.length, cash3Bets.length, play4Bets.length]);
@@ -547,6 +577,7 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
       if (pos != null) {
         if (gtId === 20) suffix = `s${pos}`;     // Singulacion: 5s1, 5s2, 5s3
         else if (gtId === 19) suffix = `b${pos}`; // Bolita: 12b1, 12b2
+        else if (gtId === 18) suffix = `m${pos}`; // Pick2 Middle: 25m1, 25m2, 25m3
       }
       return {
         gameTypeId: gtId,
@@ -572,9 +603,9 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
     match = trimmed.match(/^(\d{2})\+([12])$/);
     if (match) return buildResult(19, match[1], parseInt(match[2]));
 
-    // 4. Pick2 Middle: 2digits-3 (e.g. 12-3)
-    match = trimmed.match(/^(\d{2})-3$/);
-    if (match) return buildResult(18, match[1]);
+    // 4. Pick2 Middle: 2digits-position (1, 2, or 3) (e.g. 25-1, 25-2, 25-3)
+    match = trimmed.match(/^(\d{2})-([123])$/);
+    if (match) return buildResult(18, match[1], parseInt(match[2]));
 
     // 5. Pick2 Front: 2digits + f (e.g. 12f)
     match = trimmed.match(/^(\d{2})[fF]$/);
@@ -612,8 +643,8 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
     match = trimmed.match(/^(\d{5})-$/);
     if (match) return buildResult(12, match[1]);
 
-    // 14. Pick5 Box: 5digits+ (e.g. 12345+)
-    match = trimmed.match(/^(\d{5})\+$/);
+    // 14. Pick5 Box: 5digits + or . (e.g. 12345+, 12345.)
+    match = trimmed.match(/^(\d{5})[+.]$/);
     if (match) return buildResult(13, match[1]);
 
     // 15. Play4 Straight / Panama: 4digits- (ambiguous: 10 vs 21)
@@ -652,6 +683,244 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
     return null;
   }, [getDropdownGameTypeId]);
 
+  /**
+   * Compound plays — one input expands into multiple bets. They skip the
+   * client-side limit check; the backend decides whether each generated bet is
+   * valid. The UI shows an "X" in the limit field while the user types one.
+   *
+   * Patterns:
+   *   "XY."  →  Directo "XY" + reverse "YX" (skipped if XY == YX)
+   */
+  type CompoundItem = { cleanNumber: string; gameTypeId: number; displaySuffix: string };
+  const detectCompoundPlay = useCallback((
+    input: string,
+    allowedGameTypes: number[],
+  ): CompoundItem[] | null => {
+    const trimmed = input.trim();
+    if (!trimmed) return null;
+
+    const allowed = new Set(allowedGameTypes);
+    const pick = (candidates: number[], fallback: number): number => {
+      if (allowed.size === 0) return fallback;
+      const valid = candidates.filter(id => allowed.has(id));
+      return valid.length > 0 ? valid[0] : fallback;
+    };
+
+    // "XY." → Directo + Directo reverso. Works for Directo (1) or Pick2 (15).
+    {
+      const m = trimmed.match(/^(\d)(\d)\.$/);
+      if (m) {
+        const [, a, b] = m;
+        const gtId = pick([1, 15], 1);
+        const items: CompoundItem[] = [{ cleanNumber: a + b, gameTypeId: gtId, displaySuffix: '' }];
+        if (a !== b) items.push({ cleanNumber: b + a, gameTypeId: gtId, displaySuffix: '' });
+        return items;
+      }
+    }
+
+    // "XXdYY" (rundown) → all doubles between XX and YY, inclusive. Both endpoints
+    // must be doubles themselves (00, 11, 22, …, 99). Direction-agnostic: 33d00
+    // works the same as 00d33. Generates Directo (1) or Pick2 (15) plays.
+    {
+      const m = trimmed.match(/^(\d)\1[dD](\d)\2$/);
+      if (m) {
+        const lo = Math.min(parseInt(m[1]), parseInt(m[2]));
+        const hi = Math.max(parseInt(m[1]), parseInt(m[2]));
+        const gtId = pick([1, 15], 1);
+        const items: CompoundItem[] = [];
+        for (let d = lo; d <= hi; d++) {
+          items.push({ cleanNumber: `${d}${d}`, gameTypeId: gtId, displaySuffix: '' });
+        }
+        return items;
+      }
+    }
+
+    // "ABCD." → Pale with each 2-digit pair independently reversed (2^2 = 4 combos).
+    // Example: 1234. → 12-34, 21-34, 12-43, 21-43. Duplicates from palindromes (e.g. 11)
+    // are removed so 1122. only produces 11-22.
+    {
+      const m = trimmed.match(/^(\d{2})(\d{2})\.$/);
+      if (m) {
+        const [, p1, p2] = m;
+        const p1s = p1[0] === p1[1] ? [p1] : [p1, p1[1] + p1[0]];
+        const p2s = p2[0] === p2[1] ? [p2] : [p2, p2[1] + p2[0]];
+        const seen = new Set<string>();
+        const items: CompoundItem[] = [];
+        for (const a of p1s) for (const b of p2s) {
+          const num = a + b;
+          if (seen.has(num)) continue;
+          seen.add(num);
+          items.push({ cleanNumber: num, gameTypeId: 2, displaySuffix: '' });
+        }
+        return items;
+      }
+    }
+
+    // "ABCDEF." → Tripleta with each 2-digit pair independently reversed (2^3 = 8 combos).
+    // Example: 123456. → 12-34-56, 21-34-56, 12-43-56, ..., 21-43-65 (dedup palindromes).
+    {
+      const m = trimmed.match(/^(\d{2})(\d{2})(\d{2})\.$/);
+      if (m) {
+        const [, p1, p2, p3] = m;
+        const variants = (p: string) => p[0] === p[1] ? [p] : [p, p[1] + p[0]];
+        const p1s = variants(p1);
+        const p2s = variants(p2);
+        const p3s = variants(p3);
+        const seen = new Set<string>();
+        const items: CompoundItem[] = [];
+        for (const a of p1s) for (const b of p2s) for (const c of p3s) {
+          const num = a + b + c;
+          if (seen.has(num)) continue;
+          seen.add(num);
+          items.push({ cleanNumber: num, gameTypeId: 3, displaySuffix: '' });
+        }
+        return items;
+      }
+    }
+
+    // ─── Cash 3 / Pick 3 compound commands ──────────────────────────────────
+    // All produce Cash3 Straight (gtId 4) plays. Each generated bet's display
+    // gets the standard 's' suffix from GAME_TYPES[4].
+
+    // "ABCq" → all 6 permutations of the 3 digits (deduped for repeated digits).
+    // e.g. 123Q → 123, 132, 213, 231, 312, 321. 112Q → 112, 121, 211. 111Q → 111.
+    {
+      const m = trimmed.match(/^(\d)(\d)(\d)[qQ]$/);
+      if (m) {
+        const [, a, b, c] = m;
+        const perms = [a + b + c, a + c + b, b + a + c, b + c + a, c + a + b, c + b + a];
+        const seen = new Set<string>();
+        const items: CompoundItem[] = [];
+        for (const p of perms) {
+          if (seen.has(p)) continue;
+          seen.add(p);
+          items.push({ cleanNumber: p, gameTypeId: 4, displaySuffix: 's' });
+        }
+        return items;
+      }
+    }
+
+    // "ABC+DEF" → numeric range from min to max, inclusive. Caps at 100 plays
+    // to avoid accidentally generating huge sequences.
+    {
+      const m = trimmed.match(/^(\d{3})\+(\d{3})$/);
+      if (m) {
+        const start = parseInt(m[1]);
+        const end = parseInt(m[2]);
+        const lo = Math.min(start, end);
+        const hi = Math.max(start, end);
+        if (hi - lo + 1 > 100) return null;
+        const items: CompoundItem[] = [];
+        for (let n = lo; n <= hi; n++) {
+          items.push({ cleanNumber: n.toString().padStart(3, '0'), gameTypeId: 4, displaySuffix: 's' });
+        }
+        return items;
+      }
+    }
+
+    // "ABC-10" / "-20" / "-30" → vary one digit position across its full range:
+    //   -10 → first digit 1-9 (skips 0, since 0XX collapses to a 2-digit number)
+    //   -20 → middle digit 0-9
+    //   -30 → last digit 0-9
+    {
+      const m = trimmed.match(/^(\d)(\d)(\d)-([123])0$/);
+      if (m) {
+        const [, d1, d2, d3, modeStr] = m;
+        const items: CompoundItem[] = [];
+        if (modeStr === '1') {
+          for (let i = 1; i <= 9; i++) items.push({ cleanNumber: `${i}${d2}${d3}`, gameTypeId: 4, displaySuffix: 's' });
+        } else if (modeStr === '2') {
+          for (let i = 0; i <= 9; i++) items.push({ cleanNumber: `${d1}${i}${d3}`, gameTypeId: 4, displaySuffix: 's' });
+        } else {
+          for (let i = 0; i <= 9; i++) items.push({ cleanNumber: `${d1}${d2}${i}`, gameTypeId: 4, displaySuffix: 's' });
+        }
+        return items;
+      }
+    }
+
+    // "AAAdBBB" → rundown of triples (000, 111, 222, …, 999). Both endpoints
+    // must be triples themselves. Direction-agnostic.
+    {
+      const m = trimmed.match(/^(\d)\1\1[dD](\d)\2\2$/);
+      if (m) {
+        const lo = Math.min(parseInt(m[1]), parseInt(m[2]));
+        const hi = Math.max(parseInt(m[1]), parseInt(m[2]));
+        const items: CompoundItem[] = [];
+        for (let d = lo; d <= hi; d++) {
+          items.push({ cleanNumber: `${d}${d}${d}`, gameTypeId: 4, displaySuffix: 's' });
+        }
+        return items;
+      }
+    }
+
+    // ─── Play 4 compound commands ──────────────────────────────────────────
+    // Generate Play4 Straight (gtId 10) plays. Display suffix follows GAME_TYPES[10] = 's'.
+
+    // "ABCDq" → all permutations of the 4 digits, deduped (max 24, fewer with repeated digits).
+    {
+      const m = trimmed.match(/^(\d)(\d)(\d)(\d)[qQ]$/);
+      if (m) {
+        const digits = [m[1], m[2], m[3], m[4]];
+        const perms: string[] = [];
+        const used = [false, false, false, false];
+        const buf: string[] = [];
+        const walk = () => {
+          if (buf.length === 4) { perms.push(buf.join('')); return; }
+          for (let i = 0; i < 4; i++) {
+            if (used[i]) continue;
+            used[i] = true;
+            buf.push(digits[i]);
+            walk();
+            buf.pop();
+            used[i] = false;
+          }
+        };
+        walk();
+        const seen = new Set<string>();
+        const items: CompoundItem[] = [];
+        for (const p of perms) {
+          if (seen.has(p)) continue;
+          seen.add(p);
+          items.push({ cleanNumber: p, gameTypeId: 10, displaySuffix: 's' });
+        }
+        return items;
+      }
+    }
+
+    // "AAAAdN" → rundown of quads (0000, 1111, …, 9999). The 4-digit side must
+    // be a quad; the right side is a single digit that maps to NNNN.
+    // Example: 1111D9 → 1111, 2222, …, 9999 (9 plays). Direction-agnostic.
+    {
+      const m = trimmed.match(/^(\d)\1{3}[dD](\d)$/);
+      if (m) {
+        const lo = Math.min(parseInt(m[1]), parseInt(m[2]));
+        const hi = Math.max(parseInt(m[1]), parseInt(m[2]));
+        const items: CompoundItem[] = [];
+        for (let d = lo; d <= hi; d++) {
+          items.push({ cleanNumber: `${d}${d}${d}${d}`, gameTypeId: 10, displaySuffix: 's' });
+        }
+        return items;
+      }
+    }
+
+    return null;
+  }, []);
+
+  // True when the current input matches a compound-play pattern.
+  const isCompoundPlay = useMemo(() => {
+    const allowedGameTypes = selectedDraw ? (drawGameTypes.get(selectedDraw.id) || []) : [];
+    return detectCompoundPlay(betNumber, allowedGameTypes) !== null;
+  }, [betNumber, selectedDraw, drawGameTypes, detectCompoundPlay]);
+
+  // The moment the input becomes a compound command (e.g. user just typed the
+  // trailing "."), jump straight to the amount field. Skips having to Tab.
+  useEffect(() => {
+    if (isCompoundPlay) {
+      amountInputRef.current?.focus();
+      amountInputRef.current?.select();
+    }
+  }, [isCompoundPlay]);
+
   const handleAddBet = useCallback((): void => {
     const drawsToPlay = multiLotteryMode && selectedDraws.length > 0
       ? selectedDraws
@@ -671,6 +940,84 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
     const totalAmount = isSplitAmount ? numericAmount + boxAmount : numericAmount;
     if (totalAmount <= 0) {
       setBetError('El monto no puede ser 0');
+      setTimeout(() => amountInputRef.current?.focus(), 100);
+      return;
+    }
+
+    // Compound play branch — expands the input into multiple bets and pushes
+    // them directly to the matching column, skipping the limit-availability
+    // check entirely. The backend validates each generated bet at create time.
+    {
+      const firstDrawId = drawsToPlay[0].id;
+      const allowedForFirst = drawGameTypes.get(firstDrawId) || [];
+      const compoundItems = detectCompoundPlay(betNumber, allowedForFirst);
+      if (compoundItems) {
+        const newDirectBetsC: Bet[] = [];
+        const newPaleBetsC: Bet[] = [];
+        const newCash3BetsC: Bet[] = [];
+        const newPlay4BetsC: Bet[] = [];
+        const pushC = (bet: Bet, column: ColumnType) => {
+          switch (column) {
+            case 'directo': newDirectBetsC.push(bet); break;
+            case 'pale':    newPaleBetsC.push(bet); break;
+            case 'cash3':   newCash3BetsC.push(bet); break;
+            case 'play4':   newPlay4BetsC.push(bet); break;
+          }
+        };
+        let idC = Date.now();
+        for (const draw of drawsToPlay) {
+          const allowed = drawGameTypes.get(draw.id) || [];
+          for (const item of compoundItems) {
+            // Per-draw filter: if the draw restricts game types, honor it.
+            if (allowed.length > 0 && !allowed.includes(item.gameTypeId)) continue;
+            const cfg = GAME_TYPES[item.gameTypeId];
+            pushC({
+              id: idC++,
+              drawName: draw.name,
+              drawAbbr: draw.abbreviation || draw.name,
+              drawId: draw.id,
+              betNumber: item.cleanNumber + item.displaySuffix,
+              cleanNumber: item.cleanNumber,
+              betAmount: numericAmount,
+              selectedBetType: selectedBetType || '',
+              gameTypeId: item.gameTypeId,
+            }, cfg.column);
+          }
+        }
+
+        if (newDirectBetsC.length > 0) setDirectBets(prev => [...prev, ...newDirectBetsC]);
+        if (newPaleBetsC.length > 0)   setPaleBets(prev => [...prev, ...newPaleBetsC]);
+        if (newCash3BetsC.length > 0)  setCash3Bets(prev => [...prev, ...newCash3BetsC]);
+        if (newPlay4BetsC.length > 0)  setPlay4Bets(prev => [...prev, ...newPlay4BetsC]);
+
+        // Reserve limit capacity for each generated bet (same flow as a normal
+        // add). The backend gates each one individually — compound plays just
+        // skip the client-side pre-check, not the server-side reservation.
+        if (selectedPool) {
+          const allNewCompound = [...newDirectBetsC, ...newPaleBetsC, ...newCash3BetsC, ...newPlay4BetsC];
+          allNewCompound.forEach(bet => {
+            if (bet.gameTypeId && bet.drawId) {
+              const key = `${bet.drawId}-${bet.gameTypeId}`;
+              pendingReservationsRef.current.set(key, bet.id);
+              reservePlay(bet.drawId, bet.gameTypeId, selectedPool.bettingPoolId, bet.betAmount, bet.cleanNumber || bet.betNumber.replace(/[^0-9]/g, ''));
+            }
+          });
+        }
+
+        setBetError('');
+        setBetWarning('');
+        setLimitAvailable(null);
+        setPlayStats(null);
+        setBetNumber('');
+        setTimeout(() => betNumberInputRef.current?.focus(), 0);
+        return;
+      }
+    }
+
+    // Wait for the in-flight limit-availability response before allowing the
+    // bet down. Otherwise a fast typer could bypass the check.
+    if (limitChecking) {
+      setBetError('Esperando disponibilidad...');
       setTimeout(() => amountInputRef.current?.focus(), 100);
       return;
     }
@@ -833,7 +1180,57 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
     setPlayStats(null);
     setBetNumber('');
     setTimeout(() => betNumberInputRef.current?.focus(), 0);
-  }, [multiLotteryMode, selectedDraws, selectedDraw, betNumber, amount, selectedBetType, drawGameTypes, determineBetType, allowSplitAmount, selectedPool, reservePlay]);
+  }, [multiLotteryMode, selectedDraws, selectedDraw, betNumber, amount, selectedBetType, drawGameTypes, determineBetType, detectCompoundPlay, allowSplitAmount, selectedPool, reservePlay, limitAvailable, limitChecking]);
+
+  /**
+   * Convert existing Quiniela/Palé/Tripleta plays into new combinations with a
+   * single shared amount. Triggered from the "Convertir jugadas" modal.
+   * Bets are added on top of existing ones — nothing is removed.
+   */
+  const handleConvertPlays = useCallback((result: {
+    target: 'directo' | 'pale' | 'tripleta';
+    gameTypeId: number;
+    amount: number;
+    combos: string[];
+  }): void => {
+    if (!selectedDraw || result.combos.length === 0 || result.amount <= 0) return;
+
+    const draw = selectedDraw;
+    const cfg = GAME_TYPES[result.gameTypeId];
+    if (!cfg) return;
+
+    const newBets: Bet[] = result.combos.map((clean, idx) => ({
+      id: Date.now() + idx,
+      drawName: draw.name,
+      drawAbbr: draw.abbreviation || draw.name,
+      drawId: draw.id,
+      betNumber: clean + cfg.displaySuffix,
+      cleanNumber: clean,
+      betAmount: result.amount,
+      selectedBetType: '',
+      gameTypeId: result.gameTypeId,
+    }));
+
+    switch (cfg.column) {
+      case 'directo': setDirectBets(prev => [...prev, ...newBets]); break;
+      case 'pale':    setPaleBets(prev => [...prev, ...newBets]); break;
+      case 'cash3':   setCash3Bets(prev => [...prev, ...newBets]); break;
+      case 'play4':   setPlay4Bets(prev => [...prev, ...newBets]); break;
+    }
+
+    // Reserve capacity for each generated bet (same flow as a normal add)
+    if (selectedPool) {
+      newBets.forEach(bet => {
+        if (bet.gameTypeId && bet.drawId) {
+          const key = `${bet.drawId}-${bet.gameTypeId}`;
+          pendingReservationsRef.current.set(key, bet.id);
+          reservePlay(bet.drawId, bet.gameTypeId, selectedPool.bettingPoolId, bet.betAmount, bet.cleanNumber);
+        }
+      });
+    }
+
+    setTimeout(() => betNumberInputRef.current?.focus(), 0);
+  }, [selectedDraw, selectedPool, reservePlay]);
 
   // Release reservations for a bet
   const releaseBetReservation = useCallback((bet: Bet): void => {
@@ -972,6 +1369,15 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
       return;
     }
 
+    // Compound plays don't check limits — the backend validates each generated
+    // bet individually at create time. The UI shows "X" in the middle field.
+    const allowedGameTypesEarly = selectedDraw ? (drawGameTypes.get(selectedDraw.id) || []) : [];
+    if (detectCompoundPlay(betNumber, allowedGameTypesEarly)) {
+      setLimitAvailable(null);
+      setPlayStats(null);
+      return;
+    }
+
     const drawsToCheck = multiLotteryMode && selectedDraws.length > 0
       ? selectedDraws
       : selectedDraw ? [selectedDraw] : [];
@@ -994,18 +1400,20 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
     // Reset and check each draw
     setLimitAvailable(null);
     setPlayStats(null);
+    setLimitChecking(true);
     const firstDraw = drawsToCheck[0];
     for (const draw of drawsToCheck) {
       checkPlayLimit(betNumber.trim(), detection.gameTypeId, draw.id, selectedPool.bettingPoolId);
     }
     // Get play stats for the first draw
     getPlayStats(betNumber.trim(), detection.gameTypeId, firstDraw.id, selectedPool.bettingPoolId);
-  }, [betNumber, selectedPool, multiLotteryMode, selectedDraws, selectedDraw, selectedBetType, drawGameTypes, determineBetType, checkPlayLimit, getPlayStats]);
+  }, [betNumber, selectedPool, multiLotteryMode, selectedDraws, selectedDraw, selectedBetType, drawGameTypes, determineBetType, detectCompoundPlay, checkPlayLimit, getPlayStats]);
 
-  // Clear warnings/errors instantly when bet number changes
+  // Clear warnings/errors and stale limit-check status when bet number changes
   useEffect(() => {
     setBetWarning('');
     setBetError('');
+    setLimitChecking(false);
   }, [betNumber]);
 
   // Keep ref in sync for use by delete handlers
@@ -1123,9 +1531,16 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
     cancelMinutes,
     allowSplitAmount,
     limitAvailable,
+    limitChecking,
     signalRConnected,
     handleBetNumberBlur,
     playStats,
+    isCompoundPlay,
+    // Convert plays modal
+    convertModalOpen,
+    setConvertModalOpen,
+    handleConvertPlays,
+    selectedDrawGameTypes,
   };
 };
 

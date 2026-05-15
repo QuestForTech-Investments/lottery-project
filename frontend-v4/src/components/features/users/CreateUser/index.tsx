@@ -167,7 +167,7 @@ const CreateUserMUI = () => {
             </Typography>
 
             <Grid container spacing={3}>
-              {/* Username */}
+              {/* Username — stored in uppercase regardless of input casing */}
               <Grid item xs={12} md={6}>
                 <TextField
                   fullWidth
@@ -175,13 +175,20 @@ const CreateUserMUI = () => {
                   label="Nombre de Usuario"
                   name="username"
                   value={formData.username}
-                  onChange={handleChange}
+                  onChange={(e) => {
+                    const upper = e.target.value.toUpperCase();
+                    handleChange({
+                      ...e,
+                      target: { ...e.target, name: 'username', value: upper },
+                    } as React.ChangeEvent<HTMLInputElement>);
+                  }}
                   error={!!errors.username}
                   helperText={errors.username || 'Mínimo 3 caracteres'}
                   disabled={loading}
                   autoFocus
                   autoComplete="off"
                   placeholder="Ingrese el nombre de usuario"
+                  sx={{ '& input': { textTransform: 'uppercase' } }}
                 />
               </Grid>
 

@@ -21,7 +21,7 @@ import TicketPrinter from '../TicketPrinter';
 import { useCreateTicketsState } from './hooks/useCreateTicketsState';
 import { useUserPermissions } from '@hooks/useUserPermissions';
 import { COLUMN_COLORS, COLUMN_TITLES } from './constants';
-import { BetCardColumn, DrawsGrid, StatsRow, BetInputRow, TicketsDropdown } from './components';
+import { BetCardColumn, DrawsGrid, StatsRow, BetInputRow, TicketsDropdown, ConvertPlaysModal } from './components';
 import type { TicketDateMode } from './types';
 
 /**
@@ -91,9 +91,15 @@ const CreateTickets: React.FC = () => {
     cancelMinutes,
     allowSplitAmount,
     limitAvailable,
+    limitChecking,
     signalRConnected,
     handleBetNumberBlur,
     playStats,
+    isCompoundPlay,
+    convertModalOpen,
+    setConvertModalOpen,
+    handleConvertPlays,
+    selectedDrawGameTypes,
   } = useCreateTicketsState();
 
   const { hasPermission } = useUserPermissions();
@@ -178,7 +184,10 @@ const CreateTickets: React.FC = () => {
         onAmountKeyDown={handleAmountKeyDown}
         onBetNumberBlur={handleBetNumberBlur}
         limitAvailable={limitAvailable}
+        limitChecking={limitChecking}
+        compoundMode={isCompoundPlay}
         allowSplitAmount={allowSplitAmount}
+        onOpenConvertModal={() => setConvertModalOpen(true)}
         ticketsDropdown={<TicketsDropdown selectedPool={selectedPool} cancelMinutes={cancelMinutes} />}
       />
 
@@ -253,6 +262,15 @@ const CreateTickets: React.FC = () => {
 
       {/* Modals */}
       <HelpModal open={helpModalOpen} onClose={() => setHelpModalOpen(false)} />
+
+      <ConvertPlaysModal
+        open={convertModalOpen}
+        onClose={() => setConvertModalOpen(false)}
+        allBets={[...directBets, ...paleBets, ...cash3Bets, ...play4Bets]}
+        selectedDrawId={selectedDraw?.id ?? null}
+        allowedGameTypes={selectedDrawGameTypes}
+        onConvert={handleConvertPlays}
+      />
 
       <Dialog
         open={ticketModalOpen}

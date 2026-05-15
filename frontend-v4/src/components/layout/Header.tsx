@@ -422,6 +422,7 @@ const Header = ({ sidebarCollapsed, sidebarHovered, onToggleSidebar, isMobile = 
                   color: hoveredIcon === 'user' || openSettings ? 'primary.main' : 'text.primary',
                   fontWeight: 600,
                   fontSize: '13px',
+                  textTransform: 'uppercase',
                 }}
               >
                 {authService.getCurrentUser()?.username || 'Usuario'}

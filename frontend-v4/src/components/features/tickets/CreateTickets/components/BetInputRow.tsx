@@ -19,8 +19,18 @@ interface BetInputRowProps {
   onAmountKeyDown: (e: KeyboardEvent<HTMLInputElement>) => void;
   onBetNumberBlur?: () => void;
   limitAvailable?: number | null;
+  /** True while a limit-availability response is in flight. Blocks add. */
+  limitChecking?: boolean;
   ticketsDropdown?: ReactNode;
   allowSplitAmount?: boolean;
+  /**
+   * True when the current input is a compound-play command (e.g. "25.").
+   * Replaces the middle "limit" field with a neutral "X" — the backend handles
+   * validation per generated bet.
+   */
+  compoundMode?: boolean;
+  /** Opens the "Convertir jugadas" modal when "+" is typed on an empty input. */
+  onOpenConvertModal?: () => void;
 }
 
 const BetInputRow: React.FC<BetInputRowProps> = memo(({
@@ -40,8 +50,11 @@ const BetInputRow: React.FC<BetInputRowProps> = memo(({
   onAmountKeyDown,
   onBetNumberBlur,
   limitAvailable,
+  limitChecking = false,
   ticketsDropdown,
   allowSplitAmount = false,
+  compoundMode = false,
+  onOpenConvertModal,
 }) => {
   const handleAmountChange = (value: string) => {
     const pattern = allowSplitAmount
@@ -72,6 +85,17 @@ const BetInputRow: React.FC<BetInputRowProps> = memo(({
     middleBgColor = '#e65100';
     middleTextColor = '#fff';
     middleFontSize = '14px';
+  } else if (compoundMode) {
+    // Compound plays bypass the limit check — backend validates each bet.
+    middleText = 'X';
+    middleBgColor = '#f5f5f5';
+    middleTextColor = '#666';
+    middleFontSize = '28px';
+  } else if (limitChecking) {
+    middleText = 'Buscando...';
+    middleBgColor = '#fff8e1';
+    middleTextColor = '#8d6e00';
+    middleFontSize = '16px';
   } else if (hasLimit) {
     if (limitAvailable === -1) {
       middleText = 'Sin Límite';
@@ -97,7 +121,16 @@ const BetInputRow: React.FC<BetInputRowProps> = memo(({
       <TextField
         placeholder="JUGADA"
         value={betNumber}
-        onChange={(e) => onBetNumberChange(e.target.value)}
+        onChange={(e) => {
+          const next = e.target.value.toUpperCase();
+          // "+" on an empty input is the shortcut to open "Convertir jugadas".
+          // Anywhere else "+" is a real modifier (box, etc.).
+          if (next === '+' && betNumber === '' && onOpenConvertModal) {
+            onOpenConvertModal();
+            return;
+          }
+          onBetNumberChange(next);
+        }}
         onKeyDown={onBetNumberKeyDown}
         onBlur={onBetNumberBlur}
         disabled={!selectedDraw}
@@ -106,7 +139,7 @@ const BetInputRow: React.FC<BetInputRowProps> = memo(({
         inputProps={{ tabIndex: 1 }}
         sx={{
           flex: 1, bgcolor: 'white',
-          '& input': { fontSize: '24px', fontWeight: 'bold', textAlign: 'center', py: 2, color: '#333' },
+          '& input': { fontSize: '24px', fontWeight: 'bold', textAlign: 'center', py: 2, color: '#333', textTransform: 'uppercase' },
           '& input::placeholder': { color: '#999', opacity: 1 },
         }}
       />
@@ -150,9 +183,9 @@ const BetInputRow: React.FC<BetInputRowProps> = memo(({
       {ticketsDropdown}
       <IconButton
         onClick={onAddBet}
-        disabled={!betNumber || !amount || !selectedDraw}
+        disabled={!betNumber || !amount || !selectedDraw || limitChecking}
         sx={{ bgcolor: '#8b5cf6', color: 'white', '&:hover': { bgcolor: '#7c3aed' } }}
-        title="Agregar jugada (o presione Enter)"
+        title={limitChecking ? 'Esperando disponibilidad...' : 'Agregar jugada (o presione Enter)'}
       >
         ➕
       </IconButton>

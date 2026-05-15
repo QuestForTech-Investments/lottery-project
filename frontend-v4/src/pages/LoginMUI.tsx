@@ -1,4 +1,4 @@
-import { memo, type SyntheticEvent } from 'react';
+import { memo, useState, type SyntheticEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Box,
@@ -7,6 +7,7 @@ import {
   Button,
   Typography,
   InputAdornment,
+  IconButton,
   Link,
   CircularProgress,
   Alert,
@@ -16,6 +17,8 @@ import {
   Error as ErrorIcon,
   Person as PersonIcon,
   Lock as LockIcon,
+  Visibility as VisibilityIcon,
+  VisibilityOff as VisibilityOffIcon,
 } from '@mui/icons-material';
 import backgroundImage from '@/assets/images/login-background.jpg';
 import logoImage from '@/assets/images/lottobook-logo.png';
@@ -45,6 +48,12 @@ const LoginMUI = () => {
     onPasswordChanged,
     onPinSet,
   } = useLogin();
+
+  // Press-and-hold reveal for the password field. The button only flips the
+  // visibility while held — release reverts it.
+  const [showPassword, setShowPassword] = useState(false);
+  const showWhileHeld = () => setShowPassword(true);
+  const hideOnRelease = () => setShowPassword(false);
 
   const justChanged =
     typeof window !== 'undefined' &&
@@ -264,7 +273,7 @@ const LoginMUI = () => {
           <TextField
             fullWidth
             id="password"
-            type="password"
+            type={showPassword ? 'text' : 'password'}
             placeholder={t('login.password')}
             value={password}
             onChange={handlePasswordChange}
@@ -276,9 +285,30 @@ const LoginMUI = () => {
                   <LockIcon sx={{ color: '#94a3b8', fontSize: { xs: '1.1rem', sm: '1.3rem' } }} />
                 </InputAdornment>
               ),
-              endAdornment: errors.password && (
+              endAdornment: (
                 <InputAdornment position="end">
-                  <ErrorIcon color="error" sx={{ fontSize: '1.2rem' }} />
+                  {errors.password && (
+                    <ErrorIcon color="error" sx={{ fontSize: '1.2rem', mr: 0.5 }} />
+                  )}
+                  <IconButton
+                    aria-label="Mantener pulsado para mostrar la contraseña"
+                    size="small"
+                    tabIndex={-1}
+                    onMouseDown={showWhileHeld}
+                    onMouseUp={hideOnRelease}
+                    onMouseLeave={hideOnRelease}
+                    onTouchStart={showWhileHeld}
+                    onTouchEnd={hideOnRelease}
+                    onTouchCancel={hideOnRelease}
+                    onContextMenu={(e) => e.preventDefault()}
+                    sx={{ color: '#94a3b8', p: 0.5 }}
+                  >
+                    {showPassword ? (
+                      <VisibilityOffIcon sx={{ fontSize: '1.2rem' }} />
+                    ) : (
+                      <VisibilityIcon sx={{ fontSize: '1.2rem' }} />
+                    )}
+                  </IconButton>
                 </InputAdornment>
               ),
               sx: {

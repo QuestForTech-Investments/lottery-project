@@ -29,10 +29,12 @@ export const GAME_TYPES: Record<number, GameTypeConfig> = {
   12: { code: 'PICK5_STRAIGHT',    name: 'Pick5 Straight',       column: 'play4',   displaySuffix: 's' },
   13: { code: 'PICK5_BOX',         name: 'Pick5 Box',            column: 'play4',   displaySuffix: 'b' },
   14: { code: 'SUPER_PALE',        name: 'Super Pale',           column: 'pale',    displaySuffix: '' },
-  15: { code: 'PICK2',             name: 'Pick 2',               column: 'directo', displaySuffix: '' },
-  16: { code: 'PICK2_FRONT',       name: 'Pick 2 Front',         column: 'directo', displaySuffix: 'f' },
-  17: { code: 'PICK2_BACK',        name: 'Pick 2 Back',          column: 'directo', displaySuffix: 'bk' },
-  18: { code: 'PICK2_MIDDLE',      name: 'Pick 2 Middle',        column: 'directo', displaySuffix: 'm' },
+  // Pick2 family goes into the PICK2/PICK3 column. A draw is either Pick2 or
+  // Pick3 — never both — so the bets won't visually mix.
+  15: { code: 'PICK2',             name: 'Pick 2',               column: 'cash3',   displaySuffix: '' },
+  16: { code: 'PICK2_FRONT',       name: 'Pick 2 Front',         column: 'cash3',   displaySuffix: 'f' },
+  17: { code: 'PICK2_BACK',        name: 'Pick 2 Back',          column: 'cash3',   displaySuffix: 'bk' },
+  18: { code: 'PICK2_MIDDLE',      name: 'Pick 2 Middle',        column: 'cash3',   displaySuffix: 'm' },
   19: { code: 'BOLITA',            name: 'Bolita',               column: 'directo', displaySuffix: '' },
   20: { code: 'SINGULACION',       name: 'Singulacion',          column: 'directo', displaySuffix: '' },
   21: { code: 'PANAMA',            name: 'Panama',               column: 'directo', displaySuffix: 's' },
@@ -87,8 +89,8 @@ export const COLUMN_COLORS = {
 
 // Column titles
 export const COLUMN_TITLES = {
-  directo: 'DIRECTO',
-  pale: 'PALE & TRIPLETA',
-  cash3: 'CASH 3',
-  play4: 'PLAY 4 & PICK 5',
+  directo: 'QUINIELA / SINGULAR',
+  pale: 'PALE / TRIPLETA',
+  cash3: 'PICK2 / PICK3',
+  play4: 'PICK4 / PICK5',
 } as const;
