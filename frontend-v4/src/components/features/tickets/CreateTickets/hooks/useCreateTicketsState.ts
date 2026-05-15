@@ -1022,14 +1022,26 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
       return;
     }
 
-    // Validate against limit availability
+    // Validate against limit availability.
+    // When the amount is split (e.g. "5+3") and the detected game type has a
+    // straight/box split pair, only the *straight* portion competes against
+    // the limit we just fetched (which is for the straight game type). The box
+    // portion is for a different game type and is validated server-side at
+    // reserve time. Without this, "1234- 5+5" was being blocked because 10 was
+    // compared to the Play4 Straight limit (when only 5 actually goes there).
     if (limitAvailable !== null && limitAvailable !== -1) {
+      const firstDrawForLimit = drawsToPlay[0];
+      const allowedForFirstDraw = drawGameTypes.get(firstDrawForLimit.id) || [];
+      const detectionForLimit = determineBetType(betNumber, selectedBetType, allowedForFirstDraw);
+      const hasSplitPair = detectionForLimit ? !!SPLIT_PAIRS[detectionForLimit.gameTypeId] : false;
+      const amountAgainstLimit = (isSplitAmount && hasSplitPair) ? numericAmount : totalAmount;
+
       if (limitAvailable <= 0) {
         setBetError('Límite agotado para este número');
         setTimeout(() => amountInputRef.current?.focus(), 100);
         return;
       }
-      if (totalAmount > limitAvailable) {
+      if (amountAgainstLimit > limitAvailable) {
         setBetError(`Monto excede el límite disponible ($${limitAvailable.toFixed(2)})`);
         setTimeout(() => amountInputRef.current?.focus(), 100);
         return;
@@ -1347,14 +1359,54 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
       setSuccessMessage(`Ticket creado: ${response.ticketCode || 'OK'}`);
     } catch (error: unknown) {
       console.error('Error creating ticket:', error);
-      // Check for limit exceeded response
-      const err = error as { response?: { data?: { code?: string; invalidBets?: Array<{ betNumber?: string; drawName?: string }> } } };
-      if (err?.response?.data?.code === 'ticket/invalid-bets-exceed-limits') {
-        const bets = err.response.data.invalidBets || [];
+
+      // Surface the most specific message the API returned. Order of precedence:
+      //   1. Structured limit-exceeded payload (with the offending bets listed)
+      //   2. Validation errors (ASP.NET Core ModelState `errors` shape)
+      //   3. Plain `message` / `error` / `title` fields on the body
+      //   4. axios `.message`
+      //   5. Generic fallback
+      type ErrShape = {
+        response?: {
+          status?: number;
+          statusText?: string;
+          data?:
+            | string
+            | {
+                code?: string;
+                message?: string;
+                error?: string;
+                title?: string;
+                detail?: string;
+                errors?: Record<string, string[] | string>;
+                invalidBets?: Array<{ betNumber?: string; drawName?: string }>;
+              };
+        };
+        message?: string;
+      };
+      const err = error as ErrShape;
+      const data = err?.response?.data;
+
+      if (typeof data === 'object' && data?.code === 'ticket/invalid-bets-exceed-limits') {
+        const bets = data.invalidBets || [];
         const details = bets.map(b => `${b.betNumber || ''} (${b.drawName || ''})`).join(', ');
         setBetError(`Límite excedido: ${details || 'una o más jugadas exceden el límite disponible'}`);
+      } else if (typeof data === 'object' && data?.errors) {
+        // ModelState validation: flatten the first message of each field.
+        const flat: string[] = [];
+        Object.entries(data.errors).forEach(([field, msgs]) => {
+          const list = Array.isArray(msgs) ? msgs : [msgs];
+          list.forEach(m => flat.push(field === '' ? m : `${field}: ${m}`));
+        });
+        setBetError(flat.length ? `Error al crear el ticket: ${flat.join(' · ')}` : 'Error al crear el ticket');
       } else {
-        setBetError('Error al crear el ticket');
+        const explicit =
+          (typeof data === 'string' && data) ||
+          (typeof data === 'object' && (data?.message || data?.error || data?.title || data?.detail)) ||
+          err?.message;
+        const status = err?.response?.status;
+        const prefix = status ? `Error ${status}` : 'Error al crear el ticket';
+        setBetError(explicit ? `${prefix}: ${explicit}` : prefix);
       }
     } finally {
       setCreatingTicket(false);
