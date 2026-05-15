@@ -1586,7 +1586,17 @@ public class TicketsController : ControllerBase
     [HttpPatch("{id}/cancel")]
     public async Task<ActionResult<TicketDetailDto>> CancelTicket(long id, [FromBody] CancelTicketDto dto)
     {
-        if (!await HasPermissionAsync("CANCEL_TICKET")) return Forbid();
+        // Admins need CANCEL_TICKET. POS users can cancel tickets of their own banca
+        // without the explicit permission.
+        if (!await HasPermissionAsync("CANCEL_TICKET"))
+        {
+            var ticketBancaId = await _context.Tickets.AsNoTracking()
+                .Where(t => t.TicketId == id)
+                .Select(t => (int?)t.BettingPoolId)
+                .FirstOrDefaultAsync();
+            if (ticketBancaId == null) return NotFound(new { message = "Ticket no encontrado" });
+            if (!await IsAssignedToBettingPoolAsync(ticketBancaId.Value)) return Forbid();
+        }
 
         try
         {

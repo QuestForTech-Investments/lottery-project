@@ -165,7 +165,7 @@ export const MENU_ITEMS: MenuItem[] = [
       { id: 'group-configuration', label: 'Configuración', shortcut: 'C', path: '/my-group/configuration', permission: 'MANAGE_MY_GROUP' }
     ]
   },
-  { id: 'warnings', label: 'ADVERTENCIAS', icon: WarningIcon, path: '/warnings' },
+  { id: 'warnings', label: 'ADVERTENCIAS', icon: WarningIcon, path: '/warnings', permission: 'VIEW_ANOMALIES' },
   {
     id: 'zones',
     label: 'ZONAS',
@@ -181,9 +181,10 @@ export const MENU_ITEMS: MenuItem[] = [
     id: 'entities',
     label: 'ENTIDADES CONTABLES',
     icon: AccountBalance,
+    permission: 'MANAGE_ACCOUNTING_ENTITIES',
     submenu: [
-      { id: 'entities-list', label: 'Lista', shortcut: 'L', path: '/entities/list' },
-      { id: 'create-entity', label: 'Crear', shortcut: 'C', path: '/entities/new' }
+      { id: 'entities-list', label: 'Lista', shortcut: 'L', path: '/entities/list', permission: 'MANAGE_ACCOUNTING_ENTITIES' },
+      { id: 'create-entity', label: 'Crear', shortcut: 'C', path: '/entities/new', permission: 'MANAGE_ACCOUNTING_ENTITIES' }
     ]
   },
   {

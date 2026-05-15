@@ -405,9 +405,9 @@ function App() {
                           } />
 
                           {/* Entities */}
-                          <Route path="/entities/list" element={<LazyRoute component={AccountableEntitiesMUI} />} />
-                          <Route path="/entities/new" element={<LazyRoute component={CreateAccountableEntityMUI} />} />
-                          <Route path="/entities/edit/:id" element={<LazyRoute component={EditAccountableEntityMUI} />} />
+                          <Route path="/entities/list" element={<PermissionGuard permission="MANAGE_ACCOUNTING_ENTITIES"><LazyRoute component={AccountableEntitiesMUI} /></PermissionGuard>} />
+                          <Route path="/entities/new" element={<PermissionGuard permission="MANAGE_ACCOUNTING_ENTITIES"><LazyRoute component={CreateAccountableEntityMUI} /></PermissionGuard>} />
+                          <Route path="/entities/edit/:id" element={<PermissionGuard permission="MANAGE_ACCOUNTING_ENTITIES"><LazyRoute component={EditAccountableEntityMUI} /></PermissionGuard>} />
 
                           {/* Configuration */}
                           <Route path="/my-group/configuration" element={
@@ -417,7 +417,7 @@ function App() {
                           } />
 
                           {/* Warnings */}
-                          <Route path="/warnings" element={<LazyRoute component={WarningsListMUI} />} />
+                          <Route path="/warnings" element={<PermissionGuard permission="VIEW_ANOMALIES"><LazyRoute component={WarningsListMUI} /></PermissionGuard>} />
 
                           {/* Monitoring */}
                           <Route path="/f8" element={<LazyRoute component={F8MonitorMUI} />} />

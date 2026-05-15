@@ -24,6 +24,21 @@ public class WarningsController : ControllerBase
         _zoneScope = zoneScope;
     }
 
+    /// <summary>Returns true if the current user holds the given permission code.</summary>
+    private async Task<bool> HasPermissionAsync(string code)
+    {
+        var raw = User.FindFirst("userId")?.Value
+               ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (!int.TryParse(raw, out var userId)) return false;
+
+        return await _context.UserPermissions.AsNoTracking()
+            .AnyAsync(up => up.UserId == userId
+                && up.IsActive
+                && up.Permission != null
+                && up.Permission.IsActive
+                && up.Permission.PermissionCode == code);
+    }
+
     /// <summary>
     /// True if the current user can act on draw-result publication. Used to gate
     /// result-related warnings (sorteo no publicado / resultado cambiado) — those are
@@ -87,6 +102,8 @@ public class WarningsController : ControllerBase
         [FromQuery] DateTime? date = null,
         [FromQuery] string? type = null)
     {
+        if (!await HasPermissionAsync("VIEW_ANOMALIES")) return Forbid();
+
         var targetDay = date?.Date ?? DateTimeHelper.TodayInBusinessTimezone();
         var utcStart = DateTimeHelper.GetUtcStartOfDay(targetDay);
         var utcEnd = DateTimeHelper.GetUtcEndOfDay(targetDay);
@@ -206,6 +223,13 @@ public class WarningsController : ControllerBase
     public async Task<ActionResult<object>> GetCount([FromQuery] DateTime? date = null)
     {
         var targetDay = date?.Date ?? DateTimeHelper.TodayInBusinessTimezone();
+
+        // The badge polls every 60s. Users without VIEW_ANOMALIES get 0 — the icon stays calm.
+        if (!await HasPermissionAsync("VIEW_ANOMALIES"))
+        {
+            return Ok(new { count = 0, date = targetDay });
+        }
+
         var utcStart = DateTimeHelper.GetUtcStartOfDay(targetDay);
         var utcEnd = DateTimeHelper.GetUtcEndOfDay(targetDay);
 

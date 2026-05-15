@@ -1,5 +1,5 @@
 import { memo, useState, useEffect, type MouseEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import {
   AppBar,
   Toolbar,
@@ -141,15 +141,42 @@ const Header = ({ sidebarCollapsed, sidebarHovered, onToggleSidebar, isMobile = 
   const [isTimezoneModalOpen, setIsTimezoneModalOpen] = useState(false)
   const [hoveredIcon, setHoveredIcon] = useState<string | null>(null)
   const [activeIcon, setActiveIcon] = useState<string | null>(null)
-  const [warningCount, setWarningCount] = useState<number>(0)
+  const [totalWarnings, setTotalWarnings] = useState<number>(0)
+  const [seenWarnings, setSeenWarnings] = useState<number>(0)
   const openSettings = Boolean(settingsAnchorEl)
+  const location = useLocation()
+
+  // Persists "last seen" alongside the date — resets automatically when the day rolls over.
+  const SEEN_STORAGE_KEY = 'warnings:lastSeen'
+  const todayStr = () => new Date().toISOString().slice(0, 10)
+
+  const readSeenForToday = (): number => {
+    try {
+      const raw = localStorage.getItem(SEEN_STORAGE_KEY)
+      if (!raw) return 0
+      const parsed = JSON.parse(raw) as { date?: string; count?: number }
+      return parsed.date === todayStr() ? Number(parsed.count) || 0 : 0
+    } catch {
+      return 0
+    }
+  }
+
+  const writeSeen = (count: number) => {
+    try {
+      localStorage.setItem(SEEN_STORAGE_KEY, JSON.stringify({ date: todayStr(), count }))
+    } catch {
+      // ignore quota / privacy mode errors
+    }
+  }
 
   useEffect(() => {
     let cancelled = false
     const fetchCount = async () => {
       try {
         const count = await getWarningCount()
-        if (!cancelled) setWarningCount(count)
+        if (cancelled) return
+        setTotalWarnings(count)
+        setSeenWarnings(readSeenForToday())
       } catch (err) {
         // Silent fail — badge just stays at last value
       }
@@ -161,6 +188,17 @@ const Header = ({ sidebarCollapsed, sidebarHovered, onToggleSidebar, isMobile = 
       clearInterval(timer)
     }
   }, [])
+
+  // Mark current count as "seen" when the user opens the warnings page.
+  useEffect(() => {
+    if (location.pathname === '/warnings') {
+      writeSeen(totalWarnings)
+      setSeenWarnings(totalWarnings)
+    }
+  }, [location.pathname, totalWarnings])
+
+  // Badge shows only new (unseen) warnings; new arrivals push it back above zero.
+  const warningCount = Math.max(0, totalWarnings - seenWarnings)
 
   const handleSettingsClick = (event: MouseEvent<HTMLElement>) => {
     setSettingsAnchorEl(event.currentTarget)
@@ -279,9 +317,9 @@ const Header = ({ sidebarCollapsed, sidebarHovered, onToggleSidebar, isMobile = 
             <TimeDisplay />
           </Box>
 
-          {/* Warnings bell — between time and language */}
-          {!isMobile && (
-            <Tooltip title={warningCount > 0 ? `${warningCount} advertencia(s) hoy` : 'Sin advertencias'}>
+          {/* Warnings bell — only shown when there are unseen warnings */}
+          {!isMobile && warningCount > 0 && (
+            <Tooltip title={`${warningCount} advertencia(s) nueva(s)`}>
               <IconButton
                 onClick={() => navigate('/warnings')}
                 onMouseEnter={() => setHoveredIcon('bell')}

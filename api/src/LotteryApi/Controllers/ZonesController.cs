@@ -55,9 +55,8 @@ public class ZonesController : ControllerBase
         [FromQuery] int? countryId = null,
         [FromQuery] bool? isActive = null)
     {
-        if (!await HasPermissionAsync("ZONE_ACCESS")
-            && !await HasPermissionAsync("CREATE_ZONES")
-            && !await HasPermissionAsync("MANAGE_ZONES")) return Forbid();
+        // No permission gate on read — zones are lookup data used in filters across the app
+        // (sales, bancas, users, etc.). Zone scope still hides zones outside the admin's scope.
 
         try
         {
@@ -148,9 +147,7 @@ public class ZonesController : ControllerBase
     [HttpGet("{id}")]
     public async Task<ActionResult<ZoneDto>> GetZone(int id)
     {
-        if (!await HasPermissionAsync("ZONE_ACCESS")
-            && !await HasPermissionAsync("CREATE_ZONES")
-            && !await HasPermissionAsync("MANAGE_ZONES")) return Forbid();
+        // No permission gate on read — zones are lookup data. Zone scope still applies.
         if (!await _zoneScope.IsZoneAllowedAsync(id)) return NotFound(new { message = "Zona no encontrada" });
         try
         {
