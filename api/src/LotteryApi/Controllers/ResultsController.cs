@@ -63,12 +63,41 @@ public class ResultsController : ControllerBase
         _zoneScope = zoneScope;
     }
 
+    /// <summary>Returns true if the current user holds the given permission code.</summary>
+    private async Task<bool> HasPermissionAsync(string code)
+    {
+        var raw = User.FindFirst("userId")?.Value
+               ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (!int.TryParse(raw, out var userId)) return false;
+
+        return await _context.UserPermissions.AsNoTracking()
+            .AnyAsync(up => up.UserId == userId
+                && up.IsActive
+                && up.Permission != null
+                && up.Permission.IsActive
+                && up.Permission.PermissionCode == code);
+    }
+
     /// <summary>
-    /// Publishing/changing lottery results is global config — only super-admin
-    /// (an admin with no zones assigned) may write. Scoped admins can only read.
+    /// Whether the given target date counts as "today" in the business timezone.
+    /// Determines whether PUBLISH_TODAY_RESULTS or PUBLISH_PAST_RESULTS is required.
     /// </summary>
-    private async Task<bool> IsSuperAdminAsync() =>
-        await _zoneScope.GetAllowedZoneIdsAsync() == null;
+    private static bool IsTodayBusiness(DateTime targetDate) =>
+        targetDate.Date == DateTimeHelper.TodayInBusinessTimezone();
+
+    /// <summary>
+    /// Gate publish/edit/delete by the appropriate permission depending on whether
+    /// the affected result is for today or a past day.
+    /// </summary>
+    private async Task<bool> CanWriteResultForAsync(DateTime targetDate)
+    {
+        return IsTodayBusiness(targetDate)
+            ? await HasPermissionAsync("PUBLISH_TODAY_RESULTS")
+            : await HasPermissionAsync("PUBLISH_PAST_RESULTS");
+    }
+
+    /// <summary>Kept for transitional compatibility. Now requires PUBLISH_TODAY_RESULTS.</summary>
+    private Task<bool> IsSuperAdminAsync() => HasPermissionAsync("PUBLISH_TODAY_RESULTS");
 
     /// <summary>
     /// Get all results for a specific date
@@ -161,7 +190,8 @@ public class ResultsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> CreateResult([FromBody] CreateResultDto dto)
     {
-        if (!await IsSuperAdminAsync()) return Forbid();
+        // Today's results vs past require different permissions.
+        if (!await CanWriteResultForAsync(dto.ResultDate)) return Forbid();
 
         var userId = GetCurrentUserId();
 
@@ -298,7 +328,7 @@ public class ResultsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UpdateResult(int id, [FromBody] CreateResultDto dto)
     {
-        if (!await IsSuperAdminAsync()) return Forbid();
+        if (!await CanWriteResultForAsync(dto.ResultDate)) return Forbid();
 
         var userId = GetCurrentUserId();
 
@@ -394,14 +424,11 @@ public class ResultsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeleteResult(int id)
     {
-        if (!await IsSuperAdminAsync()) return Forbid();
-
         var result = await _context.Results.FindAsync(id);
+        if (result == null) return NotFound(new { message = $"Result with ID {id} not found" });
 
-        if (result == null)
-        {
-            return NotFound(new { message = $"Result with ID {id} not found" });
-        }
+        // Permission depends on whether we're deleting today's or a past day's result.
+        if (!await CanWriteResultForAsync(result.ResultDate)) return Forbid();
 
         _context.Results.Remove(result);
         await _context.SaveChangesAsync();

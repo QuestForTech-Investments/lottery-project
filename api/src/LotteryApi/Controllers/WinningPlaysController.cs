@@ -24,6 +24,21 @@ public class WinningPlaysController : ControllerBase
         _zoneScope = zoneScope;
     }
 
+    /// <summary>Returns true if the current user holds the given permission code.</summary>
+    private async Task<bool> HasPermissionAsync(string code)
+    {
+        var raw = User.FindFirst("userId")?.Value
+               ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (!int.TryParse(raw, out var userId)) return false;
+
+        return await _context.UserPermissions.AsNoTracking()
+            .AnyAsync(up => up.UserId == userId
+                && up.IsActive
+                && up.Permission != null
+                && up.Permission.IsActive
+                && up.Permission.PermissionCode == code);
+    }
+
     /// <summary>
     /// GET /api/winning-plays/params
     /// Get parameters needed for filtering winning plays (draws, zones)
@@ -32,6 +47,8 @@ public class WinningPlaysController : ControllerBase
     [HttpGet("params")]
     public async Task<ActionResult<WinningPlaysParamsDto>> GetParams()
     {
+        if (!await HasPermissionAsync("TICKET_MONITORING")) return Forbid();
+
         try
         {
             _logger.LogInformation("Getting winning plays filter params");
@@ -98,6 +115,8 @@ public class WinningPlaysController : ControllerBase
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 100)
     {
+        if (!await HasPermissionAsync("TICKET_MONITORING")) return Forbid();
+
         try
         {
             var start = startDate ?? DateTimeHelper.TodayInBusinessTimezone();

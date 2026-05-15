@@ -324,10 +324,11 @@ export const calculateTicketCounts = (tickets: MappedTicket[]): TicketCounts => 
  * Calculate ticket totals
  */
 export const calculateTicketTotals = (tickets: MappedTicket[]): TicketTotals => {
+  const active = tickets.filter(t => t.estado !== 'Cancelado');
   return {
-    montoTotal: tickets.reduce((sum, t) => sum + t.monto, 0),
-    totalPremios: tickets.reduce((sum, t) => sum + t.premio, 0),
-    totalPendiente: tickets
+    montoTotal: active.reduce((sum, t) => sum + t.monto, 0),
+    totalPremios: active.reduce((sum, t) => sum + t.premio, 0),
+    totalPendiente: active
       .filter(t => t.estado === 'Pendiente')
       .reduce((sum, t) => sum + t.monto, 0),
   };

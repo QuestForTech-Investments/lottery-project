@@ -46,11 +46,28 @@ public class TicketsController : ControllerBase
         _zoneScope = zoneScope;
     }
 
+    /// <summary>Returns true if the current user holds the given permission code.</summary>
+    private async Task<bool> HasPermissionAsync(string code)
+    {
+        var raw = User.FindFirst("userId")?.Value
+               ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (!int.TryParse(raw, out var userId)) return false;
+
+        return await _context.UserPermissions.AsNoTracking()
+            .AnyAsync(up => up.UserId == userId
+                && up.IsActive
+                && up.Permission != null
+                && up.Permission.IsActive
+                && up.Permission.PermissionCode == code);
+    }
+
     [HttpGet]
     public async Task<ActionResult<TicketDetailDto[]>> GetTickets(
         [FromQuery] int bettingPoolId,
         [FromQuery] DateTime? date = null)
     {
+        if (!await HasPermissionAsync("TICKET_MONITORING")) return Forbid();
+
         _logger.LogInformation("Getting tickets for bettingPoolId {BettingPoolId}, date {Date}", bettingPoolId, date);
 
         // Zone scope — admin cannot see tickets of a banca outside their zones.
@@ -448,6 +465,8 @@ public class TicketsController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<TicketDetailDto>> CreateTicket([FromBody] CreateTicketDto dto)
     {
+        if (!await HasPermissionAsync("SELL_TICKETS")) return Forbid();
+
         using var transaction = await _context.Database.BeginTransactionAsync();
         try
         {
@@ -469,6 +488,27 @@ public class TicketsController : ControllerBase
             if (!bettingPool.IsActive)
             {
                 return UnprocessableEntity(new { message = "La banca no está activa" });
+            }
+
+            // 1.4 Banca attribution: user must be assigned to this banca unless they hold SELL_AS_ANY_BANK
+            var isAssignedToBanca = await _context.UserBettingPools.AsNoTracking()
+                .AnyAsync(ubp => ubp.UserId == dto.UserId
+                    && ubp.BettingPoolId == dto.BettingPoolId
+                    && ubp.IsActive);
+
+            if (!isAssignedToBanca)
+            {
+                var canSellAsAnyBanca = await _context.UserPermissions.AsNoTracking()
+                    .AnyAsync(up => up.UserId == dto.UserId
+                        && up.IsActive
+                        && up.Permission != null
+                        && up.Permission.IsActive
+                        && up.Permission.PermissionCode == "SELL_AS_ANY_BANK");
+
+                if (!canSellAsAnyBanca)
+                {
+                    return StatusCode(403, new { message = "No tiene permiso para vender en esta banca" });
+                }
             }
 
             // 1.5 Validate ticket date for future sales
@@ -505,6 +545,17 @@ public class TicketsController : ControllerBase
 
                 if (ticketDate > todayBusiness)
                 {
+                    // Server-side permission check for future sales
+                    var hasFutureDatePermission = await _context.UserPermissions
+                        .AnyAsync(up => up.UserId == dto.UserId
+                            && up.Permission!.PermissionCode == "TICKET_FUTURE_SALE"
+                            && up.IsActive);
+
+                    if (!hasFutureDatePermission)
+                    {
+                        return StatusCode(403, new { message = "No tiene permiso para ventas futuras" });
+                    }
+
                     var futureSalesMode = bpConfig?.FutureSalesMode ?? "OFF";
                     var maxFutureDays = bpConfig?.MaxFutureDays ?? 7;
 
@@ -1231,6 +1282,8 @@ public class TicketsController : ControllerBase
     [HttpPatch]
     public async Task<ActionResult<TicketListResponseDto>> FilterTickets([FromBody] TicketFilterDto filter)
     {
+        if (!await HasPermissionAsync("TICKET_MONITORING")) return Forbid();
+
         try
         {
             _logger.LogInformation(
@@ -1519,6 +1572,8 @@ public class TicketsController : ControllerBase
     [HttpPatch("{id}/cancel")]
     public async Task<ActionResult<TicketDetailDto>> CancelTicket(long id, [FromBody] CancelTicketDto dto)
     {
+        if (!await HasPermissionAsync("CANCEL_TICKET")) return Forbid();
+
         try
         {
             _logger.LogInformation("Canceling ticket {TicketId} by user {UserId}", id, dto.CancelledBy);
@@ -1778,6 +1833,8 @@ public class TicketsController : ControllerBase
     [HttpPatch("{id}/pay")]
     public async Task<ActionResult<TicketDetailDto>> PayTicket(long id, [FromBody] PayTicketDto dto)
     {
+        if (!await HasPermissionAsync("MARK_TICKET_AS_PAID")) return Forbid();
+
         try
         {
             _logger.LogInformation("Paying ticket {TicketId} by user {UserId}", id, dto.PaidBy);
@@ -2172,6 +2229,8 @@ public class TicketsController : ControllerBase
         [FromQuery] string? zoneIds,
         [FromQuery] int? bettingPoolId)
     {
+        if (!await HasPermissionAsync("TICKET_MONITORING")) return Forbid();
+
         try
         {
             _logger.LogInformation(

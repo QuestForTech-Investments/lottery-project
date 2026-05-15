@@ -30,9 +30,23 @@ public class AutomaticLimitsController : ControllerBase
         _zoneScope = zoneScope;
     }
 
-    /// <summary>Global config — only super-admin mutates.</summary>
-    private async Task<bool> IsSuperAdminAsync() =>
-        await _zoneScope.GetAllowedZoneIdsAsync() == null;
+    /// <summary>
+    /// Automatic-limits management requires the MANAGE_AUTOMATIC_LIMITS permission.
+    /// (No zone scope — config is global.)
+    /// </summary>
+    private async Task<bool> IsSuperAdminAsync()
+    {
+        var raw = User.FindFirst("userId")?.Value
+               ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (!int.TryParse(raw, out var userId)) return false;
+
+        return await _context.UserPermissions.AsNoTracking()
+            .AnyAsync(up => up.UserId == userId
+                && up.IsActive
+                && up.Permission != null
+                && up.Permission.IsActive
+                && up.Permission.PermissionCode == "MANAGE_AUTOMATIC_LIMITS");
+    }
 
     /// <summary>
     /// Get current automatic limits configuration
@@ -41,6 +55,7 @@ public class AutomaticLimitsController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<AutomaticLimitConfigDto>> GetConfig()
     {
+        if (!await IsSuperAdminAsync()) return Forbid();
         try
         {
             var result = new AutomaticLimitConfigDto
@@ -164,6 +179,7 @@ public class AutomaticLimitsController : ControllerBase
     [HttpGet("random-block")]
     public async Task<ActionResult<RandomBlockConfigDto>> GetRandomBlockConfig()
     {
+        if (!await IsSuperAdminAsync()) return Forbid();
         try
         {
             var config = await _context.Set<RandomBlockConfig>().FirstOrDefaultAsync();

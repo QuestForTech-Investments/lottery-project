@@ -27,6 +27,23 @@ public class CaidaController : ControllerBase
     }
 
     /// <summary>
+    /// Returns true if the current user holds the given permission code.
+    /// </summary>
+    private async Task<bool> HasPermissionAsync(string code)
+    {
+        var raw = User.FindFirst("userId")?.Value
+               ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (!int.TryParse(raw, out var userId)) return false;
+
+        return await _context.UserPermissions.AsNoTracking()
+            .AnyAsync(up => up.UserId == userId
+                && up.IsActive
+                && up.Permission != null
+                && up.Permission.IsActive
+                && up.Permission.PermissionCode == code);
+    }
+
+    /// <summary>
     /// Get caída history with optional filters.
     /// </summary>
     [HttpGet("history")]
@@ -136,6 +153,7 @@ public class CaidaController : ControllerBase
     [HttpPut("{bettingPoolId}/accumulated-fall")]
     public async Task<ActionResult> UpdateAccumulatedFall(int bettingPoolId, [FromBody] UpdateAccumulatedFallDto dto)
     {
+        if (!await HasPermissionAsync("EDIT_ACCUMULATED_FALL")) return Forbid();
         if (!await _zoneScope.IsBettingPoolAllowedAsync(bettingPoolId)) return Forbid();
 
         var config = await _context.BettingPoolConfigs

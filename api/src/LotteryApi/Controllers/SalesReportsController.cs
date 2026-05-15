@@ -9,6 +9,7 @@ using LotteryApi.Services.Caida;
 
 namespace LotteryApi.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("api/reports/sales")]
 public class SalesReportsController : ControllerBase
@@ -26,6 +27,21 @@ public class SalesReportsController : ControllerBase
         _zoneScope = zoneScope;
     }
 
+    /// <summary>Returns true if the current user holds the given permission code.</summary>
+    private async Task<bool> HasPermissionAsync(string code)
+    {
+        var raw = User.FindFirst("userId")?.Value
+               ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (!int.TryParse(raw, out var userId)) return false;
+
+        return await _context.UserPermissions.AsNoTracking()
+            .AnyAsync(up => up.UserId == userId
+                && up.IsActive
+                && up.Permission != null
+                && up.Permission.IsActive
+                && up.Permission.PermissionCode == code);
+    }
+
     /// <summary>
     /// Get sales report by betting pool and draw
     /// Generates an aggregated sales report per betting pool (banca) grouped by draw for a date range
@@ -36,6 +52,8 @@ public class SalesReportsController : ControllerBase
     public async Task<ActionResult<SalesReportResponseDto>> GetSalesByBettingPoolAndDraw(
         [FromBody] SalesReportFilterDto filter)
     {
+        if (!await HasPermissionAsync("VIEW_SALES")) return Forbid();
+
         try
         {
             // Validate date range
@@ -168,6 +186,8 @@ public class SalesReportsController : ControllerBase
         [FromQuery] DateTime? date = null,
         [FromQuery] int? bettingPoolId = null)
     {
+        if (!await HasPermissionAsync("VIEW_SALES")) return Forbid();
+
         try
         {
             var targetDate = date ?? DateTimeHelper.TodayInBusinessTimezone();
@@ -305,6 +325,8 @@ public class SalesReportsController : ControllerBase
         [FromQuery] string? zoneIds = null,
         [FromQuery] string? bettingPoolIds = null)
     {
+        if (!await HasPermissionAsync("VIEW_SALES")) return Forbid();
+
         try
         {
             _logger.LogInformation(
@@ -425,6 +447,8 @@ public class SalesReportsController : ControllerBase
         [FromQuery] string? zoneIds = null,
         [FromQuery] int? lotteryId = null)
     {
+        if (!await HasPermissionAsync("VIEW_SALES")) return Forbid();
+
         try
         {
             // Validate date range
@@ -596,6 +620,8 @@ public class SalesReportsController : ControllerBase
         [FromQuery] string? zoneIds,
         [FromQuery] int? bettingPoolId = null)
     {
+        if (!await HasPermissionAsync("VIEW_SALES")) return Forbid();
+
         try
         {
             var targetDate = date ?? DateTimeHelper.TodayInBusinessTimezone();
@@ -704,6 +730,8 @@ public class SalesReportsController : ControllerBase
         [FromQuery] DateTime? date,
         [FromQuery] string? zoneIds)
     {
+        if (!await HasPermissionAsync("VIEW_SALES")) return Forbid();
+
         try
         {
             var targetDate = date ?? DateTimeHelper.TodayInBusinessTimezone();
@@ -819,6 +847,8 @@ public class SalesReportsController : ControllerBase
         [FromQuery] DateTime? date,
         [FromQuery] string? zoneIds)
     {
+        if (!await HasPermissionAsync("VIEW_SALES")) return Forbid();
+
         try
         {
             var targetDate = date ?? DateTimeHelper.TodayInBusinessTimezone();
@@ -968,6 +998,8 @@ public class SalesReportsController : ControllerBase
         [FromQuery] int? drawId,
         [FromQuery] string? zoneIds)
     {
+        if (!await HasPermissionAsync("VIEW_SALES")) return Forbid();
+
         try
         {
             var targetDate = date ?? DateTimeHelper.TodayInBusinessTimezone();
@@ -1082,6 +1114,8 @@ public class SalesReportsController : ControllerBase
         [FromQuery] string? zoneIds,
         [FromQuery] int? bettingPoolId)
     {
+        if (!await HasPermissionAsync("VIEW_SALES")) return Forbid();
+
         try
         {
             var targetDate = date ?? DateTimeHelper.TodayInBusinessTimezone();

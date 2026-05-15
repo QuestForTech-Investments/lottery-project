@@ -23,14 +23,36 @@ public class BlockedNumbersController : ControllerBase
         _zoneScope = zoneScope;
     }
 
+    /// <summary>Returns true if the current user holds the given permission code.</summary>
+    private async Task<bool> HasPermissionAsync(string code)
+    {
+        var raw = User.FindFirst("userId")?.Value
+               ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (!int.TryParse(raw, out var userId)) return false;
+
+        return await _context.UserPermissions.AsNoTracking()
+            .AnyAsync(up => up.UserId == userId
+                && up.IsActive
+                && up.Permission != null
+                && up.Permission.IsActive
+                && up.Permission.PermissionCode == code);
+    }
+
     /// <summary>
     /// Get all active blocked numbers (optionally include expired).
     /// Scoped admin sees global blocks (zone_id IS NULL) + blocks in their zones.
     /// Super-admin sees all.
+    /// Requires MANAGE_BLOCKED_NUMBERS or BLOCK_NUMBERS_QUICK (quick-block widget needs the list to dedupe).
     /// </summary>
     [HttpGet]
     public async Task<ActionResult> GetAll([FromQuery] bool includeExpired = false)
     {
+        if (!await HasPermissionAsync("MANAGE_BLOCKED_NUMBERS")
+            && !await HasPermissionAsync("BLOCK_NUMBERS_QUICK"))
+        {
+            return Forbid();
+        }
+
         var now = DateTime.UtcNow;
         var query = _context.BlockedNumbers
             .AsNoTracking()
@@ -78,6 +100,13 @@ public class BlockedNumbersController : ControllerBase
     [HttpPost]
     public async Task<ActionResult> Create([FromBody] CreateBlockedNumbersRequest dto)
     {
+        // Either MANAGE_BLOCKED_NUMBERS (full page) or BLOCK_NUMBERS_QUICK (dashboard widget).
+        if (!await HasPermissionAsync("MANAGE_BLOCKED_NUMBERS")
+            && !await HasPermissionAsync("BLOCK_NUMBERS_QUICK"))
+        {
+            return Forbid();
+        }
+
         if (dto.Items == null || dto.Items.Count == 0)
             return BadRequest(new { message = "Debe enviar al menos un número" });
 
@@ -138,6 +167,8 @@ public class BlockedNumbersController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<ActionResult> Delete(int id)
     {
+        if (!await HasPermissionAsync("MANAGE_BLOCKED_NUMBERS")) return Forbid();
+
         var block = await _context.BlockedNumbers.FirstOrDefaultAsync(b => b.BlockedNumberId == id);
         if (block == null)
             return NotFound(new { message = "Número bloqueado no encontrado" });

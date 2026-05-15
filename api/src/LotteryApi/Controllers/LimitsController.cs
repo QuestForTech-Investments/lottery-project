@@ -51,6 +51,21 @@ public class LimitsController : ControllerBase
         _zoneScope = zoneScope;
     }
 
+    /// <summary>Returns true if the current user holds the given permission code.</summary>
+    private async Task<bool> HasPermissionAsync(string code)
+    {
+        var raw = User.FindFirst("userId")?.Value
+               ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (!int.TryParse(raw, out var userId)) return false;
+
+        return await _context.UserPermissions.AsNoTracking()
+            .AnyAsync(up => up.UserId == userId
+                && up.IsActive
+                && up.Permission != null
+                && up.Permission.IsActive
+                && up.Permission.PermissionCode == code);
+    }
+
     /// <summary>
     /// Returns true if the given limit-rule scope (zone / banca) falls within the
     /// current admin's allowed zones. Used to gate writes on limit endpoints.
@@ -77,6 +92,8 @@ public class LimitsController : ControllerBase
     {
         try
         {
+            if (!await HasPermissionAsync("MANAGE_LIMITS")) return Forbid();
+
             // Validate pagination
             page = Math.Max(1, page);
             pageSize = Math.Clamp(pageSize, 1, 200);
@@ -227,6 +244,7 @@ public class LimitsController : ControllerBase
     [HttpGet("{id}")]
     public async Task<ActionResult<LimitRuleDto>> GetLimit(int id)
     {
+        if (!await HasPermissionAsync("MANAGE_LIMITS")) return Forbid();
         try
         {
             var limitRule = await _context.LimitRules
@@ -287,6 +305,7 @@ public class LimitsController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<List<LimitRuleDto>>> CreateLimit([FromBody] CreateLimitDto dto)
     {
+        if (!await HasPermissionAsync("MANAGE_LIMITS")) return Forbid();
         try
         {
             // Validate limit type
@@ -748,6 +767,7 @@ public class LimitsController : ControllerBase
     [HttpPut("{id}")]
     public async Task<ActionResult<LimitRuleDto>> UpdateLimit(int id, [FromBody] UpdateLimitDto dto)
     {
+        if (!await HasPermissionAsync("MANAGE_LIMITS")) return Forbid();
         try
         {
             var limitRule = await _context.LimitRules.FindAsync(id);
@@ -901,6 +921,7 @@ public class LimitsController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteLimit(int id)
     {
+        if (!await HasPermissionAsync("MANAGE_LIMITS")) return Forbid();
         try
         {
             var limitRule = await _context.LimitRules.FindAsync(id);
@@ -943,6 +964,7 @@ public class LimitsController : ControllerBase
     [HttpDelete("batch")]
     public async Task<ActionResult<BatchDeleteResponseDto>> DeleteLimitsBatch([FromBody] BatchDeleteLimitsDto dto)
     {
+        if (!await HasPermissionAsync("MANAGE_LIMITS")) return Forbid();
         try
         {
             var rulesToDelete = new List<LimitRule>();
@@ -1228,6 +1250,7 @@ public class LimitsController : ControllerBase
     [HttpDelete("{id}/amounts/{gameTypeId}")]
     public async Task<ActionResult> DeleteAmount(int id, int gameTypeId)
     {
+        if (!await HasPermissionAsync("MANAGE_LIMITS")) return Forbid();
         try
         {
             var amount = await _context.LimitRuleAmounts
@@ -1267,6 +1290,7 @@ public class LimitsController : ControllerBase
     [HttpPut("{id}/amounts/{gameTypeId}")]
     public async Task<ActionResult> UpdateAmount(int id, int gameTypeId, [FromBody] UpdateAmountDto dto)
     {
+        if (!await HasPermissionAsync("MANAGE_LIMITS")) return Forbid();
         try
         {
             var amount = await _context.LimitRuleAmounts
@@ -1302,6 +1326,7 @@ public class LimitsController : ControllerBase
         [FromQuery] int? zoneId = null,
         [FromQuery] int? bettingPoolId = null)
     {
+        if (!await HasPermissionAsync("MANAGE_LIMITS")) return Forbid();
         try
         {
             // Zone scope on the requested target.
@@ -1350,6 +1375,7 @@ public class LimitsController : ControllerBase
     [HttpPatch("{id}/toggle")]
     public async Task<ActionResult<LimitRuleDto>> ToggleLimitStatus(int id)
     {
+        if (!await HasPermissionAsync("MANAGE_LIMITS")) return Forbid();
         try
         {
             var limitRule = await _context.LimitRules.FindAsync(id);
@@ -1774,6 +1800,8 @@ public class LimitsController : ControllerBase
     [HttpGet("defaults")]
     public async Task<ActionResult> GetLimitDefaults()
     {
+        if (!await HasPermissionAsync("MANAGE_LIMIT_DEFAULTS")) return Forbid();
+
         var defaults = await _context.LimitDefaults
             .AsNoTracking()
             .Include(d => d.GameType)

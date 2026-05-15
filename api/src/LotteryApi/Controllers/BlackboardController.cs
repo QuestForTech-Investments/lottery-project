@@ -23,6 +23,21 @@ public class BlackboardController : ControllerBase
         _zoneScope = zoneScope;
     }
 
+    /// <summary>Returns true if the current user holds the given permission code.</summary>
+    private async Task<bool> HasPermissionAsync(string code)
+    {
+        var raw = User.FindFirst("userId")?.Value
+               ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (!int.TryParse(raw, out var userId)) return false;
+
+        return await _context.UserPermissions.AsNoTracking()
+            .AnyAsync(up => up.UserId == userId
+                && up.IsActive
+                && up.Permission != null
+                && up.Permission.IsActive
+                && up.Permission.PermissionCode == code);
+    }
+
     public class PlayByNumberRow
     {
         public string BetTypeCode { get; set; } = string.Empty;
@@ -54,6 +69,8 @@ public class BlackboardController : ControllerBase
         [FromQuery] string? zoneIds = null,
         [FromQuery] int? bettingPoolId = null)
     {
+        if (!await HasPermissionAsync("TICKET_MONITORING")) return Forbid();
+
         var targetDate = date.Date;
         var utcStart = DateTimeHelper.GetUtcStartOfDay(targetDate);
         var utcEnd = DateTimeHelper.GetUtcEndOfDay(targetDate);
@@ -158,6 +175,8 @@ public class BlackboardController : ControllerBase
         [FromQuery] string? zoneIds = null,
         [FromQuery] int? bettingPoolId = null)
     {
+        if (!await HasPermissionAsync("TICKET_MONITORING")) return Forbid();
+
         if (string.IsNullOrWhiteSpace(betTypeCode) || string.IsNullOrWhiteSpace(betNumber))
         {
             return BadRequest(new { message = "betTypeCode and betNumber are required" });

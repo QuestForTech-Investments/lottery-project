@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using LotteryApi.Data;
@@ -7,6 +8,7 @@ using LotteryApi.Services;
 
 namespace LotteryApi.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("api/betting-pools/{bettingPoolId}")]
 public class BettingPoolPrizesCommissionsController : ControllerBase
@@ -25,12 +27,28 @@ public class BettingPoolPrizesCommissionsController : ControllerBase
         _zoneScope = zoneScope;
     }
 
+    /// <summary>Returns true if the current user holds the given permission code.</summary>
+    private async Task<bool> HasPermissionAsync(string code)
+    {
+        var raw = User.FindFirst("userId")?.Value
+               ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (!int.TryParse(raw, out var userId)) return false;
+
+        return await _context.UserPermissions.AsNoTracking()
+            .AnyAsync(up => up.UserId == userId
+                && up.IsActive
+                && up.Permission != null
+                && up.Permission.IsActive
+                && up.Permission.PermissionCode == code);
+    }
+
     /// <summary>
     /// Get all prizes and commissions for a betting pool
     /// </summary>
     [HttpGet("prizes-commissions")]
     public async Task<ActionResult<List<BettingPoolPrizesCommissionDto>>> GetPrizesCommissions(int bettingPoolId)
     {
+        if (!await HasPermissionAsync("CHANGE_GAME_PRIZES")) return Forbid();
         if (!await _zoneScope.IsBettingPoolAllowedAsync(bettingPoolId)) return NotFound(new { message = "Banca no encontrada" });
         try
         {
@@ -86,6 +104,7 @@ public class BettingPoolPrizesCommissionsController : ControllerBase
         int bettingPoolId,
         int prizeCommissionId)
     {
+        if (!await HasPermissionAsync("CHANGE_GAME_PRIZES")) return Forbid();
         if (!await _zoneScope.IsBettingPoolAllowedAsync(bettingPoolId)) return NotFound(new { message = "Banca no encontrada" });
         try
         {
@@ -137,6 +156,7 @@ public class BettingPoolPrizesCommissionsController : ControllerBase
         int bettingPoolId,
         [FromBody] CreateBettingPoolPrizesCommissionDto dto)
     {
+        if (!await HasPermissionAsync("CHANGE_GAME_PRIZES")) return Forbid();
         if (!await _zoneScope.IsBettingPoolAllowedAsync(bettingPoolId)) return Forbid();
         try
         {
@@ -239,6 +259,7 @@ public class BettingPoolPrizesCommissionsController : ControllerBase
         int prizeCommissionId,
         [FromBody] UpdateBettingPoolPrizesCommissionDto dto)
     {
+        if (!await HasPermissionAsync("CHANGE_GAME_PRIZES")) return Forbid();
         if (!await _zoneScope.IsBettingPoolAllowedAsync(bettingPoolId)) return Forbid();
         try
         {
@@ -342,6 +363,7 @@ public class BettingPoolPrizesCommissionsController : ControllerBase
         int bettingPoolId,
         int prizeCommissionId)
     {
+        if (!await HasPermissionAsync("CHANGE_GAME_PRIZES")) return Forbid();
         if (!await _zoneScope.IsBettingPoolAllowedAsync(bettingPoolId)) return Forbid();
         try
         {
@@ -372,6 +394,7 @@ public class BettingPoolPrizesCommissionsController : ControllerBase
     [HttpGet("prizes-bulk")]
     public async Task<ActionResult<FlatPrizesConfigDto>> GetPrizesCommissionsBulk(int bettingPoolId)
     {
+        if (!await HasPermissionAsync("CHANGE_GAME_PRIZES")) return Forbid();
         if (!await _zoneScope.IsBettingPoolAllowedAsync(bettingPoolId)) return NotFound(new { message = "Banca no encontrada" });
         try
         {
@@ -406,6 +429,7 @@ public class BettingPoolPrizesCommissionsController : ControllerBase
         int bettingPoolId,
         [FromBody] FlatPrizesConfigDto dto)
     {
+        if (!await HasPermissionAsync("CHANGE_GAME_PRIZES")) return Forbid();
         if (!await _zoneScope.IsBettingPoolAllowedAsync(bettingPoolId)) return Forbid();
         try
         {
@@ -566,6 +590,7 @@ public class BettingPoolPrizesCommissionsController : ControllerBase
         int bettingPoolId,
         [FromBody] BatchSaveCommissionsDto dto)
     {
+        if (!await HasPermissionAsync("CHANGE_GAME_PRIZES")) return Forbid();
         if (!await _zoneScope.IsBettingPoolAllowedAsync(bettingPoolId)) return Forbid();
         try
         {

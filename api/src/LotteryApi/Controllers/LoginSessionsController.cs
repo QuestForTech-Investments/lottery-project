@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using LotteryApi.Data;
 using LotteryApi.DTOs;
 using LotteryApi.Helpers;
 using LotteryApi.Services;
@@ -14,12 +16,29 @@ public class LoginSessionsController : ControllerBase
     private readonly ILoginSessionService _loginSessionService;
     private readonly ILogger<LoginSessionsController> _logger;
     private readonly IZoneScopeService _zoneScope;
+    private readonly LotteryDbContext _context;
 
-    public LoginSessionsController(ILoginSessionService loginSessionService, ILogger<LoginSessionsController> logger, IZoneScopeService zoneScope)
+    public LoginSessionsController(ILoginSessionService loginSessionService, ILogger<LoginSessionsController> logger, IZoneScopeService zoneScope, LotteryDbContext context)
     {
         _loginSessionService = loginSessionService;
         _logger = logger;
         _zoneScope = zoneScope;
+        _context = context;
+    }
+
+    /// <summary>Returns true if the current user holds the given permission code.</summary>
+    private async Task<bool> HasPermissionAsync(string code)
+    {
+        var raw = User.FindFirst("userId")?.Value
+               ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (!int.TryParse(raw, out var userId)) return false;
+
+        return await _context.UserPermissions.AsNoTracking()
+            .AnyAsync(up => up.UserId == userId
+                && up.IsActive
+                && up.Permission != null
+                && up.Permission.IsActive
+                && up.Permission.PermissionCode == code);
     }
 
     /// <summary>
@@ -53,6 +72,8 @@ public class LoginSessionsController : ControllerBase
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 100)
     {
+        if (!await HasPermissionAsync("VIEW_LOGIN_SESSIONS")) return Forbid();
+
         var requestedZones = string.IsNullOrWhiteSpace(zoneIds)
             ? null
             : zoneIds.Split(',').Select(int.Parse).ToList();
@@ -79,6 +100,8 @@ public class LoginSessionsController : ControllerBase
         [FromQuery] string? zoneIds,
         [FromQuery] string? searchText)
     {
+        if (!await HasPermissionAsync("VIEW_LOGIN_SESSIONS")) return Forbid();
+
         var requestedZones = string.IsNullOrWhiteSpace(zoneIds)
             ? null
             : zoneIds.Split(',').Select(int.Parse).ToList();
@@ -104,6 +127,8 @@ public class LoginSessionsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> EndSession(int sessionId)
     {
+        if (!await HasPermissionAsync("VIEW_LOGIN_SESSIONS")) return Forbid();
+
         await _loginSessionService.EndLoginSessionAsync(sessionId);
         return Ok(new { message = "Session ended successfully" });
     }

@@ -49,6 +49,21 @@ public class UsersController : ControllerBase
         return true;
     }
 
+    /// <summary>Returns true if the current user holds the given permission code.</summary>
+    private async Task<bool> HasPermissionAsync(string code)
+    {
+        var raw = User.FindFirst("userId")?.Value
+               ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (!int.TryParse(raw, out var userId)) return false;
+
+        return await _context.UserPermissions.AsNoTracking()
+            .AnyAsync(up => up.UserId == userId
+                && up.IsActive
+                && up.Permission != null
+                && up.Permission.IsActive
+                && up.Permission.PermissionCode == code);
+    }
+
     /// <summary>
     /// Get all administrator users with pagination and filters.
     /// Excludes POS users (banca users) by default.
@@ -63,6 +78,8 @@ public class UsersController : ControllerBase
         [FromQuery] int? zoneId = null,
         [FromQuery] bool includePosUsers = false)
     {
+        if (!await HasPermissionAsync("MANAGE_USERS")) return Forbid();
+
         var query = _context.Users
             .Where(u => u.IsActive)
             .AsQueryable();
@@ -147,6 +164,8 @@ public class UsersController : ControllerBase
         [FromQuery] int? bettingPoolId = null,
         [FromQuery] int? zoneId = null)
     {
+        if (!await HasPermissionAsync("MANAGE_USERS")) return Forbid();
+
         var query = _context.Users
             .Include(u => u.Role)
             .Include(u => u.UserBettingPools)
@@ -223,6 +242,8 @@ public class UsersController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetById(int id)
     {
+        if (!await HasPermissionAsync("MANAGE_USERS")) return Forbid();
+
         var user = await _context.Users
             .Include(u => u.Role)
             .Include(u => u.UserZones)
@@ -479,6 +500,8 @@ public class UsersController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> CreateWithPermissions([FromBody] CreateUserDto dto)
     {
+        if (!await HasPermissionAsync("MANAGE_USERS")) return Forbid();
+
         // Zone scope — scoped admin can only assign zones inside their own set.
         if (!await AreAllZonesAllowedAsync(dto.ZoneIds)) return Forbid();
 
@@ -627,6 +650,8 @@ public class UsersController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Update(int id, [FromBody] UpdateUserDto dto)
     {
+        if (!await HasPermissionAsync("MANAGE_USERS")) return Forbid();
+
         var user = await _userRepository.GetByIdAsync(id);
         if (user == null)
         {
@@ -657,6 +682,8 @@ public class UsersController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UpdatePermissions(int userId, [FromBody] UpdateUserPermissionsDto dto)
     {
+        if (!await HasPermissionAsync("MANAGE_USERS")) return Forbid();
+
         var user = await _userRepository.GetByIdAsync(userId);
         if (user == null)
         {
@@ -695,6 +722,8 @@ public class UsersController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UpdateComplete(int userId, [FromBody] UpdateUserCompleteDto dto)
     {
+        if (!await HasPermissionAsync("MANAGE_USERS")) return Forbid();
+
         var user = await _userRepository.GetByIdAsync(userId);
         if (user == null)
         {
@@ -852,7 +881,8 @@ public class UsersController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> ResetTempPassword(int userId)
     {
-        // Load Role explicitly — needed to pick the right generator (numeric for POS, complex for admin).
+        // Load Role explicitly — needed to pick the right generator (numeric for POS, complex for admin)
+        // and to choose the right permission (CHANGE_BANK_PASSWORDS for POS, CHANGE_ADMIN_PASSWORDS otherwise).
         var user = await _context.Users
             .Include(u => u.Role)
             .FirstOrDefaultAsync(u => u.UserId == userId);
@@ -862,6 +892,9 @@ public class UsersController : ControllerBase
         }
 
         var isPosUser = string.Equals(user.Role?.RoleName, "POS", StringComparison.OrdinalIgnoreCase);
+        var requiredPermission = isPosUser ? "CHANGE_BANK_PASSWORDS" : "CHANGE_ADMIN_PASSWORDS";
+        if (!await HasPermissionAsync(requiredPermission)) return Forbid();
+
         var temp = isPosUser
             ? PasswordHelper.GenerateNumeric6()
             : PasswordHelper.GenerateAdminTempPassword();
@@ -988,11 +1021,18 @@ public class UsersController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> AdminResetPassword(int userId, [FromBody] AdminResetPasswordDto dto)
     {
-        var user = await _userRepository.GetByIdAsync(userId);
+        // Load Role so we can pick the right permission (CHANGE_BANK_PASSWORDS vs CHANGE_ADMIN_PASSWORDS).
+        var user = await _context.Users
+            .Include(u => u.Role)
+            .FirstOrDefaultAsync(u => u.UserId == userId);
         if (user == null)
         {
             return NotFound(new { message = $"User with ID {userId} not found" });
         }
+
+        var isPosUser = string.Equals(user.Role?.RoleName, "POS", StringComparison.OrdinalIgnoreCase);
+        var requiredPermission = isPosUser ? "CHANGE_BANK_PASSWORDS" : "CHANGE_ADMIN_PASSWORDS";
+        if (!await HasPermissionAsync(requiredPermission)) return Forbid();
 
         // Validate new password
         if (string.IsNullOrWhiteSpace(dto.NewPassword) || dto.NewPassword.Length < 6)
@@ -1019,6 +1059,8 @@ public class UsersController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(int id)
     {
+        if (!await HasPermissionAsync("MANAGE_USERS")) return Forbid();
+
         var user = await _userRepository.GetByIdAsync(id);
         if (user == null)
         {

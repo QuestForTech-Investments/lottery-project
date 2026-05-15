@@ -24,11 +24,31 @@ public class DashboardController : ControllerBase
     }
 
     /// <summary>
+    /// All dashboard widgets require ADMIN_DASHBOARD permission.
+    /// Returns true if the current user holds it (directly or via role).
+    /// </summary>
+    private async Task<bool> HasDashboardPermissionAsync()
+    {
+        var raw = User.FindFirst("userId")?.Value
+               ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (!int.TryParse(raw, out var userId)) return false;
+
+        return await _context.UserPermissions.AsNoTracking()
+            .AnyAsync(up => up.UserId == userId
+                && up.IsActive
+                && up.Permission != null
+                && up.Permission.IsActive
+                && up.Permission.PermissionCode == "ADMIN_DASHBOARD");
+    }
+
+    /// <summary>
     /// Daily sales and benefit for the last 7 days (current week).
     /// </summary>
     [HttpGet("sales-benefit-chart")]
     public async Task<ActionResult> GetSalesBenefitChart([FromQuery] int days = 7)
     {
+        if (!await HasDashboardPermissionAsync()) return Forbid();
+
         var today = DateTimeHelper.TodayInBusinessTimezone();
         var startDate = today.AddDays(-(days - 1));
 
@@ -94,6 +114,8 @@ public class DashboardController : ControllerBase
     [HttpGet("sales-by-hour")]
     public async Task<ActionResult> GetSalesByHour()
     {
+        if (!await HasDashboardPermissionAsync()) return Forbid();
+
         var today = DateTimeHelper.TodayInBusinessTimezone();
         var utcStart = DateTimeHelper.GetUtcStartOfDay(today);
         var utcEnd = DateTimeHelper.GetUtcEndOfDay(today);
@@ -137,6 +159,8 @@ public class DashboardController : ControllerBase
     [HttpGet("sales-by-draw")]
     public async Task<ActionResult> GetSalesByDraw()
     {
+        if (!await HasDashboardPermissionAsync()) return Forbid();
+
         var today = DateTimeHelper.TodayInBusinessTimezone();
         var utcStart = DateTimeHelper.GetUtcStartOfDay(today);
         var utcEnd = DateTimeHelper.GetUtcEndOfDay(today);
@@ -176,6 +200,8 @@ public class DashboardController : ControllerBase
     [HttpGet("top-positive-bancas")]
     public async Task<ActionResult> GetTopPositiveBancas([FromQuery] int limit = 10)
     {
+        if (!await HasDashboardPermissionAsync()) return Forbid();
+
         var allowedBpIds = await _zoneScope.GetAllowedBettingPoolIdsAsync();
         var q = _context.Balances.AsNoTracking()
             .Include(b => b.BettingPool)
@@ -205,6 +231,8 @@ public class DashboardController : ControllerBase
     [HttpGet("top-negative-bancas")]
     public async Task<ActionResult> GetTopNegativeBancas([FromQuery] int limit = 10)
     {
+        if (!await HasDashboardPermissionAsync()) return Forbid();
+
         var allowedBpIds = await _zoneScope.GetAllowedBettingPoolIdsAsync();
         var q = _context.Balances.AsNoTracking()
             .Include(b => b.BettingPool)
@@ -234,6 +262,8 @@ public class DashboardController : ControllerBase
     [HttpGet("bancas-without-sales")]
     public async Task<ActionResult> GetBancasWithoutSales([FromQuery] int limit = 10)
     {
+        if (!await HasDashboardPermissionAsync()) return Forbid();
+
         var today = DateTimeHelper.TodayInBusinessTimezone();
         var allowedBpIds = await _zoneScope.GetAllowedBettingPoolIdsAsync();
 

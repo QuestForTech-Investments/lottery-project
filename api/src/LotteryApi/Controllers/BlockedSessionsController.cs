@@ -19,6 +19,21 @@ public class BlockedSessionsController : ControllerBase
         _logger = logger;
     }
 
+    /// <summary>Returns true if the current user holds the given permission code.</summary>
+    private async Task<bool> HasPermissionAsync(string code)
+    {
+        var raw = User.FindFirst("userId")?.Value
+               ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (!int.TryParse(raw, out var userId)) return false;
+
+        return await _context.UserPermissions.AsNoTracking()
+            .AnyAsync(up => up.UserId == userId
+                && up.IsActive
+                && up.Permission != null
+                && up.Permission.IsActive
+                && up.Permission.PermissionCode == code);
+    }
+
     public class BlockedSessionDto
     {
         public string Id { get; set; } = string.Empty;
@@ -35,6 +50,8 @@ public class BlockedSessionsController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<List<BlockedSessionDto>>> GetBlocked([FromQuery] string type = "password")
     {
+        if (!await HasPermissionAsync("VIEW_LOGIN_SESSIONS")) return Forbid();
+
         switch (type)
         {
             case "password":
@@ -105,6 +122,8 @@ public class BlockedSessionsController : ControllerBase
     [HttpPost("unblock")]
     public async Task<IActionResult> Unblock([FromBody] UnblockRequest req)
     {
+        if (!await HasPermissionAsync("VIEW_LOGIN_SESSIONS")) return Forbid();
+
         if (req == null || string.IsNullOrWhiteSpace(req.Id))
         {
             return BadRequest(new { message = "id required" });

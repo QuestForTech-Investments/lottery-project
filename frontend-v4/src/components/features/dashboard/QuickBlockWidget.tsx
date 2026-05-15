@@ -6,6 +6,7 @@ import {
 import { Add as AddIcon } from '@mui/icons-material';
 import limitService from '@/services/limitService';
 import { createBlockedNumbers, type BlockedNumberCreateItem } from '@/services/blockedNumbersService';
+import useUserPermissions from '@/hooks/useUserPermissions';
 
 const ACCENT = '#6366f1';
 
@@ -56,6 +57,9 @@ interface PendingBlock {
 }
 
 const QuickBlockWidget: React.FC = () => {
+  const { hasPermission, loading: permsLoading } = useUserPermissions();
+  const canQuickBlock = hasPermission('BLOCK_NUMBERS_QUICK');
+
   const [draws, setDraws] = useState<{ value: number; label: string }[]>([]);
   const [gameTypes, setGameTypes] = useState<{ value: number; label: string }[]>([]);
   const [loading, setLoading] = useState(true);
@@ -139,6 +143,11 @@ const QuickBlockWidget: React.FC = () => {
       setSaving(false);
     }
   };
+
+  // Hide the widget entirely if the user doesn't have the quick-block permission.
+  // Waiting on permission load avoids a flash of the widget.
+  if (permsLoading) return null;
+  if (!canQuickBlock) return null;
 
   return (
     <Paper elevation={3} sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>

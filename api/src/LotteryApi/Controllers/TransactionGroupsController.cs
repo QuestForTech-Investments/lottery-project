@@ -28,6 +28,33 @@ public class TransactionGroupsController : ControllerBase
         _zoneScope = zoneScope;
     }
 
+    /// <summary>Returns true if the current user holds the given permission code.</summary>
+    private async Task<bool> HasPermissionCodeAsync(string code)
+    {
+        var raw = User.FindFirst("userId")?.Value
+               ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (!int.TryParse(raw, out var userId)) return false;
+
+        return await _context.UserPermissions.AsNoTracking()
+            .AnyAsync(up => up.UserId == userId
+                && up.IsActive
+                && up.Permission != null
+                && up.Permission.IsActive
+                && up.Permission.PermissionCode == code);
+    }
+
+    /// <summary>
+    /// Map a transaction-line type (Pago/Cobro/Ajuste/Retiro) to the permission needed to create it.
+    /// </summary>
+    private static string PermissionForTransactionType(string transactionType) => transactionType?.Trim().ToUpperInvariant() switch
+    {
+        "PAGO" => "CREATE_PAYMENTS",
+        "COBRO" => "CREATE_COLLECTIONS",
+        "AJUSTE" => "CREATE_ADJUSTMENTS",
+        "RETIRO" => "CREATE_WITHDRAWALS",
+        _ => "MANAGE_TRANSACTIONS"
+    };
+
     [HttpGet]
     public async Task<ActionResult<List<TransactionGroupDto>>> GetGroups(
         [FromQuery] string? startDate = null,
@@ -35,6 +62,7 @@ public class TransactionGroupsController : ControllerBase
         [FromQuery] string? search = null,
         [FromQuery] int? tzOffset = null)
     {
+        if (!await HasPermissionCodeAsync("VIEW_ALL_TRANSACTION_GROUPS")) return Forbid();
         try
         {
             var query = _context.TransactionGroups
@@ -106,6 +134,7 @@ public class TransactionGroupsController : ControllerBase
         [FromQuery] string? endDate = null,
         [FromQuery] int? tzOffset = null)
     {
+        if (!await HasPermissionCodeAsync("TRANSACTION_APPROVE")) return Forbid();
         try
         {
             var query = _context.TransactionGroups
@@ -185,6 +214,11 @@ public class TransactionGroupsController : ControllerBase
     [HttpGet("{id}")]
     public async Task<ActionResult<TransactionGroupDto>> GetGroup(int id)
     {
+        if (!await HasPermissionCodeAsync("VIEW_ALL_TRANSACTION_GROUPS")
+            && !await HasPermissionCodeAsync("MANAGE_TRANSACTIONS"))
+        {
+            return Forbid();
+        }
         try
         {
             var group = await _context.TransactionGroups
@@ -347,6 +381,7 @@ public class TransactionGroupsController : ControllerBase
         [FromQuery] int? limit = null,
         [FromQuery] int? tzOffset = null)
     {
+        if (!await HasPermissionCodeAsync("MANAGE_TRANSACTIONS")) return Forbid();
         try
         {
             var query = _context.TransactionGroupLines
@@ -448,6 +483,7 @@ public class TransactionGroupsController : ControllerBase
         [FromQuery] int bettingPoolId,
         [FromQuery] DateTime? date = null)
     {
+        if (!await HasPermissionCodeAsync("MANAGE_TRANSACTIONS")) return Forbid();
         try
         {
             if (bettingPoolId <= 0)
@@ -509,6 +545,7 @@ public class TransactionGroupsController : ControllerBase
         [FromQuery] int? bettingPoolId = null,
         [FromQuery] int? tzOffset = null)
     {
+        if (!await HasPermissionCodeAsync("MANAGE_TRANSACTIONS")) return Forbid();
         try
         {
             var offset = TimeSpan.FromMinutes(tzOffset ?? 0);
@@ -722,6 +759,20 @@ public class TransactionGroupsController : ControllerBase
         // Zone scope — admin can only create transaction groups for their assigned zones.
         if (dto.ZoneId.HasValue && !await _zoneScope.IsZoneAllowedAsync(dto.ZoneId.Value)) return Forbid();
 
+        // Per-line permission gating: every transaction type in the group must be
+        // creatable by the current user. (Pago→CREATE_PAYMENTS, Cobro→CREATE_COLLECTIONS, etc.)
+        if (dto.Lines != null && dto.Lines.Count > 0)
+        {
+            var requiredPerms = dto.Lines
+                .Select(l => PermissionForTransactionType(l.TransactionType))
+                .Distinct()
+                .ToList();
+            foreach (var perm in requiredPerms)
+            {
+                if (!await HasPermissionCodeAsync(perm)) return Forbid();
+            }
+        }
+
         using var transaction = await _context.Database.BeginTransactionAsync();
         try
         {
@@ -833,6 +884,8 @@ public class TransactionGroupsController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<ActionResult> DeleteGroup(int id)
     {
+        if (!await HasPermissionCodeAsync("MANAGE_TRANSACTIONS")) return Forbid();
+
         using var transaction = await _context.Database.BeginTransactionAsync();
         try
         {

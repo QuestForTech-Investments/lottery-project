@@ -27,11 +27,22 @@ public class HotNumbersController : ControllerBase
     }
 
     /// <summary>
-    /// Hot-number config is global (no zone column). Only super-admin (no zones assigned)
-    /// can mutate it — scoped admins would inadvertently affect other groups.
+    /// Hot-number management requires the MANAGE_HOT_NUMBERS permission.
+    /// (Hot-number config has no zone scope, so the permission alone gates it.)
     /// </summary>
-    private async Task<bool> IsSuperAdminAsync() =>
-        await _zoneScope.GetAllowedZoneIdsAsync() == null;
+    private async Task<bool> IsSuperAdminAsync()
+    {
+        var raw = User.FindFirst("userId")?.Value
+               ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (!int.TryParse(raw, out var userId)) return false;
+
+        return await _context.UserPermissions.AsNoTracking()
+            .AnyAsync(up => up.UserId == userId
+                && up.IsActive
+                && up.Permission != null
+                && up.Permission.IsActive
+                && up.Permission.PermissionCode == "MANAGE_HOT_NUMBERS");
+    }
 
     #region Hot Numbers Selection
 
@@ -42,6 +53,7 @@ public class HotNumbersController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<HotNumbersConfigDto>> GetHotNumbers()
     {
+        if (!await IsSuperAdminAsync()) return Forbid();
         try
         {
             var hotNumbers = await _context.HotNumbers
@@ -152,6 +164,7 @@ public class HotNumbersController : ControllerBase
     [HttpGet("limits")]
     public async Task<ActionResult<List<HotNumberLimitDto>>> GetHotNumberLimits([FromQuery] List<int>? drawIds = null)
     {
+        if (!await IsSuperAdminAsync()) return Forbid();
         try
         {
             var query = _context.HotNumberLimits
@@ -201,6 +214,7 @@ public class HotNumbersController : ControllerBase
     [HttpGet("limits/{id}")]
     public async Task<ActionResult<HotNumberLimitDto>> GetHotNumberLimit(int id)
     {
+        if (!await IsSuperAdminAsync()) return Forbid();
         try
         {
             var limit = await _context.HotNumberLimits.FindAsync(id);

@@ -11,6 +11,7 @@ namespace LotteryApi.Controllers;
 /// <summary>
 /// Controller para gestionar configuración personalizada de premios por sorteo y banca
 /// </summary>
+[Authorize]
 [ApiController]
 [Route("api/betting-pools")]
 [Produces("application/json")]
@@ -28,6 +29,21 @@ public class DrawPrizeConfigController : ControllerBase
         _context = context;
         _logger = logger;
         _zoneScope = zoneScope;
+    }
+
+    /// <summary>Returns true if the current user holds the given permission code.</summary>
+    private async Task<bool> HasPermissionAsync(string code)
+    {
+        var raw = User.FindFirst("userId")?.Value
+               ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (!int.TryParse(raw, out var userId)) return false;
+
+        return await _context.UserPermissions.AsNoTracking()
+            .AnyAsync(up => up.UserId == userId
+                && up.IsActive
+                && up.Permission != null
+                && up.Permission.IsActive
+                && up.Permission.PermissionCode == code);
     }
 
     /// <summary>
@@ -51,6 +67,7 @@ public class DrawPrizeConfigController : ControllerBase
         int drawId,
         [FromBody] SaveDrawPrizeConfigRequest request)
     {
+        if (!await HasPermissionAsync("CHANGE_GAME_PRIZES")) return Forbid();
         if (!await _zoneScope.IsBettingPoolAllowedAsync(bettingPoolId)) return Forbid();
         try
         {
@@ -207,6 +224,7 @@ public class DrawPrizeConfigController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<List<DrawPrizeConfigDto>>> GetDrawPrizeConfig(int bettingPoolId, int drawId)
     {
+        if (!await HasPermissionAsync("CHANGE_GAME_PRIZES")) return Forbid();
         if (!await _zoneScope.IsBettingPoolAllowedAsync(bettingPoolId)) return NotFound(new { message = "Banca no encontrada" });
         try
         {
@@ -277,6 +295,7 @@ public class DrawPrizeConfigController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<List<DrawPrizeConfigDto>>> GetResolvedDrawPrizeConfig(int bettingPoolId, int drawId)
     {
+        if (!await HasPermissionAsync("CHANGE_GAME_PRIZES")) return Forbid();
         if (!await _zoneScope.IsBettingPoolAllowedAsync(bettingPoolId)) return NotFound(new { message = "Banca no encontrada" });
         try
         {
@@ -413,6 +432,7 @@ public class DrawPrizeConfigController : ControllerBase
         int bettingPoolId,
         [FromBody] BatchDrawPrizeConfigRequest request)
     {
+        if (!await HasPermissionAsync("CHANGE_GAME_PRIZES")) return Forbid();
         if (!await _zoneScope.IsBettingPoolAllowedAsync(bettingPoolId)) return Forbid();
         try
         {
@@ -547,6 +567,7 @@ public class DrawPrizeConfigController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<List<DrawPrizeConfigDto>>> GetAllDrawPrizeConfigs(int bettingPoolId)
     {
+        if (!await HasPermissionAsync("CHANGE_GAME_PRIZES")) return Forbid();
         if (!await _zoneScope.IsBettingPoolAllowedAsync(bettingPoolId)) return NotFound(new { message = "Banca no encontrada" });
         try
         {
@@ -603,6 +624,7 @@ public class DrawPrizeConfigController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeleteDrawPrizeConfig(int bettingPoolId, int drawId)
     {
+        if (!await HasPermissionAsync("CHANGE_GAME_PRIZES")) return Forbid();
         if (!await _zoneScope.IsBettingPoolAllowedAsync(bettingPoolId)) return Forbid();
         try
         {

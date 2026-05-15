@@ -24,9 +24,20 @@ public class ExpenseCategoriesController : ControllerBase
         _zoneScope = zoneScope;
     }
 
-    /// <summary>Global config — only super-admin mutates.</summary>
-    private async Task<bool> IsSuperAdminAsync() =>
-        await _zoneScope.GetAllowedZoneIdsAsync() == null;
+    /// <summary>Expense-category management requires the CREATE_EXPENSE_CATEGORIES permission.</summary>
+    private async Task<bool> IsSuperAdminAsync()
+    {
+        var raw = User.FindFirst("userId")?.Value
+               ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (!int.TryParse(raw, out var userId)) return false;
+
+        return await _context.UserPermissions.AsNoTracking()
+            .AnyAsync(up => up.UserId == userId
+                && up.IsActive
+                && up.Permission != null
+                && up.Permission.IsActive
+                && up.Permission.PermissionCode == "CREATE_EXPENSE_CATEGORIES");
+    }
 
     [HttpGet]
     public async Task<ActionResult<List<ExpenseCategoryDto>>> GetCategories(

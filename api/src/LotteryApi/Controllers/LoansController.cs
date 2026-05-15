@@ -25,6 +25,21 @@ public class LoansController : ControllerBase
         _zoneScope = zoneScope;
     }
 
+    /// <summary>Returns true if the current user holds the given permission code.</summary>
+    private async Task<bool> HasPermissionAsync(string code)
+    {
+        var raw = User.FindFirst("userId")?.Value
+               ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (!int.TryParse(raw, out var userId)) return false;
+
+        return await _context.UserPermissions.AsNoTracking()
+            .AnyAsync(up => up.UserId == userId
+                && up.IsActive
+                && up.Permission != null
+                && up.Permission.IsActive
+                && up.Permission.PermissionCode == code);
+    }
+
     /// <summary>
     /// Returns true if the loan (banca entity) is within the current admin's scope.
     /// Non-banca entity loans are visible to everyone unless we expand scoping.
@@ -42,6 +57,7 @@ public class LoansController : ControllerBase
         [FromQuery] string? search = null,
         [FromQuery] int? limit = null)
     {
+        if (!await HasPermissionAsync("MANAGE_LOANS")) return Forbid();
         try
         {
             var query = _context.Loans
@@ -121,6 +137,7 @@ public class LoansController : ControllerBase
     [HttpGet("{id}")]
     public async Task<ActionResult<LoanDto>> GetLoan(int id)
     {
+        if (!await HasPermissionAsync("MANAGE_LOANS")) return Forbid();
         try
         {
             var loan = await _context.Loans
@@ -182,6 +199,8 @@ public class LoansController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<LoanDto>> CreateLoan([FromBody] CreateLoanDto dto)
     {
+        if (!await HasPermissionAsync("MANAGE_LOANS")) return Forbid();
+
         // Zone scope — admin can only create loans for bancas in their assigned zones.
         if (dto.EntityType == "bettingPool" && !await _zoneScope.IsBettingPoolAllowedAsync(dto.EntityId))
         {
@@ -261,6 +280,8 @@ public class LoansController : ControllerBase
     [HttpPost("{id}/payments")]
     public async Task<ActionResult<LoanPaymentDto>> CreatePayment(int id, [FromBody] CreateLoanPaymentDto dto)
     {
+        if (!await HasPermissionAsync("MANAGE_LOANS")) return Forbid();
+
         using var transaction = await _context.Database.BeginTransactionAsync();
         try
         {
@@ -326,6 +347,7 @@ public class LoansController : ControllerBase
     [HttpPut("{id}")]
     public async Task<ActionResult> UpdateLoan(int id, [FromBody] UpdateLoanDto dto)
     {
+        if (!await HasPermissionAsync("MANAGE_LOANS")) return Forbid();
         try
         {
             var loan = await _context.Loans.FirstOrDefaultAsync(l => l.LoanId == id);
@@ -360,6 +382,7 @@ public class LoansController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<ActionResult> CancelLoan(int id)
     {
+        if (!await HasPermissionAsync("MANAGE_LOANS")) return Forbid();
         try
         {
             var loan = await _context.Loans.FirstOrDefaultAsync(l => l.LoanId == id);

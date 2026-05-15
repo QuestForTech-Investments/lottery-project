@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using LotteryApi.Data;
@@ -8,6 +9,7 @@ using BCrypt.Net;
 
 namespace LotteryApi.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("api/betting-pools")]
 public class BettingPoolsController : ControllerBase
@@ -21,6 +23,23 @@ public class BettingPoolsController : ControllerBase
         _context = context;
         _logger = logger;
         _zoneScope = zoneScope;
+    }
+
+    /// <summary>
+    /// Returns true if the current user holds the given permission code.
+    /// </summary>
+    private async Task<bool> HasPermissionAsync(string code)
+    {
+        var raw = User.FindFirst("userId")?.Value
+               ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (!int.TryParse(raw, out var userId)) return false;
+
+        return await _context.UserPermissions.AsNoTracking()
+            .AnyAsync(up => up.UserId == userId
+                && up.IsActive
+                && up.Permission != null
+                && up.Permission.IsActive
+                && up.Permission.PermissionCode == code);
     }
 
     /// <summary>
@@ -40,6 +59,7 @@ public class BettingPoolsController : ControllerBase
         [FromQuery] int? zoneId = null,
         [FromQuery] bool? isActive = null)
     {
+        if (!await HasPermissionAsync("BANK_ACCESS")) return Forbid();
         try
         {
             // Validate pagination parameters
@@ -130,6 +150,7 @@ public class BettingPoolsController : ControllerBase
     [HttpGet("{id}")]
     public async Task<ActionResult<BettingPoolDetailDto>> GetBettingPool(int id)
     {
+        if (!await HasPermissionAsync("BANK_ACCESS")) return Forbid();
         try
         {
             // Scope check — admin cannot read a banca outside their assigned zones.
@@ -245,6 +266,7 @@ public class BettingPoolsController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<BettingPoolDetailDto>> CreateBettingPool([FromBody] CreateBettingPoolDto dto)
     {
+        if (!await HasPermissionAsync("CREATE_BANKS")) return Forbid();
         try
         {
             // Validate zone exists
@@ -427,6 +449,7 @@ public class BettingPoolsController : ControllerBase
     [HttpPut("{id}")]
     public async Task<ActionResult<BettingPoolDetailDto>> UpdateBettingPool(int id, [FromBody] UpdateBettingPoolDto dto)
     {
+        if (!await HasPermissionAsync("MANAGE_BANKS")) return Forbid();
         try
         {
             var bettingPool = await _context.BettingPools.FindAsync(id);
@@ -577,6 +600,7 @@ public class BettingPoolsController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteBettingPool(int id)
     {
+        if (!await HasPermissionAsync("MANAGE_BANKS")) return Forbid();
         try
         {
             var bettingPool = await _context.BettingPools.FindAsync(id);

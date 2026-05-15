@@ -4,6 +4,7 @@ import { lazy } from 'react'
 // Eager load: Login page (first page users see)
 import LoginMUI from '@pages/LoginMUI'
 import PrivateRoute from '@components/common/PrivateRoute'
+import PermissionGuard from '@components/common/PermissionGuard'
 import ErrorBoundary from '@components/common/ErrorBoundary'
 import MainLayout from '@components/layout/MainLayout'
 import LazyRoute from '@components/common/LazyRoute'
@@ -63,7 +64,7 @@ const ResultsMUI = lazy(() => import('@components/features/results/Results'))
 const BettingPoolBalancesMUI = lazy(() => import('@components/features/balances/BettingPoolBalances'))
 const BankBalancesMUI = lazy(() => import('@components/features/balances/BankBalances'))
 const ZoneBalancesMUI = lazy(() => import('@components/features/balances/ZoneBalances'))
-const GroupBalancesMUI = lazy(() => import('@components/features/balances/GroupBalances'))
+// GroupBalancesMUI removed — BALANCE_GROUPS permission deactivated
 
 // Payments feature components
 const CollectionsPaymentsListMUI = lazy(() => import('@components/features/payments/CollectionsPaymentsList'))
@@ -142,7 +143,9 @@ function App() {
                 <PrivateRoute>
                   <ErrorBoundary>
                     <MainLayout>
-                      <LazyRoute component={DashboardMUI} />
+                      <PermissionGuard permission="ADMIN_DASHBOARD">
+                        <LazyRoute component={DashboardMUI} />
+                      </PermissionGuard>
                     </MainLayout>
                   </ErrorBoundary>
                 </PrivateRoute>
@@ -158,47 +161,107 @@ function App() {
                     <MainLayout>
                       <Routes>
                           {/* Dashboard */}
-                          <Route path="/" element={<LazyRoute component={DashboardMUI} />} />
+                          <Route path="/" element={
+                            <PermissionGuard permission="ADMIN_DASHBOARD">
+                              <LazyRoute component={DashboardMUI} />
+                            </PermissionGuard>
+                          } />
 
                           {/* Users */}
-                          <Route path="/users/new" element={<LazyRoute component={CreateUserMUI} />} />
-                          <Route path="/users/edit/:userId" element={<LazyRoute component={EditUserMUI} />} />
-                          <Route path="/users/list" element={<LazyRoute component={UsersTabbedMUI} />} />
-                          <Route path="/users/all" element={<LazyRoute component={UserListMUI} />} />
-                          <Route path="/users/betting-pools" element={<LazyRoute component={UserBettingPoolsMUI} />} />
-                          <Route path="/users/administrators" element={<LazyRoute component={UserAdministratorsMUI} />} />
-                          <Route path="/users/login-history" element={<LazyRoute component={UserSessionsMUI} />} />
-                          <Route path="/users/blocked-sessions" element={<LazyRoute component={UserBlockedSessionsMUI} />} />
+                          <Route path="/users/new" element={
+                            <PermissionGuard permission="MANAGE_USERS">
+                              <LazyRoute component={CreateUserMUI} />
+                            </PermissionGuard>
+                          } />
+                          <Route path="/users/edit/:userId" element={
+                            <PermissionGuard permission="MANAGE_USERS">
+                              <LazyRoute component={EditUserMUI} />
+                            </PermissionGuard>
+                          } />
+                          <Route path="/users/list" element={
+                            <PermissionGuard permission="MANAGE_USERS">
+                              <LazyRoute component={UsersTabbedMUI} />
+                            </PermissionGuard>
+                          } />
+                          <Route path="/users/all" element={
+                            <PermissionGuard permission="MANAGE_USERS">
+                              <LazyRoute component={UserListMUI} />
+                            </PermissionGuard>
+                          } />
+                          <Route path="/users/betting-pools" element={
+                            <PermissionGuard permission="MANAGE_USERS">
+                              <LazyRoute component={UserBettingPoolsMUI} />
+                            </PermissionGuard>
+                          } />
+                          <Route path="/users/administrators" element={
+                            <PermissionGuard permission="MANAGE_USERS">
+                              <LazyRoute component={UserAdministratorsMUI} />
+                            </PermissionGuard>
+                          } />
+                          <Route path="/users/login-history" element={
+                            <PermissionGuard permission="VIEW_LOGIN_SESSIONS">
+                              <LazyRoute component={UserSessionsMUI} />
+                            </PermissionGuard>
+                          } />
+                          <Route path="/users/blocked-sessions" element={
+                            <PermissionGuard permission="VIEW_LOGIN_SESSIONS">
+                              <LazyRoute component={UserBlockedSessionsMUI} />
+                            </PermissionGuard>
+                          } />
 
                           {/* Betting Pools */}
-                          <Route path="/betting-pools/list" element={<LazyRoute component={BettingPoolsListMUI} />} />
-                          <Route path="/betting-pools/new" element={<LazyRoute component={CreateBettingPoolMUI} />} />
-                          <Route path="/betting-pools/edit/:id" element={<LazyRoute component={EditBettingPoolMUI} />} />
-                          <Route path="/betting-pools/mass-edit" element={<LazyRoute component={MassEditBettingPoolsMUI} />} />
+                          <Route path="/betting-pools/list" element={
+                            <PermissionGuard permission="BANK_ACCESS">
+                              <LazyRoute component={BettingPoolsListMUI} />
+                            </PermissionGuard>
+                          } />
+                          <Route path="/betting-pools/new" element={
+                            <PermissionGuard permission="CREATE_BANKS">
+                              <LazyRoute component={CreateBettingPoolMUI} />
+                            </PermissionGuard>
+                          } />
+                          <Route path="/betting-pools/edit/:id" element={
+                            <PermissionGuard permission="MANAGE_BANKS">
+                              <LazyRoute component={EditBettingPoolMUI} />
+                            </PermissionGuard>
+                          } />
+                          <Route path="/betting-pools/mass-edit" element={
+                            <PermissionGuard permission="MANAGE_BANKS">
+                              <LazyRoute component={MassEditBettingPoolsMUI} />
+                            </PermissionGuard>
+                          } />
                           <Route path="/betting-pools/access" element={<LazyRoute component={BettingPoolAccessMUI} />} />
                           <Route path="/betting-pools/clear-pending" element={<LazyRoute component={CleanPendingPaymentsMUI} />} />
-                          <Route path="/betting-pools/no-sales" element={<LazyRoute component={BettingPoolsWithoutSalesMUI} />} />
-                          <Route path="/betting-pools/days-report" element={<LazyRoute component={DaysWithoutSalesReportMUI} />} />
+                          <Route path="/betting-pools/no-sales" element={
+                            <PermissionGuard permission="VIEW_BANKS_NO_SALES">
+                              <LazyRoute component={BettingPoolsWithoutSalesMUI} />
+                            </PermissionGuard>
+                          } />
+                          <Route path="/betting-pools/days-report" element={
+                            <PermissionGuard permission="VIEW_BANKS_NO_SALES">
+                              <LazyRoute component={DaysWithoutSalesReportMUI} />
+                            </PermissionGuard>
+                          } />
 
                           {/* Tickets */}
-                          <Route path="/tickets/new" element={<LazyRoute component={CreateTicketsMUI} />} />
-                          <Route path="/tickets/monitoring" element={<LazyRoute component={TicketMonitoringMUI} />} />
+                          <Route path="/tickets/new" element={<PermissionGuard permission="SELL_TICKETS"><LazyRoute component={CreateTicketsMUI} /></PermissionGuard>} />
+                          <Route path="/tickets/monitoring" element={<PermissionGuard permission="TICKET_MONITORING"><LazyRoute component={TicketMonitoringMUI} /></PermissionGuard>} />
                           <Route path="/tickets/external-agents" element={<LazyRoute component={ExternalAgentsMonitoringMUI} />} />
-                          <Route path="/tickets/plays" element={<LazyRoute component={PlayMonitoringMUI} />} />
-                          <Route path="/tickets/winners" element={<LazyRoute component={WinningPlaysMUI} />} />
-                          <Route path="/tickets/board" element={<LazyRoute component={BlackboardMUI} />} />
+                          <Route path="/tickets/plays" element={<PermissionGuard permission="TICKET_MONITORING"><LazyRoute component={PlayMonitoringMUI} /></PermissionGuard>} />
+                          <Route path="/tickets/winners" element={<PermissionGuard permission="TICKET_MONITORING"><LazyRoute component={WinningPlaysMUI} /></PermissionGuard>} />
+                          <Route path="/tickets/board" element={<PermissionGuard permission="TICKET_MONITORING"><LazyRoute component={BlackboardMUI} /></PermissionGuard>} />
                           <Route path="/tickets/imported-pool" element={<LazyRoute component={ImportedPoolMUI} />} />
                           <Route path="/tickets/exported-pool" element={<LazyRoute component={ExportedPoolMUI} />} />
-                          <Route path="/tickets/anomalies" element={<LazyRoute component={TicketAnomaliesMUI} />} />
+                          <Route path="/tickets/anomalies" element={<PermissionGuard permission="VIEW_ANOMALIES"><LazyRoute component={TicketAnomaliesMUI} /></PermissionGuard>} />
 
                           {/* Sales */}
-                          <Route path="/sales/day" element={<LazyRoute component={DailySalesMUI} />} />
-                          <Route path="/sales/history" element={<LazyRoute component={HistoricalSalesMUI} />} />
-                          <Route path="/sales/by-date" element={<LazyRoute component={SalesByDateMUI} />} />
-                          <Route path="/sales/prizes" element={<LazyRoute component={PlayTypePrizesMUI} />} />
-                          <Route path="/sales/percentages" element={<LazyRoute component={PlayTypePrizesPercentagesMUI} />} />
-                          <Route path="/sales/betting-pools" element={<LazyRoute component={BettingPoolSalesMUI} />} />
-                          <Route path="/sales/zones" element={<LazyRoute component={ZoneSalesMUI} />} />
+                          <Route path="/sales/day" element={<PermissionGuard permission="VIEW_SALES"><LazyRoute component={DailySalesMUI} /></PermissionGuard>} />
+                          <Route path="/sales/history" element={<PermissionGuard permission="VIEW_SALES"><LazyRoute component={HistoricalSalesMUI} /></PermissionGuard>} />
+                          <Route path="/sales/by-date" element={<PermissionGuard permission="VIEW_SALES"><LazyRoute component={SalesByDateMUI} /></PermissionGuard>} />
+                          <Route path="/sales/prizes" element={<PermissionGuard permission="CHANGE_GAME_PRIZES"><LazyRoute component={PlayTypePrizesMUI} /></PermissionGuard>} />
+                          <Route path="/sales/percentages" element={<PermissionGuard permission="CHANGE_GAME_PRIZES"><LazyRoute component={PlayTypePrizesPercentagesMUI} /></PermissionGuard>} />
+                          <Route path="/sales/betting-pools" element={<PermissionGuard permission="VIEW_SALES"><LazyRoute component={BettingPoolSalesMUI} /></PermissionGuard>} />
+                          <Route path="/sales/zones" element={<PermissionGuard permission="VIEW_SALES"><LazyRoute component={ZoneSalesMUI} /></PermissionGuard>} />
 
                           {/* Zones */}
                           <Route path="/zones/list" element={<LazyRoute component={ZonesListMUI} />} />
@@ -207,51 +270,139 @@ function App() {
                           <Route path="/zones/manage" element={<LazyRoute component={ManageZonesMUI} />} />
 
                           {/* Results */}
-                          <Route path="/results" element={<LazyRoute component={ResultsMUI} />} />
+                          <Route path="/results" element={
+                            <PermissionGuard permission={['PUBLISH_TODAY_RESULTS', 'PUBLISH_PAST_RESULTS', 'PUBLISH_RESULTS_QUICK']}>
+                              <LazyRoute component={ResultsMUI} />
+                            </PermissionGuard>
+                          } />
 
                           {/* Balances */}
-                          <Route path="/balances/betting-pools" element={<LazyRoute component={BettingPoolBalancesMUI} />} />
-                          <Route path="/balances/banks" element={<LazyRoute component={BankBalancesMUI} />} />
-                          <Route path="/balances/zones" element={<LazyRoute component={ZoneBalancesMUI} />} />
-                          <Route path="/balances/groups" element={<LazyRoute component={GroupBalancesMUI} />} />
+                          <Route path="/balances/betting-pools" element={
+                            <PermissionGuard permission="BALANCE_BANKS">
+                              <LazyRoute component={BettingPoolBalancesMUI} />
+                            </PermissionGuard>
+                          } />
+                          <Route path="/balances/banks" element={
+                            <PermissionGuard permission="BALANCE_FINANCIAL_BANKS">
+                              <LazyRoute component={BankBalancesMUI} />
+                            </PermissionGuard>
+                          } />
+                          <Route path="/balances/zones" element={
+                            <PermissionGuard permission="BALANCE_ZONES">
+                              <LazyRoute component={ZoneBalancesMUI} />
+                            </PermissionGuard>
+                          } />
+                          {/* /balances/groups removed — BALANCE_GROUPS permission deactivated */}
 
                           {/* Payments */}
-                          <Route path="/collections-payments/list" element={<LazyRoute component={CollectionsPaymentsListMUI} />} />
+                          <Route path="/collections-payments/list" element={
+                            <PermissionGuard permission={['CREATE_PAYMENTS', 'CREATE_COLLECTIONS', 'PAYMENTS_COLLECTIONS_QUICK']}>
+                              <LazyRoute component={CollectionsPaymentsListMUI} />
+                            </PermissionGuard>
+                          } />
 
                           {/* Transactions */}
-                          <Route path="/accountable-transactions" element={<LazyRoute component={TransactionsListMUI} />} />
-                          <Route path="/accountable-transactions/betting-pool" element={<LazyRoute component={TransactionsByBettingPoolMUI} />} />
-                          <Route path="/accountable-transactions/summary" element={<LazyRoute component={TransactionsSummaryMUI} />} />
-                          <Route path="/accountable-transactions-groups" element={<LazyRoute component={TransactionGroupsListMUI} />} />
-                          <Route path="/accountable-transaction-approvals" element={<LazyRoute component={TransactionApprovalsMUI} />} />
+                          <Route path="/accountable-transactions" element={
+                            <PermissionGuard permission="MANAGE_TRANSACTIONS">
+                              <LazyRoute component={TransactionsListMUI} />
+                            </PermissionGuard>
+                          } />
+                          <Route path="/accountable-transactions/betting-pool" element={
+                            <PermissionGuard permission="MANAGE_TRANSACTIONS">
+                              <LazyRoute component={TransactionsByBettingPoolMUI} />
+                            </PermissionGuard>
+                          } />
+                          <Route path="/accountable-transactions/summary" element={
+                            <PermissionGuard permission="MANAGE_TRANSACTIONS">
+                              <LazyRoute component={TransactionsSummaryMUI} />
+                            </PermissionGuard>
+                          } />
+                          <Route path="/accountable-transactions-groups" element={
+                            <PermissionGuard permission="VIEW_ALL_TRANSACTION_GROUPS">
+                              <LazyRoute component={TransactionGroupsListMUI} />
+                            </PermissionGuard>
+                          } />
+                          <Route path="/accountable-transaction-approvals" element={
+                            <PermissionGuard permission="TRANSACTION_APPROVE">
+                              <LazyRoute component={TransactionApprovalsMUI} />
+                            </PermissionGuard>
+                          } />
 
                           {/* Expenses */}
-                          <Route path="/expenses/categories" element={<LazyRoute component={ExpenseCategoriesMUI} />} />
+                          <Route path="/expenses/categories" element={
+                            <PermissionGuard permission="CREATE_EXPENSE_CATEGORIES">
+                              <LazyRoute component={ExpenseCategoriesMUI} />
+                            </PermissionGuard>
+                          } />
 
                           {/* Loans */}
-                          <Route path="/loans/new" element={<LazyRoute component={CreateLoanMUI} />} />
-                          <Route path="/loans/list" element={<LazyRoute component={LoansListMUI} />} />
+                          <Route path="/loans/new" element={
+                            <PermissionGuard permission="MANAGE_LOANS">
+                              <LazyRoute component={CreateLoanMUI} />
+                            </PermissionGuard>
+                          } />
+                          <Route path="/loans/list" element={
+                            <PermissionGuard permission="MANAGE_LOANS">
+                              <LazyRoute component={LoansListMUI} />
+                            </PermissionGuard>
+                          } />
 
                           {/* Surpluses */}
                           <Route path="/surpluses/manage" element={<LazyRoute component={ManageExcessesMUI} />} />
                           <Route path="/surpluses/report" element={<LazyRoute component={ExcessesReportMUI} />} />
 
                           {/* Limits */}
-                          <Route path="/limits/list" element={<LazyRoute component={LimitsListMUI} />} />
-                          <Route path="/limits/new" element={<LazyRoute component={CreateLimitMUI} />} />
-                          <Route path="/limits/defaults" element={<LazyRoute component={LimitDefaultsMUI} />} />
-                          <Route path="/limits/automatic" element={<LazyRoute component={AutomaticLimitsMUI} />} />
-                          <Route path="/limits/delete" element={<LazyRoute component={DeleteLimitsMUI} />} />
-                          <Route path="/limits/hot-numbers" element={<LazyRoute component={HotNumbersMUI} />} />
-                          <Route path="/limits/blocked-numbers" element={<LazyRoute component={BlockedNumbersMUI} />} />
+                          <Route path="/limits/list" element={
+                            <PermissionGuard permission="MANAGE_LIMITS">
+                              <LazyRoute component={LimitsListMUI} />
+                            </PermissionGuard>
+                          } />
+                          <Route path="/limits/new" element={
+                            <PermissionGuard permission="MANAGE_LIMITS">
+                              <LazyRoute component={CreateLimitMUI} />
+                            </PermissionGuard>
+                          } />
+                          <Route path="/limits/defaults" element={
+                            <PermissionGuard permission="MANAGE_LIMIT_DEFAULTS">
+                              <LazyRoute component={LimitDefaultsMUI} />
+                            </PermissionGuard>
+                          } />
+                          <Route path="/limits/automatic" element={
+                            <PermissionGuard permission="MANAGE_AUTOMATIC_LIMITS">
+                              <LazyRoute component={AutomaticLimitsMUI} />
+                            </PermissionGuard>
+                          } />
+                          <Route path="/limits/delete" element={
+                            <PermissionGuard permission="MANAGE_LIMITS">
+                              <LazyRoute component={DeleteLimitsMUI} />
+                            </PermissionGuard>
+                          } />
+                          <Route path="/limits/hot-numbers" element={
+                            <PermissionGuard permission="MANAGE_HOT_NUMBERS">
+                              <LazyRoute component={HotNumbersMUI} />
+                            </PermissionGuard>
+                          } />
+                          <Route path="/limits/blocked-numbers" element={
+                            <PermissionGuard permission="MANAGE_BLOCKED_NUMBERS">
+                              <LazyRoute component={BlockedNumbersMUI} />
+                            </PermissionGuard>
+                          } />
 
                           {/* Collectors */}
                           <Route path="/collectors" element={<LazyRoute component={DebtCollectorsMUI} />} />
                           <Route path="/collector-management" element={<LazyRoute component={ManageDebtCollectorsMUI} />} />
 
                           {/* Draws */}
-                          <Route path="/draws/list" element={<LazyRoute component={DrawsListMUI} />} />
-                          <Route path="/draws/schedules" element={<LazyRoute component={DrawSchedulesMUI} />} />
+                          <Route path="/draws/list" element={
+                            <PermissionGuard permission="MANAGE_DRAWS">
+                              <LazyRoute component={DrawsListMUI} />
+                            </PermissionGuard>
+                          } />
+                          <Route path="/draws/schedules" element={
+                            <PermissionGuard permission="MANAGE_DRAW_SCHEDULES">
+                              <LazyRoute component={DrawSchedulesMUI} />
+                            </PermissionGuard>
+                          } />
 
                           {/* Entities */}
                           <Route path="/entities/list" element={<LazyRoute component={AccountableEntitiesMUI} />} />
@@ -259,7 +410,11 @@ function App() {
                           <Route path="/entities/edit/:id" element={<LazyRoute component={EditAccountableEntityMUI} />} />
 
                           {/* Configuration */}
-                          <Route path="/my-group/configuration" element={<LazyRoute component={GroupConfigurationMUI} />} />
+                          <Route path="/my-group/configuration" element={
+                            <PermissionGuard permission="MANAGE_MY_GROUP">
+                              <LazyRoute component={GroupConfigurationMUI} />
+                            </PermissionGuard>
+                          } />
 
                           {/* Warnings */}
                           <Route path="/warnings" element={<LazyRoute component={WarningsListMUI} />} />
@@ -272,8 +427,16 @@ function App() {
                           <Route path="/external-agents/list" element={<LazyRoute component={ExternalAgentsListMUI} />} />
 
                           {/* Email Receivers */}
-                          <Route path="/receivers/new" element={<LazyRoute component={CreateEmailReceiverMUI} />} />
-                          <Route path="/receivers/list" element={<LazyRoute component={EmailReceiversListMUI} />} />
+                          <Route path="/receivers/new" element={
+                            <PermissionGuard permission="MANAGE_EMAIL_RECIPIENTS">
+                              <LazyRoute component={CreateEmailReceiverMUI} />
+                            </PermissionGuard>
+                          } />
+                          <Route path="/receivers/list" element={
+                            <PermissionGuard permission="MANAGE_EMAIL_RECIPIENTS">
+                              <LazyRoute component={EmailReceiversListMUI} />
+                            </PermissionGuard>
+                          } />
                         </Routes>
                       </MainLayout>
                   </ErrorBoundary>

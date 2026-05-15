@@ -29,9 +29,23 @@ public class DrawsController : ControllerBase
         _zoneScope = zoneScope;
     }
 
-    /// <summary>Draws are global config — only super-admin mutates.</summary>
-    private async Task<bool> IsSuperAdminAsync() =>
-        await _zoneScope.GetAllowedZoneIdsAsync() == null;
+    /// <summary>Returns true if the current user holds the given permission code.</summary>
+    private async Task<bool> HasPermissionAsync(string code)
+    {
+        var raw = User.FindFirst("userId")?.Value
+               ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (!int.TryParse(raw, out var userId)) return false;
+
+        return await _context.UserPermissions.AsNoTracking()
+            .AnyAsync(up => up.UserId == userId
+                && up.IsActive
+                && up.Permission != null
+                && up.Permission.IsActive
+                && up.Permission.PermissionCode == code);
+    }
+
+    /// <summary>Kept for binary compatibility — now alias for MANAGE_DRAWS.</summary>
+    private Task<bool> IsSuperAdminAsync() => HasPermissionAsync("MANAGE_DRAWS");
 
     /// <summary>
     /// Get all draws with pagination (optimized with caching and SQL projection)
@@ -157,7 +171,7 @@ public class DrawsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> UpdateDrawSchedules([FromBody] UpdateDrawSchedulesDto dto)
     {
-        if (!await IsSuperAdminAsync()) return Forbid();
+        if (!await HasPermissionAsync("MANAGE_DRAW_SCHEDULES")) return Forbid();
         try
         {
             foreach (var schedule in dto.Schedules)

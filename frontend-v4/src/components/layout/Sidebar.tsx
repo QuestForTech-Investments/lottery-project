@@ -20,6 +20,7 @@ import {
   ExpandMore,
 } from '@mui/icons-material';
 import { MENU_ITEMS, type MenuItem } from '@constants/menuItems';
+import useUserPermissions from '@/hooks/useUserPermissions';
 
 interface SidebarProps {
   collapsed: boolean;
@@ -35,8 +36,37 @@ function Sidebar({ collapsed, hovered, onHoverChange, isMobile = false, mobileOp
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useTranslation();
+  const { hasPermission } = useUserPermissions();
   const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({});
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
+
+  // Hide items whose required permission the user doesn't have.
+  //   - Items without a `permission` field are visible by default.
+  //   - permission can be a single code or an array (any-of).
+  //   - Parent items with a submenu also require their own permission (if set)
+  //     AND at least one visible child.
+  const holdsPermission = useCallback((req: string | string[] | undefined): boolean => {
+    if (!req) return true;
+    if (Array.isArray(req)) return req.some(c => hasPermission(c));
+    return hasPermission(req);
+  }, [hasPermission]);
+
+  const isItemVisible = useCallback((item: MenuItem): boolean => {
+    if (!holdsPermission(item.permission)) return false;
+    if (item.submenu && item.submenu.length > 0) {
+      return item.submenu.some(isItemVisible);
+    }
+    return true;
+  }, [holdsPermission]);
+
+  const visibleMenu = React.useMemo(
+    () => MENU_ITEMS
+      .filter(isItemVisible)
+      .map(item => item.submenu
+        ? { ...item, submenu: item.submenu.filter(isItemVisible) }
+        : item),
+    [isItemVisible]
+  );
 
   const handleMenuClick = useCallback((item: MenuItem) => {
     if (item.submenu) {
@@ -186,7 +216,7 @@ function Sidebar({ collapsed, hovered, onHoverChange, isMobile = false, mobileOp
 
         {/* Menu Items */}
         <List sx={{ padding: 0, paddingTop: '20px' }}>
-          {MENU_ITEMS.map((item) => {
+          {visibleMenu.map((item) => {
             const Icon = item.icon;
             const active = isActive(item);
             const isExpanded = expandedMenus[item.id];
@@ -434,7 +464,7 @@ function Sidebar({ collapsed, hovered, onHoverChange, isMobile = false, mobileOp
 
       {/* Menu Items */}
       <List sx={{ padding: 0, paddingTop: '20px' }}>
-        {MENU_ITEMS.map((item) => {
+        {visibleMenu.map((item) => {
           const Icon = item.icon;
           const active = isActive(item);
           const isExpanded = expandedMenus[item.id];

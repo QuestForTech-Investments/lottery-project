@@ -24,6 +24,21 @@ public class AccountableEntitiesController : ControllerBase
         _zoneScope = zoneScope;
     }
 
+    /// <summary>Returns true if the current user holds the given permission code.</summary>
+    private async Task<bool> HasPermissionAsync(string code)
+    {
+        var raw = User.FindFirst("userId")?.Value
+               ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (!int.TryParse(raw, out var userId)) return false;
+
+        return await _context.UserPermissions.AsNoTracking()
+            .AnyAsync(up => up.UserId == userId
+                && up.IsActive
+                && up.Permission != null
+                && up.Permission.IsActive
+                && up.Permission.PermissionCode == code);
+    }
+
     [HttpGet]
     public async Task<ActionResult<List<AccountableEntityDto>>> GetEntities(
         [FromQuery] string? search = null,
@@ -127,6 +142,7 @@ public class AccountableEntitiesController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<AccountableEntityDto>> CreateEntity([FromBody] CreateAccountableEntityDto dto)
     {
+        if (!await HasPermissionAsync("MANAGE_ACCOUNTING_ENTITIES")) return Forbid();
         // Zone scope — if a zone is set on the new entity, it must be in scope.
         if (dto.ZoneId.HasValue && !await _zoneScope.IsZoneAllowedAsync(dto.ZoneId.Value)) return Forbid();
         try
@@ -175,6 +191,7 @@ public class AccountableEntitiesController : ControllerBase
     [HttpPut("{id}")]
     public async Task<ActionResult<AccountableEntityDto>> UpdateEntity(int id, [FromBody] UpdateAccountableEntityDto dto)
     {
+        if (!await HasPermissionAsync("MANAGE_ACCOUNTING_ENTITIES")) return Forbid();
         try
         {
             var entity = await _context.AccountableEntities.FindAsync(id);
@@ -223,6 +240,7 @@ public class AccountableEntitiesController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<ActionResult> DeleteEntity(int id)
     {
+        if (!await HasPermissionAsync("MANAGE_ACCOUNTING_ENTITIES")) return Forbid();
         try
         {
             var entity = await _context.AccountableEntities.FindAsync(id);

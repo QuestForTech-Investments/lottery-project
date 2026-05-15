@@ -11,6 +11,7 @@ namespace LotteryApi.Controllers;
 /// <summary>
 /// Controller para gestionar configuración personalizada de premios por banca
 /// </summary>
+[Authorize]
 [ApiController]
 [Route("api/betting-pools")]
 [Produces("application/json")]
@@ -28,6 +29,21 @@ public class BancaPrizeConfigController : ControllerBase
         _context = context;
         _logger = logger;
         _zoneScope = zoneScope;
+    }
+
+    /// <summary>Returns true if the current user holds the given permission code.</summary>
+    private async Task<bool> HasPermissionAsync(string code)
+    {
+        var raw = User.FindFirst("userId")?.Value
+               ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (!int.TryParse(raw, out var userId)) return false;
+
+        return await _context.UserPermissions.AsNoTracking()
+            .AnyAsync(up => up.UserId == userId
+                && up.IsActive
+                && up.Permission != null
+                && up.Permission.IsActive
+                && up.Permission.PermissionCode == code);
     }
 
     /// <summary>
@@ -49,6 +65,7 @@ public class BancaPrizeConfigController : ControllerBase
         int bettingPoolId,
         [FromBody] SaveBancaPrizeConfigRequest request)
     {
+        if (!await HasPermissionAsync("CHANGE_GAME_PRIZES")) return Forbid();
         if (!await _zoneScope.IsBettingPoolAllowedAsync(bettingPoolId)) return Forbid();
         try
         {
@@ -182,6 +199,7 @@ public class BancaPrizeConfigController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<List<BancaPrizeConfigDto>>> GetPrizeConfig(int bettingPoolId)
     {
+        if (!await HasPermissionAsync("CHANGE_GAME_PRIZES")) return Forbid();
         if (!await _zoneScope.IsBettingPoolAllowedAsync(bettingPoolId)) return NotFound(new { message = "Banca no encontrada" });
         try
         {
@@ -255,6 +273,9 @@ public class BancaPrizeConfigController : ControllerBase
         int bettingPoolId,
         [FromBody] SaveBancaPrizeConfigRequest request)
     {
+        if (!await HasPermissionAsync("CHANGE_GAME_PRIZES")) return Forbid();
+        if (!await _zoneScope.IsBettingPoolAllowedAsync(bettingPoolId)) return Forbid();
+
         try
         {
             // Validar que la banca existe
@@ -401,6 +422,7 @@ public class BancaPrizeConfigController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeletePrizeConfig(int bettingPoolId)
     {
+        if (!await HasPermissionAsync("CHANGE_GAME_PRIZES")) return Forbid();
         if (!await _zoneScope.IsBettingPoolAllowedAsync(bettingPoolId)) return Forbid();
         try
         {
