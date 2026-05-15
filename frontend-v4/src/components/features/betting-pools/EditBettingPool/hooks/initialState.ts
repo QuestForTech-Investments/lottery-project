@@ -74,6 +74,9 @@ export const INITIAL_FORM_DATA: FormData = {
   statFall: true,
   statAccumulatedFall: true,
 
+  // UI / banca preferences
+  defaultLanguage: 'es',
+
   // Footers
   autoFooter: false,
   footerText1: '',
@@ -82,6 +85,8 @@ export const INITIAL_FORM_DATA: FormData = {
   footerText4: '',
   footerText5: '',
   footerText6: '',
+  footerText7: '',
+  footerText8: '',
   showBranchInfo: true,
   showDateTime: true,
 

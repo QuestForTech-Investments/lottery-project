@@ -19,6 +19,10 @@ import {
   DialogActions,
   Alert,
   CircularProgress,
+  Select,
+  MenuItem,
+  InputLabel,
+  type SelectChangeEvent,
 } from '@mui/material';
 import { DeleteSweep as DeleteSweepIcon } from '@mui/icons-material';
 import { clearContactsByBettingPool } from '@services/contactService';
@@ -66,6 +70,7 @@ interface ConfigFormData {
   statBalance: boolean;
   statFall: boolean;
   statAccumulatedFall: boolean;
+  defaultLanguage: string;
   [key: string]: string | boolean | null;
 }
 
@@ -217,6 +222,37 @@ const ConfigurationTab: React.FC<ConfigTabProps> = ({ formData, handleChange, be
             Opciones Generales
           </Typography>
           <Divider sx={{ mb: 2 }} />
+        </Grid>
+
+        {/* Idioma Default */}
+        <Grid item xs={12} md={6}>
+          <FormControl fullWidth size="small">
+            <InputLabel id="default-language-label">Idioma Default</InputLabel>
+            <Select
+              labelId="default-language-label"
+              label="Idioma Default"
+              name="defaultLanguage"
+              value={formData.defaultLanguage || ''}
+              onChange={(e: SelectChangeEvent) =>
+                handleChange({
+                  target: { name: 'defaultLanguage', value: e.target.value, type: 'text', checked: false },
+                } as unknown as ChangeEvent<HTMLInputElement>)
+              }
+            >
+              <MenuItem value="es">
+                <Box component="span" sx={{ mr: 1, fontSize: '1.2em' }}>🇪🇸</Box> Español
+              </MenuItem>
+              <MenuItem value="en">
+                <Box component="span" sx={{ mr: 1, fontSize: '1.2em' }}>🇺🇸</Box> Inglés
+              </MenuItem>
+              <MenuItem value="fr">
+                <Box component="span" sx={{ mr: 1, fontSize: '1.2em' }}>🇫🇷</Box> Francés
+              </MenuItem>
+              <MenuItem value="ht">
+                <Box component="span" sx={{ mr: 1, fontSize: '1.2em' }}>🇭🇹</Box> Creol
+              </MenuItem>
+            </Select>
+          </FormControl>
         </Grid>
 
         <Grid item xs={12} md={6}>

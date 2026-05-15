@@ -66,6 +66,7 @@ interface FormData {
   statBalance: boolean;
   statFall: boolean;
   statAccumulatedFall: boolean;
+  defaultLanguage: string;
   autoFooter: boolean;
   footerText1: string;
   footerText2: string;
@@ -73,6 +74,8 @@ interface FormData {
   footerText4: string;
   footerText5: string;
   footerText6: string;
+  footerText7: string;
+  footerText8: string;
   showBranchInfo: boolean;
   showDateTime: boolean;
   domingoInicio: string;
@@ -236,6 +239,9 @@ const getInitialFormData = (branchCode = ''): FormData => ({
   statFall: true,
   statAccumulatedFall: true,
 
+  // UI / banca preferences
+  defaultLanguage: 'es',
+
   // Pies de página
   autoFooter: false,
   footerText1: '',
@@ -244,6 +250,8 @@ const getInitialFormData = (branchCode = ''): FormData => ({
   footerText4: '',
   footerText5: '',
   footerText6: '',
+  footerText7: '',
+  footerText8: '',
   showBranchInfo: true,
   showDateTime: true,
 
@@ -686,6 +694,7 @@ const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
             updates.futureSalesMode = configData.config.futureSalesMode || (configData.config.allowFutureSales ? 'DAYS' : 'OFF');
             updates.maxFutureDays = String(configData.config.maxFutureDays ?? 7);
             updates.creditLimit = String(configData.config.creditLimit ?? '');
+            updates.defaultLanguage = configData.config.defaultLanguage || 'es';
             updates.useCentralLogo = configData.config.useCentralLogo || false;
 
             // Stats panel
@@ -735,6 +744,8 @@ const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
           updates.footerText4 = configData.footer.footerLine4 || '';
           updates.footerText5 = configData.footer.footerLine5 || '';
           updates.footerText6 = configData.footer.footerLine6 || '';
+          updates.footerText7 = configData.footer.footerLine7 || '';
+          updates.footerText8 = configData.footer.footerLine8 || '';
           updates.showBranchInfo = configData.footer.showBranchInfo !== undefined ? configData.footer.showBranchInfo : true;
           updates.showDateTime = configData.footer.showDateTime !== undefined ? configData.footer.showDateTime : true;
         }
@@ -1494,6 +1505,9 @@ const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
         allowFutureSales: formData.futureSalesMode !== 'OFF',
         maxFutureDays: formData.maxFutureDays ? parseInt(formData.maxFutureDays) : 7,
 
+        // Default UI language for this banca
+        defaultLanguage: formData.defaultLanguage || 'es',
+
         // Stats panel configuration
         showStatsPanel: formData.showStatsPanel !== undefined ? formData.showStatsPanel : true,
         statsPanelConfig: JSON.stringify({
@@ -1558,6 +1572,7 @@ const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
                 futureSalesMode: formData.futureSalesMode || 'OFF',
                 allowFutureSales: formData.futureSalesMode !== 'OFF',
                 maxFutureDays: formData.maxFutureDays ? parseInt(formData.maxFutureDays) : 7,
+                defaultLanguage: formData.defaultLanguage || 'es',
                 useCentralLogo: formData.useCentralLogo || false,
                 enableAutoLogout: formData.enableAutoLogout || false,
                 autoLogoutMinutes: formData.autoLogoutMinutes ? parseInt(formData.autoLogoutMinutes) : 30,
@@ -1594,7 +1609,9 @@ const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
                 footerLine3: formData.footerText3 || '',
                 footerLine4: formData.footerText4 || '',
                 footerLine5: formData.footerText5 || '',
-                footerLine6: formData.footerText6 || ''
+                footerLine6: formData.footerText6 || '',
+                footerLine7: formData.footerText7 || '',
+                footerLine8: formData.footerText8 || ''
               }
             };
             await updateBettingPoolConfig(createdBettingPoolId, configPayload as unknown as BettingPoolConfigData);

@@ -1158,6 +1158,7 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
           futureSalesMode: formData.futureSalesMode || 'OFF',
           allowFutureSales: formData.futureSalesMode !== 'OFF',
           maxFutureDays: formData.maxFutureDays ? parseInt(formData.maxFutureDays) : 7,
+          defaultLanguage: formData.defaultLanguage || 'es',
           useCentralLogo: formData.useCentralLogo || false,
           enableAutoLogout: formData.enableAutoLogout || false,
           autoLogoutMinutes: formData.autoLogoutMinutes ? parseInt(formData.autoLogoutMinutes) : 30,
@@ -1195,6 +1196,8 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
           footerLine4: formData.footerText4 || '',
           footerLine5: formData.footerText5 || '',
           footerLine6: formData.footerText6 || '',
+          footerLine7: formData.footerText7 || '',
+          footerLine8: formData.footerText8 || '',
           showBranchInfo: formData.showBranchInfo !== undefined ? formData.showBranchInfo : true,
           showDateTime: formData.showDateTime !== undefined ? formData.showDateTime : true
         }

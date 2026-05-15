@@ -29,6 +29,21 @@ public class ZonesController : ControllerBase
         _zoneScope = zoneScope;
     }
 
+    /// <summary>Returns true if the current user holds the given permission code.</summary>
+    private async Task<bool> HasPermissionAsync(string code)
+    {
+        var raw = User.FindFirst("userId")?.Value
+               ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (!int.TryParse(raw, out var userId)) return false;
+
+        return await _context.UserPermissions.AsNoTracking()
+            .AnyAsync(up => up.UserId == userId
+                && up.IsActive
+                && up.Permission != null
+                && up.Permission.IsActive
+                && up.Permission.PermissionCode == code);
+    }
+
     /// <summary>
     /// Get all zones with pagination
     /// </summary>
@@ -40,6 +55,10 @@ public class ZonesController : ControllerBase
         [FromQuery] int? countryId = null,
         [FromQuery] bool? isActive = null)
     {
+        if (!await HasPermissionAsync("ZONE_ACCESS")
+            && !await HasPermissionAsync("CREATE_ZONES")
+            && !await HasPermissionAsync("MANAGE_ZONES")) return Forbid();
+
         try
         {
             // Zone scope: scoped admin only sees their assigned zones.
@@ -129,6 +148,9 @@ public class ZonesController : ControllerBase
     [HttpGet("{id}")]
     public async Task<ActionResult<ZoneDto>> GetZone(int id)
     {
+        if (!await HasPermissionAsync("ZONE_ACCESS")
+            && !await HasPermissionAsync("CREATE_ZONES")
+            && !await HasPermissionAsync("MANAGE_ZONES")) return Forbid();
         if (!await _zoneScope.IsZoneAllowedAsync(id)) return NotFound(new { message = "Zona no encontrada" });
         try
         {
@@ -169,6 +191,7 @@ public class ZonesController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<ZoneDto>> CreateZone([FromBody] CreateZoneDto createDto)
     {
+        if (!await HasPermissionAsync("CREATE_ZONES")) return Forbid();
         // Creating a zone is admin-level config — a scoped admin must not be able
         // to grow the set of zones (would let them self-escalate scope).
         if (await _zoneScope.GetAllowedZoneIdsAsync() != null) return Forbid();
@@ -240,6 +263,7 @@ public class ZonesController : ControllerBase
     [HttpPut("{id}")]
     public async Task<ActionResult<ZoneDto>> UpdateZone(int id, [FromBody] UpdateZoneDto updateDto)
     {
+        if (!await HasPermissionAsync("MANAGE_ZONES")) return Forbid();
         if (!await _zoneScope.IsZoneAllowedAsync(id)) return Forbid();
         try
         {
@@ -310,6 +334,7 @@ public class ZonesController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<ActionResult> DeleteZone(int id)
     {
+        if (!await HasPermissionAsync("MANAGE_ZONES")) return Forbid();
         if (!await _zoneScope.IsZoneAllowedAsync(id)) return Forbid();
         try
         {
@@ -343,6 +368,8 @@ public class ZonesController : ControllerBase
     [HttpGet("{id}/users")]
     public async Task<ActionResult<ZoneWithUsersDto>> GetZoneUsers(int id)
     {
+        if (!await HasPermissionAsync("MANAGE_ZONES")) return Forbid();
+
         try
         {
             var zone = await _context.Zones
@@ -392,6 +419,8 @@ public class ZonesController : ControllerBase
     [HttpPost("{id}/users")]
     public async Task<ActionResult> AssignUsersToZone(int id, [FromBody] AssignUsersToZoneDto assignDto)
     {
+        if (!await HasPermissionAsync("MANAGE_ZONES")) return Forbid();
+
         try
         {
             var zone = await _context.Zones.FindAsync(id);
@@ -465,6 +494,8 @@ public class ZonesController : ControllerBase
     [HttpDelete("{id}/users/{userId}")]
     public async Task<ActionResult> RemoveUserFromZone(int id, int userId)
     {
+        if (!await HasPermissionAsync("MANAGE_ZONES")) return Forbid();
+
         try
         {
             var assignment = await _context.UserZones

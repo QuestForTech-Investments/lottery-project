@@ -43,6 +43,16 @@ public class TransactionGroupsController : ControllerBase
                 && up.Permission.PermissionCode == code);
     }
 
+    /// <summary>True if the current user is actively assigned to the given banca (POS).</summary>
+    private async Task<bool> IsAssignedToBettingPoolAsync(int bettingPoolId)
+    {
+        var raw = User.FindFirst("userId")?.Value
+               ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (!int.TryParse(raw, out var userId)) return false;
+        return await _context.UserBettingPools.AsNoTracking()
+            .AnyAsync(ubp => ubp.UserId == userId && ubp.BettingPoolId == bettingPoolId && ubp.IsActive);
+    }
+
     /// <summary>
     /// Map a transaction-line type (Pago/Cobro/Ajuste/Retiro) to the permission needed to create it.
     /// </summary>
@@ -483,7 +493,10 @@ public class TransactionGroupsController : ControllerBase
         [FromQuery] int bettingPoolId,
         [FromQuery] DateTime? date = null)
     {
-        if (!await HasPermissionCodeAsync("MANAGE_TRANSACTIONS")) return Forbid();
+        // Admins need MANAGE_TRANSACTIONS. POS users can read transactions of their own banca.
+        if (!await HasPermissionCodeAsync("MANAGE_TRANSACTIONS")
+            && !await IsAssignedToBettingPoolAsync(bettingPoolId))
+            return Forbid();
         try
         {
             if (bettingPoolId <= 0)

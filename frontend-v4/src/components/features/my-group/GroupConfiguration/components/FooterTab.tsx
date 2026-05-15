@@ -1,7 +1,7 @@
 /**
  * FooterTab Component
  *
- * Tab content for footer default lines (up to 6 lines, 30 chars each).
+ * Tab content for footer default lines (up to 8 lines, 30 chars each).
  * These defaults pre-populate new banca footers.
  */
 
@@ -9,7 +9,7 @@ import { memo, type FC } from 'react';
 import { Box, Typography, TextField } from '@mui/material';
 import type { FooterTabProps, FooterData } from '../types';
 
-const LINE_KEYS: (keyof FooterData)[] = ['line1', 'line2', 'line3', 'line4', 'line5', 'line6'];
+const LINE_KEYS: (keyof FooterData)[] = ['line1', 'line2', 'line3', 'line4', 'line5', 'line6', 'line7', 'line8'];
 
 const FooterTab: FC<FooterTabProps> = memo(({ footerData, onFooterChange }) => (
   <Box>

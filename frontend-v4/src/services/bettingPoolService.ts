@@ -88,6 +88,7 @@ export interface BettingPoolConfigData {
     allowFutureSales?: boolean;
     maxFutureDays?: number;
     futureSalesMode?: string;
+    defaultLanguage?: string;
     useCentralLogo?: boolean;
     showStatsPanel?: boolean;
     statsPanelConfig?: string;
@@ -110,6 +111,10 @@ export interface BettingPoolConfigData {
     footerLine2?: string;
     footerLine3?: string;
     footerLine4?: string;
+    footerLine5?: string;
+    footerLine6?: string;
+    footerLine7?: string;
+    footerLine8?: string;
     showBranchInfo?: boolean;
     showDateTime?: boolean;
   };

@@ -43,6 +43,19 @@ public class BettingPoolsController : ControllerBase
     }
 
     /// <summary>
+    /// True if the current user has an active assignment to the given banca.
+    /// Used to let POS users read data scoped to their own banca even without admin perms.
+    /// </summary>
+    private async Task<bool> IsAssignedToBettingPoolAsync(int bettingPoolId)
+    {
+        var raw = User.FindFirst("userId")?.Value
+               ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (!int.TryParse(raw, out var userId)) return false;
+        return await _context.UserBettingPools.AsNoTracking()
+            .AnyAsync(ubp => ubp.UserId == userId && ubp.BettingPoolId == bettingPoolId && ubp.IsActive);
+    }
+
+    /// <summary>
     /// Get all betting pools with pagination and filtering
     /// </summary>
     /// <param name="page">Page number (default: 1)</param>
@@ -150,7 +163,8 @@ public class BettingPoolsController : ControllerBase
     [HttpGet("{id}")]
     public async Task<ActionResult<BettingPoolDetailDto>> GetBettingPool(int id)
     {
-        if (!await HasPermissionAsync("BANK_ACCESS")) return Forbid();
+        // Admins need BANK_ACCESS. POS users can read their own banca without it.
+        if (!await HasPermissionAsync("BANK_ACCESS") && !await IsAssignedToBettingPoolAsync(id)) return Forbid();
         try
         {
             // Scope check — admin cannot read a banca outside their assigned zones.
@@ -922,6 +936,7 @@ public class BettingPoolsController : ControllerBase
                     AllowFutureSales = bettingPool.Config.AllowFutureSales,
                     MaxFutureDays = bettingPool.Config.MaxFutureDays,
                     FutureSalesMode = bettingPool.Config.FutureSalesMode,
+                    DefaultLanguage = bettingPool.Config.DefaultLanguage,
                     UseCentralLogo = bettingPool.Config.UseCentralLogo,
                     ShowStatsPanel = bettingPool.Config.ShowStatsPanel,
                     StatsPanelConfig = bettingPool.Config.StatsPanelConfig,
@@ -950,7 +965,9 @@ public class BettingPoolsController : ControllerBase
                     FooterLine3 = bettingPool.Footer.FooterLine3,
                     FooterLine4 = bettingPool.Footer.FooterLine4,
                     FooterLine5 = bettingPool.Footer.FooterLine5,
-                    FooterLine6 = bettingPool.Footer.FooterLine6
+                    FooterLine6 = bettingPool.Footer.FooterLine6,
+                    FooterLine7 = bettingPool.Footer.FooterLine7,
+                    FooterLine8 = bettingPool.Footer.FooterLine8
                 } : null
             };
 
@@ -1026,6 +1043,7 @@ public class BettingPoolsController : ControllerBase
                 bettingPool.Config.FutureSalesMode = dto.Config.FutureSalesMode ?? "OFF";
                 bettingPool.Config.AllowFutureSales = dto.Config.FutureSalesMode != "OFF";
                 bettingPool.Config.MaxFutureDays = dto.Config.MaxFutureDays;
+                bettingPool.Config.DefaultLanguage = dto.Config.DefaultLanguage;
                 bettingPool.Config.UseCentralLogo = dto.Config.UseCentralLogo;
                 bettingPool.Config.ShowStatsPanel = dto.Config.ShowStatsPanel;
                 bettingPool.Config.StatsPanelConfig = dto.Config.StatsPanelConfig;
@@ -1094,6 +1112,8 @@ public class BettingPoolsController : ControllerBase
                 bettingPool.Footer.FooterLine4 = dto.Footer.FooterLine4;
                 bettingPool.Footer.FooterLine5 = dto.Footer.FooterLine5;
                 bettingPool.Footer.FooterLine6 = dto.Footer.FooterLine6;
+                bettingPool.Footer.FooterLine7 = dto.Footer.FooterLine7;
+                bettingPool.Footer.FooterLine8 = dto.Footer.FooterLine8;
                 bettingPool.Footer.UpdatedAt = DateTime.UtcNow;
             }
 
@@ -1280,6 +1300,7 @@ public class BettingPoolsController : ControllerBase
                     FutureSalesMode = dto.Config.FutureSalesMode ?? "OFF",
                     AllowFutureSales = dto.Config.FutureSalesMode != "OFF",
                     MaxFutureDays = dto.Config.MaxFutureDays,
+                    DefaultLanguage = dto.Config.DefaultLanguage,
                     UseCentralLogo = dto.Config.UseCentralLogo,
                     ShowStatsPanel = dto.Config.ShowStatsPanel,
                     StatsPanelConfig = dto.Config.StatsPanelConfig,

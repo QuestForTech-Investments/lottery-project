@@ -108,6 +108,8 @@ export interface FooterData {
   line4: string;
   line5: string;
   line6: string;
+  line7: string;
+  line8: string;
 }
 
 // Allowed values structure

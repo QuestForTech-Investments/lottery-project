@@ -5,7 +5,7 @@
  * OPTIMIZED: useCallback added for all handlers (2025-10-30)
  */
 
-import { useState, useEffect, useCallback, type ChangeEvent, type FormEvent } from 'react'
+import { useState, useEffect, useCallback, useMemo, type ChangeEvent, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { userService, permissionService } from '@/services'
 import { handleApiError } from '@/utils'
@@ -40,6 +40,46 @@ const useUserForm = () => {
   // Permissions state
   const [permissionCategories, setPermissionCategories] = useState<PermissionCategory[]>([])
   const [loadingPermissions, setLoadingPermissions] = useState<boolean>(true)
+
+  /**
+   * Banca (POS) users can only receive permissions from two groups:
+   *   - Acceso al sistema (full)
+   *   - Tickets → only SELL_TICKETS
+   * For admin users, the full list is shown.
+   */
+  const visiblePermissionCategories = useMemo<PermissionCategory[]>(() => {
+    if (!formData.assignBanca) return permissionCategories
+    return permissionCategories
+      .map(cat => {
+        if (cat.category === 'Acceso al sistema') {
+          // POS users don't need the admin dashboard; only basic system access.
+          return {
+            ...cat,
+            permissions: cat.permissions.filter(p => p.permissionCode !== 'ADMIN_DASHBOARD')
+          }
+        }
+        if (cat.category === 'Tickets') {
+          return {
+            ...cat,
+            permissions: cat.permissions.filter(p => p.permissionCode === 'SELL_TICKETS')
+          }
+        }
+        return { ...cat, permissions: [] }
+      })
+      .filter(cat => cat.permissions.length > 0)
+  }, [permissionCategories, formData.assignBanca])
+
+  // Prune any selected permissions that are no longer visible (e.g. user toggled assignBanca on).
+  const allowedPermissionIds = useMemo(
+    () => new Set(visiblePermissionCategories.flatMap(c => c.permissions.map(p => p.permissionId))),
+    [visiblePermissionCategories]
+  )
+  useEffect(() => {
+    setFormData(prev => {
+      const filtered = prev.permissionIds.filter(id => allowedPermissionIds.has(id))
+      return filtered.length === prev.permissionIds.length ? prev : { ...prev, permissionIds: filtered }
+    })
+  }, [allowedPermissionIds])
 
   // UI state
   const [loading, setLoading] = useState<boolean>(false)
@@ -300,7 +340,7 @@ const useUserForm = () => {
     formData,
 
     // Permissions
-    permissionCategories,
+    permissionCategories: visiblePermissionCategories,
     loadingPermissions,
     loadPermissions,
 

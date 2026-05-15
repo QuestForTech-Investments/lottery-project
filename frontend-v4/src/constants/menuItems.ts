@@ -170,10 +170,11 @@ export const MENU_ITEMS: MenuItem[] = [
     id: 'zones',
     label: 'ZONAS',
     icon: LocationOn,
+    permission: ['ZONE_ACCESS', 'CREATE_ZONES', 'MANAGE_ZONES'],
     submenu: [
-      { id: 'zones-list', label: 'Lista', shortcut: 'L', path: '/zones/list' },
-      { id: 'create-zone', label: 'Crear', shortcut: 'C', path: '/zones/new' },
-      { id: 'manage-zones', label: 'Manejar', shortcut: 'M', path: '/zones/manage' }
+      { id: 'zones-list', label: 'Lista', shortcut: 'L', path: '/zones/list', permission: 'ZONE_ACCESS' },
+      { id: 'create-zone', label: 'Crear', shortcut: 'C', path: '/zones/new', permission: 'CREATE_ZONES' },
+      { id: 'manage-zones', label: 'Manejar', shortcut: 'M', path: '/zones/manage', permission: 'MANAGE_ZONES' }
     ]
   },
   {

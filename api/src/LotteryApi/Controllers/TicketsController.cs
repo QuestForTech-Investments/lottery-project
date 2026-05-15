@@ -61,12 +61,26 @@ public class TicketsController : ControllerBase
                 && up.Permission.PermissionCode == code);
     }
 
+    /// <summary>
+    /// True if the current user has an active assignment to the given banca.
+    /// Lets POS users read data scoped to their own banca even without admin perms.
+    /// </summary>
+    private async Task<bool> IsAssignedToBettingPoolAsync(int bettingPoolId)
+    {
+        var raw = User.FindFirst("userId")?.Value
+               ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (!int.TryParse(raw, out var userId)) return false;
+        return await _context.UserBettingPools.AsNoTracking()
+            .AnyAsync(ubp => ubp.UserId == userId && ubp.BettingPoolId == bettingPoolId && ubp.IsActive);
+    }
+
     [HttpGet]
     public async Task<ActionResult<TicketDetailDto[]>> GetTickets(
         [FromQuery] int bettingPoolId,
         [FromQuery] DateTime? date = null)
     {
-        if (!await HasPermissionAsync("TICKET_MONITORING")) return Forbid();
+        // Admins need TICKET_MONITORING; POS users can read their own banca's tickets.
+        if (!await HasPermissionAsync("TICKET_MONITORING") && !await IsAssignedToBettingPoolAsync(bettingPoolId)) return Forbid();
 
         _logger.LogInformation("Getting tickets for bettingPoolId {BettingPoolId}, date {Date}", bettingPoolId, date);
 

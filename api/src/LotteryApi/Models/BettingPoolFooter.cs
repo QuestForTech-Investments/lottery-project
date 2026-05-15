@@ -40,6 +40,14 @@ public class BettingPoolFooter
     [Column("footer_line_6")]
     public string? FooterLine6 { get; set; }
 
+    [MaxLength(30)]
+    [Column("footer_line_7")]
+    public string? FooterLine7 { get; set; }
+
+    [MaxLength(30)]
+    [Column("footer_line_8")]
+    public string? FooterLine8 { get; set; }
+
     [Column("created_at")]
     public DateTime? CreatedAt { get; set; }
 

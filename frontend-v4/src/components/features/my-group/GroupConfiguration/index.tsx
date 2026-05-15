@@ -166,7 +166,7 @@ const GroupConfiguration = (): React.ReactElement => {
         if (footerLines.length > 0) {
           const nextFooter: FooterData = { ...INITIAL_FOOTER_DATA };
           footerLines.forEach(l => {
-            if (l.lineNumber >= 1 && l.lineNumber <= 6) {
+            if (l.lineNumber >= 1 && l.lineNumber <= 8) {
               const key = `line${l.lineNumber}` as keyof FooterData;
               nextFooter[key] = l.lineText || '';
             }
@@ -242,7 +242,7 @@ const GroupConfiguration = (): React.ReactElement => {
         });
       });
 
-      const footerLines: FooterLine[] = ([1, 2, 3, 4, 5, 6] as const).map(n => ({
+      const footerLines: FooterLine[] = ([1, 2, 3, 4, 5, 6, 7, 8] as const).map(n => ({
         lineNumber: n,
         lineText: footerData[`line${n}` as keyof FooterData] || ''
       }));

@@ -77,6 +77,8 @@ export interface FormData {
   statBalance: boolean;
   statFall: boolean;
   statAccumulatedFall: boolean;
+  // UI / banca preferences
+  defaultLanguage: string;
   // Footers
   autoFooter: boolean;
   footerText1: string;
@@ -85,6 +87,8 @@ export interface FormData {
   footerText4: string;
   footerText5: string;
   footerText6: string;
+  footerText7: string;
+  footerText8: string;
   showBranchInfo: boolean;
   showDateTime: boolean;
   // Schedules
@@ -249,6 +253,7 @@ export interface ConfigResponse {
     allowFutureSales?: boolean;
     maxFutureDays?: number;
     futureSalesMode?: string;
+    defaultLanguage?: string;
     useCentralLogo?: boolean;
     enableAutoLogout?: boolean;
     autoLogoutMinutes?: number;
@@ -275,6 +280,8 @@ export interface ConfigResponse {
     footerLine4?: string;
     footerLine5?: string;
     footerLine6?: string;
+    footerLine7?: string;
+    footerLine8?: string;
     showBranchInfo?: boolean;
     showDateTime?: boolean;
   };

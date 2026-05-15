@@ -233,25 +233,16 @@ const CreateUserMUI = () => {
                       checked={formData.assignBanca}
                       onChange={handleChange}
                       name="assignBanca"
-                      disabled={loading || formData.zoneIds.length === 0}
+                      disabled={loading}
                       color="primary"
                     />
                   }
-                  label={
-                    <Box>
-                      <Typography variant="body1">Asignar Banca</Typography>
-                      {formData.zoneIds.length === 0 && (
-                        <Typography variant="caption" color="text.secondary">
-                          Selecciona zonas primero para habilitar la asignación de banca
-                        </Typography>
-                      )}
-                    </Box>
-                  }
+                  label={<Typography variant="body1">Asignar Banca</Typography>}
                 />
               </Grid>
 
               {/* Branch Selection */}
-              {formData.assignBanca && formData.zoneIds.length > 0 && (
+              {formData.assignBanca && (
                 <Grid item xs={12}>
                   <Box>
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>

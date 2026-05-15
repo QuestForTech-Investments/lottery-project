@@ -172,6 +172,7 @@ public class BettingPoolConfigDto
     public bool AllowFutureSales { get; set; } = false;
     public int MaxFutureDays { get; set; } = 7;
     public string FutureSalesMode { get; set; } = "OFF";
+    public string? DefaultLanguage { get; set; }
     public bool UseCentralLogo { get; set; } = false;
     public bool ShowStatsPanel { get; set; } = true;
     public string? StatsPanelConfig { get; set; }
@@ -485,6 +486,8 @@ public class BettingPoolFooterDto
     public string? FooterLine4 { get; set; }
     public string? FooterLine5 { get; set; }
     public string? FooterLine6 { get; set; }
+    public string? FooterLine7 { get; set; }
+    public string? FooterLine8 { get; set; }
 }
 
 /// <summary>
@@ -499,6 +502,8 @@ public class UpdateBettingPoolFooterDto
     public string? FooterLine4 { get; set; }
     public string? FooterLine5 { get; set; }
     public string? FooterLine6 { get; set; }
+    public string? FooterLine7 { get; set; }
+    public string? FooterLine8 { get; set; }
 }
 
 // =============================================================================

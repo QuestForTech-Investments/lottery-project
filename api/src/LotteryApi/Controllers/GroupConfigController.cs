@@ -233,7 +233,7 @@ public class GroupConfigController : ControllerBase
     }
 
     // ============================================================================
-    // Footer Defaults (up to 6 lines, max 30 chars each)
+    // Footer Defaults (up to 8 lines, max 30 chars each)
     // ============================================================================
 
     public class FooterLineDto
@@ -248,7 +248,7 @@ public class GroupConfigController : ControllerBase
     }
 
     /// <summary>
-    /// Get all footer default lines, ordered by line_number (1..6).
+    /// Get all footer default lines, ordered by line_number (1..8).
     /// </summary>
     [HttpGet("footer")]
     public async Task<ActionResult<List<FooterLineDto>>> GetFooterDefaults()
@@ -262,7 +262,7 @@ public class GroupConfigController : ControllerBase
     }
 
     /// <summary>
-    /// Upsert footer default lines. Each line max 30 chars, line_number 1..6.
+    /// Upsert footer default lines. Each line max 30 chars, line_number 1..8.
     /// </summary>
     [HttpPut("footer")]
     public async Task<ActionResult> SaveFooterDefaults([FromBody] SaveFooterRequest request)
@@ -283,7 +283,7 @@ public class GroupConfigController : ControllerBase
 
         foreach (var line in request.Lines)
         {
-            if (line.LineNumber < 1 || line.LineNumber > 6) continue;
+            if (line.LineNumber < 1 || line.LineNumber > 8) continue;
             var text = (line.LineText ?? string.Empty);
             if (text.Length > 30) text = text.Substring(0, 30);
 

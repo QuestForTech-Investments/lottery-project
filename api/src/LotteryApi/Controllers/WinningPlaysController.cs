@@ -39,6 +39,18 @@ public class WinningPlaysController : ControllerBase
                 && up.Permission.PermissionCode == code);
     }
 
+    /// <summary>Returns the IDs of bancas the current user is assigned to (POS).</summary>
+    private async Task<List<int>> GetAssignedBettingPoolIdsAsync()
+    {
+        var raw = User.FindFirst("userId")?.Value
+               ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (!int.TryParse(raw, out var userId)) return new List<int>();
+        return await _context.UserBettingPools.AsNoTracking()
+            .Where(ubp => ubp.UserId == userId && ubp.IsActive)
+            .Select(ubp => ubp.BettingPoolId)
+            .ToListAsync();
+    }
+
     /// <summary>
     /// GET /api/winning-plays/params
     /// Get parameters needed for filtering winning plays (draws, zones)
@@ -47,7 +59,11 @@ public class WinningPlaysController : ControllerBase
     [HttpGet("params")]
     public async Task<ActionResult<WinningPlaysParamsDto>> GetParams()
     {
-        if (!await HasPermissionAsync("TICKET_MONITORING")) return Forbid();
+        // Admin needs TICKET_MONITORING. POS users get this if they have a banca assigned —
+        // they need the draws/zones lookups to filter their own winning plays.
+        if (!await HasPermissionAsync("TICKET_MONITORING")
+            && (await GetAssignedBettingPoolIdsAsync()).Count == 0)
+            return Forbid();
 
         try
         {
@@ -115,7 +131,14 @@ public class WinningPlaysController : ControllerBase
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 100)
     {
-        if (!await HasPermissionAsync("TICKET_MONITORING")) return Forbid();
+        var hasAdminView = await HasPermissionAsync("TICKET_MONITORING");
+        List<int>? posAllowedBpIds = null;
+        if (!hasAdminView)
+        {
+            posAllowedBpIds = await GetAssignedBettingPoolIdsAsync();
+            if (posAllowedBpIds.Count == 0) return Forbid();
+            if (bettingPoolId.HasValue && !posAllowedBpIds.Contains(bettingPoolId.Value)) return Forbid();
+        }
 
         try
         {
@@ -152,6 +175,12 @@ public class WinningPlaysController : ControllerBase
             if (allowedBpIds != null)
             {
                 query = query.Where(tl => tl.Ticket != null && allowedBpIds.Contains(tl.Ticket.BettingPoolId));
+            }
+
+            // POS users: hard-scope to their assigned bancas.
+            if (posAllowedBpIds != null)
+            {
+                query = query.Where(tl => tl.Ticket != null && posAllowedBpIds.Contains(tl.Ticket.BettingPoolId));
             }
 
             // Apply filters

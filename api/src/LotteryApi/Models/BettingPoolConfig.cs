@@ -83,6 +83,11 @@ public class BettingPoolConfig
     [Column("future_sales_mode")]
     public string FutureSalesMode { get; set; } = "OFF";
 
+    /// <summary>Default UI language for this banca: es | en | fr | ht.</summary>
+    [MaxLength(10)]
+    [Column("default_language")]
+    public string? DefaultLanguage { get; set; }
+
     [Column("use_central_logo")]
     public bool UseCentralLogo { get; set; } = false;
 

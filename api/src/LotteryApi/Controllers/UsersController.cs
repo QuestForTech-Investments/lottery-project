@@ -84,12 +84,17 @@ public class UsersController : ControllerBase
             .Where(u => u.IsActive)
             .AsQueryable();
 
-        // Zone scope: scoped admin only sees users assigned to at least one of their zones.
-        // Super-admin (no zones assigned) sees everyone, including users with no zones.
+        // Zone scope: scoped admin only sees users in their zones. The path differs by role:
+        //   - admin users: only via UserZones (the banca-zone path doesn't apply to them)
+        //   - POS users: via their banca's zone, since POS users don't have UserZones
         var allowedZones = await _zoneScope.GetAllowedZoneIdsAsync();
         if (allowedZones != null)
         {
-            query = query.Where(u => u.UserZones.Any(uz => uz.IsActive && allowedZones.Contains(uz.ZoneId)));
+            query = query.Where(u =>
+                (u.Role != null && u.Role.RoleName == "POS")
+                    ? u.UserBettingPools.Any(ubp =>
+                        ubp.IsActive && ubp.BettingPool != null && allowedZones.Contains(ubp.BettingPool.ZoneId))
+                    : u.UserZones.Any(uz => uz.IsActive && allowedZones.Contains(uz.ZoneId)));
         }
 
         // Exclude POS users by default (unless includePosUsers=true)
@@ -173,6 +178,15 @@ public class UsersController : ControllerBase
                     .ThenInclude(bp => bp!.Zone)
             .Where(u => u.IsActive && u.Role != null && u.Role.RoleName == "POS")
             .AsQueryable();
+
+        // Zone scope: scoped admin only sees POS users whose banca belongs to their zones.
+        // POS users aren't assigned to zones directly — the link is user → banca → zone.
+        var allowedZones = await _zoneScope.GetAllowedZoneIdsAsync();
+        if (allowedZones != null)
+        {
+            query = query.Where(u => u.UserBettingPools.Any(ubp =>
+                ubp.IsActive && ubp.BettingPool != null && allowedZones.Contains(ubp.BettingPool.ZoneId)));
+        }
 
         // Apply filters
         if (!string.IsNullOrEmpty(search))
@@ -730,17 +744,37 @@ public class UsersController : ControllerBase
             return NotFound(new { message = $"User with ID {userId} not found" });
         }
 
-        // Zone scope — the target user's current zones AND any new zones must be in admin's scope.
+        // Zone scope — different rule by role:
+        //   - admin users: scoped only via UserZones (the banca-zone path doesn't apply)
+        //   - POS users: scoped via their banca's zone (POS users don't have UserZones)
         var allowedZones = await _zoneScope.GetAllowedZoneIdsAsync();
         if (allowedZones != null)
         {
-            var currentZones = await _context.UserZones
-                .Where(uz => uz.UserId == userId && uz.IsActive)
-                .Select(uz => uz.ZoneId)
-                .ToListAsync();
-            // If the user has existing zones, at least one must be in scope —
-            // otherwise the admin doesn't have rights over this user.
-            if (currentZones.Count > 0 && !currentZones.Any(z => allowedZones.Contains(z)))
+            var targetIsPos = await _context.Users
+                .AsNoTracking()
+                .Where(u => u.UserId == userId)
+                .Select(u => u.Role != null && u.Role.RoleName == "POS")
+                .FirstOrDefaultAsync();
+
+            List<int> userZonesTotal;
+            if (targetIsPos)
+            {
+                userZonesTotal = await _context.UserBettingPools
+                    .Where(ubp => ubp.UserId == userId && ubp.IsActive && ubp.BettingPool != null)
+                    .Select(ubp => ubp.BettingPool!.ZoneId)
+                    .Distinct()
+                    .ToListAsync();
+            }
+            else
+            {
+                userZonesTotal = await _context.UserZones
+                    .Where(uz => uz.UserId == userId && uz.IsActive)
+                    .Select(uz => uz.ZoneId)
+                    .ToListAsync();
+            }
+
+            // If the user is scoped to any zone, at least one must be in admin's scope.
+            if (userZonesTotal.Count > 0 && !userZonesTotal.Any(z => allowedZones.Contains(z)))
             {
                 return Forbid();
             }
@@ -1067,15 +1101,36 @@ public class UsersController : ControllerBase
             return NotFound(new { message = $"User with ID {id} not found" });
         }
 
-        // Zone scope — admin can only delete users with at least one zone in their scope.
+        // Zone scope — different rule by role:
+        //   - admin users: scoped only via UserZones
+        //   - POS users: scoped via their banca's zone
         var allowedZones = await _zoneScope.GetAllowedZoneIdsAsync();
         if (allowedZones != null)
         {
-            var currentZones = await _context.UserZones
-                .Where(uz => uz.UserId == id && uz.IsActive)
-                .Select(uz => uz.ZoneId)
-                .ToListAsync();
-            if (currentZones.Count > 0 && !currentZones.Any(z => allowedZones.Contains(z)))
+            var targetIsPos = await _context.Users
+                .AsNoTracking()
+                .Where(u => u.UserId == id)
+                .Select(u => u.Role != null && u.Role.RoleName == "POS")
+                .FirstOrDefaultAsync();
+
+            List<int> userZonesTotal;
+            if (targetIsPos)
+            {
+                userZonesTotal = await _context.UserBettingPools
+                    .Where(ubp => ubp.UserId == id && ubp.IsActive && ubp.BettingPool != null)
+                    .Select(ubp => ubp.BettingPool!.ZoneId)
+                    .Distinct()
+                    .ToListAsync();
+            }
+            else
+            {
+                userZonesTotal = await _context.UserZones
+                    .Where(uz => uz.UserId == id && uz.IsActive)
+                    .Select(uz => uz.ZoneId)
+                    .ToListAsync();
+            }
+
+            if (userZonesTotal.Count > 0 && !userZonesTotal.Any(z => allowedZones.Contains(z)))
             {
                 return Forbid();
             }

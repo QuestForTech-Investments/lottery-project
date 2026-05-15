@@ -87,6 +87,8 @@ export const mapConfigToFormData = (configResponse: ConfigResponse): Partial<For
     footerText4: footer.footerLine4 || '',
     footerText5: footer.footerLine5 || '',
     footerText6: footer.footerLine6 || '',
+    footerText7: footer.footerLine7 || '',
+    footerText8: footer.footerLine8 || '',
     showBranchInfo: footer.showBranchInfo !== undefined ? footer.showBranchInfo : true,
     showDateTime: footer.showDateTime !== undefined ? footer.showDateTime : true,
 
@@ -96,6 +98,9 @@ export const mapConfigToFormData = (configResponse: ConfigResponse): Partial<For
     // Future sales configuration
     futureSalesMode: config.futureSalesMode || (config.allowFutureSales ? 'DAYS' : 'OFF'),
     maxFutureDays: String(config.maxFutureDays ?? 7),
+
+    // Default UI language for this banca
+    defaultLanguage: config.defaultLanguage || 'es',
 
     // Central logo
     useCentralLogo: config.useCentralLogo || false,

@@ -51,7 +51,7 @@ export const buildPrefillFromGroupDefaults = async (): Promise<Record<string, nu
   const updates: Record<string, number | string | boolean> = {};
 
   footerLines.forEach(l => {
-    if (l.lineNumber >= 1 && l.lineNumber <= 6 && l.lineText) {
+    if (l.lineNumber >= 1 && l.lineNumber <= 8 && l.lineText) {
       updates[`footerText${l.lineNumber}`] = l.lineText;
     }
   });

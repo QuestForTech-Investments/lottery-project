@@ -1,4 +1,4 @@
-import { useState, useEffect, type ChangeEvent, type FormEvent } from 'react';
+import { useState, useEffect, useMemo, type ChangeEvent, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { userService, permissionService } from '@/services';
 import * as logger from '@/utils/logger';
@@ -21,6 +21,10 @@ interface UserApiData {
   ZoneId?: number;
   BettingPoolId?: number | null;
   bettingPoolId?: number | null;
+  BettingPoolIds?: number[];
+  bettingPoolIds?: number[];
+  RoleName?: string | null;
+  roleName?: string | null;
 }
 
 // Permissions response formats
@@ -61,6 +65,49 @@ const useEditUserForm = (userId: string | undefined) => {
   // Permissions state
   const [permissionCategories, setPermissionCategories] = useState<PermissionCategory[]>([]);
   const [loadingPermissions, setLoadingPermissions] = useState<boolean>(true);
+
+  // POS / banca user marker — drives the permission filter. Detected from RoleName
+  // when the user is loaded (more reliable than the betting-pool toggle alone).
+  const [isPosUser, setIsPosUser] = useState<boolean>(false);
+
+  /**
+   * Banca (POS) users can only receive permissions from two groups:
+   *   - Acceso al sistema (full)
+   *   - Tickets → only SELL_TICKETS
+   */
+  const visiblePermissionCategories = useMemo<PermissionCategory[]>(() => {
+    if (!isPosUser && !formData.assignBanca) return permissionCategories;
+    return permissionCategories
+      .map(cat => {
+        if (cat.category === 'Acceso al sistema') {
+          // POS users don't need the admin dashboard; only basic system access.
+          return {
+            ...cat,
+            permissions: cat.permissions.filter(p => p.permissionCode !== 'ADMIN_DASHBOARD')
+          };
+        }
+        if (cat.category === 'Tickets') {
+          return {
+            ...cat,
+            permissions: cat.permissions.filter(p => p.permissionCode === 'SELL_TICKETS')
+          };
+        }
+        return { ...cat, permissions: [] };
+      })
+      .filter(cat => cat.permissions.length > 0);
+  }, [permissionCategories, formData.assignBanca, isPosUser]);
+
+  // Prune any selected permissions that are no longer visible (e.g. when assignBanca toggles on).
+  const allowedPermissionIds = useMemo(
+    () => new Set(visiblePermissionCategories.flatMap(c => c.permissions.map(p => p.permissionId))),
+    [visiblePermissionCategories]
+  );
+  useEffect(() => {
+    setFormData(prev => {
+      const filtered = prev.permissionIds.filter(id => allowedPermissionIds.has(id));
+      return filtered.length === prev.permissionIds.length ? prev : { ...prev, permissionIds: filtered };
+    });
+  }, [allowedPermissionIds]);
 
   // UI state
   const [loading, setLoading] = useState<boolean>(false);
@@ -158,7 +205,18 @@ const useEditUserForm = (userId: string | undefined) => {
 
       // Extract user fields handling both PascalCase and camelCase
       const username = user.Username || user.username || '';
-      const bettingPoolId = user.BettingPoolId !== undefined ? user.BettingPoolId : user.bettingPoolId;
+      // Prefer the singular field when present, fall back to the first item of the array
+      // returned by GetById (BettingPoolIds).
+      const bettingPoolIdsArray = user.BettingPoolIds ?? user.bettingPoolIds ?? [];
+      const bettingPoolId = user.BettingPoolId !== undefined
+        ? user.BettingPoolId
+        : (user.bettingPoolId !== undefined ? user.bettingPoolId : (bettingPoolIdsArray[0] ?? null));
+
+      // Detect POS / banca user from role name — independent of whether they currently
+      // have a betting pool assigned. POS users can never receive admin-only permissions.
+      const roleName = (user.RoleName ?? user.roleName ?? '').trim().toUpperCase();
+      const posUser = roleName === 'POS';
+      setIsPosUser(posUser);
 
       // Set basic user data
       setFormData(prev => ({
@@ -166,7 +224,7 @@ const useEditUserForm = (userId: string | undefined) => {
         username: username,
         zoneIds: zoneIds,
         bettingPoolId: bettingPoolId || null,
-        assignBanca: !!bettingPoolId,
+        assignBanca: posUser || !!bettingPoolId,
       }));
 
       // Load user permissions
@@ -316,10 +374,7 @@ const useEditUserForm = (userId: string | undefined) => {
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
 
-    // Zone validation - required if assignBanca is true
-    if (formData.assignBanca && formData.zoneIds.length === 0) {
-      newErrors.zones = 'Debe seleccionar al menos una zona';
-    }
+    // Banca users don't require a zone — the banca itself is enough scope.
 
     // Branch validation - required if assignBanca is true
     if (formData.assignBanca && !formData.bettingPoolId) {
@@ -402,7 +457,7 @@ const useEditUserForm = (userId: string | undefined) => {
     formData,
 
     // Permissions
-    permissionCategories,
+    permissionCategories: visiblePermissionCategories,
     loadingPermissions,
     loadPermissions,
 

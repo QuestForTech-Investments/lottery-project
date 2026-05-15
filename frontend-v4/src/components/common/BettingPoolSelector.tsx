@@ -20,28 +20,54 @@ interface BettingPoolSelectorProps {
   required?: boolean
 }
 
-type BettingPoolResponse = {
-  data?: BettingPool[]
-  bettingPools?: BettingPool[]
+type RawBetingPool = {
+  id?: BettingPoolId
+  bettingPoolId?: BettingPoolId
+  name?: string
+  bettingPoolName?: string
+  code?: string
+  bettingPoolCode?: string
+  branchCode?: string
   [key: string]: unknown
 }
 
+type BettingPoolResponse = {
+  items?: RawBetingPool[]
+  data?: RawBetingPool[]
+  bettingPools?: RawBetingPool[]
+  [key: string]: unknown
+}
+
+/**
+ * Normalize a raw API banca row into the shape the selector expects.
+ * The list endpoint returns `bettingPoolId` / `bettingPoolName` etc.; older callers
+ * used `id` / `name`. Map both into `id` / `name` so the autocomplete renders.
+ */
+const normalize = (row: RawBetingPool): BettingPool | null => {
+  const id = row.id ?? row.bettingPoolId
+  if (id == null) return null
+  return {
+    id,
+    name: row.name ?? row.bettingPoolName,
+    code: row.code ?? row.bettingPoolCode ?? row.branchCode,
+  }
+}
+
 const extractBettingPools = (response: unknown): BettingPool[] => {
-  if (Array.isArray(response)) {
-    return response as BettingPool[]
-  }
-
-  if (response && typeof response === 'object') {
-    const typedResponse = response as BettingPoolResponse
-    if (Array.isArray(typedResponse.data)) {
-      return typedResponse.data
+  const arr: RawBetingPool[] = (() => {
+    if (Array.isArray(response)) return response as RawBetingPool[]
+    if (response && typeof response === 'object') {
+      const typed = response as BettingPoolResponse
+      if (Array.isArray(typed.items)) return typed.items
+      if (Array.isArray(typed.data)) return typed.data
+      if (Array.isArray(typed.bettingPools)) return typed.bettingPools
     }
-    if (Array.isArray(typedResponse.bettingPools)) {
-      return typedResponse.bettingPools
-    }
-  }
+    return []
+  })()
 
-  return []
+  return arr
+    .map(normalize)
+    .filter((b): b is BettingPool => b !== null)
 }
 
 /**
@@ -69,20 +95,15 @@ const BettingPoolSelector = ({
   // Load bettingPools when selected zones change
   useEffect(() => {
     const loadBettingPools = async () => {
-      // Only load if there are selected zones
-      if (!selectedZoneIds || selectedZoneIds.length === 0) {
-        setBettingPools([])
-        return
-      }
-
       try {
         setLoading(true)
         setError(null)
 
-        // Fetch bettingPools for each selected zone
-        const bettingPoolPromises = selectedZoneIds.map((zoneId) => getBettingPools({ zoneId, isActive: true }))
-
-        const responses = await Promise.all(bettingPoolPromises)
+        // No zone filter → load all active bancas. POS users can be assigned a banca
+        // without first picking a zone.
+        const responses = !selectedZoneIds || selectedZoneIds.length === 0
+          ? [await getBettingPools({ isActive: true, pageSize: 500 })]
+          : await Promise.all(selectedZoneIds.map((zoneId) => getBettingPools({ zoneId, isActive: true })))
 
         // Combine all bettingPools from different zones
         const allBettingPools = responses.reduce<BettingPool[]>((acc, response) => {
@@ -131,7 +152,7 @@ const BettingPoolSelector = ({
       value={selectedBettingPool}
       onChange={handleChange}
       loading={loading}
-      disabled={loading || !!error || selectedZoneIds.length === 0}
+      disabled={loading || !!error}
       getOptionLabel={(option) => option?.name?.toString() || option?.code?.toString() || ''}
       isOptionEqualToValue={(option, optionValue) => option.id === optionValue.id}
       renderInput={(params) => (
@@ -139,7 +160,7 @@ const BettingPoolSelector = ({
           {...params}
           placeholder={placeholder}
           error={!!error}
-          helperText={error || (selectedZoneIds.length === 0 ? 'Selecciona zonas primero' : '')}
+          helperText={error || ''}
           required={required && !selectedBettingPool}
           InputProps={{
             ...params.InputProps,
@@ -152,13 +173,7 @@ const BettingPoolSelector = ({
           }}
         />
       )}
-      noOptionsText={
-        loading
-          ? 'Cargando...'
-          : selectedZoneIds.length === 0
-          ? 'Selecciona zonas primero'
-          : 'No hay betting pools disponibles'
-      }
+      noOptionsText={loading ? 'Cargando...' : 'No hay bancas disponibles'}
     />
   )
 }

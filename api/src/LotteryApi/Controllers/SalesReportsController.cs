@@ -43,6 +43,34 @@ public class SalesReportsController : ControllerBase
     }
 
     /// <summary>
+    /// True if the current user has an active assignment to the given banca.
+    /// Lets POS users read sales data scoped to their own banca even without admin perms.
+    /// </summary>
+    private async Task<bool> IsAssignedToBettingPoolAsync(int bettingPoolId)
+    {
+        var raw = User.FindFirst("userId")?.Value
+               ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (!int.TryParse(raw, out var userId)) return false;
+        return await _context.UserBettingPools.AsNoTracking()
+            .AnyAsync(ubp => ubp.UserId == userId && ubp.BettingPoolId == bettingPoolId && ubp.IsActive);
+    }
+
+    /// <summary>
+    /// Returns the list of banca IDs the current user is assigned to (POS).
+    /// Used to auto-scope endpoints that don't take a single bettingPoolId.
+    /// </summary>
+    private async Task<List<int>> GetAssignedBettingPoolIdsAsync()
+    {
+        var raw = User.FindFirst("userId")?.Value
+               ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (!int.TryParse(raw, out var userId)) return new List<int>();
+        return await _context.UserBettingPools.AsNoTracking()
+            .Where(ubp => ubp.UserId == userId && ubp.IsActive)
+            .Select(ubp => ubp.BettingPoolId)
+            .ToListAsync();
+    }
+
+    /// <summary>
     /// Get sales report by betting pool and draw
     /// Generates an aggregated sales report per betting pool (banca) grouped by draw for a date range
     /// </summary>
@@ -52,7 +80,9 @@ public class SalesReportsController : ControllerBase
     public async Task<ActionResult<SalesReportResponseDto>> GetSalesByBettingPoolAndDraw(
         [FromBody] SalesReportFilterDto filter)
     {
-        if (!await HasPermissionAsync("VIEW_SALES")) return Forbid();
+        var hasAdminView = await HasPermissionAsync("VIEW_SALES");
+        var posAllowedBpIds = hasAdminView ? null : await GetAssignedBettingPoolIdsAsync();
+        if (!hasAdminView && (posAllowedBpIds == null || posAllowedBpIds.Count == 0)) return Forbid();
 
         try
         {
@@ -72,6 +102,12 @@ public class SalesReportsController : ControllerBase
             // Start with all betting pools
             var bettingPoolsQuery = _context.BettingPools
                 .AsQueryable();
+
+            // POS users: hard-scope to their own bancas.
+            if (posAllowedBpIds != null)
+            {
+                bettingPoolsQuery = bettingPoolsQuery.Where(bp => posAllowedBpIds.Contains(bp.BettingPoolId));
+            }
 
             // Zone scope: admin only sees bancas in their assigned zones.
             var allowedZones = await _zoneScope.GetAllowedZoneIdsAsync();
@@ -186,7 +222,16 @@ public class SalesReportsController : ControllerBase
         [FromQuery] DateTime? date = null,
         [FromQuery] int? bettingPoolId = null)
     {
-        if (!await HasPermissionAsync("VIEW_SALES")) return Forbid();
+        var hasAdminView = await HasPermissionAsync("VIEW_SALES");
+        List<int>? posAllowedBpIds = null;
+        if (!hasAdminView)
+        {
+            // POS users: must scope to their own banca. If a specific bettingPoolId is provided,
+            // it has to belong to them.
+            posAllowedBpIds = await GetAssignedBettingPoolIdsAsync();
+            if (posAllowedBpIds.Count == 0) return Forbid();
+            if (bettingPoolId.HasValue && !posAllowedBpIds.Contains(bettingPoolId.Value)) return Forbid();
+        }
 
         try
         {
@@ -217,6 +262,12 @@ public class SalesReportsController : ControllerBase
             if (allowedBpIds != null)
             {
                 query = query.Where(t => allowedBpIds.Contains(t.BettingPoolId));
+            }
+
+            // POS users are hard-scoped to their assigned bancas.
+            if (posAllowedBpIds != null)
+            {
+                query = query.Where(t => posAllowedBpIds.Contains(t.BettingPoolId));
             }
 
             if (bettingPoolId.HasValue)
@@ -325,7 +376,13 @@ public class SalesReportsController : ControllerBase
         [FromQuery] string? zoneIds = null,
         [FromQuery] string? bettingPoolIds = null)
     {
-        if (!await HasPermissionAsync("VIEW_SALES")) return Forbid();
+        var hasAdminView = await HasPermissionAsync("VIEW_SALES");
+        List<int>? posAllowedBpIds = null;
+        if (!hasAdminView)
+        {
+            posAllowedBpIds = await GetAssignedBettingPoolIdsAsync();
+            if (posAllowedBpIds.Count == 0) return Forbid();
+        }
 
         try
         {
@@ -362,6 +419,12 @@ public class SalesReportsController : ControllerBase
             if (allowedBpIdsRange != null)
             {
                 query = query.Where(t => allowedBpIdsRange.Contains(t.BettingPoolId));
+            }
+
+            // POS users are hard-scoped to their assigned bancas.
+            if (posAllowedBpIds != null)
+            {
+                query = query.Where(t => posAllowedBpIds.Contains(t.BettingPoolId));
             }
 
             // Apply filters
@@ -447,7 +510,13 @@ public class SalesReportsController : ControllerBase
         [FromQuery] string? zoneIds = null,
         [FromQuery] int? lotteryId = null)
     {
-        if (!await HasPermissionAsync("VIEW_SALES")) return Forbid();
+        var hasAdminView = await HasPermissionAsync("VIEW_SALES");
+        List<int>? posAllowedBpIds = null;
+        if (!hasAdminView)
+        {
+            posAllowedBpIds = await GetAssignedBettingPoolIdsAsync();
+            if (posAllowedBpIds.Count == 0) return Forbid();
+        }
 
         try
         {
@@ -462,6 +531,12 @@ public class SalesReportsController : ControllerBase
                 startDate, endDate, zoneId, lotteryId);
 
             var query = _context.BettingPools.AsQueryable();
+
+            // POS users: hard-scope to their own bancas.
+            if (posAllowedBpIds != null)
+            {
+                query = query.Where(bp => posAllowedBpIds.Contains(bp.BettingPoolId));
+            }
 
             // Zone scope: admin only sees bancas in their assigned zones.
             var allowedZones = await _zoneScope.GetAllowedZoneIdsAsync();
@@ -620,7 +695,14 @@ public class SalesReportsController : ControllerBase
         [FromQuery] string? zoneIds,
         [FromQuery] int? bettingPoolId = null)
     {
-        if (!await HasPermissionAsync("VIEW_SALES")) return Forbid();
+        var hasAdminView = await HasPermissionAsync("VIEW_SALES");
+        List<int>? posAllowedBpIds = null;
+        if (!hasAdminView)
+        {
+            posAllowedBpIds = await GetAssignedBettingPoolIdsAsync();
+            if (posAllowedBpIds.Count == 0) return Forbid();
+            if (bettingPoolId.HasValue && !posAllowedBpIds.Contains(bettingPoolId.Value)) return Forbid();
+        }
 
         try
         {
@@ -652,6 +734,12 @@ public class SalesReportsController : ControllerBase
             if (allowedBpIds != null)
             {
                 query = query.Where(tl => tl.Ticket != null && allowedBpIds.Contains(tl.Ticket.BettingPoolId));
+            }
+
+            // POS users: hard-scope to their assigned bancas.
+            if (posAllowedBpIds != null)
+            {
+                query = query.Where(tl => tl.Ticket != null && posAllowedBpIds.Contains(tl.Ticket.BettingPoolId));
             }
 
             if (bettingPoolId.HasValue)
@@ -847,7 +935,13 @@ public class SalesReportsController : ControllerBase
         [FromQuery] DateTime? date,
         [FromQuery] string? zoneIds)
     {
-        if (!await HasPermissionAsync("VIEW_SALES")) return Forbid();
+        var hasAdminView = await HasPermissionAsync("VIEW_SALES");
+        List<int>? posAllowedBpIds = null;
+        if (!hasAdminView)
+        {
+            posAllowedBpIds = await GetAssignedBettingPoolIdsAsync();
+            if (posAllowedBpIds.Count == 0) return Forbid();
+        }
 
         try
         {
@@ -867,6 +961,12 @@ public class SalesReportsController : ControllerBase
             }
 
             var bettingPoolsQuery = _context.BettingPools.Include(bp => bp.Zone).Where(bp => bp.IsActive);
+
+            // POS users: hard-scope to their own bancas.
+            if (posAllowedBpIds != null)
+            {
+                bettingPoolsQuery = bettingPoolsQuery.Where(bp => posAllowedBpIds.Contains(bp.BettingPoolId));
+            }
 
             // Zone scope.
             var allowedZonesBpd = await _zoneScope.GetAllowedZoneIdsAsync();
@@ -998,7 +1098,13 @@ public class SalesReportsController : ControllerBase
         [FromQuery] int? drawId,
         [FromQuery] string? zoneIds)
     {
-        if (!await HasPermissionAsync("VIEW_SALES")) return Forbid();
+        var hasAdminView = await HasPermissionAsync("VIEW_SALES");
+        List<int>? posAllowedBpIds = null;
+        if (!hasAdminView)
+        {
+            posAllowedBpIds = await GetAssignedBettingPoolIdsAsync();
+            if (posAllowedBpIds.Count == 0) return Forbid();
+        }
 
         try
         {
@@ -1028,6 +1134,12 @@ public class SalesReportsController : ControllerBase
             if (allowedBpIdsPc != null)
             {
                 query = query.Where(tl => tl.Ticket != null && allowedBpIdsPc.Contains(tl.Ticket.BettingPoolId));
+            }
+
+            // POS users: hard-scope to their own bancas.
+            if (posAllowedBpIds != null)
+            {
+                query = query.Where(tl => tl.Ticket != null && posAllowedBpIds.Contains(tl.Ticket.BettingPoolId));
             }
 
             if (drawId.HasValue)
@@ -1114,7 +1226,14 @@ public class SalesReportsController : ControllerBase
         [FromQuery] string? zoneIds,
         [FromQuery] int? bettingPoolId)
     {
-        if (!await HasPermissionAsync("VIEW_SALES")) return Forbid();
+        var hasAdminView = await HasPermissionAsync("VIEW_SALES");
+        List<int>? posAllowedBpIds = null;
+        if (!hasAdminView)
+        {
+            posAllowedBpIds = await GetAssignedBettingPoolIdsAsync();
+            if (posAllowedBpIds.Count == 0) return Forbid();
+            if (bettingPoolId.HasValue && !posAllowedBpIds.Contains(bettingPoolId.Value)) return Forbid();
+        }
 
         try
         {
@@ -1146,6 +1265,12 @@ public class SalesReportsController : ControllerBase
             if (allowedBpIdsCb != null)
             {
                 query = query.Where(tl => tl.Ticket != null && allowedBpIdsCb.Contains(tl.Ticket.BettingPoolId));
+            }
+
+            // POS users: hard-scope to their own bancas.
+            if (posAllowedBpIds != null)
+            {
+                query = query.Where(tl => tl.Ticket != null && posAllowedBpIds.Contains(tl.Ticket.BettingPoolId));
             }
 
             if (drawId.HasValue)

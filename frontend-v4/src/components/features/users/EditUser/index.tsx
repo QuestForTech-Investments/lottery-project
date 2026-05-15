@@ -223,20 +223,14 @@ const EditUserMUI = () => {
                     <Switch
                       checked={formData.assignBanca}
                       onChange={(e) => handleAssignBancaChange(e.target.checked)}
-                      disabled={formData.zoneIds.length === 0}
                     />
                   }
                   label="Asignar Banca"
                 />
-                {formData.zoneIds.length === 0 && (
-                  <Typography variant="caption" color="text.secondary" display="block" sx={{ ml: 4 }}>
-                    Selecciona zonas primero para habilitar la asignación de banca
-                  </Typography>
-                )}
               </Grid>
 
               {/* Branch Selector (conditional) */}
-              {formData.assignBanca && formData.zoneIds.length > 0 && (
+              {formData.assignBanca && (
                 <Grid item xs={12}>
                   <Box>
                     <Typography variant="body2" color="text.secondary" gutterBottom>

@@ -264,10 +264,10 @@ function App() {
                           <Route path="/sales/zones" element={<PermissionGuard permission="VIEW_SALES"><LazyRoute component={ZoneSalesMUI} /></PermissionGuard>} />
 
                           {/* Zones */}
-                          <Route path="/zones/list" element={<LazyRoute component={ZonesListMUI} />} />
-                          <Route path="/zones/new" element={<LazyRoute component={CreateZoneMUI} />} />
-                          <Route path="/zones/edit/:id" element={<LazyRoute component={EditZoneMUI} />} />
-                          <Route path="/zones/manage" element={<LazyRoute component={ManageZonesMUI} />} />
+                          <Route path="/zones/list" element={<PermissionGuard permission="ZONE_ACCESS"><LazyRoute component={ZonesListMUI} /></PermissionGuard>} />
+                          <Route path="/zones/new" element={<PermissionGuard permission="CREATE_ZONES"><LazyRoute component={CreateZoneMUI} /></PermissionGuard>} />
+                          <Route path="/zones/edit/:id" element={<PermissionGuard permission="MANAGE_ZONES"><LazyRoute component={EditZoneMUI} /></PermissionGuard>} />
+                          <Route path="/zones/manage" element={<PermissionGuard permission="MANAGE_ZONES"><LazyRoute component={ManageZonesMUI} /></PermissionGuard>} />
 
                           {/* Results */}
                           <Route path="/results" element={

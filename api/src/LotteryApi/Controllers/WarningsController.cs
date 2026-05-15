@@ -1,6 +1,7 @@
 using LotteryApi.Data;
 using LotteryApi.Helpers;
 using LotteryApi.Services;
+using LotteryApi.Services.Warnings;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -21,6 +22,27 @@ public class WarningsController : ControllerBase
         _context = context;
         _logger = logger;
         _zoneScope = zoneScope;
+    }
+
+    /// <summary>
+    /// True if the current user can act on draw-result publication. Used to gate
+    /// result-related warnings (sorteo no publicado / resultado cambiado) — those are
+    /// noise for users who can't fix them anyway.
+    /// </summary>
+    private async Task<bool> CanSeeResultWarningsAsync()
+    {
+        var raw = User.FindFirst("userId")?.Value
+               ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (!int.TryParse(raw, out var userId)) return false;
+
+        return await _context.UserPermissions.AsNoTracking()
+            .AnyAsync(up => up.UserId == userId
+                && up.IsActive
+                && up.Permission != null
+                && up.Permission.IsActive
+                && (up.Permission.PermissionCode == "PUBLISH_TODAY_RESULTS"
+                    || up.Permission.PermissionCode == "PUBLISH_PAST_RESULTS"
+                    || up.Permission.PermissionCode == "PUBLISH_RESULTS_QUICK"));
     }
 
     public class WarningDto
@@ -79,6 +101,14 @@ public class WarningsController : ControllerBase
         if (allowedBpIds != null)
         {
             query = query.Where(w => w.BettingPoolId == null || allowedBpIds.Contains(w.BettingPoolId.Value));
+        }
+
+        // Hide draw-result warnings from users without any publish permission —
+        // they can't act on a "sorteo no publicado" anyway.
+        if (!await CanSeeResultWarningsAsync())
+        {
+            query = query.Where(w => w.WarningType != WarningTypes.ResultPublicationLate
+                                  && w.WarningType != WarningTypes.ResultChangedAfterPrizes);
         }
 
         if (!string.IsNullOrWhiteSpace(type))
@@ -190,6 +220,11 @@ public class WarningsController : ControllerBase
             if (allowedBpIds != null)
             {
                 q = q.Where(w => w.BettingPoolId == null || allowedBpIds.Contains(w.BettingPoolId.Value));
+            }
+            if (!await CanSeeResultWarningsAsync())
+            {
+                q = q.Where(w => w.WarningType != WarningTypes.ResultPublicationLate
+                              && w.WarningType != WarningTypes.ResultChangedAfterPrizes);
             }
             var count = await q.CountAsync();
 

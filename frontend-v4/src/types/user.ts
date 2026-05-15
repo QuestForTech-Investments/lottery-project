@@ -32,6 +32,7 @@ export interface Permission {
   permissionId: number;
   name: string;
   permissionName?: string; // Alternative name field from API
+  permissionCode?: string; // Stable code from API used for permission lookups
   description?: string;
 }
 
