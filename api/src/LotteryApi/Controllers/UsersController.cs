@@ -834,7 +834,10 @@ public class UsersController : ControllerBase
             }
         }
 
-        // Update betting pool
+        // Update betting pool — three cases:
+        //   - BranchId provided: replace existing assignment with this banca
+        //   - ClearBranch == true: remove the existing assignment ("Asignar Banca" toggled off)
+        //   - neither: leave assignment untouched
         if (dto.BranchId.HasValue)
         {
             var existingBettingPools = await _context.UserBettingPools
@@ -850,6 +853,13 @@ public class UsersController : ControllerBase
                 CreatedAt = DateTime.UtcNow
             };
             _context.UserBettingPools.Add(userBettingPool);
+        }
+        else if (dto.ClearBranch == true)
+        {
+            var existingBettingPools = await _context.UserBettingPools
+                .Where(ubp => ubp.UserId == userId)
+                .ToListAsync();
+            _context.UserBettingPools.RemoveRange(existingBettingPools);
         }
 
         await _context.SaveChangesAsync();

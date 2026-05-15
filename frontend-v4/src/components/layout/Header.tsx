@@ -36,6 +36,7 @@ import {
 } from '@mui/icons-material'
 import type { SvgIconComponent } from '@mui/icons-material'
 import { useTimezone } from '@hooks/useTimezone'
+import useUserPermissions from '@hooks/useUserPermissions'
 import LanguageSelector from '@components/common/LanguageSelector'
 import ChangePasswordModal from '@components/modals/ChangePasswordModal'
 import TimezoneModal from '@components/modals/TimezoneModal'
@@ -145,6 +146,8 @@ const Header = ({ sidebarCollapsed, sidebarHovered, onToggleSidebar, isMobile = 
   const [seenWarnings, setSeenWarnings] = useState<number>(0)
   const openSettings = Boolean(settingsAnchorEl)
   const location = useLocation()
+  const { hasPermission } = useUserPermissions()
+  const canSeeWarnings = hasPermission('VIEW_ANOMALIES')
 
   // Persists "last seen" alongside the date — resets automatically when the day rolls over.
   const SEEN_STORAGE_KEY = 'warnings:lastSeen'
@@ -317,9 +320,10 @@ const Header = ({ sidebarCollapsed, sidebarHovered, onToggleSidebar, isMobile = 
             <TimeDisplay />
           </Box>
 
-          {/* Warnings bell — only shown when there are unseen warnings */}
-          {!isMobile && warningCount > 0 && (
-            <Tooltip title={`${warningCount} advertencia(s) nueva(s)`}>
+          {/* Warnings bell — visible whenever the user can see warnings.
+              Badge + red color only when there are unseen warnings. */}
+          {!isMobile && canSeeWarnings && (
+            <Tooltip title={warningCount > 0 ? `${warningCount} advertencia(s) nueva(s)` : 'Sin advertencias nuevas'}>
               <IconButton
                 onClick={() => navigate('/warnings')}
                 onMouseEnter={() => setHoveredIcon('bell')}

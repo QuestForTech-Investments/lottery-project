@@ -95,7 +95,10 @@ interface UserUpdateData {
   phone?: string;
   roleId?: number;
   zoneId?: number;
+  zoneIds?: number[];
   bettingPoolId?: number;
+  /** When true, removes any existing betting-pool assignment. */
+  clearBranch?: boolean;
   commissionRate?: number;
   isActive?: boolean;
   permissionIds?: number[];

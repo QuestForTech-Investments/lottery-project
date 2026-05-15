@@ -70,6 +70,11 @@ public class UpdateUserCompleteDto
     public int? RoleId { get; set; }
     public List<int>? ZoneIds { get; set; }  // Changed from ZoneId to ZoneIds (array)
     public int? BranchId { get; set; }
+    /// <summary>
+    /// When true, removes any existing betting-pool assignment for this user.
+    /// Lets the frontend "Asignar Banca" toggle un-assign a banca cleanly.
+    /// </summary>
+    public bool? ClearBranch { get; set; }
     public decimal? CommissionRate { get; set; }
     public bool? IsActive { get; set; }
     public List<int>? PermissionIds { get; set; }

@@ -413,6 +413,8 @@ const useEditUserForm = (userId: string | undefined) => {
         // banca is assigned. assignBanca only gates the betting-pool assignment.
         zoneIds: formData.zoneIds,
         bettingPoolId: formData.assignBanca && formData.bettingPoolId ? formData.bettingPoolId : undefined,
+        // When the toggle is off, ask the backend to drop any existing assignment.
+        clearBranch: !formData.assignBanca,
       };
 
       logger.info('EDIT_USER_MUI', 'Updating user', {

@@ -1777,10 +1777,14 @@ public class TicketsController : ControllerBase
             try
             {
                 var cancelledLate = ticket.SpecialFlags?.Contains("CANCELLED_OUT_OF_TIME") == true;
+                // DrawDate (date-only) + DrawTime are in business timezone — convert to UTC
+                // before comparing to `now` (DateTime.UtcNow). Comparing them directly would
+                // make every Santo Domingo cancellation look "after the draw" due to the +4h offset.
                 var cancelledAfterDraw = ticket.TicketLines.Any(l =>
                 {
-                    var drawDateTimeUtc = l.DrawDate.Date.Add(l.DrawTime);
-                    return now > drawDateTimeUtc;
+                    var drawLocal = l.DrawDate.Date.Add(l.DrawTime);
+                    var drawUtc = Helpers.DateTimeHelper.ToUtc(drawLocal);
+                    return now > drawUtc;
                 });
                 var winnerCancelled = ticket.TotalPrize > 0
                     || ticket.TicketLines.Any(l => l.IsWinner);
