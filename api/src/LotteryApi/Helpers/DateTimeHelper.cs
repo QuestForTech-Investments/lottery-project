@@ -56,6 +56,20 @@ public static class DateTimeHelper
     }
 
     /// <summary>
+    /// Converts a datetime in the given timezone to UTC.
+    /// Falls back to the business timezone if <paramref name="timezoneId"/> is null or unknown.
+    /// </summary>
+    public static DateTime ToUtc(DateTime localDateTime, string? timezoneId)
+    {
+        TimeZoneInfo tz;
+        try { tz = TimeZoneInfo.FindSystemTimeZoneById(timezoneId ?? BusinessTimezoneId); }
+        catch { tz = _businessTimeZone; }
+        return TimeZoneInfo.ConvertTimeToUtc(
+            DateTime.SpecifyKind(localDateTime, DateTimeKind.Unspecified),
+            tz);
+    }
+
+    /// <summary>
     /// Gets the start of day (00:00:00) in UTC for a given date in the business timezone.
     /// Useful for date range queries.
     /// </summary>

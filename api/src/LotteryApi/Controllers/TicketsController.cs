@@ -1777,15 +1777,31 @@ public class TicketsController : ControllerBase
             try
             {
                 var cancelledLate = ticket.SpecialFlags?.Contains("CANCELLED_OUT_OF_TIME") == true;
-                // DrawDate (date-only) + DrawTime are in business timezone — convert to UTC
-                // before comparing to `now` (DateTime.UtcNow). Comparing them directly would
-                // make every Santo Domingo cancellation look "after the draw" due to the +4h offset.
-                var cancelledAfterDraw = ticket.TicketLines.Any(l =>
+
+                // True "after the draw" means past the draw's actual closing time for that
+                // weekday in the draw's timezone. We can't trust TicketLine.DrawTime — many
+                // legacy rows have 00:00, so the previous check raised this for every cancel.
+                // Use draw_weekly_schedules.end_time, same source the create-ticket flow uses.
+                var drawIdsForCheck = ticket.TicketLines.Select(l => l.DrawId).Distinct().ToList();
+                var drawsForCheck = await _context.Draws
+                    .AsNoTracking()
+                    .Include(d => d.WeeklySchedules)
+                    .Include(d => d.Lottery)
+                    .Where(d => drawIdsForCheck.Contains(d.DrawId))
+                    .ToDictionaryAsync(d => d.DrawId);
+
+                bool cancelledAfterDraw = false;
+                foreach (var l in ticket.TicketLines)
                 {
-                    var drawLocal = l.DrawDate.Date.Add(l.DrawTime);
-                    var drawUtc = Helpers.DateTimeHelper.ToUtc(drawLocal);
-                    return now > drawUtc;
-                });
+                    if (!drawsForCheck.TryGetValue(l.DrawId, out var draw)) continue;
+                    var tz = draw.Lottery?.Timezone ?? "America/Santo_Domingo";
+                    var dayOfWeek = (byte)l.DrawDate.DayOfWeek;
+                    var schedule = draw.WeeklySchedules?.FirstOrDefault(ws => ws.DayOfWeek == dayOfWeek && ws.IsActive);
+                    if (schedule == null) continue;
+                    var closeLocal = l.DrawDate.Date.Add(schedule.EndTime);
+                    var closeUtc = Helpers.DateTimeHelper.ToUtc(closeLocal, tz);
+                    if (now > closeUtc) { cancelledAfterDraw = true; break; }
+                }
                 var winnerCancelled = ticket.TotalPrize > 0
                     || ticket.TicketLines.Any(l => l.IsWinner);
 
