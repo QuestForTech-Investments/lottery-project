@@ -24,7 +24,6 @@ const cardBackgroundImage = '/images/bannerlotto-02.jpg';
 import useLogin from './hooks/useLogin';
 import ForcePasswordChangeModal from '@components/modals/ForcePasswordChangeModal';
 import ForceSetPinModal from '@components/modals/ForceSetPinModal';
-import LanguageSelector from '@components/common/LanguageSelector';
 
 /**
  * LoginMUI Component
@@ -73,21 +72,6 @@ const LoginMUI = () => {
         },
       }}
     >
-      {/* Language switcher — floating top-right */}
-      <Box
-        sx={{
-          position: 'absolute',
-          top: { xs: 12, sm: 20 },
-          right: { xs: 12, sm: 24 },
-          zIndex: 2,
-          bgcolor: 'rgba(255, 255, 255, 0.92)',
-          borderRadius: 1,
-          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
-        }}
-      >
-        <LanguageSelector />
-      </Box>
-
       <Paper
         elevation={0}
         sx={{
