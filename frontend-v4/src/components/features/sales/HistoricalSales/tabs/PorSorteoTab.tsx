@@ -23,7 +23,24 @@ interface SorteoData {
   premios: number;
   comisiones: number;
   neto: number;
+  lotteryImageUrl?: string | null;
 }
+
+/** Inline lottery logo + draw name for the first column. */
+const renderSorteoCell = (_v: unknown, row: SorteoData): ReactNode => (
+  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+    {row.lotteryImageUrl && (
+      <Box
+        component="img"
+        src={row.lotteryImageUrl}
+        alt={row.sorteo}
+        sx={{ width: 24, height: 24, borderRadius: '4px', objectFit: 'cover', flexShrink: 0 }}
+        onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+      />
+    )}
+    <span>{row.sorteo}</span>
+  </Box>
+);
 
 interface PorSorteoTabProps {
   fechaInicial: string;
@@ -80,7 +97,7 @@ export const PorSorteoTab: FC<PorSorteoTabProps> = memo(({
   // Table columns
   const columns: Column<SorteoData>[] = useMemo(
     () => [
-      { id: 'sorteo', label: 'Sorteo' },
+      { id: 'sorteo', label: 'Sorteo', format: renderSorteoCell },
       { id: 'venta', label: 'Total Vendido', align: 'right', format: (v) => formatCurrency(v as number) },
       { id: 'premios', label: 'Total premios', align: 'right', format: (v) => formatCurrency(v as number) },
       { id: 'comisiones', label: 'Total comisiones', align: 'right', format: (v) => formatCurrency(v as number) },

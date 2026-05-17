@@ -772,6 +772,7 @@ public class SalesReportsController : ControllerBase
                         LotteryName = draw?.Lottery?.LotteryName,
                         DrawTime = draw?.DrawTime ?? TimeSpan.Zero,
                         DrawColor = draw?.Lottery?.Colour,
+                        LotteryImageUrl = draw?.Lottery?.ImageUrl,
                         TicketCount = ticketIds.Count,
                         LineCount = g.Count(),
                         WinnerCount = g.Count(tl => tl.IsWinner),
@@ -1223,8 +1224,10 @@ public class SalesReportsController : ControllerBase
     public async Task<ActionResult<CombinationSalesResponseDto>> GetCombinations(
         [FromQuery] DateTime? date,
         [FromQuery] int? drawId,
+        [FromQuery] string? drawIds,
         [FromQuery] string? zoneIds,
-        [FromQuery] int? bettingPoolId)
+        [FromQuery] int? bettingPoolId,
+        [FromQuery] string? bettingPoolIds)
     {
         var hasAdminView = await HasPermissionAsync("VIEW_SALES");
         List<int>? posAllowedBpIds = null;
@@ -1252,6 +1255,30 @@ public class SalesReportsController : ControllerBase
                     .ToList();
             }
 
+            // Parse draw IDs (multi). Falls back to single drawId for legacy callers.
+            List<int>? drawIdList = null;
+            if (!string.IsNullOrEmpty(drawIds))
+            {
+                drawIdList = drawIds.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(int.Parse)
+                    .ToList();
+            }
+
+            // Parse betting pool IDs (multi). Falls back to single bettingPoolId for legacy callers.
+            List<int>? bettingPoolIdList = null;
+            if (!string.IsNullOrEmpty(bettingPoolIds))
+            {
+                bettingPoolIdList = bettingPoolIds.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(int.Parse)
+                    .ToList();
+                // POS users may only filter to their own bancas.
+                if (posAllowedBpIds != null)
+                {
+                    bettingPoolIdList = bettingPoolIdList.Where(id => posAllowedBpIds.Contains(id)).ToList();
+                    if (bettingPoolIdList.Count == 0) return Forbid();
+                }
+            }
+
             var query = _context.TicketLines
                 .Include(tl => tl.Ticket)
                 .Include(tl => tl.Draw)
@@ -1273,7 +1300,11 @@ public class SalesReportsController : ControllerBase
                 query = query.Where(tl => tl.Ticket != null && posAllowedBpIds.Contains(tl.Ticket.BettingPoolId));
             }
 
-            if (drawId.HasValue)
+            if (drawIdList != null && drawIdList.Count > 0)
+            {
+                query = query.Where(tl => drawIdList.Contains(tl.DrawId));
+            }
+            else if (drawId.HasValue)
             {
                 query = query.Where(tl => tl.DrawId == drawId.Value);
             }
@@ -1285,7 +1316,11 @@ public class SalesReportsController : ControllerBase
                     zoneIdList.Contains(tl.Ticket.BettingPool.ZoneId));
             }
 
-            if (bettingPoolId.HasValue)
+            if (bettingPoolIdList != null && bettingPoolIdList.Count > 0)
+            {
+                query = query.Where(tl => tl.Ticket != null && bettingPoolIdList.Contains(tl.Ticket.BettingPoolId));
+            }
+            else if (bettingPoolId.HasValue)
             {
                 query = query.Where(tl => tl.Ticket != null && tl.Ticket.BettingPoolId == bettingPoolId.Value);
             }

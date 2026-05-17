@@ -22,6 +22,17 @@ import type {
 } from '../types';
 import { DEFAULT_TOTALS } from '../types';
 
+export interface DrawOption {
+  drawId: number;
+  drawName: string;
+}
+
+export interface BancaOption {
+  id: number;
+  name: string;
+  code: string;
+}
+
 interface UseHistoricalSalesReturn {
   mainTab: number;
   setMainTab: (tab: number) => void;
@@ -40,6 +51,12 @@ interface UseHistoricalSalesReturn {
   setFiltroRapido: (filtro: string) => void;
   zonasList: Zona[];
   gruposList: Grupo[];
+  drawsList: DrawOption[];
+  bancasList: BancaOption[];
+  selectedDraws: number[];
+  selectedBancas: number[];
+  setSelectedDraws: (ids: number[]) => void;
+  setSelectedBancas: (ids: number[]) => void;
   bancasData: BancaData[];
   sorteoData: SorteoData[];
   combinacionesData: CombinacionData[];
@@ -60,6 +77,10 @@ export const useHistoricalSales = (): UseHistoricalSalesReturn => {
 
   const [zonasList, setZonasList] = useState<Zona[]>([]);
   const [gruposList] = useState<Grupo[]>([]);
+  const [drawsList, setDrawsList] = useState<DrawOption[]>([]);
+  const [bancasList, setBancasList] = useState<BancaOption[]>([]);
+  const [selectedDraws, setSelectedDraws] = useState<number[]>([]);
+  const [selectedBancas, setSelectedBancas] = useState<number[]>([]);
 
   const [bancasData, setBancasData] = useState<BancaData[]>([]);
   const [sorteoData, setSorteoData] = useState<SorteoData[]>([]);
@@ -89,6 +110,42 @@ export const useHistoricalSales = (): UseHistoricalSalesReturn => {
       }
     };
     loadZones();
+  }, []);
+
+  // Load draws + bancas once for the Combinaciones filters.
+  useEffect(() => {
+    const loadFilters = async () => {
+      try {
+        const drawsResponse = await api.get<{ items?: DrawOption[] } | DrawOption[]>('/draws');
+        const drawsArray = (drawsResponse && typeof drawsResponse === 'object' && 'items' in drawsResponse)
+          ? (drawsResponse.items || [])
+          : (drawsResponse as DrawOption[] || []);
+        setDrawsList(drawsArray);
+        setSelectedDraws(drawsArray.map(d => d.drawId));
+
+        type BancaRow = {
+          bettingPoolId?: number;
+          id?: number;
+          bettingPoolName?: string;
+          name?: string;
+          bettingPoolCode?: string;
+          code?: string;
+        };
+        const bancasResponse = await api.get<{ items?: BancaRow[] } | BancaRow[]>('/betting-pools');
+        const bancasArray = (bancasResponse && typeof bancasResponse === 'object' && 'items' in bancasResponse)
+          ? (bancasResponse.items || [])
+          : (bancasResponse as BancaRow[] || []);
+        const normalized = bancasArray.map(b => ({
+          id: b.bettingPoolId || b.id || 0,
+          name: b.bettingPoolName || b.name || '',
+          code: b.bettingPoolCode || b.code || '',
+        }));
+        setBancasList(normalized);
+      } catch (error) {
+        console.error('Error loading combinaciones filters:', error);
+      }
+    };
+    loadFilters();
   }, []);
 
   // Build zone query param
@@ -160,7 +217,8 @@ export const useHistoricalSales = (): UseHistoricalSalesReturn => {
         comisiones: item.totalCommissions,
         descuentos: 0,
         premios: item.totalPrizes,
-        neto: item.totalNet
+        neto: item.totalNet,
+        lotteryImageUrl: item.lotteryImageUrl ?? null,
       }));
 
       setSorteoData(mapped);
@@ -175,8 +233,17 @@ export const useHistoricalSales = (): UseHistoricalSalesReturn => {
   const loadCombinacionesData = useCallback(async () => {
     setLoading(true);
     try {
+      // Only include the filter param when the user has narrowed below the full list —
+      // sending all IDs is equivalent to omitting the filter on the backend.
+      const drawParam = (selectedDraws.length > 0 && selectedDraws.length < drawsList.length)
+        ? `&drawIds=${selectedDraws.join(',')}`
+        : '';
+      const bancaParam = (selectedBancas.length > 0 && selectedBancas.length < bancasList.length)
+        ? `&bettingPoolIds=${selectedBancas.join(',')}`
+        : '';
+
       const response = await api.get<CombinationSalesResponse>(
-        `/reports/sales/combinations?date=${fechaInicial}${getZoneParam()}`
+        `/reports/sales/combinations?date=${fechaInicial}${getZoneParam()}${drawParam}${bancaParam}`
       );
 
       const mapped: CombinacionData[] = (response?.combinations || []).map(item => ({
@@ -197,7 +264,7 @@ export const useHistoricalSales = (): UseHistoricalSalesReturn => {
     } finally {
       setLoading(false);
     }
-  }, [fechaInicial, getZoneParam]);
+  }, [fechaInicial, getZoneParam, selectedDraws, drawsList.length, selectedBancas, bancasList.length]);
 
   // Load sales by zone (Por zona tab)
   const loadZonasData = useCallback(async () => {
@@ -276,6 +343,12 @@ export const useHistoricalSales = (): UseHistoricalSalesReturn => {
     setFiltroRapido,
     zonasList,
     gruposList,
+    drawsList,
+    bancasList,
+    selectedDraws,
+    selectedBancas,
+    setSelectedDraws,
+    setSelectedBancas,
     bancasData,
     sorteoData,
     combinacionesData,

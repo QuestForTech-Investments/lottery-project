@@ -105,10 +105,8 @@ export interface FiltersSectionProps {
   selectedDate: string;
   zones: Zone[];
   selectedZones: number[];
-  selectedGroup: string;
   onDateChange: (date: string) => void;
   onZoneChange: (event: SelectChangeEvent<number[]>) => void;
-  onGroupChange: (group: string) => void;
 }
 
 export interface ActionButtonsProps {

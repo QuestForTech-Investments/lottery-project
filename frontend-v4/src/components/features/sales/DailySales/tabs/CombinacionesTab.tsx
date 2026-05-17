@@ -26,6 +26,20 @@ import type { SelectChangeEvent } from '@mui/material/Select';
 import { Search as SearchIcon } from '@mui/icons-material';
 import api from '@services/api';
 import { formatCurrency } from '@/utils/formatCurrency';
+import { SELECT_ALL, applySelectAllToggle } from '../selectAllHelper';
+
+/**
+ * Map the raw game-type name (from `game_types.game_name`) to the user-facing
+ * label used in the new column names (Pick3 / Pick4 / Quiniela …).
+ * Unknown names fall through unchanged.
+ */
+const prettyBetTypeName = (raw: string | null | undefined): string => {
+  if (!raw) return '';
+  return raw
+    .replace(/^Cash3\b/i, 'Pick3')
+    .replace(/^Play4\b/i, 'Pick4')
+    .replace(/^Directo\b/i, 'Quiniela');
+};
 
 interface Zone {
   zoneId?: number;
@@ -122,13 +136,19 @@ const CombinacionesTab = ({ selectedDate, setSelectedDate, zones, selectedZones,
   }, []);
 
   const handleDrawChange = (event: SelectChangeEvent<number[]>) => {
-    const value = event.target.value;
-    setSelectedDraws(typeof value === 'string' ? value.split(',').map(Number) : value);
+    setSelectedDraws(applySelectAllToggle(
+      event.target.value as number[] | string,
+      selectedDraws,
+      draws.map(d => d.drawId),
+    ));
   };
 
   const handleBancaChange = (event: SelectChangeEvent<number[]>) => {
-    const value = event.target.value;
-    setSelectedBancas(typeof value === 'string' ? value.split(',').map(Number) : value);
+    setSelectedBancas(applySelectAllToggle(
+      event.target.value as number[] | string,
+      selectedBancas,
+      bancas.map(b => b.id),
+    ));
   };
 
   const loadData = useCallback(async () => {
@@ -156,6 +176,47 @@ const CombinacionesTab = ({ selectedDate, setSelectedDate, zones, selectedZones,
       d.betTypeName.toLowerCase().includes(term)
     );
   }, [data, searchTerm]);
+
+  /**
+   * Combinations grouped by bet type — one row per type with summed totals.
+   * Search still narrows the underlying rows (so filtering by "25" only counts
+   * the plays that include that number), then we aggregate what's left.
+   */
+  type AggRow = {
+    betTypeId: number;
+    betTypeName: string;
+    lineCount: number;
+    totalSold: number;
+    totalCommissions: number;
+    totalPrizes: number;
+    balance: number;
+  };
+  const groupedData = useMemo<AggRow[]>(() => {
+    const map = new Map<number, AggRow>();
+    for (const row of filteredData) {
+      const existing = map.get(row.betTypeId);
+      if (existing) {
+        existing.lineCount += row.lineCount;
+        existing.totalSold += row.totalSold;
+        existing.totalCommissions += row.totalCommissions;
+        existing.totalPrizes += row.totalPrizes;
+        existing.balance += row.balance;
+      } else {
+        map.set(row.betTypeId, {
+          betTypeId: row.betTypeId,
+          betTypeName: row.betTypeName,
+          lineCount: row.lineCount,
+          totalSold: row.totalSold,
+          totalCommissions: row.totalCommissions,
+          totalPrizes: row.totalPrizes,
+          balance: row.balance,
+        });
+      }
+    }
+    return Array.from(map.values()).sort((a, b) =>
+      prettyBetTypeName(a.betTypeName).localeCompare(prettyBetTypeName(b.betTypeName)),
+    );
+  }, [filteredData]);
 
 
   const totals = useMemo(() => {
@@ -212,8 +273,23 @@ const CombinacionesTab = ({ selectedDate, setSelectedDate, zones, selectedZones,
                 value={selectedDraws}
                 onChange={handleDrawChange}
                 input={<OutlinedInput />}
-                renderValue={(selected) => `${selected.length} seleccionados`}
+                MenuProps={{
+                  disableAutoFocusItem: true,
+                  PaperProps: { sx: { maxHeight: 360 } },
+                }}
+                renderValue={(selected) =>
+                  selected.length === draws.length && draws.length > 0
+                    ? 'Todos'
+                    : `${selected.length} seleccionados`
+                }
               >
+                <MenuItem value={SELECT_ALL}>
+                  <Checkbox
+                    checked={draws.length > 0 && selectedDraws.length === draws.length}
+                    indeterminate={selectedDraws.length > 0 && selectedDraws.length < draws.length}
+                  />
+                  <ListItemText primary="Todos" />
+                </MenuItem>
                 {draws.map((draw) => (
                   <MenuItem key={draw.drawId} value={draw.drawId}>
                     <Checkbox checked={selectedDraws.indexOf(draw.drawId) > -1} />
@@ -239,9 +315,19 @@ const CombinacionesTab = ({ selectedDate, setSelectedDate, zones, selectedZones,
               <Select
                 multiple
                 value={selectedZones}
-                onChange={handleZoneChange}
+                onChange={(e) => {
+                  const allIds = zones.map(z => z.zoneId || z.id || 0).filter(Boolean);
+                  const next = applySelectAllToggle(e.target.value as number[] | string, selectedZones, allIds);
+                  handleZoneChange({ ...e, target: { ...e.target, value: next } } as typeof e);
+                }}
                 input={<OutlinedInput />}
+                MenuProps={{
+                  disableAutoFocusItem: true,
+                  PaperProps: { sx: { maxHeight: 360 } },
+                }}
                 renderValue={(selected) => {
+                  if (selected.length === 0) return '';
+                  if (selected.length === zones.length) return 'Todas';
                   if (selected.length === 1) {
                     const zone = zones.find(z => (z.zoneId || z.id) === selected[0]);
                     return zone?.zoneName || zone?.name || '1 seleccionada';
@@ -249,6 +335,13 @@ const CombinacionesTab = ({ selectedDate, setSelectedDate, zones, selectedZones,
                   return `${selected.length} seleccionadas`;
                 }}
               >
+                <MenuItem value={SELECT_ALL}>
+                  <Checkbox
+                    checked={zones.length > 0 && selectedZones.length === zones.length}
+                    indeterminate={selectedZones.length > 0 && selectedZones.length < zones.length}
+                  />
+                  <ListItemText primary="Todas" />
+                </MenuItem>
                 {zones.map((zone) => {
                   const zoneId = zone.zoneId || zone.id || 0;
                   return (
@@ -279,7 +372,13 @@ const CombinacionesTab = ({ selectedDate, setSelectedDate, zones, selectedZones,
                 value={selectedBancas}
                 onChange={handleBancaChange}
                 input={<OutlinedInput />}
+                MenuProps={{
+                  disableAutoFocusItem: true,
+                  PaperProps: { sx: { maxHeight: 360 } },
+                }}
                 renderValue={(selected) => {
+                  if (selected.length === 0) return '';
+                  if (selected.length === bancas.length) return 'Todas';
                   if (selected.length === 1) {
                     const banca = bancas.find(b => b.id === selected[0]);
                     return banca?.name || '1 seleccionada';
@@ -287,6 +386,13 @@ const CombinacionesTab = ({ selectedDate, setSelectedDate, zones, selectedZones,
                   return `${selected.length} seleccionadas`;
                 }}
               >
+                <MenuItem value={SELECT_ALL}>
+                  <Checkbox
+                    checked={bancas.length > 0 && selectedBancas.length === bancas.length}
+                    indeterminate={selectedBancas.length > 0 && selectedBancas.length < bancas.length}
+                  />
+                  <ListItemText primary="Todas" />
+                </MenuItem>
                 {bancas.map((banca) => (
                   <MenuItem key={banca.id} value={banca.id}>
                     <Checkbox checked={selectedBancas.indexOf(banca.id) > -1} />
@@ -347,7 +453,7 @@ const CombinacionesTab = ({ selectedDate, setSelectedDate, zones, selectedZones,
               </TableRow>
             </TableHead>
             <TableBody>
-              {filteredData.length === 0 ? (
+              {groupedData.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} align="center" sx={{ py: 3, color: 'text.secondary' }}>
                     {loading ? 'Cargando...' : 'No hay entradas para el sorteo y la fecha elegidos'}
@@ -355,11 +461,11 @@ const CombinacionesTab = ({ selectedDate, setSelectedDate, zones, selectedZones,
                 </TableRow>
               ) : (
                 <>
-                  {filteredData.map((row, index) => (
-                    <TableRow key={`${row.drawId}-${row.betNumber}-${index}`} hover>
+                  {groupedData.map((row) => (
+                    <TableRow key={row.betTypeId} hover>
                       <TableCell>
-                        <Typography variant="body2" sx={{ fontWeight: 600, fontFamily: 'monospace' }}>
-                          {row.betNumber}
+                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                          {prettyBetTypeName(row.betTypeName)} ({row.lineCount})
                         </Typography>
                       </TableCell>
                       <TableCell align="right">{formatCurrency(row.totalSold)}</TableCell>
@@ -386,7 +492,8 @@ const CombinacionesTab = ({ selectedDate, setSelectedDate, zones, selectedZones,
         </TableContainer>
 
         <Typography variant="body2" sx={{ mt: 2 }}>
-          Mostrando {filteredData.length} de {data.length} entradas
+          Mostrando {groupedData.length} tipo{groupedData.length === 1 ? '' : 's'} de jugada
+          {' '}({filteredData.length} de {data.length} combinaciones)
         </Typography>
       </CardContent>
     </Card>

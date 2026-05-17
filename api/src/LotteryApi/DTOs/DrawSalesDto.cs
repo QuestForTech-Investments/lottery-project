@@ -12,6 +12,8 @@ public class DrawSalesDto
     public string? LotteryName { get; set; }
     public TimeSpan DrawTime { get; set; }
     public string? DrawColor { get; set; }
+    /// <summary>URL of the lottery logo, used by the "Por sorteo" report row.</summary>
+    public string? LotteryImageUrl { get; set; }
     public int TicketCount { get; set; }
     public int LineCount { get; set; }
     public int WinnerCount { get; set; }

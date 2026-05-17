@@ -5,9 +5,12 @@ import {
   Select,
   MenuItem,
   Checkbox,
+  ListItemText,
   Typography,
 } from '@mui/material';
 import type { SelectChangeEvent } from '@mui/material/Select';
+
+const SELECT_ALL = -1;
 
 export interface Zone {
   id: number;
@@ -47,11 +50,18 @@ export const ZoneMultiSelect: FC<ZoneMultiSelectProps> = memo(({
 }) => {
   const handleChange = (event: SelectChangeEvent<number[]>) => {
     const value = event.target.value;
-    onChange(typeof value === 'string' ? [] : value);
+    const arr = typeof value === 'string' ? [] : value;
+    if (arr.includes(SELECT_ALL)) {
+      // "Todas" toggled: clear if all were selected, otherwise select every zone.
+      onChange(selectedZoneIds.length === zones.length ? [] : zones.map(z => z.id));
+      return;
+    }
+    onChange(arr);
   };
 
   const renderValue = (selected: number[]) => {
     if (selected.length === 0) return placeholder;
+    if (selected.length === zones.length && zones.length > 0) return 'Todas';
     if (selected.length === 1) {
       const zone = zones.find((z) => z.id === selected[0]);
       return zone?.name || '1 seleccionada';
@@ -73,7 +83,18 @@ export const ZoneMultiSelect: FC<ZoneMultiSelectProps> = memo(({
           onChange={handleChange}
           renderValue={renderValue}
           displayEmpty
+          MenuProps={{
+            disableAutoFocusItem: true,
+            PaperProps: { sx: { maxHeight: 360 } },
+          }}
         >
+          <MenuItem value={SELECT_ALL}>
+            <Checkbox
+              checked={zones.length > 0 && selectedZoneIds.length === zones.length}
+              indeterminate={selectedZoneIds.length > 0 && selectedZoneIds.length < zones.length}
+            />
+            <ListItemText primary="Todas" />
+          </MenuItem>
           {zones.map((zone) => (
             <MenuItem key={zone.id} value={zone.id}>
               <Checkbox checked={selectedZoneIds.includes(zone.id)} />

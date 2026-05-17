@@ -18,15 +18,14 @@ import {
 } from '@mui/material';
 import { COMPACT_INPUT_STYLE, COMPACT_SELECT_STYLE } from '../constants';
 import type { FiltersSectionProps } from '../types';
+import { SELECT_ALL, applySelectAllToggle } from '../selectAllHelper';
 
 const FiltersSection: FC<FiltersSectionProps> = memo(({
   selectedDate,
   zones,
   selectedZones,
-  selectedGroup,
   onDateChange,
   onZoneChange,
-  onGroupChange,
 }) => {
   return (
     <Box sx={{
@@ -61,9 +60,19 @@ const FiltersSection: FC<FiltersSectionProps> = memo(({
           <Select
             multiple
             value={selectedZones}
-            onChange={onZoneChange}
+            onChange={(e) => {
+              const allIds = zones.map(z => z.zoneId || z.id || 0).filter(Boolean);
+              const next = applySelectAllToggle(e.target.value as number[] | string, selectedZones, allIds);
+              onZoneChange({ ...e, target: { ...e.target, value: next } } as typeof e);
+            }}
             input={<OutlinedInput />}
+            MenuProps={{
+              disableAutoFocusItem: true,
+              PaperProps: { sx: { maxHeight: 360 } },
+            }}
             renderValue={(selected) => {
+              if (selected.length === 0) return '';
+              if (selected.length === zones.length) return 'Todas';
               if (selected.length === 1) {
                 const zone = zones.find(z => (z.zoneId || z.id) === selected[0]);
                 return zone?.zoneName || zone?.name || '1 seleccionada';
@@ -71,6 +80,13 @@ const FiltersSection: FC<FiltersSectionProps> = memo(({
               return `${selected.length} seleccionadas`;
             }}
           >
+            <MenuItem value={SELECT_ALL}>
+              <Checkbox
+                checked={zones.length > 0 && selectedZones.length === zones.length}
+                indeterminate={selectedZones.length > 0 && selectedZones.length < zones.length}
+              />
+              <ListItemText primary="Todas" />
+            </MenuItem>
             {zones.map((zone) => {
               const zoneId = zone.zoneId || zone.id || 0;
               return (
@@ -80,24 +96,6 @@ const FiltersSection: FC<FiltersSectionProps> = memo(({
                 </MenuItem>
               );
             })}
-          </Select>
-        </FormControl>
-      </Box>
-
-      {/* Group Filter */}
-      <Box sx={{ width: { xs: '100%', sm: 'auto' } }}>
-        <Typography variant="caption" sx={{ color: 'text.secondary', mb: 0.5, display: 'block' }}>
-          Grupo
-        </Typography>
-        <FormControl sx={{ width: { xs: '100%', sm: 150 }, minWidth: { sm: 150 }, ...COMPACT_SELECT_STYLE }} size="small">
-          <Select
-            value={selectedGroup}
-            onChange={(e) => onGroupChange(e.target.value)}
-            displayEmpty
-          >
-            <MenuItem value="">Seleccione</MenuItem>
-            <MenuItem value="group1">Grupo 1</MenuItem>
-            <MenuItem value="group2">Grupo 2</MenuItem>
           </Select>
         </FormControl>
       </Box>

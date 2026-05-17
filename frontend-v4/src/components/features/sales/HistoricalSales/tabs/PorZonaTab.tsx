@@ -1,6 +1,7 @@
-import { memo, type FC, useMemo, type ReactNode } from 'react';
+import { memo, type FC, useMemo, useCallback, type ReactNode } from 'react';
 import { Box, Typography, Button, CircularProgress } from '@mui/material';
 import { formatCurrency } from '@/utils/formatCurrency';
+import { exportToCsv, exportToPdf, type ExportColumn } from '@/utils/exportTable';
 
 const coloredCurrency = (v: unknown): ReactNode => {
   const n = v as number;
@@ -112,6 +113,62 @@ export const PorZonaTab: FC<PorZonaTabProps> = memo(({
     return zonasData.filter((d) => d.nombre?.toLowerCase().includes(term));
   }, [zonasData, filtroRapido]);
 
+  // Export columns (mirror the visible table; money columns get pre-formatted).
+  const exportColumns = useMemo<ExportColumn<Record<string, unknown>>[]>(() => {
+    const moneyKeys = new Set(['venta', 'comisiones', 'descuentos', 'premios', 'neto', 'caida', 'final', 'balance']);
+    return [
+      { key: 'nombre', label: 'Nombre', align: 'left' as const },
+      { key: 'p', label: 'P', align: 'center' as const },
+      { key: 'l', label: 'L', align: 'center' as const },
+      { key: 'w', label: 'W', align: 'center' as const },
+      { key: 'total', label: 'Total', align: 'right' as const },
+      { key: 'venta', label: 'Venta', align: 'right' as const },
+      { key: 'comisiones', label: 'Comisiones', align: 'right' as const },
+      { key: 'descuentos', label: 'Descuentos', align: 'right' as const },
+      { key: 'premios', label: 'Premios', align: 'right' as const },
+      { key: 'neto', label: 'Neto', align: 'right' as const },
+      { key: 'caida', label: 'Caída', align: 'right' as const },
+      { key: 'final', label: 'Final', align: 'right' as const },
+      { key: 'balance', label: 'Balance', align: 'right' as const },
+    ].map(c => ({
+      ...c,
+      getValue: moneyKeys.has(c.key)
+        ? (row: Record<string, unknown>) => formatCurrency(Number(row[c.key] ?? 0))
+        : undefined,
+    }));
+  }, []);
+
+  const totalsAsRow = useMemo<Record<string, unknown>>(
+    () => ({ nombre: 'Totales', ...totals }),
+    [totals],
+  );
+
+  const handleExportCsv = useCallback(() => {
+    if (filteredData.length === 0) {
+      alert('No hay datos para exportar.');
+      return;
+    }
+    exportToCsv(
+      filteredData as unknown as Record<string, unknown>[],
+      exportColumns,
+      `ventas-por-zona-${fechaInicial}_${fechaFinal}`,
+      totalsAsRow,
+    );
+  }, [filteredData, exportColumns, fechaInicial, fechaFinal, totalsAsRow]);
+
+  const handleExportPdf = useCallback(() => {
+    if (filteredData.length === 0) {
+      alert('No hay datos para exportar.');
+      return;
+    }
+    exportToPdf(
+      filteredData as unknown as Record<string, unknown>[],
+      exportColumns,
+      `Ventas por Zona — ${fechaInicial} al ${fechaFinal}`,
+      totalsAsRow,
+    );
+  }, [filteredData, exportColumns, fechaInicial, fechaFinal, totalsAsRow]);
+
   // Table columns
   const columns: Column<ZonaData>[] = useMemo(
     () => [
@@ -174,6 +231,22 @@ export const PorZonaTab: FC<PorZonaTabProps> = memo(({
         </Button>
         <Button
           variant="contained"
+          onClick={handleExportCsv}
+          size="small"
+          sx={{
+            borderRadius: '20px',
+            px: 2.5,
+            py: 0.5,
+            fontSize: '0.75rem',
+            textTransform: 'uppercase',
+            fontWeight: 500,
+          }}
+        >
+          CSV
+        </Button>
+        <Button
+          variant="contained"
+          onClick={handleExportPdf}
           size="small"
           sx={{
             borderRadius: '20px',

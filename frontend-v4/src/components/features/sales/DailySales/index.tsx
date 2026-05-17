@@ -23,6 +23,7 @@ import { Search as SearchIcon } from '@mui/icons-material';
 import api from '@services/api';
 import { formatCurrency } from '@/utils/formatCurrency';
 import { getTodayDate } from '@/utils/formatters';
+import { exportToCsv, exportToPdf, type ExportColumn } from '@/utils/exportTable';
 
 // Tab components
 import BancaPorSorteoTab from './tabs/BancaPorSorteoTab';
@@ -62,7 +63,6 @@ const DailySales = (): React.ReactElement => {
     return getTodayDate();
   });
   const [selectedZones, setSelectedZones] = useState<number[]>([]);
-  const [selectedGroup, setSelectedGroup] = useState<string>('');
   const [filterType, setFilterType] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState<string>('');
 
@@ -147,13 +147,6 @@ const DailySales = (): React.ReactElement => {
     }
   }, [loadSalesData, selectedDate]);
 
-  const handleExportPdf = useCallback(() => {
-    alert('Exportar a PDF - Funcionalidad pendiente');
-  }, []);
-
-  const handleExportCsv = useCallback(() => {
-    alert('Exportar a CSV - Funcionalidad pendiente');
-  }, []);
 
   const handleProcessTodayTickets = useCallback(() => {
     alert('Procesar tickets de hoy - Funcionalidad pendiente');
@@ -224,6 +217,54 @@ const DailySales = (): React.ReactElement => {
     }), INITIAL_TOTALS);
   }, [filteredData]);
 
+  // Map TABLE_COLUMNS → export columns. Money cells get currency-formatted so
+  // the CSV/PDF mirror what's on screen.
+  const exportColumns = useMemo<ExportColumn<Record<string, unknown>>[]>(() => {
+    const moneyKeys = new Set([
+      'total', 'sales', 'commissions', 'discounts', 'prizes',
+      'net', 'fall', 'final', 'balance', 'accumulatedFall',
+    ]);
+    return TABLE_COLUMNS.map(col => ({
+      key: col.key,
+      label: col.label,
+      align: col.align as 'left' | 'right' | 'center',
+      getValue: moneyKeys.has(col.key)
+        ? (row) => formatCurrency(Number(row[col.key] ?? 0))
+        : undefined,
+    }));
+  }, []);
+
+  const totalsAsRow = useMemo<Record<string, unknown>>(
+    () => ({ ref: 'Totales', code: '', ...totals }),
+    [totals],
+  );
+
+  const handleExportPdf = useCallback(() => {
+    if (filteredData.length === 0) {
+      alert('No hay datos para exportar.');
+      return;
+    }
+    exportToPdf(
+      filteredData as unknown as Record<string, unknown>[],
+      exportColumns,
+      `Ventas del día — ${selectedDate}`,
+      totalsAsRow,
+    );
+  }, [filteredData, exportColumns, selectedDate, totalsAsRow]);
+
+  const handleExportCsv = useCallback(() => {
+    if (filteredData.length === 0) {
+      alert('No hay datos para exportar.');
+      return;
+    }
+    exportToCsv(
+      filteredData as unknown as Record<string, unknown>[],
+      exportColumns,
+      `ventas-${selectedDate}`,
+      totalsAsRow,
+    );
+  }, [filteredData, exportColumns, selectedDate, totalsAsRow]);
+
   // Loading state
   if (loading && bettingPools.length === 0) {
     return (
@@ -276,10 +317,8 @@ const DailySales = (): React.ReactElement => {
               selectedDate={selectedDate}
               zones={zones}
               selectedZones={selectedZones}
-              selectedGroup={selectedGroup}
               onDateChange={setSelectedDate}
               onZoneChange={handleZoneChange}
-              onGroupChange={setSelectedGroup}
             />
 
             {/* Action Buttons */}

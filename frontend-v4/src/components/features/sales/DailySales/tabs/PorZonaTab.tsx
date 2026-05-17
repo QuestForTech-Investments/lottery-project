@@ -27,6 +27,7 @@ import {
 import type { SelectChangeEvent } from '@mui/material/Select';
 import { Search as SearchIcon } from '@mui/icons-material';
 import api from '@services/api';
+import { SELECT_ALL, applySelectAllToggle } from '../selectAllHelper';
 import { formatCurrency } from '@/utils/formatCurrency';
 
 interface Zone {
@@ -203,9 +204,19 @@ const PorZonaTab = ({ selectedDate, setSelectedDate, zones, selectedZones, handl
               <Select
                 multiple
                 value={selectedZones}
-                onChange={handleZoneChange}
+                onChange={(e) => {
+                  const allIds = zones.map(z => z.zoneId || z.id || 0).filter(Boolean);
+                  const next = applySelectAllToggle(e.target.value as number[] | string, selectedZones, allIds);
+                  handleZoneChange({ ...e, target: { ...e.target, value: next } } as typeof e);
+                }}
                 input={<OutlinedInput />}
+                MenuProps={{
+                  disableAutoFocusItem: true,
+                  PaperProps: { sx: { maxHeight: 360 } },
+                }}
                 renderValue={(selected) => {
+                  if (selected.length === 0) return '';
+                  if (selected.length === zones.length) return 'Todas';
                   if (selected.length === 1) {
                     const zone = zones.find(z => (z.zoneId || z.id) === selected[0]);
                     return zone?.zoneName || zone?.name || '1 seleccionada';
@@ -213,6 +224,13 @@ const PorZonaTab = ({ selectedDate, setSelectedDate, zones, selectedZones, handl
                   return `${selected.length} seleccionadas`;
                 }}
               >
+                <MenuItem value={SELECT_ALL}>
+                  <Checkbox
+                    checked={zones.length > 0 && selectedZones.length === zones.length}
+                    indeterminate={selectedZones.length > 0 && selectedZones.length < zones.length}
+                  />
+                  <ListItemText primary="Todas" />
+                </MenuItem>
                 {zones.map((zone) => {
                   const zoneId = zone.zoneId || zone.id || 0;
                   return (

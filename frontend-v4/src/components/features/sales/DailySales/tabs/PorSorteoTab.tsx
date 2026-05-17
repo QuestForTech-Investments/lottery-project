@@ -25,6 +25,7 @@ import {
 import type { SelectChangeEvent } from '@mui/material/Select';
 import { Search as SearchIcon } from '@mui/icons-material';
 import api from '@services/api';
+import { SELECT_ALL, applySelectAllToggle } from '../selectAllHelper';
 import { formatCurrency } from '@/utils/formatCurrency';
 
 interface Zone {
@@ -40,6 +41,7 @@ interface DrawSalesDto {
   lotteryName: string | null;
   drawTime: string;
   drawColor: string | null;
+  lotteryImageUrl: string | null;
   ticketCount: number;
   lineCount: number;
   winnerCount: number;
@@ -140,9 +142,19 @@ const PorSorteoTab = ({ selectedDate, setSelectedDate, zones, selectedZones, han
               <Select
                 multiple
                 value={selectedZones}
-                onChange={handleZoneChange}
+                onChange={(e) => {
+                  const allIds = zones.map(z => z.zoneId || z.id || 0).filter(Boolean);
+                  const next = applySelectAllToggle(e.target.value as number[] | string, selectedZones, allIds);
+                  handleZoneChange({ ...e, target: { ...e.target, value: next } } as typeof e);
+                }}
                 input={<OutlinedInput />}
+                MenuProps={{
+                  disableAutoFocusItem: true,
+                  PaperProps: { sx: { maxHeight: 360 } },
+                }}
                 renderValue={(selected) => {
+                  if (selected.length === 0) return '';
+                  if (selected.length === zones.length) return 'Todas';
                   if (selected.length === 1) {
                     const zone = zones.find(z => (z.zoneId || z.id) === selected[0]);
                     return zone?.zoneName || zone?.name || '1 seleccionada';
@@ -150,6 +162,13 @@ const PorSorteoTab = ({ selectedDate, setSelectedDate, zones, selectedZones, han
                   return `${selected.length} seleccionadas`;
                 }}
               >
+                <MenuItem value={SELECT_ALL}>
+                  <Checkbox
+                    checked={zones.length > 0 && selectedZones.length === zones.length}
+                    indeterminate={selectedZones.length > 0 && selectedZones.length < zones.length}
+                  />
+                  <ListItemText primary="Todas" />
+                </MenuItem>
                 {zones.map((zone) => {
                   const zoneId = zone.zoneId || zone.id || 0;
                   return (
@@ -239,14 +258,31 @@ const PorSorteoTab = ({ selectedDate, setSelectedDate, zones, selectedZones, han
                   <TableRow key={row.drawId} hover>
                     <TableCell>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        {row.drawColor && (
+                        {row.lotteryImageUrl ? (
+                          <Box
+                            component="img"
+                            src={row.lotteryImageUrl}
+                            alt={row.lotteryName || row.drawName}
+                            sx={{
+                              width: 24,
+                              height: 24,
+                              borderRadius: '4px',
+                              objectFit: 'cover',
+                              flexShrink: 0,
+                            }}
+                            onError={(e) => {
+                              // Fallback to colored circle if the image fails to load.
+                              (e.currentTarget as HTMLImageElement).style.display = 'none';
+                            }}
+                          />
+                        ) : row.drawColor ? (
                           <Box sx={{
                             width: 12,
                             height: 12,
                             borderRadius: '50%',
-                            bgcolor: row.drawColor
+                            bgcolor: row.drawColor,
                           }} />
-                        )}
+                        ) : null}
                         {row.drawName}
                       </Box>
                     </TableCell>

@@ -27,6 +27,7 @@ import type { SelectChangeEvent } from '@mui/material/Select';
 import { Search as SearchIcon } from '@mui/icons-material';
 import api from '@services/api';
 import { formatCurrency } from '@/utils/formatCurrency';
+import { SELECT_ALL, applySelectAllToggle } from '../selectAllHelper';
 
 interface Zone {
   zoneId?: number;
@@ -179,8 +180,8 @@ const BancaPorSorteoTab = ({ selectedDate, setSelectedDate, zones, selectedZones
   }, [data, searchTerm]);
 
   const handleDrawChange = (event: SelectChangeEvent<number[]>) => {
-    const value = event.target.value;
-    setSelectedDraws(typeof value === 'string' ? value.split(',').map(Number) : value);
+    const allIds = draws.map(d => d.drawId);
+    setSelectedDraws(applySelectAllToggle(event.target.value as number[] | string, selectedDraws, allIds));
   };
 
 
@@ -257,8 +258,23 @@ const BancaPorSorteoTab = ({ selectedDate, setSelectedDate, zones, selectedZones
                 value={selectedDraws}
                 onChange={handleDrawChange}
                 input={<OutlinedInput />}
-                renderValue={(selected) => `${selected.length} seleccionados`}
+                MenuProps={{
+                  disableAutoFocusItem: true,
+                  PaperProps: { sx: { maxHeight: 360 } },
+                }}
+                renderValue={(selected) =>
+                  selected.length === draws.length && draws.length > 0
+                    ? 'Todos'
+                    : `${selected.length} seleccionados`
+                }
               >
+                <MenuItem value={SELECT_ALL}>
+                  <Checkbox
+                    checked={draws.length > 0 && selectedDraws.length === draws.length}
+                    indeterminate={selectedDraws.length > 0 && selectedDraws.length < draws.length}
+                  />
+                  <ListItemText primary="Todos" />
+                </MenuItem>
                 {draws.map((draw) => (
                   <MenuItem key={draw.drawId} value={draw.drawId}>
                     <Checkbox checked={selectedDraws.indexOf(draw.drawId) > -1} />
@@ -284,9 +300,19 @@ const BancaPorSorteoTab = ({ selectedDate, setSelectedDate, zones, selectedZones
               <Select
                 multiple
                 value={selectedZones}
-                onChange={handleZoneChange}
+                onChange={(e) => {
+                  const allIds = zones.map(z => z.zoneId || z.id || 0).filter(Boolean);
+                  const next = applySelectAllToggle(e.target.value as number[] | string, selectedZones, allIds);
+                  handleZoneChange({ ...e, target: { ...e.target, value: next } } as typeof e);
+                }}
                 input={<OutlinedInput />}
+                MenuProps={{
+                  disableAutoFocusItem: true,
+                  PaperProps: { sx: { maxHeight: 360 } },
+                }}
                 renderValue={(selected) => {
+                  if (selected.length === 0) return '';
+                  if (selected.length === zones.length) return 'Todas';
                   if (selected.length === 1) {
                     const zone = zones.find(z => (z.zoneId || z.id) === selected[0]);
                     return zone?.zoneName || zone?.name || '1 seleccionada';
@@ -294,6 +320,13 @@ const BancaPorSorteoTab = ({ selectedDate, setSelectedDate, zones, selectedZones
                   return `${selected.length} seleccionadas`;
                 }}
               >
+                <MenuItem value={SELECT_ALL}>
+                  <Checkbox
+                    checked={zones.length > 0 && selectedZones.length === zones.length}
+                    indeterminate={selectedZones.length > 0 && selectedZones.length < zones.length}
+                  />
+                  <ListItemText primary="Todas" />
+                </MenuItem>
                 {zones.map((zone) => {
                   const zoneId = zone.zoneId || zone.id || 0;
                   return (

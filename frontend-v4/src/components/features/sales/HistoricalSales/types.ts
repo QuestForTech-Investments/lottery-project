@@ -38,6 +38,7 @@ export interface SorteoData {
   descuentos: number;
   premios: number;
   neto: number;
+  lotteryImageUrl?: string | null;
 }
 
 export interface CombinacionData {
@@ -106,6 +107,7 @@ export interface DrawSalesDto {
   totalPrizes: number;
   totalCommissions: number;
   totalNet: number;
+  lotteryImageUrl?: string | null;
 }
 
 export interface DrawSalesResponse {

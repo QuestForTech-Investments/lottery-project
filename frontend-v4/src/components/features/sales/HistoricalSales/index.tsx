@@ -7,15 +7,17 @@
  * - Tab components in ./tabs/
  */
 
-import React, { memo } from 'react';
+import React, { memo, useCallback, useMemo } from 'react';
 import {
   Box, Paper, Typography, TextField, Grid, Autocomplete, Button, Stack,
-  Tabs, Tab, FormControl, InputLabel, Select, MenuItem, InputAdornment,
+  Tabs, Tab, InputAdornment,
   CircularProgress
 } from '@mui/material';
 import { useHistoricalSales } from './hooks/useHistoricalSales';
 import { BancasTab, PorSorteoTab, CombinacionesTab, PorZonaTab } from './tabs';
 import type { Zona } from './types';
+import { exportToCsv, exportToPdf, type ExportColumn } from '@/utils/exportTable';
+import { formatCurrency } from '@/utils/formatCurrency';
 
 const HistoricalSales: React.FC = () => {
   const {
@@ -24,18 +26,21 @@ const HistoricalSales: React.FC = () => {
     fechaInicial,
     fechaFinal,
     zonas,
-    grupo,
     filterType,
     filtroRapido,
     loading,
     setFechaInicial,
     setFechaFinal,
     setZonas,
-    setGrupo,
     setFilterType,
     setFiltroRapido,
     zonasList,
-    gruposList,
+    drawsList,
+    bancasList,
+    selectedDraws,
+    selectedBancas,
+    setSelectedDraws,
+    setSelectedBancas,
     bancasData,
     sorteoData,
     combinacionesData,
@@ -43,6 +48,60 @@ const HistoricalSales: React.FC = () => {
     totals,
     handleSearch,
   } = useHistoricalSales();
+
+  // Export columns mirror the BancaData shape used in the General tab.
+  const exportColumns = useMemo<ExportColumn<Record<string, unknown>>[]>(() => {
+    const moneyKeys = new Set(['venta', 'comisiones', 'descuentos', 'premios', 'neto', 'caida', 'gastos', 'final']);
+    return [
+      { key: 'ref', label: 'Ref.', align: 'left' as const },
+      { key: 'codigo', label: 'Código', align: 'left' as const },
+      { key: 'tickets', label: 'Tickets', align: 'right' as const },
+      { key: 'venta', label: 'Venta', align: 'right' as const },
+      { key: 'comisiones', label: 'Comisiones', align: 'right' as const },
+      { key: 'descuentos', label: 'Descuentos', align: 'right' as const },
+      { key: 'premios', label: 'Premios', align: 'right' as const },
+      { key: 'neto', label: 'Neto', align: 'right' as const },
+      { key: 'caida', label: 'Caída', align: 'right' as const },
+      { key: 'gastos', label: 'Gastos', align: 'right' as const },
+      { key: 'final', label: 'Final', align: 'right' as const },
+    ].map(c => ({
+      ...c,
+      getValue: moneyKeys.has(c.key)
+        ? (row: Record<string, unknown>) => formatCurrency(Number(row[c.key] ?? 0))
+        : undefined,
+    }));
+  }, []);
+
+  const totalsAsRow = useMemo<Record<string, unknown>>(
+    () => ({ ref: 'Totales', codigo: '', ...totals }),
+    [totals],
+  );
+
+  const handleExportCsv = useCallback(() => {
+    if (bancasData.length === 0) {
+      alert('No hay datos para exportar.');
+      return;
+    }
+    exportToCsv(
+      bancasData as unknown as Record<string, unknown>[],
+      exportColumns,
+      `historico-ventas-${fechaInicial}_${fechaFinal}`,
+      totalsAsRow,
+    );
+  }, [bancasData, exportColumns, fechaInicial, fechaFinal, totalsAsRow]);
+
+  const handleExportPdf = useCallback(() => {
+    if (bancasData.length === 0) {
+      alert('No hay datos para exportar.');
+      return;
+    }
+    exportToPdf(
+      bancasData as unknown as Record<string, unknown>[],
+      exportColumns,
+      `Histórico de Ventas — ${fechaInicial} al ${fechaFinal}`,
+      totalsAsRow,
+    );
+  }, [bancasData, exportColumns, fechaInicial, fechaFinal, totalsAsRow]);
 
   // Render content based on selected tab
   const renderTabContent = () => {
@@ -72,6 +131,7 @@ const HistoricalSales: React.FC = () => {
               premios: d.premios,
               comisiones: d.comisiones,
               neto: d.neto,
+              lotteryImageUrl: d.lotteryImageUrl ?? null,
             }))}
             filtroRapido={filtroRapido}
             loading={loading}
@@ -90,8 +150,16 @@ const HistoricalSales: React.FC = () => {
             fechaFinal={fechaFinal}
             zonas={zonas.map(z => ({ id: z.id, name: z.name }))}
             zonasList={zonasList.map(z => ({ id: z.id, name: z.name }))}
+            drawsList={drawsList}
+            bancasList={bancasList}
+            selectedDraws={selectedDraws}
+            selectedBancas={selectedBancas}
+            setSelectedDraws={setSelectedDraws}
+            setSelectedBancas={setSelectedBancas}
             combinacionesData={combinacionesData.map(d => ({
               combinacion: d.combinacion,
+              tipoApuesta: d.tipoApuesta,
+              lineas: d.lineas,
               totalVendido: d.totalVendido,
               comisiones: d.comisiones,
               comisiones2: d.comisiones2,
@@ -166,14 +234,13 @@ const HistoricalSales: React.FC = () => {
               fechaFinal={fechaFinal}
               zonas={zonas}
               zonasList={zonasList}
-              grupo={grupo}
-              gruposList={gruposList}
               loading={loading}
               onFechaInicialChange={setFechaInicial}
               onFechaFinalChange={setFechaFinal}
               onZonasChange={setZonas}
-              onGrupoChange={setGrupo}
               onSearch={handleSearch}
+              onExportCsv={handleExportCsv}
+              onExportPdf={handleExportPdf}
             />
           )}
           {renderTabContent()}
@@ -189,14 +256,13 @@ interface GeneralTabHeaderProps {
   fechaFinal: string;
   zonas: Zona[];
   zonasList: Zona[];
-  grupo: string | number;
-  gruposList: Array<{ id: number; name: string }>;
   loading: boolean;
   onFechaInicialChange: (date: string) => void;
   onFechaFinalChange: (date: string) => void;
   onZonasChange: (zonas: Zona[]) => void;
-  onGrupoChange: (grupo: string | number) => void;
   onSearch: () => void;
+  onExportCsv: () => void;
+  onExportPdf: () => void;
 }
 
 const GeneralTabHeader = memo<GeneralTabHeaderProps>(({
@@ -204,14 +270,13 @@ const GeneralTabHeader = memo<GeneralTabHeaderProps>(({
   fechaFinal,
   zonas,
   zonasList,
-  grupo,
-  gruposList,
   loading,
   onFechaInicialChange,
   onFechaFinalChange,
   onZonasChange,
-  onGrupoChange,
   onSearch,
+  onExportCsv,
+  onExportPdf,
 }) => {
   const buttonStyles = {
     borderRadius: '20px',
@@ -254,10 +319,17 @@ const GeneralTabHeader = memo<GeneralTabHeaderProps>(({
         <Grid item xs={12} md={3}>
           <Autocomplete
             multiple
-            options={zonasList}
+            // Prepend a synthetic "Todas" entry — clicking it toggles all zones.
+            options={[{ id: -1, name: 'Todas' } as Zona, ...zonasList]}
             getOptionLabel={(o) => o.name || ''}
             value={zonas}
-            onChange={(_, v) => onZonasChange(v)}
+            onChange={(_, v) => {
+              if (v.some((z) => z.id === -1)) {
+                onZonasChange(zonas.length === zonasList.length ? [] : zonasList.slice());
+                return;
+              }
+              onZonasChange(v);
+            }}
             renderTags={() => null}
             renderInput={(params) => (
               <TextField
@@ -268,29 +340,18 @@ const GeneralTabHeader = memo<GeneralTabHeaderProps>(({
                   ...params.InputProps,
                   startAdornment: zonas.length > 0 ? (
                     <InputAdornment position="start" sx={{ ml: 1 }}>
-                      {zonas.length === 1 ? zonas[0].name : `${zonas.length} seleccionadas`}
+                      {zonas.length === zonasList.length && zonasList.length > 0
+                        ? 'Todas'
+                        : zonas.length === 1
+                          ? zonas[0].name
+                          : `${zonas.length} seleccionadas`}
                     </InputAdornment>
                   ) : null
                 }}
-                placeholder={zonas.length === 0 ? "Seleccione" : ""}
+                placeholder={zonas.length === 0 ? 'Seleccione' : ''}
               />
             )}
           />
-        </Grid>
-        <Grid item xs={12} md={3}>
-          <FormControl fullWidth size="small">
-            <InputLabel>Grupo</InputLabel>
-            <Select
-              value={grupo}
-              label="Grupo"
-              onChange={(e) => onGrupoChange(e.target.value)}
-            >
-              <MenuItem value="">Seleccione</MenuItem>
-              {gruposList.map(g => (
-                <MenuItem key={g.id} value={g.id}>{g.name}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
         </Grid>
       </Grid>
 
@@ -305,10 +366,10 @@ const GeneralTabHeader = memo<GeneralTabHeaderProps>(({
         >
           Ver ventas
         </Button>
-        <Button variant="contained" size="small" sx={buttonStyles}>
+        <Button variant="contained" onClick={onExportCsv} size="small" sx={buttonStyles}>
           CSV
         </Button>
-        <Button variant="contained" size="small" sx={buttonStyles}>
+        <Button variant="contained" onClick={onExportPdf} size="small" sx={buttonStyles}>
           PDF
         </Button>
       </Stack>
