@@ -26,6 +26,7 @@ export { DataTable, type DataTableProps, type Column } from './DataTable';
 // Form & Filter Components
 export { DateRangePicker, type DateRangePickerProps } from './DateRangePicker';
 export { ZoneMultiSelect, type ZoneMultiSelectProps, type Zone } from './ZoneMultiSelect';
+export { MultiSelectSearch, type MultiSelectSearchProps, type OptionItem } from './MultiSelectSearch';
 export { SearchInput, type SearchInputProps } from './SearchInput';
 export { FilterToggleGroup, type FilterToggleGroupProps, type FilterOption } from './FilterToggleGroup';
 

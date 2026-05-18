@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import {
   Box,
   Card,
@@ -19,24 +19,24 @@ import {
 import { Search as SearchIcon } from '@mui/icons-material';
 import api from '@services/api';
 import { formatCurrency } from '@/utils/formatCurrency';
+import PayoutBancasDialog from './PayoutBancasDialog';
 
-interface PrizeCategoryDto {
-  betTypeId: number;
-  betTypeName: string;
-  betTypeCode: string | null;
+interface PayoutGroupDto {
+  multiplier: number;
+  label: string;
   lineCount: number;
+  pendingCount: number;
+  loserCount: number;
   winnerCount: number;
   totalSold: number;
   totalPrizes: number;
   totalNet: number;
-  profitPercentage: number;
 }
 
-interface PrizeCategoryResponse {
+interface PayoutGroupResponse {
   date: string;
-  drawId: number | null;
-  drawName: string | null;
-  categories: PrizeCategoryDto[];
+  category: string;
+  groups: PayoutGroupDto[];
   summary: {
     totalSold: number;
     totalPrizes: number;
@@ -53,45 +53,48 @@ interface CategoriaPremiosTabProps {
 
 const CategoriaPremiosTab = ({ selectedDate, setSelectedDate }: CategoriaPremiosTabProps): React.ReactElement => {
   const [loading, setLoading] = useState(false);
-  const [data, setData] = useState<PrizeCategoryDto[]>([]);
+  const [data, setData] = useState<PayoutGroupDto[]>([]);
   const [summary, setSummary] = useState({ totalSold: 0, totalPrizes: 0, totalCommissions: 0, totalNet: 0 });
   const [searchTerm, setSearchTerm] = useState('');
+  const [dialogMultiplier, setDialogMultiplier] = useState<number | null>(null);
 
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await api.get<PrizeCategoryResponse>(
-        `/reports/sales/prize-categories?date=${selectedDate}`
+      const response = await api.get<PayoutGroupResponse>(
+        `/reports/sales/prize-categories-by-payout?date=${selectedDate}&category=quiniela`
       );
-      setData(response?.categories || []);
+      setData(response?.groups || []);
       setSummary(response?.summary || { totalSold: 0, totalPrizes: 0, totalCommissions: 0, totalNet: 0 });
     } catch (error) {
-      console.error('Error loading prize categories:', error);
+      console.error('Error loading quiniela payout groups:', error);
       setData([]);
     } finally {
       setLoading(false);
     }
   }, [selectedDate]);
 
+  // Auto-load when the tab mounts or the shared date changes.
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
   const filteredData = useMemo(() => {
     if (!searchTerm) return data;
     const term = searchTerm.toLowerCase();
-    return data.filter(d =>
-      d.betTypeName.toLowerCase().includes(term) ||
-      (d.betTypeCode && d.betTypeCode.toLowerCase().includes(term))
-    );
+    return data.filter((d) => d.label.toLowerCase().includes(term));
   }, [data, searchTerm]);
-
 
   const totals = useMemo(() => {
     return filteredData.reduce((acc, row) => ({
-      lineCount: acc.lineCount + row.lineCount,
+      pendingCount: acc.pendingCount + row.pendingCount,
+      loserCount: acc.loserCount + row.loserCount,
       winnerCount: acc.winnerCount + row.winnerCount,
       totalSold: acc.totalSold + row.totalSold,
       totalPrizes: acc.totalPrizes + row.totalPrizes,
-      totalNet: acc.totalNet + row.totalNet
+      totalNet: acc.totalNet + row.totalNet,
     }), {
-      lineCount: 0, winnerCount: 0, totalSold: 0, totalPrizes: 0, totalNet: 0
+      pendingCount: 0, loserCount: 0, winnerCount: 0, totalSold: 0, totalPrizes: 0, totalNet: 0,
     });
   }, [filteredData]);
 
@@ -136,7 +139,7 @@ const CategoriaPremiosTab = ({ selectedDate, setSelectedDate }: CategoriaPremios
               py: 0.5,
               fontSize: '0.75rem',
               textTransform: 'uppercase',
-              fontWeight: 500
+              fontWeight: 500,
             }}
           >
             {loading ? <CircularProgress size={16} color="inherit" /> : 'Ver reporte'}
@@ -165,6 +168,7 @@ const CategoriaPremiosTab = ({ selectedDate, setSelectedDate }: CategoriaPremios
             <TableHead sx={{ backgroundColor: '#e3e3e3' }}>
               <TableRow>
                 <TableCell sx={{ fontWeight: 600 }}>Premio</TableCell>
+                <TableCell align="center" sx={{ fontWeight: 600 }}>P</TableCell>
                 <TableCell align="center" sx={{ fontWeight: 600 }}>L</TableCell>
                 <TableCell align="center" sx={{ fontWeight: 600 }}>W</TableCell>
                 <TableCell align="right" sx={{ fontWeight: 600 }}>Total</TableCell>
@@ -172,7 +176,6 @@ const CategoriaPremiosTab = ({ selectedDate, setSelectedDate }: CategoriaPremios
                 <TableCell align="right" sx={{ fontWeight: 600 }}>Comisiones</TableCell>
                 <TableCell align="right" sx={{ fontWeight: 600 }}>Premios</TableCell>
                 <TableCell align="right" sx={{ fontWeight: 600 }}>Neto</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600 }}>Balance</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -185,31 +188,34 @@ const CategoriaPremiosTab = ({ selectedDate, setSelectedDate }: CategoriaPremios
               ) : (
                 <>
                   {filteredData.map((row) => (
-                    <TableRow key={row.betTypeId} hover>
-                      <TableCell>{row.betTypeName}</TableCell>
-                      <TableCell align="center">{row.lineCount}</TableCell>
+                    <TableRow
+                      key={row.multiplier}
+                      hover
+                      onClick={() => setDialogMultiplier(row.multiplier)}
+                      sx={{ cursor: 'pointer' }}
+                    >
+                      <TableCell sx={{ color: '#1976d2', textDecoration: 'underline' }}>{row.label}</TableCell>
+                      <TableCell align="center">{row.pendingCount}</TableCell>
+                      <TableCell align="center">{row.loserCount}</TableCell>
                       <TableCell align="center">{row.winnerCount}</TableCell>
-                      <TableCell align="right">{row.lineCount + row.winnerCount}</TableCell>
+                      <TableCell align="right">{row.pendingCount + row.loserCount + row.winnerCount}</TableCell>
                       <TableCell align="right">{formatCurrency(row.totalSold)}</TableCell>
                       <TableCell align="right">{formatCurrency(0)}</TableCell>
                       <TableCell align="right">{formatCurrency(row.totalPrizes)}</TableCell>
                       <TableCell align="right" sx={{ color: row.totalNet < 0 ? 'error.main' : 'inherit' }}>
                         {formatCurrency(row.totalNet)}
                       </TableCell>
-                      <TableCell align="right" sx={{ color: row.totalNet < 0 ? 'error.main' : 'success.main' }}>
-                        {formatCurrency(row.totalNet)}
-                      </TableCell>
                     </TableRow>
                   ))}
                   <TableRow sx={{ backgroundColor: '#f5f7fa', '& td': { fontWeight: 600 } }}>
                     <TableCell>Totales</TableCell>
-                    <TableCell align="center">{totals.lineCount}</TableCell>
+                    <TableCell align="center">{totals.pendingCount}</TableCell>
+                    <TableCell align="center">{totals.loserCount}</TableCell>
                     <TableCell align="center">{totals.winnerCount}</TableCell>
-                    <TableCell align="right">{totals.lineCount + totals.winnerCount}</TableCell>
+                    <TableCell align="right">{totals.pendingCount + totals.loserCount + totals.winnerCount}</TableCell>
                     <TableCell align="right">{formatCurrency(totals.totalSold)}</TableCell>
                     <TableCell align="right">{formatCurrency(0)}</TableCell>
                     <TableCell align="right">{formatCurrency(totals.totalPrizes)}</TableCell>
-                    <TableCell align="right">{formatCurrency(totals.totalNet)}</TableCell>
                     <TableCell align="right">{formatCurrency(totals.totalNet)}</TableCell>
                   </TableRow>
                 </>
@@ -219,8 +225,16 @@ const CategoriaPremiosTab = ({ selectedDate, setSelectedDate }: CategoriaPremios
         </TableContainer>
 
         <Typography variant="body2" sx={{ mt: 2 }}>
-          Mostrando {filteredData.length} de {data.length} entradas
+          Mostrando {filteredData.length} grupo(s) de pago
         </Typography>
+
+        <PayoutBancasDialog
+          open={dialogMultiplier !== null}
+          onClose={() => setDialogMultiplier(null)}
+          category="quiniela"
+          multiplier={dialogMultiplier}
+          selectedDate={selectedDate}
+        />
       </CardContent>
     </Card>
   );

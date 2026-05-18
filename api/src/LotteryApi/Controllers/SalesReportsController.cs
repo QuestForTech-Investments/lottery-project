@@ -6,6 +6,7 @@ using LotteryApi.DTOs;
 using LotteryApi.Helpers;
 using LotteryApi.Services;
 using LotteryApi.Services.Caida;
+using LotteryApi.Services.ExternalResults;
 
 namespace LotteryApi.Controllers;
 
@@ -692,6 +693,8 @@ public class SalesReportsController : ControllerBase
     [HttpGet("by-draw")]
     public async Task<ActionResult<DrawSalesResponseDto>> GetSalesByDraw(
         [FromQuery] DateTime? date,
+        [FromQuery] DateTime? startDate,
+        [FromQuery] DateTime? endDate,
         [FromQuery] string? zoneIds,
         [FromQuery] int? bettingPoolId = null)
     {
@@ -706,11 +709,22 @@ public class SalesReportsController : ControllerBase
 
         try
         {
-            var targetDate = date ?? DateTimeHelper.TodayInBusinessTimezone();
-            var startDate = targetDate.Date;
-            var endDate = startDate.AddDays(1).AddTicks(-1);
+            // Accept either a (startDate, endDate) range or a single legacy `date`.
+            DateTime rangeStart;
+            DateTime rangeEnd;
+            if (startDate.HasValue || endDate.HasValue)
+            {
+                rangeStart = (startDate ?? endDate)!.Value.Date;
+                rangeEnd = (endDate ?? startDate)!.Value.Date.AddDays(1).AddTicks(-1);
+            }
+            else
+            {
+                var targetDate = date ?? DateTimeHelper.TodayInBusinessTimezone();
+                rangeStart = targetDate.Date;
+                rangeEnd = rangeStart.AddDays(1).AddTicks(-1);
+            }
 
-            _logger.LogInformation("Getting sales by draw for {Date}, BettingPoolId: {BettingPoolId}", targetDate, bettingPoolId);
+            _logger.LogInformation("Getting sales by draw from {Start} to {End}, BettingPoolId: {BettingPoolId}", rangeStart, rangeEnd, bettingPoolId);
 
             // Parse zone IDs
             List<int>? zoneIdList = null;
@@ -727,7 +741,7 @@ public class SalesReportsController : ControllerBase
                 .Include(tl => tl.Draw)
                     .ThenInclude(d => d!.Lottery)
                 .Where(tl => tl.Ticket != null && !tl.Ticket.IsCancelled)
-                .Where(tl => tl.DrawDate.Date >= startDate.Date && tl.DrawDate.Date <= endDate.Date);
+                .Where(tl => tl.DrawDate.Date >= rangeStart.Date && tl.DrawDate.Date <= rangeEnd.Date);
 
             // Zone scope.
             var allowedBpIds = await _zoneScope.GetAllowedBettingPoolIdsAsync();
@@ -797,7 +811,7 @@ public class SalesReportsController : ControllerBase
 
             return Ok(new DrawSalesResponseDto
             {
-                Date = targetDate,
+                Date = rangeStart,
                 Draws = drawSales,
                 Summary = summary,
                 TotalCount = drawSales.Count()
@@ -817,17 +831,30 @@ public class SalesReportsController : ControllerBase
     [HttpGet("by-zone")]
     public async Task<ActionResult<ZoneSalesResponseDto>> GetSalesByZone(
         [FromQuery] DateTime? date,
+        [FromQuery] DateTime? startDate,
+        [FromQuery] DateTime? endDate,
         [FromQuery] string? zoneIds)
     {
         if (!await HasPermissionAsync("VIEW_SALES")) return Forbid();
 
         try
         {
-            var targetDate = date ?? DateTimeHelper.TodayInBusinessTimezone();
-            var startDate = targetDate.Date;
-            var endDate = startDate.AddDays(1).AddTicks(-1);
+            // Accept either a (startDate, endDate) range or a single legacy `date`.
+            DateTime rangeStart;
+            DateTime rangeEnd;
+            if (startDate.HasValue || endDate.HasValue)
+            {
+                rangeStart = (startDate ?? endDate)!.Value.Date;
+                rangeEnd = (endDate ?? startDate)!.Value.Date.AddDays(1).AddTicks(-1);
+            }
+            else
+            {
+                var targetDate = date ?? DateTimeHelper.TodayInBusinessTimezone();
+                rangeStart = targetDate.Date;
+                rangeEnd = rangeStart.AddDays(1).AddTicks(-1);
+            }
 
-            _logger.LogInformation("Getting sales by zone for {Date}", targetDate);
+            _logger.LogInformation("Getting sales by zone from {Start} to {End}", rangeStart, rangeEnd);
 
             // Parse zone IDs
             List<int>? zoneIdList = null;
@@ -862,7 +889,7 @@ public class SalesReportsController : ControllerBase
                     .Include(t => t.BettingPool)
                     .Include(t => t.TicketLines)
                     .Where(t => !t.IsCancelled)
-                    .Where(t => t.TicketLines.Any(tl => tl.DrawDate.Date >= startDate.Date && tl.DrawDate.Date <= endDate.Date))
+                    .Where(t => t.TicketLines.Any(tl => tl.DrawDate.Date >= rangeStart.Date && tl.DrawDate.Date <= rangeEnd.Date))
                     .Where(t => t.BettingPool != null && t.BettingPool.ZoneId == zone.ZoneId)
                     .ToListAsync();
 
@@ -870,6 +897,15 @@ public class SalesReportsController : ControllerBase
 
                 var distinctPoolIds = tickets.Select(t => t.BettingPoolId).Distinct().ToList();
                 var bettingPoolIds = distinctPoolIds.Count;
+
+                // P/L/W are ticket-level counts (TicketState: "P" pending, "W" winner, "L" loser).
+                var pendingCount = tickets.Count(t => t.TicketState == "P");
+                var loserCount = tickets.Count(t => t.TicketState == "L");
+                var winnerCount = tickets.Count(t => t.TicketState == "W");
+
+                var lineCount = tickets
+                    .SelectMany(t => t.TicketLines)
+                    .Count(tl => tl.DrawDate.Date >= rangeStart.Date && tl.DrawDate.Date <= rangeEnd.Date);
 
                 var zoneRiferoDiscount = tickets.Where(t => t.DiscountMode == "RIFERO").Sum(t => t.TotalDiscount);
                 var zoneTotalNet = tickets.Sum(t => t.GrandTotal) + zoneRiferoDiscount - tickets.Sum(t => t.TotalCommission) - tickets.Sum(t => t.TotalPrize);
@@ -881,8 +917,8 @@ public class SalesReportsController : ControllerBase
                 var zoneFall = await _context.CaidaHistory
                     .AsNoTracking()
                     .Where(h => distinctPoolIds.Contains(h.BettingPoolId)
-                        && h.CalculationDate >= startDate.Date
-                        && h.CalculationDate <= endDate.Date)
+                        && h.CalculationDate >= rangeStart.Date
+                        && h.CalculationDate <= rangeEnd.Date)
                     .SumAsync(h => (decimal?)h.CaidaAmount) ?? 0;
 
                 zoneSales.Add(new ZoneSalesDto
@@ -891,8 +927,10 @@ public class SalesReportsController : ControllerBase
                     ZoneName = zone.ZoneName ?? "Unknown",
                     BettingPoolCount = bettingPoolIds,
                     TicketCount = tickets.Count,
-                    LineCount = tickets.Sum(t => t.TotalLines),
-                    WinnerCount = tickets.Sum(t => t.WinningLines),
+                    LineCount = lineCount,
+                    PendingCount = pendingCount,
+                    LoserCount = loserCount,
+                    WinnerCount = winnerCount,
                     TotalSold = tickets.Sum(t => t.GrandTotal),
                     TotalPrizes = tickets.Sum(t => t.TotalPrize),
                     TotalCommissions = tickets.Sum(t => t.TotalCommission),
@@ -914,7 +952,7 @@ public class SalesReportsController : ControllerBase
 
             return Ok(new ZoneSalesResponseDto
             {
-                Date = targetDate,
+                Date = rangeStart,
                 Zones = zoneSales.OrderBy(z => z.ZoneName).ToList(),
                 Summary = summary,
                 TotalCount = zoneSales.Count
@@ -934,6 +972,8 @@ public class SalesReportsController : ControllerBase
     [HttpGet("betting-pool-by-draw")]
     public async Task<ActionResult<BettingPoolDrawSalesResponseDto>> GetBettingPoolByDraw(
         [FromQuery] DateTime? date,
+        [FromQuery] DateTime? startDate,
+        [FromQuery] DateTime? endDate,
         [FromQuery] string? zoneIds)
     {
         var hasAdminView = await HasPermissionAsync("VIEW_SALES");
@@ -946,11 +986,22 @@ public class SalesReportsController : ControllerBase
 
         try
         {
-            var targetDate = date ?? DateTimeHelper.TodayInBusinessTimezone();
-            var startDate = targetDate.Date;
-            var endDate = startDate.AddDays(1).AddTicks(-1);
+            // Accept either a (startDate, endDate) range or a single legacy `date`.
+            DateTime rangeStart;
+            DateTime rangeEnd;
+            if (startDate.HasValue || endDate.HasValue)
+            {
+                rangeStart = (startDate ?? endDate)!.Value.Date;
+                rangeEnd = (endDate ?? startDate)!.Value.Date.AddDays(1).AddTicks(-1);
+            }
+            else
+            {
+                var targetDate = date ?? DateTimeHelper.TodayInBusinessTimezone();
+                rangeStart = targetDate.Date;
+                rangeEnd = rangeStart.AddDays(1).AddTicks(-1);
+            }
 
-            _logger.LogInformation("Getting betting pool by draw for {Date}", targetDate);
+            _logger.LogInformation("Getting betting pool by draw from {Start} to {End}", rangeStart, rangeEnd);
 
             // Parse zone IDs
             List<int>? zoneIdList = null;
@@ -992,7 +1043,7 @@ public class SalesReportsController : ControllerBase
                         .ThenInclude(d => d!.Lottery)
                     .Where(tl => tl.Ticket != null && !tl.Ticket.IsCancelled)
                     .Where(tl => tl.Ticket!.BettingPoolId == bp.BettingPoolId)
-                    .Where(tl => tl.DrawDate.Date >= startDate.Date && tl.DrawDate.Date <= endDate.Date)
+                    .Where(tl => tl.DrawDate.Date >= rangeStart.Date && tl.DrawDate.Date <= rangeEnd.Date)
                     .ToListAsync();
 
                 if (!lines.Any()) continue;
@@ -1037,7 +1088,7 @@ public class SalesReportsController : ControllerBase
                 .Include(tl => tl.Draw)
                     .ThenInclude(d => d!.Lottery)
                 .Where(tl => tl.Ticket != null && !tl.Ticket.IsCancelled)
-                .Where(tl => tl.DrawDate.Date >= startDate.Date && tl.DrawDate.Date <= endDate.Date)
+                .Where(tl => tl.DrawDate.Date >= rangeStart.Date && tl.DrawDate.Date <= rangeEnd.Date)
                 .Where(tl => zoneIdList == null || zoneIdList.Count == 0 ||
                     (tl.Ticket!.BettingPool != null && zoneIdList.Contains(tl.Ticket.BettingPool.ZoneId)))
                 .ToListAsync();
@@ -1075,7 +1126,7 @@ public class SalesReportsController : ControllerBase
 
             return Ok(new BettingPoolDrawSalesResponseDto
             {
-                Date = targetDate,
+                Date = rangeStart,
                 BettingPools = result.OrderBy(r => r.BettingPoolCode).ToList(),
                 DrawTotals = drawTotals,
                 Summary = summary,
@@ -1217,12 +1268,450 @@ public class SalesReportsController : ControllerBase
     }
 
     /// <summary>
+    /// Sales grouped by the effective primer-pago multiplier per banca.
+    /// `category` selects the bet type group: "quiniela" (Directo) or "pale".
+    /// Used by the "Categoría de premios" and "Pale" tabs of DailySales.
+    /// </summary>
+    [HttpGet("prize-categories-by-payout")]
+    public async Task<ActionResult<PayoutGroupResponseDto>> GetPrizeCategoriesByPayout(
+        [FromQuery] DateTime? date,
+        [FromQuery] DateTime? startDate,
+        [FromQuery] DateTime? endDate,
+        [FromQuery] string category = "quiniela",
+        [FromQuery] int? drawId = null,
+        [FromQuery] string? zoneIds = null)
+    {
+        var hasAdminView = await HasPermissionAsync("VIEW_SALES");
+        List<int>? posAllowedBpIds = null;
+        if (!hasAdminView)
+        {
+            posAllowedBpIds = await GetAssignedBettingPoolIdsAsync();
+            if (posAllowedBpIds.Count == 0) return Forbid();
+        }
+
+        try
+        {
+            // Date range (accepts either `date` or a startDate/endDate window).
+            DateTime rangeStart;
+            DateTime rangeEnd;
+            if (startDate.HasValue || endDate.HasValue)
+            {
+                rangeStart = (startDate ?? endDate)!.Value.Date;
+                rangeEnd = (endDate ?? startDate)!.Value.Date.AddDays(1).AddTicks(-1);
+            }
+            else
+            {
+                var targetDate = date ?? DateTimeHelper.TodayInBusinessTimezone();
+                rangeStart = targetDate.Date;
+                rangeEnd = rangeStart.AddDays(1).AddTicks(-1);
+            }
+
+            // Map the requested category to one or more game_type codes.
+            var normalizedCategory = (category ?? "quiniela").Trim().ToLowerInvariant();
+            string[] gameTypeCodes = normalizedCategory switch
+            {
+                "quiniela" => new[] { "DIRECTO" },
+                "pale" => new[] { "PALE", "SUPER_PALE", "PALE_USA", "PALE_RD" },
+                _ => Array.Empty<string>(),
+            };
+            if (gameTypeCodes.Length == 0)
+            {
+                return BadRequest(new { message = "Categoría no soportada. Use 'quiniela' o 'pale'." });
+            }
+
+            var gameTypeIds = await _context.GameTypes
+                .Where(gt => gameTypeCodes.Contains(gt.GameTypeCode.ToUpper()))
+                .Select(gt => gt.GameTypeId)
+                .ToListAsync();
+            if (gameTypeIds.Count == 0)
+            {
+                return Ok(new PayoutGroupResponseDto { Date = rangeStart, Category = normalizedCategory });
+            }
+
+            // game_type_id → prize bet_type_id (different numbering, see ExternalResultsService).
+            var gameTypeToPrizeBetType = ExternalResultsService.GameTypeToPrizeBetType;
+            var prizeBetTypeIds = gameTypeIds
+                .Select(id => gameTypeToPrizeBetType.GetValueOrDefault(id, id))
+                .Distinct()
+                .ToList();
+
+            // Primer pago = DisplayOrder == 1. Map prize_bet_type_id → primer-pago PrizeType.
+            var primerPagoByBetType = await _context.PrizeTypes
+                .Where(pt => prizeBetTypeIds.Contains(pt.BetTypeId) && pt.IsActive && pt.DisplayOrder == 1)
+                .ToDictionaryAsync(pt => pt.BetTypeId, pt => new { pt.PrizeTypeId, pt.DefaultMultiplier });
+
+            // Parse zone IDs.
+            List<int>? zoneIdList = null;
+            if (!string.IsNullOrEmpty(zoneIds))
+            {
+                zoneIdList = zoneIds.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(int.Parse)
+                    .ToList();
+            }
+
+            // Ticket lines for the requested game types within the date range.
+            var query = _context.TicketLines
+                .Where(tl => tl.Ticket != null && !tl.Ticket.IsCancelled)
+                .Where(tl => tl.DrawDate.Date >= rangeStart.Date && tl.DrawDate.Date <= rangeEnd.Date)
+                .Where(tl => gameTypeIds.Contains(tl.BetTypeId));
+
+            var allowedBpIds = await _zoneScope.GetAllowedBettingPoolIdsAsync();
+            if (allowedBpIds != null)
+            {
+                query = query.Where(tl => tl.Ticket != null && allowedBpIds.Contains(tl.Ticket.BettingPoolId));
+            }
+            if (posAllowedBpIds != null)
+            {
+                query = query.Where(tl => tl.Ticket != null && posAllowedBpIds.Contains(tl.Ticket.BettingPoolId));
+            }
+            if (drawId.HasValue)
+            {
+                query = query.Where(tl => tl.DrawId == drawId.Value);
+            }
+            if (zoneIdList != null && zoneIdList.Count > 0)
+            {
+                query = query.Where(tl => tl.Ticket != null &&
+                    tl.Ticket.BettingPool != null &&
+                    zoneIdList.Contains(tl.Ticket.BettingPool.ZoneId));
+            }
+
+            var lines = await query
+                .Select(tl => new
+                {
+                    tl.BetTypeId,
+                    tl.TicketId,
+                    BettingPoolId = tl.Ticket!.BettingPoolId,
+                    TicketState = tl.Ticket!.TicketState,
+                    tl.DrawId,
+                    tl.Subtotal,
+                    tl.PrizeAmount,
+                })
+                .ToListAsync();
+
+            if (lines.Count == 0)
+            {
+                return Ok(new PayoutGroupResponseDto { Date = rangeStart, Category = normalizedCategory });
+            }
+
+            // Pre-fetch banca and draw overrides for the (banca, prize_type) and (draw, banca, prize_type) tuples involved.
+            var prizeTypeIds = primerPagoByBetType.Values.Select(v => v.PrizeTypeId).Distinct().ToList();
+            var bancaIds = lines.Select(l => l.BettingPoolId).Distinct().ToList();
+            var drawIdsInPlay = lines.Select(l => l.DrawId).Distinct().ToList();
+
+            var bancaConfigList = await _context.BancaPrizeConfigs
+                .Where(bc => bancaIds.Contains(bc.BettingPoolId) && prizeTypeIds.Contains(bc.PrizeTypeId))
+                .Select(bc => new { bc.BettingPoolId, bc.PrizeTypeId, bc.CustomValue })
+                .ToListAsync();
+            var bancaConfigs = bancaConfigList
+                .GroupBy(bc => (bc.BettingPoolId, bc.PrizeTypeId))
+                .ToDictionary(g => g.Key, g => g.First().CustomValue);
+
+            var drawConfigList = await _context.DrawPrizeConfigs
+                .Where(dc => drawIdsInPlay.Contains(dc.DrawId)
+                    && bancaIds.Contains(dc.BettingPoolId)
+                    && prizeTypeIds.Contains(dc.PrizeTypeId))
+                .Select(dc => new { dc.DrawId, dc.BettingPoolId, dc.PrizeTypeId, dc.CustomValue })
+                .ToListAsync();
+            var drawConfigs = drawConfigList
+                .GroupBy(dc => (dc.DrawId, dc.BettingPoolId, dc.PrizeTypeId))
+                .ToDictionary(g => g.Key, g => g.First().CustomValue);
+
+            // Cascade per line: draw override > banca override > default.
+            // Then dedupe tickets per multiplier so P/L/W reflect ticket counts, not line counts.
+            // Money totals (sold/prize) stay at the line level — a ticket can mix multipliers.
+            var groups = new Dictionary<decimal, (Dictionary<long, string> ticketStates, decimal sold, decimal prize)>();
+            foreach (var line in lines)
+            {
+                var prizeBetTypeId = gameTypeToPrizeBetType.GetValueOrDefault(line.BetTypeId, line.BetTypeId);
+                if (!primerPagoByBetType.TryGetValue(prizeBetTypeId, out var pt)) continue;
+
+                decimal multiplier;
+                if (drawConfigs.TryGetValue((line.DrawId, line.BettingPoolId, pt.PrizeTypeId), out var dv))
+                    multiplier = dv;
+                else if (bancaConfigs.TryGetValue((line.BettingPoolId, pt.PrizeTypeId), out var bv))
+                    multiplier = bv;
+                else
+                    multiplier = pt.DefaultMultiplier;
+
+                var key = decimal.Round(multiplier, 2);
+                if (!groups.TryGetValue(key, out var acc))
+                    acc = (new Dictionary<long, string>(), 0m, 0m);
+                acc.ticketStates[line.TicketId] = line.TicketState;
+                acc.sold += line.Subtotal;
+                acc.prize += line.PrizeAmount;
+                groups[key] = acc;
+            }
+
+            var rows = groups
+                .Select(kv =>
+                {
+                    var pending = kv.Value.ticketStates.Count(kvp => kvp.Value == "P");
+                    var loser = kv.Value.ticketStates.Count(kvp => kvp.Value == "L");
+                    var winner = kv.Value.ticketStates.Count(kvp => kvp.Value == "W");
+                    return new PayoutGroupDto
+                    {
+                        Multiplier = kv.Key,
+                        Label = kv.Key.ToString("0.##"),
+                        LineCount = kv.Value.ticketStates.Count,
+                        PendingCount = pending,
+                        LoserCount = loser,
+                        WinnerCount = winner,
+                        TotalSold = kv.Value.sold,
+                        TotalPrizes = kv.Value.prize,
+                        TotalNet = kv.Value.sold - kv.Value.prize,
+                    };
+                })
+                .OrderBy(r => r.Multiplier)
+                .ToList();
+
+            var summary = new SalesSummaryDto
+            {
+                TotalSold = rows.Sum(r => r.TotalSold),
+                TotalPrizes = rows.Sum(r => r.TotalPrizes),
+                TotalCommissions = 0,
+                TotalNet = rows.Sum(r => r.TotalNet),
+            };
+
+            return Ok(new PayoutGroupResponseDto
+            {
+                Date = rangeStart,
+                Category = normalizedCategory,
+                Groups = rows,
+                Summary = summary,
+                TotalCount = rows.Count,
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting prize categories by payout");
+            return StatusCode(500, new { message = "Error al obtener las categorías de premios por pago" });
+        }
+    }
+
+    /// <summary>
+    /// Drill-down for the prize-categories-by-payout report: returns the bancas
+    /// whose effective primer-pago multiplier equals `multiplier` for `category`,
+    /// along with each banca's aggregate stats over the date range.
+    /// </summary>
+    [HttpGet("prize-categories-by-payout/bancas")]
+    public async Task<ActionResult<PayoutBancasResponseDto>> GetPrizeCategoryBancas(
+        [FromQuery] decimal multiplier,
+        [FromQuery] DateTime? date,
+        [FromQuery] DateTime? startDate,
+        [FromQuery] DateTime? endDate,
+        [FromQuery] string category = "quiniela",
+        [FromQuery] int? drawId = null,
+        [FromQuery] string? zoneIds = null)
+    {
+        var hasAdminView = await HasPermissionAsync("VIEW_SALES");
+        List<int>? posAllowedBpIds = null;
+        if (!hasAdminView)
+        {
+            posAllowedBpIds = await GetAssignedBettingPoolIdsAsync();
+            if (posAllowedBpIds.Count == 0) return Forbid();
+        }
+
+        try
+        {
+            DateTime rangeStart;
+            DateTime rangeEnd;
+            if (startDate.HasValue || endDate.HasValue)
+            {
+                rangeStart = (startDate ?? endDate)!.Value.Date;
+                rangeEnd = (endDate ?? startDate)!.Value.Date.AddDays(1).AddTicks(-1);
+            }
+            else
+            {
+                var targetDate = date ?? DateTimeHelper.TodayInBusinessTimezone();
+                rangeStart = targetDate.Date;
+                rangeEnd = rangeStart.AddDays(1).AddTicks(-1);
+            }
+
+            var normalizedCategory = (category ?? "quiniela").Trim().ToLowerInvariant();
+            string[] gameTypeCodes = normalizedCategory switch
+            {
+                "quiniela" => new[] { "DIRECTO" },
+                "pale" => new[] { "PALE", "SUPER_PALE", "PALE_USA", "PALE_RD" },
+                _ => Array.Empty<string>(),
+            };
+            if (gameTypeCodes.Length == 0)
+            {
+                return BadRequest(new { message = "Categoría no soportada. Use 'quiniela' o 'pale'." });
+            }
+
+            var gameTypeIds = await _context.GameTypes
+                .Where(gt => gameTypeCodes.Contains(gt.GameTypeCode.ToUpper()))
+                .Select(gt => gt.GameTypeId)
+                .ToListAsync();
+            if (gameTypeIds.Count == 0)
+            {
+                return Ok(new PayoutBancasResponseDto { Multiplier = multiplier, Category = normalizedCategory });
+            }
+
+            var gameTypeToPrizeBetType = ExternalResultsService.GameTypeToPrizeBetType;
+            var prizeBetTypeIds = gameTypeIds
+                .Select(id => gameTypeToPrizeBetType.GetValueOrDefault(id, id))
+                .Distinct()
+                .ToList();
+
+            var primerPagoByBetType = await _context.PrizeTypes
+                .Where(pt => prizeBetTypeIds.Contains(pt.BetTypeId) && pt.IsActive && pt.DisplayOrder == 1)
+                .ToDictionaryAsync(pt => pt.BetTypeId, pt => new { pt.PrizeTypeId, pt.DefaultMultiplier });
+
+            List<int>? zoneIdList = null;
+            if (!string.IsNullOrEmpty(zoneIds))
+            {
+                zoneIdList = zoneIds.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(int.Parse)
+                    .ToList();
+            }
+
+            var query = _context.TicketLines
+                .Include(tl => tl.Ticket)
+                    .ThenInclude(t => t!.BettingPool)
+                        .ThenInclude(bp => bp!.Zone)
+                .Where(tl => tl.Ticket != null && !tl.Ticket.IsCancelled)
+                .Where(tl => tl.DrawDate.Date >= rangeStart.Date && tl.DrawDate.Date <= rangeEnd.Date)
+                .Where(tl => gameTypeIds.Contains(tl.BetTypeId));
+
+            var allowedBpIds = await _zoneScope.GetAllowedBettingPoolIdsAsync();
+            if (allowedBpIds != null)
+            {
+                query = query.Where(tl => tl.Ticket != null && allowedBpIds.Contains(tl.Ticket.BettingPoolId));
+            }
+            if (posAllowedBpIds != null)
+            {
+                query = query.Where(tl => tl.Ticket != null && posAllowedBpIds.Contains(tl.Ticket.BettingPoolId));
+            }
+            if (drawId.HasValue)
+            {
+                query = query.Where(tl => tl.DrawId == drawId.Value);
+            }
+            if (zoneIdList != null && zoneIdList.Count > 0)
+            {
+                query = query.Where(tl => tl.Ticket != null &&
+                    tl.Ticket.BettingPool != null &&
+                    zoneIdList.Contains(tl.Ticket.BettingPool.ZoneId));
+            }
+
+            var lines = await query
+                .Select(tl => new
+                {
+                    tl.BetTypeId,
+                    tl.TicketId,
+                    BettingPoolId = tl.Ticket!.BettingPoolId,
+                    TicketState = tl.Ticket!.TicketState,
+                    BettingPoolName = tl.Ticket!.BettingPool != null ? tl.Ticket.BettingPool.BettingPoolName : "",
+                    BettingPoolCode = tl.Ticket!.BettingPool != null ? tl.Ticket.BettingPool.BettingPoolCode : "",
+                    ZoneName = tl.Ticket!.BettingPool != null && tl.Ticket.BettingPool.Zone != null
+                        ? tl.Ticket.BettingPool.Zone.ZoneName
+                        : null,
+                    tl.DrawId,
+                    tl.Subtotal,
+                    tl.PrizeAmount,
+                })
+                .ToListAsync();
+
+            if (lines.Count == 0)
+            {
+                return Ok(new PayoutBancasResponseDto { Multiplier = multiplier, Category = normalizedCategory });
+            }
+
+            var prizeTypeIds = primerPagoByBetType.Values.Select(v => v.PrizeTypeId).Distinct().ToList();
+            var bancaIds = lines.Select(l => l.BettingPoolId).Distinct().ToList();
+            var drawIdsInPlay = lines.Select(l => l.DrawId).Distinct().ToList();
+
+            var bancaConfigList = await _context.BancaPrizeConfigs
+                .Where(bc => bancaIds.Contains(bc.BettingPoolId) && prizeTypeIds.Contains(bc.PrizeTypeId))
+                .Select(bc => new { bc.BettingPoolId, bc.PrizeTypeId, bc.CustomValue })
+                .ToListAsync();
+            var bancaConfigs = bancaConfigList
+                .GroupBy(bc => (bc.BettingPoolId, bc.PrizeTypeId))
+                .ToDictionary(g => g.Key, g => g.First().CustomValue);
+
+            var drawConfigList = await _context.DrawPrizeConfigs
+                .Where(dc => drawIdsInPlay.Contains(dc.DrawId)
+                    && bancaIds.Contains(dc.BettingPoolId)
+                    && prizeTypeIds.Contains(dc.PrizeTypeId))
+                .Select(dc => new { dc.DrawId, dc.BettingPoolId, dc.PrizeTypeId, dc.CustomValue })
+                .ToListAsync();
+            var drawConfigs = drawConfigList
+                .GroupBy(dc => (dc.DrawId, dc.BettingPoolId, dc.PrizeTypeId))
+                .ToDictionary(g => g.Key, g => g.First().CustomValue);
+
+            var targetMultiplier = decimal.Round(multiplier, 2);
+            var perBanca = new Dictionary<int, (string name, string code, string? zone, Dictionary<long, string> ticketStates, decimal sold, decimal prize)>();
+            foreach (var line in lines)
+            {
+                var prizeBetTypeId = gameTypeToPrizeBetType.GetValueOrDefault(line.BetTypeId, line.BetTypeId);
+                if (!primerPagoByBetType.TryGetValue(prizeBetTypeId, out var pt)) continue;
+
+                decimal effective;
+                if (drawConfigs.TryGetValue((line.DrawId, line.BettingPoolId, pt.PrizeTypeId), out var dv))
+                    effective = dv;
+                else if (bancaConfigs.TryGetValue((line.BettingPoolId, pt.PrizeTypeId), out var bv))
+                    effective = bv;
+                else
+                    effective = pt.DefaultMultiplier;
+
+                if (decimal.Round(effective, 2) != targetMultiplier) continue;
+
+                if (!perBanca.TryGetValue(line.BettingPoolId, out var acc))
+                    acc = (line.BettingPoolName, line.BettingPoolCode, line.ZoneName, new Dictionary<long, string>(), 0m, 0m);
+                acc.ticketStates[line.TicketId] = line.TicketState;
+                acc.sold += line.Subtotal;
+                acc.prize += line.PrizeAmount;
+                perBanca[line.BettingPoolId] = acc;
+            }
+
+            var rows = perBanca
+                .Select(kv =>
+                {
+                    var pending = kv.Value.ticketStates.Count(kvp => kvp.Value == "P");
+                    var loser = kv.Value.ticketStates.Count(kvp => kvp.Value == "L");
+                    var winner = kv.Value.ticketStates.Count(kvp => kvp.Value == "W");
+                    return new PayoutBancaDto
+                    {
+                        BettingPoolId = kv.Key,
+                        BettingPoolName = kv.Value.name,
+                        BettingPoolCode = kv.Value.code,
+                        ZoneName = kv.Value.zone,
+                        LineCount = kv.Value.ticketStates.Count,
+                        PendingCount = pending,
+                        LoserCount = loser,
+                        WinnerCount = winner,
+                        TotalSold = kv.Value.sold,
+                        TotalPrizes = kv.Value.prize,
+                        TotalNet = kv.Value.sold - kv.Value.prize,
+                    };
+                })
+                .OrderBy(r => r.BettingPoolCode)
+                .ToList();
+
+            return Ok(new PayoutBancasResponseDto
+            {
+                Multiplier = targetMultiplier,
+                Category = normalizedCategory,
+                Bancas = rows,
+                TotalCount = rows.Count,
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting bancas for prize-category payout");
+            return StatusCode(500, new { message = "Error al obtener las bancas del grupo" });
+        }
+    }
+
+    /// <summary>
     /// Get combinations (bet numbers by draw)
     /// Used in "Combinaciones" tab of DailySales
     /// </summary>
     [HttpGet("combinations")]
     public async Task<ActionResult<CombinationSalesResponseDto>> GetCombinations(
         [FromQuery] DateTime? date,
+        [FromQuery] DateTime? startDate,
+        [FromQuery] DateTime? endDate,
         [FromQuery] int? drawId,
         [FromQuery] string? drawIds,
         [FromQuery] string? zoneIds,
@@ -1240,11 +1729,22 @@ public class SalesReportsController : ControllerBase
 
         try
         {
-            var targetDate = date ?? DateTimeHelper.TodayInBusinessTimezone();
-            var startDate = targetDate.Date;
-            var endDate = startDate.AddDays(1).AddTicks(-1);
+            // Accept either a (startDate, endDate) range or a single legacy `date`.
+            DateTime rangeStart;
+            DateTime rangeEnd;
+            if (startDate.HasValue || endDate.HasValue)
+            {
+                rangeStart = (startDate ?? endDate)!.Value.Date;
+                rangeEnd = (endDate ?? startDate)!.Value.Date.AddDays(1).AddTicks(-1);
+            }
+            else
+            {
+                var targetDate = date ?? DateTimeHelper.TodayInBusinessTimezone();
+                rangeStart = targetDate.Date;
+                rangeEnd = rangeStart.AddDays(1).AddTicks(-1);
+            }
 
-            _logger.LogInformation("Getting combinations for {Date}, DrawId: {DrawId}", targetDate, drawId);
+            _logger.LogInformation("Getting combinations from {Start} to {End}, DrawId: {DrawId}", rangeStart, rangeEnd, drawId);
 
             // Parse zone IDs
             List<int>? zoneIdList = null;
@@ -1285,7 +1785,7 @@ public class SalesReportsController : ControllerBase
                     .ThenInclude(d => d!.Lottery)
                 .Include(tl => tl.BetType)
                 .Where(tl => tl.Ticket != null && !tl.Ticket.IsCancelled)
-                .Where(tl => tl.DrawDate.Date >= startDate.Date && tl.DrawDate.Date <= endDate.Date);
+                .Where(tl => tl.DrawDate.Date >= rangeStart.Date && tl.DrawDate.Date <= rangeEnd.Date);
 
             // Zone scope.
             var allowedBpIdsCb = await _zoneScope.GetAllowedBettingPoolIdsAsync();
@@ -1364,7 +1864,7 @@ public class SalesReportsController : ControllerBase
 
             return Ok(new CombinationSalesResponseDto
             {
-                Date = targetDate,
+                Date = rangeStart,
                 DrawId = drawId,
                 Combinations = combinations,
                 Summary = summary,

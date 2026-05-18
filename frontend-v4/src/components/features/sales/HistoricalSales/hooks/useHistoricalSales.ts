@@ -116,12 +116,17 @@ export const useHistoricalSales = (): UseHistoricalSalesReturn => {
   useEffect(() => {
     const loadFilters = async () => {
       try {
-        const drawsResponse = await api.get<{ items?: DrawOption[] } | DrawOption[]>('/draws');
+        // Default page size on the API is 50 — request a high page size to get every active draw.
+        const drawsResponse = await api.get<{ items?: DrawOption[] } | DrawOption[]>('/draws?pageSize=500');
         const drawsArray = (drawsResponse && typeof drawsResponse === 'object' && 'items' in drawsResponse)
           ? (drawsResponse.items || [])
           : (drawsResponse as DrawOption[] || []);
-        setDrawsList(drawsArray);
-        setSelectedDraws(drawsArray.map(d => d.drawId));
+        const normalizedDraws = drawsArray.map((d: DrawOption & { lotteryName?: string }) => ({
+          drawId: d.drawId,
+          drawName: d.drawName || d.lotteryName || `Draw ${d.drawId}`,
+        }));
+        setDrawsList(normalizedDraws);
+        setSelectedDraws(normalizedDraws.map(d => d.drawId));
 
         type BancaRow = {
           bettingPoolId?: number;
@@ -131,7 +136,7 @@ export const useHistoricalSales = (): UseHistoricalSalesReturn => {
           bettingPoolCode?: string;
           code?: string;
         };
-        const bancasResponse = await api.get<{ items?: BancaRow[] } | BancaRow[]>('/betting-pools');
+        const bancasResponse = await api.get<{ items?: BancaRow[] } | BancaRow[]>('/betting-pools?pageSize=1000');
         const bancasArray = (bancasResponse && typeof bancasResponse === 'object' && 'items' in bancasResponse)
           ? (bancasResponse.items || [])
           : (bancasResponse as BancaRow[] || []);
@@ -205,7 +210,7 @@ export const useHistoricalSales = (): UseHistoricalSalesReturn => {
     setLoading(true);
     try {
       const response = await api.get<DrawSalesResponse>(
-        `/reports/sales/by-draw?date=${fechaInicial}${getZoneParam()}`
+        `/reports/sales/by-draw?startDate=${fechaInicial}&endDate=${fechaFinal}${getZoneParam()}`
       );
 
       const mapped: SorteoData[] = (response?.draws || []).map(item => ({
@@ -227,7 +232,7 @@ export const useHistoricalSales = (): UseHistoricalSalesReturn => {
     } finally {
       setLoading(false);
     }
-  }, [fechaInicial, getZoneParam]);
+  }, [fechaInicial, fechaFinal, getZoneParam]);
 
   // Load combinations (Combinaciones tab)
   const loadCombinacionesData = useCallback(async () => {
@@ -243,7 +248,7 @@ export const useHistoricalSales = (): UseHistoricalSalesReturn => {
         : '';
 
       const response = await api.get<CombinationSalesResponse>(
-        `/reports/sales/combinations?date=${fechaInicial}${getZoneParam()}${drawParam}${bancaParam}`
+        `/reports/sales/combinations?startDate=${fechaInicial}&endDate=${fechaFinal}${getZoneParam()}${drawParam}${bancaParam}`
       );
 
       const mapped: CombinacionData[] = (response?.combinations || []).map(item => ({
@@ -264,14 +269,14 @@ export const useHistoricalSales = (): UseHistoricalSalesReturn => {
     } finally {
       setLoading(false);
     }
-  }, [fechaInicial, getZoneParam, selectedDraws, drawsList.length, selectedBancas, bancasList.length]);
+  }, [fechaInicial, fechaFinal, getZoneParam, selectedDraws, drawsList.length, selectedBancas, bancasList.length]);
 
   // Load sales by zone (Por zona tab)
   const loadZonasData = useCallback(async () => {
     setLoading(true);
     try {
       const response = await api.get<ZoneSalesResponse>(
-        `/reports/sales/by-zone?date=${fechaInicial}${getZoneParam()}`
+        `/reports/sales/by-zone?startDate=${fechaInicial}&endDate=${fechaFinal}${getZoneParam()}`
       );
 
       const mapped: ZonaData[] = (response?.zones || []).map(item => ({
@@ -284,10 +289,10 @@ export const useHistoricalSales = (): UseHistoricalSalesReturn => {
         descuentos: item.totalDiscounts,
         premios: item.totalPrizes,
         neto: item.totalNet,
-        p: 0,
-        l: 0,
+        p: item.pendingCount,
+        l: item.loserCount,
         w: item.winnerCount,
-        total: item.lineCount,
+        total: (item.pendingCount || 0) + (item.loserCount || 0) + (item.winnerCount || 0),
         caida: item.fall,
         final: item.final,
         balance: item.balance
@@ -299,7 +304,7 @@ export const useHistoricalSales = (): UseHistoricalSalesReturn => {
     } finally {
       setLoading(false);
     }
-  }, [fechaInicial, getZoneParam]);
+  }, [fechaInicial, fechaFinal, getZoneParam]);
 
   // Handle search based on current tab
   const handleSearch = useCallback(() => {

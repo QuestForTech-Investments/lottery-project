@@ -1,66 +1,72 @@
-import { memo, type FC, type SyntheticEvent } from 'react';
+import { memo, type SyntheticEvent } from 'react';
 import {
   Autocomplete,
   Box,
   Checkbox,
+  InputAdornment,
   TextField,
   Typography,
-  InputAdornment,
 } from '@mui/material';
 import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank';
 import CheckBoxIcon from '@mui/icons-material/CheckBox';
 
-const SELECT_ALL = -1;
+const SELECT_ALL_ID = -1;
 
-export interface Zone {
+export interface OptionItem {
   id: number;
-  name: string;
+  label: string;
 }
 
-export interface ZoneMultiSelectProps {
-  zones: Zone[];
-  selectedZoneIds: number[];
-  onChange: (selectedIds: number[]) => void;
+export interface MultiSelectSearchProps {
   label?: string;
   placeholder?: string;
+  options: OptionItem[];
+  selectedIds: number[];
+  onChange: (ids: number[]) => void;
+  /** Label shown on the synthetic "select all" row + as the summary when all are picked. */
+  selectAllLabel?: string;
   minWidth?: number;
+  size?: 'small' | 'medium';
 }
 
 /**
- * Reusable zone multi-select with typeahead search.
- * The first option ("Todas") toggles selecting all / clearing.
+ * Multi-select dropdown with built-in typeahead and a "select all" toggle row.
+ *
+ * Caller passes a flat options array with `{id, label}`; selection is tracked
+ * by id only so it stays decoupled from the underlying domain shape.
  */
-export const ZoneMultiSelect: FC<ZoneMultiSelectProps> = memo(({
-  zones,
-  selectedZoneIds,
-  onChange,
-  label = 'Zonas',
+export const MultiSelectSearch = memo(({
+  label,
   placeholder = 'Seleccione',
+  options,
+  selectedIds,
+  onChange,
+  selectAllLabel = 'Todas',
   minWidth = 220,
-}) => {
-  const allOption: Zone = { id: SELECT_ALL, name: 'Todas' };
-  const options: Zone[] = [allOption, ...zones];
-  const selectedZones: Zone[] = zones.filter((z) => selectedZoneIds.includes(z.id));
+  size = 'small',
+}: MultiSelectSearchProps) => {
+  const optionsWithAll: OptionItem[] = [
+    { id: SELECT_ALL_ID, label: selectAllLabel },
+    ...options,
+  ];
+  const selectedOptions: OptionItem[] = options.filter((o) => selectedIds.includes(o.id));
 
-  const handleChange = (
-    _e: SyntheticEvent,
-    value: Zone[],
-  ) => {
-    if (value.some((z) => z.id === SELECT_ALL)) {
-      onChange(selectedZoneIds.length === zones.length ? [] : zones.map((z) => z.id));
+  const handleChange = (_e: SyntheticEvent, value: OptionItem[]) => {
+    if (value.some((v) => v.id === SELECT_ALL_ID)) {
+      onChange(selectedIds.length === options.length ? [] : options.map((o) => o.id));
       return;
     }
-    onChange(value.map((z) => z.id));
+    onChange(value.map((v) => v.id));
   };
 
   const summary =
-    selectedZones.length === 0
+    selectedOptions.length === 0
       ? ''
-      : selectedZones.length === zones.length && zones.length > 0
-        ? 'Todas'
-        : selectedZones.length === 1
-          ? selectedZones[0].name
-          : `${selectedZones.length} seleccionadas`;
+      : selectedOptions.length === options.length && options.length > 0
+        ? selectAllLabel
+        : selectedOptions.length === 1
+          ? selectedOptions[0].label
+          : `${selectedOptions.length} seleccionada${selectAllLabel.endsWith('os') ? 's' : 's'}`;
 
   return (
     <Box>
@@ -72,19 +78,19 @@ export const ZoneMultiSelect: FC<ZoneMultiSelectProps> = memo(({
       <Autocomplete
         multiple
         disableCloseOnSelect
-        size="small"
+        size={size}
         sx={{ minWidth }}
-        options={options}
-        value={selectedZones}
+        options={optionsWithAll}
+        value={selectedOptions}
         onChange={handleChange}
-        getOptionLabel={(o) => o.name || ''}
+        getOptionLabel={(o) => o.label}
         isOptionEqualToValue={(o, v) => o.id === v.id}
         renderTags={() => null}
         ListboxProps={{ style: { maxHeight: 360 } }}
         renderOption={(props, option, { selected }) => {
-          if (option.id === SELECT_ALL) {
-            const allSelected = zones.length > 0 && selectedZoneIds.length === zones.length;
-            const indeterminate = selectedZoneIds.length > 0 && selectedZoneIds.length < zones.length;
+          if (option.id === SELECT_ALL_ID) {
+            const allSelected = options.length > 0 && selectedIds.length === options.length;
+            const indeterminate = selectedIds.length > 0 && selectedIds.length < options.length;
             return (
               <li {...props} key="__all__">
                 <Checkbox
@@ -95,7 +101,7 @@ export const ZoneMultiSelect: FC<ZoneMultiSelectProps> = memo(({
                   indeterminate={indeterminate}
                   sx={{ mr: 1 }}
                 />
-                {option.name}
+                {option.label}
               </li>
             );
           }
@@ -108,14 +114,14 @@ export const ZoneMultiSelect: FC<ZoneMultiSelectProps> = memo(({
                 checked={selected}
                 sx={{ mr: 1 }}
               />
-              {option.name}
+              {option.label}
             </li>
           );
         }}
         renderInput={(params) => (
           <TextField
             {...params}
-            placeholder={selectedZones.length === 0 ? placeholder : ''}
+            placeholder={selectedOptions.length === 0 ? placeholder : ''}
             InputProps={{
               ...params.InputProps,
               startAdornment: summary ? (
@@ -131,6 +137,6 @@ export const ZoneMultiSelect: FC<ZoneMultiSelectProps> = memo(({
   );
 });
 
-ZoneMultiSelect.displayName = 'ZoneMultiSelect';
+MultiSelectSearch.displayName = 'MultiSelectSearch';
 
-export default ZoneMultiSelect;
+export default MultiSelectSearch;

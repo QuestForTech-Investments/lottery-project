@@ -6,12 +6,6 @@ import {
   Typography,
   TextField,
   Button,
-  FormControl,
-  Select,
-  MenuItem,
-  Checkbox,
-  ListItemText,
-  OutlinedInput,
   Table,
   TableBody,
   TableCell,
@@ -26,7 +20,7 @@ import type { SelectChangeEvent } from '@mui/material/Select';
 import { Search as SearchIcon } from '@mui/icons-material';
 import api from '@services/api';
 import { formatCurrency } from '@/utils/formatCurrency';
-import { SELECT_ALL, applySelectAllToggle } from '../selectAllHelper';
+import { MultiSelectSearch } from '@/components/common';
 
 /**
  * Map the raw game-type name (from `game_types.game_name`) to the user-facing
@@ -110,7 +104,7 @@ const CombinacionesTab = ({ selectedDate, setSelectedDate, zones, selectedZones,
     const loadFilters = async () => {
       try {
         // Load draws
-        const drawsResponse = await api.get<{ items?: Draw[] } | Draw[]>('/draws');
+        const drawsResponse = await api.get<{ items?: Draw[] } | Draw[]>('/draws?pageSize=500');
         const drawsArray = (drawsResponse && typeof drawsResponse === 'object' && 'items' in drawsResponse)
           ? (drawsResponse.items || [])
           : (drawsResponse as Draw[] || []);
@@ -118,7 +112,7 @@ const CombinacionesTab = ({ selectedDate, setSelectedDate, zones, selectedZones,
         setSelectedDraws(drawsArray.map(d => d.drawId));
 
         // Load bancas
-        const bancasResponse = await api.get<{ items?: BettingPool[] } | BettingPool[]>('/betting-pools');
+        const bancasResponse = await api.get<{ items?: BettingPool[] } | BettingPool[]>('/betting-pools?pageSize=1000');
         const bancasArray = (bancasResponse && typeof bancasResponse === 'object' && 'items' in bancasResponse)
           ? (bancasResponse.items || [])
           : (bancasResponse as BettingPool[] || []);
@@ -135,21 +129,6 @@ const CombinacionesTab = ({ selectedDate, setSelectedDate, zones, selectedZones,
     loadFilters();
   }, []);
 
-  const handleDrawChange = (event: SelectChangeEvent<number[]>) => {
-    setSelectedDraws(applySelectAllToggle(
-      event.target.value as number[] | string,
-      selectedDraws,
-      draws.map(d => d.drawId),
-    ));
-  };
-
-  const handleBancaChange = (event: SelectChangeEvent<number[]>) => {
-    setSelectedBancas(applySelectAllToggle(
-      event.target.value as number[] | string,
-      selectedBancas,
-      bancas.map(b => b.id),
-    ));
-  };
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -166,6 +145,11 @@ const CombinacionesTab = ({ selectedDate, setSelectedDate, zones, selectedZones,
       setLoading(false);
     }
   }, [selectedDate]);
+
+  // Auto-load when the tab mounts or the shared date changes.
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const filteredData = useMemo(() => {
     if (!searchTerm) return data;
@@ -256,152 +240,34 @@ const CombinacionesTab = ({ selectedDate, setSelectedDate, zones, selectedZones,
             />
           </Box>
 
-          <Box>
-            <Typography variant="caption" sx={{ color: 'text.secondary', mb: 0.5, display: 'block' }}>
-              Sorteos
-            </Typography>
-            <FormControl
-              sx={{
-                minWidth: 200,
-                '& .MuiInputBase-root': { height: 32 },
-                '& .MuiSelect-select': { py: 0.5, fontSize: '0.8rem' },
-              }}
-              size="small"
-            >
-              <Select
-                multiple
-                value={selectedDraws}
-                onChange={handleDrawChange}
-                input={<OutlinedInput />}
-                MenuProps={{
-                  disableAutoFocusItem: true,
-                  PaperProps: { sx: { maxHeight: 360 } },
-                }}
-                renderValue={(selected) =>
-                  selected.length === draws.length && draws.length > 0
-                    ? 'Todos'
-                    : `${selected.length} seleccionados`
-                }
-              >
-                <MenuItem value={SELECT_ALL}>
-                  <Checkbox
-                    checked={draws.length > 0 && selectedDraws.length === draws.length}
-                    indeterminate={selectedDraws.length > 0 && selectedDraws.length < draws.length}
-                  />
-                  <ListItemText primary="Todos" />
-                </MenuItem>
-                {draws.map((draw) => (
-                  <MenuItem key={draw.drawId} value={draw.drawId}>
-                    <Checkbox checked={selectedDraws.indexOf(draw.drawId) > -1} />
-                    <ListItemText primary={draw.drawName || draw.lotteryName || `Draw ${draw.drawId}`} />
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Box>
+          <MultiSelectSearch
+            label="Sorteos"
+            selectAllLabel="Todos"
+            options={draws.map((d) => ({
+              id: d.drawId,
+              label: d.drawName || d.lotteryName || `Draw ${d.drawId}`,
+            }))}
+            selectedIds={selectedDraws}
+            onChange={setSelectedDraws}
+          />
 
-          <Box>
-            <Typography variant="caption" sx={{ color: 'text.secondary', mb: 0.5, display: 'block' }}>
-              Zonas
-            </Typography>
-            <FormControl
-              sx={{
-                minWidth: 200,
-                '& .MuiInputBase-root': { height: 32 },
-                '& .MuiSelect-select': { py: 0.5, fontSize: '0.8rem' },
-              }}
-              size="small"
-            >
-              <Select
-                multiple
-                value={selectedZones}
-                onChange={(e) => {
-                  const allIds = zones.map(z => z.zoneId || z.id || 0).filter(Boolean);
-                  const next = applySelectAllToggle(e.target.value as number[] | string, selectedZones, allIds);
-                  handleZoneChange({ ...e, target: { ...e.target, value: next } } as typeof e);
-                }}
-                input={<OutlinedInput />}
-                MenuProps={{
-                  disableAutoFocusItem: true,
-                  PaperProps: { sx: { maxHeight: 360 } },
-                }}
-                renderValue={(selected) => {
-                  if (selected.length === 0) return '';
-                  if (selected.length === zones.length) return 'Todas';
-                  if (selected.length === 1) {
-                    const zone = zones.find(z => (z.zoneId || z.id) === selected[0]);
-                    return zone?.zoneName || zone?.name || '1 seleccionada';
-                  }
-                  return `${selected.length} seleccionadas`;
-                }}
-              >
-                <MenuItem value={SELECT_ALL}>
-                  <Checkbox
-                    checked={zones.length > 0 && selectedZones.length === zones.length}
-                    indeterminate={selectedZones.length > 0 && selectedZones.length < zones.length}
-                  />
-                  <ListItemText primary="Todas" />
-                </MenuItem>
-                {zones.map((zone) => {
-                  const zoneId = zone.zoneId || zone.id || 0;
-                  return (
-                    <MenuItem key={zoneId} value={zoneId}>
-                      <Checkbox checked={selectedZones.indexOf(zoneId) > -1} />
-                      <ListItemText primary={zone.zoneName || zone.name} />
-                    </MenuItem>
-                  );
-                })}
-              </Select>
-            </FormControl>
-          </Box>
+          <MultiSelectSearch
+            label="Zonas"
+            selectAllLabel="Todas"
+            options={zones.map((z) => ({ id: z.zoneId || z.id || 0, label: z.zoneName || z.name || '' }))}
+            selectedIds={selectedZones}
+            onChange={(ids) => {
+              handleZoneChange({ target: { value: ids } } as unknown as SelectChangeEvent<number[]>);
+            }}
+          />
 
-          <Box>
-            <Typography variant="caption" sx={{ color: 'text.secondary', mb: 0.5, display: 'block' }}>
-              Bancas
-            </Typography>
-            <FormControl
-              sx={{
-                minWidth: 200,
-                '& .MuiInputBase-root': { height: 32 },
-                '& .MuiSelect-select': { py: 0.5, fontSize: '0.8rem' },
-              }}
-              size="small"
-            >
-              <Select
-                multiple
-                value={selectedBancas}
-                onChange={handleBancaChange}
-                input={<OutlinedInput />}
-                MenuProps={{
-                  disableAutoFocusItem: true,
-                  PaperProps: { sx: { maxHeight: 360 } },
-                }}
-                renderValue={(selected) => {
-                  if (selected.length === 0) return '';
-                  if (selected.length === bancas.length) return 'Todas';
-                  if (selected.length === 1) {
-                    const banca = bancas.find(b => b.id === selected[0]);
-                    return banca?.name || '1 seleccionada';
-                  }
-                  return `${selected.length} seleccionadas`;
-                }}
-              >
-                <MenuItem value={SELECT_ALL}>
-                  <Checkbox
-                    checked={bancas.length > 0 && selectedBancas.length === bancas.length}
-                    indeterminate={selectedBancas.length > 0 && selectedBancas.length < bancas.length}
-                  />
-                  <ListItemText primary="Todas" />
-                </MenuItem>
-                {bancas.map((banca) => (
-                  <MenuItem key={banca.id} value={banca.id}>
-                    <Checkbox checked={selectedBancas.indexOf(banca.id) > -1} />
-                    <ListItemText primary={`${banca.code} - ${banca.name}`} />
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Box>
+          <MultiSelectSearch
+            label="Bancas"
+            selectAllLabel="Todas"
+            options={bancas.map((b) => ({ id: b.id, label: `${b.code} - ${b.name}` }))}
+            selectedIds={selectedBancas}
+            onChange={setSelectedBancas}
+          />
         </Box>
 
         <Box sx={{ mb: 3 }}>

@@ -147,6 +147,8 @@ export interface ZoneSalesDto {
   bettingPoolCount: number;
   ticketCount: number;
   lineCount: number;
+  pendingCount: number;
+  loserCount: number;
   winnerCount: number;
   totalSold: number;
   totalPrizes: number;

@@ -69,7 +69,7 @@ public class ExternalResultsService : IExternalResultsService
     /// systems: game_types is the play classification while bet_types is the
     /// prize configuration key.
     /// </summary>
-    private static readonly Dictionary<int, int> GameTypeToPrizeBetType = new()
+    public static readonly Dictionary<int, int> GameTypeToPrizeBetType = new()
     {
         { 1, 1 },    // DIRECTO → Directo
         { 2, 2 },    // PALE → Pale

@@ -107,7 +107,7 @@ const DailySales = (): React.ReactElement => {
     setError(null);
     try {
       const [poolsData, zonesData] = await Promise.all([
-        api.get<{ items?: BettingPool[] } | BettingPool[]>('/betting-pools'),
+        api.get<{ items?: BettingPool[] } | BettingPool[]>('/betting-pools?pageSize=1000'),
         api.get<{ items?: Zone[] } | Zone[]>('/zones')
       ]);
 

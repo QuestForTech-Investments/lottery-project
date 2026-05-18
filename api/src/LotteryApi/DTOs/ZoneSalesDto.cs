@@ -11,6 +11,8 @@ public class ZoneSalesDto
     public int BettingPoolCount { get; set; }
     public int TicketCount { get; set; }
     public int LineCount { get; set; }
+    public int PendingCount { get; set; }
+    public int LoserCount { get; set; }
     public int WinnerCount { get; set; }
     public decimal TotalSold { get; set; }
     public decimal TotalPrizes { get; set; }

@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import {
   Box,
   Card,
@@ -6,12 +6,6 @@ import {
   Typography,
   TextField,
   Button,
-  FormControl,
-  Select,
-  MenuItem,
-  Checkbox,
-  ListItemText,
-  OutlinedInput,
   Table,
   TableBody,
   TableCell,
@@ -27,7 +21,7 @@ import {
 import type { SelectChangeEvent } from '@mui/material/Select';
 import { Search as SearchIcon } from '@mui/icons-material';
 import api from '@services/api';
-import { SELECT_ALL, applySelectAllToggle } from '../selectAllHelper';
+import { MultiSelectSearch } from '@/components/common';
 import { formatCurrency } from '@/utils/formatCurrency';
 
 interface Zone {
@@ -43,6 +37,8 @@ interface ZoneSalesDto {
   bettingPoolCount: number;
   ticketCount: number;
   lineCount: number;
+  pendingCount: number;
+  loserCount: number;
   winnerCount: number;
   totalSold: number;
   totalPrizes: number;
@@ -111,6 +107,11 @@ const PorZonaTab = ({ selectedDate, setSelectedDate, zones, selectedZones, handl
     }
   }, [selectedDate]);
 
+  // Auto-load when the tab mounts or the shared date changes.
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
   const filteredData = useMemo(() => {
     let result = data;
 
@@ -129,7 +130,7 @@ const PorZonaTab = ({ selectedDate, setSelectedDate, zones, selectedZones, handl
         result = result.filter(d => d.totalNet > 0);
         break;
       case 'with-pending-tickets':
-        result = result.filter(d => d.ticketCount > 0 && d.winnerCount === 0);
+        result = result.filter(d => d.pendingCount > 0);
         break;
     }
 
@@ -148,6 +149,8 @@ const PorZonaTab = ({ selectedDate, setSelectedDate, zones, selectedZones, handl
       bettingPoolCount: acc.bettingPoolCount + row.bettingPoolCount,
       ticketCount: acc.ticketCount + row.ticketCount,
       lineCount: acc.lineCount + row.lineCount,
+      pendingCount: acc.pendingCount + row.pendingCount,
+      loserCount: acc.loserCount + row.loserCount,
       winnerCount: acc.winnerCount + row.winnerCount,
       totalSold: acc.totalSold + row.totalSold,
       totalCommissions: acc.totalCommissions + row.totalCommissions,
@@ -158,7 +161,8 @@ const PorZonaTab = ({ selectedDate, setSelectedDate, zones, selectedZones, handl
       final: acc.final + row.final,
       balance: acc.balance + row.balance
     }), {
-      bettingPoolCount: 0, ticketCount: 0, lineCount: 0, winnerCount: 0,
+      bettingPoolCount: 0, ticketCount: 0, lineCount: 0,
+      pendingCount: 0, loserCount: 0, winnerCount: 0,
       totalSold: 0, totalCommissions: 0, totalDiscounts: 0, totalPrizes: 0,
       totalNet: 0, fall: 0, final: 0, balance: 0
     });
@@ -189,60 +193,15 @@ const PorZonaTab = ({ selectedDate, setSelectedDate, zones, selectedZones, handl
             />
           </Box>
 
-          <Box>
-            <Typography variant="caption" sx={{ color: 'text.secondary', mb: 0.5, display: 'block' }}>
-              Zonas
-            </Typography>
-            <FormControl
-              sx={{
-                minWidth: 200,
-                '& .MuiInputBase-root': { height: 32 },
-                '& .MuiSelect-select': { py: 0.5, fontSize: '0.8rem' },
-              }}
-              size="small"
-            >
-              <Select
-                multiple
-                value={selectedZones}
-                onChange={(e) => {
-                  const allIds = zones.map(z => z.zoneId || z.id || 0).filter(Boolean);
-                  const next = applySelectAllToggle(e.target.value as number[] | string, selectedZones, allIds);
-                  handleZoneChange({ ...e, target: { ...e.target, value: next } } as typeof e);
-                }}
-                input={<OutlinedInput />}
-                MenuProps={{
-                  disableAutoFocusItem: true,
-                  PaperProps: { sx: { maxHeight: 360 } },
-                }}
-                renderValue={(selected) => {
-                  if (selected.length === 0) return '';
-                  if (selected.length === zones.length) return 'Todas';
-                  if (selected.length === 1) {
-                    const zone = zones.find(z => (z.zoneId || z.id) === selected[0]);
-                    return zone?.zoneName || zone?.name || '1 seleccionada';
-                  }
-                  return `${selected.length} seleccionadas`;
-                }}
-              >
-                <MenuItem value={SELECT_ALL}>
-                  <Checkbox
-                    checked={zones.length > 0 && selectedZones.length === zones.length}
-                    indeterminate={selectedZones.length > 0 && selectedZones.length < zones.length}
-                  />
-                  <ListItemText primary="Todas" />
-                </MenuItem>
-                {zones.map((zone) => {
-                  const zoneId = zone.zoneId || zone.id || 0;
-                  return (
-                    <MenuItem key={zoneId} value={zoneId}>
-                      <Checkbox checked={selectedZones.indexOf(zoneId) > -1} />
-                      <ListItemText primary={zone.zoneName || zone.name} />
-                    </MenuItem>
-                  );
-                })}
-              </Select>
-            </FormControl>
-          </Box>
+          <MultiSelectSearch
+            label="Zonas"
+            selectAllLabel="Todas"
+            options={zones.map((z) => ({ id: z.zoneId || z.id || 0, label: z.zoneName || z.name || '' }))}
+            selectedIds={selectedZones}
+            onChange={(ids) => {
+              handleZoneChange({ target: { value: ids } } as unknown as SelectChangeEvent<number[]>);
+            }}
+          />
         </Box>
 
         <Box sx={{ display: 'flex', gap: 1, mb: 3, flexWrap: 'wrap' }}>
@@ -387,10 +346,10 @@ const PorZonaTab = ({ selectedDate, setSelectedDate, zones, selectedZones, handl
                   {filteredData.map((row) => (
                     <TableRow key={row.zoneId} hover>
                       <TableCell>{row.zoneName}</TableCell>
-                      <TableCell align="center">{row.bettingPoolCount}</TableCell>
-                      <TableCell align="center">{row.lineCount}</TableCell>
+                      <TableCell align="center">{row.pendingCount}</TableCell>
+                      <TableCell align="center">{row.loserCount}</TableCell>
                       <TableCell align="center">{row.winnerCount}</TableCell>
-                      <TableCell align="right">{row.bettingPoolCount + row.lineCount + row.winnerCount}</TableCell>
+                      <TableCell align="right">{row.pendingCount + row.loserCount + row.winnerCount}</TableCell>
                       <TableCell align="right">{formatCurrency(row.totalSold)}</TableCell>
                       <TableCell align="right">{formatCurrency(row.totalCommissions)}</TableCell>
                       <TableCell align="right">{formatCurrency(row.totalDiscounts)}</TableCell>
@@ -407,10 +366,10 @@ const PorZonaTab = ({ selectedDate, setSelectedDate, zones, selectedZones, handl
                   ))}
                   <TableRow sx={{ backgroundColor: '#f5f7fa', '& td': { fontWeight: 600 } }}>
                     <TableCell>Totales</TableCell>
-                    <TableCell align="center">{totals.bettingPoolCount}</TableCell>
-                    <TableCell align="center">{totals.lineCount}</TableCell>
+                    <TableCell align="center">{totals.pendingCount}</TableCell>
+                    <TableCell align="center">{totals.loserCount}</TableCell>
                     <TableCell align="center">{totals.winnerCount}</TableCell>
-                    <TableCell align="right">{totals.bettingPoolCount + totals.lineCount + totals.winnerCount}</TableCell>
+                    <TableCell align="right">{totals.pendingCount + totals.loserCount + totals.winnerCount}</TableCell>
                     <TableCell align="right">{formatCurrency(totals.totalSold)}</TableCell>
                     <TableCell align="right">{formatCurrency(totals.totalCommissions)}</TableCell>
                     <TableCell align="right">{formatCurrency(totals.totalDiscounts)}</TableCell>

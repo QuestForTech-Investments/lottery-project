@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import {
   Box,
   Card,
@@ -6,12 +6,6 @@ import {
   Typography,
   TextField,
   Button,
-  FormControl,
-  Select,
-  MenuItem,
-  Checkbox,
-  ListItemText,
-  OutlinedInput,
   Table,
   TableBody,
   TableCell,
@@ -25,7 +19,7 @@ import {
 import type { SelectChangeEvent } from '@mui/material/Select';
 import { Search as SearchIcon } from '@mui/icons-material';
 import api from '@services/api';
-import { SELECT_ALL, applySelectAllToggle } from '../selectAllHelper';
+import { MultiSelectSearch } from '@/components/common';
 import { formatCurrency } from '@/utils/formatCurrency';
 
 interface Zone {
@@ -93,6 +87,11 @@ const PorSorteoTab = ({ selectedDate, setSelectedDate, zones, selectedZones, han
     }
   }, [selectedDate]);
 
+  // Auto-load when the tab mounts or the shared date changes.
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
   const filteredData = useMemo(() => {
     if (!searchTerm) return data;
     const term = searchTerm.toLowerCase();
@@ -127,60 +126,15 @@ const PorSorteoTab = ({ selectedDate, setSelectedDate, zones, selectedZones, han
             />
           </Box>
 
-          <Box>
-            <Typography variant="caption" sx={{ color: 'text.secondary', mb: 0.5, display: 'block' }}>
-              Zonas
-            </Typography>
-            <FormControl
-              sx={{
-                minWidth: 200,
-                '& .MuiInputBase-root': { height: 32 },
-                '& .MuiSelect-select': { py: 0.5, fontSize: '0.8rem' },
-              }}
-              size="small"
-            >
-              <Select
-                multiple
-                value={selectedZones}
-                onChange={(e) => {
-                  const allIds = zones.map(z => z.zoneId || z.id || 0).filter(Boolean);
-                  const next = applySelectAllToggle(e.target.value as number[] | string, selectedZones, allIds);
-                  handleZoneChange({ ...e, target: { ...e.target, value: next } } as typeof e);
-                }}
-                input={<OutlinedInput />}
-                MenuProps={{
-                  disableAutoFocusItem: true,
-                  PaperProps: { sx: { maxHeight: 360 } },
-                }}
-                renderValue={(selected) => {
-                  if (selected.length === 0) return '';
-                  if (selected.length === zones.length) return 'Todas';
-                  if (selected.length === 1) {
-                    const zone = zones.find(z => (z.zoneId || z.id) === selected[0]);
-                    return zone?.zoneName || zone?.name || '1 seleccionada';
-                  }
-                  return `${selected.length} seleccionadas`;
-                }}
-              >
-                <MenuItem value={SELECT_ALL}>
-                  <Checkbox
-                    checked={zones.length > 0 && selectedZones.length === zones.length}
-                    indeterminate={selectedZones.length > 0 && selectedZones.length < zones.length}
-                  />
-                  <ListItemText primary="Todas" />
-                </MenuItem>
-                {zones.map((zone) => {
-                  const zoneId = zone.zoneId || zone.id || 0;
-                  return (
-                    <MenuItem key={zoneId} value={zoneId}>
-                      <Checkbox checked={selectedZones.indexOf(zoneId) > -1} />
-                      <ListItemText primary={zone.zoneName || zone.name} />
-                    </MenuItem>
-                  );
-                })}
-              </Select>
-            </FormControl>
-          </Box>
+          <MultiSelectSearch
+            label="Zonas"
+            selectAllLabel="Todas"
+            options={zones.map((z) => ({ id: z.zoneId || z.id || 0, label: z.zoneName || z.name || '' }))}
+            selectedIds={selectedZones}
+            onChange={(ids) => {
+              handleZoneChange({ target: { value: ids } } as unknown as SelectChangeEvent<number[]>);
+            }}
+          />
         </Box>
 
         <Box sx={{ mb: 3 }}>

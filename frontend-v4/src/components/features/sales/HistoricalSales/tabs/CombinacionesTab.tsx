@@ -1,17 +1,16 @@
-import { memo, type FC, useMemo, type ReactNode } from 'react';
+import { memo, type FC, useMemo, type ReactNode, type SyntheticEvent } from 'react';
 import {
+  Autocomplete,
   Box,
-  Typography,
   Button,
-  CircularProgress,
-  FormControl,
-  Select,
-  MenuItem,
   Checkbox,
-  ListItemText,
-  OutlinedInput,
+  CircularProgress,
+  InputAdornment,
+  TextField,
+  Typography,
 } from '@mui/material';
-import type { SelectChangeEvent } from '@mui/material/Select';
+import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank';
+import CheckBoxIcon from '@mui/icons-material/CheckBox';
 import { formatCurrency } from '@/utils/formatCurrency';
 import {
   DateRangePicker,
@@ -23,18 +22,6 @@ import {
 } from '@/components/common';
 
 const SELECT_ALL = -1;
-
-const applySelectAllToggle = (
-  raw: number[] | string,
-  current: number[],
-  all: number[],
-): number[] => {
-  const arr = typeof raw === 'string' ? [] : raw;
-  if (arr.includes(SELECT_ALL)) {
-    return current.length === all.length ? [] : all.slice();
-  }
-  return arr;
-};
 
 const coloredCurrency = (v: unknown): ReactNode => {
   const n = v as number;
@@ -80,6 +67,12 @@ interface BancaOption {
   id: number;
   name: string;
   code: string;
+}
+
+// Generic typeahead option shape used by the multi-selects below.
+interface OptionItem {
+  id: number;
+  label: string;
 }
 
 interface CombinacionesTabProps {
@@ -135,7 +128,6 @@ export const CombinacionesTab: FC<CombinacionesTabProps> = memo(({
     );
   }, [combinacionesData, filtroRapido]);
 
-  // Aggregate rows by bet type name and sum metrics.
   const groupedData = useMemo<AggRow[]>(() => {
     const map = new Map<string, AggRow>();
     for (const row of filteredData) {
@@ -165,7 +157,6 @@ export const CombinacionesTab: FC<CombinacionesTabProps> = memo(({
     );
   }, [filteredData]);
 
-  // Totals across aggregated rows.
   const totals = useMemo(() => {
     return groupedData.reduce(
       (acc, d) => ({
@@ -195,21 +186,58 @@ export const CombinacionesTab: FC<CombinacionesTabProps> = memo(({
     [],
   );
 
-  const handleDrawChange = (event: SelectChangeEvent<number[]>) => {
-    setSelectedDraws(applySelectAllToggle(
-      event.target.value as number[] | string,
-      selectedDraws,
-      drawsList.map(d => d.drawId),
-    ));
+  // Build typeahead option lists with a synthetic "Todos/Todas" entry on top.
+  const drawOptions: OptionItem[] = useMemo(
+    () => [{ id: SELECT_ALL, label: 'Todos' }, ...drawsList.map((d) => ({ id: d.drawId, label: d.drawName || `Draw ${d.drawId}` }))],
+    [drawsList],
+  );
+  const bancaOptions: OptionItem[] = useMemo(
+    () => [{ id: SELECT_ALL, label: 'Todas' }, ...bancasList.map((b) => ({ id: b.id, label: `${b.code} - ${b.name}` }))],
+    [bancasList],
+  );
+
+  const drawValues: OptionItem[] = useMemo(
+    () => drawOptions.filter((o) => o.id !== SELECT_ALL && selectedDraws.includes(o.id)),
+    [drawOptions, selectedDraws],
+  );
+  const bancaValues: OptionItem[] = useMemo(
+    () => bancaOptions.filter((o) => o.id !== SELECT_ALL && selectedBancas.includes(o.id)),
+    [bancaOptions, selectedBancas],
+  );
+
+  const handleDrawChange = (_e: SyntheticEvent, value: OptionItem[]) => {
+    if (value.some((v) => v.id === SELECT_ALL)) {
+      setSelectedDraws(selectedDraws.length === drawsList.length ? [] : drawsList.map((d) => d.drawId));
+      return;
+    }
+    setSelectedDraws(value.map((v) => v.id));
   };
 
-  const handleBancaChange = (event: SelectChangeEvent<number[]>) => {
-    setSelectedBancas(applySelectAllToggle(
-      event.target.value as number[] | string,
-      selectedBancas,
-      bancasList.map(b => b.id),
-    ));
+  const handleBancaChange = (_e: SyntheticEvent, value: OptionItem[]) => {
+    if (value.some((v) => v.id === SELECT_ALL)) {
+      setSelectedBancas(selectedBancas.length === bancasList.length ? [] : bancasList.map((b) => b.id));
+      return;
+    }
+    setSelectedBancas(value.map((v) => v.id));
   };
+
+  const drawSummary =
+    drawValues.length === 0
+      ? ''
+      : drawValues.length === drawsList.length && drawsList.length > 0
+        ? 'Todos'
+        : drawValues.length === 1
+          ? drawValues[0].label
+          : `${drawValues.length} seleccionados`;
+
+  const bancaSummary =
+    bancaValues.length === 0
+      ? ''
+      : bancaValues.length === bancasList.length && bancasList.length > 0
+        ? 'Todas'
+        : bancaValues.length === 1
+          ? bancaValues[0].label
+          : `${bancaValues.length} seleccionadas`;
 
   return (
     <>
@@ -230,40 +258,64 @@ export const CombinacionesTab: FC<CombinacionesTabProps> = memo(({
           <Typography variant="caption" sx={{ color: 'text.secondary', mb: 0.5, display: 'block' }}>
             Sorteos
           </Typography>
-          <FormControl sx={{ minWidth: 200 }} size="small">
-            <Select
-              multiple
-              value={selectedDraws}
-              onChange={handleDrawChange}
-              input={<OutlinedInput />}
-              MenuProps={{
-                disableAutoFocusItem: true,
-                PaperProps: { sx: { maxHeight: 360 } },
-              }}
-              renderValue={(selected) =>
-                selected.length === 0
-                  ? 'Seleccione'
-                  : selected.length === drawsList.length && drawsList.length > 0
-                    ? 'Todos'
-                    : `${selected.length} seleccionados`
+          <Autocomplete
+            multiple
+            disableCloseOnSelect
+            size="small"
+            sx={{ minWidth: 220 }}
+            options={drawOptions}
+            value={drawValues}
+            onChange={handleDrawChange}
+            getOptionLabel={(o) => o.label}
+            isOptionEqualToValue={(o, v) => o.id === v.id}
+            renderTags={() => null}
+            ListboxProps={{ style: { maxHeight: 360 } }}
+            renderOption={(props, option, { selected }) => {
+              if (option.id === SELECT_ALL) {
+                const allSelected = drawsList.length > 0 && selectedDraws.length === drawsList.length;
+                const indeterminate = selectedDraws.length > 0 && selectedDraws.length < drawsList.length;
+                return (
+                  <li {...props} key="__all_draws__">
+                    <Checkbox
+                      size="small"
+                      icon={<CheckBoxOutlineBlankIcon fontSize="small" />}
+                      checkedIcon={<CheckBoxIcon fontSize="small" />}
+                      checked={allSelected}
+                      indeterminate={indeterminate}
+                      sx={{ mr: 1 }}
+                    />
+                    {option.label}
+                  </li>
+                );
               }
-              displayEmpty
-            >
-              <MenuItem value={SELECT_ALL}>
-                <Checkbox
-                  checked={drawsList.length > 0 && selectedDraws.length === drawsList.length}
-                  indeterminate={selectedDraws.length > 0 && selectedDraws.length < drawsList.length}
-                />
-                <ListItemText primary="Todos" />
-              </MenuItem>
-              {drawsList.map((draw) => (
-                <MenuItem key={draw.drawId} value={draw.drawId}>
-                  <Checkbox checked={selectedDraws.indexOf(draw.drawId) > -1} />
-                  <ListItemText primary={draw.drawName || `Draw ${draw.drawId}`} />
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+              return (
+                <li {...props} key={option.id}>
+                  <Checkbox
+                    size="small"
+                    icon={<CheckBoxOutlineBlankIcon fontSize="small" />}
+                    checkedIcon={<CheckBoxIcon fontSize="small" />}
+                    checked={selected}
+                    sx={{ mr: 1 }}
+                  />
+                  {option.label}
+                </li>
+              );
+            }}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                placeholder={drawValues.length === 0 ? 'Seleccione' : ''}
+                InputProps={{
+                  ...params.InputProps,
+                  startAdornment: drawSummary ? (
+                    <InputAdornment position="start" sx={{ ml: 1 }}>
+                      {drawSummary}
+                    </InputAdornment>
+                  ) : null,
+                }}
+              />
+            )}
+          />
         </Box>
 
         <ZoneMultiSelect
@@ -276,42 +328,64 @@ export const CombinacionesTab: FC<CombinacionesTabProps> = memo(({
           <Typography variant="caption" sx={{ color: 'text.secondary', mb: 0.5, display: 'block' }}>
             Bancas
           </Typography>
-          <FormControl sx={{ minWidth: 200 }} size="small">
-            <Select
-              multiple
-              value={selectedBancas}
-              onChange={handleBancaChange}
-              input={<OutlinedInput />}
-              MenuProps={{
-                disableAutoFocusItem: true,
-                PaperProps: { sx: { maxHeight: 360 } },
-              }}
-              renderValue={(selected) => {
-                if (selected.length === 0) return 'Todas';
-                if (selected.length === bancasList.length && bancasList.length > 0) return 'Todas';
-                if (selected.length === 1) {
-                  const banca = bancasList.find(b => b.id === selected[0]);
-                  return banca?.name || '1 seleccionada';
-                }
-                return `${selected.length} seleccionadas`;
-              }}
-              displayEmpty
-            >
-              <MenuItem value={SELECT_ALL}>
-                <Checkbox
-                  checked={bancasList.length > 0 && selectedBancas.length === bancasList.length}
-                  indeterminate={selectedBancas.length > 0 && selectedBancas.length < bancasList.length}
-                />
-                <ListItemText primary="Todas" />
-              </MenuItem>
-              {bancasList.map((banca) => (
-                <MenuItem key={banca.id} value={banca.id}>
-                  <Checkbox checked={selectedBancas.indexOf(banca.id) > -1} />
-                  <ListItemText primary={`${banca.code} - ${banca.name}`} />
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+          <Autocomplete
+            multiple
+            disableCloseOnSelect
+            size="small"
+            sx={{ minWidth: 220 }}
+            options={bancaOptions}
+            value={bancaValues}
+            onChange={handleBancaChange}
+            getOptionLabel={(o) => o.label}
+            isOptionEqualToValue={(o, v) => o.id === v.id}
+            renderTags={() => null}
+            ListboxProps={{ style: { maxHeight: 360 } }}
+            renderOption={(props, option, { selected }) => {
+              if (option.id === SELECT_ALL) {
+                const allSelected = bancasList.length > 0 && selectedBancas.length === bancasList.length;
+                const indeterminate = selectedBancas.length > 0 && selectedBancas.length < bancasList.length;
+                return (
+                  <li {...props} key="__all_bancas__">
+                    <Checkbox
+                      size="small"
+                      icon={<CheckBoxOutlineBlankIcon fontSize="small" />}
+                      checkedIcon={<CheckBoxIcon fontSize="small" />}
+                      checked={allSelected}
+                      indeterminate={indeterminate}
+                      sx={{ mr: 1 }}
+                    />
+                    {option.label}
+                  </li>
+                );
+              }
+              return (
+                <li {...props} key={option.id}>
+                  <Checkbox
+                    size="small"
+                    icon={<CheckBoxOutlineBlankIcon fontSize="small" />}
+                    checkedIcon={<CheckBoxIcon fontSize="small" />}
+                    checked={selected}
+                    sx={{ mr: 1 }}
+                  />
+                  {option.label}
+                </li>
+              );
+            }}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                placeholder={bancaValues.length === 0 ? 'Seleccione' : ''}
+                InputProps={{
+                  ...params.InputProps,
+                  startAdornment: bancaSummary ? (
+                    <InputAdornment position="start" sx={{ ml: 1 }}>
+                      {bancaSummary}
+                    </InputAdornment>
+                  ) : null,
+                }}
+              />
+            )}
+          />
         </Box>
       </Box>
 
