@@ -53,17 +53,23 @@ interface BettingPool {
   zoneId?: number;
 }
 
-interface PoolWithWeeklyData extends BettingPool {
+interface PoolWithWeeklyData {
+  bettingPoolId: number;
+  bettingPoolCode?: string;
+  bettingPoolName?: string;
+  zoneId?: number;
+  zoneName?: string;
+  weekStart?: string;
   code: string;
   poolName: string;
-  monday?: number;
-  tuesday?: number;
-  wednesday?: number;
-  thursday?: number;
-  friday?: number;
-  saturday?: number;
-  sunday?: number;
-  [key: string]: string | number | undefined | { id?: number };
+  monday: number;
+  tuesday: number;
+  wednesday: number;
+  thursday: number;
+  friday: number;
+  saturday: number;
+  sunday: number;
+  [key: string]: string | number | undefined;
 }
 
 type OrderDirection = 'asc' | 'desc';
@@ -81,7 +87,7 @@ const WEEKDAYS: WeekDay[] = [
 const DaysWithoutSalesReport: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [bettingPools, setBettingPools] = useState<BettingPool[]>([]);
+  const [results, setResults] = useState<PoolWithWeeklyData[]>([]);
   const [zones, setZones] = useState<Zone[]>([]);
 
   // Filter state
@@ -96,53 +102,77 @@ const DaysWithoutSalesReport: React.FC = () => {
   const [orderBy, setOrderBy] = useState<string>('code');
   const [order, setOrder] = useState<OrderDirection>('asc');
 
+  // Load zones once on mount.
   useEffect(() => {
-    loadInitialData();
+    (async () => {
+      try {
+        const zonesData = await api.get('/zones?pageSize=1000') as { items?: Zone[] } | Zone[];
+        const zonesArray: Zone[] = Array.isArray(zonesData) ? zonesData : (zonesData?.items || []);
+        setZones(zonesArray);
+        setSelectedZones(zonesArray.map(z => z.zoneId || z.id || 0));
+      } catch (err) {
+        console.error('[SCHEDULE] Error loading zones:', err);
+      }
+    })();
   }, []);
-
-  const loadInitialData = async (): Promise<void> => {
-    setLoading(true);
-    setError(null);
-    try {
-      const [poolsData, zonesData] = await Promise.all([
-        api.get('/betting-pools') as Promise<{ items?: BettingPool[] } | BettingPool[]>,
-        api.get('/zones') as Promise<{ items?: Zone[] } | Zone[]>
-      ]);
-
-      const poolsArray: BettingPool[] = Array.isArray(poolsData) ? poolsData : (poolsData?.items || []);
-      const zonesArray: Zone[] = Array.isArray(zonesData) ? zonesData : (zonesData?.items || []);
-
-
-      setBettingPools(poolsArray);
-      setZones(zonesArray);
-
-      // Select all zones by default
-      const allZoneIds = zonesArray.map(z => z.zoneId || z.id || 0);
-      setSelectedZones(allZoneIds);
-    } catch (err) {
-      const error = err as Error;
-      console.error('[SCHEDULE] Error loading data:', error);
-      setError(error.message || 'Error loading data');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleSearch = async (): Promise<void> => {
     setLoading(true);
     setError(null);
     try {
-      // TODO: Call actual API endpoint when available
-      // const data = await api.get(`/betting-pools/weekly-sales?date=${selectedDate}&zoneIds=${selectedZones.join(',')}`);
-      // setBettingPools(data?.items || data || []);
-      setLoading(false);
+      const zoneParam = selectedZones.length > 0 && selectedZones.length < zones.length
+        ? `&zoneIds=${selectedZones.join(',')}`
+        : '';
+      const data = await api.get(
+        `/betting-pools/weekly-sales?date=${selectedDate}${zoneParam}`,
+      ) as Array<{
+        bettingPoolId: number;
+        bettingPoolCode?: string;
+        bettingPoolName?: string;
+        zoneId?: number;
+        zoneName?: string;
+        weekStart?: string;
+        monday: number;
+        tuesday: number;
+        wednesday: number;
+        thursday: number;
+        friday: number;
+        saturday: number;
+        sunday: number;
+      }>;
+      const mapped: PoolWithWeeklyData[] = (data || []).map((p) => ({
+        bettingPoolId: p.bettingPoolId,
+        bettingPoolCode: p.bettingPoolCode,
+        bettingPoolName: p.bettingPoolName,
+        zoneId: p.zoneId,
+        zoneName: p.zoneName,
+        weekStart: p.weekStart,
+        code: p.bettingPoolCode || `#${p.bettingPoolId}`,
+        poolName: p.bettingPoolName || 'Sin nombre',
+        monday: p.monday || 0,
+        tuesday: p.tuesday || 0,
+        wednesday: p.wednesday || 0,
+        thursday: p.thursday || 0,
+        friday: p.friday || 0,
+        saturday: p.saturday || 0,
+        sunday: p.sunday || 0,
+      }));
+      setResults(mapped);
     } catch (err) {
       const error = err as Error;
       console.error('[SCHEDULE] Error searching:', error);
       setError(error.message || 'Error searching');
+      setResults([]);
+    } finally {
       setLoading(false);
     }
   };
+
+  // Auto-run when zones load + whenever the date changes.
+  useEffect(() => {
+    if (zones.length > 0) handleSearch();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [zones.length, selectedDate]);
 
   const handleSort = (property: string): void => {
     const isAsc = orderBy === property && order === 'asc';
@@ -155,42 +185,10 @@ const DaysWithoutSalesReport: React.FC = () => {
     setSelectedZones(typeof value === 'string' ? value.split(',').map(Number) : value);
   };
 
-  // Generate mock weekly sales data for demo purposes
-  const poolsWithWeeklyData = useMemo((): PoolWithWeeklyData[] => {
-    return bettingPools.map((pool): PoolWithWeeklyData => {
-      // Generate random sales for each day of the week
-      const weeklySales: Record<string, number> = {};
-      WEEKDAYS.forEach(day => {
-        // 30% chance of no sales, otherwise random amount
-        const hasSales = Math.random() > 0.3;
-        weeklySales[day.key] = hasSales ? Math.floor(Math.random() * 1000) + Math.random() * 100 : 0;
-      });
-
-      // Generate pool code like "LAN-0001"
-      const poolId = pool.bettingPoolId || pool.id || 0;
-      const code = `LAN-${poolId.toString().padStart(4, '0')}`;
-
-      return {
-        ...pool,
-        code,
-        poolName: pool.bettingPoolName || pool.name || 'Sin nombre',
-        ...weeklySales
-      };
-    });
-  }, [bettingPools]);
-
-  // Filter and sort data
+  // Filter and sort the real backend results.
   const filteredAndSortedData = useMemo((): PoolWithWeeklyData[] => {
-    let data = [...poolsWithWeeklyData];
+    let data = [...results];
 
-    // Filter by selected zones
-    if (selectedZones.length > 0 && selectedZones.length < zones.length) {
-      data = data.filter(pool =>
-        selectedZones.includes((pool.zoneId as number) || (pool.zone as { id?: number })?.id || 0)
-      );
-    }
-
-    // Filter by search term
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       data = data.filter(pool =>
@@ -225,9 +223,9 @@ const DaysWithoutSalesReport: React.FC = () => {
     });
 
     return data;
-  }, [poolsWithWeeklyData, selectedZones, zones.length, searchTerm, orderBy, order]);
+  }, [results, searchTerm, orderBy, order]);
 
-  if (loading && bettingPools.length === 0) {
+  if (loading && results.length === 0) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
         <CircularProgress />
@@ -243,7 +241,7 @@ const DaysWithoutSalesReport: React.FC = () => {
             <Typography color="error" variant="h6">
               Error: {error}
             </Typography>
-            <Button onClick={loadInitialData} sx={{ mt: 2 }}>
+            <Button onClick={handleSearch} sx={{ mt: 2 }}>
               Reintentar
             </Button>
           </CardContent>
@@ -344,7 +342,13 @@ const DaysWithoutSalesReport: React.FC = () => {
                   </TableCell>
                   {WEEKDAYS.map(day => (
                     <TableCell key={day.key} align="right">
-                      {day.label}
+                      <TableSortLabel
+                        active={orderBy === day.key}
+                        direction={orderBy === day.key ? order : 'asc'}
+                        onClick={() => handleSort(day.key)}
+                      >
+                        {day.label}
+                      </TableSortLabel>
                     </TableCell>
                   ))}
                 </TableRow>
@@ -358,21 +362,32 @@ const DaysWithoutSalesReport: React.FC = () => {
                   </TableRow>
                 ) : (
                   filteredAndSortedData.map((pool) => (
-                    <TableRow key={pool.bettingPoolId || pool.id} hover>
+                    <TableRow key={pool.bettingPoolId} hover>
                       <TableCell>{pool.code}</TableCell>
                       <TableCell>{pool.poolName}</TableCell>
-                      {WEEKDAYS.map(day => (
-                        <TableCell
-                          key={day.key}
-                          align="right"
-                          sx={{
-                            color: pool[day.key] === 0 ? 'error.main' : 'inherit',
-                            fontWeight: pool[day.key] === 0 ? 'bold' : 'normal'
-                          }}
-                        >
-                          {formatCurrency(pool[day.key] as number)}
-                        </TableCell>
-                      ))}
+                      {WEEKDAYS.map((day) => {
+                        const amount = Number(pool[day.key] ?? 0);
+                        // 0 → red, < 1000 → yellow, ≥ 1000 → green
+                        const tone =
+                          amount <= 0
+                            ? { bg: '#fdecea', color: '#c62828' }
+                            : amount < 1000
+                              ? { bg: '#fff8e1', color: '#b26a00' }
+                              : { bg: '#e8f5e9', color: '#2e7d32' };
+                        return (
+                          <TableCell
+                            key={day.key}
+                            align="right"
+                            sx={{
+                              backgroundColor: tone.bg,
+                              color: tone.color,
+                              fontWeight: 600,
+                            }}
+                          >
+                            {formatCurrency(amount)}
+                          </TableCell>
+                        );
+                      })}
                     </TableRow>
                   ))
                 )}

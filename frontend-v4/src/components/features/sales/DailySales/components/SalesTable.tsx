@@ -4,7 +4,7 @@
  * Data table for displaying sales with totals row.
  */
 
-import { memo, type FC } from 'react';
+import { memo, useMemo, useState, type FC } from 'react';
 import {
   Table,
   TableBody,
@@ -12,27 +12,70 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  TableSortLabel,
   Paper,
   Link,
 } from '@mui/material';
 import { formatCurrency } from '@/utils/formatCurrency';
-import type { SalesTableProps } from '../types';
+import type { SalesTableProps, SalesRow } from '../types';
+
+type SortOrder = 'asc' | 'desc';
 
 const SalesTable: FC<SalesTableProps> = memo(({ data, totals, columns, onCodeClick }) => {
+  // Default sort matches the previous static order (by code asc).
+  const [sortBy, setSortBy] = useState<keyof SalesRow>('code');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
+
+  const handleSort = (key: keyof SalesRow) => {
+    if (sortBy === key) {
+      setSortOrder((o) => (o === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortBy(key);
+      const sample = data[0]?.[key];
+      setSortOrder(typeof sample === 'number' ? 'desc' : 'asc');
+    }
+  };
+
+  const sortedData = useMemo(() => {
+    if (data.length === 0) return data;
+    const dir = sortOrder === 'asc' ? 1 : -1;
+    return data.slice().sort((a, b) => {
+      const av = a[sortBy];
+      const bv = b[sortBy];
+      if (typeof av === 'number' && typeof bv === 'number') return (av - bv) * dir;
+      return String(av).localeCompare(String(bv)) * dir;
+    });
+  }, [data, sortBy, sortOrder]);
+
   return (
     <TableContainer component={Paper} variant="outlined" sx={{ maxHeight: 600 }}>
       <Table size="small" stickyHeader>
         <TableHead sx={{ backgroundColor: '#e3e3e3' }}>
           <TableRow>
-            {columns.map(col => (
-              <TableCell key={col.key} align={col.align} sx={{ backgroundColor: '#e3e3e3', fontWeight: 600 }}>
-                {col.label}
-              </TableCell>
-            ))}
+            {columns.map(col => {
+              const key = col.key as keyof SalesRow;
+              const isActive = sortBy === key;
+              return (
+                <TableCell
+                  key={col.key}
+                  align={col.align}
+                  sx={{ backgroundColor: '#e3e3e3', fontWeight: 600 }}
+                  sortDirection={isActive ? sortOrder : false}
+                >
+                  <TableSortLabel
+                    active={isActive}
+                    direction={isActive ? sortOrder : 'asc'}
+                    onClick={() => handleSort(key)}
+                  >
+                    {col.label}
+                  </TableSortLabel>
+                </TableCell>
+              );
+            })}
           </TableRow>
         </TableHead>
         <TableBody>
-          {data.length === 0 ? (
+          {sortedData.length === 0 ? (
             <TableRow>
               <TableCell colSpan={15} align="center" sx={{ py: 3, color: 'text.secondary' }}>
                 No hay entradas para el sorteo y la fecha elegidos
@@ -40,7 +83,7 @@ const SalesTable: FC<SalesTableProps> = memo(({ data, totals, columns, onCodeCli
             </TableRow>
           ) : (
             <>
-              {data.map((row) => (
+              {sortedData.map((row) => (
                 <TableRow key={row.id} hover>
                   <TableCell sx={{ whiteSpace: 'nowrap' }}>{row.ref}</TableCell>
                   <TableCell sx={{ whiteSpace: 'nowrap' }}>

@@ -1734,6 +1734,301 @@ public class BettingPoolsController : ControllerBase
         return $"{displayHours:D2}:{minutes:D2} {period}";
     }
 
+    // -----------------------------------------------------------------------
+    // Weekly sales per banca (Mon-Sun bucket)
+    // -----------------------------------------------------------------------
+
+    /// <summary>
+    /// Per-banca daily totals for the ISO week (Mon-Sun) containing the given
+    /// date. Used by /betting-pools/days-report.
+    /// </summary>
+    [HttpGet("weekly-sales")]
+    public async Task<ActionResult<object>> GetWeeklySales(
+        [FromQuery] DateTime? date = null,
+        [FromQuery] string? zoneIds = null)
+    {
+        var target = (date ?? Helpers.DateTimeHelper.TodayInBusinessTimezone()).Date;
+        // ISO-style week starting Monday (day-of-week: Mon=1..Sun=0 → 0..6 with Mon=0).
+        var diff = ((int)target.DayOfWeek + 6) % 7;
+        var weekStartLocal = target.AddDays(-diff);
+        var weekEndLocal = weekStartLocal.AddDays(7); // exclusive
+
+        // Window in UTC for filtering Ticket.CreatedAt.
+        var weekStartUtc = Helpers.DateTimeHelper.ToUtc(weekStartLocal);
+        var weekEndUtc = Helpers.DateTimeHelper.ToUtc(weekEndLocal);
+
+        List<int>? zoneIdList = null;
+        if (!string.IsNullOrEmpty(zoneIds))
+        {
+            zoneIdList = zoneIds.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(s => int.TryParse(s.Trim(), out var n) ? n : 0)
+                .Where(n => n > 0)
+                .ToList();
+        }
+
+        var bancasQuery = _context.BettingPools.AsNoTracking()
+            .Include(bp => bp.Zone)
+            .Where(bp => bp.IsActive && bp.DeletedAt == null);
+
+        var allowedBpIds = await _zoneScope.GetAllowedBettingPoolIdsAsync();
+        if (allowedBpIds != null)
+        {
+            bancasQuery = bancasQuery.Where(bp => allowedBpIds.Contains(bp.BettingPoolId));
+        }
+        if (zoneIdList != null && zoneIdList.Count > 0)
+        {
+            bancasQuery = bancasQuery.Where(bp => zoneIdList.Contains(bp.ZoneId));
+        }
+
+        var bancas = await bancasQuery
+            .Select(bp => new
+            {
+                bp.BettingPoolId,
+                bp.BettingPoolCode,
+                bp.BettingPoolName,
+                bp.ZoneId,
+                ZoneName = bp.Zone != null ? bp.Zone.ZoneName : null,
+            })
+            .ToListAsync();
+
+        var bancaIds = bancas.Select(b => b.BettingPoolId).ToList();
+
+        // Pull tickets in the week for the scoped bancas, then bucket in-memory by
+        // (banca, local weekday).
+        var tickets = await _context.Tickets
+            .AsNoTracking()
+            .Where(t => !t.IsCancelled
+                && t.CreatedAt >= weekStartUtc && t.CreatedAt < weekEndUtc
+                && bancaIds.Contains(t.BettingPoolId))
+            .Select(t => new { t.BettingPoolId, t.CreatedAt, t.GrandTotal })
+            .ToListAsync();
+
+        // Bucket key: bettingPoolId → 7-element decimal[] (0=Mon..6=Sun).
+        var buckets = new Dictionary<int, decimal[]>();
+        foreach (var bp in bancas) buckets[bp.BettingPoolId] = new decimal[7];
+
+        foreach (var t in tickets)
+        {
+            var local = Helpers.DateTimeHelper.ToBusinessTimezone(t.CreatedAt).Date;
+            var idx = (local - weekStartLocal).Days;
+            if (idx < 0 || idx > 6) continue; // safety
+            if (buckets.TryGetValue(t.BettingPoolId, out var arr))
+            {
+                arr[idx] += t.GrandTotal;
+            }
+        }
+
+        var result = bancas.Select(bp =>
+        {
+            var arr = buckets[bp.BettingPoolId];
+            return new
+            {
+                bettingPoolId = bp.BettingPoolId,
+                bettingPoolCode = bp.BettingPoolCode,
+                bettingPoolName = bp.BettingPoolName,
+                zoneId = bp.ZoneId,
+                zoneName = bp.ZoneName,
+                weekStart = weekStartLocal.ToString("yyyy-MM-dd"),
+                monday = arr[0],
+                tuesday = arr[1],
+                wednesday = arr[2],
+                thursday = arr[3],
+                friday = arr[4],
+                saturday = arr[5],
+                sunday = arr[6],
+            };
+        })
+        .OrderBy(x => x.bettingPoolCode)
+        .ToList();
+
+        return Ok(result);
+    }
+
+    // -----------------------------------------------------------------------
+    // Bancas without sales
+    // -----------------------------------------------------------------------
+
+    /// <summary>
+    /// List bancas whose last ticket sale is at least `minDays` days old
+    /// (or that have never sold). Used by /betting-pools/no-sales.
+    /// </summary>
+    [HttpGet("without-sales")]
+    public async Task<ActionResult<object>> GetWithoutSales(
+        [FromQuery] int minDays = 7,
+        [FromQuery] string? zoneIds = null)
+    {
+        var today = Helpers.DateTimeHelper.TodayInBusinessTimezone();
+
+        List<int>? zoneIdList = null;
+        if (!string.IsNullOrEmpty(zoneIds))
+        {
+            zoneIdList = zoneIds.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(s => int.TryParse(s.Trim(), out var n) ? n : 0)
+                .Where(n => n > 0)
+                .ToList();
+        }
+
+        var bancasQuery = _context.BettingPools.AsNoTracking()
+            .Include(bp => bp.Zone)
+            .Where(bp => bp.IsActive && bp.DeletedAt == null);
+
+        // Zone scope — admin sees their assigned zones; POS sees only assigned bancas.
+        var allowedBpIds = await _zoneScope.GetAllowedBettingPoolIdsAsync();
+        if (allowedBpIds != null)
+        {
+            bancasQuery = bancasQuery.Where(bp => allowedBpIds.Contains(bp.BettingPoolId));
+        }
+        if (zoneIdList != null && zoneIdList.Count > 0)
+        {
+            bancasQuery = bancasQuery.Where(bp => zoneIdList.Contains(bp.ZoneId));
+        }
+
+        var bancas = await bancasQuery
+            .Select(bp => new
+            {
+                bp.BettingPoolId,
+                bp.BettingPoolCode,
+                bp.BettingPoolName,
+                bp.Reference,
+                bp.ZoneId,
+                ZoneName = bp.Zone != null ? bp.Zone.ZoneName : null,
+                bp.CreatedAt,
+                Balance = _context.Balances.Where(b => b.BettingPoolId == bp.BettingPoolId)
+                    .Select(b => (decimal?)b.CurrentBalance).FirstOrDefault() ?? 0m
+            })
+            .ToListAsync();
+
+        var lastSaleByBanca = await _context.Tickets
+            .AsNoTracking()
+            .Where(t => !t.IsCancelled)
+            .GroupBy(t => t.BettingPoolId)
+            .Select(g => new { BettingPoolId = g.Key, LastCreated = g.Max(t => t.CreatedAt) })
+            .ToDictionaryAsync(x => x.BettingPoolId, x => x.LastCreated);
+
+        var result = bancas
+            .Select(bp =>
+            {
+                DateTime? lastSaleLocal = null;
+                if (lastSaleByBanca.TryGetValue(bp.BettingPoolId, out var lastUtc))
+                    lastSaleLocal = Helpers.DateTimeHelper.ToBusinessTimezone(lastUtc).Date;
+
+                int days;
+                if (lastSaleLocal.HasValue)
+                {
+                    days = (today - lastSaleLocal.Value).Days;
+                }
+                else
+                {
+                    var createdLocal = bp.CreatedAt.HasValue
+                        ? Helpers.DateTimeHelper.ToBusinessTimezone(bp.CreatedAt.Value).Date
+                        : today;
+                    days = (today - createdLocal).Days;
+                }
+
+                return new
+                {
+                    bettingPoolId = bp.BettingPoolId,
+                    bettingPoolCode = bp.BettingPoolCode,
+                    bettingPoolName = bp.BettingPoolName,
+                    reference = bp.Reference,
+                    zoneId = bp.ZoneId,
+                    zoneName = bp.ZoneName,
+                    daysWithoutSales = days,
+                    balance = bp.Balance,
+                    lastSaleDate = lastSaleLocal?.ToString("yyyy-MM-dd")
+                };
+            })
+            .Where(x => x.daysWithoutSales >= minDays)
+            .OrderByDescending(x => x.daysWithoutSales)
+            .ToList();
+
+        return Ok(result);
+    }
+
+    // -----------------------------------------------------------------------
+    // Clean pending payments
+    // -----------------------------------------------------------------------
+
+    /// <summary>
+    /// Preview how many winner tickets are pending payment for a banca up to a date.
+    /// Used by the "Limpiar pendientes de pago" modal to show counts before confirming.
+    /// </summary>
+    [HttpGet("{id}/pending-payments-preview")]
+    public async Task<ActionResult<object>> GetPendingPaymentsPreview(int id, [FromQuery] DateTime? untilDate)
+    {
+        if (!await _zoneScope.IsBettingPoolAllowedAsync(id))
+            return Forbid();
+
+        var day = (untilDate ?? Helpers.DateTimeHelper.TodayInBusinessTimezone()).Date;
+        // [start, end) for that single day in business timezone, converted to UTC.
+        var startUtc = Helpers.DateTimeHelper.GetUtcStartOfDay(day);
+        var endUtc = Helpers.DateTimeHelper.GetUtcEndOfDay(day);
+
+        var query = _context.Tickets
+            .AsNoTracking()
+            .Where(t => t.BettingPoolId == id)
+            .Where(t => !t.IsCancelled)
+            .Where(t => !t.IsPaid)
+            .Where(t => t.WinningLines > 0)
+            // Only tickets whose latest draw happened on the chosen day (fall back
+            // to CreatedAt for legacy rows where LatestDrawTime is null).
+            .Where(t => (t.LatestDrawTime ?? t.CreatedAt) >= startUtc
+                     && (t.LatestDrawTime ?? t.CreatedAt) <= endUtc);
+
+        var tickets = await query.CountAsync();
+        var amount = await query.SumAsync(t => (decimal?)t.TotalPrize) ?? 0m;
+
+        return Ok(new { tickets, amount });
+    }
+
+    public class CleanPendingPaymentsRequest
+    {
+        public DateTime UntilDate { get; set; }
+    }
+
+    /// <summary>
+    /// Mark every pending-payment winner ticket up to `untilDate` as paid.
+    /// </summary>
+    [HttpPost("{id}/clean-pending-payments")]
+    public async Task<ActionResult<object>> CleanPendingPayments(int id, [FromBody] CleanPendingPaymentsRequest request)
+    {
+        if (!await _zoneScope.IsBettingPoolAllowedAsync(id))
+            return Forbid();
+
+        var day = request.UntilDate.Date;
+        var startUtc = Helpers.DateTimeHelper.GetUtcStartOfDay(day);
+        var endUtc = Helpers.DateTimeHelper.GetUtcEndOfDay(day);
+
+        // Tickets whose latest draw falls on the chosen day, same window as preview.
+        var matching = await _context.Tickets
+            .Where(t => t.BettingPoolId == id)
+            .Where(t => !t.IsCancelled)
+            .Where(t => !t.IsPaid)
+            .Where(t => t.WinningLines > 0)
+            .Where(t => (t.LatestDrawTime ?? t.CreatedAt) >= startUtc
+                     && (t.LatestDrawTime ?? t.CreatedAt) <= endUtc)
+            .ToListAsync();
+
+        var now = DateTime.UtcNow;
+        var totalAmount = 0m;
+        foreach (var t in matching)
+        {
+            t.IsPaid = true;
+            t.PaidAt = now;
+            totalAmount += t.TotalPrize;
+        }
+
+        if (matching.Count > 0)
+        {
+            await _context.SaveChangesAsync();
+            _logger.LogInformation(
+                "Cleaned {Count} pending tickets for betting pool {BettingPoolId} on {Day}",
+                matching.Count, id, day);
+        }
+
+        return Ok(new { tickets = matching.Count, amount = totalAmount });
+    }
+
     /// <summary>
     /// Convert AM/PM format string to TimeSpan
     /// Example: "02:30 PM" → 14:30:00

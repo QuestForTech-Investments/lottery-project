@@ -1362,6 +1362,11 @@ public class TicketsController : ControllerBase
                 query = query.Where(t => t.TicketLines.Any(tl => tl.Draw.LotteryId == filter.LotteryId.Value));
             }
 
+            if (filter.DrawId.HasValue)
+            {
+                query = query.Where(t => t.TicketLines.Any(tl => tl.DrawId == filter.DrawId.Value));
+            }
+
             if (filter.BetTypeId.HasValue)
             {
                 query = query.Where(t => t.TicketLines.Any(tl => tl.BetTypeId == filter.BetTypeId.Value));

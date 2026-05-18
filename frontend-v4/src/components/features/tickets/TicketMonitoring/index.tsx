@@ -20,22 +20,40 @@ import {
   TableBody,
   TableRow,
   TableCell,
+  TableSortLabel,
   CircularProgress,
   Alert,
 } from '@mui/material';
 
-import { BET_TYPES, ZONES, TICKET_TABLE_HEADERS } from '@constants/index';
+import { TICKET_TABLE_HEADERS } from '@constants/index';
 import { useTicketMonitoring } from './hooks/useTicketMonitoring';
 import { STYLES, COLUMN_WIDTHS, COMPACT_INPUT_STYLE, IOSSwitch } from './constants';
 import { TicketRow, TicketDetailPanel, StatusToggle, TotalsPanel } from './components';
+import { MultiSelectSearch } from '@/components/common';
+import { placeholderForBetType } from './numberPlaceholder';
+import { useTableSort } from '@/utils/useTableSort';
+import type { MappedTicket } from '@services/ticketService';
 
 // ============================================================================
 // Constants
 // ============================================================================
 
-const TIPOS_JUGADA = BET_TYPES;
-const ZONAS = ZONES;
 const TABLE_HEADERS = TICKET_TABLE_HEADERS;
+
+// Map header label → sort key (on MappedTicket). "" (the icons column) and "Acciones"
+// have no sort. "Fecha" sorts by raw timestamp so the user gets chronological order
+// instead of alphabetical formatted strings.
+const HEADER_SORT_KEY: Record<string, keyof MappedTicket | 'rawCreatedAt' | null> = {
+  'Número': 'numero',
+  '': null,
+  'Fecha': 'rawCreatedAt',
+  'Usuario': 'usuario',
+  'Monto': 'monto',
+  'Premio': 'premio',
+  'Fecha de cancelación': 'fechaCancelacion',
+  'Estado': 'estado',
+  'Acciones': null,
+};
 
 // ============================================================================
 // Main Component
@@ -49,10 +67,12 @@ const TicketMonitoring: FC = () => {
     loteria,
     loterias,
     tipoJugada,
+    tiposJugada,
     numero,
     pendientesPago,
     soloGanadores,
-    zona,
+    zonas,
+    zonasList,
     filtroEstado,
     filtroRapido,
     filteredTickets,
@@ -67,7 +87,7 @@ const TicketMonitoring: FC = () => {
     handleBancaChange,
     handleLoteriaChange,
     handleTipoJugadaChange,
-    handleZonaChange,
+    handleZonasChange,
     handleNumeroChange,
     handleFiltroRapidoChange,
     handlePendientesPagoChange,
@@ -81,6 +101,13 @@ const TicketMonitoring: FC = () => {
     handleCancelTicket,
     handleErrorClose,
   } = useTicketMonitoring();
+
+  // Client-side sort on top of whatever the API returns.
+  const { sortedData: sortedTickets, getSortProps } = useTableSort<MappedTicket, string>(
+    filteredTickets,
+    (row, key) => (row as unknown as Record<string, string | number>)[key],
+    { sortBy: 'rawCreatedAt', sortOrder: 'desc' },
+  );
 
   // Render table content
   const renderTableContent = useMemo(() => {
@@ -97,7 +124,7 @@ const TicketMonitoring: FC = () => {
       );
     }
 
-    if (filteredTickets.length === 0) {
+    if (sortedTickets.length === 0) {
       return (
         <TableRow>
           <TableCell colSpan={8} align="center" sx={STYLES.emptyCell}>
@@ -107,7 +134,7 @@ const TicketMonitoring: FC = () => {
       );
     }
 
-    return filteredTickets.map((ticket) => (
+    return sortedTickets.map((ticket) => (
       <TicketRow
         key={ticket.id}
         ticket={ticket}
@@ -118,7 +145,7 @@ const TicketMonitoring: FC = () => {
         onCancel={handleCancelTicket}
       />
     ));
-  }, [isLoading, filteredTickets, selectedTicket?.id, handleRowClick, handlePrintTicket, handleSendTicket, handleCancelTicket]);
+  }, [isLoading, sortedTickets, selectedTicket?.id, handleRowClick, handlePrintTicket, handleSendTicket, handleCancelTicket]);
 
   return (
     <Paper elevation={3} sx={{ minHeight: 'calc(100vh - 96px)' }}>
@@ -166,7 +193,7 @@ const TicketMonitoring: FC = () => {
           </Box>
           <Box>
             <Typography variant="caption" sx={STYLES.filterLabel}>
-              Lotería
+              Sorteo
             </Typography>
             <Autocomplete
               options={loterias}
@@ -177,7 +204,7 @@ const TicketMonitoring: FC = () => {
               renderInput={(params) => (
                 <TextField {...params} size="small" sx={COMPACT_INPUT_STYLE} />
               )}
-              sx={{ width: 200 }}
+              sx={{ width: 220 }}
             />
           </Box>
           {!isCompactView && (
@@ -187,8 +214,9 @@ const TicketMonitoring: FC = () => {
                   Tipo jugada
                 </Typography>
                 <Autocomplete
-                  options={TIPOS_JUGADA}
+                  options={tiposJugada}
                   getOptionLabel={(o) => o.name || ''}
+                  isOptionEqualToValue={(a, b) => a.id === b.id}
                   value={tipoJugada}
                   onChange={handleTipoJugadaChange}
                   renderInput={(params) => (
@@ -205,6 +233,7 @@ const TicketMonitoring: FC = () => {
                   value={numero}
                   onChange={handleNumeroChange}
                   size="small"
+                  placeholder={placeholderForBetType(tipoJugada?.code, tipoJugada?.numberLength)}
                   sx={{ width: 200, ...COMPACT_INPUT_STYLE }}
                 />
               </Box>
@@ -214,19 +243,17 @@ const TicketMonitoring: FC = () => {
 
         {/* Row 2: Zonas, Filter button, and toggles */}
         <Box sx={{ ...STYLES.filtersRow, mb: 1, alignItems: 'center' }}>
-          <Box>
+          <Box sx={{ width: 220 }}>
             <Typography variant="caption" sx={STYLES.filterLabel}>
               Zonas
             </Typography>
-            <Autocomplete
-              options={ZONAS}
-              getOptionLabel={(o) => o.name || ''}
-              value={zona}
-              onChange={handleZonaChange}
-              renderInput={(params) => (
-                <TextField {...params} size="small" sx={COMPACT_INPUT_STYLE} />
-              )}
-              sx={{ width: 200 }}
+            <MultiSelectSearch
+              label=""
+              selectAllLabel="Todas"
+              options={zonasList.map((z) => ({ id: z.id, label: z.name }))}
+              selectedIds={zonas}
+              onChange={handleZonasChange}
+              minWidth={220}
             />
           </Box>
           <Box sx={{ display: 'flex', alignItems: 'center', pt: 2.5 }}>
@@ -283,18 +310,27 @@ const TicketMonitoring: FC = () => {
                 <Table size="small" stickyHeader sx={{ tableLayout: 'fixed', width: '100%' }}>
                   <TableHead sx={STYLES.tableHeader}>
                     <TableRow>
-                      {TABLE_HEADERS.map((h) => (
-                        <TableCell
-                          key={h}
-                          align={h === 'Acciones' ? 'center' : 'left'}
-                          sx={{
-                            ...STYLES.tableHeaderCell,
-                            width: COLUMN_WIDTHS[h] || 'auto',
-                                                      }}
-                        >
-                          {h}
-                        </TableCell>
-                      ))}
+                      {TABLE_HEADERS.map((h) => {
+                        const sortKey = HEADER_SORT_KEY[h];
+                        return (
+                          <TableCell
+                            key={h}
+                            align={h === 'Acciones' ? 'center' : 'left'}
+                            sx={{
+                              ...STYLES.tableHeaderCell,
+                              width: COLUMN_WIDTHS[h] || 'auto',
+                            }}
+                          >
+                            {sortKey ? (
+                              <TableSortLabel {...getSortProps(sortKey as string)}>
+                                {h}
+                              </TableSortLabel>
+                            ) : (
+                              h
+                            )}
+                          </TableCell>
+                        );
+                      })}
                     </TableRow>
                   </TableHead>
                   <TableBody>{renderTableContent}</TableBody>

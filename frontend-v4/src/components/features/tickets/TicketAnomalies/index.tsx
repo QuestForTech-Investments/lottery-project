@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useMemo, memo } from 'react';
 import { formatCurrency } from '@/utils/formatCurrency';
-import { Box, Paper, Typography, TextField, Table, TableHead, TableBody, TableRow, TableCell, IconButton } from '@mui/material';
+import { Box, Paper, Typography, TextField, Table, TableHead, TableBody, TableRow, TableCell, TableSortLabel, IconButton } from '@mui/material';
 import { Search } from '@mui/icons-material';
 import { getTodayDate } from '@/utils/formatters';
+import { useTableSort } from '@/utils/useTableSort';
 
 interface AnomalousTicket {
   numero: string;
@@ -72,6 +73,18 @@ const TicketAnomalies: React.FC = () => {
     );
   }, [cambiosData, filtroCambios]);
 
+  const { sortedData: sortedTickets, getSortProps: ticketsSortProps } = useTableSort<AnomalousTicket, string>(
+    filteredTickets,
+    (row, key) => (row as unknown as Record<string, string | number>)[key],
+    { sortBy: 'numero', sortOrder: 'asc' },
+  );
+
+  const { sortedData: sortedCambios, getSortProps: cambiosSortProps } = useTableSort<ResultChange, string>(
+    filteredCambios,
+    (row, key) => (row as unknown as Record<string, string | number>)[key],
+    { sortBy: 'fecha', sortOrder: 'asc' },
+  );
+
   return (
     <Box sx={{ p: 2 }}>
       <Paper elevation={3}>
@@ -95,15 +108,25 @@ const TicketAnomalies: React.FC = () => {
           <Table size="small" sx={{ mb: 1 }}>
             <TableHead>
               <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
-                {['Número ▼', 'Fecha ▲', 'Usuario ▲', 'Monto', 'Premio', 'Fecha de cancelación ▲', 'Estado ▲'].map(h => (
-                  <TableCell key={h} sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.75rem', cursor: 'pointer' }}>{h}</TableCell>
+                {([
+                  { key: 'numero', label: 'Número' },
+                  { key: 'fecha', label: 'Fecha' },
+                  { key: 'usuario', label: 'Usuario' },
+                  { key: 'monto', label: 'Monto' },
+                  { key: 'premio', label: 'Premio' },
+                  { key: 'fechaCancelacion', label: 'Fecha de cancelación' },
+                  { key: 'estado', label: 'Estado' },
+                ] as const).map((col) => (
+                  <TableCell key={col.key} sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.75rem' }}>
+                    <TableSortLabel {...ticketsSortProps(col.key)}>{col.label}</TableSortLabel>
+                  </TableCell>
                 ))}
               </TableRow>
             </TableHead>
             <TableBody>
-              {filteredTickets.length === 0 ? (
+              {sortedTickets.length === 0 ? (
                 <TableRow><TableCell colSpan={7} align="center" sx={{ py: 3, color: 'text.secondary' }}>Mostrando 0 entradas</TableCell></TableRow>
-              ) : filteredTickets.map((t, i) => (
+              ) : sortedTickets.map((t, i) => (
                 <TableRow key={i} sx={{ '&:hover': { backgroundColor: 'action.hover' } }}>
                   <TableCell>{t.numero}</TableCell><TableCell>{t.fecha}</TableCell><TableCell>{t.usuario}</TableCell>
                   <TableCell>{t.monto}</TableCell><TableCell>{t.premio}</TableCell><TableCell>{t.fechaCancelacion}</TableCell>
@@ -126,15 +149,24 @@ const TicketAnomalies: React.FC = () => {
           <Table size="small" sx={{ mb: 1 }}>
             <TableHead>
               <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
-                {['Grupos ▲', 'Sorteo ▲', 'Fecha ▲', 'Cambios', 'Usuario ▲', 'Última actualización ▲'].map(h => (
-                  <TableCell key={h} sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.75rem', cursor: 'pointer' }}>{h}</TableCell>
+                {([
+                  { key: 'grupos', label: 'Grupos' },
+                  { key: 'sorteo', label: 'Sorteo' },
+                  { key: 'fecha', label: 'Fecha' },
+                  { key: 'cambios', label: 'Cambios' },
+                  { key: 'usuario', label: 'Usuario' },
+                  { key: 'ultimaActualizacion', label: 'Última actualización' },
+                ] as const).map((col) => (
+                  <TableCell key={col.key} sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.75rem' }}>
+                    <TableSortLabel {...cambiosSortProps(col.key)}>{col.label}</TableSortLabel>
+                  </TableCell>
                 ))}
               </TableRow>
             </TableHead>
             <TableBody>
-              {filteredCambios.length === 0 ? (
+              {sortedCambios.length === 0 ? (
                 <TableRow><TableCell colSpan={6} align="center" sx={{ py: 3, color: 'text.secondary' }}>Mostrando 0 entradas</TableCell></TableRow>
-              ) : filteredCambios.map((c, i) => (
+              ) : sortedCambios.map((c, i) => (
                 <TableRow key={i} sx={{ '&:hover': { backgroundColor: 'action.hover' } }}>
                   <TableCell>{c.grupos}</TableCell><TableCell>{c.sorteo}</TableCell><TableCell>{c.fecha}</TableCell>
                   <TableCell sx={{ color: 'warning.main', fontWeight: 500 }}>{c.cambios}</TableCell>

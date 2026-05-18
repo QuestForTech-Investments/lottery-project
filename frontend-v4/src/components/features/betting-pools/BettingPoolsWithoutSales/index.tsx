@@ -31,6 +31,7 @@ import {
   Visibility as VisibilityIcon
 } from '@mui/icons-material';
 import api from '@services/api';
+import { exportToPdf, type ExportColumn } from '@/utils/exportTable';
 
 interface Zone {
   zoneId?: number;
@@ -53,8 +54,8 @@ interface BettingPool {
 
 interface PoolWithDaysData extends BettingPool {
   daysWithoutSales: number;
-  lastSaleDate: string;
-  [key: string]: string | number | { id?: number; name?: string } | undefined;
+  lastSaleDate: string | null;
+  [key: string]: string | number | null | { id?: number; name?: string } | undefined;
 }
 
 type OrderDirection = 'asc' | 'desc';
@@ -62,7 +63,7 @@ type OrderDirection = 'asc' | 'desc';
 const BettingPoolsWithoutSales: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [bettingPools, setBettingPools] = useState<BettingPool[]>([]);
+  const [results, setResults] = useState<PoolWithDaysData[]>([]);
   const [zones, setZones] = useState<Zone[]>([]);
 
   // Filter state
@@ -71,63 +72,79 @@ const BettingPoolsWithoutSales: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState<string>('');
 
   // Sorting state
-  const [orderBy, setOrderBy] = useState<string>('number');
-  const [order, setOrder] = useState<OrderDirection>('asc');
+  const [orderBy, setOrderBy] = useState<string>('days');
+  const [order, setOrder] = useState<OrderDirection>('desc');
 
+  // Load zones once, then run the search.
   useEffect(() => {
-    loadInitialData();
+    (async () => {
+      try {
+        const zonesData = await api.get('/zones?pageSize=1000') as { items?: Zone[] } | Zone[];
+        const zonesArray: Zone[] = Array.isArray(zonesData) ? zonesData : (zonesData?.items || []);
+        setZones(zonesArray);
+        setSelectedZones(zonesArray.map(z => z.zoneId || z.id || 0));
+      } catch (err) {
+        console.error('[DATA] Error loading zones:', err);
+      }
+    })();
   }, []);
 
-  const loadInitialData = async (): Promise<void> => {
+  // Fetch the actual report from the backend whenever the user clicks Ver ventas.
+  // The first load runs once the zones list resolves.
+  const handleSearch = async (): Promise<void> => {
     setLoading(true);
     setError(null);
     try {
-      const [poolsData, zonesData] = await Promise.all([
-        api.get('/betting-pools') as Promise<{ items?: BettingPool[] } | BettingPool[]>,
-        api.get('/zones') as Promise<{ items?: Zone[] } | Zone[]>
-      ]);
-
-      const poolsArray: BettingPool[] = Array.isArray(poolsData) ? poolsData : (poolsData?.items || []);
-      const zonesArray: Zone[] = Array.isArray(zonesData) ? zonesData : (zonesData?.items || []);
-
-
-      setBettingPools(poolsArray);
-      setZones(zonesArray);
-
-      // Select all zones by default
-      const allZoneIds = zonesArray.map(z => z.zoneId || z.id || 0);
-      setSelectedZones(allZoneIds);
+      // Send zoneIds only when narrowed below the full list.
+      const zoneParam = selectedZones.length > 0 && selectedZones.length < zones.length
+        ? `&zoneIds=${selectedZones.join(',')}`
+        : '';
+      const data = await api.get(
+        `/betting-pools/without-sales?minDays=${daysWithoutSales}${zoneParam}`,
+      ) as PoolWithDaysData[];
+      setResults(Array.isArray(data) ? data : []);
     } catch (err) {
       const error = err as Error;
-      console.error('[DATA] Error loading data:', error);
-      setError(error.message || 'Error loading data');
+      console.error('[DATA] Error searching:', error);
+      setError(error.message || 'Error searching');
+      setResults([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSearch = async (): Promise<void> => {
-    setLoading(true);
-    setError(null);
-    try {
-      // TODO: Call actual API endpoint when available
-      // const data = await api.get(`/betting-pools/without-sales?days=${daysWithoutSales}&zoneIds=${selectedZones.join(',')}`);
-      // setBettingPools(data?.items || data || []);
-
-      // For now, filter existing pools (mock behavior)
-      // In production, this would be an API call
-      setLoading(false);
-    } catch (err) {
-      const error = err as Error;
-      console.error('[DATA] Error searching:', error);
-      setError(error.message || 'Error searching');
-      setLoading(false);
-    }
-  };
+  // Auto-run on mount + whenever the days threshold changes (debounced is overkill — number input).
+  useEffect(() => {
+    if (zones.length > 0) handleSearch();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [zones.length, daysWithoutSales]);
 
   const handleExportPdf = (): void => {
-    // TODO: Implement PDF export
-    alert('Exportar a PDF - Funcionalidad pendiente');
+    if (filteredAndSortedData.length === 0) {
+      alert('No hay datos para exportar.');
+      return;
+    }
+    const columns: ExportColumn<Record<string, unknown>>[] = [
+      { key: 'number', label: 'Número', align: 'left',
+        getValue: (r) => String(r.bettingPoolId ?? r.id ?? '') },
+      { key: 'name', label: 'Nombre', align: 'left',
+        getValue: (r) => String(r.bettingPoolName ?? r.name ?? '') },
+      { key: 'reference', label: 'Referencia', align: 'left',
+        getValue: (r) => String(r.reference ?? '-') },
+      { key: 'days', label: 'Días', align: 'right',
+        getValue: (r) => String(r.daysWithoutSales ?? 0) },
+      { key: 'lastSale', label: 'Última venta', align: 'left',
+        getValue: (r) => String(r.lastSaleDate ?? 'Nunca') },
+      { key: 'zone', label: 'Zona', align: 'left',
+        getValue: (r) => String(r.zoneName ?? '') },
+      { key: 'balance', label: 'Balance', align: 'right',
+        getValue: (r) => `$${Number(r.balance ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}` },
+    ];
+    exportToPdf(
+      filteredAndSortedData as unknown as Record<string, unknown>[],
+      columns,
+      `Bancas sin ventas — últimos ${daysWithoutSales} días`,
+    );
   };
 
   const handleSort = (property: string): void => {
@@ -141,45 +158,17 @@ const BettingPoolsWithoutSales: React.FC = () => {
     setSelectedZones(typeof value === 'string' ? value.split(',').map(Number) : value);
   };
 
-  // Generate mock "days without sales" data for demo purposes
-  const poolsWithDaysData = useMemo((): PoolWithDaysData[] => {
-    return bettingPools.map(pool => {
-      // Generate random days without sales (1-7) for demo
-      const daysNoSales = Math.floor(Math.random() * daysWithoutSales) + 1;
-      const lastSaleDate = new Date();
-      lastSaleDate.setDate(lastSaleDate.getDate() - daysNoSales);
-
-      return {
-        ...pool,
-        daysWithoutSales: daysNoSales,
-        lastSaleDate: lastSaleDate.toISOString().split('T')[0],
-        zoneName: pool.zoneName || pool.zone?.name || 'Sin zona'
-      };
-    });
-  }, [bettingPools, daysWithoutSales]);
-
-  // Filter and sort data
+  // Filter and sort the real backend results.
   const filteredAndSortedData = useMemo((): PoolWithDaysData[] => {
-    let data = [...poolsWithDaysData];
+    let data = [...results];
 
-    // Filter by selected zones
-    if (selectedZones.length > 0 && selectedZones.length < zones.length) {
-      data = data.filter(pool =>
-        selectedZones.includes(pool.zoneId || pool.zone?.id || 0)
-      );
-    }
-
-    // Filter by days
-    data = data.filter(pool => pool.daysWithoutSales <= daysWithoutSales);
-
-    // Filter by search term
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       data = data.filter(pool =>
         (pool.bettingPoolId || pool.id)?.toString().includes(term) ||
         (pool.bettingPoolName || pool.name)?.toLowerCase().includes(term) ||
         (pool.reference || '')?.toLowerCase().includes(term) ||
-        pool.zoneName?.toLowerCase().includes(term)
+        (pool.zoneName || '').toLowerCase().includes(term)
       );
     }
 
@@ -229,9 +218,9 @@ const BettingPoolsWithoutSales: React.FC = () => {
     });
 
     return data;
-  }, [poolsWithDaysData, selectedZones, zones.length, daysWithoutSales, searchTerm, orderBy, order]);
+  }, [results, searchTerm, orderBy, order]);
 
-  if (loading && bettingPools.length === 0) {
+  if (loading && results.length === 0) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
         <CircularProgress />
@@ -247,7 +236,7 @@ const BettingPoolsWithoutSales: React.FC = () => {
             <Typography color="error" variant="h6">
               Error: {error}
             </Typography>
-            <Button onClick={loadInitialData} sx={{ mt: 2 }}>
+            <Button onClick={handleSearch} sx={{ mt: 2 }}>
               Reintentar
             </Button>
           </CardContent>
@@ -412,19 +401,24 @@ const BettingPoolsWithoutSales: React.FC = () => {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredAndSortedData.map((pool) => (
-                    <TableRow key={pool.bettingPoolId || pool.id} hover>
-                      <TableCell>{pool.bettingPoolId || pool.id}</TableCell>
-                      <TableCell>{pool.bettingPoolName || pool.name}</TableCell>
-                      <TableCell>{pool.reference || '-'}</TableCell>
-                      <TableCell>{pool.daysWithoutSales}</TableCell>
-                      <TableCell>{pool.lastSaleDate}</TableCell>
-                      <TableCell>{pool.zoneName}</TableCell>
-                      <TableCell>
-                        ${(pool.balance || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                      </TableCell>
-                    </TableRow>
-                  ))
+                  filteredAndSortedData.map((pool) => {
+                    const bal = pool.balance ?? 0;
+                    // Green/red accent driven by the sign of the balance.
+                    const balColor = bal > 0 ? '#2e7d32' : bal < 0 ? '#c62828' : 'inherit';
+                    return (
+                      <TableRow key={pool.bettingPoolId || pool.id} hover>
+                        <TableCell>{pool.bettingPoolId || pool.id}</TableCell>
+                        <TableCell>{pool.bettingPoolName || pool.name}</TableCell>
+                        <TableCell>{pool.reference || '-'}</TableCell>
+                        <TableCell>{pool.daysWithoutSales}</TableCell>
+                        <TableCell>{pool.lastSaleDate || 'Nunca'}</TableCell>
+                        <TableCell>{pool.zoneName}</TableCell>
+                        <TableCell sx={{ color: balColor, fontWeight: 600 }}>
+                          ${bal.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
                 )}
               </TableBody>
             </Table>

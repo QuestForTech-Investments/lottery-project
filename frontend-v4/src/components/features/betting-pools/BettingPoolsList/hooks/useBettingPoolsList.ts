@@ -56,7 +56,7 @@ interface UseBettingPoolsListReturn {
 const useBettingPoolsList = (): UseBettingPoolsListReturn => {
   // Data state
   const [bettingPools, setBettingPools] = useState<TransformedBettingPool[]>([]);
-  const [_zonesMap, setZonesMap] = useState<ZonesMap>({});
+  const [zonesMap, setZonesMap] = useState<ZonesMap>({});
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -86,7 +86,9 @@ const useBettingPoolsList = (): UseBettingPoolsListReturn => {
 
       // ⚡ OPTIMIZATION: Load zones, betting pools, loans, caída, and balances in parallel
       const [zonesResponse, response, loansData, caidaData, balancesData] = await Promise.all([
-        getAllZones(),
+        // Without an explicit pageSize the API defaults to ~20 zones, which
+        // truncates the dropdown. 1000 is well above any realistic count.
+        getAllZones({ pageSize: 1000 }),
         getBettingPools({
           page: 1,
           pageSize: 1000 // Load all betting pools for client-side filtering
@@ -137,12 +139,14 @@ const useBettingPoolsList = (): UseBettingPoolsListReturn => {
         });
       }
 
-      // Process zones response
+      // Process zones response — the API returns `zoneName`, not `name`.
+      // Tolerate either shape so a future rename doesn't silently empty the map.
       const zMap: ZonesMap = {};
       if (zonesResponse.success && zonesResponse.data) {
-        // Create map of zoneId -> zoneName
-        zonesResponse.data.forEach(zone => {
-          zMap[zone.zoneId] = zone.name;
+        zonesResponse.data.forEach((zone) => {
+          const z = zone as { zoneId: number; zoneName?: string; name?: string };
+          const label = (z.zoneName ?? z.name ?? '').trim();
+          if (label) zMap[z.zoneId] = label;
         });
         setZonesMap(zMap);
       }
@@ -204,12 +208,20 @@ const useBettingPoolsList = (): UseBettingPoolsListReturn => {
   }, [loadInitialData]);
 
   /**
-   * Get unique zones from betting pools
+   * Full list of zones — comes from the /zones endpoint, plus any zone string
+   * that already appears on a banca (covers historical names not in the active
+   * list). This way the dropdown shows every zone in the system, not only the
+   * ones present on currently-loaded bancas. Blanks are dropped so a zone with
+   * an empty name doesn't render an empty row in the dropdown.
    */
   const availableZones = useMemo((): string[] => {
-    const uniqueZones = [...new Set(bettingPools.map(b => b.zone))];
-    return uniqueZones.sort();
-  }, [bettingPools]);
+    const fromMap = Object.values(zonesMap);
+    const fromBancas = bettingPools.map((b) => b.zone);
+    const merged = [...fromMap, ...fromBancas]
+      .map((z) => (z ?? '').trim())
+      .filter((z) => z.length > 0 && z !== 'Sin zona');
+    return Array.from(new Set(merged)).sort();
+  }, [zonesMap, bettingPools]);
 
   /**
    * Filter betting pools by search text and selected zones
@@ -241,7 +253,23 @@ const useBettingPoolsList = (): UseBettingPoolsListReturn => {
       let aValue: string | number | boolean | string[] | null = a[orderBy];
       let bValue: string | number | boolean | string[] | null = b[orderBy];
 
-      // Handle different data types
+      // Arrays (e.g. users) — sort by length so the column orders by count.
+      if (Array.isArray(aValue) && Array.isArray(bValue)) {
+        return order === 'asc' ? aValue.length - bValue.length : bValue.length - aValue.length;
+      }
+
+      // Booleans — true sorts after false in asc.
+      if (typeof aValue === 'boolean' && typeof bValue === 'boolean') {
+        const a01 = aValue ? 1 : 0;
+        const b01 = bValue ? 1 : 0;
+        return order === 'asc' ? a01 - b01 : b01 - a01;
+      }
+
+      // Nulls always sort last regardless of direction.
+      if (aValue == null && bValue == null) return 0;
+      if (aValue == null) return 1;
+      if (bValue == null) return -1;
+
       if (typeof aValue === 'string' && typeof bValue === 'string') {
         aValue = aValue.toLowerCase();
         bValue = bValue.toLowerCase();

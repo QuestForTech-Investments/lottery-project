@@ -12,6 +12,7 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  TableSortLabel,
   Paper,
   InputAdornment,
   CircularProgress
@@ -21,6 +22,7 @@ import { Search as SearchIcon } from '@mui/icons-material';
 import api from '@services/api';
 import { MultiSelectSearch } from '@/components/common';
 import { formatCurrency } from '@/utils/formatCurrency';
+import { useTableSort } from '@/utils/useTableSort';
 
 interface Zone {
   zoneId?: number;
@@ -100,6 +102,12 @@ const PorSorteoTab = ({ selectedDate, setSelectedDate, zones, selectedZones, han
       (d.lotteryName && d.lotteryName.toLowerCase().includes(term))
     );
   }, [data, searchTerm]);
+
+  const { sortedData, getSortProps } = useTableSort(
+    filteredData,
+    (row, key) => (row as unknown as Record<string, string | number>)[key],
+    { sortBy: 'drawName', sortOrder: 'asc' },
+  );
 
   return (
     <Card>
@@ -193,22 +201,22 @@ const PorSorteoTab = ({ selectedDate, setSelectedDate, zones, selectedZones, han
           <Table size="small">
             <TableHead sx={{ backgroundColor: '#e3e3e3' }}>
               <TableRow>
-                <TableCell sx={{ cursor: 'pointer', fontWeight: 600 }}>Sorteo</TableCell>
-                <TableCell align="right" sx={{ cursor: 'pointer', fontWeight: 600 }}>Total Vendido</TableCell>
-                <TableCell align="right" sx={{ cursor: 'pointer', fontWeight: 600 }}>Total premios</TableCell>
-                <TableCell align="right" sx={{ cursor: 'pointer', fontWeight: 600 }}>Total comisiones</TableCell>
-                <TableCell align="right" sx={{ cursor: 'pointer', fontWeight: 600 }}>Total neto</TableCell>
+                <TableCell sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('drawName')}>Sorteo</TableSortLabel></TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('totalSold')}>Total Vendido</TableSortLabel></TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('totalPrizes')}>Total premios</TableSortLabel></TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('totalCommissions')}>Total comisiones</TableSortLabel></TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('totalNet')}>Total neto</TableSortLabel></TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {filteredData.length === 0 ? (
+              {sortedData.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} align="center" sx={{ py: 3, color: 'text.secondary' }}>
                     {loading ? 'Cargando...' : 'No hay entradas para el sorteo y la fecha elegidos'}
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredData.map((row) => (
+                sortedData.map((row) => (
                   <TableRow key={row.drawId} hover>
                     <TableCell>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>

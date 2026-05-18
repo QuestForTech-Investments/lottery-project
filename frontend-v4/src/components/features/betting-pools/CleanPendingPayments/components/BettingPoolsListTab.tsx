@@ -114,7 +114,11 @@ const BettingPoolsListTab: FC<BettingPoolsListTabProps> = memo(({
                 <TableCell>{pool.bettingPoolName || pool.name}</TableCell>
                 <TableCell>{pool.reference || '-'}</TableCell>
                 <TableCell>
-                  {pool.userCodes?.join(', ') || pool.reference || '-'}
+                  {(pool.users?.length ?? 0) > 0
+                    ? pool.users!.join(', ').toUpperCase()
+                    : (pool.userCodes?.length ?? 0) > 0
+                      ? pool.userCodes!.join(', ').toUpperCase()
+                      : '-'}
                 </TableCell>
                 <TableCell>
                   <IconButton

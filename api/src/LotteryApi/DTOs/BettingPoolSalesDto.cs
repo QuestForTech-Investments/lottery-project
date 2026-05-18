@@ -51,4 +51,9 @@ public class BettingPoolSalesDto
     /// Balance snapshot for the requested date (from balance_history)
     /// </summary>
     public decimal BalanceOfTheDay { get; set; }
+
+    /// <summary>
+    /// Sum of bet amounts of tickets still pending in the period.
+    /// </summary>
+    public decimal PendingTicketsAmount { get; set; }
 }

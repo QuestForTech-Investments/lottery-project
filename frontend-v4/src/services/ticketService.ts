@@ -122,6 +122,14 @@ export interface TicketFilterParams {
   isPaid?: boolean;
   pageNumber?: number;  // API expects 'pageNumber', not 'page'
   pageSize?: number;
+  // Extended monitoring filters
+  betTypeId?: number;
+  betNumber?: string;
+  zoneIds?: number[];
+  pendingPayment?: boolean;
+  winnersOnly?: boolean;
+  search?: string;
+  status?: string;
 }
 
 export interface TicketFilterResponse {

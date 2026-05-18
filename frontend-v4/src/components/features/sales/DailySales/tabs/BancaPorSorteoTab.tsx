@@ -13,6 +13,7 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  TableSortLabel,
   Paper,
   CircularProgress,
   InputAdornment
@@ -22,6 +23,7 @@ import { Search as SearchIcon } from '@mui/icons-material';
 import api from '@services/api';
 import { formatCurrency } from '@/utils/formatCurrency';
 import { MultiSelectSearch } from '@/components/common';
+import { useTableSort } from '@/utils/useTableSort';
 
 interface Zone {
   zoneId?: number;
@@ -176,6 +178,15 @@ const BancaPorSorteoTab = ({ selectedDate, setSelectedDate, zones, selectedZones
     );
   }, [data, searchTerm]);
 
+  const { sortedData, getSortProps } = useTableSort(
+    filteredData,
+    (row, key) => {
+      if (key === 'reference') return row.reference ?? '';
+      return (row as unknown as Record<string, string | number>)[key];
+    },
+    { sortBy: 'bettingPoolCode', sortOrder: 'asc' },
+  );
+
   // Get unique draws from data for columns
   const uniqueDraws = drawTotals;
 
@@ -287,16 +298,16 @@ const BancaPorSorteoTab = ({ selectedDate, setSelectedDate, zones, selectedZones
           <Table size="small" stickyHeader>
             <TableHead sx={{ backgroundColor: '#e3e3e3' }}>
               <TableRow>
-                <TableCell sx={{ fontWeight: 600, backgroundColor: '#e3e3e3' }}>Ref.</TableCell>
-                <TableCell sx={{ fontWeight: 600, backgroundColor: '#e3e3e3' }}>Banca</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600, backgroundColor: '#e3e3e3' }}>Total Vendido</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600, backgroundColor: '#e3e3e3' }}>Total premios</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600, backgroundColor: '#e3e3e3' }}>Total comisiones</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600, backgroundColor: '#e3e3e3' }}>Total neto</TableCell>
+                <TableCell sx={{ fontWeight: 600, backgroundColor: '#e3e3e3' }}><TableSortLabel {...getSortProps('reference')}>Ref.</TableSortLabel></TableCell>
+                <TableCell sx={{ fontWeight: 600, backgroundColor: '#e3e3e3' }}><TableSortLabel {...getSortProps('bettingPoolName')}>Banca</TableSortLabel></TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600, backgroundColor: '#e3e3e3' }}><TableSortLabel {...getSortProps('totalSold')}>Total Vendido</TableSortLabel></TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600, backgroundColor: '#e3e3e3' }}><TableSortLabel {...getSortProps('totalPrizes')}>Total premios</TableSortLabel></TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600, backgroundColor: '#e3e3e3' }}><TableSortLabel {...getSortProps('totalCommissions')}>Total comisiones</TableSortLabel></TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600, backgroundColor: '#e3e3e3' }}><TableSortLabel {...getSortProps('totalNet')}>Total neto</TableSortLabel></TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {filteredData.length === 0 ? (
+              {sortedData.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} align="center" sx={{ py: 3, color: 'text.secondary' }}>
                     {loading ? 'Cargando...' : 'No hay entradas para el sorteo y la fecha elegidos'}
@@ -304,7 +315,7 @@ const BancaPorSorteoTab = ({ selectedDate, setSelectedDate, zones, selectedZones
                 </TableRow>
               ) : (
                 <>
-                  {filteredData.map((pool) => (
+                  {sortedData.map((pool) => (
                     <TableRow key={pool.bettingPoolId} hover>
                       <TableCell>{pool.reference || ''}</TableCell>
                       <TableCell>{pool.bettingPoolName}</TableCell>

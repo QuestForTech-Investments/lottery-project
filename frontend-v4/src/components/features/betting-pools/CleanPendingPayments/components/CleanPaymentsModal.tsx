@@ -13,7 +13,8 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions
+  DialogActions,
+  CircularProgress,
 } from '@mui/material';
 import type { BettingPool, CleanSummary } from '../types';
 
@@ -23,6 +24,7 @@ interface CleanPaymentsModalProps {
   cleanDate: string;
   cleanSummary: CleanSummary;
   cleaning: boolean;
+  previewLoading?: boolean;
   onDateChange: (date: string) => void;
   onClose: () => void;
   onClean: () => void;
@@ -34,6 +36,7 @@ const CleanPaymentsModal: FC<CleanPaymentsModalProps> = memo(({
   cleanDate,
   cleanSummary,
   cleaning,
+  previewLoading = false,
   onDateChange,
   onClose,
   onClean,
@@ -67,14 +70,23 @@ const CleanPaymentsModal: FC<CleanPaymentsModalProps> = memo(({
           seleccionada
         </Typography>
 
-        <Box sx={{ backgroundColor: 'grey.50', p: 2, borderRadius: 1 }}>
-          <Typography variant="body1">
-            <strong>Tickets:</strong> {cleanSummary.tickets}
-          </Typography>
-          <Typography variant="body1">
-            <strong>Monto de premios a limpiar:</strong> $
-            {cleanSummary.amount.toFixed(2)}
-          </Typography>
+        <Box sx={{ backgroundColor: 'grey.50', p: 2, borderRadius: 1, position: 'relative', minHeight: 64 }}>
+          {previewLoading ? (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, color: 'text.secondary' }}>
+              <CircularProgress size={18} />
+              <Typography variant="body2">Calculando…</Typography>
+            </Box>
+          ) : (
+            <>
+              <Typography variant="body1">
+                <strong>Tickets:</strong> {cleanSummary.tickets}
+              </Typography>
+              <Typography variant="body1">
+                <strong>Monto de premios a limpiar:</strong> $
+                {cleanSummary.amount.toFixed(2)}
+              </Typography>
+            </>
+          )}
         </Box>
       </DialogContent>
       <DialogActions>
@@ -82,7 +94,7 @@ const CleanPaymentsModal: FC<CleanPaymentsModalProps> = memo(({
         <Button
           variant="contained"
           onClick={onClean}
-          disabled={cleaning}
+          disabled={cleaning || previewLoading}
         >
           {cleaning ? 'Limpiando...' : 'OK'}
         </Button>

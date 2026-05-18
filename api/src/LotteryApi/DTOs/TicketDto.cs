@@ -270,6 +270,7 @@ public class TicketFilterDto
     public DateTime? Date { get; set; }
     public int? BettingPoolId { get; set; }
     public int? LotteryId { get; set; }
+    public int? DrawId { get; set; }
     public int? BetTypeId { get; set; }
     public string? BetNumber { get; set; }
     public List<int>? ZoneIds { get; set; }

@@ -2,10 +2,11 @@ import React, { useState, useEffect, useMemo, memo } from 'react';
 import { formatCurrency } from '@/utils/formatCurrency';
 import {
   Box, Paper, Typography, TextField, Grid, Autocomplete, Switch, FormControlLabel,
-  Button, ToggleButtonGroup, ToggleButton, Table, TableHead, TableBody, TableRow, TableCell, IconButton
+  Button, ToggleButtonGroup, ToggleButton, Table, TableHead, TableBody, TableRow, TableCell, TableSortLabel, IconButton
 } from '@mui/material';
 import { Visibility } from '@mui/icons-material';
 import { getTodayDate } from '@/utils/formatters';
+import { useTableSort } from '@/utils/useTableSort';
 
 interface Agente {
   id: number;
@@ -133,6 +134,11 @@ const ExternalAgentsMonitoring: React.FC = () => {
     return data;
   }, [tickets, filtroEstado, filtroRapido]);
 
+  const { sortedData: sortedTickets, getSortProps } = useTableSort<Ticket, string>(
+    filteredTickets,
+    (row, key) => (row as unknown as Record<string, string | number>)[key],
+    { sortBy: 'fecha', sortOrder: 'desc' },
+  );
 
   return (
     <Box sx={{ p: 2 }}>
@@ -197,15 +203,26 @@ const ExternalAgentsMonitoring: React.FC = () => {
           <Table size="small">
             <TableHead>
               <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
-                {['Número', 'Fecha', 'Usuario', 'Monto', 'Premio', 'Fecha de cancelación', 'Estado', 'Acciones'].map(h => (
-                  <TableCell key={h} sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.75rem' }}>{h}</TableCell>
+                {([
+                  { key: 'numero', label: 'Número' },
+                  { key: 'fecha', label: 'Fecha' },
+                  { key: 'usuario', label: 'Usuario' },
+                  { key: 'monto', label: 'Monto' },
+                  { key: 'premio', label: 'Premio' },
+                  { key: 'fechaCancelacion', label: 'Fecha de cancelación' },
+                  { key: 'estado', label: 'Estado' },
+                ] as const).map((col) => (
+                  <TableCell key={col.key} sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.75rem' }}>
+                    <TableSortLabel {...getSortProps(col.key)}>{col.label}</TableSortLabel>
+                  </TableCell>
                 ))}
+                <TableCell sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.75rem' }}>Acciones</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {filteredTickets.length === 0 ? (
+              {sortedTickets.length === 0 ? (
                 <TableRow><TableCell colSpan={8} align="center" sx={{ py: 3, color: 'text.secondary' }}>Mostrando 0 entradas</TableCell></TableRow>
-              ) : filteredTickets.map((t, i) => (
+              ) : sortedTickets.map((t, i) => (
                 <TableRow key={i} sx={{ '&:hover': { backgroundColor: 'action.hover' } }}>
                   <TableCell>{t.numero}</TableCell><TableCell>{t.fecha}</TableCell><TableCell>{t.usuario}</TableCell>
                   <TableCell>{formatCurrency(t.monto)}</TableCell><TableCell>{formatCurrency(t.premio)}</TableCell>

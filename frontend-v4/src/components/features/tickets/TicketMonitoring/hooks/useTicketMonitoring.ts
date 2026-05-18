@@ -13,7 +13,6 @@ import ticketService, {
   calculateTicketCounts,
   calculateTicketTotals,
 } from '@services/ticketService';
-import { getAllLotteries } from '@services/lotteryService';
 import { getCurrentUser } from '@services/authService';
 import { useDebounce } from '@hooks/index';
 import type { BettingPool, Lottery, SelectOption } from '@/types';
@@ -23,6 +22,20 @@ import { getTodayDate } from '@/utils/formatters';
 import type { BettingPoolApiResponse, FilterEstado, MappedTicket, TicketCounts, TicketTotals } from '../types';
 import { INITIAL_COUNTS, INITIAL_TOTALS } from '../constants';
 
+// Game type returned by /api/game-types.
+export interface GameTypeOption {
+  id: number;
+  name: string;
+  code: string;
+  numberLength: number;
+  requiresAdditionalNumber: boolean;
+}
+
+export interface ZoneOption {
+  id: number;
+  name: string;
+}
+
 interface UseTicketMonitoringReturn {
   // Filter state
   fecha: string;
@@ -30,11 +43,13 @@ interface UseTicketMonitoringReturn {
   bancas: BettingPool[];
   loteria: Lottery | null;
   loterias: Lottery[];
-  tipoJugada: SelectOption | null;
+  tipoJugada: GameTypeOption | null;
+  tiposJugada: GameTypeOption[];
   numero: string;
   pendientesPago: boolean;
   soloGanadores: boolean;
-  zona: SelectOption | null;
+  zonas: number[];
+  zonasList: ZoneOption[];
   filtroEstado: FilterEstado;
   filtroRapido: string;
 
@@ -55,8 +70,8 @@ interface UseTicketMonitoringReturn {
   handleFechaChange: (e: ChangeEvent<HTMLInputElement>) => void;
   handleBancaChange: (event: React.SyntheticEvent, value: BettingPool | null) => void;
   handleLoteriaChange: (event: React.SyntheticEvent, value: Lottery | null) => void;
-  handleTipoJugadaChange: (event: React.SyntheticEvent, value: SelectOption | null) => void;
-  handleZonaChange: (event: React.SyntheticEvent, value: SelectOption | null) => void;
+  handleTipoJugadaChange: (event: React.SyntheticEvent, value: GameTypeOption | null) => void;
+  handleZonasChange: (ids: number[]) => void;
   handleNumeroChange: (e: ChangeEvent<HTMLInputElement>) => void;
   handleFiltroRapidoChange: (e: ChangeEvent<HTMLInputElement>) => void;
   handlePendientesPagoChange: (e: ChangeEvent<HTMLInputElement>) => void;
@@ -89,11 +104,13 @@ export const useTicketMonitoring = (): UseTicketMonitoringReturn => {
   const [bancas, setBancas] = useState<BettingPool[]>([]);
   const [loteria, setLoteria] = useState<Lottery | null>(null);
   const [loterias, setLoterias] = useState<Lottery[]>([]);
-  const [tipoJugada, setTipoJugada] = useState<SelectOption | null>(null);
+  const [tipoJugada, setTipoJugada] = useState<GameTypeOption | null>(null);
+  const [tiposJugada, setTiposJugada] = useState<GameTypeOption[]>([]);
   const [numero, setNumero] = useState<string>('');
   const [pendientesPago, setPendientesPago] = useState<boolean>(false);
   const [soloGanadores, setSoloGanadores] = useState<boolean>(false);
-  const [zona, setZona] = useState<SelectOption | null>(null);
+  const [zonas, setZonas] = useState<number[]>([]);
+  const [zonasList, setZonasList] = useState<ZoneOption[]>([]);
 
   // Data states
   const [tickets, setTickets] = useState<MappedTicket[]>([]);
@@ -141,27 +158,80 @@ export const useTicketMonitoring = (): UseTicketMonitoringReturn => {
     }
   }, []);
 
-  // Load lotteries from API
-  const loadLoterias = useCallback(async (signal?: AbortSignal): Promise<Lottery[]> => {
+  // Load game types from API — drives both the dropdown and the number placeholder.
+  const loadGameTypes = useCallback(async (signal?: AbortSignal): Promise<GameTypeOption[]> => {
     try {
-      const response = await getAllLotteries({ loadAll: true });
-
+      type RawGameType = {
+        gameTypeId: number;
+        gameName: string;
+        gameTypeCode: string;
+        numberLength?: number;
+        requiresAdditionalNumber?: boolean;
+      };
+      const response = await api.get<RawGameType[]>('/game-types');
       if (signal?.aborted) return [];
-
-      const lotteriesData = 'data' in response
-        ? response.data
-        : (response as { items?: { lotteryId: number; lotteryName: string }[] }).items || [];
-
-      const mappedLotteries: Lottery[] = lotteriesData.map((l) => ({
-        id: l.lotteryId,
-        name: l.lotteryName,
+      const list: GameTypeOption[] = (response || []).map((g) => ({
+        id: g.gameTypeId,
+        name: g.gameName,
+        code: g.gameTypeCode,
+        numberLength: g.numberLength || 2,
+        requiresAdditionalNumber: g.requiresAdditionalNumber || false,
       }));
-
-      setLoterias(mappedLotteries);
-      return mappedLotteries;
+      setTiposJugada(list);
+      return list;
     } catch (err) {
       if (signal?.aborted) return [];
-      console.error('Error loading lotteries:', err);
+      console.error('Error loading game types:', err);
+      return [];
+    }
+  }, []);
+
+  // Load zones from API.
+  const loadZonas = useCallback(async (signal?: AbortSignal): Promise<ZoneOption[]> => {
+    try {
+      type RawZone = { zoneId?: number; id?: number; zoneName?: string; name?: string };
+      const response = await api.get<{ items?: RawZone[] } | RawZone[]>('/zones');
+      if (signal?.aborted) return [];
+      const arr = (response && typeof response === 'object' && 'items' in response)
+        ? (response.items || [])
+        : (response as RawZone[] || []);
+      const list: ZoneOption[] = arr.map((z) => ({
+        id: z.zoneId || z.id || 0,
+        name: z.zoneName || z.name || '',
+      }));
+      setZonasList(list);
+      // Start with all zones selected → "Todas" by default.
+      setZonas(list.map((z) => z.id));
+      return list;
+    } catch (err) {
+      if (signal?.aborted) return [];
+      console.error('Error loading zones:', err);
+      return [];
+    }
+  }, []);
+
+  // Load active draws — the dropdown shows draws (sorteos), not lotteries.
+  const loadLoterias = useCallback(async (signal?: AbortSignal): Promise<Lottery[]> => {
+    try {
+      type RawDraw = { drawId: number; drawName?: string; lotteryName?: string };
+      const response = await api.get<{ items?: RawDraw[] } | RawDraw[]>('/draws?pageSize=500');
+
+      if (signal?.aborted) return [];
+
+      const drawsData = (response && typeof response === 'object' && 'items' in response)
+        ? (response.items || [])
+        : (response as RawDraw[] || []);
+
+      const mapped: Lottery[] = drawsData.map((d) => ({
+        id: d.drawId,
+        name: d.drawName || d.lotteryName || `Sorteo ${d.drawId}`,
+      }));
+
+      setLoterias(mapped);
+      return mapped;
+    } catch (err) {
+      if (signal?.aborted) return [];
+      console.error('Error loading draws:', err);
       return [];
     }
   }, []);
@@ -175,17 +245,25 @@ export const useTicketMonitoring = (): UseTicketMonitoringReturn => {
       const bettingPoolId = selectedBancaId ?? banca?.id ?? null;
       const fechaToUse = selectedFecha ?? fecha;
 
-      if (!bettingPoolId && !loteria && !zona && !numero) {
-        setError('Seleccione al menos una banca, lotería, zona o número para filtrar.');
+      if (!bettingPoolId && !loteria && zonas.length === 0 && !numero && !tipoJugada) {
+        setError('Seleccione al menos una banca, lotería, zona, tipo de jugada o número para filtrar.');
         setIsLoading(false);
         return;
       }
 
       try {
+        // Only send zoneIds when narrowed below the full list (mirrors other reports).
+        const zoneIdsParam = zonas.length > 0 && zonas.length < zonasList.length ? zonas : undefined;
         const response = await ticketService.filterTickets({
           date: fechaToUse,
           bettingPoolId: bettingPoolId ?? undefined,
-          lotteryId: loteria?.id,
+          // The "Lotería" dropdown now lists draws; the selected id is a drawId.
+          drawId: loteria?.id,
+          betTypeId: tipoJugada?.id,
+          betNumber: numero || undefined,
+          zoneIds: zoneIdsParam,
+          pendingPayment: pendientesPago || undefined,
+          winnersOnly: soloGanadores || undefined,
           pageNumber: 1,
           pageSize: 100,
         });
@@ -223,7 +301,7 @@ export const useTicketMonitoring = (): UseTicketMonitoringReturn => {
         }
       }
     },
-    [banca?.id, fecha, loteria, zona, numero]
+    [banca?.id, fecha, loteria, zonas, zonasList.length, numero, tipoJugada, pendientesPago, soloGanadores]
   );
 
   // Initialize data on mount
@@ -235,6 +313,8 @@ export const useTicketMonitoring = (): UseTicketMonitoringReturn => {
       const [mappedPools] = await Promise.all([
         loadBancas(controller.signal),
         loadLoterias(controller.signal),
+        loadGameTypes(controller.signal),
+        loadZonas(controller.signal),
       ]);
 
       if (controller.signal.aborted) return;
@@ -309,14 +389,11 @@ export const useTicketMonitoring = (): UseTicketMonitoringReturn => {
   );
 
   const handleTipoJugadaChange = useCallback(
-    (_: React.SyntheticEvent, value: SelectOption | null) => setTipoJugada(value),
+    (_: React.SyntheticEvent, value: GameTypeOption | null) => setTipoJugada(value),
     []
   );
 
-  const handleZonaChange = useCallback(
-    (_: React.SyntheticEvent, value: SelectOption | null) => setZona(value),
-    []
-  );
+  const handleZonasChange = useCallback((ids: number[]) => setZonas(ids), []);
 
   const handleFechaChange = useCallback((e: ChangeEvent<HTMLInputElement>) => setFecha(e.target.value), []);
   const handleNumeroChange = useCallback((e: ChangeEvent<HTMLInputElement>) => setNumero(e.target.value), []);
@@ -400,10 +477,12 @@ export const useTicketMonitoring = (): UseTicketMonitoringReturn => {
     loteria,
     loterias,
     tipoJugada,
+    tiposJugada,
     numero,
     pendientesPago,
     soloGanadores,
-    zona,
+    zonas,
+    zonasList,
     filtroEstado,
     filtroRapido,
     tickets,
@@ -419,7 +498,7 @@ export const useTicketMonitoring = (): UseTicketMonitoringReturn => {
     handleBancaChange,
     handleLoteriaChange,
     handleTipoJugadaChange,
-    handleZonaChange,
+    handleZonasChange,
     handleNumeroChange,
     handleFiltroRapidoChange,
     handlePendientesPagoChange,

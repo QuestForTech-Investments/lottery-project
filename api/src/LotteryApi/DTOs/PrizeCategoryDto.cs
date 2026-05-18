@@ -82,6 +82,23 @@ public class PayoutBancasResponseDto
 }
 
 /// <summary>
+/// One (banca, game type) cell in the "Premios por tipo de jugada" report.
+/// </summary>
+public class PrizesByBancaGameTypeDto
+{
+    public int BettingPoolId { get; set; }
+    public string BettingPoolName { get; set; } = string.Empty;
+    public string BettingPoolCode { get; set; } = string.Empty;
+    public int GameTypeId { get; set; }
+    public string GameTypeCode { get; set; } = string.Empty;
+    public string GameTypeName { get; set; } = string.Empty;
+    public decimal TotalSold { get; set; }
+    public decimal TotalPrizes { get; set; }
+    public decimal TotalCommissions { get; set; }
+    public decimal TotalNet { get; set; }
+}
+
+/// <summary>
 /// Combination sales data (number + draw combination)
 /// Used in "Combinaciones" tab of DailySales
 /// </summary>

@@ -8,6 +8,9 @@ export interface BettingPool {
   bettingPoolName?: string;
   name?: string;
   reference?: string;
+  /** Usernames returned by /betting-pools — field is `users` on the API. */
+  users?: string[];
+  /** Legacy alias kept for backwards compat. */
   userCodes?: string[];
   [key: string]: string | number | string[] | undefined;
 }

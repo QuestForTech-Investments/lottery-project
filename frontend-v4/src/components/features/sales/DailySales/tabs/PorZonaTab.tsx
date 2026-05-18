@@ -12,6 +12,7 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  TableSortLabel,
   Paper,
   InputAdornment,
   ToggleButton,
@@ -23,6 +24,7 @@ import { Search as SearchIcon } from '@mui/icons-material';
 import api from '@services/api';
 import { MultiSelectSearch } from '@/components/common';
 import { formatCurrency } from '@/utils/formatCurrency';
+import { useTableSort } from '@/utils/useTableSort';
 
 interface Zone {
   zoneId?: number;
@@ -143,6 +145,11 @@ const PorZonaTab = ({ selectedDate, setSelectedDate, zones, selectedZones, handl
     return result;
   }, [data, filterType, searchTerm]);
 
+  const { sortedData, getSortProps } = useTableSort(
+    filteredData,
+    (row, key) => (row as unknown as Record<string, string | number>)[key],
+    { sortBy: 'zoneName', sortOrder: 'asc' },
+  );
 
   const totals = useMemo(() => {
     return filteredData.reduce((acc, row) => ({
@@ -319,23 +326,23 @@ const PorZonaTab = ({ selectedDate, setSelectedDate, zones, selectedZones, handl
           <Table size="small">
             <TableHead sx={{ backgroundColor: '#e3e3e3' }}>
               <TableRow>
-                <TableCell sx={{ fontWeight: 600 }}>Nombre</TableCell>
-                <TableCell align="center" sx={{ fontWeight: 600 }}>P</TableCell>
-                <TableCell align="center" sx={{ fontWeight: 600 }}>L</TableCell>
-                <TableCell align="center" sx={{ fontWeight: 600 }}>W</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600 }}>Total</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600 }}>Venta</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600 }}>Comisiones</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600 }}>Descuentos</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600 }}>Premios</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600 }}>Neto</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600 }}>Caída</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600 }}>Final</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600 }}>Balance</TableCell>
+                <TableCell sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('zoneName')}>Nombre</TableSortLabel></TableCell>
+                <TableCell align="center" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('pendingCount')}>P</TableSortLabel></TableCell>
+                <TableCell align="center" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('loserCount')}>L</TableSortLabel></TableCell>
+                <TableCell align="center" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('winnerCount')}>W</TableSortLabel></TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('lineCount')}>Total</TableSortLabel></TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('totalSold')}>Venta</TableSortLabel></TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('totalCommissions')}>Comisiones</TableSortLabel></TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('totalDiscounts')}>Descuentos</TableSortLabel></TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('totalPrizes')}>Premios</TableSortLabel></TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('totalNet')}>Neto</TableSortLabel></TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('fall')}>Caída</TableSortLabel></TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('final')}>Final</TableSortLabel></TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('balance')}>Balance</TableSortLabel></TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {filteredData.length === 0 ? (
+              {sortedData.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={13} align="center" sx={{ py: 3, color: 'text.secondary' }}>
                     {loading ? 'Cargando...' : 'No hay entradas para el sorteo y la fecha elegidos'}
@@ -343,7 +350,7 @@ const PorZonaTab = ({ selectedDate, setSelectedDate, zones, selectedZones, handl
                 </TableRow>
               ) : (
                 <>
-                  {filteredData.map((row) => (
+                  {sortedData.map((row) => (
                     <TableRow key={row.zoneId} hover>
                       <TableCell>{row.zoneName}</TableCell>
                       <TableCell align="center">{row.pendingCount}</TableCell>

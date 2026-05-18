@@ -53,6 +53,7 @@ interface UseCleanPendingPaymentsReturn {
   cleanDate: string;
   cleanSummary: CleanSummary;
   cleaning: boolean;
+  previewLoading: boolean;
   setCleanDate: (date: string) => void;
   handleOpenModal: (pool: BettingPool) => void;
   handleCloseModal: () => void;
@@ -98,13 +99,15 @@ export const useCleanPendingPayments = (): UseCleanPendingPaymentsReturn => {
     amount: 0
   });
   const [cleaning, setCleaning] = useState<boolean>(false);
+  const [previewLoading, setPreviewLoading] = useState<boolean>(false);
 
   // Load betting pools on mount
   const loadBettingPools = useCallback(async (): Promise<void> => {
     setLoading(true);
     setError(null);
     try {
-      const poolsData = await api.get('/betting-pools') as { items?: BettingPool[] } | BettingPool[];
+      // pageSize=1000 so every banca appears in the list (default is ~20).
+      const poolsData = await api.get('/betting-pools?pageSize=1000') as { items?: BettingPool[] } | BettingPool[];
       const poolsArray: BettingPool[] = Array.isArray(poolsData)
         ? poolsData
         : (poolsData?.items || []);
@@ -147,6 +150,33 @@ export const useCleanPendingPayments = (): UseCleanPendingPaymentsReturn => {
     setModalOpen(false);
     setSelectedPool(null);
   }, []);
+
+  // Live preview: whenever the modal is open and the user changes the date,
+  // ask the backend how many tickets / how much money would be cleaned.
+  useEffect(() => {
+    if (!modalOpen || !selectedPool) return;
+    let cancelled = false;
+    const id = selectedPool.bettingPoolId || selectedPool.id;
+    setPreviewLoading(true);
+    (async () => {
+      try {
+        const preview = await api.get(
+          `/betting-pools/${id}/pending-payments-preview?untilDate=${cleanDate}`,
+        ) as { tickets: number; amount: number };
+        if (!cancelled) {
+          setCleanSummary({ tickets: preview?.tickets || 0, amount: preview?.amount || 0 });
+        }
+      } catch (err) {
+        if (!cancelled) {
+          console.error('Error fetching pending-payments preview:', err);
+          setCleanSummary({ tickets: 0, amount: 0 });
+        }
+      } finally {
+        if (!cancelled) setPreviewLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [modalOpen, selectedPool, cleanDate]);
 
   const handleCleanPayments = useCallback(async (): Promise<void> => {
     if (!selectedPool) return;
@@ -205,7 +235,7 @@ export const useCleanPendingPayments = (): UseCleanPendingPaymentsReturn => {
         (pool.bettingPoolId || pool.id)?.toString().includes(term) ||
         (pool.bettingPoolName || pool.name)?.toLowerCase().includes(term) ||
         (pool.reference || '')?.toLowerCase().includes(term) ||
-        (pool.userCodes?.join(', ') || '')?.toLowerCase().includes(term)
+        ((pool.users || pool.userCodes || []).join(', ')).toLowerCase().includes(term)
       );
     }
 
@@ -302,6 +332,7 @@ export const useCleanPendingPayments = (): UseCleanPendingPaymentsReturn => {
     cleanDate,
     cleanSummary,
     cleaning,
+    previewLoading,
     setCleanDate,
     handleOpenModal,
     handleCloseModal,

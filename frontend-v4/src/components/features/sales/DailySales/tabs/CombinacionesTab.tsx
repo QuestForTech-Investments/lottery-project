@@ -12,6 +12,7 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  TableSortLabel,
   Paper,
   InputAdornment,
   CircularProgress
@@ -21,6 +22,7 @@ import { Search as SearchIcon } from '@mui/icons-material';
 import api from '@services/api';
 import { formatCurrency } from '@/utils/formatCurrency';
 import { MultiSelectSearch } from '@/components/common';
+import { useTableSort } from '@/utils/useTableSort';
 
 /**
  * Map the raw game-type name (from `game_types.game_name`) to the user-facing
@@ -202,6 +204,14 @@ const CombinacionesTab = ({ selectedDate, setSelectedDate, zones, selectedZones,
     );
   }, [filteredData]);
 
+  const { sortedData, getSortProps } = useTableSort(
+    groupedData,
+    (row, key) => {
+      if (key === 'betTypeName') return prettyBetTypeName(row.betTypeName);
+      return (row as unknown as Record<string, string | number>)[key];
+    },
+    { sortBy: 'betTypeName', sortOrder: 'asc' },
+  );
 
   const totals = useMemo(() => {
     return filteredData.reduce((acc, row) => ({
@@ -310,16 +320,16 @@ const CombinacionesTab = ({ selectedDate, setSelectedDate, zones, selectedZones,
           <Table size="small" stickyHeader>
             <TableHead sx={{ backgroundColor: '#e3e3e3' }}>
               <TableRow>
-                <TableCell sx={{ fontWeight: 600, backgroundColor: '#e3e3e3' }}>Combinación</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600, backgroundColor: '#e3e3e3' }}>Total Vendido</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600, backgroundColor: '#e3e3e3' }}>Total comisiones</TableCell>
+                <TableCell sx={{ fontWeight: 600, backgroundColor: '#e3e3e3' }}><TableSortLabel {...getSortProps('betTypeName')}>Combinación</TableSortLabel></TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600, backgroundColor: '#e3e3e3' }}><TableSortLabel {...getSortProps('totalSold')}>Total Vendido</TableSortLabel></TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600, backgroundColor: '#e3e3e3' }}><TableSortLabel {...getSortProps('totalCommissions')}>Total comisiones</TableSortLabel></TableCell>
                 <TableCell align="right" sx={{ fontWeight: 600, backgroundColor: '#e3e3e3' }}>Total comisiones 2</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600, backgroundColor: '#e3e3e3' }}>Total premios</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600, backgroundColor: '#e3e3e3' }}>Balances</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600, backgroundColor: '#e3e3e3' }}><TableSortLabel {...getSortProps('totalPrizes')}>Total premios</TableSortLabel></TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600, backgroundColor: '#e3e3e3' }}><TableSortLabel {...getSortProps('balance')}>Balances</TableSortLabel></TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {groupedData.length === 0 ? (
+              {sortedData.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} align="center" sx={{ py: 3, color: 'text.secondary' }}>
                     {loading ? 'Cargando...' : 'No hay entradas para el sorteo y la fecha elegidos'}
@@ -327,7 +337,7 @@ const CombinacionesTab = ({ selectedDate, setSelectedDate, zones, selectedZones,
                 </TableRow>
               ) : (
                 <>
-                  {groupedData.map((row) => (
+                  {sortedData.map((row) => (
                     <TableRow key={row.betTypeId} hover>
                       <TableCell>
                         <Typography variant="body2" sx={{ fontWeight: 600 }}>

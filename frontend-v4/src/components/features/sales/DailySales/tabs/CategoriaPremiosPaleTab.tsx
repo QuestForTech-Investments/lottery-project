@@ -12,6 +12,7 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  TableSortLabel,
   Paper,
   InputAdornment,
   CircularProgress
@@ -20,6 +21,7 @@ import { Search as SearchIcon } from '@mui/icons-material';
 import api from '@services/api';
 import { formatCurrency } from '@/utils/formatCurrency';
 import PayoutBancasDialog from './PayoutBancasDialog';
+import { useTableSort } from '@/utils/useTableSort';
 
 interface PayoutGroupDto {
   multiplier: number;
@@ -84,6 +86,15 @@ const CategoriaPremiosPaleTab = ({ selectedDate, setSelectedDate }: CategoriaPre
     const term = searchTerm.toLowerCase();
     return data.filter((d) => d.label.toLowerCase().includes(term));
   }, [data, searchTerm]);
+
+  const { sortedData, getSortProps } = useTableSort(
+    filteredData,
+    (row, key) => {
+      if (key === 'total') return row.pendingCount + row.loserCount + row.winnerCount;
+      return (row as unknown as Record<string, string | number>)[key];
+    },
+    { sortBy: 'multiplier', sortOrder: 'asc' },
+  );
 
   const totals = useMemo(() => {
     return filteredData.reduce((acc, row) => ({
@@ -167,19 +178,19 @@ const CategoriaPremiosPaleTab = ({ selectedDate, setSelectedDate }: CategoriaPre
           <Table size="small">
             <TableHead sx={{ backgroundColor: '#e3e3e3' }}>
               <TableRow>
-                <TableCell sx={{ fontWeight: 600 }}>Premio</TableCell>
-                <TableCell align="center" sx={{ fontWeight: 600 }}>P</TableCell>
-                <TableCell align="center" sx={{ fontWeight: 600 }}>L</TableCell>
-                <TableCell align="center" sx={{ fontWeight: 600 }}>W</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600 }}>Total</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600 }}>Venta</TableCell>
+                <TableCell sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('multiplier')}>Premio</TableSortLabel></TableCell>
+                <TableCell align="center" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('pendingCount')}>P</TableSortLabel></TableCell>
+                <TableCell align="center" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('loserCount')}>L</TableSortLabel></TableCell>
+                <TableCell align="center" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('winnerCount')}>W</TableSortLabel></TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('total')}>Total</TableSortLabel></TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('totalSold')}>Venta</TableSortLabel></TableCell>
                 <TableCell align="right" sx={{ fontWeight: 600 }}>Comisiones</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600 }}>Premios</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600 }}>Neto</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('totalPrizes')}>Premios</TableSortLabel></TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('totalNet')}>Neto</TableSortLabel></TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {filteredData.length === 0 ? (
+              {sortedData.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={9} align="center" sx={{ py: 3, color: 'text.secondary' }}>
                     {loading ? 'Cargando...' : 'No hay entradas para el sorteo y la fecha elegidos'}
@@ -187,7 +198,7 @@ const CategoriaPremiosPaleTab = ({ selectedDate, setSelectedDate }: CategoriaPre
                 </TableRow>
               ) : (
                 <>
-                  {filteredData.map((row) => (
+                  {sortedData.map((row) => (
                     <TableRow
                       key={row.multiplier}
                       hover

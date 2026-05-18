@@ -199,7 +199,7 @@ const BancasListMUI: React.FC = () => {
     { id: 'number', label: 'Número', sortable: true, align: 'left' },
     { id: 'name', label: 'Nombre', sortable: true, align: 'left' },
     { id: 'reference', label: 'Referencia', sortable: true, align: 'left' },
-    { id: 'users', label: 'Usuarios', sortable: false, align: 'left' },
+    { id: 'users', label: 'Usuarios', sortable: true, align: 'left' },
     { id: 'isActive', label: 'Activa', sortable: true, align: 'center' },
     { id: 'zone', label: 'Zona', sortable: true, align: 'left' },
     { id: 'balance', label: 'Balance', sortable: true, align: 'right' },

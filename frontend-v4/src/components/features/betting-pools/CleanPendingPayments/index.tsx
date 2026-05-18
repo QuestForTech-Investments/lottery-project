@@ -59,6 +59,7 @@ const CleanPendingPayments: React.FC = () => {
     cleanDate,
     cleanSummary,
     cleaning,
+    previewLoading,
     setCleanDate,
     handleOpenModal,
     handleCloseModal,
@@ -147,6 +148,7 @@ const CleanPendingPayments: React.FC = () => {
         cleanDate={cleanDate}
         cleanSummary={cleanSummary}
         cleaning={cleaning}
+        previewLoading={previewLoading}
         onDateChange={setCleanDate}
         onClose={handleCloseModal}
         onClean={handleCleanPayments}

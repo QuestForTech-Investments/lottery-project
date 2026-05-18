@@ -405,15 +405,17 @@ public class SalesReportsController : ControllerBase
                 (startDate, endDate) = (endDate, startDate);
             }
 
-            // Get all tickets in the date range
-            var rangeStart = startDate.Date;
-            var rangeEnd = endDate.Date.AddDays(1).AddTicks(-1);
+            // The query params are calendar dates in the business timezone; CreatedAt is stored
+            // in UTC. Convert the [startDate 00:00, endDate+1 00:00) window from Santo Domingo
+            // to UTC so a ticket made at, e.g., 21:00 SDQ yesterday isn't bucketed into today.
+            var rangeStartUtc = DateTimeHelper.ToUtc(startDate.Date);
+            var rangeEndUtc = DateTimeHelper.ToUtc(endDate.Date.AddDays(1)).AddTicks(-1);
 
             var query = _context.Tickets
                 .Include(t => t.BettingPool)
                 .Where(t => !t.IsCancelled
-                    && t.CreatedAt >= rangeStart
-                    && t.CreatedAt <= rangeEnd);
+                    && t.CreatedAt >= rangeStartUtc
+                    && t.CreatedAt <= rangeEndUtc);
 
             // Zone scope.
             var allowedBpIdsRange = await _zoneScope.GetAllowedBettingPoolIdsAsync();
@@ -455,10 +457,12 @@ public class SalesReportsController : ControllerBase
 
             while (currentDate <= endDate.Date)
             {
-                var dayStart = currentDate;
-                var dayEnd = currentDate.AddDays(1).AddTicks(-1);
+                // Day boundaries are Santo Domingo midnight → midnight, converted to UTC
+                // so the per-day bucket matches the per-range filter we ran above.
+                var dayStartUtc = DateTimeHelper.ToUtc(currentDate);
+                var dayEndUtc = DateTimeHelper.ToUtc(currentDate.AddDays(1)).AddTicks(-1);
 
-                var dayTickets = tickets.Where(t => t.CreatedAt >= dayStart && t.CreatedAt <= dayEnd).ToList();
+                var dayTickets = tickets.Where(t => t.CreatedAt >= dayStartUtc && t.CreatedAt <= dayEndUtc).ToList();
 
                 var totalSold = dayTickets.Sum(t => t.GrandTotal);
                 var totalPrizes = dayTickets.Sum(t => t.TotalPrize);
@@ -646,6 +650,7 @@ public class SalesReportsController : ControllerBase
                     var pendingCount = x.Tickets.Count(t => t.TicketState == "P");
                     var winnerCount = x.Tickets.Count(t => t.TicketState == "W");
                     var loserCount = x.Tickets.Count(t => t.TicketState == "L");
+                    var pendingTicketsAmount = x.Tickets.Where(t => t.TicketState == "P").Sum(t => t.TotalBetAmount);
 
                     bpCaidaValues.TryGetValue(x.BettingPool.BettingPoolId, out var caida);
 
@@ -671,7 +676,8 @@ public class SalesReportsController : ControllerBase
                         WinnerCount = winnerCount,
                         LoserCount = loserCount,
                         Balance = snapBal + totalNet + txAdj,
-                        BalanceOfTheDay = snapBal
+                        BalanceOfTheDay = snapBal,
+                        PendingTicketsAmount = pendingTicketsAmount,
                     };
                 })
                 .OrderBy(x => x.BettingPoolCode)
@@ -1700,6 +1706,141 @@ public class SalesReportsController : ControllerBase
         {
             _logger.LogError(ex, "Error getting bancas for prize-category payout");
             return StatusCode(500, new { message = "Error al obtener las bancas del grupo" });
+        }
+    }
+
+    /// <summary>
+    /// "Premios por tipo de jugada" report — sales/prizes/commissions/net per (banca, game type).
+    /// Frontend pivots the rows into per-tab column groups (e.g. Directo + Pale side-by-side).
+    /// </summary>
+    [HttpGet("prizes-by-banca-game-type")]
+    public async Task<ActionResult<List<PrizesByBancaGameTypeDto>>> GetPrizesByBancaGameType(
+        [FromQuery] DateTime startDate,
+        [FromQuery] DateTime endDate,
+        [FromQuery] string gameTypeCodes,
+        [FromQuery] string? zoneIds = null)
+    {
+        var hasAdminView = await HasPermissionAsync("VIEW_SALES");
+        List<int>? posAllowedBpIds = null;
+        if (!hasAdminView)
+        {
+            posAllowedBpIds = await GetAssignedBettingPoolIdsAsync();
+            if (posAllowedBpIds.Count == 0) return Forbid();
+        }
+
+        try
+        {
+            if (string.IsNullOrWhiteSpace(gameTypeCodes))
+            {
+                return BadRequest(new { message = "gameTypeCodes es requerido" });
+            }
+
+            if (startDate > endDate) (startDate, endDate) = (endDate, startDate);
+
+            // Window is in business timezone — convert to UTC to match Ticket.CreatedAt storage.
+            var rangeStartUtc = DateTimeHelper.ToUtc(startDate.Date);
+            var rangeEndUtc = DateTimeHelper.ToUtc(endDate.Date.AddDays(1)).AddTicks(-1);
+
+            var codes = gameTypeCodes
+                .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(c => c.Trim().ToUpperInvariant())
+                .ToList();
+
+            var gameTypes = await _context.GameTypes
+                .Where(gt => codes.Contains(gt.GameTypeCode.ToUpper()))
+                .Select(gt => new { gt.GameTypeId, gt.GameTypeCode, gt.GameName })
+                .ToListAsync();
+            var gameTypeIds = gameTypes.Select(gt => gt.GameTypeId).ToList();
+            if (gameTypeIds.Count == 0)
+            {
+                return Ok(new List<PrizesByBancaGameTypeDto>());
+            }
+
+            List<int>? zoneIdList = null;
+            if (!string.IsNullOrEmpty(zoneIds))
+            {
+                zoneIdList = zoneIds.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(int.Parse)
+                    .ToList();
+            }
+
+            var query = _context.TicketLines
+                .Include(tl => tl.Ticket)
+                    .ThenInclude(t => t!.BettingPool)
+                .Where(tl => tl.Ticket != null && !tl.Ticket.IsCancelled)
+                .Where(tl => tl.Ticket!.CreatedAt >= rangeStartUtc && tl.Ticket.CreatedAt <= rangeEndUtc)
+                .Where(tl => gameTypeIds.Contains(tl.BetTypeId));
+
+            var allowedBpIds = await _zoneScope.GetAllowedBettingPoolIdsAsync();
+            if (allowedBpIds != null)
+            {
+                query = query.Where(tl => tl.Ticket != null && allowedBpIds.Contains(tl.Ticket.BettingPoolId));
+            }
+            if (posAllowedBpIds != null)
+            {
+                query = query.Where(tl => tl.Ticket != null && posAllowedBpIds.Contains(tl.Ticket.BettingPoolId));
+            }
+            if (zoneIdList != null && zoneIdList.Count > 0)
+            {
+                query = query.Where(tl => tl.Ticket != null
+                    && tl.Ticket.BettingPool != null
+                    && zoneIdList.Contains(tl.Ticket.BettingPool.ZoneId));
+            }
+
+            var rows = await query
+                .GroupBy(tl => new { tl.Ticket!.BettingPoolId, tl.BetTypeId })
+                .Select(g => new
+                {
+                    g.Key.BettingPoolId,
+                    g.Key.BetTypeId,
+                    TotalSold = g.Sum(tl => tl.Subtotal),
+                    TotalPrizes = g.Sum(tl => tl.PrizeAmount),
+                    TotalCommissions = g.Sum(tl => tl.CommissionAmount),
+                })
+                .ToListAsync();
+
+            if (rows.Count == 0)
+            {
+                return Ok(new List<PrizesByBancaGameTypeDto>());
+            }
+
+            // Resolve banca name/code in one batch.
+            var bancaIds = rows.Select(r => r.BettingPoolId).Distinct().ToList();
+            var bancaMap = await _context.BettingPools
+                .Where(bp => bancaIds.Contains(bp.BettingPoolId))
+                .Select(bp => new { bp.BettingPoolId, bp.BettingPoolName, bp.BettingPoolCode })
+                .ToDictionaryAsync(bp => bp.BettingPoolId);
+
+            var gameTypeMap = gameTypes.ToDictionary(gt => gt.GameTypeId);
+
+            var result = rows.Select(r =>
+            {
+                bancaMap.TryGetValue(r.BettingPoolId, out var bp);
+                gameTypeMap.TryGetValue(r.BetTypeId, out var gt);
+                return new PrizesByBancaGameTypeDto
+                {
+                    BettingPoolId = r.BettingPoolId,
+                    BettingPoolName = bp?.BettingPoolName ?? "",
+                    BettingPoolCode = bp?.BettingPoolCode ?? "",
+                    GameTypeId = r.BetTypeId,
+                    GameTypeCode = gt?.GameTypeCode ?? "",
+                    GameTypeName = gt?.GameName ?? "",
+                    TotalSold = r.TotalSold,
+                    TotalPrizes = r.TotalPrizes,
+                    TotalCommissions = r.TotalCommissions,
+                    TotalNet = r.TotalSold - r.TotalCommissions - r.TotalPrizes,
+                };
+            })
+            .OrderBy(r => r.BettingPoolCode)
+            .ThenBy(r => r.GameTypeId)
+            .ToList();
+
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting prizes by banca and game type");
+            return StatusCode(500, new { message = "Error al obtener premios por tipo de jugada" });
         }
     }
 
