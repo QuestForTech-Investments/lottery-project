@@ -7,6 +7,9 @@ export interface BettingPool {
   id?: number;
   bettingPoolName?: string;
   name?: string;
+  /** Display code shown in the UI, e.g. "LB-0001". */
+  bettingPoolCode?: string;
+  code?: string;
   reference?: string;
   /** Usernames returned by /betting-pools — field is `users` on the API. */
   users?: string[];

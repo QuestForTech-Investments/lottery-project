@@ -110,7 +110,7 @@ const BettingPoolsListTab: FC<BettingPoolsListTabProps> = memo(({
           <TableBody>
             {filteredData.map((pool) => (
               <TableRow key={pool.bettingPoolId || pool.id} hover>
-                <TableCell>{pool.bettingPoolId || pool.id}</TableCell>
+                <TableCell>{pool.bettingPoolCode || pool.code || `#${pool.bettingPoolId || pool.id}`}</TableCell>
                 <TableCell>{pool.bettingPoolName || pool.name}</TableCell>
                 <TableCell>{pool.reference || '-'}</TableCell>
                 <TableCell>

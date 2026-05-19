@@ -232,6 +232,7 @@ export const useCleanPendingPayments = (): UseCleanPendingPaymentsReturn => {
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       data = data.filter(pool =>
+        (pool.bettingPoolCode || pool.code || '').toLowerCase().includes(term) ||
         (pool.bettingPoolId || pool.id)?.toString().includes(term) ||
         (pool.bettingPoolName || pool.name)?.toLowerCase().includes(term) ||
         (pool.reference || '')?.toLowerCase().includes(term) ||
@@ -246,8 +247,8 @@ export const useCleanPendingPayments = (): UseCleanPendingPaymentsReturn => {
 
       switch (orderBy) {
         case 'number':
-          aValue = a.bettingPoolId || a.id || 0;
-          bValue = b.bettingPoolId || b.id || 0;
+          aValue = (a.bettingPoolCode || a.code || '').toLowerCase();
+          bValue = (b.bettingPoolCode || b.code || '').toLowerCase();
           break;
         case 'name':
           aValue = (a.bettingPoolName || a.name || '').toLowerCase();

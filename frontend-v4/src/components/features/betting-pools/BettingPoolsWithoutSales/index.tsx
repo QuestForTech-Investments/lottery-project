@@ -45,6 +45,9 @@ interface BettingPool {
   id?: number;
   bettingPoolName?: string;
   name?: string;
+  /** Display code like "LB-0001". */
+  bettingPoolCode?: string;
+  code?: string;
   reference?: string;
   zoneName?: string;
   zone?: { id?: number; name?: string };
@@ -126,7 +129,7 @@ const BettingPoolsWithoutSales: React.FC = () => {
     }
     const columns: ExportColumn<Record<string, unknown>>[] = [
       { key: 'number', label: 'Número', align: 'left',
-        getValue: (r) => String(r.bettingPoolId ?? r.id ?? '') },
+        getValue: (r) => String(r.bettingPoolCode ?? r.code ?? r.bettingPoolId ?? r.id ?? '') },
       { key: 'name', label: 'Nombre', align: 'left',
         getValue: (r) => String(r.bettingPoolName ?? r.name ?? '') },
       { key: 'reference', label: 'Referencia', align: 'left',
@@ -165,6 +168,7 @@ const BettingPoolsWithoutSales: React.FC = () => {
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       data = data.filter(pool =>
+        (pool.bettingPoolCode || pool.code || '').toLowerCase().includes(term) ||
         (pool.bettingPoolId || pool.id)?.toString().includes(term) ||
         (pool.bettingPoolName || pool.name)?.toLowerCase().includes(term) ||
         (pool.reference || '')?.toLowerCase().includes(term) ||
@@ -179,8 +183,8 @@ const BettingPoolsWithoutSales: React.FC = () => {
 
       switch (orderBy) {
         case 'number':
-          aValue = a.bettingPoolId || a.id || 0;
-          bValue = b.bettingPoolId || b.id || 0;
+          aValue = (a.bettingPoolCode || a.code || '').toLowerCase();
+          bValue = (b.bettingPoolCode || b.code || '').toLowerCase();
           break;
         case 'name':
           aValue = (a.bettingPoolName || a.name || '').toLowerCase();
@@ -407,7 +411,7 @@ const BettingPoolsWithoutSales: React.FC = () => {
                     const balColor = bal > 0 ? '#2e7d32' : bal < 0 ? '#c62828' : 'inherit';
                     return (
                       <TableRow key={pool.bettingPoolId || pool.id} hover>
-                        <TableCell>{pool.bettingPoolId || pool.id}</TableCell>
+                        <TableCell>{pool.bettingPoolCode || pool.code || `#${pool.bettingPoolId || pool.id}`}</TableCell>
                         <TableCell>{pool.bettingPoolName || pool.name}</TableCell>
                         <TableCell>{pool.reference || '-'}</TableCell>
                         <TableCell>{pool.daysWithoutSales}</TableCell>

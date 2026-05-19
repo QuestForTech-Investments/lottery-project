@@ -51,7 +51,8 @@ const CleanPaymentsModal: FC<CleanPaymentsModalProps> = memo(({
             {selectedPool?.bettingPoolName || selectedPool?.name}
           </Typography>
           <Typography variant="body1">
-            <strong>Número:</strong> #{selectedPool?.bettingPoolId || selectedPool?.id}
+            <strong>Número:</strong>{' '}
+            {selectedPool?.bettingPoolCode || selectedPool?.code || `#${selectedPool?.bettingPoolId || selectedPool?.id}`}
           </Typography>
         </Box>
 
