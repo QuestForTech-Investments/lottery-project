@@ -299,6 +299,12 @@ public class ResultsController : ControllerBase
 
         _logger.LogInformation("Created result {ResultId} for draw {DrawId}", result.ResultId, dto.DrawId);
 
+        // Clear the matching RESULT_PUBLICATION_LATE warning (if any) — the
+        // result was just published, the issue is fixed.
+        var lateRefId = $"{dto.DrawId}_{dto.ResultDate:yyyy-MM-dd}";
+        await _warningService.ClearAsync(
+            WarningTypes.ResultPublicationLate, lateRefId, "draw");
+
         // Automatically check for winners when new result is created
         var (newTicketsProcessed, newWinnersFound) = await _externalResultsService.ProcessTicketsForDrawAsync(
             dto.DrawId, dto.ResultDate);
@@ -896,6 +902,11 @@ public class ResultsController : ControllerBase
             var (cascadeTickets, cascadeWinners) = await CascadeReprocessCompositeDrawsAsync(draw.Name, request.Date);
             totalTicketsProcessed += cascadeTickets;
             totalWinnersFound += cascadeWinners;
+
+            // Clear any RESULT_PUBLICATION_LATE warning now that the result is in.
+            var lateRefId = $"{draw.Id}_{request.Date:yyyy-MM-dd}";
+            await _warningService.ClearAsync(
+                WarningTypes.ResultPublicationLate, lateRefId, "draw");
         }
 
         _logger.LogInformation("Processed {TicketsProcessed} tickets across {DrawCount} draws, found {WinnersFound} winners",

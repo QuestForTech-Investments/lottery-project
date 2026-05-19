@@ -28,6 +28,13 @@ public class NotificationsController : ControllerBase
         return int.TryParse(raw, out var id) ? id : (int?)null;
     }
 
+    /// <summary>Resolve the current banca's id from the JWT `bettingPoolId` claim.</summary>
+    private int? CurrentBancaId()
+    {
+        var raw = User.FindFirst("bettingPoolId")?.Value;
+        return int.TryParse(raw, out var id) ? id : (int?)null;
+    }
+
     private async Task<bool> HasPermissionAsync(string code)
     {
         var userId = CurrentUserId();
@@ -281,5 +288,122 @@ public class NotificationsController : ControllerBase
         if (rows.Count > 0) await _context.SaveChangesAsync();
 
         return Ok(new { updated = rows.Count });
+    }
+
+    // ────────────────────────────────────────────────────────────────
+    // BANCA endpoints — for POS / TPV clients.
+    // The banca's id is read from the JWT `bettingPoolId` claim, so no
+    // path parameter is required. Behavior mirrors the admin `/me/*` set.
+    // ────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Notifications addressed to the current banca (POS user), newest first.
+    /// Excludes expired notifications.
+    /// </summary>
+    [HttpGet("banca/me")]
+    public async Task<ActionResult<List<NotificationListItem>>> GetMineBanca()
+    {
+        var bancaId = CurrentBancaId();
+        if (bancaId == null) return Unauthorized(new { error = "El usuario no está asociado a una banca." });
+
+        var now = DateTime.UtcNow;
+        var query =
+            from r in _context.NotificationReads.AsNoTracking()
+            where r.RecipientType == "banca" && r.RecipientId == bancaId
+            join n in _context.Notifications.AsNoTracking() on r.NotificationId equals n.NotificationId
+            where !n.ExpiresAt.HasValue || n.ExpiresAt.Value > now
+            join u in _context.Users.AsNoTracking() on n.CreatedBy equals u.UserId into createdBy
+            from u in createdBy.DefaultIfEmpty()
+            orderby n.CreatedAt descending
+            select new NotificationListItem
+            {
+                NotificationId = n.NotificationId,
+                Message = n.Message,
+                Priority = n.Priority,
+                NotificationType = n.NotificationType,
+                ExpiresAt = n.ExpiresAt,
+                CreatedAt = n.CreatedAt,
+                CreatedByName = u != null ? u.Username : null,
+                IsRead = r.IsRead,
+                ReadAt = r.ReadAt,
+            };
+
+        var items = await query.Take(200).ToListAsync();
+        return Ok(items);
+    }
+
+    /// <summary>Unread count for the POS notification badge.</summary>
+    [HttpGet("banca/me/count")]
+    public async Task<ActionResult<object>> GetMyCountBanca()
+    {
+        var bancaId = CurrentBancaId();
+        if (bancaId == null) return Unauthorized(new { error = "El usuario no está asociado a una banca." });
+
+        var now = DateTime.UtcNow;
+        var unread = await (
+            from r in _context.NotificationReads.AsNoTracking()
+            where r.RecipientType == "banca" && r.RecipientId == bancaId && !r.IsRead
+            join n in _context.Notifications.AsNoTracking() on r.NotificationId equals n.NotificationId
+            where !n.ExpiresAt.HasValue || n.ExpiresAt.Value > now
+            select r
+        ).CountAsync();
+
+        return Ok(new { unread });
+    }
+
+    /// <summary>
+    /// Mark one or more notifications as read for the current banca.
+    /// Pass an empty / missing list to mark every unread one as read.
+    /// </summary>
+    [HttpPost("banca/me/read")]
+    public async Task<ActionResult<object>> MarkReadBanca([FromBody] MarkReadRequest? request)
+    {
+        var bancaId = CurrentBancaId();
+        if (bancaId == null) return Unauthorized(new { error = "El usuario no está asociado a una banca." });
+
+        var ids = request?.NotificationIds;
+        var now = DateTime.UtcNow;
+
+        var query = _context.NotificationReads
+            .Where(r => r.RecipientType == "banca" && r.RecipientId == bancaId && !r.IsRead);
+        if (ids != null && ids.Count > 0)
+        {
+            query = query.Where(r => ids.Contains(r.NotificationId));
+        }
+
+        var rows = await query.ToListAsync();
+        foreach (var r in rows)
+        {
+            r.IsRead = true;
+            r.ReadAt = now;
+        }
+        if (rows.Count > 0) await _context.SaveChangesAsync();
+
+        return Ok(new { updated = rows.Count });
+    }
+
+    /// <summary>
+    /// Remove a notification from the current banca's inbox. Only deletes the
+    /// per-recipient `notification_reads` row, so other recipients aren't affected.
+    /// </summary>
+    [HttpDelete("banca/me/{notificationId:long}")]
+    public async Task<ActionResult<object>> DeleteFromBancaInbox(long notificationId)
+    {
+        var bancaId = CurrentBancaId();
+        if (bancaId == null) return Unauthorized(new { error = "El usuario no está asociado a una banca." });
+
+        var row = await _context.NotificationReads
+            .FirstOrDefaultAsync(r => r.NotificationId == notificationId
+                && r.RecipientType == "banca"
+                && r.RecipientId == bancaId);
+
+        if (row == null)
+        {
+            return NotFound(new { error = "Notificación no encontrada en la bandeja de la banca." });
+        }
+
+        _context.NotificationReads.Remove(row);
+        await _context.SaveChangesAsync();
+        return Ok(new { deleted = 1 });
     }
 }

@@ -38,4 +38,15 @@ public interface IWarningService
         string referenceId,
         string referenceType,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Delete every warning matching (type, referenceId, referenceType). Used to
+    /// auto-clear lateness/publication warnings once the underlying issue is fixed
+    /// (e.g. the missing result was finally published).
+    /// </summary>
+    Task<int> ClearAsync(
+        string type,
+        string referenceId,
+        string referenceType,
+        CancellationToken cancellationToken = default);
 }

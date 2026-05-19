@@ -217,6 +217,11 @@ const WarningsList: React.FC = () => {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [loadingNotifs, setLoadingNotifs] = useState<boolean>(false);
 
+  // Historial de resultado no publicado — last N days, configurable.
+  const [historyDays, setHistoryDays] = useState<number>(7);
+  const [historyWarnings, setHistoryWarnings] = useState<Warning[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState<boolean>(false);
+
   const handleTicketClick = (w: Warning) => {
     if (!w.ticketId) return;
     const params = new URLSearchParams();
@@ -270,7 +275,7 @@ const WarningsList: React.FC = () => {
   // When the user opens the Notificaciones tab, mark everything as read so the
   // bell badge updates immediately on the next poll.
   useEffect(() => {
-    if (activeTab !== 2) return;
+    if (activeTab !== 1) return;
     const unread = notifications.filter((n) => !n.isRead).map((n) => n.notificationId);
     if (unread.length === 0) return;
     markNotificationsRead(unread)
@@ -288,6 +293,46 @@ const WarningsList: React.FC = () => {
     () => notifications.filter((n) => !n.isRead).length,
     [notifications],
   );
+
+  // Range query for the unpublished-results history.
+  const loadHistory = useCallback(async () => {
+    setLoadingHistory(true);
+    try {
+      const days = Math.max(1, Math.min(365, Math.floor(Number(historyDays) || 7)));
+      const end = new Date();
+      const start = new Date();
+      start.setDate(start.getDate() - (days - 1));
+      const fmt = (d: Date) => {
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${dd}`;
+      };
+      const data = await getWarnings(undefined, 'RESULT_PUBLICATION_LATE', {
+        startDate: fmt(start),
+        endDate: fmt(end),
+      });
+      setHistoryWarnings(data);
+    } catch (err) {
+      console.error('Error loading unpublished-results history:', err);
+      setHistoryWarnings([]);
+    } finally {
+      setLoadingHistory(false);
+    }
+  }, [historyDays]);
+
+  // Fetch when the user opens the Historial tab or changes the days filter.
+  useEffect(() => {
+    if (activeTab !== 3) return;
+    loadHistory();
+  }, [activeTab, loadHistory]);
+
+  // Keep the history count fresh for the tab badge so we don't have to open the
+  // tab first to see the number.
+  useEffect(() => {
+    loadHistory();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Optimistic delete — drop the row locally first, restore if the request fails.
   const handleDeleteNotification = useCallback(async (notificationId: number) => {
@@ -416,6 +461,14 @@ const WarningsList: React.FC = () => {
             <Tab
               label={
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  Notificaciones
+                  {tabBadge(unreadNotifications)}
+                </Box>
+              }
+            />
+            <Tab
+              label={
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
                   Resultados no publicados
                   {tabBadge(totalLateResults)}
                 </Box>
@@ -424,8 +477,8 @@ const WarningsList: React.FC = () => {
             <Tab
               label={
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  Notificaciones
-                  {tabBadge(unreadNotifications)}
+                  Historial de resultado no publicado
+                  {tabBadge(historyWarnings.length)}
                 </Box>
               }
             />
@@ -539,7 +592,7 @@ const WarningsList: React.FC = () => {
             </>
           )}
 
-          {activeTab === 1 && (
+          {activeTab === 2 && (
             <Table size="small">
               <TableHead>
                 <TableRow sx={{ bgcolor: '#f5f5f5' }}>
@@ -568,7 +621,58 @@ const WarningsList: React.FC = () => {
             </Table>
           )}
 
-          {activeTab === 2 && (
+          {activeTab === 3 && (
+            <>
+              <Box sx={{ display: 'flex', gap: 2, mb: 2, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                <TextField
+                  type="number"
+                  label="Últimos N días"
+                  size="small"
+                  value={historyDays}
+                  onChange={(e) => {
+                    const v = parseInt(e.target.value, 10);
+                    if (Number.isNaN(v)) return;
+                    setHistoryDays(Math.max(1, Math.min(365, v)));
+                  }}
+                  inputProps={{ min: 1, max: 365 }}
+                  sx={{ width: 180 }}
+                />
+                {loadingHistory && <CircularProgress size={20} sx={{ color: '#6366f1' }} />}
+              </Box>
+
+              <SectionHeader title="Resultados no publicados" count={historyWarnings.length} />
+              <Table size="small">
+                <TableHead>
+                  <TableRow sx={{ bgcolor: '#f5f5f5' }}>
+                    <TableCell sx={{ fontWeight: 'bold' }}>Tipo</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>Mensaje</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>Fecha</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {historyWarnings.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={3} align="center" sx={{ py: 3, color: '#888' }}>
+                        {loadingHistory
+                          ? 'Cargando...'
+                          : `No hay resultados sin publicar en los últimos ${historyDays} días`}
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    historyWarnings.map((w) => (
+                      <TableRow key={w.warningId} hover>
+                        <TableCell>{renderChip(w)}</TableCell>
+                        <TableCell>{w.message || '-'}</TableCell>
+                        <TableCell>{formatDateTime(w.createdAt)}</TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </>
+          )}
+
+          {activeTab === 1 && (
             <>
               <SectionHeader title="Notificaciones" count={totalNotifications} />
               <Table size="small">

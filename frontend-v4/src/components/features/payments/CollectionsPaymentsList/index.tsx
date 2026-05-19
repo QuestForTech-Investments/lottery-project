@@ -17,7 +17,8 @@ import {
 } from '@mui/material';
 import DateFilter from '../../balances/common/DateFilter';
 import QuickFilter from '../../balances/common/QuickFilter';
-import CreateTransactionModal from '../CreateTransactionModal';
+import CreateCobroPagoModal from './CreateCobroPagoModal';
+import TransactionGroupDetailModal from '../../transactions/TransactionGroupsList/TransactionGroupDetailModal';
 import api from '@services/api';
 import { getTodayDate } from '@/utils/formatters';
 import { useTableSort } from '@/utils/useTableSort';
@@ -68,6 +69,7 @@ const CollectionsPaymentsList = (): React.ReactElement => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState<boolean>(false);
+  const [detailGroupId, setDetailGroupId] = useState<number | null>(null);
 
   const loadTransactions = useCallback(async () => {
     setLoading(true);
@@ -223,7 +225,21 @@ const CollectionsPaymentsList = (): React.ReactElement => {
                   const chip = statusChipColor(row.status);
                   return (
                     <TableRow key={row.groupId} hover>
-                      <TableCell sx={{ fontSize: '13px', fontFamily: 'monospace' }}>{row.numero}</TableCell>
+                      <TableCell sx={{ fontSize: '13px' }}>
+                        <Typography
+                          component="span"
+                          onClick={() => setDetailGroupId(row.groupId)}
+                          sx={{
+                            fontFamily: 'monospace',
+                            color: '#1976d2',
+                            cursor: 'pointer',
+                            textDecoration: 'underline',
+                            fontSize: 'inherit',
+                          }}
+                        >
+                          {row.numero}
+                        </Typography>
+                      </TableCell>
                       <TableCell sx={{ fontSize: '13px' }}>{row.fecha}</TableCell>
                       <TableCell sx={{ fontSize: '13px' }}>{row.hora}</TableCell>
                       <TableCell sx={{ fontSize: '13px' }}>{row.creadoPor.toUpperCase()}</TableCell>
@@ -268,9 +284,21 @@ const CollectionsPaymentsList = (): React.ReactElement => {
         </Box>
       </Paper>
 
-      <CreateTransactionModal
+      <CreateCobroPagoModal
         open={showCreateModal}
         onClose={() => setShowCreateModal(false)}
+        onCreated={() => {
+          setShowCreateModal(false);
+          loadTransactions();
+        }}
+      />
+
+      <TransactionGroupDetailModal
+        open={detailGroupId !== null}
+        groupId={detailGroupId}
+        onClose={() => setDetailGroupId(null)}
+        // Refresh the list after a delete from inside the detail modal.
+        onDeleted={loadTransactions}
       />
     </Box>
   );

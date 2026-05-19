@@ -69,4 +69,38 @@ public class WarningService : IWarningService
                 && w.ReferenceType == referenceType,
                 cancellationToken);
     }
+
+    public async Task<int> ClearAsync(
+        string type,
+        string referenceId,
+        string referenceType,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var matches = await _context.Warnings
+                .Where(w => w.WarningType == type
+                    && w.ReferenceId == referenceId
+                    && w.ReferenceType == referenceType)
+                .ToListAsync(cancellationToken);
+
+            if (matches.Count == 0) return 0;
+
+            _context.Warnings.RemoveRange(matches);
+            await _context.SaveChangesAsync(cancellationToken);
+
+            _logger.LogInformation(
+                "Cleared {Count} warnings of type {Type} for {RefType}={RefId}",
+                matches.Count, type, referenceType, referenceId);
+
+            return matches.Count;
+        }
+        catch (Exception ex)
+        {
+            // Cleanup must never break the primary flow.
+            _logger.LogError(ex, "Failed to clear warnings {Type} {RefType}={RefId}",
+                type, referenceType, referenceId);
+            return 0;
+        }
+    }
 }

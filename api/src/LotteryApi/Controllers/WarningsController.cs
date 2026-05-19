@@ -100,13 +100,29 @@ public class WarningsController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<List<WarningDto>>> GetWarnings(
         [FromQuery] DateTime? date = null,
-        [FromQuery] string? type = null)
+        [FromQuery] string? type = null,
+        [FromQuery] DateTime? startDate = null,
+        [FromQuery] DateTime? endDate = null)
     {
         if (!await HasPermissionAsync("VIEW_ANOMALIES")) return Forbid();
 
-        var targetDay = date?.Date ?? DateTimeHelper.TodayInBusinessTimezone();
-        var utcStart = DateTimeHelper.GetUtcStartOfDay(targetDay);
-        var utcEnd = DateTimeHelper.GetUtcEndOfDay(targetDay);
+        // Range filter takes priority when either bound is present, otherwise fall
+        // back to the legacy single-day `date` param (defaults to today).
+        DateTime utcStart;
+        DateTime utcEnd;
+        if (startDate.HasValue || endDate.HasValue)
+        {
+            var rangeStart = (startDate ?? endDate)!.Value.Date;
+            var rangeEnd = (endDate ?? startDate)!.Value.Date;
+            utcStart = DateTimeHelper.GetUtcStartOfDay(rangeStart);
+            utcEnd = DateTimeHelper.GetUtcEndOfDay(rangeEnd);
+        }
+        else
+        {
+            var targetDay = date?.Date ?? DateTimeHelper.TodayInBusinessTimezone();
+            utcStart = DateTimeHelper.GetUtcStartOfDay(targetDay);
+            utcEnd = DateTimeHelper.GetUtcEndOfDay(targetDay);
+        }
 
         var query = _context.Warnings
             .AsNoTracking()

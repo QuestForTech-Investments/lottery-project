@@ -44,10 +44,17 @@ export interface WarningCountResponse {
 
 export const getWarnings = async (
   date?: string,
-  type?: WarningType
+  type?: WarningType,
+  range?: { startDate: string; endDate: string },
 ): Promise<Warning[]> => {
   const params: Record<string, string> = {};
-  if (date) params.date = date;
+  // A range takes priority on the backend; date is left out when both bounds are sent.
+  if (range) {
+    params.startDate = range.startDate;
+    params.endDate = range.endDate;
+  } else if (date) {
+    params.date = date;
+  }
   if (type) params.type = type;
   const qs = new URLSearchParams(params).toString();
   const url = qs ? `/warnings?${qs}` : '/warnings';

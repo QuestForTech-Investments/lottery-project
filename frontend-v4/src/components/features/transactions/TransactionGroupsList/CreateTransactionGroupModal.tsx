@@ -37,7 +37,8 @@ import api from '../../../../services/api';
 import type { BettingPoolBalanceAPI } from '../../../../services/balanceService';
 import ConfirmPinModal from '@components/modals/ConfirmPinModal';
 
-const TRANSACTION_TYPES = ['Cobro', 'Pago', 'Ajuste', 'Retiro', 'Gasto'];
+const ALL_TRANSACTION_TYPES = ['Cobro', 'Pago', 'Ajuste', 'Retiro', 'Gasto'] as const;
+type TransactionTypeName = (typeof ALL_TRANSACTION_TYPES)[number];
 
 /** Above this amount, an admin PIN is required to confirm. */
 const HIGH_AMOUNT_PIN_THRESHOLD = 10000;
@@ -83,6 +84,8 @@ interface CreateTransactionGroupModalProps {
   open: boolean;
   onClose: () => void;
   onCreated?: () => void;
+  /** Optional restriction — when set, only these types appear in the type dropdown. */
+  allowedTypes?: TransactionTypeName[];
 }
 
 // Type-based configuration for entity labels and sources
@@ -103,7 +106,12 @@ const getTypeConfig = (type: string) => {
   }
 };
 
-const CreateTransactionGroupModal = ({ open, onClose, onCreated }: CreateTransactionGroupModalProps): React.ReactElement => {
+const CreateTransactionGroupModal = ({ open, onClose, onCreated, allowedTypes }: CreateTransactionGroupModalProps): React.ReactElement => {
+  // Use the subset when provided; fall back to the full set.
+  const transactionTypes = useMemo<readonly string[]>(
+    () => (allowedTypes && allowedTypes.length > 0 ? allowedTypes : ALL_TRANSACTION_TYPES),
+    [allowedTypes],
+  );
   const [zoneId, setZoneId] = useState<string>('');
   const [transactionType, setTransactionType] = useState<string>('');
   const [entity1, setEntity1] = useState<EntityOption | null>(null);
@@ -490,7 +498,7 @@ const CreateTransactionGroupModal = ({ open, onClose, onCreated }: CreateTransac
                 onChange={(e: SelectChangeEvent) => handleTypeChange(e.target.value)}
                 label="Tipo"
               >
-                {TRANSACTION_TYPES.map(t => (
+                {transactionTypes.map(t => (
                   <MenuItem key={t} value={t}>{t}</MenuItem>
                 ))}
               </Select>
