@@ -42,6 +42,7 @@ import ChangePasswordModal from '@components/modals/ChangePasswordModal'
 import TimezoneModal from '@components/modals/TimezoneModal'
 import * as authService from '@services/authService'
 import { getWarningCount } from '@services/warningService'
+import { getMyNotificationsCount } from '@services/notificationService'
 import * as logger from '@utils/logger'
 
 interface HeaderProps {
@@ -144,6 +145,8 @@ const Header = ({ sidebarCollapsed, sidebarHovered, onToggleSidebar, isMobile = 
   const [activeIcon, setActiveIcon] = useState<string | null>(null)
   const [totalWarnings, setTotalWarnings] = useState<number>(0)
   const [seenWarnings, setSeenWarnings] = useState<number>(0)
+  // Unread admin notifications — server-tracked, no localStorage needed.
+  const [unreadNotifications, setUnreadNotifications] = useState<number>(0)
   const openSettings = Boolean(settingsAnchorEl)
   const location = useLocation()
   const { hasPermission } = useUserPermissions()
@@ -176,11 +179,21 @@ const Header = ({ sidebarCollapsed, sidebarHovered, onToggleSidebar, isMobile = 
     let cancelled = false
     const fetchCount = async () => {
       try {
-        const count = await getWarningCount()
+        // Fetch both counts in parallel; treat them as independent so a 404 on
+        // either endpoint doesn't blank out the other badge.
+        const [warnings, notifs] = await Promise.allSettled([
+          getWarningCount(),
+          getMyNotificationsCount(),
+        ])
         if (cancelled) return
-        setTotalWarnings(count)
-        setSeenWarnings(readSeenForToday())
-      } catch (err) {
+        if (warnings.status === 'fulfilled') {
+          setTotalWarnings(warnings.value)
+          setSeenWarnings(readSeenForToday())
+        }
+        if (notifs.status === 'fulfilled') {
+          setUnreadNotifications(notifs.value)
+        }
+      } catch {
         // Silent fail — badge just stays at last value
       }
     }
@@ -193,15 +206,18 @@ const Header = ({ sidebarCollapsed, sidebarHovered, onToggleSidebar, isMobile = 
   }, [])
 
   // Mark current count as "seen" when the user opens the warnings page.
+  // The Notificaciones tab on that page marks server-side too, which will be
+  // reflected on the next fetchCount tick.
   useEffect(() => {
     if (location.pathname === '/warnings') {
       writeSeen(totalWarnings)
       setSeenWarnings(totalWarnings)
+      setUnreadNotifications(0)
     }
   }, [location.pathname, totalWarnings])
 
-  // Badge shows only new (unseen) warnings; new arrivals push it back above zero.
-  const warningCount = Math.max(0, totalWarnings - seenWarnings)
+  // Combined badge — unseen warnings plus unread notifications.
+  const warningCount = Math.max(0, totalWarnings - seenWarnings) + unreadNotifications
 
   const handleSettingsClick = (event: MouseEvent<HTMLElement>) => {
     setSettingsAnchorEl(event.currentTarget)

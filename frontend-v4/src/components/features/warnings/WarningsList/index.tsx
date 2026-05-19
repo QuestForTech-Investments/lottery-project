@@ -15,7 +15,10 @@ import {
   Link as MuiLink,
   Tabs,
   Tab,
+  IconButton,
+  Tooltip,
 } from '@mui/material';
+import { DeleteOutline } from '@mui/icons-material';
 import { getTodayDate } from '@/utils/formatters';
 import { formatCurrency } from '@/utils/formatCurrency';
 import {
@@ -25,6 +28,12 @@ import {
   type WarningType,
   type WarningSeverity,
 } from '@services/warningService';
+import {
+  getMyNotifications,
+  markNotificationsRead,
+  deleteMyNotification,
+  type NotificationItem,
+} from '@services/notificationService';
 
 const TICKET_TYPES: WarningType[] = [
   'TICKET_CREATED_LATE',
@@ -192,6 +201,12 @@ const renderResultDiff = (meta: ResultChangeMeta) => {
   );
 };
 
+const PRIORITY_STYLE: Record<NotificationItem['priority'], { bg: string; text: string; label: string }> = {
+  high:   { bg: '#ffebee', text: '#c62828', label: 'ALTA' },
+  medium: { bg: '#fff3e0', text: '#e65100', label: 'MEDIA' },
+  low:    { bg: '#e3f2fd', text: '#1565c0', label: 'BAJA' },
+};
+
 const WarningsList: React.FC = () => {
   const navigate = useNavigate();
   const [date, setDate] = useState<string>(getTodayDate());
@@ -199,6 +214,8 @@ const WarningsList: React.FC = () => {
   const [warnings, setWarnings] = useState<Warning[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<number>(0);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [loadingNotifs, setLoadingNotifs] = useState<boolean>(false);
 
   const handleTicketClick = (w: Warning) => {
     if (!w.ticketId) return;
@@ -231,6 +248,58 @@ const WarningsList: React.FC = () => {
   useEffect(() => {
     loadWarnings();
   }, [loadWarnings]);
+
+  // Load the current user's notifications once on mount.
+  const loadNotifications = useCallback(async () => {
+    setLoadingNotifs(true);
+    try {
+      const items = await getMyNotifications();
+      setNotifications(items);
+    } catch (err) {
+      console.error('Error loading notifications:', err);
+      setNotifications([]);
+    } finally {
+      setLoadingNotifs(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadNotifications();
+  }, [loadNotifications]);
+
+  // When the user opens the Notificaciones tab, mark everything as read so the
+  // bell badge updates immediately on the next poll.
+  useEffect(() => {
+    if (activeTab !== 2) return;
+    const unread = notifications.filter((n) => !n.isRead).map((n) => n.notificationId);
+    if (unread.length === 0) return;
+    markNotificationsRead(unread)
+      .then(() => {
+        setNotifications((prev) => prev.map((n) =>
+          unread.includes(n.notificationId) ? { ...n, isRead: true } : n,
+        ));
+      })
+      .catch((err) => console.error('Error marking notifications read:', err));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
+
+  const totalNotifications = notifications.length;
+  const unreadNotifications = useMemo(
+    () => notifications.filter((n) => !n.isRead).length,
+    [notifications],
+  );
+
+  // Optimistic delete — drop the row locally first, restore if the request fails.
+  const handleDeleteNotification = useCallback(async (notificationId: number) => {
+    const snapshot = notifications;
+    setNotifications((prev) => prev.filter((n) => n.notificationId !== notificationId));
+    try {
+      await deleteMyNotification(notificationId);
+    } catch (err) {
+      console.error('Error deleting notification:', err);
+      setNotifications(snapshot);
+    }
+  }, [notifications]);
 
   const matchesFilter = (w: Warning): boolean => {
     if (!filter) return true;
@@ -349,6 +418,14 @@ const WarningsList: React.FC = () => {
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                   Resultados no publicados
                   {tabBadge(totalLateResults)}
+                </Box>
+              }
+            />
+            <Tab
+              label={
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  Notificaciones
+                  {tabBadge(unreadNotifications)}
                 </Box>
               }
             />
@@ -489,6 +566,69 @@ const WarningsList: React.FC = () => {
                 )}
               </TableBody>
             </Table>
+          )}
+
+          {activeTab === 2 && (
+            <>
+              <SectionHeader title="Notificaciones" count={totalNotifications} />
+              <Table size="small">
+                <TableHead>
+                  <TableRow sx={{ bgcolor: '#f5f5f5' }}>
+                    <TableCell sx={{ fontWeight: 'bold' }}>Prioridad</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>Mensaje</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>De</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>Recibida</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>Expira</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', textAlign: 'center', width: 56 }}>Acciones</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {notifications.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} align="center" sx={{ py: 3, color: '#888' }}>
+                        {loadingNotifs ? 'Cargando...' : 'No tiene notificaciones'}
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    notifications.map((n) => {
+                      const p = PRIORITY_STYLE[n.priority] || PRIORITY_STYLE.medium;
+                      return (
+                        <TableRow
+                          key={n.notificationId}
+                          hover
+                          sx={{ backgroundColor: n.isRead ? 'transparent' : '#f0f7ff' }}
+                        >
+                          <TableCell>
+                            <Chip
+                              label={p.label}
+                              size="small"
+                              sx={{ bgcolor: p.bg, color: p.text, fontWeight: 600 }}
+                            />
+                          </TableCell>
+                          <TableCell sx={{ fontWeight: n.isRead ? 400 : 600 }}>
+                            {n.message}
+                          </TableCell>
+                          <TableCell>{(n.createdByName || '-').toUpperCase()}</TableCell>
+                          <TableCell>{formatDateTime(n.createdAt)}</TableCell>
+                          <TableCell>{n.expiresAt ? formatDateTime(n.expiresAt) : '-'}</TableCell>
+                          <TableCell align="center">
+                            <Tooltip title="Eliminar">
+                              <IconButton
+                                size="small"
+                                onClick={() => handleDeleteNotification(n.notificationId)}
+                                sx={{ color: '#c62828' }}
+                              >
+                                <DeleteOutline fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </>
           )}
         </Box>
       </Paper>

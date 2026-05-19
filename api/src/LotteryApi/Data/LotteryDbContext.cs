@@ -118,6 +118,10 @@ public class LotteryDbContext : DbContext
     // Warnings
     public DbSet<Warning> Warnings { get; set; }
 
+    // Notifications (admin → banca/admin messages)
+    public DbSet<Notification> Notifications { get; set; }
+    public DbSet<NotificationRead> NotificationReads { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

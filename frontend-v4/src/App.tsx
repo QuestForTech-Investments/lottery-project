@@ -69,6 +69,9 @@ const ZoneBalancesMUI = lazy(() => import('@components/features/balances/ZoneBal
 // Payments feature components
 const CollectionsPaymentsListMUI = lazy(() => import('@components/features/payments/CollectionsPaymentsList'))
 
+// Notifications feature components
+const SendNotificationMUI = lazy(() => import('@components/features/notifications/SendNotification'))
+
 // Transactions feature components
 const TransactionsListMUI = lazy(() => import('@components/features/transactions/TransactionsList'))
 const TransactionsByBettingPoolMUI = lazy(() => import('@components/features/transactions/TransactionsByBettingPool'))
@@ -298,6 +301,13 @@ function App() {
                           <Route path="/collections-payments/list" element={
                             <PermissionGuard permission={['CREATE_PAYMENTS', 'CREATE_COLLECTIONS', 'PAYMENTS_COLLECTIONS_QUICK']}>
                               <LazyRoute component={CollectionsPaymentsListMUI} />
+                            </PermissionGuard>
+                          } />
+
+                          {/* Notifications */}
+                          <Route path="/notifications" element={
+                            <PermissionGuard permission="SEND_NOTIFICATIONS">
+                              <LazyRoute component={SendNotificationMUI} />
                             </PermissionGuard>
                           } />
 
