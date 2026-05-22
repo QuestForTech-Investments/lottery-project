@@ -12,6 +12,10 @@ const getHubUrl = (): string => {
   return `${window.location.origin}/hubs/lottery`;
 };
 
+// Cache key for play-limit lookups. Bet number normalised to trim cheap whitespace.
+const limitCacheKey = (drawId: number, gameTypeId: number, betNumber: string) =>
+  `${drawId}_${gameTypeId}_${betNumber.trim()}`;
+
 export interface LimitAvailability {
   betNumber: string;
   gameTypeId: number;
@@ -38,6 +42,12 @@ export interface PlayStats {
 export interface UseSignalRReturn {
   connected: boolean;
   checkPlayLimit: (betNumber: string, gameTypeId: number, drawId: number, bettingPoolId: number) => void;
+  /**
+   * Read the most recent <see cref="LimitAvailability"/> for a key without
+   * dispatching a new request. Useful for showing a cached value instantly
+   * while a fresh check is in flight (avoids the empty/loading flicker).
+   */
+  getCachedLimit: (betNumber: string, gameTypeId: number, drawId: number) => LimitAvailability | undefined;
   getPlayStats: (betNumber: string, gameTypeId: number, drawId: number, bettingPoolId: number) => void;
   reservePlay: (drawId: number, gameTypeId: number, bettingPoolId: number, amount: number, betNumber?: string) => void;
   releaseReservation: (reservationId: string) => void;
@@ -52,20 +62,36 @@ export const useSignalR = (): UseSignalRReturn => {
   const limitCallbackRef = useRef<((data: LimitAvailability) => void) | null>(null);
   const reserveCallbackRef = useRef<((data: { reservationId: string; drawId: number; gameTypeId: number; amount: number }) => void) | null>(null);
   const playStatsCallbackRef = useRef<((data: PlayStats) => void) | null>(null);
+  // Last-seen availability per (drawId, gameTypeId, betNumber). Lets the UI
+  // render an instant value while a fresh check is en-route.
+  const limitCacheRef = useRef<Map<string, LimitAvailability>>(new Map());
+  // De-duplicate in-flight checks: when the user re-types the same number, we
+  // skip the redundant invoke until the previous one resolves.
+  const inFlightChecksRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     const token = localStorage.getItem('authToken');
     if (!token) return;
 
     const hubUrl = getHubUrl();
+    // skipNegotiation + WebSockets-only transport saves one round-trip on
+    // connection setup. Stayed on the default JSON protocol — MessagePack
+    // would need a custom camelCase resolver on the server to match the TS
+    // contract, and the savings are dwarfed by the DB-query parallelization
+    // in the Hub anyway.
     const connection = new signalR.HubConnectionBuilder()
-      .withUrl(`${hubUrl}?access_token=${token}`)
-      .withAutomaticReconnect([0, 2000, 5000, 10000, 30000])
+      .withUrl(`${hubUrl}?access_token=${token}`, {
+        skipNegotiation: true,
+        transport: signalR.HttpTransportType.WebSockets,
+      })
+      .withAutomaticReconnect([0, 500, 1500, 3000, 5000, 10000])
       .configureLogging(signalR.LogLevel.Warning)
       .build();
 
     // Listen for limit availability responses
     connection.on('PlayLimitAvailability', (data: LimitAvailability) => {
+      limitCacheRef.current.set(limitCacheKey(data.drawId, data.gameTypeId, data.betNumber), data);
+      inFlightChecksRef.current.delete(limitCacheKey(data.drawId, data.gameTypeId, data.betNumber));
       limitCallbackRef.current?.(data);
     });
 
@@ -113,8 +139,20 @@ export const useSignalR = (): UseSignalRReturn => {
     const conn = connectionRef.current;
     if (!conn || conn.state !== signalR.HubConnectionState.Connected) return;
 
+    // Skip duplicate inflight requests so rapid typing doesn't fan out to the hub.
+    const key = limitCacheKey(drawId, gameTypeId, betNumber);
+    if (inFlightChecksRef.current.has(key)) return;
+    inFlightChecksRef.current.add(key);
+
     conn.invoke('CheckPlayLimit', { betNumber, gameTypeId, drawId, bettingPoolId })
-      .catch(err => console.warn('[SignalR] CheckPlayLimit error:', err));
+      .catch(err => {
+        inFlightChecksRef.current.delete(key);
+        console.warn('[SignalR] CheckPlayLimit error:', err);
+      });
+  }, []);
+
+  const getCachedLimit = useCallback((betNumber: string, gameTypeId: number, drawId: number) => {
+    return limitCacheRef.current.get(limitCacheKey(drawId, gameTypeId, betNumber));
   }, []);
 
   const reservePlay = useCallback((drawId: number, gameTypeId: number, bettingPoolId: number, amount: number, betNumber?: string) => {
@@ -148,6 +186,7 @@ export const useSignalR = (): UseSignalRReturn => {
   return {
     connected,
     checkPlayLimit,
+    getCachedLimit,
     getPlayStats,
     reservePlay,
     releaseReservation,
