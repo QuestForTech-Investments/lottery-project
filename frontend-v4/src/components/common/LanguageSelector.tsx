@@ -4,12 +4,13 @@ import { Menu, MenuItem, ListItemIcon, ListItemText, Box, IconButton } from '@mu
 import { ArrowDropDown } from '@mui/icons-material'
 import { updateMyPreferredLanguage } from '@services/userService'
 import { isAuthenticated } from '@services/authService'
+import { FlagES, FlagUS, FlagFR, FlagHT } from './LanguageFlags'
 
 const languages = [
-  { code: 'es', name: 'language.spanish', flag: '🇪🇸' },
-  { code: 'en', name: 'language.english', flag: '🇬🇧' },
-  { code: 'fr', name: 'language.french', flag: '🇫🇷' },
-  { code: 'ht', name: 'language.creole', flag: '🇭🇹' }
+  { code: 'es', name: 'language.spanish', Flag: FlagES },
+  { code: 'en', name: 'language.english', Flag: FlagUS },
+  { code: 'fr', name: 'language.french', Flag: FlagFR },
+  { code: 'ht', name: 'language.creole', Flag: FlagHT },
 ]
 
 interface LanguageSelectorProps {
@@ -78,8 +79,8 @@ export default function LanguageSelector({
           }
         }}
       >
-        <Box component="span" sx={{ fontSize: '18px', lineHeight: 1 }}>
-          {currentLang.flag}
+        <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', lineHeight: 0 }}>
+          <currentLang.Flag />
         </Box>
         <Box
           component="span"
@@ -134,8 +135,8 @@ export default function LanguageSelector({
               }
             }}
           >
-            <ListItemIcon>
-              <span style={{ fontSize: '18px' }}>{lang.flag}</span>
+            <ListItemIcon sx={{ minWidth: 32, display: 'flex', alignItems: 'center' }}>
+              <lang.Flag />
             </ListItemIcon>
             <ListItemText>{t(lang.name)}</ListItemText>
           </MenuItem>

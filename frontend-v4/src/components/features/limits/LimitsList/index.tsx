@@ -78,7 +78,11 @@ const styles = {
     boxShadow: 'none', '&:hover': { bgcolor: ACCENT_HOVER },
   },
   dayTab: {
-    textTransform: 'none' as const, fontSize: '14px', fontWeight: 500, minWidth: 0, flex: 1,
+    textTransform: 'none' as const, fontSize: '14px', fontWeight: 500,
+    // Each tab sizes to its label so scrollable variant can lay them out
+    // naturally; setting flex:1 here used to squash the labels on phones.
+    minWidth: 'auto',
+    px: 2,
     color: '#666', '&.Mui-selected': { color: ACCENT, fontWeight: 600 },
   },
   drawTab: {
@@ -496,10 +500,17 @@ const LimitsList = (): React.ReactElement => {
         </Box>
       </Box>
 
-      {/* Day tabs */}
+      {/* Day tabs — scrollable so phone widths get horizontal scroll instead
+          of squished labels; on desktop all 7 fit and no buttons appear. */}
       <Box sx={styles.card}>
-        <Tabs value={selectedDayIdx} onChange={(_, v) => setSelectedDayIdx(v)} variant="fullWidth"
-          TabIndicatorProps={{ sx: { bgcolor: ACCENT, height: 3 } }}>
+        <Tabs
+          value={selectedDayIdx}
+          onChange={(_, v) => setSelectedDayIdx(v)}
+          variant="scrollable"
+          scrollButtons="auto"
+          allowScrollButtonsMobile
+          TabIndicatorProps={{ sx: { bgcolor: ACCENT, height: 3 } }}
+        >
           {DAY_LABELS.map((label, idx) => <Tab key={idx} label={label} sx={styles.dayTab} />)}
         </Tabs>
       </Box>

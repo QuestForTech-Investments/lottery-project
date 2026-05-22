@@ -236,7 +236,7 @@ function Sidebar({ collapsed, hovered, onHoverChange, isMobile = false, mobileOp
                       transition: 'all 0.3s ease',
                       position: 'relative',
                       '&:hover': {
-                        backgroundColor: 'rgba(49, 151, 149, 0.15)',
+                        backgroundColor: 'rgba(99, 102, 241, 0.1)',
                         transform: 'translateX(4px)'
                       },
                     }}
@@ -244,7 +244,7 @@ function Sidebar({ collapsed, hovered, onHoverChange, isMobile = false, mobileOp
                     <ListItemIcon
                       sx={{
                         minWidth: 40,
-                        color: active ? '#38b2ac' : (isHovered ? '#ffffff' : '#ffffff'),
+                        color: active ? '#c084fc' : (isHovered ? '#ffffff' : '#ffffff'),
                         transition: 'all 0.3s ease-in-out'
                       }}
                     >
@@ -257,7 +257,7 @@ function Sidebar({ collapsed, hovered, onHoverChange, isMobile = false, mobileOp
                           fontSize: '11.5px',
                           fontWeight: 600,
                           textTransform: 'uppercase',
-                          color: active ? '#38b2ac' : (isHovered ? '#ffffff' : '#ffffff'),
+                          color: active ? '#c084fc' : (isHovered ? '#ffffff' : '#ffffff'),
                           fontFamily: '"Montserrat","Helvetica Neue",Arial,sans-serif',
                           WebkitFontSmoothing: 'antialiased',
                           textRendering: 'optimizeLegibility',
@@ -268,7 +268,7 @@ function Sidebar({ collapsed, hovered, onHoverChange, isMobile = false, mobileOp
                     />
                     {item.submenu && (
                       <Box sx={{
-                        color: active ? '#38b2ac' : (isHovered ? '#ffffff' : '#ffffff'),
+                        color: active ? '#c084fc' : (isHovered ? '#ffffff' : '#ffffff'),
                         transition: 'all 0.3s ease-in-out'
                       }}>
                         {isExpanded ? <ExpandLess /> : <ExpandMore />}
@@ -299,7 +299,7 @@ function Sidebar({ collapsed, hovered, onHoverChange, isMobile = false, mobileOp
                                 transition: 'all 0.3s ease',
                                 position: 'relative',
                                 '&:hover': {
-                                  backgroundColor: 'rgba(49, 151, 149, 0.1)',
+                                  backgroundColor: 'rgba(99, 102, 241, 0.08)',
                                   transform: 'translateX(4px)'
                                 },
                               }}
@@ -307,7 +307,7 @@ function Sidebar({ collapsed, hovered, onHoverChange, isMobile = false, mobileOp
                               {subitem.shortcut && (
                                 <Typography
                                   sx={{
-                                    color: subActive ? '#38b2ac' : (isSubHovered ? '#ffffff' : '#ffffff'),
+                                    color: subActive ? '#c084fc' : (isSubHovered ? '#ffffff' : '#ffffff'),
                                     fontSize: '10.5px',
                                     fontWeight: (subActive || isSubHovered) ? 'bold' : 'normal',
                                     marginRight: 1,
@@ -326,7 +326,7 @@ function Sidebar({ collapsed, hovered, onHoverChange, isMobile = false, mobileOp
                                   '& .MuiListItemText-primary': {
                                     fontSize: '10.5px',
                                     fontWeight: 600,
-                                    color: subActive ? '#38b2ac' : (isSubHovered ? '#ffffff' : '#ffffff'),
+                                    color: subActive ? '#c084fc' : (isSubHovered ? '#ffffff' : '#ffffff'),
                                     fontFamily: '"Montserrat","Helvetica Neue",Arial,sans-serif',
                                     WebkitFontSmoothing: 'antialiased',
                                     textRendering: 'optimizeLegibility',

@@ -119,7 +119,14 @@ const BetInputRow: React.FC<BetInputRowProps> = memo(({
 
   return (
   <>
-    <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+    <Box
+      sx={{
+        display: 'flex',
+        flexDirection: { xs: 'column', md: 'row' },
+        gap: { xs: 1, md: 2 },
+        mb: 2,
+      }}
+    >
       <TextField
         placeholder={t('tickets.create.playPlaceholder')}
         value={betNumber}
