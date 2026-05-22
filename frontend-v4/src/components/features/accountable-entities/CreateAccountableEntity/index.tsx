@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect, type ChangeEvent, type FormEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Card,
@@ -30,6 +31,7 @@ interface ZoneOption {
 }
 
 const CreateAccountableEntity = (): React.ReactElement => {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState<FormData>({
     entityName: '',
     entityCode: '',
@@ -78,15 +80,15 @@ const CreateAccountableEntity = (): React.ReactElement => {
         zoneId: formData.zoneId ? parseInt(formData.zoneId) : null
       });
 
-      setSuccess('Entidad contable creada exitosamente');
+      setSuccess(t('entitiesAdmin.create.msgSuccess'));
       setFormData({ entityName: '', entityCode: '', entityType: 'Banco', zoneId: '' });
     } catch (err) {
       console.error('Error creating entity:', err);
-      setError('Error al crear la entidad contable. Verifique que el código no esté duplicado.');
+      setError(t('entitiesAdmin.create.errCreate'));
     } finally {
       setLoading(false);
     }
-  }, [formData]);
+  }, [formData, t]);
 
   return (
     <Box sx={{ p: 3, bgcolor: '#f5f5f5', minHeight: '100vh' }}>
@@ -102,7 +104,7 @@ const CreateAccountableEntity = (): React.ReactElement => {
               color: '#2c2c2c'
             }}
           >
-            Crear entidad contable
+            {t('entitiesAdmin.create.title')}
           </Typography>
 
           {success && (
@@ -120,12 +122,12 @@ const CreateAccountableEntity = (): React.ReactElement => {
           <form onSubmit={handleSubmit}>
             <TextField
               fullWidth
-              label="Nombre"
+              label={t('entitiesAdmin.create.nameLabel')}
               name="entityName"
               value={formData.entityName}
               onChange={handleTextChange}
               required
-              placeholder="Nombre"
+              placeholder={t('entitiesAdmin.create.namePlaceholder')}
               sx={{ mb: 3 }}
               InputLabelProps={{ sx: { fontSize: '14px', color: '#787878' } }}
               InputProps={{ sx: { fontSize: '14px' } }}
@@ -133,42 +135,42 @@ const CreateAccountableEntity = (): React.ReactElement => {
 
             <TextField
               fullWidth
-              label="Código"
+              label={t('entitiesAdmin.create.codeLabel')}
               name="entityCode"
               value={formData.entityCode}
               onChange={handleTextChange}
               required
-              placeholder="Código"
+              placeholder={t('entitiesAdmin.create.codePlaceholder')}
               sx={{ mb: 3 }}
               InputLabelProps={{ sx: { fontSize: '14px', color: '#787878' } }}
               InputProps={{ sx: { fontSize: '14px' } }}
             />
 
             <FormControl fullWidth required sx={{ mb: 3 }}>
-              <InputLabel sx={{ fontSize: '14px', color: '#787878' }}>Tipo de entidad</InputLabel>
+              <InputLabel sx={{ fontSize: '14px', color: '#787878' }}>{t('entitiesAdmin.create.typeLabel')}</InputLabel>
               <Select
                 name="entityType"
                 value={formData.entityType}
                 onChange={handleSelectChange}
-                label="Tipo de entidad"
+                label={t('entitiesAdmin.create.typeLabel')}
                 sx={{ fontSize: '14px' }}
               >
-                <MenuItem value="Banco" sx={{ fontSize: '14px' }}>Banco</MenuItem>
-                <MenuItem value="Otro" sx={{ fontSize: '14px' }}>Otro</MenuItem>
+                <MenuItem value="Banco" sx={{ fontSize: '14px' }}>{t('entitiesAdmin.create.typeBank')}</MenuItem>
+                <MenuItem value="Otro" sx={{ fontSize: '14px' }}>{t('entitiesAdmin.create.typeOther')}</MenuItem>
               </Select>
             </FormControl>
 
             <FormControl fullWidth sx={{ mb: 4 }}>
-              <InputLabel sx={{ fontSize: '14px', color: '#787878' }}>Zona</InputLabel>
+              <InputLabel sx={{ fontSize: '14px', color: '#787878' }}>{t('entitiesAdmin.create.zoneLabel')}</InputLabel>
               <Select
                 name="zoneId"
                 value={formData.zoneId}
                 onChange={handleSelectChange}
-                label="Zona"
+                label={t('entitiesAdmin.create.zoneLabel')}
                 sx={{ fontSize: '14px' }}
               >
                 <MenuItem value="">
-                  <em>Sin zona</em>
+                  <em>{t('entitiesAdmin.create.zoneNone')}</em>
                 </MenuItem>
                 {zones.map(zone => (
                   <MenuItem key={zone.id} value={String(zone.id)} sx={{ fontSize: '14px' }}>
@@ -194,7 +196,7 @@ const CreateAccountableEntity = (): React.ReactElement => {
                   textTransform: 'uppercase'
                 }}
               >
-                {loading ? <CircularProgress size={24} color="inherit" /> : 'CREAR'}
+                {loading ? <CircularProgress size={24} color="inherit" /> : t('entitiesAdmin.create.submitButton')}
               </Button>
             </Box>
           </form>

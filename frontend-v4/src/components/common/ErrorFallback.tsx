@@ -24,7 +24,7 @@ interface ErrorFallbackProps {
 const ErrorFallback = ({ error, errorInfo, errorCount, onReset, onReload }: ErrorFallbackProps) => {
   const [showDetails, setShowDetails] = useState(false)
   const navigate = useNavigate()
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation()
 
   const handleGoHome = () => {
     onReset()
@@ -77,18 +77,18 @@ const ErrorFallback = ({ error, errorInfo, errorCount, onReset, onReload }: Erro
 
           {/* Title */}
           <Typography variant="h4" gutterBottom color="error" fontWeight="bold">
-            ¡Oops! Algo salió mal
+            {t('errorBoundary.title')}
           </Typography>
 
           {/* Description */}
           <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-            Lo sentimos, ocurrió un error inesperado. No te preocupes, tus datos están seguros.
+            {t('errorBoundary.description')}
           </Typography>
 
           {/* Error count alert (if multiple errors) */}
           {errorCount > 1 && (
             <Alert severity="warning" sx={{ mb: 3 }}>
-              Este error ha ocurrido {errorCount} veces. Considera recargar la página.
+              {t('errorBoundary.repeatedErrors', { count: errorCount })}
             </Alert>
           )}
 
@@ -100,15 +100,15 @@ const ErrorFallback = ({ error, errorInfo, errorCount, onReset, onReload }: Erro
             sx={{ mb: 3 }}
           >
             <Button variant="contained" color="primary" size="large" startIcon={<Refresh />} onClick={onReset}>
-              Intentar de nuevo
+              {t('errorBoundary.retry')}
             </Button>
 
             <Button variant="outlined" color="primary" size="large" startIcon={<Home />} onClick={handleGoHome}>
-              Ir al inicio
+              {t('errorBoundary.goHome')}
             </Button>
 
             <Button variant="outlined" color="secondary" size="large" startIcon={<Refresh />} onClick={onReload}>
-              Recargar página
+              {t('errorBoundary.reload')}
             </Button>
           </Stack>
 
@@ -122,7 +122,7 @@ const ErrorFallback = ({ error, errorInfo, errorCount, onReset, onReload }: Erro
             endIcon={showDetails ? <ExpandLess /> : <ExpandMore />}
             sx={{ mb: 2 }}
           >
-            {showDetails ? 'Ocultar detalles técnicos' : 'Ver detalles técnicos'}
+            {showDetails ? t('errorBoundary.hideDetails') : t('errorBoundary.showDetails')}
           </Button>
 
           {/* Error Details (Collapsible) */}
@@ -176,13 +176,13 @@ const ErrorFallback = ({ error, errorInfo, errorCount, onReset, onReload }: Erro
             </Paper>
 
             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 2 }}>
-              💡 Tip: Captura esta pantalla y envíala al equipo de desarrollo para ayudar a solucionar el problema.
+              💡 {t('errorBoundary.tip')}
             </Typography>
           </Collapse>
 
           {/* Additional Help Text */}
           <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 3 }}>
-            Si el problema persiste, contacta al soporte técnico.
+            {t('errorBoundary.contactSupport')}
           </Typography>
         </Paper>
       </Box>

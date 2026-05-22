@@ -14,6 +14,7 @@ import {
   Checkbox
 } from '@mui/material';
 import type { SelectChangeEvent } from '@mui/material/Select';
+import { useTranslation } from 'react-i18next';
 
 interface FormData {
   nombre: string;
@@ -35,6 +36,7 @@ const initialFormData: FormData = {
  * Formulario para crear un nuevo receptor de correo
  */
 const CreateEmailReceiver = (): React.ReactElement => {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState<FormData>(initialFormData);
 
   const handleTextChange = useCallback((e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
@@ -63,7 +65,12 @@ const CreateEmailReceiver = (): React.ReactElement => {
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>): void => {
     e.preventDefault();
-    alert(`Receptor de correo creado (mockup)\n\nNombre: ${formData.nombre}\nEmail: ${formData.email}\nTipo de notificación: ${formData.tipoNotificacion}\nActivo: ${formData.activo ? 'Sí' : 'No'}`);
+    alert(t('emailReceiversAdmin.create.createdAlert', {
+      name: formData.nombre,
+      email: formData.email,
+      notificationType: formData.tipoNotificacion,
+      active: formData.activo ? t('common.yes') : t('common.no')
+    }));
 
     // Reset form
     setFormData({
@@ -89,7 +96,7 @@ const CreateEmailReceiver = (): React.ReactElement => {
               color: '#2c2c2c'
             }}
           >
-            Crear receptor de correo
+            {t('emailReceiversAdmin.create.title')}
           </Typography>
 
           {/* Formulario */}
@@ -97,11 +104,11 @@ const CreateEmailReceiver = (): React.ReactElement => {
             {/* Nombre */}
             <TextField
               fullWidth
-              label="Nombre"
+              label={t('common.name')}
               name="nombre"
               value={formData.nombre}
               onChange={handleTextChange}
-              placeholder="Nombre del receptor"
+              placeholder={t('emailReceiversAdmin.create.namePlaceholder')}
               required
               sx={{ mb: 3 }}
               InputLabelProps={{
@@ -115,12 +122,12 @@ const CreateEmailReceiver = (): React.ReactElement => {
             {/* Email */}
             <TextField
               fullWidth
-              label="Correo electrónico"
+              label={t('emailReceiversAdmin.fields.email')}
               name="email"
               type="email"
               value={formData.email}
               onChange={handleTextChange}
-              placeholder="correo@ejemplo.com"
+              placeholder={t('emailReceiversAdmin.create.emailPlaceholder')}
               required
               sx={{ mb: 3 }}
               InputLabelProps={{
@@ -134,21 +141,21 @@ const CreateEmailReceiver = (): React.ReactElement => {
             {/* Tipo de notificación */}
             <FormControl fullWidth sx={{ mb: 3 }} required>
               <InputLabel sx={{ fontSize: '14px', fontFamily: 'Montserrat, sans-serif' }}>
-                Tipo de notificación
+                {t('emailReceiversAdmin.fields.notificationType')}
               </InputLabel>
               <Select
                 name="tipoNotificacion"
                 value={formData.tipoNotificacion}
                 onChange={handleSelectChange}
-                label="Tipo de notificación"
+                label={t('emailReceiversAdmin.fields.notificationType')}
                 sx={{ fontSize: '14px', fontFamily: 'Montserrat, sans-serif' }}
               >
-                <MenuItem value="Reportes diarios">Reportes diarios</MenuItem>
-                <MenuItem value="Alertas de ventas">Alertas de ventas</MenuItem>
-                <MenuItem value="Notificaciones de premios">Notificaciones de premios</MenuItem>
-                <MenuItem value="Resumen semanal">Resumen semanal</MenuItem>
-                <MenuItem value="Alertas de sistema">Alertas de sistema</MenuItem>
-                <MenuItem value="Todas">Todas las notificaciones</MenuItem>
+                <MenuItem value="Reportes diarios">{t('emailReceiversAdmin.types.dailyReports')}</MenuItem>
+                <MenuItem value="Alertas de ventas">{t('emailReceiversAdmin.types.salesAlerts')}</MenuItem>
+                <MenuItem value="Notificaciones de premios">{t('emailReceiversAdmin.types.prizeNotifications')}</MenuItem>
+                <MenuItem value="Resumen semanal">{t('emailReceiversAdmin.types.weeklySummary')}</MenuItem>
+                <MenuItem value="Alertas de sistema">{t('emailReceiversAdmin.types.systemAlerts')}</MenuItem>
+                <MenuItem value="Todas">{t('emailReceiversAdmin.types.all')}</MenuItem>
               </Select>
             </FormControl>
 
@@ -161,7 +168,7 @@ const CreateEmailReceiver = (): React.ReactElement => {
                   onChange={handleCheckboxChange}
                 />
               }
-              label="Receptor activo"
+              label={t('emailReceiversAdmin.create.activeReceiver')}
               sx={{
                 mb: 4,
                 '& .MuiFormControlLabel-label': {
@@ -188,7 +195,7 @@ const CreateEmailReceiver = (): React.ReactElement => {
                   textTransform: 'none'
                 }}
               >
-                CREAR
+                {t('emailReceiversAdmin.create.submit')}
               </Button>
             </Box>
           </Box>

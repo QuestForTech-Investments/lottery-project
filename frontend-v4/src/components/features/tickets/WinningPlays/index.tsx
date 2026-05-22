@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, memo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Paper,
@@ -75,6 +76,7 @@ const groupPlays = (plays: WinningPlay[]): DrawGroup[] => {
 };
 
 const WinningPlays: React.FC = () => {
+  const { t } = useTranslation();
   const [startDate, setStartDate] = useState<string>(getTodayDate());
   const [endDate, setEndDate] = useState<string>(getTodayDate());
   const [selectedDraw, setSelectedDraw] = useState<Draw | null>(null);
@@ -107,7 +109,7 @@ const WinningPlays: React.FC = () => {
           : (drawsResp as RawDraw[] || []);
         const draws: Draw[] = drawsArr.map((d) => ({
           drawId: d.drawId,
-          drawName: d.drawName || d.lotteryName || `Sorteo ${d.drawId}`,
+          drawName: d.drawName || d.lotteryName || `${t('common.draw')} ${d.drawId}`,
         }));
         setDrawsList(draws);
 
@@ -122,12 +124,13 @@ const WinningPlays: React.FC = () => {
         setSelectedZoneIds(zones.map((z) => z.zoneId));
       } catch (err) {
         console.error('Error loading filter options:', err);
-        setError('Error al cargar las opciones de filtro');
+        setError(t('tickets.winners.loadFiltersError'));
       } finally {
         setLoadingFilters(false);
       }
     };
     load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchWinningPlays = useCallback(async () => {
@@ -149,14 +152,14 @@ const WinningPlays: React.FC = () => {
       setTotalPrizes(response.totalPrizes);
     } catch (err) {
       console.error('Error fetching winning plays:', err);
-      setError('Error al cargar las jugadas ganadoras');
+      setError(t('tickets.winners.loadError'));
       setWinningPlays([]);
       setTotalSales(0);
       setTotalPrizes(0);
     } finally {
       setLoading(false);
     }
-  }, [startDate, endDate, selectedDraw, selectedZoneIds, zonesList.length]);
+  }, [startDate, endDate, selectedDraw, selectedZoneIds, zonesList.length, t]);
 
   // Auto-load once filters are ready.
   useEffect(() => {
@@ -197,11 +200,11 @@ const WinningPlays: React.FC = () => {
             <thead>
               <tr><th colspan="5" class="draw-header">${esc(draw.drawName)}</th></tr>
               <tr>
-                <th>Tipo de jugada</th>
-                <th>Jugada</th>
-                <th style="text-align:right">Venta</th>
-                <th style="text-align:right">Premio</th>
-                <th style="text-align:right">Total</th>
+                <th>${esc(t('tickets.plays.playType'))}</th>
+                <th>${esc(t('common.play'))}</th>
+                <th style="text-align:right">${esc(t('tickets.winners.sale'))}</th>
+                <th style="text-align:right">${esc(t('common.prize'))}</th>
+                <th style="text-align:right">${esc(t('common.total'))}</th>
               </tr>
             </thead>
             <tbody>${rows}</tbody>
@@ -209,7 +212,11 @@ const WinningPlays: React.FC = () => {
       })
       .join('');
 
-    const title = `Jugadas ganadoras — ${startDate} al ${endDate}`;
+    const title = `${t('tickets.winners.title')} — ${startDate} ${t('common.to').toLowerCase()} ${endDate}`;
+    const filtersDraw = selectedDraw?.drawName ?? t('common.all');
+    const filtersZones = selectedZoneIds.length === 0 || selectedZoneIds.length === zonesList.length
+      ? t('common.all')
+      : String(selectedZoneIds.length);
     w.document.write(`<!doctype html>
 <html lang="es"><head><meta charset="utf-8"><title>${esc(title)}</title>
 <style>
@@ -225,12 +232,12 @@ const WinningPlays: React.FC = () => {
 </style>
 </head><body>
   <h1>${esc(title)}</h1>
-  <div class="meta">${esc(`Filtros — Sorteo: ${selectedDraw?.drawName ?? 'Todos'} · Zonas: ${selectedZoneIds.length === 0 || selectedZoneIds.length === zonesList.length ? 'Todas' : selectedZoneIds.length}`)}</div>
+  <div class="meta">${esc(`${t('common.filter')} — ${t('common.draw')}: ${filtersDraw} · ${t('common.zones')}: ${filtersZones}`)}</div>
   ${sections}
   <table>
     <tbody>
       <tr>
-        <td style="font-weight:700;width:30%">Total</td>
+        <td style="font-weight:700;width:30%">${esc(t('common.total'))}</td>
         <td></td>
         <td style="text-align:right;font-weight:700">${esc(formatCurrency(totalSales))}</td>
         <td style="text-align:right;font-weight:700;color:#2e7d32">${esc(formatCurrency(totalPrizes))}</td>
@@ -241,7 +248,7 @@ const WinningPlays: React.FC = () => {
   <script>window.onload = () => setTimeout(() => window.print(), 250);</script>
 </body></html>`);
     w.document.close();
-  }, [groupedData, startDate, endDate, selectedDraw, selectedZoneIds, zonesList.length, totalSales, totalPrizes, winningPlays.length]);
+  }, [groupedData, startDate, endDate, selectedDraw, selectedZoneIds, zonesList.length, totalSales, totalPrizes, winningPlays.length, t]);
 
   return (
     <Box sx={{ p: 2 }}>
@@ -252,7 +259,7 @@ const WinningPlays: React.FC = () => {
             align="center"
             sx={{ color: '#2c2c2c', mb: 4, fontWeight: 500, fontFamily: 'Montserrat, sans-serif' }}
           >
-            Jugadas ganadoras
+            {t('tickets.winners.title')}
           </Typography>
 
           {error && (
@@ -270,7 +277,7 @@ const WinningPlays: React.FC = () => {
               <Box sx={{ display: 'flex', gap: 2, mb: 2, flexWrap: 'wrap', alignItems: 'flex-end' }}>
                 <TextField
                   type="date"
-                  label="Fecha inicial"
+                  label={t('common.dateStart')}
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
                   InputLabelProps={{ shrink: true }}
@@ -279,7 +286,7 @@ const WinningPlays: React.FC = () => {
                 />
                 <TextField
                   type="date"
-                  label="Fecha final"
+                  label={t('common.dateEnd')}
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
                   InputLabelProps={{ shrink: true }}
@@ -293,15 +300,15 @@ const WinningPlays: React.FC = () => {
                   onChange={(_, v) => setSelectedDraw(v)}
                   isOptionEqualToValue={(a, b) => a.drawId === b.drawId}
                   renderInput={(params) => (
-                    <TextField {...params} label="Sorteo" size="small" placeholder="Seleccione" />
+                    <TextField {...params} label={t('common.draw')} size="small" placeholder={t('common.select')} />
                   )}
                   size="small"
                   sx={{ flex: 1, minWidth: 200 }}
                 />
                 <Box sx={{ flex: 1, minWidth: 200 }}>
                   <MultiSelectSearch
-                    label="Zonas"
-                    selectAllLabel="Todas"
+                    label={t('common.zones')}
+                    selectAllLabel={t('common.all')}
                     options={zonesList.map((z) => ({ id: z.zoneId, label: z.name }))}
                     selectedIds={selectedZoneIds}
                     onChange={setSelectedZoneIds}
@@ -323,7 +330,7 @@ const WinningPlays: React.FC = () => {
                     borderRadius: '20px',
                   }}
                 >
-                  Filtrar
+                  {t('common.filter')}
                 </Button>
                 <Button
                   variant="contained"
@@ -350,7 +357,7 @@ const WinningPlays: React.FC = () => {
 
               {!loading && winningPlays.length === 0 && (
                 <Typography variant="body2" align="center" sx={{ color: 'text.secondary', py: 4 }}>
-                  No hay entradas disponibles para los filtros seleccionados.
+                  {t('tickets.winners.noEntriesForFilters')}
                 </Typography>
               )}
 
@@ -371,11 +378,11 @@ const WinningPlays: React.FC = () => {
                             </TableCell>
                           </TableRow>
                           <TableRow sx={{ backgroundColor: '#fafafa' }}>
-                            <TableCell sx={{ fontWeight: 600, color: '#6b7280' }}>Tipo de jugada</TableCell>
-                            <TableCell sx={{ fontWeight: 600, color: '#6b7280' }}>Jugada</TableCell>
-                            <TableCell sx={{ fontWeight: 600, color: '#6b7280' }}>Venta</TableCell>
-                            <TableCell sx={{ fontWeight: 600, color: '#6b7280' }}>Premio</TableCell>
-                            <TableCell sx={{ fontWeight: 600, color: '#6b7280' }}>Total</TableCell>
+                            <TableCell sx={{ fontWeight: 600, color: '#6b7280' }}>{t('tickets.plays.playType')}</TableCell>
+                            <TableCell sx={{ fontWeight: 600, color: '#6b7280' }}>{t('common.play')}</TableCell>
+                            <TableCell sx={{ fontWeight: 600, color: '#6b7280' }}>{t('tickets.winners.sale')}</TableCell>
+                            <TableCell sx={{ fontWeight: 600, color: '#6b7280' }}>{t('common.prize')}</TableCell>
+                            <TableCell sx={{ fontWeight: 600, color: '#6b7280' }}>{t('common.total')}</TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
@@ -410,7 +417,7 @@ const WinningPlays: React.FC = () => {
                     {/* Grand totals row */}
                     <TableBody>
                       <TableRow sx={{ backgroundColor: '#eef2ff', '& td': { fontWeight: 700 } }}>
-                        <TableCell>Total</TableCell>
+                        <TableCell>{t('common.total')}</TableCell>
                         <TableCell />
                         <TableCell>{formatCurrency(totalSales)}</TableCell>
                         <TableCell>{formatCurrency(totalPrizes)}</TableCell>

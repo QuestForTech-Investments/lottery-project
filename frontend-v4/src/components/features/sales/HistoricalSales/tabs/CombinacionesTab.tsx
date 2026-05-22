@@ -1,4 +1,5 @@
 import { memo, type FC, useMemo, type ReactNode, type SyntheticEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Autocomplete,
   Box,
@@ -119,6 +120,7 @@ export const CombinacionesTab: FC<CombinacionesTabProps> = memo(({
   setFiltroRapido,
   onSearch,
 }) => {
+  const { t } = useTranslation();
   // Filter rows by search term against pretty bet type name.
   const filteredData = useMemo(() => {
     if (!filtroRapido) return combinacionesData;
@@ -174,26 +176,26 @@ export const CombinacionesTab: FC<CombinacionesTabProps> = memo(({
     () => [
       {
         id: 'tipoApuesta',
-        label: 'Tipo de jugada',
+        label: t('sales.playType'),
         format: (_v, row) => `${prettyBetTypeName(row.tipoApuesta)} (${row.lineas})`,
       },
-      { id: 'totalVendido', label: 'Total Vendido', align: 'right', format: (v) => formatCurrency(v as number) },
-      { id: 'comisiones', label: 'Total comisiones', align: 'right', format: (v) => formatCurrency(v as number) },
-      { id: 'comisiones2', label: 'Total comisiones 2', align: 'right', format: (v) => formatCurrency(v as number) },
-      { id: 'premios', label: 'Total premios', align: 'right', format: (v) => formatCurrency(v as number) },
-      { id: 'balances', label: 'Balances', align: 'right', format: coloredCurrency },
+      { id: 'totalVendido', label: t('sales.totalSold'), align: 'right', format: (v) => formatCurrency(v as number) },
+      { id: 'comisiones', label: t('sales.totalCommissions'), align: 'right', format: (v) => formatCurrency(v as number) },
+      { id: 'comisiones2', label: t('sales.totalCommissions2'), align: 'right', format: (v) => formatCurrency(v as number) },
+      { id: 'premios', label: t('sales.totalPrizes'), align: 'right', format: (v) => formatCurrency(v as number) },
+      { id: 'balances', label: t('sales.balances'), align: 'right', format: coloredCurrency },
     ],
-    [],
+    [t],
   );
 
   // Build typeahead option lists with a synthetic "Todos/Todas" entry on top.
   const drawOptions: OptionItem[] = useMemo(
-    () => [{ id: SELECT_ALL, label: 'Todos' }, ...drawsList.map((d) => ({ id: d.drawId, label: d.drawName || `Draw ${d.drawId}` }))],
-    [drawsList],
+    () => [{ id: SELECT_ALL, label: t('common.all') }, ...drawsList.map((d) => ({ id: d.drawId, label: d.drawName || `Draw ${d.drawId}` }))],
+    [drawsList, t],
   );
   const bancaOptions: OptionItem[] = useMemo(
-    () => [{ id: SELECT_ALL, label: 'Todas' }, ...bancasList.map((b) => ({ id: b.id, label: `${b.code} - ${b.name}` }))],
-    [bancasList],
+    () => [{ id: SELECT_ALL, label: t('common.all') }, ...bancasList.map((b) => ({ id: b.id, label: `${b.code} - ${b.name}` }))],
+    [bancasList, t],
   );
 
   const drawValues: OptionItem[] = useMemo(
@@ -225,24 +227,24 @@ export const CombinacionesTab: FC<CombinacionesTabProps> = memo(({
     drawValues.length === 0
       ? ''
       : drawValues.length === drawsList.length && drawsList.length > 0
-        ? 'Todos'
+        ? t('common.all')
         : drawValues.length === 1
           ? drawValues[0].label
-          : `${drawValues.length} seleccionados`;
+          : t('balances.selectedCount', { count: drawValues.length });
 
   const bancaSummary =
     bancaValues.length === 0
       ? ''
       : bancaValues.length === bancasList.length && bancasList.length > 0
-        ? 'Todas'
+        ? t('common.all')
         : bancaValues.length === 1
           ? bancaValues[0].label
-          : `${bancaValues.length} seleccionadas`;
+          : t('balances.selectedCount', { count: bancaValues.length });
 
   return (
     <>
       <Typography variant="h4" align="center" gutterBottom sx={{ fontWeight: 400, mb: 4, fontSize: '1.75rem' }}>
-        Combinaciones
+        {t('sales.tabs.combinaciones')}
       </Typography>
 
       {/* Filters */}
@@ -256,7 +258,7 @@ export const CombinacionesTab: FC<CombinacionesTabProps> = memo(({
 
         <Box>
           <Typography variant="caption" sx={{ color: 'text.secondary', mb: 0.5, display: 'block' }}>
-            Sorteos
+            {t('common.draws')}
           </Typography>
           <Autocomplete
             multiple
@@ -304,7 +306,7 @@ export const CombinacionesTab: FC<CombinacionesTabProps> = memo(({
             renderInput={(params) => (
               <TextField
                 {...params}
-                placeholder={drawValues.length === 0 ? 'Seleccione' : ''}
+                placeholder={drawValues.length === 0 ? t('common.select') : ''}
                 InputProps={{
                   ...params.InputProps,
                   startAdornment: drawSummary ? (
@@ -326,7 +328,7 @@ export const CombinacionesTab: FC<CombinacionesTabProps> = memo(({
 
         <Box>
           <Typography variant="caption" sx={{ color: 'text.secondary', mb: 0.5, display: 'block' }}>
-            Bancas
+            {t('common.bettingPools')}
           </Typography>
           <Autocomplete
             multiple
@@ -374,7 +376,7 @@ export const CombinacionesTab: FC<CombinacionesTabProps> = memo(({
             renderInput={(params) => (
               <TextField
                 {...params}
-                placeholder={bancaValues.length === 0 ? 'Seleccione' : ''}
+                placeholder={bancaValues.length === 0 ? t('common.select') : ''}
                 InputProps={{
                   ...params.InputProps,
                   startAdornment: bancaSummary ? (
@@ -405,13 +407,13 @@ export const CombinacionesTab: FC<CombinacionesTabProps> = memo(({
             fontWeight: 500,
           }}
         >
-          {loading ? <CircularProgress size={16} color="inherit" /> : 'Ver ventas'}
+          {loading ? <CircularProgress size={16} color="inherit" /> : t('transactions.viewSales')}
         </Button>
       </Box>
 
       {/* Search */}
       <Box sx={{ mb: 2 }}>
-        <SearchInput value={filtroRapido} onChange={setFiltroRapido} placeholder="Filtrado rápido" />
+        <SearchInput value={filtroRapido} onChange={setFiltroRapido} placeholder={t('common.filterQuick')} />
       </Box>
 
       {/* Data table */}
@@ -419,11 +421,11 @@ export const CombinacionesTab: FC<CombinacionesTabProps> = memo(({
         columns={columns}
         data={groupedData}
         totals={totals}
-        emptyMessage="No hay entradas disponibles"
+        emptyMessage={t('common.noEntries')}
       />
 
       <Typography variant="body2" sx={{ mt: 2 }}>
-        Mostrando {groupedData.length} tipo(s) de jugada
+        {t('sales.showingPlayTypes', { count: groupedData.length })}
       </Typography>
     </>
   );

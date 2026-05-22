@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Typography,
@@ -8,6 +9,7 @@ import {
 } from '@mui/material';
 import { getDrawsForResults, getResults } from '@services/resultsService';
 import type { DrawForResults, ResultDto } from '@services/resultsService';
+import { getActiveLocale } from '@/utils/formatters';
 
 interface ResultField {
   label: string;
@@ -25,6 +27,7 @@ interface ResultadosSubTabProps {
 }
 
 const ResultadosSubTab = ({ selectedDate }: ResultadosSubTabProps): React.ReactElement => {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [drawResults, setDrawResults] = useState<DrawWithResult[]>([]);
 
@@ -51,10 +54,10 @@ const ResultadosSubTab = ({ selectedDate }: ResultadosSubTabProps): React.ReactE
         const fields: ResultField[] = [];
 
         if (result) {
-          // Always show 1ra, 2da, 3ra for all lotteries
-          if (result.num1) fields.push({ label: '1ra', value: result.num1 });
-          if (result.num2) fields.push({ label: '2da', value: result.num2 });
-          if (result.num3) fields.push({ label: '3ra', value: result.num3 });
+          // Always show 1st, 2nd, 3rd positions for all lotteries
+          if (result.num1) fields.push({ label: t('results.firstShort'), value: result.num1 });
+          if (result.num2) fields.push({ label: t('results.secondShort'), value: result.num2 });
+          if (result.num3) fields.push({ label: t('results.thirdShort'), value: result.num3 });
 
           // Show USA lottery specific fields if available
           if (result.cash3) fields.push({ label: 'Pick Three', value: result.cash3 });
@@ -69,9 +72,9 @@ const ResultadosSubTab = ({ selectedDate }: ResultadosSubTabProps): React.ReactE
           if (result.bolita2) fields.push({ label: 'Bolita 2', value: result.bolita2 });
         } else {
           // No result yet - show empty fields for basic numbers
-          fields.push({ label: '1ra', value: '' });
-          fields.push({ label: '2da', value: '' });
-          fields.push({ label: '3ra', value: '' });
+          fields.push({ label: t('results.firstShort'), value: '' });
+          fields.push({ label: t('results.secondShort'), value: '' });
+          fields.push({ label: t('results.thirdShort'), value: '' });
         }
 
         return {
@@ -87,7 +90,7 @@ const ResultadosSubTab = ({ selectedDate }: ResultadosSubTabProps): React.ReactE
     } finally {
       setLoading(false);
     }
-  }, [selectedDate]);
+  }, [selectedDate, t]);
 
   useEffect(() => {
     loadResults();
@@ -95,7 +98,7 @@ const ResultadosSubTab = ({ selectedDate }: ResultadosSubTabProps): React.ReactE
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr + 'T00:00:00');
-    return date.toLocaleDateString('es-ES', {
+    return date.toLocaleDateString(getActiveLocale(), {
       month: '2-digit',
       day: '2-digit',
       year: 'numeric'
@@ -113,13 +116,13 @@ const ResultadosSubTab = ({ selectedDate }: ResultadosSubTabProps): React.ReactE
   return (
     <Box>
       <Typography variant="h5" sx={{ mb: 2, fontWeight: 400 }}>
-        Resultados para {formatDate(selectedDate)}
+        {t('results.resultsFor', { date: formatDate(selectedDate) })}
       </Typography>
       <Divider sx={{ mb: 3 }} />
 
       {drawResults.length === 0 ? (
         <Typography color="text.secondary" align="center" py={3}>
-          No hay sorteos disponibles para esta fecha
+          {t('results.noDrawsForDate')}
         </Typography>
       ) : (
         drawResults.map((draw) => (

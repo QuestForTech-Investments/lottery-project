@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useCallback, type ChangeEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Card,
@@ -48,6 +49,7 @@ interface SortConfig {
  * Lista y CRUD de agentes externos
  */
 const ExternalAgentsList = (): React.ReactElement => {
+  const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: null, direction: 'asc' });
 
@@ -113,21 +115,29 @@ const ExternalAgentsList = (): React.ReactElement => {
   }, []);
 
   const handleEdit = useCallback((id: number): void => {
-    alert(`Editar agente #${id} (mockup)`);
-  }, []);
+    alert(t('externalAgentsAdmin.list.msgEditMock', { id }));
+  }, [t]);
 
   const handleDelete = useCallback((id: number): void => {
-    if (window.confirm('¿Está seguro de eliminar este agente externo?')) {
-      alert(`Agente #${id} eliminado (mockup)`);
+    if (window.confirm(t('externalAgentsAdmin.list.confirmDelete'))) {
+      alert(t('externalAgentsAdmin.list.msgDeletedMock', { id }));
     }
-  }, []);
+  }, [t]);
 
   const handleInfo = useCallback((id: number): void => {
     const agent = agents.find(a => a.id === id);
     if (agent) {
-      alert(`Información del agente:\n\nNombre: ${agent.nombre}\nCódigo: ${agent.codigo}\nContacto: ${agent.contacto}\nTeléfono: ${agent.telefono}\nEmail: ${agent.email}\nComisión: ${agent.comision}%\nEstado: ${agent.activo ? 'Activo' : 'Inactivo'}`);
+      alert(t('externalAgentsAdmin.list.msgInfoMock', {
+        name: agent.nombre,
+        code: agent.codigo,
+        contact: agent.contacto,
+        phone: agent.telefono,
+        email: agent.email,
+        commission: agent.comision,
+        status: agent.activo ? t('externalAgentsAdmin.list.statusActive') : t('externalAgentsAdmin.list.statusInactive')
+      }));
     }
-  }, [agents]);
+  }, [agents, t]);
 
   return (
     <Box sx={{ p: 3, backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
@@ -144,7 +154,7 @@ const ExternalAgentsList = (): React.ReactElement => {
               color: '#2c2c2c'
             }}
           >
-            Lista de agentes externos
+            {t('externalAgentsAdmin.list.title')}
           </Typography>
 
           {/* Filtro rápido */}
@@ -152,7 +162,7 @@ const ExternalAgentsList = (): React.ReactElement => {
             <TextField
               fullWidth
               size="small"
-              placeholder="Filtrado rápido"
+              placeholder={t('externalAgentsAdmin.list.quickFilterPlaceholder')}
               value={searchTerm}
               onChange={handleSearchChange}
               InputProps={{
@@ -175,46 +185,46 @@ const ExternalAgentsList = (): React.ReactElement => {
                     onClick={() => handleSort('id')}
                     sx={{ cursor: 'pointer', userSelect: 'none', fontSize: '14px', fontFamily: 'Montserrat, sans-serif', fontWeight: 600 }}
                   >
-                    # {sortConfig.key === 'id' && (sortConfig.direction === 'asc' ? '▲' : '▼')}
+                    {t('externalAgentsAdmin.list.headerNumber')} {sortConfig.key === 'id' && (sortConfig.direction === 'asc' ? '▲' : '▼')}
                   </TableCell>
                   <TableCell
                     onClick={() => handleSort('nombre')}
                     sx={{ cursor: 'pointer', userSelect: 'none', fontSize: '14px', fontFamily: 'Montserrat, sans-serif', fontWeight: 600 }}
                   >
-                    Nombre {sortConfig.key === 'nombre' && (sortConfig.direction === 'asc' ? '▲' : '▼')}
+                    {t('externalAgentsAdmin.list.headerName')} {sortConfig.key === 'nombre' && (sortConfig.direction === 'asc' ? '▲' : '▼')}
                   </TableCell>
                   <TableCell
                     onClick={() => handleSort('codigo')}
                     sx={{ cursor: 'pointer', userSelect: 'none', fontSize: '14px', fontFamily: 'Montserrat, sans-serif', fontWeight: 600 }}
                   >
-                    Código {sortConfig.key === 'codigo' && (sortConfig.direction === 'asc' ? '▲' : '▼')}
+                    {t('externalAgentsAdmin.list.headerCode')} {sortConfig.key === 'codigo' && (sortConfig.direction === 'asc' ? '▲' : '▼')}
                   </TableCell>
                   <TableCell
                     onClick={() => handleSort('contacto')}
                     sx={{ cursor: 'pointer', userSelect: 'none', fontSize: '14px', fontFamily: 'Montserrat, sans-serif', fontWeight: 600 }}
                   >
-                    Contacto {sortConfig.key === 'contacto' && (sortConfig.direction === 'asc' ? '▲' : '▼')}
+                    {t('externalAgentsAdmin.list.headerContact')} {sortConfig.key === 'contacto' && (sortConfig.direction === 'asc' ? '▲' : '▼')}
                   </TableCell>
                   <TableCell sx={{ fontSize: '14px', fontFamily: 'Montserrat, sans-serif', fontWeight: 600 }}>
-                    Teléfono
+                    {t('externalAgentsAdmin.list.headerPhone')}
                   </TableCell>
                   <TableCell sx={{ fontSize: '14px', fontFamily: 'Montserrat, sans-serif', fontWeight: 600 }}>
-                    Email
+                    {t('externalAgentsAdmin.list.headerEmail')}
                   </TableCell>
                   <TableCell
                     onClick={() => handleSort('comision')}
                     sx={{ cursor: 'pointer', userSelect: 'none', fontSize: '14px', fontFamily: 'Montserrat, sans-serif', fontWeight: 600, textAlign: 'right' }}
                   >
-                    Comisión (%) {sortConfig.key === 'comision' && (sortConfig.direction === 'asc' ? '▲' : '▼')}
+                    {t('externalAgentsAdmin.list.headerCommission')} {sortConfig.key === 'comision' && (sortConfig.direction === 'asc' ? '▲' : '▼')}
                   </TableCell>
                   <TableCell
                     onClick={() => handleSort('activo')}
                     sx={{ cursor: 'pointer', userSelect: 'none', fontSize: '14px', fontFamily: 'Montserrat, sans-serif', fontWeight: 600, textAlign: 'center' }}
                   >
-                    Estado {sortConfig.key === 'activo' && (sortConfig.direction === 'asc' ? '▲' : '▼')}
+                    {t('externalAgentsAdmin.list.headerStatus')} {sortConfig.key === 'activo' && (sortConfig.direction === 'asc' ? '▲' : '▼')}
                   </TableCell>
                   <TableCell sx={{ fontSize: '14px', fontFamily: 'Montserrat, sans-serif', fontWeight: 600, textAlign: 'center' }}>
-                    Acciones
+                    {t('externalAgentsAdmin.list.headerActions')}
                   </TableCell>
                 </TableRow>
               </TableHead>
@@ -222,7 +232,7 @@ const ExternalAgentsList = (): React.ReactElement => {
                 {filteredAndSortedAgents.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={9} align="center" sx={{ py: 5, color: '#999', fontSize: '14px', fontFamily: 'Montserrat, sans-serif' }}>
-                      No se encontraron agentes externos
+                      {t('externalAgentsAdmin.list.noResults')}
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -251,7 +261,7 @@ const ExternalAgentsList = (): React.ReactElement => {
                       </TableCell>
                       <TableCell align="center">
                         <Chip
-                          label={agent.activo ? 'Activo' : 'Inactivo'}
+                          label={agent.activo ? t('externalAgentsAdmin.list.statusActive') : t('externalAgentsAdmin.list.statusInactive')}
                           color={agent.activo ? 'success' : 'error'}
                           size="small"
                           sx={{ fontSize: '12px', fontFamily: 'Montserrat, sans-serif' }}
@@ -262,7 +272,7 @@ const ExternalAgentsList = (): React.ReactElement => {
                           size="small"
                           onClick={() => handleInfo(agent.id)}
                           sx={{ color: '#17a2b8', mr: 0.5 }}
-                          title="Ver información"
+                          title={t('externalAgentsAdmin.list.tooltipInfo')}
                         >
                           <InfoIcon fontSize="small" />
                         </IconButton>
@@ -270,7 +280,7 @@ const ExternalAgentsList = (): React.ReactElement => {
                           size="small"
                           onClick={() => handleEdit(agent.id)}
                           sx={{ color: '#007bff', mr: 0.5 }}
-                          title="Editar"
+                          title={t('externalAgentsAdmin.list.tooltipEdit')}
                         >
                           <EditIcon fontSize="small" />
                         </IconButton>
@@ -278,7 +288,7 @@ const ExternalAgentsList = (): React.ReactElement => {
                           size="small"
                           onClick={() => handleDelete(agent.id)}
                           sx={{ color: '#dc3545' }}
-                          title="Eliminar"
+                          title={t('externalAgentsAdmin.list.tooltipDelete')}
                         >
                           <DeleteIcon fontSize="small" />
                         </IconButton>
@@ -301,7 +311,7 @@ const ExternalAgentsList = (): React.ReactElement => {
               fontFamily: 'Montserrat, sans-serif'
             }}
           >
-            Mostrando {filteredAndSortedAgents.length} de {agents.length} entradas
+            {t('externalAgentsAdmin.list.showingEntries', { shown: filteredAndSortedAgents.length, total: agents.length })}
           </Box>
         </CardContent>
       </Card>

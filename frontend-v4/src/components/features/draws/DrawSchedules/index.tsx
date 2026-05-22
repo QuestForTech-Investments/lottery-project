@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, memo, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Card,
@@ -249,7 +250,7 @@ interface DayScheduleRowProps {
   onCopyToAllDays: (drawId: number, dayKey: DayKey) => void;
 }
 
-const DAYS_ES_ROW: string[] = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+const DAY_KEYS_ROW: DayKey[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 
 const DayScheduleRow: React.FC<DayScheduleRowProps> = memo(({
   drawId,
@@ -261,6 +262,8 @@ const DayScheduleRow: React.FC<DayScheduleRowProps> = memo(({
   onTimeChange,
   onCopyToAllDays
 }) => {
+  const { t } = useTranslation();
+
   // Create stable callbacks for this specific row
   const handleStartChange = useCallback((value: string) => {
     onTimeChange(drawId, dayKey, 'startTime', value);
@@ -283,14 +286,14 @@ const DayScheduleRow: React.FC<DayScheduleRowProps> = memo(({
         fontWeight: 500,
         color: '#333'
       }}>
-        {DAYS_ES_ROW[dayIndex]}
+        {t(`drawsAdmin.schedules.days.${DAY_KEYS_ROW[dayIndex]}`)}
       </Typography>
 
       {/* Start Time */}
       <TimeInput
         value={startTime}
         onChange={handleStartChange}
-        placeholder="12:00 AM"
+        placeholder={t('drawsAdmin.schedules.startPlaceholder')}
       />
 
       {/* Arrow */}
@@ -300,7 +303,7 @@ const DayScheduleRow: React.FC<DayScheduleRowProps> = memo(({
       <TimeInput
         value={endTime}
         onChange={handleEndChange}
-        placeholder="11:59 PM"
+        placeholder={t('drawsAdmin.schedules.endPlaceholder')}
       />
 
       {/* Copy to All Days Button */}
@@ -308,7 +311,7 @@ const DayScheduleRow: React.FC<DayScheduleRowProps> = memo(({
         size="small"
         onClick={handleCopy}
         disabled={!enabled}
-        title="Copiar a todos los días"
+        title={t('drawsAdmin.schedules.copyToAllDays')}
         sx={{
           p: 0.3,
           color: enabled ? '#667eea' : '#ccc',
@@ -376,10 +379,10 @@ interface ScheduleUpdate {
   weeklySchedule: WeeklySchedule;
 }
 
-const DAYS_ES: string[] = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 const DAY_KEYS: DayKey[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 
 const DrawSchedules = (): React.ReactElement => {
+  const { t } = useTranslation();
   const [lotteries, setLotteries] = useState<Lottery[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [expandedLotteryIds, setExpandedLotteryIds] = useState<Set<number>>(new Set());
@@ -419,13 +422,13 @@ const DrawSchedules = (): React.ReactElement => {
       setLotteries(grouped);
     } catch (error) {
       console.error('[ERROR] [DRAW SCHEDULES] Error loading:', error);
-      showSnackbar('Error al cargar horarios de sorteos', 'error');
+      showSnackbar(t('drawsAdmin.schedules.loadError'), 'error');
     } finally {
       if (showLoadingState) {
         setLoading(false);
       }
     }
-  }, [showSnackbar]);
+  }, [showSnackbar, t]);
 
   const toggleLotteryExpansion = useCallback((lotteryId: number): void => {
     setExpandedLotteryIds(prev => {
@@ -578,21 +581,11 @@ const DrawSchedules = (): React.ReactElement => {
       return newMap;
     });
 
-    showSnackbar('Horario copiado a todos los días', 'success');
-  }, [showSnackbar]);
+    showSnackbar(t('drawsAdmin.schedules.copiedToAllDays'), 'success');
+  }, [showSnackbar, t]);
 
   // Validate schedules before saving
   const validateSchedules = useCallback((): string | null => {
-    const dayNames: Record<string, string> = {
-      monday: 'Lunes',
-      tuesday: 'Martes',
-      wednesday: 'Miércoles',
-      thursday: 'Jueves',
-      friday: 'Viernes',
-      saturday: 'Sábado',
-      sunday: 'Domingo'
-    };
-
     for (const draw of modifiedDraws.values()) {
       const schedule = draw.weeklySchedule;
       if (!schedule) continue;
@@ -602,13 +595,16 @@ const DrawSchedules = (): React.ReactElement => {
         if (daySchedule && daySchedule.enabled) {
           // Compare times as strings (HH:MM:SS format)
           if (daySchedule.startTime >= daySchedule.endTime) {
-            return `${draw.drawName} - ${dayNames[dayKey]}: La hora de fin debe ser mayor que la hora de inicio`;
+            return t('drawsAdmin.schedules.validationEndAfterStart', {
+              drawName: draw.drawName,
+              dayName: t(`drawsAdmin.schedules.days.${dayKey}`)
+            });
           }
         }
       }
     }
     return null;
-  }, [modifiedDraws]);
+  }, [modifiedDraws, t]);
 
   const handleSaveAll = useCallback(async (): Promise<void> => {
     try {
@@ -622,7 +618,7 @@ const DrawSchedules = (): React.ReactElement => {
       }));
 
       if (schedules.length === 0) {
-        showSnackbar('No hay cambios para guardar', 'info');
+        showSnackbar(t('drawsAdmin.schedules.noChangesToSave'), 'info');
         return;
       }
 
@@ -635,7 +631,7 @@ const DrawSchedules = (): React.ReactElement => {
 
       await updateDrawSchedules(schedules as unknown as Parameters<typeof updateDrawSchedules>[0]);
 
-      showSnackbar('Horarios actualizados correctamente', 'success');
+      showSnackbar(t('drawsAdmin.schedules.saveSuccess'), 'success');
 
       // Clear modified draws and reload (without showing loading spinner)
       setModifiedDraws(new Map());
@@ -643,11 +639,11 @@ const DrawSchedules = (): React.ReactElement => {
 
     } catch (error) {
       console.error('[ERROR] [DRAW SCHEDULES] Error saving:', error);
-      showSnackbar('Error al guardar horarios', 'error');
+      showSnackbar(t('drawsAdmin.schedules.saveError'), 'error');
     } finally {
       setSaving(false);
     }
-  }, [modifiedDraws, showSnackbar, loadDrawSchedules, validateSchedules]);
+  }, [modifiedDraws, showSnackbar, loadDrawSchedules, validateSchedules, t]);
 
   const handleCloseSnackbar = useCallback((): void => {
     setSnackbar(prev => ({ ...prev, open: false }));
@@ -676,7 +672,7 @@ const DrawSchedules = (): React.ReactElement => {
                 color: '#2c2c2c'
               }}
             >
-              Horarios de sorteos
+              {t('drawsAdmin.schedules.title')}
             </Typography>
 
             {/* Lottery Accordion Buttons */}
@@ -763,7 +759,7 @@ const DrawSchedules = (): React.ReactElement => {
                                   <Box sx={{ flex: 1 }}>
                                     <Box sx={{ mb: 1.5 }}>
                                       <Typography sx={{ fontSize: '13px', color: '#666', mb: 0.5 }}>
-                                        Nombre
+                                        {t('drawsAdmin.schedules.drawName')}
                                       </Typography>
                                       <TextField
                                         value={draw.drawName}
@@ -787,7 +783,7 @@ const DrawSchedules = (): React.ReactElement => {
 
                                     <Box sx={{ mb: 1.5 }}>
                                       <Typography sx={{ fontSize: '13px', color: '#666', mb: 0.5 }}>
-                                        Abreviación
+                                        {t('drawsAdmin.schedules.abbreviation')}
                                       </Typography>
                                       <TextField
                                         value={draw.abbreviation || ''}
@@ -811,7 +807,7 @@ const DrawSchedules = (): React.ReactElement => {
 
                                     <Box>
                                       <Typography sx={{ fontSize: '13px', color: '#666', mb: 0.5 }}>
-                                        Color
+                                        {t('drawsAdmin.schedules.color')}
                                       </Typography>
                                       <Box
                                         sx={{
@@ -872,7 +868,7 @@ const DrawSchedules = (): React.ReactElement => {
                               fontWeight: 500
                             }}
                           >
-                            {saving ? <CircularProgress size={20} sx={{ color: 'white' }} /> : 'Actualizar'}
+                            {saving ? <CircularProgress size={20} sx={{ color: 'white' }} /> : t('common.update')}
                           </Button>
                         </Box>
                       </Box>
@@ -884,7 +880,7 @@ const DrawSchedules = (): React.ReactElement => {
 
             {lotteries.length === 0 && (
               <Alert severity="info">
-                No hay sorteos configurados
+                {t('drawsAdmin.schedules.noDrawsConfigured')}
               </Alert>
             )}
           </CardContent>

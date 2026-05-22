@@ -1,4 +1,5 @@
 import React, { useState, memo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Table,
@@ -33,6 +34,7 @@ import { handleApiError } from '@utils/index';
  * Content for Bancas tab - matches original Vue.js design
  */
 const UserBettingPoolsContent: React.FC = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const {
     users,
@@ -77,7 +79,7 @@ const UserBettingPoolsContent: React.FC = () => {
       setTempDialog({ open: true, username: res.username, password: res.temporaryPassword });
       setConfirmTarget(null);
     } catch (err) {
-      alert(handleApiError(err) || 'No se pudo generar la clave temporal');
+      alert(handleApiError(err) || t('usersAdmin.tempPasswordError'));
       setConfirmTarget(null);
     } finally {
       setGeneratingFor(null);
@@ -101,7 +103,7 @@ const UserBettingPoolsContent: React.FC = () => {
       setDeleteTarget(null);
       refreshData();
     } catch (err) {
-      alert(handleApiError(err) || 'No se pudo eliminar el usuario');
+      alert(handleApiError(err) || t('usersAdmin.deleteUserError'));
       setDeleteTarget(null);
     } finally {
       setDeletingFor(null);
@@ -121,7 +123,7 @@ const UserBettingPoolsContent: React.FC = () => {
       <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
         <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
           <TextField
-            placeholder="Filtrado por usuario"
+            placeholder={t('usersAdmin.filterByUser')}
             value={searchText}
             onChange={handleSearchChange}
             size="small"
@@ -137,7 +139,7 @@ const UserBettingPoolsContent: React.FC = () => {
             }}
           />
           <TextField
-            placeholder="Filtro rapido"
+            placeholder={t('common.filterQuick')}
             value={quickFilter}
             onChange={(e) => setQuickFilter(e.target.value)}
             size="small"
@@ -161,16 +163,16 @@ const UserBettingPoolsContent: React.FC = () => {
           <TableHead>
             <TableRow sx={{ bgcolor: '#e3e3e3' }}>
               <TableCell>
-                <strong>Usuario</strong>
+                <strong>{t('usersAdmin.user')}</strong>
               </TableCell>
               <TableCell>
-                <strong>Banca</strong>
+                <strong>{t('common.bettingPool')}</strong>
               </TableCell>
               <TableCell>
-                <strong>Número</strong>
+                <strong>{t('common.number')}</strong>
               </TableCell>
               <TableCell align="center">
-                <strong>Acciones</strong>
+                <strong>{t('usersAdmin.actions')}</strong>
               </TableCell>
             </TableRow>
           </TableHead>
@@ -181,7 +183,7 @@ const UserBettingPoolsContent: React.FC = () => {
                   <Box sx={{ py: 3, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 2 }}>
                     <CircularProgress size={24} />
                     <Typography variant="body2" color="text.secondary">
-                      Cargando usuarios...
+                      {t('usersAdmin.loadingUsersShort')}
                     </Typography>
                   </Box>
                 </TableCell>
@@ -190,7 +192,7 @@ const UserBettingPoolsContent: React.FC = () => {
               <TableRow>
                 <TableCell colSpan={4} align="center">
                   <Typography variant="body2" color="text.secondary" sx={{ py: 3 }}>
-                    No se encontraron usuarios
+                    {t('usersAdmin.noUsersFoundShort')}
                   </Typography>
                 </TableCell>
               </TableRow>
@@ -230,7 +232,7 @@ const UserBettingPoolsContent: React.FC = () => {
                         size="small"
                         onClick={() => user.userId && setConfirmTarget({ userId: user.userId, username: user.id })}
                         disabled={generatingFor === user.userId}
-                        title="Generar clave temporal"
+                        title={t('usersAdmin.generateTempPassword')}
                         sx={{
                           color: '#6366f1',
                           '&:hover': { bgcolor: 'rgba(99, 102, 241, 0.1)' },
@@ -241,7 +243,7 @@ const UserBettingPoolsContent: React.FC = () => {
                       <IconButton
                         size="small"
                         onClick={() => handleEditUserClick(user.userId || 0)}
-                        title="Editar usuario"
+                        title={t('usersAdmin.editUser')}
                         sx={{
                           color: '#6366f1',
                           '&:hover': { bgcolor: 'rgba(99, 102, 241, 0.1)' },
@@ -253,7 +255,7 @@ const UserBettingPoolsContent: React.FC = () => {
                         size="small"
                         onClick={() => user.userId && setDeleteTarget({ userId: user.userId, username: user.id })}
                         disabled={deletingFor === user.userId}
-                        title="Eliminar usuario"
+                        title={t('usersAdmin.deleteUser')}
                         sx={{
                           color: '#d32f2f',
                           '&:hover': { bgcolor: 'rgba(211, 47, 47, 0.1)' },
@@ -273,15 +275,15 @@ const UserBettingPoolsContent: React.FC = () => {
       {/* Footer with count */}
       <Box sx={{ p: 2, borderTop: 1, borderColor: 'divider' }}>
         <Typography variant="body2" color="text.secondary">
-          Mostrando {filteredUsers.length} entradas
+          {t('usersAdmin.showingEntries', { count: filteredUsers.length })}
         </Typography>
       </Box>
 
       <ConfirmActionDialog
         isOpen={!!confirmTarget}
-        title="Generar clave temporal"
-        message={`Se generará una nueva clave de 6 dígitos para el usuario "${confirmTarget?.username}". El usuario deberá cambiarla al iniciar sesión y la actual dejará de funcionar.`}
-        confirmLabel="Generar"
+        title={t('usersAdmin.tempPasswordTitle')}
+        message={t('usersAdmin.tempPasswordSixDigitMessage', { username: confirmTarget?.username ?? '' })}
+        confirmLabel={t('usersAdmin.generate')}
         severity="warning"
         loading={generatingFor !== null}
         onConfirm={handleConfirmGenerate}
@@ -290,9 +292,9 @@ const UserBettingPoolsContent: React.FC = () => {
 
       <ConfirmActionDialog
         isOpen={!!deleteTarget}
-        title="Eliminar usuario"
-        message={`¿Eliminar al usuario "${deleteTarget?.username}"? El usuario será desactivado y no podrá acceder al sistema.`}
-        confirmLabel="Eliminar"
+        title={t('usersAdmin.deleteUser')}
+        message={t('usersAdmin.deleteUserMessage', { username: deleteTarget?.username ?? '' })}
+        confirmLabel={t('common.delete')}
         severity="danger"
         loading={deletingFor !== null}
         onConfirm={handleConfirmDelete}

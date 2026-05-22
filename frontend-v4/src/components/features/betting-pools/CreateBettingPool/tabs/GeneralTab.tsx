@@ -1,4 +1,5 @@
 import React, { type ChangeEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Grid,
   TextField,
@@ -51,6 +52,7 @@ interface GeneralTabProps {
 }
 
 const GeneralTab: React.FC<GeneralTabProps> = ({ formData, errors, zones, loadingZones, handleChange, isEditMode = false }) => {
+  const { t } = useTranslation();
   // Force-uppercase wrapper for free-text fields like Ubicación/Referencia —
   // the stored value is uppercase regardless of the user's caps lock.
   const handleUppercaseChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -75,7 +77,7 @@ const GeneralTab: React.FC<GeneralTabProps> = ({ formData, errors, zones, loadin
             fullWidth
             size="small"
             required
-            label="Nombre"
+            label={t('createBettingPool.general.name')}
             name="bettingPoolName"
             value={formData.bettingPoolName}
             onChange={handleChange}
@@ -87,7 +89,7 @@ const GeneralTab: React.FC<GeneralTabProps> = ({ formData, errors, zones, loadin
           <TextField
             fullWidth
             size="small"
-            label="Número"
+            label={t('createBettingPool.general.number')}
             name="branchCode"
             value={formData.branchCode}
             onChange={handleChange}
@@ -110,9 +112,9 @@ const GeneralTab: React.FC<GeneralTabProps> = ({ formData, errors, zones, loadin
                 fullWidth
                 size="small"
                 required
-                label="Nombre de usuario"
+                label={t('createBettingPool.general.usernameLabel')}
                 name="username"
-                placeholder="Usuario"
+                placeholder={t('createBettingPool.general.usernamePlaceholder')}
                 value={formData.username}
                 onChange={handleUppercaseChange}
                 error={!!errors.username}
@@ -125,7 +127,7 @@ const GeneralTab: React.FC<GeneralTabProps> = ({ formData, errors, zones, loadin
               <TextField
                 fullWidth
                 size="small"
-                label="Ubicación"
+                label={t('createBettingPool.general.location')}
                 name="location"
                 value={formData.location}
                 onChange={handleUppercaseChange}
@@ -139,7 +141,7 @@ const GeneralTab: React.FC<GeneralTabProps> = ({ formData, errors, zones, loadin
               <TextField
                 fullWidth
                 size="small"
-                label="Ubicación"
+                label={t('createBettingPool.general.location')}
                 name="location"
                 value={formData.location}
                 onChange={handleUppercaseChange}
@@ -150,7 +152,7 @@ const GeneralTab: React.FC<GeneralTabProps> = ({ formData, errors, zones, loadin
               <TextField
                 fullWidth
                 size="small"
-                label="Referencia"
+                label={t('createBettingPool.general.reference')}
                 name="reference"
                 value={formData.reference}
                 onChange={handleUppercaseChange}
@@ -169,7 +171,7 @@ const GeneralTab: React.FC<GeneralTabProps> = ({ formData, errors, zones, loadin
                 size="small"
                 required
                 type="password"
-                label="Contraseña"
+                label={t('createBettingPool.general.password')}
                 name="password"
                 value={formData.password}
                 onChange={handleChange}
@@ -182,7 +184,7 @@ const GeneralTab: React.FC<GeneralTabProps> = ({ formData, errors, zones, loadin
               <TextField
                 fullWidth
                 size="small"
-                label="Referencia"
+                label={t('createBettingPool.general.reference')}
                 name="reference"
                 value={formData.reference}
                 onChange={handleUppercaseChange}
@@ -194,16 +196,16 @@ const GeneralTab: React.FC<GeneralTabProps> = ({ formData, errors, zones, loadin
           <>
             <Grid item xs={12} md={6}>
               <FormControl fullWidth size="small" error={!!errors.zoneId}>
-                <InputLabel>Zona</InputLabel>
+                <InputLabel>{t('createBettingPool.general.zone')}</InputLabel>
                 <Select
                   name="zoneId"
                   value={formData.zoneId || ''}
-                  label="Zona"
+                  label={t('createBettingPool.general.zone')}
                   onChange={handleChange}
                   disabled={loadingZones}
                 >
                   <MenuItem value="" disabled>
-                    <em>Seleccione una zona</em>
+                    <em>{t('createBettingPool.general.selectZone')}</em>
                   </MenuItem>
                   {zones.map((zone) => (
                     <MenuItem key={zone.zoneId} value={String(zone.zoneId)}>
@@ -219,7 +221,7 @@ const GeneralTab: React.FC<GeneralTabProps> = ({ formData, errors, zones, loadin
                 size="small"
                 multiline
                 rows={2}
-                label="Comentario"
+                label={t('createBettingPool.general.comment')}
                 name="comment"
                 value={formData.comment}
                 onChange={handleChange}
@@ -237,7 +239,7 @@ const GeneralTab: React.FC<GeneralTabProps> = ({ formData, errors, zones, loadin
                 size="small"
                 required
                 type="password"
-                label="Confirmación de contraseña"
+                label={t('createBettingPool.general.confirmPassword')}
                 name="confirmPassword"
                 value={formData.confirmPassword}
                 onChange={handleChange}
@@ -252,7 +254,7 @@ const GeneralTab: React.FC<GeneralTabProps> = ({ formData, errors, zones, loadin
                 size="small"
                 multiline
                 rows={2}
-                label="Comentario"
+                label={t('createBettingPool.general.comment')}
                 name="comment"
                 value={formData.comment}
                 onChange={handleChange}

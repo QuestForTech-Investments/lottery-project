@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, memo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Card,
@@ -74,17 +75,17 @@ interface PoolWithWeeklyData {
 
 type OrderDirection = 'asc' | 'desc';
 
-const WEEKDAYS: WeekDay[] = [
-  { key: 'monday', label: 'Lunes' },
-  { key: 'tuesday', label: 'Martes' },
-  { key: 'wednesday', label: 'Miércoles' },
-  { key: 'thursday', label: 'Jueves' },
-  { key: 'friday', label: 'Viernes' },
-  { key: 'saturday', label: 'Sábado' },
-  { key: 'sunday', label: 'Domingo' }
-];
-
 const DaysWithoutSalesReport: React.FC = () => {
+  const { t } = useTranslation();
+  const WEEKDAYS: WeekDay[] = [
+    { key: 'monday', label: t('bettingPoolsAdmin.monday') },
+    { key: 'tuesday', label: t('bettingPoolsAdmin.tuesday') },
+    { key: 'wednesday', label: t('bettingPoolsAdmin.wednesday') },
+    { key: 'thursday', label: t('bettingPoolsAdmin.thursday') },
+    { key: 'friday', label: t('bettingPoolsAdmin.friday') },
+    { key: 'saturday', label: t('bettingPoolsAdmin.saturday') },
+    { key: 'sunday', label: t('bettingPoolsAdmin.sunday') }
+  ];
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [results, setResults] = useState<PoolWithWeeklyData[]>([]);
@@ -148,7 +149,7 @@ const DaysWithoutSalesReport: React.FC = () => {
         zoneName: p.zoneName,
         weekStart: p.weekStart,
         code: p.bettingPoolCode || `#${p.bettingPoolId}`,
-        poolName: p.bettingPoolName || 'Sin nombre',
+        poolName: p.bettingPoolName || t('bettingPoolsAdmin.noNameFallback'),
         monday: p.monday || 0,
         tuesday: p.tuesday || 0,
         wednesday: p.wednesday || 0,
@@ -239,10 +240,10 @@ const DaysWithoutSalesReport: React.FC = () => {
         <Card>
           <CardContent>
             <Typography color="error" variant="h6">
-              Error: {error}
+              {t('bettingPoolsAdmin.errorPrefix', { message: error })}
             </Typography>
             <Button onClick={handleSearch} sx={{ mt: 2 }}>
-              Reintentar
+              {t('sales.retry')}
             </Button>
           </CardContent>
         </Card>
@@ -256,14 +257,14 @@ const DaysWithoutSalesReport: React.FC = () => {
       <Card>
         <CardContent>
           <Typography variant="h5" gutterBottom>
-            Bancas con dias sin vender
+            {t('bettingPoolsAdmin.daysWithoutSalesTitle')}
           </Typography>
 
           {/* Filters Section */}
           <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap', alignItems: 'center' }}>
             <TextField
               type="date"
-              label="Fecha"
+              label={t('bettingPoolsAdmin.dateLabel')}
               size="small"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
@@ -272,13 +273,13 @@ const DaysWithoutSalesReport: React.FC = () => {
             />
 
             <FormControl sx={{ minWidth: 200 }} size="small">
-              <InputLabel>Zonas</InputLabel>
+              <InputLabel>{t('common.zones')}</InputLabel>
               <Select
                 multiple
                 value={selectedZones}
                 onChange={handleZoneChange}
-                input={<OutlinedInput label="Zonas" />}
-                renderValue={(selected) => `${selected.length} seleccionadas`}
+                input={<OutlinedInput label={t('common.zones')} />}
+                renderValue={(selected) => t('bettingPoolsAdmin.selectedCount', { count: selected.length })}
               >
                 {zones.map((zone) => (
                   <MenuItem key={zone.zoneId || zone.id} value={zone.zoneId || zone.id || 0}>
@@ -295,7 +296,7 @@ const DaysWithoutSalesReport: React.FC = () => {
               onClick={handleSearch}
               disabled={loading}
             >
-              Ver ventas
+              {t('bettingPoolsAdmin.viewSales')}
             </Button>
           </Box>
 
@@ -303,7 +304,7 @@ const DaysWithoutSalesReport: React.FC = () => {
           <Box sx={{ mb: 2 }}>
             <TextField
               size="small"
-              placeholder="Filtrado rápido"
+              placeholder={t('bettingPoolsAdmin.quickFilter')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               InputProps={{
@@ -328,7 +329,7 @@ const DaysWithoutSalesReport: React.FC = () => {
                       direction={orderBy === 'code' ? order : 'asc'}
                       onClick={() => handleSort('code')}
                     >
-                      Código
+                      {t('bettingPoolsAdmin.tableCode')}
                     </TableSortLabel>
                   </TableCell>
                   <TableCell>
@@ -337,7 +338,7 @@ const DaysWithoutSalesReport: React.FC = () => {
                       direction={orderBy === 'name' ? order : 'asc'}
                       onClick={() => handleSort('name')}
                     >
-                      Nombre
+                      {t('bettingPoolsAdmin.tableName')}
                     </TableSortLabel>
                   </TableCell>
                   {WEEKDAYS.map(day => (
@@ -357,7 +358,7 @@ const DaysWithoutSalesReport: React.FC = () => {
                 {filteredAndSortedData.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={9} align="center">
-                      No hay datos disponibles
+                      {t('bettingPoolsAdmin.noDataAvailable')}
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -397,7 +398,7 @@ const DaysWithoutSalesReport: React.FC = () => {
 
           {/* Entry Counter */}
           <Typography variant="body2" sx={{ mt: 2 }}>
-            Mostrando {filteredAndSortedData.length} de {filteredAndSortedData.length} entradas
+            {t('common.showingEntries', { shown: filteredAndSortedData.length, total: filteredAndSortedData.length })}
           </Typography>
         </CardContent>
       </Card>

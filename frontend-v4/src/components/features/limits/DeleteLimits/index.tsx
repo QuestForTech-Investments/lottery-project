@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Card,
@@ -36,6 +37,7 @@ interface SnackbarState {
 }
 
 const DeleteLimits = (): React.ReactElement => {
+  const { t } = useTranslation();
   // Form state
   const [limitType, setLimitType] = useState<string>('');
   const [selectedBetTypes, setSelectedBetTypes] = useState<string[]>([]);
@@ -70,7 +72,7 @@ const DeleteLimits = (): React.ReactElement => {
         console.error('Error loading params:', err);
         setSnackbar({
           open: true,
-          message: handleLimitError(err, 'cargar parametros'),
+          message: handleLimitError(err, t('limitsAdmin.batchDelete.errLoadParams')),
           severity: 'error'
         });
       } finally {
@@ -78,7 +80,7 @@ const DeleteLimits = (): React.ReactElement => {
       }
     };
     loadParams();
-  }, []);
+  }, [t]);
 
   // Build filter from current selections
   const buildFilter = (): LimitFilter => {
@@ -114,7 +116,7 @@ const DeleteLimits = (): React.ReactElement => {
     if (!hasFilters()) {
       setSnackbar({
         open: true,
-        message: 'Seleccione al menos un filtro para previsualizar',
+        message: t('limitsAdmin.batchDelete.msgSelectFilterPreview'),
         severity: 'warning'
       });
       return;
@@ -129,7 +131,7 @@ const DeleteLimits = (): React.ReactElement => {
       if (limits.length === 0) {
         setSnackbar({
           open: true,
-          message: 'No se encontraron limites con los filtros seleccionados',
+          message: t('limitsAdmin.batchDelete.previewEmpty'),
           severity: 'info'
         });
       }
@@ -137,7 +139,7 @@ const DeleteLimits = (): React.ReactElement => {
       console.error('Error previewing:', err);
       setSnackbar({
         open: true,
-        message: handleLimitError(err, 'previsualizar'),
+        message: handleLimitError(err, t('limitsAdmin.batchDelete.errPreview')),
         severity: 'error'
       });
       setPreviewCount(null);
@@ -151,17 +153,17 @@ const DeleteLimits = (): React.ReactElement => {
     if (!hasFilters()) {
       setSnackbar({
         open: true,
-        message: 'Seleccione al menos un filtro para eliminar',
+        message: t('limitsAdmin.batchDelete.msgSelectFilterDelete'),
         severity: 'warning'
       });
       return;
     }
 
     // Show confirmation dialog
-    const countText = previewCount !== null ? previewCount.toString() : 'los';
-    const confirmed = window.confirm(
-      `¿Esta seguro de eliminar ${countText} limite(s) que coinciden con los filtros seleccionados?\n\nEsta accion no se puede deshacer.`
-    );
+    const confirmMessage = previewCount !== null
+      ? t('limitsAdmin.batchDelete.confirmDelete', { total: previewCount })
+      : t('limitsAdmin.batchDelete.confirmDeleteUnknown');
+    const confirmed = window.confirm(confirmMessage);
 
     if (!confirmed) return;
 
@@ -172,7 +174,7 @@ const DeleteLimits = (): React.ReactElement => {
 
       setSnackbar({
         open: true,
-        message: `${result.deletedCount} limite(s) eliminado(s) exitosamente`,
+        message: t('limitsAdmin.batchDelete.msgDeleted', { total: result.deletedCount }),
         severity: 'success'
       });
 
@@ -186,7 +188,7 @@ const DeleteLimits = (): React.ReactElement => {
       console.error('Error deleting:', err);
       setSnackbar({
         open: true,
-        message: handleLimitError(err, 'eliminar'),
+        message: handleLimitError(err, t('limitsAdmin.batchDelete.errDelete')),
         severity: 'error'
       });
     } finally {
@@ -268,7 +270,7 @@ const DeleteLimits = (): React.ReactElement => {
           color: '#2c2c2c'
         }}
       >
-        Eliminar limites en lote
+        {t('limitsAdmin.batchDelete.title')}
       </Typography>
 
       <Card>
@@ -283,19 +285,19 @@ const DeleteLimits = (): React.ReactElement => {
               pb: 1
             }}
           >
-            LIMITES
+            {t('limitsAdmin.batchDelete.sectionLimits')}
           </Typography>
 
           {/* Limit Type Select */}
           <FormControl fullWidth sx={{ mb: 2 }}>
-            <InputLabel>Tipo de Limite</InputLabel>
+            <InputLabel>{t('limitsAdmin.batchDelete.limitType')}</InputLabel>
             <Select
               value={limitType}
               onChange={(e) => handleLimitTypeChange(e.target.value)}
-              label="Tipo de Limite"
+              label={t('limitsAdmin.batchDelete.limitType')}
             >
               <MenuItem value="">
-                <em>Todos los tipos</em>
+                <em>{t('limitsAdmin.batchDelete.allTypes')}</em>
               </MenuItem>
               {limitTypeOptions.map(option => (
                 <MenuItem key={option.value} value={option.value}>
@@ -308,7 +310,7 @@ const DeleteLimits = (): React.ReactElement => {
           {/* Bet Types Checkboxes */}
           <Box sx={{ mb: 2 }}>
             <Typography sx={{ fontSize: '12px', color: '#787878', mb: 1 }}>
-              Tipos de jugada (opcional)
+              {t('limitsAdmin.batchDelete.betTypesOptional')}
             </Typography>
             <Box
               sx={{

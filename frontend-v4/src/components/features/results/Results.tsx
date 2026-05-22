@@ -10,6 +10,7 @@
  */
 
 import React, { useCallback, useEffect, useRef, useState, useMemo, type SyntheticEvent, type ChangeEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Paper,
@@ -61,6 +62,7 @@ import ConfirmPinModal from '@components/modals/ConfirmPinModal';
 // =============================================================================
 
 const Results = (): React.ReactElement => {
+  const { t } = useTranslation();
   // ---------------------------------------------------------------------------
   // State Management (via useReducer hook)
   // ---------------------------------------------------------------------------
@@ -198,11 +200,11 @@ const Results = (): React.ReactElement => {
       actions.setDrawResults(mergedData);
     } catch (err) {
       console.error('Error loading data:', err);
-      actions.setError('Error al cargar los datos');
+      actions.setError(t('resultsAdmin.messages.loadError'));
     } finally {
       actions.setLoading(false);
     }
-  }, [selectedDate, actions]);
+  }, [selectedDate, actions, t]);
 
   useEffect(() => {
     if (isLoadingRef.current || lastLoadedDateRef.current === selectedDate) {
@@ -533,7 +535,7 @@ const Results = (): React.ReactElement => {
   const doPublishAll = useCallback(async () => {
     const dirtyRows = computed.dirtyRows;
     if (dirtyRows.length === 0) {
-      actions.setError('No hay resultados pendientes de guardar');
+      actions.setError(t('resultsAdmin.messages.noPendingResults'));
       return;
     }
 
@@ -545,7 +547,7 @@ const Results = (): React.ReactElement => {
       const errorMessages = invalidRows
         .map((item) => `${item.row.drawName}: ${item.validation.error}`)
         .join('\n');
-      actions.setError(`No se puede publicar. Errores:\n${errorMessages}`);
+      actions.setError(t('resultsAdmin.messages.cannotPublishWithErrors', { errors: errorMessages }));
       return;
     }
 
@@ -572,16 +574,16 @@ const Results = (): React.ReactElement => {
         actions.markSaved(row.drawId, savedResult?.resultId || row.resultId || 0);
       } catch (err) {
         console.error('Error saving result:', err);
-        actions.setError(`Error al guardar resultado para ${row.drawName}`);
+        actions.setError(t('resultsAdmin.messages.publishErrorForDraw', { name: row.drawName }));
         actions.setSaving(row.drawId, false);
       }
     }
-    actions.setSuccess(`${dirtyRows.length} resultados publicados`);
-  }, [computed.dirtyRows, selectedDate, actions]);
+    actions.setSuccess(t('resultsAdmin.messages.publishedCount', { total: dirtyRows.length }));
+  }, [computed.dirtyRows, selectedDate, actions, t]);
 
   const doPublishIndividual = useCallback(async () => {
     if (!individualForm.selectedDrawId) {
-      actions.setError('Seleccione un sorteo');
+      actions.setError(t('resultsAdmin.form.selectDraw'));
       return;
     }
 
@@ -714,7 +716,7 @@ const Results = (): React.ReactElement => {
       }
 
       actions.setDrawResults(updatedResults);
-      actions.setSuccess(`Resultado publicado para ${row.drawName}`);
+      actions.setSuccess(t('resultsAdmin.messages.publishSuccessForDraw', { name: row.drawName }));
 
       const currentIndex = updatedResults.findIndex((d) => d.drawId === individualForm.selectedDrawId);
       const nextPendingDraw = updatedResults.find((d, index) => index > currentIndex && !d.hasResult);
@@ -739,28 +741,28 @@ const Results = (): React.ReactElement => {
       }
     } catch (err) {
       console.error('Error publishing individual result:', err);
-      actions.setError('Error al publicar resultado');
+      actions.setError(t('resultsAdmin.messages.publishError'));
     } finally {
       actions.setSavingIndividual(false);
     }
-  }, [individualForm, drawResults, selectedDate, actions]);
+  }, [individualForm, drawResults, selectedDate, actions, t]);
 
   // PIN-gated publish wrappers — every result publication requires admin PIN.
   const handlePublishIndividual = useCallback(() => {
     if (!individualForm.selectedDrawId) {
-      actions.setError('Seleccione un sorteo');
+      actions.setError(t('resultsAdmin.form.selectDraw'));
       return;
     }
     setPinPending('individual');
-  }, [individualForm.selectedDrawId, actions]);
+  }, [individualForm.selectedDrawId, actions, t]);
 
   const handlePublishAll = useCallback(() => {
     if (computed.dirtyRows.length === 0) {
-      actions.setError('No hay resultados pendientes de guardar');
+      actions.setError(t('resultsAdmin.messages.noPendingResults'));
       return;
     }
     setPinPending('all');
-  }, [computed.dirtyRows.length, actions]);
+  }, [computed.dirtyRows.length, actions, t]);
 
   const handlePinConfirmed = useCallback(() => {
     const pending = pinPending;
@@ -836,11 +838,11 @@ const Results = (): React.ReactElement => {
 
   const handleDeleteRow = useCallback(async (row: DrawResultRow) => {
     if (!row.resultId) {
-      actions.setError('Este sorteo no tiene resultado para borrar');
+      actions.setError(t('resultsAdmin.messages.deleteNoResult'));
       return;
     }
 
-    if (!window.confirm(`¿Está seguro de borrar el resultado de ${row.drawName}?`)) {
+    if (!window.confirm(t('resultsAdmin.messages.deleteConfirm', { name: row.drawName }))) {
       return;
     }
 
@@ -867,12 +869,12 @@ const Results = (): React.ReactElement => {
         };
       });
       actions.setDrawResults(updatedResults);
-      actions.setSuccess(`Resultado borrado para ${row.drawName}`);
+      actions.setSuccess(t('resultsAdmin.messages.deleteSuccess', { name: row.drawName }));
     } catch (err) {
       console.error('Error deleting result:', err);
-      actions.setError('Error al borrar resultado');
+      actions.setError(t('resultsAdmin.messages.deleteError'));
     }
-  }, [drawResults, actions]);
+  }, [drawResults, actions, t]);
 
   // ---------------------------------------------------------------------------
   // Render
@@ -914,8 +916,8 @@ const Results = (): React.ReactElement => {
             '& .MuiTabs-indicator': { backgroundColor: COLORS.primary },
           }}
         >
-          <Tab label="Manejar resultados" />
-          <Tab label="Logs de resultados" />
+          <Tab label={t('resultsAdmin.tabs.manage')} />
+          <Tab label={t('resultsAdmin.tabs.logs')} />
         </Tabs>
 
         <Box sx={{ p: 3 }}>
@@ -976,11 +978,11 @@ const Results = (): React.ReactElement => {
 
       <ConfirmPinModal
         isOpen={!!pinPending}
-        title="Confirmar publicación de resultado"
+        title={t('resultsAdmin.pin.title')}
         description={
           pinPending === 'all'
-            ? `Publicarás ${computed.dirtyRows.length} resultado(s). Confirma con tu PIN para continuar.`
-            : 'Confirma con tu PIN para publicar el resultado.'
+            ? t('resultsAdmin.pin.descriptionAll', { total: computed.dirtyRows.length })
+            : t('resultsAdmin.pin.descriptionSingle')
         }
         onConfirmed={handlePinConfirmed}
         onCancel={() => setPinPending(null)}

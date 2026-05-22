@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -59,6 +60,7 @@ interface Column {
  * Modern Material-UI version for Zones Management
  */
 const ZonesListMUI = (): React.ReactElement => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const {
     zones,
@@ -105,9 +107,9 @@ const ZonesListMUI = (): React.ReactElement => {
     } catch (err) {
       const error = err as Error;
       console.error('Error deleting zone:', err);
-      alert(`Error al eliminar la zona: ${error.message}`);
+      alert(t('zonesAdmin.deleteError', { message: error.message }));
     }
-  }, [zoneToDelete, handleRefresh]);
+  }, [zoneToDelete, handleRefresh, t]);
 
   const handleDeleteCancel = useCallback(() => {
     setDeleteDialogOpen(false);
@@ -123,11 +125,11 @@ const ZonesListMUI = (): React.ReactElement => {
   }, [handleRequestSort]);
 
   const columns: Column[] = [
-    { id: 'zoneId', label: 'ID', sortable: true, align: 'left' },
-    { id: 'zoneName', label: 'Nombre', sortable: true, align: 'left' },
-    { id: 'description', label: 'Descripción', sortable: true, align: 'left' },
-    { id: 'isActive', label: 'Activa', sortable: true, align: 'center' },
-    { id: 'actions', label: 'Acciones', sortable: false, align: 'center' },
+    { id: 'zoneId', label: t('zonesAdmin.id'), sortable: true, align: 'left' },
+    { id: 'zoneName', label: t('zonesAdmin.name'), sortable: true, align: 'left' },
+    { id: 'description', label: t('zonesAdmin.description'), sortable: true, align: 'left' },
+    { id: 'isActive', label: t('zonesAdmin.isActive'), sortable: true, align: 'center' },
+    { id: 'actions', label: t('zonesAdmin.actions'), sortable: false, align: 'center' },
   ];
 
   return (
@@ -135,23 +137,23 @@ const ZonesListMUI = (): React.ReactElement => {
       <Paper elevation={3}>
         <Box sx={{ p: 3, borderBottom: 1, borderColor: 'divider' }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Typography variant="h5" component="h1">Gestión de Zonas</Typography>
-            <Button variant="contained" startIcon={<AddIcon />} onClick={handleCreateNew}>Nueva Zona</Button>
+            <Typography variant="h5" component="h1">{t('zonesAdmin.listTitle')}</Typography>
+            <Button variant="contained" startIcon={<AddIcon />} onClick={handleCreateNew}>{t('zonesAdmin.newZone')}</Button>
           </Box>
         </Box>
 
         {error && (
           <Box sx={{ p: 2 }}>
-            <Alert severity="error" action={<Button color="inherit" size="small" onClick={handleRefresh} startIcon={<RefreshIcon />}>Reintentar</Button>}>
+            <Alert severity="error" action={<Button color="inherit" size="small" onClick={handleRefresh} startIcon={<RefreshIcon />}>{t('sales.retry')}</Button>}>
               {error}
             </Alert>
           </Box>
         )}
 
         <Toolbar sx={{ justifyContent: 'space-between', gap: 2, flexWrap: 'wrap' }}>
-          <FormControlLabel control={<Switch checked={showActiveOnly} onChange={handleActiveFilterToggle} size="small" />} label="Solo activas" />
+          <FormControlLabel control={<Switch checked={showActiveOnly} onChange={handleActiveFilterToggle} size="small" />} label={t('zonesAdmin.activeOnly')} />
           <TextField
-            placeholder="Buscar por nombre, descripción o ID..."
+            placeholder={t('zonesAdmin.searchPlaceholder')}
             value={searchText}
             onChange={handleSearchChange}
             variant="outlined"
@@ -163,8 +165,8 @@ const ZonesListMUI = (): React.ReactElement => {
             }}
           />
           <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-            {!loading && <Typography variant="body2" color="text.secondary">{totalZones} de {allZonesCount} zonas</Typography>}
-            <Tooltip title="Actualizar lista"><span><IconButton onClick={handleRefresh} disabled={loading} color="primary"><RefreshIcon /></IconButton></span></Tooltip>
+            {!loading && <Typography variant="body2" color="text.secondary">{t('zonesAdmin.countOfTotal', { shown: totalZones, total: allZonesCount })}</Typography>}
+            <Tooltip title={t('zonesAdmin.refreshTooltip')}><span><IconButton onClick={handleRefresh} disabled={loading} color="primary"><RefreshIcon /></IconButton></span></Tooltip>
           </Box>
         </Toolbar>
 
@@ -172,7 +174,7 @@ const ZonesListMUI = (): React.ReactElement => {
           <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', p: 6 }}>
             <Box sx={{ textAlign: 'center' }}>
               <CircularProgress />
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>Cargando zonas...</Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>{t('zonesAdmin.loadingZones')}</Typography>
             </Box>
           </Box>
         )}
@@ -196,7 +198,7 @@ const ZonesListMUI = (): React.ReactElement => {
                   {zones.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={columns.length} align="center" sx={{ py: 6 }}>
-                        <Typography variant="body1" color="text.secondary">{searchText || showActiveOnly ? 'No se encontraron zonas que coincidan con los filtros' : 'No hay zonas disponibles'}</Typography>
+                        <Typography variant="body1" color="text.secondary">{searchText || showActiveOnly ? t('zonesAdmin.noZonesFound') : t('zonesAdmin.noZonesAvailable')}</Typography>
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -205,10 +207,10 @@ const ZonesListMUI = (): React.ReactElement => {
                         <TableCell><Chip label={zone.zoneId} size="small" color="primary" variant="outlined" /></TableCell>
                         <TableCell><Typography variant="body2" fontWeight="medium">{zone.zoneName}</Typography></TableCell>
                         <TableCell><Typography variant="body2" color="text.secondary">{zone.description || '-'}</Typography></TableCell>
-                        <TableCell align="center"><Chip label={zone.isActive ? 'Activa' : 'Inactiva'} size="small" color={zone.isActive ? 'success' : 'default'} variant={zone.isActive ? 'filled' : 'outlined'} /></TableCell>
+                        <TableCell align="center"><Chip label={zone.isActive ? t('zonesAdmin.active') : t('zonesAdmin.inactive')} size="small" color={zone.isActive ? 'success' : 'default'} variant={zone.isActive ? 'filled' : 'outlined'} /></TableCell>
                         <TableCell align="center">
-                          <Tooltip title="Editar zona"><IconButton size="small" sx={{ color: '#51BCDA' }} onClick={() => handleEdit(zone.zoneId)}><EditIcon fontSize="small" /></IconButton></Tooltip>
-                          <Tooltip title="Eliminar zona"><IconButton size="small" sx={{ color: '#FF7043', ml: 1 }} onClick={() => handleDeleteClick(zone)}><DeleteIcon fontSize="small" /></IconButton></Tooltip>
+                          <Tooltip title={t('zonesAdmin.editZone')}><IconButton size="small" sx={{ color: '#51BCDA' }} onClick={() => handleEdit(zone.zoneId)}><EditIcon fontSize="small" /></IconButton></Tooltip>
+                          <Tooltip title={t('zonesAdmin.deleteZone')}><IconButton size="small" sx={{ color: '#FF7043', ml: 1 }} onClick={() => handleDeleteClick(zone)}><DeleteIcon fontSize="small" /></IconButton></Tooltip>
                         </TableCell>
                       </TableRow>
                     ))
@@ -225,9 +227,9 @@ const ZonesListMUI = (): React.ReactElement => {
                 onPageChange={handleChangePage}
                 rowsPerPage={rowsPerPage}
                 onRowsPerPageChange={handleChangeRowsPerPage}
-                rowsPerPageOptions={[{ value: 5, label: '5' }, { value: 10, label: '10' }, { value: 20, label: '20' }, { value: 50, label: '50' }, { value: 100, label: '100' }, { value: 0, label: 'Todos' }]}
-                labelRowsPerPage="Entradas por página:"
-                labelDisplayedRows={({ from, to, count }) => rowsPerPage === 0 || rowsPerPage === -1 ? `Mostrando ${count} ${count === 1 ? 'entrada' : 'entradas'}` : `${from}-${to} de ${count !== -1 ? count : `más de ${to}`}`}
+                rowsPerPageOptions={[{ value: 5, label: '5' }, { value: 10, label: '10' }, { value: 20, label: '20' }, { value: 50, label: '50' }, { value: 100, label: '100' }, { value: 0, label: t('common.all') }]}
+                labelRowsPerPage={t('balances.entriesPerPage')}
+                labelDisplayedRows={({ from, to, count }) => rowsPerPage === 0 || rowsPerPage === -1 ? t('zonesAdmin.showingEntries', { count }) : `${from}-${to} ${t('common.of')} ${count !== -1 ? count : `${t('zonesAdmin.moreThan', { count: to })}`}`}
               />
             )}
           </>
@@ -235,13 +237,13 @@ const ZonesListMUI = (): React.ReactElement => {
       </Paper>
 
       <Dialog open={deleteDialogOpen} onClose={handleDeleteCancel}>
-        <DialogTitle>Eliminar Zona</DialogTitle>
+        <DialogTitle>{t('zonesAdmin.deleteDialogTitle')}</DialogTitle>
         <DialogContent>
-          <DialogContentText>¿Está seguro que desea eliminar la zona "{zoneToDelete?.zoneName}"? Esta acción desactivará la zona en el sistema.</DialogContentText>
+          <DialogContentText>{t('zonesAdmin.deleteConfirmation', { name: zoneToDelete?.zoneName ?? '' })}</DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleDeleteCancel} color="primary">Cancelar</Button>
-          <Button onClick={handleDeleteConfirm} color="error" variant="contained">Eliminar</Button>
+          <Button onClick={handleDeleteCancel} color="primary">{t('common.cancel')}</Button>
+          <Button onClick={handleDeleteConfirm} color="error" variant="contained">{t('common.delete')}</Button>
         </DialogActions>
       </Dialog>
     </Box>

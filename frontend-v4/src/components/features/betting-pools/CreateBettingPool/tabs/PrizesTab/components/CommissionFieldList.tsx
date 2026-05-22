@@ -1,4 +1,5 @@
 import React, { memo, useState, useEffect, type ChangeEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   TextField,
   Typography,
@@ -53,6 +54,7 @@ const CommissionFieldList: React.FC<CommissionFieldListProps> = memo(({
   onSave,
   draws = [],
 }) => {
+  const { t } = useTranslation();
   const [commission2Mode, setCommission2Mode] = useState<'general' | 'perPlay'>('general');
   const [generalTopInput, setGeneralTopInput] = useState<string>('');
 
@@ -202,8 +204,8 @@ const CommissionFieldList: React.FC<CommissionFieldListProps> = memo(({
             value={commission2Mode}
             onChange={(e) => setCommission2Mode(e.target.value as 'general' | 'perPlay')}
           >
-            <FormControlLabel value="general" control={<Radio size="small" />} label="General" />
-            <FormControlLabel value="perPlay" control={<Radio size="small" />} label="Por jugada" />
+            <FormControlLabel value="general" control={<Radio size="small" />} label={t('createBettingPool.prizes.general')} />
+            <FormControlLabel value="perPlay" control={<Radio size="small" />} label={t('createBettingPool.prizes.perPlay')} />
           </RadioGroup>
         </FormControl>
       )}
@@ -230,7 +232,7 @@ const CommissionFieldList: React.FC<CommissionFieldListProps> = memo(({
             color: 'text.secondary',
           }}
         >
-          General
+          {t('createBettingPool.prizes.general')}
         </Typography>
         <TextField
           size="small"
@@ -315,7 +317,7 @@ const CommissionFieldList: React.FC<CommissionFieldListProps> = memo(({
               fontWeight: 'bold',
             }}
           >
-            {saving ? 'Guardando...' : 'ACTUALIZAR'}
+            {saving ? t('createBettingPool.prizes.saving') : t('createBettingPool.prizes.update')}
           </Button>
         </Box>
       )}

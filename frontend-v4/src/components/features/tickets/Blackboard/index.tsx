@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   Box,
   Paper,
@@ -19,7 +20,7 @@ import {
   Switch,
   FormControlLabel,
 } from '@mui/material'
-import { getTodayDate } from '@/utils/formatters'
+import { getTodayDate , getActiveLocale } from '@/utils/formatters'
 import { formatCurrency } from '@/utils/formatCurrency'
 import {
   getPlaysByNumber,
@@ -64,6 +65,7 @@ interface HoverDetailContext {
 const HoverCtx = React.createContext<HoverDetailContext | null>(null)
 
 const SingleNumberSection: React.FC<{ name: string; betTypeCode: string; rows: PlayByNumberRow[] }> = ({ name, betTypeCode, rows }) => {
+  const { t } = useTranslation()
   const hover = React.useContext(HoverCtx)
   const [filter, setFilter] = useState<string>('')
   const maxDigits = expectedDigits(betTypeCode) || 2
@@ -165,7 +167,7 @@ const SingleNumberSection: React.FC<{ name: string; betTypeCode: string; rows: P
               N°
             </Typography>
             <Typography sx={{ fontSize: '10px', fontWeight: 600, color: '#94a3b8', letterSpacing: 1 }}>
-              MONTO
+              {t('common.amount').toUpperCase()}
             </Typography>
           </Box>
         ))}
@@ -230,7 +232,7 @@ const SingleNumberSection: React.FC<{ name: string; betTypeCode: string; rows: P
                   fontWeight: 600,
                   color: amtColor,
                 }}>
-                  {cell.amount > 0 ? cell.amount.toLocaleString('es-DO', { maximumFractionDigits: 0 }) : 0}
+                  {cell.amount > 0 ? cell.amount.toLocaleString(getActiveLocale(), { maximumFractionDigits: 0 }) : 0}
                 </Typography>
               </Box>
             )
@@ -247,6 +249,7 @@ const CombinationSection: React.FC<{
   rows: PlayByNumberRow[]
   grandTotal: number
 }> = ({ name, betTypeCode, rows, grandTotal }) => {
+  const { t } = useTranslation()
   const hover = React.useContext(HoverCtx)
   const [filter, setFilter] = useState<string>('')
   const maxDigits = expectedDigits(betTypeCode) || 6
@@ -306,7 +309,7 @@ const CombinationSection: React.FC<{
           N° <Box component="span" sx={{ color: '#cbd5e1', fontWeight: 400 }}>({lineCount})</Box>
         </Typography>
         <Typography sx={{ fontSize: '10px', fontWeight: 600, color: '#94a3b8', letterSpacing: 1 }}>
-          MONTO
+          {t('common.amount').toUpperCase()}
         </Typography>
       </Box>
 
@@ -326,7 +329,7 @@ const CombinationSection: React.FC<{
       >
         {visible.length === 0 && (
           <Box sx={{ px: 1.5, py: 1, color: '#94a3b8', fontSize: '12px', textAlign: 'center' }}>
-            Sin coincidencias
+            {t('common.noResults')}
           </Box>
         )}
         {visible.map((r) => {
@@ -359,7 +362,7 @@ const CombinationSection: React.FC<{
                 {formatBetNumber(betTypeCode, r.betNumber)}
               </Typography>
               <Typography sx={{ fontFamily: 'monospace', fontSize: '16px', fontWeight: 600, color: cardStyle.amtColor }}>
-                {r.totalAmount.toLocaleString('es-DO', { maximumFractionDigits: 0 })}
+                {r.totalAmount.toLocaleString(getActiveLocale(), { maximumFractionDigits: 0 })}
               </Typography>
             </Box>
           )
@@ -370,6 +373,7 @@ const CombinationSection: React.FC<{
 }
 
 const Blackboard: React.FC = () => {
+  const { t } = useTranslation()
   const [date, setDate] = useState<string>(getTodayDate())
   const [zones, setZones] = useState<Zone[]>([])
   const [selectedZoneIds, setSelectedZoneIds] = useState<number[]>([])
@@ -486,7 +490,7 @@ const Blackboard: React.FC = () => {
     } catch (e) {
       console.error(e)
       if (!opts.silent) {
-        setError('Error al cargar la pizarra')
+        setError(t('tickets.board.loadError'))
         setRows([])
       }
     } finally {
@@ -529,10 +533,11 @@ const Blackboard: React.FC = () => {
   const lastRefreshLabel = useMemo(() => {
     if (!lastRefreshAt) return null
     const secs = Math.max(0, Math.floor((Date.now() - lastRefreshAt.getTime()) / 1000))
-    if (secs < 5) return 'ahora mismo'
-    if (secs < 60) return `hace ${secs}s`
+    if (secs < 5) return t('tickets.board.justNow')
+    if (secs < 60) return t('tickets.board.secondsAgo', { count: secs })
     const mins = Math.floor(secs / 60)
-    return `hace ${mins}m`
+    return t('tickets.board.minutesAgo', { count: mins })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lastRefreshAt, nowTick])
 
   const grouped = useMemo(() => {
@@ -619,10 +624,10 @@ const Blackboard: React.FC = () => {
       } catch (e) {
         if (lastFetchKey.current !== fetchKey) return
         console.error(e)
-        setHoverState({ anchor, betTypeCode, betNumber, loading: false, rows: [], error: 'Error al cargar' })
+        setHoverState({ anchor, betTypeCode, betNumber, loading: false, rows: [], error: t('actionsMessages.loadError') })
       }
     }, 200)
-  }, [date, selectedDrawId, selectedZoneIds, selectedBanca])
+  }, [date, selectedDrawId, selectedZoneIds, selectedBanca, t])
 
   const hideDetail = useCallback(() => {
     if (hoverShowTimer.current) {
@@ -645,7 +650,7 @@ const Blackboard: React.FC = () => {
         <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 2, mb: 2 }}>
           <TextField
             type="date"
-            label="Fecha"
+            label={t('common.date')}
             value={date}
             onChange={(e) => setDate(e.target.value)}
             size="small"
@@ -654,11 +659,11 @@ const Blackboard: React.FC = () => {
           <TextField
             select
             size="small"
-            label="Sorteo"
+            label={t('common.draw')}
             value={selectedDrawId ?? ''}
             onChange={(e) => setSelectedDrawId(e.target.value ? Number(e.target.value) : null)}
           >
-            <MenuItem value="">Todos</MenuItem>
+            <MenuItem value="">{t('common.all')}</MenuItem>
             {draws.map(d => (
               <MenuItem key={d.drawId} value={d.drawId}>{d.drawName}</MenuItem>
             ))}
@@ -671,7 +676,7 @@ const Blackboard: React.FC = () => {
             onChange={(_, vals) => setSelectedZoneIds(vals.map(v => v.zoneId))}
             getOptionLabel={(z) => z.zoneName}
             isOptionEqualToValue={(a, b) => a.zoneId === b.zoneId}
-            renderInput={(params) => <TextField {...params} label="Zonas" placeholder="Todas" />}
+            renderInput={(params) => <TextField {...params} label={t('common.zones')} placeholder={t('common.all')} />}
             renderTags={(value, getTagProps) =>
               value.map((option, index) => (
                 <Chip size="small" label={option.zoneName} {...getTagProps({ index })} key={option.zoneId} />
@@ -685,7 +690,7 @@ const Blackboard: React.FC = () => {
             onChange={(_, v) => setSelectedBanca(v)}
             getOptionLabel={(b) => b.bettingPoolCode ? `${b.bettingPoolCode} — ${b.bettingPoolName}` : b.bettingPoolName}
             isOptionEqualToValue={(a, b) => a.bettingPoolId === b.bettingPoolId}
-            renderInput={(params) => <TextField {...params} label="Banca" placeholder="Todas" />}
+            renderInput={(params) => <TextField {...params} label={t('common.bettingPool')} placeholder={t('common.all')} />}
           />
         </Box>
 
@@ -704,7 +709,7 @@ const Blackboard: React.FC = () => {
                   }}
                 />
               }
-              label={<Typography sx={{ fontSize: '13px', color: '#2c2c2c' }}>Auto-refresh (15s)</Typography>}
+              label={<Typography sx={{ fontSize: '13px', color: '#2c2c2c' }}>{t('tickets.board.autoRefresh')}</Typography>}
               sx={{ m: 0 }}
             />
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, ml: 0.5 }}>
@@ -724,9 +729,9 @@ const Blackboard: React.FC = () => {
               />
               <Typography sx={{ fontSize: '12px', color: '#666' }}>
                 {refreshing
-                  ? 'Actualizando…'
+                  ? t('tickets.board.refreshing')
                   : lastRefreshLabel
-                  ? `Actualizado ${lastRefreshLabel}`
+                  ? t('tickets.board.updatedAt', { time: lastRefreshLabel })
                   : ''}
               </Typography>
             </Box>
@@ -737,7 +742,7 @@ const Blackboard: React.FC = () => {
         {selectedDrawId && (
           <Box sx={{ textAlign: 'center', my: 2 }}>
             <Typography sx={{ fontSize: '22px', fontWeight: 500, fontFamily: 'Montserrat, sans-serif', color: '#2c2c2c' }}>
-              Total para sorteo <b>{drawLabel}</b>:{' '}
+              {t('tickets.plays.totalForDraw')} <b>{drawLabel}</b>:{' '}
               <Box
                 component="span"
                 sx={{
@@ -753,7 +758,7 @@ const Blackboard: React.FC = () => {
 
         {!selectedDrawId && (
           <Typography sx={{ textAlign: 'center', color: '#888', py: 6, fontSize: '15px' }}>
-            Selecciona un <b>sorteo</b> para ver la pizarra.
+            {t('tickets.board.selectDrawPrompt')}
           </Typography>
         )}
 
@@ -769,7 +774,7 @@ const Blackboard: React.FC = () => {
 
         {selectedDrawId && !loading && !error && rows.length === 0 && (
           <Typography sx={{ textAlign: 'center', color: '#888', py: 4 }}>
-            No hay jugadas registradas para los filtros seleccionados.
+            {t('tickets.plays.noPlaysForFilters')}
           </Typography>
         )}
 
@@ -828,16 +833,16 @@ const Blackboard: React.FC = () => {
             )}
             {!hoverState.loading && !hoverState.error && hoverState.rows.length === 0 && (
               <Typography sx={{ color: '#888', fontSize: '12px', textAlign: 'center', py: 1 }}>
-                Sin coincidencias
+                {t('common.noResults')}
               </Typography>
             )}
             {!hoverState.loading && !hoverState.error && hoverState.rows.length > 0 && (
               <Table size="small">
                 <TableHead>
                   <TableRow sx={{ bgcolor: '#e3f2fd' }}>
-                    <TableCell sx={{ fontWeight: 700, fontSize: '11px', py: 0.5, color: '#1976d2', letterSpacing: 0.3 }}>BANCA</TableCell>
-                    <TableCell sx={{ fontWeight: 700, fontSize: '11px', py: 0.5, color: '#1976d2', letterSpacing: 0.3 }}>REFERENCIA</TableCell>
-                    <TableCell sx={{ fontWeight: 700, fontSize: '11px', py: 0.5, color: '#1976d2', letterSpacing: 0.3 }} align="right">IMPORTE</TableCell>
+                    <TableCell sx={{ fontWeight: 700, fontSize: '11px', py: 0.5, color: '#1976d2', letterSpacing: 0.3 }}>{t('common.bettingPool').toUpperCase()}</TableCell>
+                    <TableCell sx={{ fontWeight: 700, fontSize: '11px', py: 0.5, color: '#1976d2', letterSpacing: 0.3 }}>{t('tickets.plays.reference').toUpperCase()}</TableCell>
+                    <TableCell sx={{ fontWeight: 700, fontSize: '11px', py: 0.5, color: '#1976d2', letterSpacing: 0.3 }} align="right">{t('common.amount').toUpperCase()}</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -856,7 +861,7 @@ const Blackboard: React.FC = () => {
                         {r.reference || '-'}
                       </TableCell>
                       <TableCell sx={{ fontSize: '12px', py: 0.5, textAlign: 'right', fontFamily: 'monospace', fontWeight: 600 }}>
-                        {r.totalAmount.toLocaleString('es-DO', { maximumFractionDigits: 0 })}
+                        {r.totalAmount.toLocaleString(getActiveLocale(), { maximumFractionDigits: 0 })}
                       </TableCell>
                     </TableRow>
                   ))}

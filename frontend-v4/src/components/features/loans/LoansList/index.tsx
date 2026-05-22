@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, type ChangeEvent } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Card,
@@ -41,15 +42,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import AddIcon from '@mui/icons-material/Add';
 import { getLoans, createLoanPayment, updateLoan, cancelLoan, type LoanAPI } from '@services/loanService';
-
-const FREQUENCY_LABELS: Record<string, string> = {
-  daily: 'Diario',
-  weekly: 'Semanal',
-  monthly: 'Mensual',
-  annual: 'Anual'
-};
-
-const DAY_LABELS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+import { getActiveLocale } from '@/utils/formatters';
 
 const formatCurrency = (val: number): string =>
   `$${val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -57,12 +50,28 @@ const formatCurrency = (val: number): string =>
 const formatDate = (dateStr: string | null): string => {
   if (!dateStr) return '-';
   const d = new Date(dateStr.endsWith('Z') ? dateStr : dateStr + 'Z');
-  return d.toLocaleDateString('es-DO', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  return d.toLocaleDateString(getActiveLocale(), { day: '2-digit', month: '2-digit', year: 'numeric' });
 };
 
 type SortKey = keyof LoanAPI;
 
 const LoansList = (): React.ReactElement => {
+  const { t } = useTranslation();
+  const FREQUENCY_LABELS: Record<string, string> = useMemo(() => ({
+    daily: t('loansAdmin.frequency.daily'),
+    weekly: t('loansAdmin.frequency.weekly'),
+    monthly: t('loansAdmin.frequency.monthly'),
+    annual: t('loansAdmin.frequency.annual')
+  }), [t]);
+  const DAY_LABELS = useMemo(() => [
+    t('loansAdmin.day.monday'),
+    t('loansAdmin.day.tuesday'),
+    t('loansAdmin.day.wednesday'),
+    t('loansAdmin.day.thursday'),
+    t('loansAdmin.day.friday'),
+    t('loansAdmin.day.saturday'),
+    t('loansAdmin.day.sunday')
+  ], [t]);
   const [loans, setLoans] = useState<LoanAPI[]>([]);
   const [loading, setLoading] = useState(true);
   const [onlyActive, setOnlyActive] = useState(true);
@@ -170,12 +179,12 @@ const LoansList = (): React.ReactElement => {
         amountPaid: parseFloat(paymentAmount),
         notes: paymentNotes || undefined
       });
-      setSnackbar({ open: true, message: 'Pago registrado exitosamente', severity: 'success' });
+      setSnackbar({ open: true, message: t('loansAdmin.payment.successMsg'), severity: 'success' });
       setPaymentLoan(null);
       loadLoans();
     } catch (err) {
       console.error('Error creating payment:', err);
-      setSnackbar({ open: true, message: 'Error al registrar pago', severity: 'error' });
+      setSnackbar({ open: true, message: t('loansAdmin.payment.errorMsg'), severity: 'error' });
     } finally {
       setPaymentSubmitting(false);
     }
@@ -201,12 +210,12 @@ const LoansList = (): React.ReactElement => {
         interestRate: parseFloat(editInterestRate) || 0,
         notes: editNotes
       });
-      setSnackbar({ open: true, message: 'Préstamo actualizado exitosamente', severity: 'success' });
+      setSnackbar({ open: true, message: t('loansAdmin.edit.successMsg'), severity: 'success' });
       setEditLoan(null);
       loadLoans();
     } catch (err) {
       console.error('Error updating loan:', err);
-      setSnackbar({ open: true, message: 'Error al actualizar préstamo', severity: 'error' });
+      setSnackbar({ open: true, message: t('loansAdmin.edit.errorMsg'), severity: 'error' });
     } finally {
       setEditSubmitting(false);
     }
@@ -222,12 +231,12 @@ const LoansList = (): React.ReactElement => {
     setDeleteSubmitting(true);
     try {
       await cancelLoan(deleteLoan.loanId);
-      setSnackbar({ open: true, message: 'Préstamo cancelado exitosamente', severity: 'success' });
+      setSnackbar({ open: true, message: t('loansAdmin.cancel.successMsg'), severity: 'success' });
       setDeleteLoan(null);
       loadLoans();
     } catch (err) {
       console.error('Error cancelling loan:', err);
-      setSnackbar({ open: true, message: 'Error al cancelar préstamo', severity: 'error' });
+      setSnackbar({ open: true, message: t('loansAdmin.cancel.errorMsg'), severity: 'error' });
     } finally {
       setDeleteSubmitting(false);
     }
@@ -235,18 +244,18 @@ const LoansList = (): React.ReactElement => {
 
   const getStatusChip = (status: string): React.ReactElement => {
     const config: Record<string, { label: string; color: 'success' | 'info' | 'error' | 'default' }> = {
-      active: { label: 'Activo', color: 'success' },
-      completed: { label: 'Completado', color: 'info' },
-      cancelled: { label: 'Cancelado', color: 'error' }
+      active: { label: t('loansAdmin.status.active'), color: 'success' },
+      completed: { label: t('loansAdmin.status.completed'), color: 'info' },
+      cancelled: { label: t('loansAdmin.status.cancelled'), color: 'error' }
     };
     const c = config[status] ?? { label: status, color: 'default' as const };
     return <Chip label={c.label} color={c.color} size="small" sx={{ fontSize: '11px', fontWeight: 500 }} />;
   };
 
   const getPaymentDayLabel = (loan: LoanAPI): string => {
-    if (loan.frequency === 'daily') return 'Todos';
+    if (loan.frequency === 'daily') return t('loansAdmin.day.all');
     if (loan.frequency === 'weekly' && loan.paymentDay != null) return DAY_LABELS[loan.paymentDay] ?? '-';
-    if (loan.frequency === 'monthly' && loan.paymentDay != null) return `Día ${loan.paymentDay}`;
+    if (loan.frequency === 'monthly' && loan.paymentDay != null) return t('loansAdmin.day.ofMonth', { day: loan.paymentDay });
     return '-';
   };
 
@@ -265,7 +274,7 @@ const LoansList = (): React.ReactElement => {
         <CardContent>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
             <Typography variant="h5" sx={{ color: '#2c2c2c', fontWeight: 600 }}>
-              Lista de préstamos
+              {t('loansAdmin.listTitle')}
             </Typography>
             <Button
               component={Link}
@@ -274,7 +283,7 @@ const LoansList = (): React.ReactElement => {
               startIcon={<AddIcon />}
               sx={{ bgcolor: '#8b5cf6', '&:hover': { bgcolor: '#7c3aed' }, textTransform: 'none' }}
             >
-              Crear préstamo
+              {t('loansAdmin.createLoan')}
             </Button>
           </Box>
 
@@ -282,12 +291,12 @@ const LoansList = (): React.ReactElement => {
           <Box sx={{ mb: 2, display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
             <FormControlLabel
               control={<Checkbox checked={onlyActive} onChange={(e) => setOnlyActive(e.target.checked)} />}
-              label="Sólo activos"
+              label={t('loansAdmin.onlyActive')}
               sx={{ '& .MuiFormControlLabel-label': { fontSize: '14px' } }}
             />
             <TextField
               size="small"
-              placeholder="Filtro rápido"
+              placeholder={t('common.filterQuick')}
               value={quickFilter}
               onChange={(e: ChangeEvent<HTMLInputElement>) => setQuickFilter(e.target.value)}
               sx={{ maxWidth: '300px' }}
@@ -307,25 +316,25 @@ const LoansList = (): React.ReactElement => {
                 <Table size="small">
                   <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
                     <TableRow>
-                      {headerCell('loanNumber', '#')}
-                      {headerCell('entityName', 'Banca')}
-                      {headerCell('principalAmount', 'Total prestado')}
-                      {headerCell('interestRate', 'Tasa %')}
-                      {headerCell('totalPaid', 'Total pagado')}
-                      {headerCell('remainingBalance', 'Pendiente')}
-                      {headerCell('installmentAmount', 'Cuota')}
-                      {headerCell('frequency', 'Frecuencia')}
-                      <TableCell sx={{ fontWeight: 'bold', fontSize: '12px' }}>Día</TableCell>
-                      {headerCell('startDate', 'Inicio')}
-                      {headerCell('status', 'Estado')}
-                      <TableCell sx={{ fontWeight: 'bold', textAlign: 'center', fontSize: '12px' }}>Acciones</TableCell>
+                      {headerCell('loanNumber', t('loansAdmin.table.number'))}
+                      {headerCell('entityName', t('loansAdmin.table.bettingPool'))}
+                      {headerCell('principalAmount', t('loansAdmin.table.totalLoaned'))}
+                      {headerCell('interestRate', t('loansAdmin.table.interestPct'))}
+                      {headerCell('totalPaid', t('loansAdmin.table.totalPaid'))}
+                      {headerCell('remainingBalance', t('loansAdmin.table.pending'))}
+                      {headerCell('installmentAmount', t('loansAdmin.table.installment'))}
+                      {headerCell('frequency', t('loansAdmin.table.frequency'))}
+                      <TableCell sx={{ fontWeight: 'bold', fontSize: '12px' }}>{t('loansAdmin.table.day')}</TableCell>
+                      {headerCell('startDate', t('loansAdmin.table.startDate'))}
+                      {headerCell('status', t('loansAdmin.table.status'))}
+                      <TableCell sx={{ fontWeight: 'bold', textAlign: 'center', fontSize: '12px' }}>{t('common.actions')}</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     {filteredAndSorted.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={12} sx={{ textAlign: 'center', py: 3 }}>
-                          No hay préstamos disponibles
+                          {t('loansAdmin.noLoans')}
                         </TableCell>
                       </TableRow>
                     ) : (
@@ -349,13 +358,13 @@ const LoansList = (): React.ReactElement => {
                           <TableCell sx={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
                             {loan.status === 'active' && (
                               <>
-                                <IconButton size="small" color="primary" onClick={() => handleOpenPayment(loan)} title="Registrar pago">
+                                <IconButton size="small" color="primary" onClick={() => handleOpenPayment(loan)} title={t('loansAdmin.actions.registerPayment')}>
                                   <PaymentIcon fontSize="small" />
                                 </IconButton>
-                                <IconButton size="small" sx={{ color: '#8b5cf6' }} onClick={() => handleOpenEdit(loan)} title="Editar préstamo">
+                                <IconButton size="small" sx={{ color: '#8b5cf6' }} onClick={() => handleOpenEdit(loan)} title={t('loansAdmin.actions.editLoan')}>
                                   <EditIcon fontSize="small" />
                                 </IconButton>
-                                <IconButton size="small" color="error" onClick={() => setDeleteLoan(loan)} title="Cancelar préstamo">
+                                <IconButton size="small" color="error" onClick={() => setDeleteLoan(loan)} title={t('loansAdmin.actions.cancelLoan')}>
                                   <DeleteIcon fontSize="small" />
                                 </IconButton>
                               </>
@@ -366,7 +375,7 @@ const LoansList = (): React.ReactElement => {
                     )}
                     {filteredAndSorted.length > 0 && (
                       <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
-                        <TableCell sx={{ fontWeight: 'bold' }}>Total</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold' }}>{t('common.total')}</TableCell>
                         <TableCell />
                         <TableCell sx={{ fontWeight: 'bold' }}>{formatCurrency(totals.principal)}</TableCell>
                         <TableCell />
@@ -380,7 +389,7 @@ const LoansList = (): React.ReactElement => {
               </TableContainer>
 
               <Typography variant="body2" sx={{ mt: 2, color: '#6c757d' }}>
-                Mostrando {filteredAndSorted.length} préstamo{filteredAndSorted.length !== 1 ? 's' : ''}
+                {t('loansAdmin.showing', { count: filteredAndSorted.length })}
               </Typography>
             </>
           )}
@@ -390,7 +399,7 @@ const LoansList = (): React.ReactElement => {
       {/* Payment Dialog */}
       <Dialog open={!!paymentLoan} onClose={() => setPaymentLoan(null)} maxWidth="sm" fullWidth>
         <DialogTitle sx={{ backgroundColor: '#8b5cf6', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          Registrar pago — {paymentLoan?.loanNumber}
+          {t('loansAdmin.payment.title', { loanNumber: paymentLoan?.loanNumber ?? '' })}
           <IconButton edge="end" color="inherit" onClick={() => setPaymentLoan(null)} size="small">
             <CloseIcon />
           </IconButton>
@@ -398,15 +407,15 @@ const LoansList = (): React.ReactElement => {
         <DialogContent sx={{ pt: 3 }}>
           <Box sx={{ mb: 2, mt: 1 }}>
             <Typography variant="body2" color="text.secondary">
-              Banca: <strong>{paymentLoan?.entityCode} - {paymentLoan?.entityName}</strong>
+              {t('loansAdmin.payment.bettingPoolLabel')} <strong>{paymentLoan?.entityCode} - {paymentLoan?.entityName}</strong>
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              Pendiente: <strong style={{ color: '#dc3545' }}>{formatCurrency(paymentLoan?.remainingBalance ?? 0)}</strong>
+              {t('loansAdmin.payment.pendingLabel')} <strong style={{ color: '#dc3545' }}>{formatCurrency(paymentLoan?.remainingBalance ?? 0)}</strong>
             </Typography>
           </Box>
           <TextField
             fullWidth
-            label="Monto del pago"
+            label={t('loansAdmin.payment.amount')}
             type="number"
             value={paymentAmount}
             onChange={(e) => setPaymentAmount(e.target.value)}
@@ -416,7 +425,7 @@ const LoansList = (): React.ReactElement => {
           />
           <TextField
             fullWidth
-            label="Notas (opcional)"
+            label={t('loansAdmin.payment.notes')}
             value={paymentNotes}
             onChange={(e) => setPaymentNotes(e.target.value)}
             multiline
@@ -430,17 +439,17 @@ const LoansList = (): React.ReactElement => {
             onClick={handleEarlyPay}
             sx={{ textTransform: 'none' }}
           >
-            Pagar todo ({formatCurrency(paymentLoan?.remainingBalance ?? 0)})
+            {t('loansAdmin.payment.payAll', { amount: formatCurrency(paymentLoan?.remainingBalance ?? 0) })}
           </Button>
           <Box sx={{ display: 'flex', gap: 1 }}>
-            <Button onClick={() => setPaymentLoan(null)} sx={{ textTransform: 'none' }}>Cancelar</Button>
+            <Button onClick={() => setPaymentLoan(null)} sx={{ textTransform: 'none' }}>{t('common.cancel')}</Button>
             <Button
               variant="contained"
               onClick={handlePayment}
               disabled={!paymentAmount || parseFloat(paymentAmount) <= 0 || paymentSubmitting}
               sx={{ bgcolor: '#8b5cf6', '&:hover': { bgcolor: '#7c3aed' }, textTransform: 'none' }}
             >
-              {paymentSubmitting ? <CircularProgress size={20} color="inherit" /> : 'Registrar pago'}
+              {paymentSubmitting ? <CircularProgress size={20} color="inherit" /> : t('loansAdmin.payment.register')}
             </Button>
           </Box>
         </DialogActions>
@@ -451,10 +460,10 @@ const LoansList = (): React.ReactElement => {
         <DialogContent sx={{ textAlign: 'center', py: 4 }}>
           <WarningAmberIcon sx={{ fontSize: 64, color: '#f0ad4e', mb: 2 }} />
           <Typography variant="h6" sx={{ mb: 1, color: '#333' }}>
-            ¿Cancelar préstamo {deleteLoan?.loanNumber}?
+            {t('loansAdmin.cancel.confirm', { loanNumber: deleteLoan?.loanNumber ?? '' })}
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-            Pendiente: {formatCurrency(deleteLoan?.remainingBalance ?? 0)}
+            {t('loansAdmin.cancel.pending', { amount: formatCurrency(deleteLoan?.remainingBalance ?? 0) })}
           </Typography>
           <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
             <Button
@@ -464,10 +473,10 @@ const LoansList = (): React.ReactElement => {
               disabled={deleteSubmitting}
               sx={{ minWidth: 100 }}
             >
-              {deleteSubmitting ? <CircularProgress size={20} color="inherit" /> : 'Cancelar préstamo'}
+              {deleteSubmitting ? <CircularProgress size={20} color="inherit" /> : t('loansAdmin.cancel.cancelLoan')}
             </Button>
             <Button variant="outlined" color="inherit" onClick={() => setDeleteLoan(null)} sx={{ minWidth: 100 }}>
-              Volver
+              {t('loansAdmin.cancel.back')}
             </Button>
           </Box>
         </DialogContent>
@@ -476,7 +485,7 @@ const LoansList = (): React.ReactElement => {
       {/* Edit Dialog */}
       <Dialog open={!!editLoan} onClose={() => setEditLoan(null)} maxWidth="sm" fullWidth>
         <DialogTitle sx={{ backgroundColor: '#8b5cf6', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          Editar préstamo — {editLoan?.loanNumber}
+          {t('loansAdmin.edit.title', { loanNumber: editLoan?.loanNumber ?? '' })}
           <IconButton edge="end" color="inherit" onClick={() => setEditLoan(null)} size="small">
             <CloseIcon />
           </IconButton>
@@ -484,15 +493,15 @@ const LoansList = (): React.ReactElement => {
         <DialogContent sx={{ pt: 3 }}>
           <Box sx={{ mb: 2, mt: 1 }}>
             <Typography variant="body2" color="text.secondary">
-              Banca: <strong>{editLoan?.entityCode} - {editLoan?.entityName}</strong>
+              {t('loansAdmin.payment.bettingPoolLabel')} <strong>{editLoan?.entityCode} - {editLoan?.entityName}</strong>
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              Monto prestado: <strong>{formatCurrency(editLoan?.principalAmount ?? 0)}</strong> | Pendiente: <strong style={{ color: '#dc3545' }}>{formatCurrency(editLoan?.remainingBalance ?? 0)}</strong>
+              {t('loansAdmin.edit.amountLoanedLabel')} <strong>{formatCurrency(editLoan?.principalAmount ?? 0)}</strong> | {t('loansAdmin.payment.pendingLabel')} <strong style={{ color: '#dc3545' }}>{formatCurrency(editLoan?.remainingBalance ?? 0)}</strong>
             </Typography>
           </Box>
           <TextField
             fullWidth
-            label="Monto cuota"
+            label={t('loansAdmin.edit.installment')}
             type="number"
             value={editInstallment}
             onChange={(e) => setEditInstallment(e.target.value)}
@@ -500,7 +509,7 @@ const LoansList = (): React.ReactElement => {
             InputProps={{ startAdornment: <InputAdornment position="start">$</InputAdornment> }}
             sx={{ mb: 2 }}
           />
-          <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>Frecuencia</Typography>
+          <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>{t('loansAdmin.edit.frequency')}</Typography>
           <FormControl component="fieldset" sx={{ mb: 2 }}>
             <RadioGroup
               row
@@ -508,10 +517,10 @@ const LoansList = (): React.ReactElement => {
               onChange={(e) => setEditFrequency(e.target.value)}
             >
               {[
-                { value: 'daily', label: 'Diario' },
-                { value: 'weekly', label: 'Semanal' },
-                { value: 'monthly', label: 'Mensual' },
-                { value: 'annual', label: 'Anual' }
+                { value: 'daily', label: t('loansAdmin.frequency.daily') },
+                { value: 'weekly', label: t('loansAdmin.frequency.weekly') },
+                { value: 'monthly', label: t('loansAdmin.frequency.monthly') },
+                { value: 'annual', label: t('loansAdmin.frequency.annual') }
               ].map(f => (
                 <FormControlLabel key={f.value} value={f.value} control={<Radio size="small" />} label={f.label} sx={{ '& .MuiFormControlLabel-label': { fontSize: '14px' } }} />
               ))}
@@ -531,7 +540,7 @@ const LoansList = (): React.ReactElement => {
           )}
           <TextField
             fullWidth
-            label="Tasa de interés (%)"
+            label={t('loansAdmin.edit.interestRatePct')}
             type="number"
             value={editInterestRate}
             onChange={(e) => setEditInterestRate(e.target.value)}
@@ -541,7 +550,7 @@ const LoansList = (): React.ReactElement => {
           />
           <TextField
             fullWidth
-            label="Notas"
+            label={t('loansAdmin.edit.notes')}
             value={editNotes}
             onChange={(e) => setEditNotes(e.target.value)}
             multiline
@@ -549,14 +558,14 @@ const LoansList = (): React.ReactElement => {
           />
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setEditLoan(null)} sx={{ textTransform: 'none' }}>Cancelar</Button>
+          <Button onClick={() => setEditLoan(null)} sx={{ textTransform: 'none' }}>{t('common.cancel')}</Button>
           <Button
             variant="contained"
             onClick={handleEdit}
             disabled={editSubmitting}
             sx={{ bgcolor: '#8b5cf6', '&:hover': { bgcolor: '#7c3aed' }, textTransform: 'none' }}
           >
-            {editSubmitting ? <CircularProgress size={20} color="inherit" /> : 'Guardar'}
+            {editSubmitting ? <CircularProgress size={20} color="inherit" /> : t('common.save')}
           </Button>
         </DialogActions>
       </Dialog>

@@ -1,4 +1,5 @@
 import React, { useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Typography,
@@ -32,17 +33,8 @@ interface WeeklyScheduleEditorProps {
   onChange: (schedule: WeeklySchedule) => void;
 }
 
-const DAYS_ES: Record<DayKey, string> = {
-  monday: 'Lunes',
-  tuesday: 'Martes',
-  wednesday: 'Miércoles',
-  thursday: 'Jueves',
-  friday: 'Viernes',
-  saturday: 'Sábado',
-  sunday: 'Domingo'
-};
-
 const WeeklyScheduleEditor = ({ schedule, onChange }: WeeklyScheduleEditorProps): React.ReactElement => {
+  const { t } = useTranslation();
   const days: DayKey[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 
   const handleDayToggle = useCallback((day: DayKey): void => {
@@ -85,7 +77,7 @@ const WeeklyScheduleEditor = ({ schedule, onChange }: WeeklyScheduleEditorProps)
 
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
               <Typography variant="subtitle1" sx={{ fontWeight: 500, fontSize: '14px' }}>
-                {DAYS_ES[day]}
+                {t(`drawsAdmin.schedules.days.${day}`)}
               </Typography>
               <FormControlLabel
                 control={
@@ -95,7 +87,7 @@ const WeeklyScheduleEditor = ({ schedule, onChange }: WeeklyScheduleEditorProps)
                     size="small"
                   />
                 }
-                label="Activo"
+                label={t('drawsAdmin.schedules.weeklyEditor.activeLabel')}
                 labelPlacement="start"
                 sx={{
                   margin: 0,
@@ -110,7 +102,7 @@ const WeeklyScheduleEditor = ({ schedule, onChange }: WeeklyScheduleEditorProps)
             {daySchedule.enabled && (
               <Box sx={{ display: 'flex', gap: 2, pl: 2 }}>
                 <TextField
-                  label="Hora Inicio"
+                  label={t('drawsAdmin.schedules.weeklyEditor.startTime')}
                   type="time"
                   value={startTime}
                   onChange={(e) => handleTimeChange(day, 'startTime', e.target.value)}
@@ -125,7 +117,7 @@ const WeeklyScheduleEditor = ({ schedule, onChange }: WeeklyScheduleEditorProps)
                   size="small"
                 />
                 <TextField
-                  label="Hora Fin"
+                  label={t('drawsAdmin.schedules.weeklyEditor.endTime')}
                   type="time"
                   value={endTime}
                   onChange={(e) => handleTimeChange(day, 'endTime', e.target.value)}

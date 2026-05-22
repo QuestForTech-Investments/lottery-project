@@ -5,6 +5,7 @@
  */
 
 import { memo, useMemo, useState, type FC } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Table,
   TableBody,
@@ -22,6 +23,7 @@ import type { SalesTableProps, SalesRow } from '../types';
 type SortOrder = 'asc' | 'desc';
 
 const SalesTable: FC<SalesTableProps> = memo(({ data, totals, columns, onCodeClick }) => {
+  const { t } = useTranslation();
   // Default sort matches the previous static order (by code asc).
   const [sortBy, setSortBy] = useState<keyof SalesRow>('code');
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
@@ -67,7 +69,7 @@ const SalesTable: FC<SalesTableProps> = memo(({ data, totals, columns, onCodeCli
                     direction={isActive ? sortOrder : 'asc'}
                     onClick={() => handleSort(key)}
                   >
-                    {col.label}
+                    {t(col.label)}
                   </TableSortLabel>
                 </TableCell>
               );
@@ -78,7 +80,7 @@ const SalesTable: FC<SalesTableProps> = memo(({ data, totals, columns, onCodeCli
           {sortedData.length === 0 ? (
             <TableRow>
               <TableCell colSpan={15} align="center" sx={{ py: 3, color: 'text.secondary' }}>
-                No hay entradas para el sorteo y la fecha elegidos
+                {t('sales.noEntriesForDrawDate')}
               </TableCell>
             </TableRow>
           ) : (
@@ -126,7 +128,7 @@ const SalesTable: FC<SalesTableProps> = memo(({ data, totals, columns, onCodeCli
               ))}
               {/* Totals Row */}
               <TableRow sx={{ backgroundColor: '#f5f7fa', '& td': { fontWeight: 600 } }}>
-                <TableCell>Totales</TableCell>
+                <TableCell>{t('balances.totals')}</TableCell>
                 <TableCell>-</TableCell>
                 <TableCell align="center">{totals.p}</TableCell>
                 <TableCell align="center">{totals.l}</TableCell>

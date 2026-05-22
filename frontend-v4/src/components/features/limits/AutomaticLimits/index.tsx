@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Card,
@@ -30,6 +31,7 @@ import type {
 } from '@/types/limits';
 
 const AutomaticLimits = (): React.ReactElement => {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<number>(0);
 
   // Configuration state
@@ -68,7 +70,7 @@ const AutomaticLimits = (): React.ReactElement => {
         setParams(paramsData);
       } catch (err) {
         console.error('Error loading config:', err);
-        const errorMessage = handleAutomaticLimitError(err, 'cargar configuracion');
+        const errorMessage = handleAutomaticLimitError(err, t('limitsAdmin.automatic.errLoadConfig'));
         setSnackbar({
           open: true,
           message: errorMessage,
@@ -79,7 +81,7 @@ const AutomaticLimits = (): React.ReactElement => {
       }
     };
     loadData();
-  }, []);
+  }, [t]);
 
   // Handle general number controls change
   const handleGeneralChange = useCallback((field: keyof NumberControlSettings, value: boolean | number) => {
@@ -128,12 +130,12 @@ const AutomaticLimits = (): React.ReactElement => {
       await automaticLimitService.saveGeneralConfig(config);
       setSnackbar({
         open: true,
-        message: 'Configuracion guardada exitosamente',
+        message: t('limitsAdmin.automatic.msgConfigSaved'),
         severity: 'success'
       });
     } catch (err) {
       console.error('Error saving general config:', err);
-      const errorMessage = handleAutomaticLimitError(err, 'guardar configuracion');
+      const errorMessage = handleAutomaticLimitError(err, t('limitsAdmin.automatic.errSaveConfig'));
       setSnackbar({
         open: true,
         message: errorMessage,
@@ -142,14 +144,14 @@ const AutomaticLimits = (): React.ReactElement => {
     } finally {
       setSavingGeneral(false);
     }
-  }, [config]);
+  }, [config, t]);
 
   // Update random blocking
   const handleUpdateBlocking = useCallback(async (): Promise<void> => {
     if (randomBlock.drawIds.length === 0) {
       setSnackbar({
         open: true,
-        message: 'Por favor seleccione al menos un sorteo',
+        message: t('limitsAdmin.automatic.msgSelectDraw'),
         severity: 'warning'
       });
       return;
@@ -158,7 +160,7 @@ const AutomaticLimits = (): React.ReactElement => {
     if (randomBlock.palesToBlock <= 0) {
       setSnackbar({
         open: true,
-        message: 'Por favor ingrese el numero de pales a bloquear',
+        message: t('limitsAdmin.automatic.msgEnterPales'),
         severity: 'warning'
       });
       return;
@@ -169,12 +171,12 @@ const AutomaticLimits = (): React.ReactElement => {
       await automaticLimitService.saveRandomBlock(randomBlock);
       setSnackbar({
         open: true,
-        message: 'Bloqueo actualizado exitosamente',
+        message: t('limitsAdmin.automatic.msgBlockUpdated'),
         severity: 'success'
       });
     } catch (err) {
       console.error('Error updating random block:', err);
-      const errorMessage = handleAutomaticLimitError(err, 'actualizar bloqueo');
+      const errorMessage = handleAutomaticLimitError(err, t('limitsAdmin.automatic.errUpdateBlock'));
       setSnackbar({
         open: true,
         message: errorMessage,
@@ -183,7 +185,7 @@ const AutomaticLimits = (): React.ReactElement => {
     } finally {
       setSavingRandom(false);
     }
-  }, [randomBlock]);
+  }, [randomBlock, t]);
 
   // Close snackbar
   const handleCloseSnackbar = useCallback(() => {
@@ -206,7 +208,7 @@ const AutomaticLimits = (): React.ReactElement => {
   return (
     <Box sx={{ p: 3, bgcolor: '#f5f5f5', minHeight: '100vh' }}>
       <Typography variant="h4" sx={{ textAlign: 'center', mb: 3, fontSize: '24px', fontWeight: 500, color: '#2c2c2c' }}>
-        Limites automaticos
+        {t('limitsAdmin.automatic.title')}
       </Typography>
 
       <Card>
@@ -221,8 +223,8 @@ const AutomaticLimits = (): React.ReactElement => {
           }}
           TabIndicatorProps={{ style: { backgroundColor: '#6366f1' } }}
         >
-          <Tab label="General" />
-          <Tab label="Bloqueo Aleatorio" />
+          <Tab label={t('limitsAdmin.automatic.tabGeneral')} />
+          <Tab label={t('limitsAdmin.automatic.tabRandomBlock')} />
         </Tabs>
 
         <CardContent sx={{ p: 4 }}>
@@ -230,7 +232,7 @@ const AutomaticLimits = (): React.ReactElement => {
           {activeTab === 0 && (
             <Box>
               <Typography variant="h6" sx={{ fontSize: '16px', fontWeight: 600, mb: 3, color: '#2c2c2c' }}>
-                Controles automaticos generales por numero
+                {t('limitsAdmin.automatic.sectionGeneralByNumber')}
               </Typography>
 
               <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 3, mb: 4 }}>
@@ -242,14 +244,14 @@ const AutomaticLimits = (): React.ReactElement => {
                         onChange={(e) => handleGeneralChange('enableDirecto', e.target.checked)}
                       />
                     }
-                    label={<Typography sx={{ fontSize: '13px' }}>Habilitar directo (dia)</Typography>}
+                    label={<Typography sx={{ fontSize: '13px' }}>{t('limitsAdmin.automatic.enableDirecto')}</Typography>}
                   />
                   <TextField
                     type="number"
                     fullWidth
                     value={config?.generalNumberControls.montoDirecto ?? 0}
                     onChange={(e) => handleGeneralChange('montoDirecto', parseFloat(e.target.value) || 0)}
-                    placeholder="Monto directo"
+                    placeholder={t('limitsAdmin.automatic.amountDirecto')}
                     disabled={!config?.generalNumberControls.enableDirecto}
                     sx={{ mt: 1 }}
                   />
@@ -263,14 +265,14 @@ const AutomaticLimits = (): React.ReactElement => {
                         onChange={(e) => handleGeneralChange('enablePale', e.target.checked)}
                       />
                     }
-                    label={<Typography sx={{ fontSize: '13px' }}>Habilitar pale (dia-mes)</Typography>}
+                    label={<Typography sx={{ fontSize: '13px' }}>{t('limitsAdmin.automatic.enablePale')}</Typography>}
                   />
                   <TextField
                     type="number"
                     fullWidth
                     value={config?.generalNumberControls.montoPale ?? 0}
                     onChange={(e) => handleGeneralChange('montoPale', parseFloat(e.target.value) || 0)}
-                    placeholder="Monto pale directo"
+                    placeholder={t('limitsAdmin.automatic.amountPale')}
                     disabled={!config?.generalNumberControls.enablePale}
                     sx={{ mt: 1 }}
                   />
@@ -284,14 +286,14 @@ const AutomaticLimits = (): React.ReactElement => {
                         onChange={(e) => handleGeneralChange('enableSuperPale', e.target.checked)}
                       />
                     }
-                    label={<Typography sx={{ fontSize: '13px' }}>Habilitar super pale (dia-mes)</Typography>}
+                    label={<Typography sx={{ fontSize: '13px' }}>{t('limitsAdmin.automatic.enableSuperPale')}</Typography>}
                   />
                   <TextField
                     type="number"
                     fullWidth
                     value={config?.generalNumberControls.montoSuperPale ?? 0}
                     onChange={(e) => handleGeneralChange('montoSuperPale', parseFloat(e.target.value) || 0)}
-                    placeholder="Monto super pale"
+                    placeholder={t('limitsAdmin.automatic.amountSuperPale')}
                     disabled={!config?.generalNumberControls.enableSuperPale}
                     sx={{ mt: 1 }}
                   />
@@ -299,7 +301,7 @@ const AutomaticLimits = (): React.ReactElement => {
               </Box>
 
               <Typography variant="h6" sx={{ fontSize: '16px', fontWeight: 600, mt: 4, mb: 3, color: '#2c2c2c' }}>
-                Controles automaticos de linea para bancas
+                {t('limitsAdmin.automatic.sectionLinePools')}
               </Typography>
 
               <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 3, mb: 4 }}>
@@ -311,14 +313,14 @@ const AutomaticLimits = (): React.ReactElement => {
                         onChange={(e) => handleLineChange('enableDirecto', e.target.checked)}
                       />
                     }
-                    label={<Typography sx={{ fontSize: '13px' }}>Habilitar directo (dia)</Typography>}
+                    label={<Typography sx={{ fontSize: '13px' }}>{t('limitsAdmin.automatic.enableDirecto')}</Typography>}
                   />
                   <TextField
                     type="number"
                     fullWidth
                     value={config?.lineControls.montoDirecto ?? 0}
                     onChange={(e) => handleLineChange('montoDirecto', parseFloat(e.target.value) || 0)}
-                    placeholder="Monto directo"
+                    placeholder={t('limitsAdmin.automatic.amountDirecto')}
                     disabled={!config?.lineControls.enableDirecto}
                     sx={{ mt: 1 }}
                   />
@@ -332,14 +334,14 @@ const AutomaticLimits = (): React.ReactElement => {
                         onChange={(e) => handleLineChange('enablePale', e.target.checked)}
                       />
                     }
-                    label={<Typography sx={{ fontSize: '13px' }}>Habilitar pale (dia-mes)</Typography>}
+                    label={<Typography sx={{ fontSize: '13px' }}>{t('limitsAdmin.automatic.enablePale')}</Typography>}
                   />
                   <TextField
                     type="number"
                     fullWidth
                     value={config?.lineControls.montoPale ?? 0}
                     onChange={(e) => handleLineChange('montoPale', parseFloat(e.target.value) || 0)}
-                    placeholder="Monto pale directo"
+                    placeholder={t('limitsAdmin.automatic.amountPale')}
                     disabled={!config?.lineControls.enablePale}
                     sx={{ mt: 1 }}
                   />
@@ -353,14 +355,14 @@ const AutomaticLimits = (): React.ReactElement => {
                         onChange={(e) => handleLineChange('enableSuperPale', e.target.checked)}
                       />
                     }
-                    label={<Typography sx={{ fontSize: '13px' }}>Habilitar super pale (dia-mes)</Typography>}
+                    label={<Typography sx={{ fontSize: '13px' }}>{t('limitsAdmin.automatic.enableSuperPale')}</Typography>}
                   />
                   <TextField
                     type="number"
                     fullWidth
                     value={config?.lineControls.montoSuperPale ?? 0}
                     onChange={(e) => handleLineChange('montoSuperPale', parseFloat(e.target.value) || 0)}
-                    placeholder="Monto super pale"
+                    placeholder={t('limitsAdmin.automatic.amountSuperPale')}
                     disabled={!config?.lineControls.enableSuperPale}
                     sx={{ mt: 1 }}
                   />
@@ -386,10 +388,10 @@ const AutomaticLimits = (): React.ReactElement => {
                   {savingGeneral ? (
                     <>
                       <CircularProgress size={20} sx={{ color: 'white', mr: 1 }} />
-                      GUARDANDO...
+                      {t('limitsAdmin.automatic.saving')}
                     </>
                   ) : (
-                    'GUARDAR'
+                    t('limitsAdmin.automatic.save')
                   )}
                 </Button>
               </Box>
@@ -401,7 +403,7 @@ const AutomaticLimits = (): React.ReactElement => {
             <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 3 }}>
               <Box>
                 <Typography sx={{ fontSize: '12px', color: '#787878', mb: 1 }}>
-                  Sorteos *
+                  {t('limitsAdmin.automatic.drawsRequired')}
                 </Typography>
                 <Box sx={{ maxHeight: '300px', overflowY: 'auto', border: '1px solid #ddd', p: 1, borderRadius: '4px', bgcolor: 'white' }}>
                   {draws.length > 0 ? (
@@ -421,7 +423,7 @@ const AutomaticLimits = (): React.ReactElement => {
                     ))
                   ) : (
                     <Typography sx={{ fontSize: '13px', color: '#999', p: 2, textAlign: 'center' }}>
-                      No hay sorteos disponibles
+                      {t('limitsAdmin.automatic.noDrawsAvailable')}
                     </Typography>
                   )}
                 </Box>
@@ -429,17 +431,17 @@ const AutomaticLimits = (): React.ReactElement => {
 
               <Box>
                 <FormControl fullWidth sx={{ mb: 2 }}>
-                  <InputLabel sx={{ fontSize: '12px' }}>Bancas</InputLabel>
+                  <InputLabel sx={{ fontSize: '12px' }}>{t('limitsAdmin.automatic.pools')}</InputLabel>
                   <Select
                     value={randomBlock.bettingPoolId ?? ''}
                     onChange={(e) => setRandomBlock(prev => ({
                       ...prev,
                       bettingPoolId: e.target.value === '' ? undefined : Number(e.target.value)
                     }))}
-                    label="Bancas"
+                    label={t('limitsAdmin.automatic.pools')}
                     sx={{ fontSize: '14px' }}
                   >
-                    <MenuItem value=""><em>Todas las bancas</em></MenuItem>
+                    <MenuItem value=""><em>{t('limitsAdmin.automatic.allPools')}</em></MenuItem>
                     {bettingPools.map(bp => (
                       <MenuItem key={bp.value} value={bp.value} sx={{ fontSize: '14px' }}>
                         {bp.label}
@@ -450,7 +452,7 @@ const AutomaticLimits = (): React.ReactElement => {
 
                 <TextField
                   type="number"
-                  label="# de pales a bloquear *"
+                  label={t('limitsAdmin.automatic.palesToBlock')}
                   fullWidth
                   value={randomBlock.palesToBlock || ''}
                   onChange={(e) => setRandomBlock(prev => ({
@@ -481,10 +483,10 @@ const AutomaticLimits = (): React.ReactElement => {
                   {savingRandom ? (
                     <>
                       <CircularProgress size={20} sx={{ color: 'white', mr: 1 }} />
-                      ACTUALIZANDO...
+                      {t('limitsAdmin.automatic.updating')}
                     </>
                   ) : (
-                    'ACTUALIZAR'
+                    t('limitsAdmin.automatic.update')
                   )}
                 </Button>
               </Box>

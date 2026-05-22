@@ -5,11 +5,14 @@
  */
 
 import { memo, type FC } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Box, Button } from '@mui/material';
 import type { FormActionsProps } from '../types';
 import { PILL_BUTTON_STYLE, PRIMARY_BUTTON_STYLE } from '../constants';
 
-const FormActions: FC<FormActionsProps> = memo(({ saving, onCancel }) => (
+const FormActions: FC<FormActionsProps> = memo(({ saving, onCancel }) => {
+  const { t } = useTranslation();
+  return (
   <Box
     sx={{
       p: 3,
@@ -27,7 +30,7 @@ const FormActions: FC<FormActionsProps> = memo(({ saving, onCancel }) => (
       disabled={saving}
       sx={PILL_BUTTON_STYLE}
     >
-      Cancelar
+      {t('common.cancel')}
     </Button>
     <Button
       type="submit"
@@ -35,10 +38,11 @@ const FormActions: FC<FormActionsProps> = memo(({ saving, onCancel }) => (
       disabled={saving}
       sx={PRIMARY_BUTTON_STYLE}
     >
-      {saving ? 'Guardando cambios...' : 'Guardar cambios'}
+      {saving ? t('zonesAdmin.savingChanges') : t('zonesAdmin.saveChanges')}
     </Button>
   </Box>
-));
+  );
+});
 
 FormActions.displayName = 'FormActions';
 

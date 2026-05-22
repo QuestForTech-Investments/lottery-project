@@ -5,6 +5,7 @@
  */
 
 import { memo, type FC } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Box, TextField, InputAdornment, IconButton, Typography } from '@mui/material';
 import { Search as SearchIcon, Clear as ClearIcon } from '@mui/icons-material';
 import type { SearchBarProps } from '../types';
@@ -15,12 +16,14 @@ const SearchBar: FC<SearchBarProps> = memo(({
   onSearchChange,
   onClearSearch,
   resultCount,
-}) => (
+}) => {
+  const { t } = useTranslation();
+  return (
   <Box sx={{ p: 3, pb: 0 }}>
     <Box sx={{ maxWidth: 600, margin: '0 auto' }}>
       <TextField
         fullWidth
-        placeholder="Buscar zona por nombre o ID..."
+        placeholder={t('zonesAdmin.searchZonePlaceholder')}
         value={searchText}
         onChange={onSearchChange}
         size="small"
@@ -42,12 +45,13 @@ const SearchBar: FC<SearchBarProps> = memo(({
       />
       {searchText && (
         <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
-          {resultCount} zona{resultCount !== 1 ? 's' : ''} encontrada{resultCount !== 1 ? 's' : ''}
+          {t('zonesAdmin.zonesFoundCount', { count: resultCount })}
         </Typography>
       )}
     </Box>
   </Box>
-));
+  );
+});
 
 SearchBar.displayName = 'SearchBar';
 

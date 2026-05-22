@@ -17,6 +17,7 @@ import {
   VpnKey,
   Close as CloseIcon,
 } from '@mui/icons-material'
+import { useTranslation } from 'react-i18next'
 
 interface Props {
   isOpen: boolean
@@ -30,6 +31,7 @@ interface Props {
  * The password cannot be recovered after closing — admin must communicate it to the user.
  */
 export default function TempCredentialDialog({ isOpen, username, password, onClose }: Props) {
+  const { t } = useTranslation()
   const [copied, setCopied] = useState(false)
 
   const copy = async () => {
@@ -47,7 +49,7 @@ export default function TempCredentialDialog({ isOpen, username, password, onClo
       <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, bgcolor: '#e8f5e9', color: '#2e7d32' }}>
         <VpnKey />
         <Typography component="span" sx={{ fontWeight: 600, fontFamily: 'Montserrat, sans-serif', flex: 1 }}>
-          Clave temporal generada
+          {t('modals.tempCredential.title')}
         </Typography>
         <IconButton size="small" onClick={onClose} sx={{ color: '#2e7d32' }}>
           <CloseIcon fontSize="small" />
@@ -56,18 +58,18 @@ export default function TempCredentialDialog({ isOpen, username, password, onClo
 
       <DialogContent>
         <Alert severity="warning" sx={{ mt: 1, mb: 2 }}>
-          Comunícale esta clave al usuario. <b>No se mostrará de nuevo</b>. El usuario deberá cambiarla al iniciar sesión.
+          <span dangerouslySetInnerHTML={{ __html: t('modals.tempCredential.warning') }} />
         </Alert>
 
         <Typography variant="body2" sx={{ color: '#666', mb: 0.5 }}>
-          Usuario:
+          {t('modals.tempCredential.userLabel')}
         </Typography>
         <Typography variant="body1" sx={{ mb: 2, fontWeight: 600 }}>
           {username}
         </Typography>
 
         <Typography variant="body2" sx={{ color: '#666', mb: 0.5 }}>
-          Clave temporal:
+          {t('modals.tempCredential.tempKeyLabel')}
         </Typography>
         <Box
           sx={{
@@ -92,7 +94,7 @@ export default function TempCredentialDialog({ isOpen, username, password, onClo
           >
             {password}
           </Typography>
-          <Tooltip title={copied ? 'Copiado' : 'Copiar al portapapeles'}>
+          <Tooltip title={copied ? t('modals.tempCredential.copied') : t('modals.tempCredential.copyToClipboard')}>
             <IconButton onClick={copy} size="small">
               {copied ? <CheckIcon sx={{ color: '#2e7d32' }} /> : <CopyIcon />}
             </IconButton>
@@ -115,7 +117,7 @@ export default function TempCredentialDialog({ isOpen, username, password, onClo
             textTransform: 'none',
           }}
         >
-          Copiar y salir
+          {t('modals.tempCredential.copyAndExit')}
         </Button>
       </DialogActions>
     </Dialog>

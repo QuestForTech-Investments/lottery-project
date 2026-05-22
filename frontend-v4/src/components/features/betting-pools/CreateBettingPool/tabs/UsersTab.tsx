@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Typography,
@@ -73,6 +74,7 @@ interface ApiResponse {
  * - In edit mode: fetches and manages real users from API
  */
 const UsersTab: React.FC<UsersTabProps> = ({ formData, handleChange, bettingPoolId }) => {
+  const { t } = useTranslation();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [newUser, setNewUser] = useState({
     username: '',
@@ -120,11 +122,11 @@ const UsersTab: React.FC<UsersTabProps> = ({ formData, handleChange, bettingPool
       setApiUsers(response || []);
     } catch (err) {
       console.error('Error fetching users:', err);
-      setError('Error al cargar los usuarios');
+      setError(t('createBettingPool.users.errorLoading'));
     } finally {
       setLoadingUsers(false);
     }
-  }, [bettingPoolId]);
+  }, [bettingPoolId, t]);
 
   // Load users on mount (edit mode only)
   useEffect(() => {
@@ -156,12 +158,12 @@ const UsersTab: React.FC<UsersTabProps> = ({ formData, handleChange, bettingPool
    */
   const validateUser = (): boolean => {
     if (!newUser.username.trim()) {
-      setError('El nombre de usuario es requerido');
+      setError(t('createBettingPool.users.errorRequiredUsername'));
       return false;
     }
 
     if (newUser.username.trim().length < 3) {
-      setError('El nombre de usuario debe tener al menos 3 caracteres');
+      setError(t('createBettingPool.users.errorMinLength'));
       return false;
     }
 
@@ -169,7 +171,7 @@ const UsersTab: React.FC<UsersTabProps> = ({ formData, handleChange, bettingPool
       u => u.username.toLowerCase() === newUser.username.trim().toLowerCase()
     );
     if (existingUser) {
-      setError('Ya existe un usuario con ese nombre');
+      setError(t('createBettingPool.users.errorDuplicate'));
       return false;
     }
 
@@ -204,15 +206,15 @@ const UsersTab: React.FC<UsersTabProps> = ({ formData, handleChange, bettingPool
               password: response.temporaryPassword,
             });
           } else {
-            setSuccessMessage(`Usuario ${dto.username} creado exitosamente`);
+            setSuccessMessage(t('createBettingPool.users.successCreated', { value: dto.username }));
           }
         } else {
-          setError(response?.message || 'Error al crear el usuario');
+          setError(response?.message || t('createBettingPool.users.errorCreateUser'));
         }
       } catch (err: unknown) {
         console.error('Error creating user:', err);
         const errorObj = err as { response?: { data?: { message?: string } } };
-        setError(errorObj?.response?.data?.message || 'Error al crear el usuario');
+        setError(errorObj?.response?.data?.message || t('createBettingPool.users.errorCreateUser'));
       } finally {
         setLoading(false);
       }
@@ -273,14 +275,14 @@ const UsersTab: React.FC<UsersTabProps> = ({ formData, handleChange, bettingPool
         if (response && response.success) {
           setApiUsers(prev => prev.filter(u => u.userId !== userToDelete.userId));
           handleCloseDeleteConfirm();
-          setSuccessMessage(`Usuario ${userToDelete.username} eliminado exitosamente`);
+          setSuccessMessage(t('createBettingPool.users.successDeleted', { value: userToDelete.username }));
         } else {
-          setError(response?.message || 'Error al eliminar el usuario');
+          setError(response?.message || t('createBettingPool.users.errorDeleteUser'));
         }
       } catch (err: unknown) {
         console.error('Error deleting user:', err);
         const errorObj = err as { response?: { data?: { message?: string } } };
-        setError(errorObj?.response?.data?.message || 'Error al eliminar el usuario');
+        setError(errorObj?.response?.data?.message || t('createBettingPool.users.errorDeleteUser'));
       } finally {
         setDeletingUser(false);
       }
@@ -314,7 +316,7 @@ const UsersTab: React.FC<UsersTabProps> = ({ formData, handleChange, bettingPool
     } catch (err: unknown) {
       console.error('Error generating temp password:', err);
       const errorObj = err as { response?: { data?: { message?: string } } };
-      setError(errorObj?.response?.data?.message || 'Error al generar la clave temporal');
+      setError(errorObj?.response?.data?.message || t('createBettingPool.users.errorGenerateTemp'));
       setConfirmGenerate(null);
     } finally {
       setGeneratingFor(null);
@@ -324,13 +326,13 @@ const UsersTab: React.FC<UsersTabProps> = ({ formData, handleChange, bettingPool
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h6" gutterBottom>
-        Usuarios de la Banca
+        {t('createBettingPool.users.title')}
       </Typography>
 
       <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
         {isEditMode
-          ? 'Gestione los usuarios POS que tienen acceso a esta banca.'
-          : 'Añada los usuarios que tendrán acceso a la banca. Serán creados cuando guarde.'}
+          ? t('createBettingPool.users.subtitleEdit')
+          : t('createBettingPool.users.subtitleCreate')}
       </Typography>
 
       {/* Error Alert */}
@@ -351,7 +353,7 @@ const UsersTab: React.FC<UsersTabProps> = ({ formData, handleChange, bettingPool
             '&:hover': { bgcolor: '#7c3aed' },
           }}
         >
-          Añadir usuario
+          {t('createBettingPool.users.addUserButton')}
         </Button>
 
         {isEditMode && (
@@ -361,7 +363,7 @@ const UsersTab: React.FC<UsersTabProps> = ({ formData, handleChange, bettingPool
             onClick={fetchUsers}
             disabled={loadingUsers}
           >
-            Actualizar
+            {t('createBettingPool.users.refreshButton')}
           </Button>
         )}
       </Box>
@@ -370,7 +372,7 @@ const UsersTab: React.FC<UsersTabProps> = ({ formData, handleChange, bettingPool
 
       {/* Current Users */}
       <Typography variant="subtitle1" gutterBottom fontWeight="bold">
-        Usuarios actuales
+        {t('createBettingPool.users.currentUsersTitle')}
       </Typography>
 
       {loadingUsers ? (
@@ -379,17 +381,17 @@ const UsersTab: React.FC<UsersTabProps> = ({ formData, handleChange, bettingPool
         </Box>
       ) : users.length === 0 ? (
         <Alert severity="info" sx={{ mt: 2 }}>
-          No hay usuarios asociados a esta banca.
+          {t('createBettingPool.users.noUsers')}
         </Alert>
       ) : (
         <TableContainer component={Paper} variant="outlined" sx={{ mt: 2 }}>
           <Table size="small">
             <TableHead>
               <TableRow sx={{ bgcolor: '#e3e3e3' }}>
-                <TableCell sx={{ fontWeight: 'bold' }}>Usuario</TableCell>
-                <TableCell sx={{ fontWeight: 'bold' }}>Nombre</TableCell>
-                <TableCell sx={{ fontWeight: 'bold' }}>Email</TableCell>
-                <TableCell align="center" sx={{ fontWeight: 'bold' }}>Acciones</TableCell>
+                <TableCell sx={{ fontWeight: 'bold' }}>{t('createBettingPool.users.colUsername')}</TableCell>
+                <TableCell sx={{ fontWeight: 'bold' }}>{t('createBettingPool.users.colName')}</TableCell>
+                <TableCell sx={{ fontWeight: 'bold' }}>{t('createBettingPool.users.colEmail')}</TableCell>
+                <TableCell align="center" sx={{ fontWeight: 'bold' }}>{t('createBettingPool.users.colActions')}</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -401,7 +403,7 @@ const UsersTab: React.FC<UsersTabProps> = ({ formData, handleChange, bettingPool
                   <TableCell align="center">
                     <Box sx={{ display: 'flex', justifyContent: 'center', gap: 0.5 }}>
                       {isEditMode && (
-                        <Tooltip title="Generar clave temporal">
+                        <Tooltip title={t('createBettingPool.users.tooltipGenerateTemp')}>
                           <span>
                             <IconButton
                               size="small"
@@ -416,7 +418,7 @@ const UsersTab: React.FC<UsersTabProps> = ({ formData, handleChange, bettingPool
                           </span>
                         </Tooltip>
                       )}
-                      <Tooltip title="Eliminar usuario">
+                      <Tooltip title={t('createBettingPool.users.tooltipDelete')}>
                         <IconButton
                           size="small"
                           color="error"
@@ -436,7 +438,7 @@ const UsersTab: React.FC<UsersTabProps> = ({ formData, handleChange, bettingPool
 
       {/* Add User Dialog */}
       <Dialog open={dialogOpen} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
-        <DialogTitle>Añadir usuario POS</DialogTitle>
+        <DialogTitle>{t('createBettingPool.users.addDialogTitle')}</DialogTitle>
         <DialogContent>
           <Box sx={{ pt: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
             {error && (
@@ -447,18 +449,18 @@ const UsersTab: React.FC<UsersTabProps> = ({ formData, handleChange, bettingPool
 
             <TextField
               fullWidth
-              label="Usuario"
+              label={t('createBettingPool.users.usernameField')}
               name="username"
               value={newUser.username}
               onChange={handleNewUserChange}
               autoFocus
-              helperText="Mínimo 3 caracteres"
+              helperText={t('createBettingPool.users.usernameHelper')}
               autoComplete="off"
             />
 
             <TextField
               fullWidth
-              label="Nombre completo"
+              label={t('createBettingPool.users.fullNameField')}
               name="fullName"
               value={newUser.fullName}
               onChange={handleNewUserChange}
@@ -466,7 +468,7 @@ const UsersTab: React.FC<UsersTabProps> = ({ formData, handleChange, bettingPool
 
             <TextField
               fullWidth
-              label="Email (opcional)"
+              label={t('createBettingPool.users.emailField')}
               name="email"
               type="email"
               value={newUser.email}
@@ -474,13 +476,13 @@ const UsersTab: React.FC<UsersTabProps> = ({ formData, handleChange, bettingPool
             />
 
             <Alert severity="info">
-              La clave temporal de 6 dígitos se genera automáticamente y se mostrará una sola vez al guardar.
+              {t('createBettingPool.users.tempPasswordInfo')}
             </Alert>
           </Box>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={handleCloseDialog} color="inherit" disabled={loading}>
-            Cancelar
+            {t('createBettingPool.cancel')}
           </Button>
           <Button
             onClick={handleAddUser}
@@ -492,28 +494,28 @@ const UsersTab: React.FC<UsersTabProps> = ({ formData, handleChange, bettingPool
               '&:hover': { bgcolor: '#7c3aed' },
             }}
           >
-            {loading ? 'Creando...' : 'Añadir usuario'}
+            {loading ? t('createBettingPool.users.creating') : t('createBettingPool.users.addUserButton')}
           </Button>
         </DialogActions>
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteConfirmOpen} onClose={handleCloseDeleteConfirm}>
-        <DialogTitle>Confirmar eliminación</DialogTitle>
+        <DialogTitle>{t('createBettingPool.users.deleteDialogTitle')}</DialogTitle>
         <DialogContent>
           <Typography>
-            ¿Está seguro que desea eliminar al usuario{' '}
+            {t('createBettingPool.users.deleteConfirmText')}{' '}
             <strong>{userToDelete?.username}</strong>?
           </Typography>
           {isEditMode && (
             <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-              El usuario será desactivado y no podrá acceder al sistema.
+              {t('createBettingPool.users.deleteEditNote')}
             </Typography>
           )}
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={handleCloseDeleteConfirm} color="inherit" disabled={deletingUser}>
-            Cancelar
+            {t('createBettingPool.cancel')}
           </Button>
           <Button
             onClick={handleDeleteUser}
@@ -522,7 +524,7 @@ const UsersTab: React.FC<UsersTabProps> = ({ formData, handleChange, bettingPool
             disabled={deletingUser}
             startIcon={deletingUser ? <CircularProgress size={16} /> : null}
           >
-            {deletingUser ? 'Eliminando...' : 'Eliminar'}
+            {deletingUser ? t('createBettingPool.users.deleting') : t('createBettingPool.users.delete')}
           </Button>
         </DialogActions>
       </Dialog>
@@ -530,9 +532,9 @@ const UsersTab: React.FC<UsersTabProps> = ({ formData, handleChange, bettingPool
       {/* Confirm dialog for generating temp password */}
       <ConfirmActionDialog
         isOpen={!!confirmGenerate}
-        title="Generar clave temporal"
-        message={`Se generará una nueva clave de 6 dígitos para "${confirmGenerate?.username}". El usuario deberá cambiarla al iniciar sesión y la actual dejará de funcionar.`}
-        confirmLabel="Generar"
+        title={t('createBettingPool.users.confirmGenerateTitle')}
+        message={t('createBettingPool.users.confirmGenerateMessage', { value: confirmGenerate?.username ?? '' })}
+        confirmLabel={t('createBettingPool.users.confirmGenerateLabel')}
         severity="warning"
         loading={!!generatingFor}
         onConfirm={handleConfirmGenerate}

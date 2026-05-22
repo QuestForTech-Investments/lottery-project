@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, memo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Card,
@@ -64,6 +65,7 @@ interface PoolWithDaysData extends BettingPool {
 type OrderDirection = 'asc' | 'desc';
 
 const BettingPoolsWithoutSales: React.FC = () => {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [results, setResults] = useState<PoolWithDaysData[]>([]);
@@ -124,29 +126,29 @@ const BettingPoolsWithoutSales: React.FC = () => {
 
   const handleExportPdf = (): void => {
     if (filteredAndSortedData.length === 0) {
-      alert('No hay datos para exportar.');
+      alert(t('bettingPoolsAdmin.noDataToExport'));
       return;
     }
     const columns: ExportColumn<Record<string, unknown>>[] = [
-      { key: 'number', label: 'Número', align: 'left',
+      { key: 'number', label: t('bettingPoolsAdmin.tableNumber'), align: 'left',
         getValue: (r) => String(r.bettingPoolCode ?? r.code ?? r.bettingPoolId ?? r.id ?? '') },
-      { key: 'name', label: 'Nombre', align: 'left',
+      { key: 'name', label: t('bettingPoolsAdmin.tableName'), align: 'left',
         getValue: (r) => String(r.bettingPoolName ?? r.name ?? '') },
-      { key: 'reference', label: 'Referencia', align: 'left',
+      { key: 'reference', label: t('bettingPoolsAdmin.tableReference'), align: 'left',
         getValue: (r) => String(r.reference ?? '-') },
-      { key: 'days', label: 'Días', align: 'right',
+      { key: 'days', label: t('bettingPoolsAdmin.tableDays'), align: 'right',
         getValue: (r) => String(r.daysWithoutSales ?? 0) },
-      { key: 'lastSale', label: 'Última venta', align: 'left',
-        getValue: (r) => String(r.lastSaleDate ?? 'Nunca') },
-      { key: 'zone', label: 'Zona', align: 'left',
+      { key: 'lastSale', label: t('bettingPoolsAdmin.exportLastSale'), align: 'left',
+        getValue: (r) => String(r.lastSaleDate ?? t('bettingPoolsAdmin.exportNever')) },
+      { key: 'zone', label: t('bettingPoolsAdmin.tableZone'), align: 'left',
         getValue: (r) => String(r.zoneName ?? '') },
-      { key: 'balance', label: 'Balance', align: 'right',
+      { key: 'balance', label: t('bettingPoolsAdmin.tableBalance'), align: 'right',
         getValue: (r) => `$${Number(r.balance ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}` },
     ];
     exportToPdf(
       filteredAndSortedData as unknown as Record<string, unknown>[],
       columns,
-      `Bancas sin ventas — últimos ${daysWithoutSales} días`,
+      t('bettingPoolsAdmin.exportTitleNoSales', { days: daysWithoutSales }),
     );
   };
 
@@ -238,10 +240,10 @@ const BettingPoolsWithoutSales: React.FC = () => {
         <Card>
           <CardContent>
             <Typography color="error" variant="h6">
-              Error: {error}
+              {t('bettingPoolsAdmin.errorPrefix', { message: error })}
             </Typography>
             <Button onClick={handleSearch} sx={{ mt: 2 }}>
-              Reintentar
+              {t('sales.retry')}
             </Button>
           </CardContent>
         </Card>
@@ -255,13 +257,13 @@ const BettingPoolsWithoutSales: React.FC = () => {
       <Card>
         <CardContent>
           <Typography variant="h5" gutterBottom>
-            Lista de bancas sin ventas
+            {t('bettingPoolsAdmin.withoutSalesTitle')}
           </Typography>
 
           {/* Filters Section */}
           <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap', alignItems: 'center' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Typography>En los últimos</Typography>
+              <Typography>{t('bettingPoolsAdmin.inLast')}</Typography>
               <TextField
                 type="number"
                 size="small"
@@ -270,17 +272,17 @@ const BettingPoolsWithoutSales: React.FC = () => {
                 sx={{ width: 80 }}
                 inputProps={{ min: 1, max: 365 }}
               />
-              <Typography>Días</Typography>
+              <Typography>{t('bettingPoolsAdmin.days')}</Typography>
             </Box>
 
             <FormControl sx={{ minWidth: 200 }} size="small">
-              <InputLabel>Zonas</InputLabel>
+              <InputLabel>{t('common.zones')}</InputLabel>
               <Select
                 multiple
                 value={selectedZones}
                 onChange={handleZoneChange}
-                input={<OutlinedInput label="Zonas" />}
-                renderValue={(selected) => `${selected.length} seleccionadas`}
+                input={<OutlinedInput label={t('common.zones')} />}
+                renderValue={(selected) => t('bettingPoolsAdmin.selectedCount', { count: selected.length })}
               >
                 {zones.map((zone) => (
                   <MenuItem key={zone.zoneId || zone.id} value={zone.zoneId || zone.id || 0}>
@@ -297,7 +299,7 @@ const BettingPoolsWithoutSales: React.FC = () => {
               onClick={handleSearch}
               disabled={loading}
             >
-              Ver ventas
+              {t('bettingPoolsAdmin.viewSales')}
             </Button>
 
             <Button
@@ -305,7 +307,7 @@ const BettingPoolsWithoutSales: React.FC = () => {
               startIcon={<PdfIcon />}
               onClick={handleExportPdf}
             >
-              PDF
+              {t('bettingPoolsAdmin.pdfButton')}
             </Button>
           </Box>
 
@@ -313,7 +315,7 @@ const BettingPoolsWithoutSales: React.FC = () => {
           <Box sx={{ mb: 2 }}>
             <TextField
               size="small"
-              placeholder="Filtrado rápido"
+              placeholder={t('bettingPoolsAdmin.quickFilter')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               InputProps={{
@@ -338,7 +340,7 @@ const BettingPoolsWithoutSales: React.FC = () => {
                       direction={orderBy === 'number' ? order : 'asc'}
                       onClick={() => handleSort('number')}
                     >
-                      Número
+                      {t('bettingPoolsAdmin.tableNumber')}
                     </TableSortLabel>
                   </TableCell>
                   <TableCell>
@@ -347,7 +349,7 @@ const BettingPoolsWithoutSales: React.FC = () => {
                       direction={orderBy === 'name' ? order : 'asc'}
                       onClick={() => handleSort('name')}
                     >
-                      Nombre
+                      {t('bettingPoolsAdmin.tableName')}
                     </TableSortLabel>
                   </TableCell>
                   <TableCell>
@@ -356,7 +358,7 @@ const BettingPoolsWithoutSales: React.FC = () => {
                       direction={orderBy === 'reference' ? order : 'asc'}
                       onClick={() => handleSort('reference')}
                     >
-                      Referencia
+                      {t('bettingPoolsAdmin.tableReference')}
                     </TableSortLabel>
                   </TableCell>
                   <TableCell>
@@ -365,7 +367,7 @@ const BettingPoolsWithoutSales: React.FC = () => {
                       direction={orderBy === 'days' ? order : 'asc'}
                       onClick={() => handleSort('days')}
                     >
-                      Días
+                      {t('bettingPoolsAdmin.tableDays')}
                     </TableSortLabel>
                   </TableCell>
                   <TableCell>
@@ -374,7 +376,7 @@ const BettingPoolsWithoutSales: React.FC = () => {
                       direction={orderBy === 'lastSale' ? order : 'asc'}
                       onClick={() => handleSort('lastSale')}
                     >
-                      Última venta
+                      {t('bettingPoolsAdmin.tableLastSale')}
                     </TableSortLabel>
                   </TableCell>
                   <TableCell>
@@ -383,7 +385,7 @@ const BettingPoolsWithoutSales: React.FC = () => {
                       direction={orderBy === 'zone' ? order : 'asc'}
                       onClick={() => handleSort('zone')}
                     >
-                      Zona
+                      {t('bettingPoolsAdmin.tableZone')}
                     </TableSortLabel>
                   </TableCell>
                   <TableCell>
@@ -392,7 +394,7 @@ const BettingPoolsWithoutSales: React.FC = () => {
                       direction={orderBy === 'balance' ? order : 'asc'}
                       onClick={() => handleSort('balance')}
                     >
-                      Balance
+                      {t('bettingPoolsAdmin.tableBalance')}
                     </TableSortLabel>
                   </TableCell>
                 </TableRow>
@@ -401,7 +403,7 @@ const BettingPoolsWithoutSales: React.FC = () => {
                 {filteredAndSortedData.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={7} align="center">
-                      No hay bancas sin ventas en el período seleccionado
+                      {t('bettingPoolsAdmin.noBettingPoolsNoSalesInPeriod')}
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -415,7 +417,7 @@ const BettingPoolsWithoutSales: React.FC = () => {
                         <TableCell>{pool.bettingPoolName || pool.name}</TableCell>
                         <TableCell>{pool.reference || '-'}</TableCell>
                         <TableCell>{pool.daysWithoutSales}</TableCell>
-                        <TableCell>{pool.lastSaleDate || 'Nunca'}</TableCell>
+                        <TableCell>{pool.lastSaleDate || t('bettingPoolsAdmin.never')}</TableCell>
                         <TableCell>{pool.zoneName}</TableCell>
                         <TableCell sx={{ color: balColor, fontWeight: 600 }}>
                           ${bal.toLocaleString('en-US', { minimumFractionDigits: 2 })}
@@ -430,7 +432,7 @@ const BettingPoolsWithoutSales: React.FC = () => {
 
           {/* Entry Counter */}
           <Typography variant="body2" sx={{ mt: 2 }}>
-            Mostrando {filteredAndSortedData.length} de {filteredAndSortedData.length} entradas
+            {t('common.showingEntries', { shown: filteredAndSortedData.length, total: filteredAndSortedData.length })}
           </Typography>
         </CardContent>
       </Card>

@@ -6,41 +6,42 @@
 
 import type { TableColumn, FilterOption, SalesTotals } from './types';
 
+// Columns and tabs use i18n keys in `label`. Components resolve them with t().
 export const TABLE_COLUMNS: TableColumn[] = [
-  { key: 'ref', label: 'Ref.', align: 'left' },
-  { key: 'code', label: 'Código', align: 'left' },
-  { key: 'p', label: 'P', align: 'center' },
-  { key: 'l', label: 'L', align: 'center' },
-  { key: 'w', label: 'W', align: 'center' },
-  { key: 'total', label: 'Total', align: 'right' },
-  { key: 'sales', label: 'Venta', align: 'right' },
-  { key: 'commissions', label: 'Comisiones', align: 'right' },
-  { key: 'discounts', label: 'Descuentos', align: 'right' },
-  { key: 'prizes', label: 'Premios', align: 'right' },
-  { key: 'net', label: 'Neto', align: 'right' },
-  { key: 'fall', label: 'Caída', align: 'right' },
-  { key: 'final', label: 'Final', align: 'right' },
-  { key: 'balance', label: 'Balance', align: 'right' },
-  { key: 'accumulatedFall', label: 'Caida acumulada', align: 'right' }
+  { key: 'ref', label: 'sales.ref', align: 'left' },
+  { key: 'code', label: 'common.code', align: 'left' },
+  { key: 'p', label: 'sales.pendingShort', align: 'center' },
+  { key: 'l', label: 'sales.loserShort', align: 'center' },
+  { key: 'w', label: 'sales.winnerShort', align: 'center' },
+  { key: 'total', label: 'common.total', align: 'right' },
+  { key: 'sales', label: 'sales.venta', align: 'right' },
+  { key: 'commissions', label: 'sales.comisiones', align: 'right' },
+  { key: 'discounts', label: 'sales.descuentos', align: 'right' },
+  { key: 'prizes', label: 'sales.premios', align: 'right' },
+  { key: 'net', label: 'sales.neto', align: 'right' },
+  { key: 'fall', label: 'sales.caida', align: 'right' },
+  { key: 'final', label: 'sales.final', align: 'right' },
+  { key: 'balance', label: 'common.balance', align: 'right' },
+  { key: 'accumulatedFall', label: 'sales.accumulatedFall', align: 'right' }
 ];
 
 export const MAIN_TABS = [
-  'General',
-  'Banca por sorteo',
-  'Por sorteo',
-  'Combinaciones',
-  'Por zona',
-  'Categoría de Premios',
-  'Categoría de Premios para Pale'
+  'sales.tabs.general',
+  'sales.tabs.bancaPorSorteo',
+  'sales.tabs.porSorteo',
+  'sales.tabs.combinaciones',
+  'sales.tabs.porZona',
+  'sales.tabs.categoriaPremios',
+  'sales.tabs.categoriaPremiosPale'
 ];
 
 export const FILTER_OPTIONS: FilterOption[] = [
-  { value: 'all', label: 'Todos' },
-  { value: 'with-sales', label: 'Con ventas' },
-  { value: 'with-prizes', label: 'Con premios' },
-  { value: 'pending-tickets', label: 'Con tickets pendientes' },
-  { value: 'negative-net', label: 'Con ventas netas negativas' },
-  { value: 'positive-net', label: 'Con ventas netas positivas' }
+  { value: 'all', label: 'common.all' },
+  { value: 'with-sales', label: 'sales.filters.withSales' },
+  { value: 'with-prizes', label: 'sales.filters.withPrizes' },
+  { value: 'pending-tickets', label: 'sales.filters.pendingTickets' },
+  { value: 'negative-net', label: 'sales.filters.negativeNet' },
+  { value: 'positive-net', label: 'sales.filters.positiveNet' }
 ];
 
 export const INITIAL_TOTALS: SalesTotals = {

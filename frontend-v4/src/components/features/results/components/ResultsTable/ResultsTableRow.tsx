@@ -9,6 +9,7 @@
  */
 
 import { memo, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   TableRow,
@@ -133,6 +134,7 @@ DisplayCell.displayName = 'DisplayCell';
  */
 export const ResultsTableRow = memo<ResultsTableRowProps>(
   ({ row, enabledFields, onFieldChange, onSave, onDelete, onEdit }) => {
+    const { t } = useTranslation();
     // enabledFields is now passed as prop for better performance
     // Prevents calling getEnabledFields() on every render
 
@@ -162,7 +164,7 @@ export const ResultsTableRow = memo<ResultsTableRowProps>(
         <TableCell sx={TABLE_CELL_STYLES.drawName}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             {/* Status indicator dot */}
-            <Tooltip title={row.hasResult ? 'Con resultado' : 'Pendiente'}>
+            <Tooltip title={row.hasResult ? t('resultsAdmin.common.status.withResult') : t('resultsAdmin.common.status.pending')}>
               <Box
                 sx={{
                   width: 10,
@@ -176,7 +178,7 @@ export const ResultsTableRow = memo<ResultsTableRowProps>(
             </Tooltip>
             <span>{row.drawName}</span>
             {row.matchesExternal === false && (
-              <Tooltip title="No coincide con externo">
+              <Tooltip title={t('resultsAdmin.common.status.doesNotMatchExternal')}>
                 <WarningIcon
                   sx={{
                     fontSize: 14,
@@ -201,7 +203,7 @@ export const ResultsTableRow = memo<ResultsTableRowProps>(
         <TableCell align="center" sx={{ p: 0.5 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
             {/* View Details */}
-            <Tooltip title="Ver detalles">
+            <Tooltip title={t('resultsAdmin.common.actionsLabels.viewDetails')}>
               <IconButton
                 size="small"
                 onClick={handleSave}
@@ -219,7 +221,7 @@ export const ResultsTableRow = memo<ResultsTableRowProps>(
             </Tooltip>
 
             {/* Edit */}
-            <Tooltip title="Editar">
+            <Tooltip title={t('resultsAdmin.common.actionsLabels.edit')}>
               <IconButton
                 size="small"
                 onClick={handleEdit}
@@ -236,7 +238,7 @@ export const ResultsTableRow = memo<ResultsTableRowProps>(
             </Tooltip>
 
             {/* Delete */}
-            <Tooltip title="Eliminar resultado">
+            <Tooltip title={t('resultsAdmin.common.actionsLabels.deleteResult')}>
               <span>
                 <IconButton
                   size="small"

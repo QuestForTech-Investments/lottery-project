@@ -1,4 +1,5 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Typography,
@@ -21,6 +22,7 @@ import {
   IconButton
 } from '@mui/material';
 import { Delete as DeleteIcon } from '@mui/icons-material';
+import { getActiveLocale } from '@/utils/formatters';
 
 interface ExcessValues {
   general: string;
@@ -67,6 +69,7 @@ interface Draw {
 type FieldKey = keyof ExcessValues;
 
 const ManageExcesses = (): React.ReactElement => {
+  const { t } = useTranslation();
   // Dropdown de sorteos
   const [selectedDraw, setSelectedDraw] = useState<string>('General');
 
@@ -115,34 +118,33 @@ const ManageExcesses = (): React.ReactElement => {
   ];
 
   // Mapeo de campos para mostrar en UI
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- Stable field labels object
-  const fieldLabels: Record<FieldKey, string> = {
-    general: 'General',
-    directo: 'Directo',
-    pale: 'Pale',
-    cash3Straight: 'Cash3 Straight',
-    cash3Box: 'Cash3 Box',
-    play4Straight: 'Play4 Straight',
-    play4Box: 'Play4 Box',
-    superPale: 'Super Pale',
-    bolita1: 'Bolita 1',
-    bolita2: 'Bolita 2',
-    singulacion1: 'Singulación 1',
-    singulacion2: 'Singulación 2',
-    singulacion3: 'Singulación 3',
-    pick5Straight: 'Pick5 Straight',
-    pick5Box: 'Pick5 Box',
-    pickTwo: 'Pick Two',
-    cash3FrontStraight: 'Cash3 Front Straight',
-    cash3FrontBox: 'Cash3 Front Box',
-    cash3BackStraight: 'Cash3 Back Straight',
-    cash3BackBox: 'Cash3 Back Box',
-    pickTwoFront: 'Pick Two Front',
-    pickTwoBack: 'Pick Two Back',
-    pickTwoMiddle: 'Pick Two Middle',
-    panama: 'Panamá',
-    tripleta: 'Tripleta'
-  };
+  const fieldLabels: Record<FieldKey, string> = useMemo(() => ({
+    general: t('excessesAdmin.fields.general'),
+    directo: t('excessesAdmin.fields.directo'),
+    pale: t('excessesAdmin.fields.pale'),
+    cash3Straight: t('excessesAdmin.fields.cash3Straight'),
+    cash3Box: t('excessesAdmin.fields.cash3Box'),
+    play4Straight: t('excessesAdmin.fields.play4Straight'),
+    play4Box: t('excessesAdmin.fields.play4Box'),
+    superPale: t('excessesAdmin.fields.superPale'),
+    bolita1: t('excessesAdmin.fields.bolita1'),
+    bolita2: t('excessesAdmin.fields.bolita2'),
+    singulacion1: t('excessesAdmin.fields.singulacion1'),
+    singulacion2: t('excessesAdmin.fields.singulacion2'),
+    singulacion3: t('excessesAdmin.fields.singulacion3'),
+    pick5Straight: t('excessesAdmin.fields.pick5Straight'),
+    pick5Box: t('excessesAdmin.fields.pick5Box'),
+    pickTwo: t('excessesAdmin.fields.pickTwo'),
+    cash3FrontStraight: t('excessesAdmin.fields.cash3FrontStraight'),
+    cash3FrontBox: t('excessesAdmin.fields.cash3FrontBox'),
+    cash3BackStraight: t('excessesAdmin.fields.cash3BackStraight'),
+    cash3BackBox: t('excessesAdmin.fields.cash3BackBox'),
+    pickTwoFront: t('excessesAdmin.fields.pickTwoFront'),
+    pickTwoBack: t('excessesAdmin.fields.pickTwoBack'),
+    pickTwoMiddle: t('excessesAdmin.fields.pickTwoMiddle'),
+    panama: t('excessesAdmin.fields.panama'),
+    tripleta: t('excessesAdmin.fields.tripleta')
+  }), [t]);
 
   const handleFieldChange = useCallback((fieldName: FieldKey, value: string): void => {
     // Solo allow números y decimales
@@ -170,12 +172,12 @@ const ManageExcesses = (): React.ReactElement => {
         draw: selectedDraw,
         betType: fieldLabels[key as FieldKey],
         excess: parseFloat(value as string),
-        date: new Date().toLocaleDateString('es-DO'),
+        date: new Date().toLocaleDateString(getActiveLocale()),
         user: 'admin'
       }));
 
     if (filledFields.length === 0) {
-      alert('Debe ingresar al menos un valor de excedente');
+      alert(t('excessesAdmin.validationMustEnterValue'));
       return;
     }
 
@@ -190,14 +192,14 @@ const ManageExcesses = (): React.ReactElement => {
     // Clear formulario después de crear
     handleClearAll();
 
-    alert(`${filledFields.length} excedente(s) creado(s) exitosamente`);
-  }, [excessValues, selectedDraw, fieldLabels, savedExcesses, handleClearAll]);
+    alert(t('excessesAdmin.createdSuccess', { count: filledFields.length }));
+  }, [excessValues, selectedDraw, fieldLabels, savedExcesses, handleClearAll, t]);
 
   const handleDelete = useCallback((id: number): void => {
-    if (window.confirm('¿Está seguro de eliminar este excedente?')) {
+    if (window.confirm(t('excessesAdmin.confirmDelete'))) {
       setSavedExcesses(savedExcesses.filter(item => item.id !== id));
     }
-  }, [savedExcesses]);
+  }, [savedExcesses, t]);
 
   // Organizar campos en grupos de 3 para el grid
   const fieldKeys = Object.keys(excessValues) as FieldKey[];
@@ -217,7 +219,7 @@ const ManageExcesses = (): React.ReactElement => {
           fontFamily: 'Montserrat, sans-serif'
         }}
       >
-        Manejar excedentes
+        {t('excessesAdmin.manageTitle')}
       </Typography>
 
       <Card>
@@ -226,11 +228,11 @@ const ManageExcesses = (): React.ReactElement => {
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1 }}>
               <FormControl sx={{ minWidth: 300 }}>
-                <InputLabel sx={{ fontSize: '14px' }}>Sorteo</InputLabel>
+                <InputLabel sx={{ fontSize: '14px' }}>{t('excessesAdmin.draw')}</InputLabel>
                 <Select
                   value={selectedDraw}
                   onChange={(e) => setSelectedDraw(e.target.value)}
-                  label="Sorteo"
+                  label={t('excessesAdmin.draw')}
                   size="small"
                   sx={{ fontSize: '14px' }}
                 >
@@ -257,7 +259,7 @@ const ManageExcesses = (): React.ReactElement => {
                 px: 3
               }}
             >
-              BORRAR TODO
+              {t('excessesAdmin.clearAll')}
             </Button>
           </Box>
 
@@ -306,7 +308,7 @@ const ManageExcesses = (): React.ReactElement => {
                 py: 1.2
               }}
             >
-              CREAR
+              {t('excessesAdmin.createButton')}
             </Button>
           </Box>
 
@@ -324,7 +326,7 @@ const ManageExcesses = (): React.ReactElement => {
               fontFamily: 'Montserrat, sans-serif'
             }}
           >
-            Lista de excedentes
+            {t('excessesAdmin.listTitle')}
           </Typography>
 
           {/* Tabla de excedentes guardados */}
@@ -334,12 +336,12 @@ const ManageExcesses = (): React.ReactElement => {
                 <TableHead>
                   <TableRow sx={{ bgcolor: '#f8f9fa' }}>
                     <TableCell sx={{ fontSize: '12px', fontWeight: 600 }}>#</TableCell>
-                    <TableCell sx={{ fontSize: '12px', fontWeight: 600 }}>Sorteo</TableCell>
-                    <TableCell sx={{ fontSize: '12px', fontWeight: 600 }}>Tipo de jugada</TableCell>
-                    <TableCell align="right" sx={{ fontSize: '12px', fontWeight: 600 }}>Excedente</TableCell>
-                    <TableCell sx={{ fontSize: '12px', fontWeight: 600 }}>Fecha</TableCell>
-                    <TableCell sx={{ fontSize: '12px', fontWeight: 600 }}>Usuario</TableCell>
-                    <TableCell align="center" sx={{ fontSize: '12px', fontWeight: 600 }}>Acciones</TableCell>
+                    <TableCell sx={{ fontSize: '12px', fontWeight: 600 }}>{t('excessesAdmin.draw')}</TableCell>
+                    <TableCell sx={{ fontSize: '12px', fontWeight: 600 }}>{t('excessesAdmin.betType')}</TableCell>
+                    <TableCell align="right" sx={{ fontSize: '12px', fontWeight: 600 }}>{t('excessesAdmin.excess')}</TableCell>
+                    <TableCell sx={{ fontSize: '12px', fontWeight: 600 }}>{t('common.date')}</TableCell>
+                    <TableCell sx={{ fontSize: '12px', fontWeight: 600 }}>{t('common.user')}</TableCell>
+                    <TableCell align="center" sx={{ fontSize: '12px', fontWeight: 600 }}>{t('common.actions')}</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -378,7 +380,7 @@ const ManageExcesses = (): React.ReactElement => {
                 borderRadius: 1
               }}
             >
-              No hay excedentes creados aún
+              {t('excessesAdmin.noneYet')}
             </Box>
           )}
         </CardContent>

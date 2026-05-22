@@ -5,6 +5,7 @@
  */
 
 import { memo, type FC } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Typography,
@@ -27,6 +28,7 @@ const FiltersSection: FC<FiltersSectionProps> = memo(({
   onDateChange,
   onZoneChange,
 }) => {
+  const { t } = useTranslation();
   return (
     <Box sx={{
       display: 'flex',
@@ -39,7 +41,7 @@ const FiltersSection: FC<FiltersSectionProps> = memo(({
       {/* Date Filter */}
       <Box sx={{ width: { xs: '100%', sm: 'auto' } }}>
         <Typography variant="caption" sx={{ color: 'text.secondary', mb: 0.5, display: 'block' }}>
-          Fecha
+          {t('common.date')}
         </Typography>
         <TextField
           type="date"
@@ -54,7 +56,7 @@ const FiltersSection: FC<FiltersSectionProps> = memo(({
       {/* Zones Filter */}
       <Box sx={{ width: { xs: '100%', sm: 'auto' } }}>
         <Typography variant="caption" sx={{ color: 'text.secondary', mb: 0.5, display: 'block' }}>
-          Zonas
+          {t('common.zones')}
         </Typography>
         <FormControl sx={{ width: { xs: '100%', sm: 200 }, minWidth: { sm: 200 }, ...COMPACT_SELECT_STYLE }} size="small">
           <Select
@@ -72,12 +74,12 @@ const FiltersSection: FC<FiltersSectionProps> = memo(({
             }}
             renderValue={(selected) => {
               if (selected.length === 0) return '';
-              if (selected.length === zones.length) return 'Todas';
+              if (selected.length === zones.length) return t('common.all');
               if (selected.length === 1) {
                 const zone = zones.find(z => (z.zoneId || z.id) === selected[0]);
-                return zone?.zoneName || zone?.name || '1 seleccionada';
+                return zone?.zoneName || zone?.name || t('balances.selectedCount', { count: 1 });
               }
-              return `${selected.length} seleccionadas`;
+              return t('balances.selectedCount', { count: selected.length });
             }}
           >
             <MenuItem value={SELECT_ALL}>
@@ -85,7 +87,7 @@ const FiltersSection: FC<FiltersSectionProps> = memo(({
                 checked={zones.length > 0 && selectedZones.length === zones.length}
                 indeterminate={selectedZones.length > 0 && selectedZones.length < zones.length}
               />
-              <ListItemText primary="Todas" />
+              <ListItemText primary={t('common.all')} />
             </MenuItem>
             {zones.map((zone) => {
               const zoneId = zone.zoneId || zone.id || 0;

@@ -1,4 +1,5 @@
 import React, { useState, useCallback, type ChangeEvent, type FormEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Card,
@@ -36,6 +37,7 @@ const initialFormData: FormData = {
  * Formulario para crear un nuevo agente externo
  */
 const CreateExternalAgent = (): React.ReactElement => {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState<FormData>(initialFormData);
 
   const handleChange = useCallback((e: ChangeEvent<HTMLInputElement>): void => {
@@ -48,10 +50,10 @@ const CreateExternalAgent = (): React.ReactElement => {
 
   const handleSubmit = useCallback((e: FormEvent<HTMLFormElement>): void => {
     e.preventDefault();
-    alert(`Agente externo creado (mockup)\nNombre: ${formData.nombre}\nCódigo: ${formData.codigo}\nContacto: ${formData.contacto}`);
+    alert(t('externalAgentsAdmin.create.msgCreatedMock', { name: formData.nombre, code: formData.codigo, contact: formData.contacto }));
     // Reset form
     setFormData(initialFormData);
-  }, [formData]);
+  }, [formData, t]);
 
   return (
     <Box sx={{ p: 3, backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
@@ -67,14 +69,14 @@ const CreateExternalAgent = (): React.ReactElement => {
               color: '#2c2c2c'
             }}
           >
-            Crear agente externo
+            {t('externalAgentsAdmin.create.title')}
           </Typography>
 
           <Box component="form" onSubmit={handleSubmit}>
             {/* Nombre */}
             <TextField
               fullWidth
-              label="Nombre"
+              label={t('externalAgentsAdmin.create.nameLabel')}
               name="nombre"
               value={formData.nombre}
               onChange={handleChange}
@@ -91,7 +93,7 @@ const CreateExternalAgent = (): React.ReactElement => {
             {/* Código */}
             <TextField
               fullWidth
-              label="Código"
+              label={t('externalAgentsAdmin.create.codeLabel')}
               name="codigo"
               value={formData.codigo}
               onChange={handleChange}
@@ -108,7 +110,7 @@ const CreateExternalAgent = (): React.ReactElement => {
             {/* Contacto */}
             <TextField
               fullWidth
-              label="Nombre de contacto"
+              label={t('externalAgentsAdmin.create.contactLabel')}
               name="contacto"
               value={formData.contacto}
               onChange={handleChange}
@@ -125,7 +127,7 @@ const CreateExternalAgent = (): React.ReactElement => {
             {/* Teléfono */}
             <TextField
               fullWidth
-              label="Teléfono"
+              label={t('externalAgentsAdmin.create.phoneLabel')}
               name="telefono"
               type="tel"
               value={formData.telefono}
@@ -142,7 +144,7 @@ const CreateExternalAgent = (): React.ReactElement => {
             {/* Email */}
             <TextField
               fullWidth
-              label="Email"
+              label={t('externalAgentsAdmin.create.emailLabel')}
               name="email"
               type="email"
               value={formData.email}
@@ -159,7 +161,7 @@ const CreateExternalAgent = (): React.ReactElement => {
             {/* Comisión */}
             <TextField
               fullWidth
-              label="Comisión (%)"
+              label={t('externalAgentsAdmin.create.commissionLabel')}
               name="comision"
               type="number"
               value={formData.comision}
@@ -183,7 +185,7 @@ const CreateExternalAgent = (): React.ReactElement => {
                   onChange={handleChange}
                 />
               }
-              label="Activo"
+              label={t('externalAgentsAdmin.create.activeLabel')}
               sx={{
                 mb: 4,
                 '& .MuiFormControlLabel-label': {
@@ -210,7 +212,7 @@ const CreateExternalAgent = (): React.ReactElement => {
                   py: 1.2
                 }}
               >
-                CREAR
+                {t('externalAgentsAdmin.create.submitButton')}
               </Button>
             </Box>
           </Box>

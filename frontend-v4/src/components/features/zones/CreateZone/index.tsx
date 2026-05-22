@@ -1,4 +1,5 @@
 import React, { useState, useCallback, type ChangeEvent, type FormEvent, type SyntheticEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import {
   Box,
@@ -41,6 +42,7 @@ interface ZoneResponse {
  * Form to create a new zone with tabs for General info and Contacts
  */
 const CreateZoneMUI = (): React.ReactElement => {
+  const { t } = useTranslation()
   const navigate = useNavigate()
 
   // Tab state
@@ -66,7 +68,7 @@ const CreateZoneMUI = (): React.ReactElement => {
 
   const handleAddContact = useCallback(() => {
     if (!contactName.trim() || !contactPhone.trim()) {
-      setError('Por favor complete nombre y teléfono del contacto')
+      setError(t('zonesAdmin.contactNamePhoneRequired'))
       return
     }
 
@@ -80,19 +82,19 @@ const CreateZoneMUI = (): React.ReactElement => {
     setContactName('')
     setContactPhone('')
     setShowContactForm(false)
-    setSuccessMessage('Contacto agregado correctamente')
-  }, [contactName, contactPhone])
+    setSuccessMessage(t('zonesAdmin.contactAdded'))
+  }, [contactName, contactPhone, t])
 
   const handleDeleteContact = useCallback((contactId: number) => {
     setContacts(prev => prev.filter(c => c.id !== contactId))
-    setSuccessMessage('Contacto eliminado')
-  }, [])
+    setSuccessMessage(t('zonesAdmin.contactDeleted'))
+  }, [t])
 
   const handleSubmit = useCallback(async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
 
     if (!zoneName.trim()) {
-      setError('El nombre de la zona es requerido')
+      setError(t('zonesAdmin.zoneNameRequired'))
       return
     }
 
@@ -108,22 +110,22 @@ const CreateZoneMUI = (): React.ReactElement => {
       const response = await createZone(zoneData) as ZoneResponse
 
       if (response && response.zoneId) {
-        setSuccessMessage('Zona creada exitosamente')
+        setSuccessMessage(t('zonesAdmin.createSuccess'))
         setTimeout(() => {
           navigate('/zones/list')
         }, 1500)
       } else {
-        setError(response?.message || 'Error al crear la zona')
+        setError(response?.message || t('zonesAdmin.createError'))
       }
 
       setLoading(false)
     } catch (err) {
       const error = err as Error
-      setError(error.message || 'Error al crear la zona')
+      setError(error.message || t('zonesAdmin.createError'))
       console.error('Error creating zone:', err)
       setLoading(false)
     }
-  }, [zoneName, navigate])
+  }, [zoneName, navigate, t])
 
   const handleCancel = useCallback(() => {
     navigate('/zones/list')
@@ -133,14 +135,14 @@ const CreateZoneMUI = (): React.ReactElement => {
     <Box className="create-zone-container" sx={{ p: 3 }}>
       <Paper elevation={3}>
         <Box sx={{ p: 3, borderBottom: 1, borderColor: 'divider' }}>
-          <Typography variant="h5" component="h1">Crear Nueva Zona</Typography>
+          <Typography variant="h5" component="h1">{t('zonesAdmin.createTitle')}</Typography>
         </Box>
 
         <form onSubmit={handleSubmit}>
           <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
             <Tabs value={activeTab} onChange={handleTabChange} aria-label="zone form tabs">
-              <Tab label="General" className="general-tab" />
-              <Tab label="Contactos" className="contacts-tab" />
+              <Tab label={t('sales.tabs.general')} className="general-tab" />
+              <Tab label={t('zonesAdmin.contacts')} className="contacts-tab" />
             </Tabs>
           </Box>
 
@@ -149,12 +151,12 @@ const CreateZoneMUI = (): React.ReactElement => {
               <Box className="form-zone">
                 <Box sx={{ display: 'flex', alignItems: 'center', mt: 3, maxWidth: 800, mx: 'auto' }}>
                   <Typography component="label" htmlFor="name" sx={{ width: '150px', fontFamily: 'Montserrat, "Helvetica Neue", Arial, sans-serif', fontWeight: 400 }}>
-                    Nombre
+                    {t('zonesAdmin.name')}
                   </Typography>
                   <TextField
                     id="name"
                     name="name"
-                    placeholder="Nombre"
+                    placeholder={t('zonesAdmin.name')}
                     value={zoneName}
                     onChange={(e: ChangeEvent<HTMLInputElement>) => setZoneName(e.target.value.toUpperCase())}
                     autoFocus
@@ -180,19 +182,19 @@ const CreateZoneMUI = (): React.ReactElement => {
                       sx={{ backgroundColor: 'rgb(81, 188, 218)', color: 'white', borderRadius: '30px', padding: '11px 23px', fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', fontFamily: 'Montserrat, "Helvetica Neue", Arial, sans-serif', '&:hover': { backgroundColor: 'rgb(61, 168, 198)' } }}
                     >
                       <AddIcon sx={{ mr: 1 }} />
-                      Agregar contacto
+                      {t('zonesAdmin.addContact')}
                     </Button>
                   </Box>
 
                   {showContactForm && (
                     <Box sx={{ mb: 3, p: 2, border: '1px solid #e0e0e0', borderRadius: '4px' }}>
                       <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-                        <TextField label="Nombre" value={contactName} onChange={(e: ChangeEvent<HTMLInputElement>) => setContactName(e.target.value)} fullWidth size="small" />
-                        <TextField label="Teléfono" value={contactPhone} onChange={(e: ChangeEvent<HTMLInputElement>) => setContactPhone(e.target.value)} fullWidth size="small" />
+                        <TextField label={t('zonesAdmin.name')} value={contactName} onChange={(e: ChangeEvent<HTMLInputElement>) => setContactName(e.target.value)} fullWidth size="small" />
+                        <TextField label={t('zonesAdmin.phone')} value={contactPhone} onChange={(e: ChangeEvent<HTMLInputElement>) => setContactPhone(e.target.value)} fullWidth size="small" />
                       </Box>
                       <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
-                        <Button size="small" onClick={() => setShowContactForm(false)}>Cancelar</Button>
-                        <Button size="small" variant="contained" onClick={handleAddContact}>Agregar</Button>
+                        <Button size="small" onClick={() => setShowContactForm(false)}>{t('common.cancel')}</Button>
+                        <Button size="small" variant="contained" onClick={handleAddContact}>{t('common.add')}</Button>
                       </Box>
                     </Box>
                   )}
@@ -200,21 +202,21 @@ const CreateZoneMUI = (): React.ReactElement => {
                   <hr />
 
                   <Box sx={{ mt: 3 }}>
-                    <Typography variant="h6" align="center" sx={{ mb: 2 }}>Lista de contactos</Typography>
+                    <Typography variant="h6" align="center" sx={{ mb: 2 }}>{t('zonesAdmin.contactsList')}</Typography>
                     <TableContainer>
                       <Table size="small" className="contacts-table">
                         <TableHead>
                           <TableRow>
-                            <TableCell>Nombre</TableCell>
-                            <TableCell>Teléfono</TableCell>
-                            <TableCell align="center">Acciones</TableCell>
+                            <TableCell>{t('zonesAdmin.name')}</TableCell>
+                            <TableCell>{t('zonesAdmin.phone')}</TableCell>
+                            <TableCell align="center">{t('zonesAdmin.actions')}</TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
                           {contacts.length === 0 ? (
                             <TableRow>
                               <TableCell colSpan={3} align="center" sx={{ py: 4 }}>
-                                <Typography color="text.secondary">No hay entradas</Typography>
+                                <Typography color="text.secondary">{t('common.noEntries')}</Typography>
                               </TableCell>
                             </TableRow>
                           ) : (
@@ -240,10 +242,10 @@ const CreateZoneMUI = (): React.ReactElement => {
           <Box className="form-zone" sx={{ p: 3, borderTop: 1, borderColor: 'divider' }}>
             <Box sx={{ maxWidth: 400, mx: 'auto', display: 'flex', gap: 2 }}>
               <Button variant="outlined" onClick={handleCancel} fullWidth disabled={loading} sx={{ borderRadius: '30px', padding: '11px 23px', textTransform: 'uppercase', fontFamily: 'Montserrat, "Helvetica Neue", Arial, sans-serif' }}>
-                Cancelar
+                {t('common.cancel')}
               </Button>
               <Button type="submit" variant="contained" fullWidth disabled={loading} className="btn-submit" sx={{ backgroundColor: 'rgb(81, 188, 218)', color: 'white', borderRadius: '30px', padding: '11px 23px', fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', fontFamily: 'Montserrat, "Helvetica Neue", Arial, sans-serif', '&:hover': { backgroundColor: 'rgb(61, 168, 198)' } }}>
-                {loading ? 'Creando...' : 'Crear'}
+                {loading ? t('zonesAdmin.creating') : t('common.create')}
               </Button>
             </Box>
           </Box>

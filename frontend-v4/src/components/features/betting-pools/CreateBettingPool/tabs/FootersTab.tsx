@@ -1,4 +1,5 @@
 import React, { type ChangeEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Grid,
   TextField,
@@ -34,14 +35,15 @@ interface FootersTabProps {
  * Contains footer text configuration for tickets
  */
 const FootersTab: React.FC<FootersTabProps> = ({ formData, handleChange }) => {
+  const { t } = useTranslation();
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h6" gutterBottom>
-        Pies de Página
+        {t('createBettingPool.footers.title')}
       </Typography>
 
       <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-        Configura los textos que aparecerán en el pie de página de los tickets
+        {t('createBettingPool.footers.subtitle')}
       </Typography>
 
       <Grid container spacing={3}>
@@ -55,7 +57,7 @@ const FootersTab: React.FC<FootersTabProps> = ({ formData, handleChange }) => {
                 name="autoFooter"
               />
             }
-            label="Pie de Página Automático"
+            label={t('createBettingPool.footers.autoFooter')}
           />
         </Grid>
 
@@ -67,103 +69,103 @@ const FootersTab: React.FC<FootersTabProps> = ({ formData, handleChange }) => {
         <Grid item xs={12} md={6}>
           <TextField
             fullWidth
-            label="Texto de Pie 1"
+            label={t('createBettingPool.footers.footerText', { n: 1 })}
             name="footerText1"
             value={formData.footerText1}
             onChange={handleChange}
             inputProps={{ maxLength: 30 }}
-            helperText={`${formData.footerText1.length}/30 caracteres`}
+            helperText={t('createBettingPool.footers.charactersCount', { value: formData.footerText1.length })}
           />
         </Grid>
 
         <Grid item xs={12} md={6}>
           <TextField
             fullWidth
-            label="Texto de Pie 2"
+            label={t('createBettingPool.footers.footerText', { n: 2 })}
             name="footerText2"
             value={formData.footerText2}
             onChange={handleChange}
             inputProps={{ maxLength: 30 }}
-            helperText={`${formData.footerText2.length}/30 caracteres`}
+            helperText={t('createBettingPool.footers.charactersCount', { value: formData.footerText2.length })}
           />
         </Grid>
 
         <Grid item xs={12} md={6}>
           <TextField
             fullWidth
-            label="Texto de Pie 3"
+            label={t('createBettingPool.footers.footerText', { n: 3 })}
             name="footerText3"
             value={formData.footerText3}
             onChange={handleChange}
             inputProps={{ maxLength: 30 }}
-            helperText={`${formData.footerText3.length}/30 caracteres`}
+            helperText={t('createBettingPool.footers.charactersCount', { value: formData.footerText3.length })}
           />
         </Grid>
 
         <Grid item xs={12} md={6}>
           <TextField
             fullWidth
-            label="Texto de Pie 4"
+            label={t('createBettingPool.footers.footerText', { n: 4 })}
             name="footerText4"
             value={formData.footerText4}
             onChange={handleChange}
             inputProps={{ maxLength: 30 }}
-            helperText={`${formData.footerText4.length}/30 caracteres`}
+            helperText={t('createBettingPool.footers.charactersCount', { value: formData.footerText4.length })}
           />
         </Grid>
 
         <Grid item xs={12} md={6}>
           <TextField
             fullWidth
-            label="Texto de Pie 5"
+            label={t('createBettingPool.footers.footerText', { n: 5 })}
             name="footerText5"
             value={formData.footerText5}
             onChange={handleChange}
             inputProps={{ maxLength: 30 }}
-            helperText={`${formData.footerText5.length}/30 caracteres`}
+            helperText={t('createBettingPool.footers.charactersCount', { value: formData.footerText5.length })}
           />
         </Grid>
 
         <Grid item xs={12} md={6}>
           <TextField
             fullWidth
-            label="Texto de Pie 6"
+            label={t('createBettingPool.footers.footerText', { n: 6 })}
             name="footerText6"
             value={formData.footerText6}
             onChange={handleChange}
             inputProps={{ maxLength: 30 }}
-            helperText={`${formData.footerText6.length}/30 caracteres`}
+            helperText={t('createBettingPool.footers.charactersCount', { value: formData.footerText6.length })}
           />
         </Grid>
 
         <Grid item xs={12} md={6}>
           <TextField
             fullWidth
-            label="Texto de Pie 7"
+            label={t('createBettingPool.footers.footerText', { n: 7 })}
             name="footerText7"
             value={formData.footerText7}
             onChange={handleChange}
             inputProps={{ maxLength: 30 }}
-            helperText={`${formData.footerText7.length}/30 caracteres`}
+            helperText={t('createBettingPool.footers.charactersCount', { value: formData.footerText7.length })}
           />
         </Grid>
 
         <Grid item xs={12} md={6}>
           <TextField
             fullWidth
-            label="Texto de Pie 8"
+            label={t('createBettingPool.footers.footerText', { n: 8 })}
             name="footerText8"
             value={formData.footerText8}
             onChange={handleChange}
             inputProps={{ maxLength: 30 }}
-            helperText={`${formData.footerText8.length}/30 caracteres`}
+            helperText={t('createBettingPool.footers.charactersCount', { value: formData.footerText8.length })}
           />
         </Grid>
 
         <Grid item xs={12}>
           <Divider sx={{ my: 2 }} />
           <Typography variant="subtitle1" gutterBottom>
-            Opciones de Visualización
+            {t('createBettingPool.footers.displayOptions')}
           </Typography>
         </Grid>
 
@@ -176,7 +178,7 @@ const FootersTab: React.FC<FootersTabProps> = ({ formData, handleChange }) => {
                 name="showBranchInfo"
               />
             }
-            label="Mostrar Información de la Banca"
+            label={t('createBettingPool.footers.showBranchInfo')}
           />
         </Grid>
 
@@ -189,7 +191,7 @@ const FootersTab: React.FC<FootersTabProps> = ({ formData, handleChange }) => {
                 name="showDateTime"
               />
             }
-            label="Mostrar Fecha y Hora"
+            label={t('createBettingPool.footers.showDateTime')}
           />
         </Grid>
       </Grid>

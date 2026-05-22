@@ -9,6 +9,7 @@
  */
 
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Button,
@@ -87,6 +88,7 @@ const ConvertPlaysModal = memo<ConvertPlaysModalProps>(({
   allowedGameTypes,
   onConvert,
 }) => {
+  const { t } = useTranslation();
   const [amount, setAmount] = useState<string>('');
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -217,7 +219,7 @@ const ConvertPlaysModal = memo<ConvertPlaysModalProps>(({
           justifyContent: 'space-between',
         }}
       >
-        <Typography sx={{ fontSize: '17px', fontWeight: 700 }}>Convertir jugadas</Typography>
+        <Typography sx={{ fontSize: '17px', fontWeight: 700 }}>{t('tickets.create.convertPlays')}</Typography>
         <IconButton
           size="small"
           onClick={onClose}
@@ -240,7 +242,7 @@ const ConvertPlaysModal = memo<ConvertPlaysModalProps>(({
               mb: 0.75,
             }}
           >
-            Monto
+            {t('common.amount')}
           </Typography>
           <TextField
             inputRef={inputRef}
@@ -268,18 +270,18 @@ const ConvertPlaysModal = memo<ConvertPlaysModalProps>(({
 
         <Typography sx={{ fontSize: '12px', fontWeight: 500, color: '#6c757d', textAlign: 'center' }}>
           {numbers.length === 0
-            ? 'No hay jugadas para convertir'
-            : `${numbers.length} número${numbers.length === 1 ? '' : 's'} disponible${numbers.length === 1 ? '' : 's'}`}
+            ? t('tickets.create.noPlaysToConvert')
+            : t('tickets.create.numbersAvailable', { count: numbers.length })}
         </Typography>
 
         <Typography sx={{ fontSize: '13px', fontWeight: 600, color: '#495057', textAlign: 'center', mt: 0.5 }}>
-          Convertir a
+          {t('tickets.create.convertTo')}
         </Typography>
 
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-          {renderTargetBtn('directo', 'Directo', directoCount)}
-          {renderTargetBtn('pale', 'Palé', paleCount)}
-          {renderTargetBtn('tripleta', 'Tripleta', tripletaCount)}
+          {renderTargetBtn('directo', t('tickets.create.gameDirecto'), directoCount)}
+          {renderTargetBtn('pale', t('tickets.create.gamePale'), paleCount)}
+          {renderTargetBtn('tripleta', t('tickets.create.gameTripleta'), tripletaCount)}
         </Box>
       </Box>
     </Dialog>

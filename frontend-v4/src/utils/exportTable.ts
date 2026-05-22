@@ -124,7 +124,7 @@ export function exportToPdf<T extends Record<string, unknown>>(
 </head>
 <body>
 <h1>${escapeHtml(title)}</h1>
-<div class="meta">Generado ${new Date().toLocaleString('es-DO')}</div>
+<div class="meta">Generado ${new Date().toLocaleString(getActiveLocale())}</div>
 <table>
   <thead>${head}</thead>
   <tbody>${body}${totals}</tbody>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Grid,
   TextField,
@@ -77,6 +78,7 @@ const DRAW_ORDER = [
  * ⚡ PERFORMANCE: Draws loaded once in parent hook, eliminating duplicate API calls
  */
 const DrawsTab: React.FC<DrawsTabProps> = ({ formData, handleChange, draws: propDraws = [], loadingDraws: propLoadingDraws = false }) => {
+  const { t } = useTranslation();
   // ⚡ PERFORMANCE: Draws loaded in parent hook when provided, otherwise load locally (backward compatible)
   const [localDraws, setLocalDraws] = useState<Draw[]>([]);
   const [localLoading, setLocalLoading] = useState<boolean>(false);
@@ -103,13 +105,14 @@ const DrawsTab: React.FC<DrawsTabProps> = ({ formData, handleChange, draws: prop
           }
         } catch (err) {
           console.error('[ERROR] Error loading draws locally:', err);
-          setError('Error cargando sorteos');
+          setError(t('createBettingPool.draws.errorLoadingDraws'));
         } finally {
           setLocalLoading(false);
         }
       };
       loadLocalDraws();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [propDraws.length]);
 
   /**
@@ -174,11 +177,11 @@ const DrawsTab: React.FC<DrawsTabProps> = ({ formData, handleChange, draws: prop
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h6" gutterBottom>
-        Sorteos
+        {t('createBettingPool.draws.title')}
       </Typography>
 
       <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-        Selecciona los sorteos de lotería que estarán disponibles en esta banca
+        {t('createBettingPool.draws.subtitle')}
       </Typography>
 
       <Grid container spacing={3}>
@@ -227,11 +230,11 @@ const DrawsTab: React.FC<DrawsTabProps> = ({ formData, handleChange, draws: prop
                   },
                 }}
               >
-                TODOS
+                {t('createBettingPool.draws.all')}
               </Button>
 
               <Typography variant="body2" color="text.secondary">
-                {selectedCount} de {draws.length} sorteo(s) seleccionado(s)
+                {t('createBettingPool.draws.selectedCounter', { selected: selectedCount, total: draws.length })}
               </Typography>
             </Box>
           </Paper>
@@ -241,7 +244,7 @@ const DrawsTab: React.FC<DrawsTabProps> = ({ formData, handleChange, draws: prop
         <Grid item xs={12}>
           <Paper variant="outlined" sx={{ p: 2 }}>
             <Typography variant="subtitle1" gutterBottom>
-              Configuración de Cierre Anticipado
+              {t('createBettingPool.draws.anticipatedClosingTitle')}
             </Typography>
 
             <Grid container spacing={2} sx={{ mt: 0.5 }}>
@@ -249,18 +252,18 @@ const DrawsTab: React.FC<DrawsTabProps> = ({ formData, handleChange, draws: prop
                 <TextField
                   fullWidth
                   type="number"
-                  label="Minutos de Cierre Anticipado"
+                  label={t('createBettingPool.draws.anticipatedClosingMinutes')}
                   name="anticipatedClosing"
                   value={formData.anticipatedClosing || ''}
                   onChange={handleChange}
-                  helperText="Minutos antes del sorteo para cerrar las ventas"
+                  helperText={t('createBettingPool.draws.anticipatedClosingHelper')}
                   inputProps={{ min: "0", step: "1" }}
                 />
               </Grid>
 
               <Grid item xs={12}>
                 <Typography variant="body2" color="text.secondary" gutterBottom>
-                  Aplicar cierre anticipado a:
+                  {t('createBettingPool.draws.applyClosingTo')}
                 </Typography>
 
                 {/* Draw Multiselect */}
@@ -275,7 +278,7 @@ const DrawsTab: React.FC<DrawsTabProps> = ({ formData, handleChange, draws: prop
                       }
                     });
                   }}
-                  placeholder="Seleccionar sorteos..."
+                  placeholder={t('createBettingPool.draws.selectDrawsPlaceholder')}
                 />
               </Grid>
             </Grid>
@@ -291,6 +294,7 @@ const DrawsTab: React.FC<DrawsTabProps> = ({ formData, handleChange, draws: prop
  * Multiselect dropdown for draws (similar to V1 zone selector)
  */
 const DrawMultiselect: React.FC<DrawMultiselectProps> = ({ draws, value = [], onChange, placeholder }) => {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -419,7 +423,7 @@ const DrawMultiselect: React.FC<DrawMultiselectProps> = ({ draws, value = [], on
               disabled={isAllSelected}
               sx={{ fontSize: '12px' }}
             >
-              Seleccionar todas
+              {t('createBettingPool.draws.selectAll')}
             </Button>
             <Button
               size="small"
@@ -427,14 +431,14 @@ const DrawMultiselect: React.FC<DrawMultiselectProps> = ({ draws, value = [], on
               disabled={value.length === 0}
               sx={{ fontSize: '12px' }}
             >
-              Limpiar
+              {t('createBettingPool.draws.clearAll')}
             </Button>
           </Box>
 
           {/* Options list */}
           {filteredDraws.length === 0 ? (
             <Box sx={{ p: 2, textAlign: 'center', color: 'text.secondary' }}>
-              {searchTerm ? 'No se encontraron sorteos' : 'No hay sorteos disponibles'}
+              {searchTerm ? t('createBettingPool.draws.noDrawsFound') : t('createBettingPool.draws.noDrawsAvailable')}
             </Box>
           ) : (
             <Box>
@@ -471,7 +475,7 @@ const DrawMultiselect: React.FC<DrawMultiselectProps> = ({ draws, value = [], on
       {/* Summary */}
       {value.length > 0 && (
         <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
-          {value.length} sorteo{value.length !== 1 ? 's' : ''} seleccionado{value.length !== 1 ? 's' : ''}
+          {t('createBettingPool.draws.selectedSummary', { value: value.length })}
         </Typography>
       )}
     </Box>

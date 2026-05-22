@@ -5,6 +5,7 @@
  */
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Box,
@@ -46,6 +47,7 @@ import { TABLE_COLUMNS, MAIN_TABS, INITIAL_TOTALS } from './constants';
 // ============================================================================
 
 const DailySales = (): React.ReactElement => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -284,7 +286,7 @@ const DailySales = (): React.ReactElement => {
               Error: {error}
             </Typography>
             <Button onClick={loadInitialData} sx={{ mt: 2 }}>
-              Reintentar
+              {t('sales.retry')}
             </Button>
           </CardContent>
         </Card>
@@ -303,8 +305,8 @@ const DailySales = (): React.ReactElement => {
         allowScrollButtonsMobile
         sx={{ mb: 1 }}
       >
-        {MAIN_TABS.map((tab, index) => (
-          <Tab key={index} label={tab} sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }} />
+        {MAIN_TABS.map((tabKey, index) => (
+          <Tab key={index} label={t(tabKey)} sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }} />
         ))}
       </Tabs>
 
@@ -334,15 +336,15 @@ const DailySales = (): React.ReactElement => {
             {/* Sub-Tabs */}
             <Box sx={{ mb: 3 }}>
               <Tabs value={subTab} onChange={(_, v) => setSubTab(v)} sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
-                <Tab label="Bancas" />
-                <Tab label="Resultados" />
+                <Tab label={t('sales.tabs.bancas')} />
+                <Tab label={t('sales.tabs.resultados')} />
               </Tabs>
 
               {/* Bancas Sub-Tab */}
               {subTab === 0 && (
                 <>
                   <Typography variant="h5" align="center" gutterBottom sx={{ fontWeight: 400, mb: 3, fontSize: '1.7rem' }}>
-                    Venta Final del Día: <Box component="span" sx={{
+                    {t('sales.finalSaleOfDay')}: <Box component="span" sx={{
                       backgroundColor: totals.final > 0 ? '#e8f5e9' : totals.final < 0 ? '#ffebee' : '#e3f2fd',
                       px: 2,
                       py: 0.5,
@@ -361,7 +363,7 @@ const DailySales = (): React.ReactElement => {
                     {/* Quick Filter */}
                     <TextField
                       size="small"
-                      placeholder="Filtro rapido"
+                      placeholder={t('common.filterQuick')}
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       InputProps={{
@@ -397,7 +399,7 @@ const DailySales = (): React.ReactElement => {
 
                 {/* Entry Counter */}
                 <Typography variant="body2" sx={{ mt: 2 }}>
-                  Mostrando {filteredData.length} entradas
+                  {t('sales.showingEntries', { count: filteredData.length })}
                 </Typography>
               </>
             )}

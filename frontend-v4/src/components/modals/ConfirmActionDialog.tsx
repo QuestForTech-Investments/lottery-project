@@ -8,6 +8,7 @@ import {
   Box,
 } from '@mui/material'
 import { WarningAmber } from '@mui/icons-material'
+import { useTranslation } from 'react-i18next'
 
 interface Props {
   isOpen: boolean
@@ -34,14 +35,17 @@ export default function ConfirmActionDialog({
   isOpen,
   title,
   message,
-  confirmLabel = 'Confirmar',
-  cancelLabel = 'Cancelar',
+  confirmLabel,
+  cancelLabel,
   severity = 'warning',
   loading = false,
   onConfirm,
   onCancel,
 }: Props) {
+  const { t } = useTranslation()
   const c = SEVERITY_COLORS[severity]
+  const resolvedConfirm = confirmLabel ?? t('common.confirm')
+  const resolvedCancel = cancelLabel ?? t('common.cancel')
   return (
     <Dialog
       open={isOpen}
@@ -65,7 +69,7 @@ export default function ConfirmActionDialog({
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2, gap: 1 }}>
         <Button onClick={onCancel} disabled={loading} sx={{ textTransform: 'none' }}>
-          {cancelLabel}
+          {resolvedCancel}
         </Button>
         <Button
           variant="contained"
@@ -77,7 +81,7 @@ export default function ConfirmActionDialog({
             textTransform: 'none',
           }}
         >
-          {confirmLabel}
+          {resolvedConfirm}
         </Button>
       </DialogActions>
     </Dialog>

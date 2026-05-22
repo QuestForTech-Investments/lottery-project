@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useMemo, type ChangeEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Paper,
@@ -38,12 +39,13 @@ const MOCK_DATA: GroupData[] = [
   { id: 5, nombre: '#Consorcio TA', balance: 3075.61 },
 ];
 
-const COLUMNS: ColumnDefinition[] = [
-  { key: 'nombre', label: 'Nombre', sortable: true },
-  { key: 'balance', label: 'Balance', sortable: true, format: 'currency', align: 'right' },
-];
-
 const GroupBalances = (): React.ReactElement => {
+  const { t } = useTranslation();
+  const COLUMNS: ColumnDefinition[] = useMemo(() => [
+    { key: 'nombre', label: t('common.name'), sortable: true },
+    { key: 'balance', label: t('common.balance'), sortable: true, format: 'currency', align: 'right' },
+  ], [t]);
+
   // State
   const [selectedDate, setSelectedDate] = useState<string>(getTodayDate());
   const [quickFilter, setQuickFilter] = useState<string>('');
@@ -105,7 +107,7 @@ const GroupBalances = (): React.ReactElement => {
     <Box sx={{ p: 3 }}>
       <Paper sx={{ p: 3 }}>
         <Typography variant="h5" sx={{ mb: 3, textAlign: 'center', fontWeight: 600 }}>
-          Balances de grupos
+          {t('balances.groups.title')}
         </Typography>
 
         {/* Date Filter */}
@@ -121,7 +123,7 @@ const GroupBalances = (): React.ReactElement => {
           {/* Entries per page */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-              Entradas por página
+              {t('balances.entriesPerPage')}
             </Typography>
             <FormControl size="small">
               <Select
@@ -134,7 +136,7 @@ const GroupBalances = (): React.ReactElement => {
                 <MenuItem value={20}>20</MenuItem>
                 <MenuItem value={50}>50</MenuItem>
                 <MenuItem value={100}>100</MenuItem>
-                <MenuItem value={1000}>Todos</MenuItem>
+                <MenuItem value={1000}>{t('common.all')}</MenuItem>
               </Select>
             </FormControl>
           </Box>
@@ -144,7 +146,7 @@ const GroupBalances = (): React.ReactElement => {
             <QuickFilter
               value={quickFilter}
               onChange={handleQuickFilterChange}
-              placeholder="Filtrado rápido"
+              placeholder={t('common.filterQuick')}
             />
           </Box>
         </Box>
@@ -167,7 +169,7 @@ const GroupBalances = (): React.ReactElement => {
           labelRowsPerPage=""
           rowsPerPageOptions={[]}
           labelDisplayedRows={({ from, to, count }) =>
-            `Mostrando ${from}-${to} de ${count} entradas`
+            t('balances.showingRange', { from, to, count })
           }
         />
       </Paper>

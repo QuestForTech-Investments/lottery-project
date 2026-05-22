@@ -1,4 +1,4 @@
-import React, { useState, type SyntheticEvent } from 'react'
+import React, { useState, useMemo, type SyntheticEvent } from 'react'
 import {
   Dialog,
   DialogTitle,
@@ -17,6 +17,7 @@ import {
   Button,
 } from '@mui/material'
 import { Close as CloseIcon } from '@mui/icons-material'
+import { useTranslation } from 'react-i18next'
 
 interface LotteryHelpModalProps {
   isOpen: boolean;
@@ -33,172 +34,31 @@ interface GameInstruction {
   steps: string[];
 }
 
+const SHORTCUT_KEYS = [
+  'arrowUp', 'l', 'slash', 'asterisk', 'c', 'p', 'q', 'dot', 'd', 'minus10', 'plusXyz'
+] as const;
+
+const GAME_KEYS = [
+  'directo', 'pale', 'tripleta', 'cash3Straight', 'cash3Box',
+  'play4Straight', 'play4Box', 'superPale', 'bolita', 'singulacion',
+  'pick5Straight', 'pick5Box', 'pickTwo', 'cash3FrontStraight', 'cash3FrontBox',
+  'cash3BackStraight', 'cash3BackBox', 'pickTwoFront', 'pickTwoBack',
+  'pickTwoMiddle', 'panama'
+] as const;
+
 export default function LotteryHelpModal({ isOpen, onClose }: LotteryHelpModalProps): React.ReactElement {
+  const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState<number>(0)
 
-  const shortcuts: Shortcut[] = [
-    { key: '↑', function: '(Arriba) Limpiar campos de jugada y Monto.' },
-    { key: 'L', function: '(Ele) Cancelar el ticket y limpiar la pantalla.' },
-    { key: '/', function: '(Slash) Cambiar de lotería.' },
-    { key: '*', function: '(Asterisco) Imprimir el ticket.' },
-    { key: 'c', function: 'Duplicar ticket.' },
-    { key: 'P', function: 'Marcar ticket como pagado.' },
-    { key: 'q', function: 'Sólo para Cash 3 y Play 4. Digitar la jugada seguida de q (Ej.: 123q) para generar todas la combinaciones del número.' },
-    { key: '.', function: '(Punto) sólo para Directo, Palé y Tripleta. Digitar la jugada seguida de un punto (Ej.: 1234.) para generar todas las combinaciones del número.' },
-    { key: 'd', function: 'Sólo para Directo. Ingresar una jugada inicial de dos dígitos iguales seguidos de la letra d y luego dos dígitos iguales para la jugada final (Ej.: 33d66) para generar una secuencia de pares iguales desde la jugada inicial has la jugada final.' },
-    { key: '-10', function: 'Sólo Para Cash 3. Ingresar una jugada de tres dígitos seguidos de -10 (Ej.: 123-10) para generar todas las combinaciones que contienen los últimos dos dígitos aumentando en 100 cada valor.' },
-    { key: '+xyz', function: 'Sólo Para Cash 3 Straight. Ingresar una jugada de tres dígitos seguido del signo + y otra jugada de tres dígitos (Ej.: 345+348) para generar una secuencia de straight: 345, 346, 347.' }
-  ]
+  const shortcuts: Shortcut[] = useMemo(() => SHORTCUT_KEYS.map((k) => ({
+    key: t(`modals.lotteryHelp.shortcuts.${k}.key`),
+    function: t(`modals.lotteryHelp.shortcuts.${k}.function`)
+  })), [t]);
 
-  const gameInstructions: GameInstruction[] = [
-    {
-      title: 'Para jugar Directo',
-      steps: [
-        'Ingresar en la jugada un número de dos dígitos y presionar enter.',
-        'Ingresar el monto y presionar enter.'
-      ]
-    },
-    {
-      title: 'Para jugar Pale',
-      steps: [
-        'Ingresar en la jugada un número de cuatro dígitos y presionar enter.',
-        'Ingresar el monto y presionar enter.'
-      ]
-    },
-    {
-      title: 'Para jugar Tripleta',
-      steps: [
-        'Ingresar en la jugada un número de seis dígitos y presionar enter.',
-        'Ingresar el monto y presionar enter.'
-      ]
-    },
-    {
-      title: 'Para jugar Cash3 Straight',
-      steps: [
-        'Ingresar en la jugada un número de tres dígitos y presionar enter.',
-        'Ingresar el monto y presionar enter.'
-      ]
-    },
-    {
-      title: 'Para jugar Cash3 Box',
-      steps: [
-        'Ingresar en la jugada un número de tres dígitos seguido del signo + (Ej.: 123+) y presionar enter.',
-        'Ingresar el monto y presionar enter.'
-      ]
-    },
-    {
-      title: 'Para jugar Play4 Straight',
-      steps: [
-        'Ingresar en la jugada un número de cuatro dígitos seguido del signo - (Ej.: 1234-) y presionar enter.',
-        'Ingresar el monto y presionar enter.'
-      ]
-    },
-    {
-      title: 'Para jugar Play4 Box',
-      steps: [
-        'Ingresar en la jugada un número de cuatro dígitos seguido del signo + (Ej.: 1234+) y presionar enter.',
-        'Ingresar el monto y presionar enter.'
-      ]
-    },
-    {
-      title: 'Para jugar Super Pale',
-      steps: [
-        'Ingresar en la jugada un número de cuatro dígitos y presionar enter.',
-        'Ingresar el monto y presionar enter.'
-      ]
-    },
-    {
-      title: 'Para jugar Bolita',
-      steps: [
-        'Ingresar en la jugada un número de dos dígitos seguido del signo de +, seguido del rango (1 o 2) (Ej.: 12+1) y presionar enter.',
-        'Ingresar el monto y presionar enter.'
-      ]
-    },
-    {
-      title: 'Para jugar Singulación',
-      steps: [
-        'Ingresar en la jugada un número de un dígitos seguido del signo de -, seguido del rango (1, 2 o 3) (Ex.: 1-2) y presionar enter.',
-        'Ingresar el monto y presionar enter.'
-      ]
-    },
-    {
-      title: 'Para jugar Pick5 Straight',
-      steps: [
-        'Ingresar en la jugada un número de cinco dígitos seguido del signo - (Ej.: 12345-) y presionar enter.',
-        'Ingresar el monto y presionar enter.'
-      ]
-    },
-    {
-      title: 'Para jugar Pick5 Box',
-      steps: [
-        'Ingresar en la jugada un número de cinco dígitos seguido del signo + (Ej.: 12345+) y presionar enter.',
-        'Ingresar el monto y presionar enter.'
-      ]
-    },
-    {
-      title: 'Para jugar Pick Two',
-      steps: [
-        'Ingresar en la jugada un número de dos dígitos y presionar enter.',
-        'Ingresar el monto y presionar enter.'
-      ]
-    },
-    {
-      title: 'Para jugar Cash3 Front Straight',
-      steps: [
-        'Ingresar en la jugada un número de tres dígitos luego la letra F y presionar enter.',
-        'Ingresar el monto y presionar enter.'
-      ]
-    },
-    {
-      title: 'Para jugar Cash3 Front Box',
-      steps: [
-        'Ingresar en la jugada un número de tres dígitos luego la letra F seguido del signo + (Ej.: 123F+) y presionar enter.',
-        'Ingresar el monto y presionar enter.'
-      ]
-    },
-    {
-      title: 'Para jugar Cash3 Back Straight',
-      steps: [
-        'Ingresar en la jugada un número de tres dígitos luego la letra B y presionar enter.',
-        'Ingresar el monto y presionar enter.'
-      ]
-    },
-    {
-      title: 'Para jugar Cash3 Back Box',
-      steps: [
-        'Ingresar en la jugada un número de tres dígitos luego la letra B seguido del signo + (Ej.: 123B+) y presionar enter.',
-        'Ingresar el monto y presionar enter.'
-      ]
-    },
-    {
-      title: 'Para jugar Pick Two Front',
-      steps: [
-        'Ingresar en la jugada un número de dos dígitos, la letra F y presionar enter.',
-        'Ingresar el monto y presionar enter.'
-      ]
-    },
-    {
-      title: 'Para jugar Pick Two Back',
-      steps: [
-        'Ingresar en la jugada un número de dos dígitos, la letra B y presionar enter.',
-        'Ingresar el monto y presionar enter.'
-      ]
-    },
-    {
-      title: 'Para jugar Pick Two Middle',
-      steps: [
-        'Ingresar en la jugada un número de dos dígitos seguido del signo de - y el rango (3) (Ej.: 10-3) y presionar enter.',
-        'Ingresar el monto y presionar enter.'
-      ]
-    },
-    {
-      title: 'Para jugar Panamá',
-      steps: [
-        'Ingresar en la jugada un número de cuatro dígitos seguido del signo - (Ej.: 1234-) y presionar enter.',
-        'Ingresar el monto y presionar enter.'
-      ]
-    }
-  ];
+  const gameInstructions: GameInstruction[] = useMemo(() => GAME_KEYS.map((k) => ({
+    title: t(`modals.lotteryHelp.games.${k}.title`),
+    steps: t(`modals.lotteryHelp.games.${k}.steps`, { returnObjects: true }) as unknown as string[]
+  })), [t]);
 
   const primaryColor = '#8b5cf6'
 
@@ -228,7 +88,7 @@ export default function LotteryHelpModal({ isOpen, onClose }: LotteryHelpModalPr
         pb: 2
       }}>
         <Typography variant="h6" component="h2" sx={{ fontWeight: 600, color: 'text.primary' }}>
-          Ayuda
+          {t('modals.lotteryHelp.title')}
         </Typography>
         <IconButton
           onClick={onClose}
@@ -261,8 +121,8 @@ export default function LotteryHelpModal({ isOpen, onClose }: LotteryHelpModalPr
             }
           }}
         >
-          <Tab label="Teclas" />
-          <Tab label="¿Cómo jugar?" />
+          <Tab label={t('modals.lotteryHelp.tabs.keys')} />
+          <Tab label={t('modals.lotteryHelp.tabs.howToPlay')} />
         </Tabs>
       </Box>
 
@@ -272,8 +132,8 @@ export default function LotteryHelpModal({ isOpen, onClose }: LotteryHelpModalPr
             <Table size="small">
               <TableHead>
                 <TableRow sx={{ bgcolor: 'grey.50' }}>
-                  <TableCell sx={{ fontWeight: 600, color: 'text.primary' }}>Tecla</TableCell>
-                  <TableCell sx={{ fontWeight: 600, color: 'text.primary' }}>Función</TableCell>
+                  <TableCell sx={{ fontWeight: 600, color: 'text.primary' }}>{t('modals.lotteryHelp.columnKey')}</TableCell>
+                  <TableCell sx={{ fontWeight: 600, color: 'text.primary' }}>{t('modals.lotteryHelp.columnFunction')}</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -319,7 +179,7 @@ export default function LotteryHelpModal({ isOpen, onClose }: LotteryHelpModalPr
                   {game.title}
                 </Typography>
                 <Box component="ol" sx={{ pl: 2.5, m: 0 }}>
-                  {game.steps.map((step, stepIndex) => (
+                  {(Array.isArray(game.steps) ? game.steps : []).map((step, stepIndex) => (
                     <Typography
                       key={stepIndex}
                       component="li"
@@ -362,7 +222,7 @@ export default function LotteryHelpModal({ isOpen, onClose }: LotteryHelpModalPr
             }
           }}
         >
-          Cerrar
+          {t('common.close')}
         </Button>
       </Box>
     </Dialog>

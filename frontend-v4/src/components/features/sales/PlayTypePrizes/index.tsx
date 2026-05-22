@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box, Paper, Typography, TextField, Grid, Button, Stack, Tabs, Tab,
   Table, TableHead, TableBody, TableRow, TableCell, TableContainer, TableSortLabel,
@@ -39,62 +40,65 @@ interface GameTypeGroup {
 }
 
 interface TabSpec {
-  label: string;
+  /** i18n key for the tab display label. */
+  labelKey: string;
   groups: GameTypeGroup[];
 }
 
 // Each tab defines one or two side-by-side game-type blocks.
+// Group headers are domain proper nouns (Directo, Palé, Straight, Box…) and
+// stay as-is; only the tab caption is translated.
 const TABS: TabSpec[] = [
   {
-    label: 'Directo y Palé',
+    labelKey: 'sales.playTypeTabs.directoYPale',
     groups: [
       { header: 'Directo', codes: ['DIRECTO'] },
       { header: 'Palé', codes: ['PALE'] },
     ],
   },
   {
-    label: 'Tripleta y Super Palé',
+    labelKey: 'sales.playTypeTabs.tripletaYSuperPale',
     groups: [
       { header: 'Tripleta', codes: ['TRIPLETA'] },
       { header: 'Super Palé', codes: ['SUPER_PALE'] },
     ],
   },
   {
-    label: 'Pick2',
+    labelKey: 'sales.playTypeTabs.pick2',
     groups: [
       { header: 'Pick2', codes: ['PICK2', 'PICK2_FRONT', 'PICK2_BACK', 'PICK2_MIDDLE'] },
     ],
   },
   {
-    label: 'Pick3',
+    labelKey: 'sales.playTypeTabs.pick3',
     groups: [
       { header: 'Straight', codes: ['CASH3_STRAIGHT', 'CASH3_FRONT_STRAIGHT', 'CASH3_BACK_STRAIGHT'] },
       { header: 'Box', codes: ['CASH3_BOX', 'CASH3_FRONT_BOX', 'CASH3_BACK_BOX'] },
     ],
   },
   {
-    label: 'Play4',
+    labelKey: 'sales.playTypeTabs.play4',
     groups: [
       { header: 'Straight', codes: ['PLAY4_STRAIGHT'] },
       { header: 'Box', codes: ['PLAY4_BOX'] },
     ],
   },
   {
-    label: 'Pick5',
+    labelKey: 'sales.playTypeTabs.pick5',
     groups: [
       { header: 'Straight', codes: ['PICK5_STRAIGHT'] },
       { header: 'Box', codes: ['PICK5_BOX'] },
     ],
   },
   {
-    label: 'Bolita y Singulación',
+    labelKey: 'sales.playTypeTabs.bolitaYSingulacion',
     groups: [
       { header: 'Bolita', codes: ['BOLITA'] },
       { header: 'Singulación', codes: ['SINGULACION'] },
     ],
   },
   {
-    label: 'Panamá',
+    labelKey: 'sales.playTypeTabs.panama',
     groups: [
       { header: 'Panamá', codes: ['PANAMA'] },
     ],
@@ -119,6 +123,7 @@ interface BancaRow {
 const EMPTY_CELL: AggCell = { sold: 0, prizes: 0, commissions: 0, net: 0 };
 
 const PlayTypePrizes = (): React.ReactElement => {
+  const { t } = useTranslation();
   const [tab, setTab] = useState<number>(0);
   const [fechaInicial, setFechaInicial] = useState<string>(getTodayDate());
   const [fechaFinal, setFechaFinal] = useState<string>(getTodayDate());
@@ -298,18 +303,18 @@ const PlayTypePrizes = (): React.ReactElement => {
 
   const handleExportCsv = useCallback(() => {
     if (filtered.length === 0) {
-      alert('No hay datos para exportar.');
+      alert(t('sales.noDataToExport'));
       return;
     }
     const groupHeaders = currentTab.groups.map((g) => g.header);
     const columns: ExportColumn<Record<string, unknown>>[] = [
-      { key: 'bettingPoolName', label: 'Banca', align: 'left' as const },
-      { key: 'bettingPoolCode', label: 'Código', align: 'left' as const },
+      { key: 'bettingPoolName', label: t('common.bettingPool'), align: 'left' as const },
+      { key: 'bettingPoolCode', label: t('common.code'), align: 'left' as const },
       ...groupHeaders.flatMap((h): ExportColumn<Record<string, unknown>>[] => [
-        { key: `${h}_sold`, label: `${h} Jugado`, align: 'right' as const, getValue: (r) => formatCurrency(Number(r[`${h}_sold`] ?? 0)) },
-        { key: `${h}_prizes`, label: `${h} Premios`, align: 'right' as const, getValue: (r) => formatCurrency(Number(r[`${h}_prizes`] ?? 0)) },
-        { key: `${h}_commissions`, label: `${h} Comisiones`, align: 'right' as const, getValue: (r) => formatCurrency(Number(r[`${h}_commissions`] ?? 0)) },
-        { key: `${h}_net`, label: `${h} Neto`, align: 'right' as const, getValue: (r) => formatCurrency(Number(r[`${h}_net`] ?? 0)) },
+        { key: `${h}_sold`, label: `${h} ${t('sales.played')}`, align: 'right' as const, getValue: (r) => formatCurrency(Number(r[`${h}_sold`] ?? 0)) },
+        { key: `${h}_prizes`, label: `${h} ${t('sales.premios')}`, align: 'right' as const, getValue: (r) => formatCurrency(Number(r[`${h}_prizes`] ?? 0)) },
+        { key: `${h}_commissions`, label: `${h} ${t('sales.comisiones')}`, align: 'right' as const, getValue: (r) => formatCurrency(Number(r[`${h}_commissions`] ?? 0)) },
+        { key: `${h}_net`, label: `${h} ${t('sales.neto')}`, align: 'right' as const, getValue: (r) => formatCurrency(Number(r[`${h}_net`] ?? 0)) },
       ]),
     ];
 
@@ -328,7 +333,7 @@ const PlayTypePrizes = (): React.ReactElement => {
       return row;
     });
 
-    const totalsRow: Record<string, unknown> = { bettingPoolName: 'Totales', bettingPoolCode: '' };
+    const totalsRow: Record<string, unknown> = { bettingPoolName: t('balances.totals'), bettingPoolCode: '' };
     groupHeaders.forEach((h) => {
       const c = totals[h] || EMPTY_CELL;
       totalsRow[`${h}_sold`] = c.sold;
@@ -337,8 +342,8 @@ const PlayTypePrizes = (): React.ReactElement => {
       totalsRow[`${h}_net`] = c.net;
     });
 
-    exportToCsv(flatRows, columns, `premios-tipo-jugada-${fechaInicial}_${fechaFinal}-${currentTab.label}`, totalsRow);
-  }, [filtered, totals, currentTab, fechaInicial, fechaFinal]);
+    exportToCsv(flatRows, columns, `premios-tipo-jugada-${fechaInicial}_${fechaFinal}-${t(currentTab.labelKey)}`, totalsRow);
+  }, [filtered, totals, currentTab, fechaInicial, fechaFinal, t]);
 
   const netColor = (n: number) => (n > 0 ? '#1976d2' : n < 0 ? '#c62828' : 'inherit');
   const netBg = (n: number) => (n > 0 ? '#e3f2fd' : n < 0 ? '#fdecea' : 'transparent');
@@ -348,22 +353,22 @@ const PlayTypePrizes = (): React.ReactElement => {
       <Paper elevation={3}>
         <Box sx={{ p: 3 }}>
           <Typography variant="h5" align="center" sx={{ mb: 4, fontWeight: 400 }}>
-            Premios por tipo de jugada
+            {t('sales.prizes.title')}
           </Typography>
 
           <Grid container spacing={2} alignItems="flex-end" sx={{ mb: 2 }}>
             <Grid item xs={12} md={4}>
-              <TextField fullWidth type="date" label="Fecha inicial" value={fechaInicial}
+              <TextField fullWidth type="date" label={t('common.dateStart')} value={fechaInicial}
                 onChange={(e) => setFechaInicial(e.target.value)} InputLabelProps={{ shrink: true }} size="small" />
             </Grid>
             <Grid item xs={12} md={4}>
-              <TextField fullWidth type="date" label="Fecha final" value={fechaFinal}
+              <TextField fullWidth type="date" label={t('common.dateEnd')} value={fechaFinal}
                 onChange={(e) => setFechaFinal(e.target.value)} InputLabelProps={{ shrink: true }} size="small" />
             </Grid>
             <Grid item xs={12} md={4} sx={{ '& > div': { width: '100%' }, '& .MuiFormControl-root': { width: '100%' } }}>
               <MultiSelectSearch
-                label="Zonas"
-                selectAllLabel="Todas"
+                label={t('common.zones')}
+                selectAllLabel={t('common.all')}
                 options={zonasList.map((z) => ({ id: z.id, label: z.name }))}
                 selectedIds={zonas}
                 onChange={setZonas}
@@ -379,7 +384,7 @@ const PlayTypePrizes = (): React.ReactElement => {
               startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <Refresh />}
               sx={{ px: 4, borderRadius: '30px', textTransform: 'uppercase' }}
             >
-              Refrescar
+              {t('common.refresh')}
             </Button>
             <Button
               variant="contained"
@@ -393,20 +398,20 @@ const PlayTypePrizes = (): React.ReactElement => {
           {visibleTabs.length > 0 && (
             <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
               <Tabs value={tab} onChange={(_, v) => setTab(v)} variant="scrollable" scrollButtons="auto">
-                {visibleTabs.map((t) => <Tab key={t.label} label={t.label} />)}
+                {visibleTabs.map((spec) => <Tab key={spec.labelKey} label={t(spec.labelKey)} />)}
               </Tabs>
             </Box>
           )}
 
           {visibleTabs.length === 0 ? (
             <Typography variant="body2" align="center" sx={{ color: 'text.secondary', py: 4 }}>
-              {loading ? 'Cargando…' : 'No hay entradas para las fechas elegidas'}
+              {loading ? t('common.loading') : t('sales.noEntriesForDates')}
             </Typography>
           ) : (
           <>
           <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Typography variant="caption" sx={{ color: 'text.secondary' }}>Entradas por página</Typography>
+              <Typography variant="caption" sx={{ color: 'text.secondary' }}>{t('balances.entriesPerPage')}</Typography>
               <FormControl size="small">
                 <Select value={pageSize} onChange={(e) => { setPageSize(Number(e.target.value)); setPage(0); }} sx={{ height: 28, fontSize: '0.8rem' }}>
                   <MenuItem value={10}>10</MenuItem>
@@ -418,7 +423,7 @@ const PlayTypePrizes = (): React.ReactElement => {
             </Box>
             <TextField
               size="small"
-              placeholder="Filtrado rápido"
+              placeholder={t('common.filterQuick')}
               value={filtroRapido}
               onChange={(e) => { setFiltroRapido(e.target.value); setPage(0); }}
               InputProps={{ endAdornment: <InputAdornment position="end"><SearchIcon /></InputAdornment> }}
@@ -445,21 +450,21 @@ const PlayTypePrizes = (): React.ReactElement => {
                   ))}
                 </TableRow>
                 <TableRow sx={{ backgroundColor: '#e3e3e3' }}>
-                  <TableCell sx={{ fontWeight: 600 }}><TableSortLabel {...sortProps('name')}>Banca</TableSortLabel></TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}><TableSortLabel {...sortProps('code')}>Código</TableSortLabel></TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}><TableSortLabel {...sortProps('name')}>{t('common.bettingPool')}</TableSortLabel></TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}><TableSortLabel {...sortProps('code')}>{t('common.code')}</TableSortLabel></TableCell>
                   {currentTab.groups.map((g) => (
                     [
                       <TableCell key={`${g.header}-jug`} align="right" sx={{ fontWeight: 600, borderLeft: '1px solid #e0e0e0' }}>
-                        <TableSortLabel {...sortProps(`${g.header}:sold`)}>Jugado</TableSortLabel>
+                        <TableSortLabel {...sortProps(`${g.header}:sold`)}>{t('sales.played')}</TableSortLabel>
                       </TableCell>,
                       <TableCell key={`${g.header}-pr`} align="right" sx={{ fontWeight: 600 }}>
-                        <TableSortLabel {...sortProps(`${g.header}:prizes`)}>Premios</TableSortLabel>
+                        <TableSortLabel {...sortProps(`${g.header}:prizes`)}>{t('sales.premios')}</TableSortLabel>
                       </TableCell>,
                       <TableCell key={`${g.header}-co`} align="right" sx={{ fontWeight: 600 }}>
-                        <TableSortLabel {...sortProps(`${g.header}:commissions`)}>Comisiones</TableSortLabel>
+                        <TableSortLabel {...sortProps(`${g.header}:commissions`)}>{t('sales.comisiones')}</TableSortLabel>
                       </TableCell>,
                       <TableCell key={`${g.header}-ne`} align="right" sx={{ fontWeight: 600 }}>
-                        <TableSortLabel {...sortProps(`${g.header}:net`)}>Neto</TableSortLabel>
+                        <TableSortLabel {...sortProps(`${g.header}:net`)}>{t('sales.neto')}</TableSortLabel>
                       </TableCell>,
                     ]
                   ))}
@@ -469,7 +474,7 @@ const PlayTypePrizes = (): React.ReactElement => {
                 {paged.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={2 + currentTab.groups.length * 4} align="center" sx={{ py: 3, color: 'text.secondary' }}>
-                      {loading ? 'Cargando…' : 'No hay entradas para el sorteo y la fecha elegidos'}
+                      {loading ? t('common.loading') : t('sales.noEntriesForDrawDate')}
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -490,7 +495,7 @@ const PlayTypePrizes = (): React.ReactElement => {
                       </TableRow>
                     ))}
                     <TableRow sx={{ backgroundColor: '#f5f7fa', '& td': { fontWeight: 600 } }}>
-                      <TableCell>Totales</TableCell>
+                      <TableCell>{t('balances.totals')}</TableCell>
                       <TableCell />
                       {currentTab.groups.map((g) => {
                         const c = totals[g.header] || EMPTY_CELL;
@@ -510,13 +515,13 @@ const PlayTypePrizes = (): React.ReactElement => {
 
           <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mt: 1 }}>
             <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-              Mostrando {paged.length} de {filtered.length} bancas
+              {t('sales.showingBettingPools', { shown: paged.length, total: filtered.length })}
             </Typography>
             {filtered.length > pageSize && (
               <Stack direction="row" spacing={1} alignItems="center">
-                <Button size="small" disabled={page === 0} onClick={() => setPage((p) => Math.max(0, p - 1))}>Anterior</Button>
-                <Typography variant="caption">Página {page + 1} / {Math.max(1, Math.ceil(filtered.length / pageSize))}</Typography>
-                <Button size="small" disabled={(page + 1) * pageSize >= filtered.length} onClick={() => setPage((p) => p + 1)}>Siguiente</Button>
+                <Button size="small" disabled={page === 0} onClick={() => setPage((p) => Math.max(0, p - 1))}>{t('common.previous')}</Button>
+                <Typography variant="caption">{t('common.pageOf', { current: page + 1, total: Math.max(1, Math.ceil(filtered.length / pageSize)) })}</Typography>
+                <Button size="small" disabled={(page + 1) * pageSize >= filtered.length} onClick={() => setPage((p) => p + 1)}>{t('common.next')}</Button>
               </Stack>
             )}
           </Stack>

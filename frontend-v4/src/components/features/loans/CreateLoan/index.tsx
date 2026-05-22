@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback, type ChangeEvent } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, type ChangeEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Card,
@@ -23,11 +24,19 @@ import { useNavigate } from 'react-router-dom';
 import { getBettingPools, type BettingPool } from '@services/bettingPoolService';
 import { createLoan } from '@services/loanService';
 
-const DAY_LABELS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
-
 const CreateLoan = (): React.ReactElement => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const today = new Date().toLocaleDateString('en-CA');
+  const DAY_LABELS = useMemo(() => [
+    t('loansAdmin.day.monday'),
+    t('loansAdmin.day.tuesday'),
+    t('loansAdmin.day.wednesday'),
+    t('loansAdmin.day.thursday'),
+    t('loansAdmin.day.friday'),
+    t('loansAdmin.day.saturday'),
+    t('loansAdmin.day.sunday')
+  ], [t]);
 
   const [selectedPool, setSelectedPool] = useState<BettingPool | null>(null);
   const [loanAmount, setLoanAmount] = useState('');
@@ -77,15 +86,15 @@ const CreateLoan = (): React.ReactElement => {
         interestRate: parseFloat(interestRate) || 0,
         notes: notes || undefined
       });
-      setSnackbar({ open: true, message: 'Préstamo creado exitosamente', severity: 'success' });
+      setSnackbar({ open: true, message: t('loansAdmin.create.successMsg'), severity: 'success' });
       setTimeout(() => navigate('/loans/list'), 1500);
     } catch (err) {
       console.error('Error creating loan:', err);
-      setSnackbar({ open: true, message: 'Error al crear préstamo', severity: 'error' });
+      setSnackbar({ open: true, message: t('loansAdmin.create.errorMsg'), severity: 'error' });
     } finally {
       setSubmitting(false);
     }
-  }, [selectedPool, loanAmount, installmentAmount, frequency, paymentDay, startDate, interestRate, notes, navigate]);
+  }, [selectedPool, loanAmount, installmentAmount, frequency, paymentDay, startDate, interestRate, notes, navigate, t]);
 
   const isValid = selectedPool && parseFloat(loanAmount) > 0 && parseFloat(installmentAmount) > 0;
 
@@ -94,18 +103,18 @@ const CreateLoan = (): React.ReactElement => {
       <Card>
         <CardContent>
           <Typography variant="h5" sx={{ textAlign: 'center', mb: 4, color: '#2c2c2c', fontWeight: 600 }}>
-            Crear préstamo
+            {t('loansAdmin.create.title')}
           </Typography>
 
           <Box sx={{ maxWidth: '800px', margin: '0 auto' }}>
             {/* Entity Type */}
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
               <Typography sx={{ width: '280px', fontSize: '12px', color: 'rgb(120, 120, 120)' }}>
-                Tipo de entidad
+                {t('loansAdmin.create.entityType')}
               </Typography>
               <FormControl fullWidth size="small">
                 <Select value="bettingPool" disabled sx={{ fontSize: '14px' }}>
-                  <MenuItem value="bettingPool">Banca</MenuItem>
+                  <MenuItem value="bettingPool">{t('loansAdmin.create.bettingPool')}</MenuItem>
                 </Select>
               </FormControl>
             </Box>
@@ -113,7 +122,7 @@ const CreateLoan = (): React.ReactElement => {
             {/* Entity (Banca) */}
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
               <Typography sx={{ width: '280px', fontSize: '12px', color: 'rgb(120, 120, 120)' }}>
-                Entidad
+                {t('loansAdmin.create.entity')}
               </Typography>
               <Autocomplete
                 fullWidth
@@ -134,7 +143,7 @@ const CreateLoan = (): React.ReactElement => {
                   );
                 }}
                 renderInput={(params) => (
-                  <TextField {...params} placeholder="Buscar banca..." sx={{ '& input': { fontSize: '14px' } }} />
+                  <TextField {...params} placeholder={t('loansAdmin.create.searchPool')} sx={{ '& input': { fontSize: '14px' } }} />
                 )}
                 isOptionEqualToValue={(opt, val) => opt.bettingPoolId === val.bettingPoolId}
               />
@@ -143,7 +152,7 @@ const CreateLoan = (): React.ReactElement => {
             {/* Loan Amount */}
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
               <Typography sx={{ width: '280px', fontSize: '12px', color: 'rgb(120, 120, 120)' }}>
-                Monto a prestar
+                {t('loansAdmin.create.loanAmount')}
               </Typography>
               <TextField
                 fullWidth
@@ -164,7 +173,7 @@ const CreateLoan = (): React.ReactElement => {
             {/* Installment Amount */}
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
               <Typography sx={{ width: '280px', fontSize: '12px', color: 'rgb(120, 120, 120)' }}>
-                Monto cuota
+                {t('loansAdmin.create.installmentAmount')}
               </Typography>
               <TextField
                 fullWidth
@@ -185,7 +194,7 @@ const CreateLoan = (): React.ReactElement => {
             {/* Frequency */}
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
               <Typography sx={{ width: '280px', fontSize: '12px', color: 'rgb(120, 120, 120)' }}>
-                Frecuencia de pago
+                {t('loansAdmin.create.paymentFrequency')}
               </Typography>
               <FormControl component="fieldset" fullWidth>
                 <RadioGroup
@@ -194,10 +203,10 @@ const CreateLoan = (): React.ReactElement => {
                   onChange={(e) => setFrequency(e.target.value)}
                 >
                   {[
-                    { value: 'daily', label: 'Diario' },
-                    { value: 'weekly', label: 'Semanal' },
-                    { value: 'monthly', label: 'Mensual' },
-                    { value: 'annual', label: 'Anual' }
+                    { value: 'daily', label: t('loansAdmin.frequency.daily') },
+                    { value: 'weekly', label: t('loansAdmin.frequency.weekly') },
+                    { value: 'monthly', label: t('loansAdmin.frequency.monthly') },
+                    { value: 'annual', label: t('loansAdmin.frequency.annual') }
                   ].map(f => (
                     <FormControlLabel
                       key={f.value}
@@ -215,7 +224,7 @@ const CreateLoan = (): React.ReactElement => {
             {frequency === 'weekly' && (
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
                 <Typography sx={{ width: '280px', fontSize: '12px', color: 'rgb(120, 120, 120)' }}>
-                  Día de pago
+                  {t('loansAdmin.create.paymentDay')}
                 </Typography>
                 <FormControl fullWidth size="small">
                   <Select
@@ -234,7 +243,7 @@ const CreateLoan = (): React.ReactElement => {
             {/* Start Date */}
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
               <Typography sx={{ width: '280px', fontSize: '12px', color: 'rgb(120, 120, 120)' }}>
-                Fecha de inicio
+                {t('loansAdmin.create.startDate')}
               </Typography>
               <TextField
                 fullWidth
@@ -251,7 +260,7 @@ const CreateLoan = (): React.ReactElement => {
             {/* Interest Rate */}
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
               <Typography sx={{ width: '280px', fontSize: '12px', color: 'rgb(120, 120, 120)' }}>
-                Tasa de interés
+                {t('loansAdmin.create.interestRate')}
               </Typography>
               <TextField
                 fullWidth
@@ -271,7 +280,7 @@ const CreateLoan = (): React.ReactElement => {
             {/* Notes */}
             <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 2.5 }}>
               <Typography sx={{ width: '280px', fontSize: '12px', color: 'rgb(120, 120, 120)', pt: 1 }}>
-                Notas
+                {t('loansAdmin.create.notes')}
               </Typography>
               <TextField
                 fullWidth
@@ -279,7 +288,7 @@ const CreateLoan = (): React.ReactElement => {
                 rows={3}
                 value={notes}
                 onChange={(e: ChangeEvent<HTMLInputElement>) => setNotes(e.target.value)}
-                placeholder="Notas adicionales..."
+                placeholder={t('loansAdmin.create.notesPlaceholder')}
                 InputProps={{ sx: { fontSize: '14px' } }}
               />
             </Box>
@@ -301,7 +310,7 @@ const CreateLoan = (): React.ReactElement => {
                   textTransform: 'none'
                 }}
               >
-                {submitting ? <CircularProgress size={20} color="inherit" /> : 'Crear'}
+                {submitting ? <CircularProgress size={20} color="inherit" /> : t('loansAdmin.create.createButton')}
               </Button>
             </Box>
           </Box>

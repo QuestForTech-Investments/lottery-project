@@ -1,4 +1,5 @@
 import React, { useMemo, memo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Paper,
@@ -33,6 +34,7 @@ interface PlayTableProps {
  * Optimized with React.memo and useMemo
  */
 const PlayTable: React.FC<PlayTableProps> = ({ title, plays, type, onDeletePlay, onDeleteAll }) => {
+  const { t } = useTranslation();
   // Memoize total calculation to avoid recalculating on every render
   const total = useMemo(() => {
     return plays.reduce((sum, play) => sum + play.amount, 0);
@@ -57,7 +59,7 @@ const PlayTable: React.FC<PlayTableProps> = ({ title, plays, type, onDeletePlay,
           size="small"
           sx={{ color: 'white', p: 0.5 }}
           onClick={() => onDeleteAll(type)}
-          title="Eliminar todas las jugadas"
+          title={t('tickets.create.deleteAllPlays')}
         >
           <DeleteSweepIcon fontSize="small" />
         </IconButton>
@@ -72,8 +74,8 @@ const PlayTable: React.FC<PlayTableProps> = ({ title, plays, type, onDeletePlay,
         fontSize: '11px',
         fontWeight: 'bold'
       }}>
-        <Box sx={{ flex: 1, textAlign: 'center' }}>LOT</Box>
-        <Box sx={{ flex: 1.5, textAlign: 'center' }}>NUM</Box>
+        <Box sx={{ flex: 1, textAlign: 'center' }}>{t('tickets.create.lotShort')}</Box>
+        <Box sx={{ flex: 1.5, textAlign: 'center' }}>{t('tickets.create.numShort')}</Box>
         <Box sx={{ flex: 1, textAlign: 'center' }}>$</Box>
         <Box sx={{ width: '30px', textAlign: 'center' }}>×</Box>
       </Box>
@@ -88,7 +90,7 @@ const PlayTable: React.FC<PlayTableProps> = ({ title, plays, type, onDeletePlay,
       }}>
         {plays.length === 0 ? (
           <Box sx={{ p: 2, textAlign: 'center', color: 'text.secondary', fontSize: '12px' }}>
-            Sin jugadas
+            {t('tickets.create.noPlays')}
           </Box>
         ) : (
           plays.map((play) => (
@@ -127,7 +129,7 @@ const PlayTable: React.FC<PlayTableProps> = ({ title, plays, type, onDeletePlay,
         fontSize: '12px',
         fontWeight: 'bold'
       }}>
-        TOTAL: ${total.toFixed(2)}
+        {t('common.total').toUpperCase()}: ${total.toFixed(2)}
       </Box>
     </Paper>
   );

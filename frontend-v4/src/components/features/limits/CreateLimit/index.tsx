@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Typography,
@@ -192,6 +193,7 @@ const styles = {
 
 const CreateLimit = (): React.ReactElement => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   // Form state
   const [limitType, setLimitType] = useState<string>('');
@@ -263,13 +265,13 @@ const CreateLimit = (): React.ReactElement => {
         setHasGlobalLimits(globalLimits.length > 0);
       } catch (err) {
         console.error('Error loading params:', err);
-        setError('Error al cargar los parametros del formulario');
+        setError(t('limitsAdmin.create.errLoadParams'));
       } finally {
         setLoading(false);
       }
     };
     loadParams();
-  }, []);
+  }, [t]);
 
   const limitTypeNum = limitType ? parseInt(limitType) : 0;
   const isZoneType = limitTypeNum === LimitType.GeneralForZone || limitTypeNum === LimitType.ByNumberForZone;
@@ -311,36 +313,36 @@ const CreateLimit = (): React.ReactElement => {
   }, []);
 
   const validateForm = (): boolean => {
-    if (!limitType) { setError('Debe seleccionar un tipo de limite'); return false; }
-    if (isByNumberType && betNumbers.length === 0) { setError('Debe agregar al menos un numero'); return false; }
+    if (!limitType) { setError(t('limitsAdmin.create.errSelectType')); return false; }
+    if (isByNumberType && betNumbers.length === 0) { setError(t('limitsAdmin.create.errAddNumber')); return false; }
     if (isByNumberType) {
       // Check that each number's game type has an amount set
       const gameTypesUsed = [...new Set(betNumbers.map(b => b.gameType))];
       const missing = gameTypesUsed.filter(gt => !amounts[gt] || parseFloat(amounts[gt]) <= 0);
       if (missing.length > 0) {
         const labels = missing.map(gt => BetTypes.find(bt => bt.key === gt)?.label || gt);
-        setError(`Falta configurar monto para: ${labels.join(', ')}`);
+        setError(t('limitsAdmin.create.errMissingAmounts', { list: labels.join(', ') }));
         return false;
       }
     }
-    if (selectedDraws.length === 0) { setError('Debe seleccionar al menos un sorteo'); return false; }
-    if (selectedDays.length === 0) { setError('Debe seleccionar al menos un dia'); return false; }
+    if (selectedDraws.length === 0) { setError(t('limitsAdmin.create.errSelectDraw')); return false; }
+    if (selectedDays.length === 0) { setError(t('limitsAdmin.create.errSelectDay')); return false; }
 
     if (isZoneType && selectedZones.length === 0) {
-      setError('Debe seleccionar al menos una zona'); return false;
+      setError(t('limitsAdmin.create.errSelectZone')); return false;
     }
 
     if (isBancaType) {
       if (bancaSelectionMode === 'specific' && !selectedBettingPool) {
-        setError('Debe seleccionar una banca'); return false;
+        setError(t('limitsAdmin.create.errSelectBanca')); return false;
       }
       if (bancaSelectionMode === 'byZone' && selectedBancaZones.length === 0) {
-        setError('Debe seleccionar al menos una zona'); return false;
+        setError(t('limitsAdmin.create.errSelectBancaZone')); return false;
       }
     }
 
     const hasAmount = Object.values(amounts).some(v => v && parseFloat(v) > 0);
-    if (!hasAmount) { setError('Debe configurar al menos un monto'); return false; }
+    if (!hasAmount) { setError(t('limitsAdmin.create.errSetAmount')); return false; }
 
     return true;
   };
@@ -370,9 +372,14 @@ const CreateLimit = (): React.ReactElement => {
 
         if (!result.isValid) {
           const violationList = result.violations.map(v =>
-            `${v.gameType}: $${v.childAmount} excede ${v.parentType} ($${v.parentAmount})`
+            t('limitsAdmin.create.violationLine', {
+              gameType: v.gameType,
+              childAmount: v.childAmount,
+              parentType: v.parentType,
+              parentAmount: v.parentAmount,
+            })
           ).join('\n');
-          setError(`Los montos exceden los limites del nivel superior:\n${violationList}`);
+          setError(t('limitsAdmin.create.errExceedsParent', { violations: violationList }));
           setSubmitting(false);
           return;
         }
@@ -422,10 +429,10 @@ const CreateLimit = (): React.ReactElement => {
         } as CreateLimitRequest);
       }
 
-      setSnackbar({ open: true, message: 'Limites creados exitosamente', severity: 'success' });
+      setSnackbar({ open: true, message: t('limitsAdmin.create.successCreated'), severity: 'success' });
       setTimeout(() => navigate('/limits/list'), 1500);
     } catch (err) {
-      const errorMsg = handleLimitError(err, 'crear limite');
+      const errorMsg = handleLimitError(err, t('limitsAdmin.create.errCreate'));
       setError(errorMsg);
       setSnackbar({ open: true, message: errorMsg, severity: 'error' });
     } finally {
@@ -443,7 +450,7 @@ const CreateLimit = (): React.ReactElement => {
 
   return (
     <Box sx={styles.container}>
-      <Typography sx={styles.title}>Crear limites</Typography>
+      <Typography sx={styles.title}>{t('limitsAdmin.create.title')}</Typography>
 
       {error && (
         <Alert severity="error" sx={{ mb: 2, whiteSpace: 'pre-line' }} onClose={() => setError(null)}>
@@ -454,19 +461,19 @@ const CreateLimit = (): React.ReactElement => {
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
         {/* Left Column - LÍMITES */}
         <Box sx={styles.card}>
-          <Typography sx={styles.columnHeader}>Limites</Typography>
+          <Typography sx={styles.columnHeader}>{t('limitsAdmin.create.columnLimits')}</Typography>
           <Divider sx={{ mb: 2 }} />
 
           {/* Warning if no global limits */}
           {!hasGlobalLimits && (
             <Alert severity="warning" sx={{ mb: 2 }}>
-              Debe crear primero un Limite Global antes de crear otros tipos de límites.
+              {t('limitsAdmin.create.warningNoGlobal')}
             </Alert>
           )}
 
           {/* Tipo de Límite - only 4 core types */}
           <Box sx={{ mb: 2 }}>
-            <Typography component="label" sx={styles.label}>Tipo de Limite</Typography>
+            <Typography component="label" sx={styles.label}>{t('limitsAdmin.create.limitType')}</Typography>
             <FormControl fullWidth size="small">
               <Select
                 value={limitType}
@@ -474,13 +481,13 @@ const CreateLimit = (): React.ReactElement => {
                 displayEmpty
                 sx={styles.select}
               >
-                <MenuItem value=""><em style={{ color: '#9a9a9a' }}>Seleccione</em></MenuItem>
+                <MenuItem value=""><em style={{ color: '#9a9a9a' }}>{t('limitsAdmin.create.select')}</em></MenuItem>
                 {Object.entries(CreateLimitTypeLabels).map(([value, label]) => {
                   const isGlobal = value === String(LimitType.GeneralForGroup);
                   const disabled = !hasGlobalLimits && !isGlobal;
                   return (
                     <MenuItem key={value} value={value} disabled={disabled}>
-                      {label}{disabled ? ' (requiere Limite Global)' : ''}
+                      {label}{disabled ? t('limitsAdmin.create.requiresGlobal') : ''}
                     </MenuItem>
                   );
                 })}
@@ -489,7 +496,7 @@ const CreateLimit = (): React.ReactElement => {
                   const disabled = !hasGlobalLimits;
                   return (
                     <MenuItem key={value} value={value} disabled={disabled}>
-                      {label}{disabled ? ' (requiere Limite Global)' : ''}
+                      {label}{disabled ? t('limitsAdmin.create.requiresGlobal') : ''}
                     </MenuItem>
                   );
                 })}
@@ -500,7 +507,7 @@ const CreateLimit = (): React.ReactElement => {
           {/* Zone multi-select (for Limite Zona) */}
           {isZoneType && params && (
             <Box sx={{ mb: 2 }}>
-              <Typography component="label" sx={styles.label}>Zona(s)</Typography>
+              <Typography component="label" sx={styles.label}>{t('limitsAdmin.create.zonesLabel')}</Typography>
               <Autocomplete
                 multiple
                 options={params.zones}
@@ -508,7 +515,7 @@ const CreateLimit = (): React.ReactElement => {
                 value={params.zones.filter(z => selectedZones.includes(z.value))}
                 onChange={(_, newValue) => setSelectedZones(newValue.map(z => z.value))}
                 renderInput={(inputParams) => (
-                  <TextField {...inputParams} placeholder="Seleccione zona(s)..." size="small" />
+                  <TextField {...inputParams} placeholder={t('limitsAdmin.create.selectZonesPlaceholder')} size="small" />
                 )}
                 size="small"
               />
@@ -518,7 +525,7 @@ const CreateLimit = (): React.ReactElement => {
           {/* Banca selection (for Limite Banca / Local Banca) */}
           {isBancaType && params && (
             <Box sx={{ mb: 2 }}>
-              <Typography component="label" sx={styles.label}>Seleccion de bancas</Typography>
+              <Typography component="label" sx={styles.label}>{t('limitsAdmin.create.bancaSelection')}</Typography>
               <RadioGroup
                 value={bancaSelectionMode}
                 onChange={(e) => {
@@ -528,9 +535,9 @@ const CreateLimit = (): React.ReactElement => {
                 }}
                 sx={{ mb: 1 }}
               >
-                <FormControlLabel value="specific" control={<Radio size="small" />} label="Una banca especifica" />
-                <FormControlLabel value="all" control={<Radio size="small" />} label="Todas las bancas" />
-                <FormControlLabel value="byZone" control={<Radio size="small" />} label="Bancas de zona(s)" />
+                <FormControlLabel value="specific" control={<Radio size="small" />} label={t('limitsAdmin.create.modeSpecific')} />
+                <FormControlLabel value="all" control={<Radio size="small" />} label={t('limitsAdmin.create.modeAll')} />
+                <FormControlLabel value="byZone" control={<Radio size="small" />} label={t('limitsAdmin.create.modeByZone')} />
               </RadioGroup>
 
               {bancaSelectionMode === 'specific' && (
@@ -540,7 +547,7 @@ const CreateLimit = (): React.ReactElement => {
                   value={selectedBettingPool}
                   onChange={(_, newValue) => setSelectedBettingPool(newValue)}
                   renderInput={(inputParams) => (
-                    <TextField {...inputParams} placeholder="Buscar banca..." size="small" />
+                    <TextField {...inputParams} placeholder={t('limitsAdmin.create.searchBancaPlaceholder')} size="small" />
                   )}
                   size="small"
                 />
@@ -554,7 +561,7 @@ const CreateLimit = (): React.ReactElement => {
                   value={params.zones.filter(z => selectedBancaZones.includes(z.value))}
                   onChange={(_, newValue) => setSelectedBancaZones(newValue.map(z => z.value))}
                   renderInput={(inputParams) => (
-                    <TextField {...inputParams} placeholder="Seleccione zona(s)..." size="small" />
+                    <TextField {...inputParams} placeholder={t('limitsAdmin.create.selectZonesPlaceholder')} size="small" />
                   )}
                   size="small"
                 />
@@ -564,7 +571,7 @@ const CreateLimit = (): React.ReactElement => {
 
           {/* Fecha de expiración */}
           <Box sx={{ mb: 2 }}>
-            <Typography component="label" sx={styles.label}>Fecha de expiracion (opcional)</Typography>
+            <Typography component="label" sx={styles.label}>{t('limitsAdmin.create.expirationDateLabel')}</Typography>
             <TextField
               type="date"
               fullWidth
@@ -577,7 +584,7 @@ const CreateLimit = (): React.ReactElement => {
 
           {/* Sorteos */}
           <Box sx={{ mb: 2 }}>
-            <Typography component="label" sx={styles.label}>Sorteos</Typography>
+            <Typography component="label" sx={styles.label}>{t('limitsAdmin.create.drawsLabel')}</Typography>
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 1 }}>
               {params?.draws.map(draw => (
                 <Box
@@ -590,7 +597,7 @@ const CreateLimit = (): React.ReactElement => {
               ))}
             </Box>
             <Button variant="outlined" onClick={handleSelectAllDraws} sx={styles.selectAllButton}>
-              {params && selectedDraws.length === params.draws.length ? 'Deseleccionar todos' : 'Seleccionar todos'}
+              {params && selectedDraws.length === params.draws.length ? t('limitsAdmin.create.deselectAll') : t('limitsAdmin.create.selectAll')}
             </Button>
           </Box>
 
@@ -599,7 +606,7 @@ const CreateLimit = (): React.ReactElement => {
             <>
               {/* Game type selector — single select */}
               <Box sx={{ mb: 2 }}>
-                <Typography component="label" sx={styles.label}>Jugada</Typography>
+                <Typography component="label" sx={styles.label}>{t('limitsAdmin.create.gameTypeLabel')}</Typography>
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                   {BetTypes.filter(({ key }) => {
                     if (!allowedGameTypes) return true;
@@ -633,7 +640,7 @@ const CreateLimit = (): React.ReactElement => {
                 };
                 return (
                   <Box sx={{ mb: 2 }}>
-                    <Typography component="label" sx={styles.label}>Numeros</Typography>
+                    <Typography component="label" sx={styles.label}>{t('limitsAdmin.create.numbersLabel')}</Typography>
                     <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
                       <TextField
                         size="small"
@@ -673,7 +680,7 @@ const CreateLimit = (): React.ReactElement => {
                           }}
                           sx={{ ...styles.selectAllButton, whiteSpace: 'nowrap', fontSize: '11px' }}
                         >
-                          Agregar dobles
+                          {t('limitsAdmin.create.addDoubles')}
                         </Button>
                       )}
                     </Box>
@@ -690,7 +697,7 @@ const CreateLimit = (): React.ReactElement => {
                         ))}
                         {betNumbers.length > 3 && (
                           <Chip
-                            label="Limpiar todos"
+                            label={t('limitsAdmin.create.clearAll')}
                             size="small"
                             variant="outlined"
                             onClick={() => setBetNumbers([])}
@@ -709,7 +716,7 @@ const CreateLimit = (): React.ReactElement => {
         {/* Right Column - MONTO */}
         <Box>
           <Box sx={styles.card}>
-            <Typography sx={styles.columnHeader}>Monto</Typography>
+            <Typography sx={styles.columnHeader}>{t('limitsAdmin.create.columnAmount')}</Typography>
 
             <Box sx={{ maxHeight: '400px', overflowY: 'auto' }}>
               {BetTypes.filter(({ key }) => {
@@ -735,7 +742,7 @@ const CreateLimit = (): React.ReactElement => {
 
             {/* Día de semana */}
             <Box sx={{ mb: 2 }}>
-              <Typography component="label" sx={styles.label}>Dia de semana</Typography>
+              <Typography component="label" sx={styles.label}>{t('limitsAdmin.create.dayOfWeekLabel')}</Typography>
               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 1 }}>
                 {DaysOfWeek.map(day => (
                   <Box
@@ -748,7 +755,7 @@ const CreateLimit = (): React.ReactElement => {
                 ))}
               </Box>
               <Button variant="outlined" onClick={handleSelectAllDays} sx={styles.selectAllButton}>
-                {selectedDays.length === DaysOfWeek.length ? 'Deseleccionar todos' : 'Seleccionar todos'}
+                {selectedDays.length === DaysOfWeek.length ? t('limitsAdmin.create.deselectAll') : t('limitsAdmin.create.selectAll')}
               </Button>
             </Box>
           </Box>
@@ -762,7 +769,7 @@ const CreateLimit = (): React.ReactElement => {
               disableElevation
               sx={styles.createButton}
             >
-              {submitting ? 'Creando...' : 'Crear'}
+              {submitting ? t('limitsAdmin.create.creating') : t('limitsAdmin.create.createButton')}
             </Button>
           </Box>
         </Box>

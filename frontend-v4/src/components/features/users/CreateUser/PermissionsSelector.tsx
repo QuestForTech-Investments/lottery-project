@@ -4,6 +4,7 @@
  */
 
 import { memo } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   Box,
   Typography,
@@ -44,6 +45,7 @@ const PermissionsSelector = ({
   onRetry = null,
   required = false
 }: PermissionsSelectorProps) => {
+  const { t } = useTranslation()
   /**
    * Check if all permissions in a category are selected
    */
@@ -100,7 +102,7 @@ const PermissionsSelector = ({
       <Box sx={{ textAlign: 'center', py: 4 }}>
         <CircularProgress />
         <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-          Cargando permisos desde la API...
+          {t('usersAdmin.loadingPermissionsFromApi')}
         </Typography>
       </Box>
     )
@@ -121,7 +123,7 @@ const PermissionsSelector = ({
               startIcon={<RefreshIcon />}
               onClick={onRetry}
             >
-              Reintentar
+              {t('usersAdmin.retry')}
             </Button>
           )
         }
@@ -130,7 +132,7 @@ const PermissionsSelector = ({
           {error}
         </Typography>
         <Typography variant="caption" display="block" sx={{ mt: 0.5 }}>
-          Verifica que la API esté corriendo en http://localhost:5000
+          {t('usersAdmin.apiRunningHint')}
         </Typography>
       </Alert>
     )
@@ -143,7 +145,7 @@ const PermissionsSelector = ({
     return (
       <Alert severity="warning">
         <Typography variant="body2" fontWeight="medium">
-          No se pudieron cargar los permisos
+          {t('usersAdmin.couldNotLoadPermissions')}
         </Typography>
         {onRetry && (
           <Button
@@ -152,7 +154,7 @@ const PermissionsSelector = ({
             onClick={onRetry}
             sx={{ mt: 1 }}
           >
-            Reintentar
+            {t('usersAdmin.retry')}
           </Button>
         )}
       </Alert>
@@ -166,13 +168,13 @@ const PermissionsSelector = ({
     <Box>
       <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 1 }}>
         <Typography variant="h6" component="div">
-          PRIVILEGIOS
+          {t('usersAdmin.privilegesUpper')}
         </Typography>
         {required && (
-          <Chip label="Requerido" color="error" size="small" />
+          <Chip label={t('usersAdmin.permRequired')} color="error" size="small" />
         )}
         <Typography variant="body2" color="text.secondary" sx={{ ml: 'auto' }}>
-          {selectedPermissionIds.length} seleccionados
+          {t('usersAdmin.selectedCount', { count: selectedPermissionIds.length })}
         </Typography>
       </Box>
 

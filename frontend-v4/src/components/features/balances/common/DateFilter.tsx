@@ -1,4 +1,5 @@
 import React, { useCallback, type ChangeEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import { TextField, Box, Typography } from '@mui/material';
 
 interface DateFilterProps {
@@ -13,8 +14,10 @@ interface DateFilterProps {
 const DateFilter = React.memo(({
   value,
   onChange,
-  label = 'Fecha'
+  label,
 }: DateFilterProps): React.ReactElement => {
+  const { t } = useTranslation();
+  const resolvedLabel = label ?? t('common.date');
   const handleChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
     onChange(e.target.value);
   }, [onChange]);
@@ -29,7 +32,7 @@ const DateFilter = React.memo(({
           fontWeight: 500
         }}
       >
-        {label}
+        {resolvedLabel}
       </Typography>
       <TextField
         type="date"

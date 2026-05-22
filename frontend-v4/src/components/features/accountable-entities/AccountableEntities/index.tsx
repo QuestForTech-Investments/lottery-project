@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect, useMemo, type SyntheticEvent, type ChangeEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Card,
@@ -56,6 +57,7 @@ const getValueColor = (value: number | undefined): string => {
 
 const AccountableEntities = (): React.ReactElement => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<number>(0);
   const [quickFilter, setQuickFilter] = useState<string>('');
   const [sortBy, setSortBy] = useState<ColumnKey | null>(null);
@@ -212,20 +214,26 @@ const AccountableEntities = (): React.ReactElement => {
 
   const getColumnLabel = useCallback((col: ColumnKey): string => {
     const labels: Record<ColumnKey, string> = {
-      nombre: 'Nombre',
-      codigo: 'Código',
-      balance: 'Balance',
-      caida: 'Caída acumulada',
-      prestamo: 'Préstamo',
-      zona: 'Zona'
+      nombre: t('entitiesAdmin.list.colName'),
+      codigo: t('entitiesAdmin.list.colCode'),
+      balance: t('entitiesAdmin.list.colBalance'),
+      caida: t('entitiesAdmin.list.colFallback'),
+      prestamo: t('entitiesAdmin.list.colLoan'),
+      zona: t('entitiesAdmin.list.colZone')
     };
     return labels[col] || col;
-  }, []);
+  }, [t]);
 
   const getTabTitle = useCallback((): string => {
-    const titles = ['Bancas', 'Empleados', 'Bancos', 'Zonas', 'Otros'];
+    const titles = [
+      t('entitiesAdmin.list.titleBettingPools'),
+      t('entitiesAdmin.list.titleEmployees'),
+      t('entitiesAdmin.list.titleBanks'),
+      t('entitiesAdmin.list.titleZones'),
+      t('entitiesAdmin.list.titleOthers')
+    ];
     return titles[activeTab];
-  }, [activeTab]);
+  }, [activeTab, t]);
 
   const handleTabChange = useCallback((_event: SyntheticEvent, newValue: number) => {
     setActiveTab(newValue);
@@ -249,11 +257,11 @@ const AccountableEntities = (): React.ReactElement => {
             TabIndicatorProps={{ style: { backgroundColor: '#8b5cf6' } }}
             sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}
           >
-            <Tab label="Bancas" sx={{ fontSize: '14px', color: activeTab === 0 ? '#8b5cf6' : '#999' }} />
-            <Tab label="Empleados" sx={{ fontSize: '14px', color: activeTab === 1 ? '#8b5cf6' : '#999' }} />
-            <Tab label="Bancos" sx={{ fontSize: '14px', color: activeTab === 2 ? '#8b5cf6' : '#999' }} />
-            <Tab label="Zonas" sx={{ fontSize: '14px', color: activeTab === 3 ? '#8b5cf6' : '#999' }} />
-            <Tab label="Otros" sx={{ fontSize: '14px', color: activeTab === 4 ? '#8b5cf6' : '#999' }} />
+            <Tab label={t('entitiesAdmin.list.tabBettingPools')} sx={{ fontSize: '14px', color: activeTab === 0 ? '#8b5cf6' : '#999' }} />
+            <Tab label={t('entitiesAdmin.list.tabEmployees')} sx={{ fontSize: '14px', color: activeTab === 1 ? '#8b5cf6' : '#999' }} />
+            <Tab label={t('entitiesAdmin.list.tabBanks')} sx={{ fontSize: '14px', color: activeTab === 2 ? '#8b5cf6' : '#999' }} />
+            <Tab label={t('entitiesAdmin.list.tabZones')} sx={{ fontSize: '14px', color: activeTab === 3 ? '#8b5cf6' : '#999' }} />
+            <Tab label={t('entitiesAdmin.list.tabOthers')} sx={{ fontSize: '14px', color: activeTab === 4 ? '#8b5cf6' : '#999' }} />
           </Tabs>
 
           {/* Tab Content */}
@@ -274,7 +282,7 @@ const AccountableEntities = (): React.ReactElement => {
             {/* Quick Filter */}
             <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
               <TextField
-                placeholder="Filtrado rápido"
+                placeholder={t('entitiesAdmin.list.quickFilterPlaceholder')}
                 value={quickFilter}
                 onChange={handleFilterChange}
                 size="small"
@@ -316,7 +324,7 @@ const AccountableEntities = (): React.ReactElement => {
                             </TableSortLabel>
                           </TableCell>
                         ))}
-                        <TableCell sx={{ fontSize: '14px', fontFamily: 'Montserrat, sans-serif', fontWeight: 600, textAlign: 'center' }}>Acciones</TableCell>
+                        <TableCell sx={{ fontSize: '14px', fontFamily: 'Montserrat, sans-serif', fontWeight: 600, textAlign: 'center' }}>{t('entitiesAdmin.list.colActions')}</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -364,7 +372,7 @@ const AccountableEntities = (): React.ReactElement => {
                         <TableRow>
                           <TableCell colSpan={getColumns().length + 1}>
                             <Alert severity="info" sx={{ justifyContent: 'center' }}>
-                              No hay entradas disponibles
+                              {t('entitiesAdmin.list.noEntries')}
                             </Alert>
                           </TableCell>
                         </TableRow>
@@ -374,7 +382,9 @@ const AccountableEntities = (): React.ReactElement => {
                 </TableContainer>
 
                 <Typography sx={{ textAlign: 'center', fontSize: '12px', color: '#999', mt: 2 }}>
-                  Mostrando {sortedData.length} {getCurrentData().length > sortedData.length ? `de ${getCurrentData().length}` : ''} entradas
+                  {getCurrentData().length > sortedData.length
+                    ? t('entitiesAdmin.list.showingEntriesPartial', { shown: sortedData.length, total: getCurrentData().length })
+                    : t('entitiesAdmin.list.showingEntries', { shown: sortedData.length })}
                 </Typography>
               </>
             )}
@@ -383,15 +393,15 @@ const AccountableEntities = (): React.ReactElement => {
       </Card>
 
       <Dialog open={deleteTarget !== null} onClose={() => setDeleteTarget(null)}>
-        <DialogTitle>Confirmar eliminación</DialogTitle>
+        <DialogTitle>{t('entitiesAdmin.list.deleteDialogTitle')}</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            ¿Está seguro que desea eliminar <strong>{deleteTarget?.name}</strong>?
+            <span dangerouslySetInnerHTML={{ __html: t('entitiesAdmin.list.deleteConfirm', { name: deleteTarget?.name ?? '' }) }} />
           </DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDeleteTarget(null)}>Cancelar</Button>
-          <Button onClick={handleDelete} color="error" variant="contained">Eliminar</Button>
+          <Button onClick={() => setDeleteTarget(null)}>{t('entitiesAdmin.list.cancel')}</Button>
+          <Button onClick={handleDelete} color="error" variant="contained">{t('entitiesAdmin.list.delete')}</Button>
         </DialogActions>
       </Dialog>
     </Box>

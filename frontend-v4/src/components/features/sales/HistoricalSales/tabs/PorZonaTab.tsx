@@ -1,4 +1,5 @@
 import { memo, type FC, useMemo, useCallback, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Box, Typography, Button, CircularProgress } from '@mui/material';
 import { formatCurrency } from '@/utils/formatCurrency';
 import { exportToCsv, exportToPdf, type ExportColumn } from '@/utils/exportTable';
@@ -59,10 +60,10 @@ interface PorZonaTabProps {
 }
 
 const FILTER_OPTIONS: FilterOption[] = [
-  { value: 'todos', label: 'Todos' },
-  { value: 'con-ventas', label: 'Con ventas' },
-  { value: 'con-premios', label: 'Con premios' },
-  { value: 'tickets-pendientes', label: 'Con tickets pendientes' },
+  { value: 'todos', label: 'common.all' },
+  { value: 'con-ventas', label: 'sales.filters.withSales' },
+  { value: 'con-premios', label: 'sales.filters.withPrizes' },
+  { value: 'tickets-pendientes', label: 'sales.filters.pendingTickets' },
 ];
 
 /**
@@ -85,6 +86,7 @@ export const PorZonaTab: FC<PorZonaTabProps> = memo(({
   setFiltroRapido,
   onSearch,
 }) => {
+  const { t } = useTranslation();
   // Calculate totals
   const totals = useMemo(() => {
     return zonasData.reduce(
@@ -117,35 +119,35 @@ export const PorZonaTab: FC<PorZonaTabProps> = memo(({
   const exportColumns = useMemo<ExportColumn<Record<string, unknown>>[]>(() => {
     const moneyKeys = new Set(['venta', 'comisiones', 'descuentos', 'premios', 'neto', 'caida', 'final', 'balance']);
     return [
-      { key: 'nombre', label: 'Nombre', align: 'left' as const },
-      { key: 'p', label: 'P', align: 'center' as const },
-      { key: 'l', label: 'L', align: 'center' as const },
-      { key: 'w', label: 'W', align: 'center' as const },
-      { key: 'total', label: 'Total', align: 'right' as const },
-      { key: 'venta', label: 'Venta', align: 'right' as const },
-      { key: 'comisiones', label: 'Comisiones', align: 'right' as const },
-      { key: 'descuentos', label: 'Descuentos', align: 'right' as const },
-      { key: 'premios', label: 'Premios', align: 'right' as const },
-      { key: 'neto', label: 'Neto', align: 'right' as const },
-      { key: 'caida', label: 'Caída', align: 'right' as const },
-      { key: 'final', label: 'Final', align: 'right' as const },
-      { key: 'balance', label: 'Balance', align: 'right' as const },
+      { key: 'nombre', label: t('common.name'), align: 'left' as const },
+      { key: 'p', label: t('sales.pendingShort'), align: 'center' as const },
+      { key: 'l', label: t('sales.loserShort'), align: 'center' as const },
+      { key: 'w', label: t('sales.winnerShort'), align: 'center' as const },
+      { key: 'total', label: t('common.total'), align: 'right' as const },
+      { key: 'venta', label: t('sales.venta'), align: 'right' as const },
+      { key: 'comisiones', label: t('sales.comisiones'), align: 'right' as const },
+      { key: 'descuentos', label: t('sales.descuentos'), align: 'right' as const },
+      { key: 'premios', label: t('sales.premios'), align: 'right' as const },
+      { key: 'neto', label: t('sales.neto'), align: 'right' as const },
+      { key: 'caida', label: t('sales.caida'), align: 'right' as const },
+      { key: 'final', label: t('sales.final'), align: 'right' as const },
+      { key: 'balance', label: t('common.balance'), align: 'right' as const },
     ].map(c => ({
       ...c,
       getValue: moneyKeys.has(c.key)
         ? (row: Record<string, unknown>) => formatCurrency(Number(row[c.key] ?? 0))
         : undefined,
     }));
-  }, []);
+  }, [t]);
 
   const totalsAsRow = useMemo<Record<string, unknown>>(
-    () => ({ nombre: 'Totales', ...totals }),
-    [totals],
+    () => ({ nombre: t('balances.totals'), ...totals }),
+    [totals, t],
   );
 
   const handleExportCsv = useCallback(() => {
     if (filteredData.length === 0) {
-      alert('No hay datos para exportar.');
+      alert(t('sales.noDataToExport'));
       return;
     }
     exportToCsv(
@@ -154,45 +156,45 @@ export const PorZonaTab: FC<PorZonaTabProps> = memo(({
       `ventas-por-zona-${fechaInicial}_${fechaFinal}`,
       totalsAsRow,
     );
-  }, [filteredData, exportColumns, fechaInicial, fechaFinal, totalsAsRow]);
+  }, [filteredData, exportColumns, fechaInicial, fechaFinal, totalsAsRow, t]);
 
   const handleExportPdf = useCallback(() => {
     if (filteredData.length === 0) {
-      alert('No hay datos para exportar.');
+      alert(t('sales.noDataToExport'));
       return;
     }
     exportToPdf(
       filteredData as unknown as Record<string, unknown>[],
       exportColumns,
-      `Ventas por Zona — ${fechaInicial} al ${fechaFinal}`,
+      t('sales.zoneExportTitle', { start: fechaInicial, end: fechaFinal }),
       totalsAsRow,
     );
-  }, [filteredData, exportColumns, fechaInicial, fechaFinal, totalsAsRow]);
+  }, [filteredData, exportColumns, fechaInicial, fechaFinal, totalsAsRow, t]);
 
   // Table columns
   const columns: Column<ZonaData>[] = useMemo(
     () => [
-      { id: 'nombre', label: 'Nombre' },
-      { id: 'p', label: 'P', align: 'center' },
-      { id: 'l', label: 'L', align: 'center' },
-      { id: 'w', label: 'W', align: 'center' },
-      { id: 'total', label: 'Total', align: 'right' },
-      { id: 'venta', label: 'Venta', align: 'right', format: (v) => formatCurrency(v as number) },
-      { id: 'comisiones', label: 'Comisiones', align: 'right', format: (v) => formatCurrency(v as number) },
-      { id: 'descuentos', label: 'Descuentos', align: 'right', format: (v) => formatCurrency(v as number) },
-      { id: 'premios', label: 'Premios', align: 'right', format: (v) => formatCurrency(v as number) },
-      { id: 'neto', label: 'Neto', align: 'right', format: coloredCurrency },
-      { id: 'caida', label: 'Caída', align: 'right', format: greenIfPositive },
-      { id: 'final', label: 'Final', align: 'right', format: coloredCurrency },
-      { id: 'balance', label: 'Balance', align: 'right', format: coloredCurrency },
+      { id: 'nombre', label: t('common.name') },
+      { id: 'p', label: t('sales.pendingShort'), align: 'center' },
+      { id: 'l', label: t('sales.loserShort'), align: 'center' },
+      { id: 'w', label: t('sales.winnerShort'), align: 'center' },
+      { id: 'total', label: t('common.total'), align: 'right' },
+      { id: 'venta', label: t('sales.venta'), align: 'right', format: (v) => formatCurrency(v as number) },
+      { id: 'comisiones', label: t('sales.comisiones'), align: 'right', format: (v) => formatCurrency(v as number) },
+      { id: 'descuentos', label: t('sales.descuentos'), align: 'right', format: (v) => formatCurrency(v as number) },
+      { id: 'premios', label: t('sales.premios'), align: 'right', format: (v) => formatCurrency(v as number) },
+      { id: 'neto', label: t('sales.neto'), align: 'right', format: coloredCurrency },
+      { id: 'caida', label: t('sales.caida'), align: 'right', format: greenIfPositive },
+      { id: 'final', label: t('sales.final'), align: 'right', format: coloredCurrency },
+      { id: 'balance', label: t('common.balance'), align: 'right', format: coloredCurrency },
     ],
-    []
+    [t]
   );
 
   return (
     <>
       <Typography variant="h5" align="center" gutterBottom sx={{ fontWeight: 400, mb: 3 }}>
-        Zonas
+        {t('common.zones')}
       </Typography>
 
       {/* Filters */}
@@ -227,7 +229,7 @@ export const PorZonaTab: FC<PorZonaTabProps> = memo(({
             fontWeight: 500,
           }}
         >
-          {loading ? <CircularProgress size={16} color="inherit" /> : 'Ver ventas'}
+          {loading ? <CircularProgress size={16} color="inherit" /> : t('transactions.viewSales')}
         </Button>
         <Button
           variant="contained"
@@ -263,7 +265,7 @@ export const PorZonaTab: FC<PorZonaTabProps> = memo(({
 
       {/* Total display */}
       <Typography variant="h5" align="center" gutterBottom sx={{ fontWeight: 400, mb: 3, fontSize: '1.7rem' }}>
-        Total:{' '}
+        {t('common.total')}:{' '}
         <Box
           component="span"
           sx={{
@@ -281,16 +283,16 @@ export const PorZonaTab: FC<PorZonaTabProps> = memo(({
       {/* Filter toggle */}
       <Box sx={{ mb: 2 }}>
         <FilterToggleGroup
-          options={FILTER_OPTIONS}
+          options={FILTER_OPTIONS.map(o => ({ ...o, label: t(o.label) }))}
           value={filterType}
           onChange={setFilterType}
-          label="Filtros"
+          label={t('common.filter')}
         />
       </Box>
 
       {/* Search */}
       <Box sx={{ mb: 2, textAlign: 'right' }}>
-        <SearchInput value={filtroRapido} onChange={setFiltroRapido} placeholder="Filtrado rápido" />
+        <SearchInput value={filtroRapido} onChange={setFiltroRapido} placeholder={t('common.filterQuick')} />
       </Box>
 
       {/* Data table */}
@@ -298,11 +300,11 @@ export const PorZonaTab: FC<PorZonaTabProps> = memo(({
         columns={columns}
         data={filteredData}
         totals={totals}
-        emptyMessage="No hay datos de zonas disponibles"
+        emptyMessage={t('sales.noZonesData')}
       />
 
       <Typography variant="body2" sx={{ mt: 2 }}>
-        Mostrando {filteredData.length} de {zonasData.length} entradas
+        {t('common.showingEntries', { shown: filteredData.length, total: zonasData.length })}
       </Typography>
     </>
   );

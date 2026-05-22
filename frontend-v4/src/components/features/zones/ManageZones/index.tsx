@@ -5,6 +5,7 @@
  */
 
 import React, { useState, useEffect, useRef, useCallback, useMemo, type ChangeEvent, type FormEvent, type SyntheticEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -42,6 +43,7 @@ import { SearchBar, ZoneTabs, SelectionSection, FormActions } from './components
 // ============================================================================
 
 const ManageZonesMUI = (): React.ReactElement => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const tabsContainerRef = useRef<HTMLDivElement>(null);
 
@@ -107,14 +109,14 @@ const ManageZonesMUI = (): React.ReactElement => {
         setLoading(false);
       } catch (err) {
         const error = err as Error;
-        setError(`Error al cargar los datos: ${error.message}`);
+        setError(`${t('zonesAdmin.loadDataError')}: ${error.message}`);
         setTimeout(() => setError(null), 5000);
         setLoading(false);
       }
     };
 
     loadAllData();
-  }, []);
+  }, [t]);
 
   // Handlers
   const handleTabChange = useCallback((_event: SyntheticEvent, newValue: number) => {
@@ -163,7 +165,7 @@ const ManageZonesMUI = (): React.ReactElement => {
       );
 
       if (zonesToUpdate.length === 0) {
-        setError('No hay cambios para guardar');
+        setError(t('zonesAdmin.noChangesToSave'));
         setSaving(false);
         return;
       }
@@ -189,20 +191,20 @@ const ManageZonesMUI = (): React.ReactElement => {
         .reduce((sum, r) => sum + (r.value?.summary?.failed || 0), 0);
 
       if (failed === 0 && failedAssignments === 0) {
-        setSuccessMessage(`Cambios guardados exitosamente: ${successfulAssignments} asignaciones en ${successful} zonas`);
+        setSuccessMessage(t('zonesAdmin.saveSuccessDetail', { assignments: successfulAssignments, zones: successful }));
       } else {
-        setSuccessMessage(`Guardado parcial: ${successfulAssignments} exitosas, ${failedAssignments} fallidas`);
+        setSuccessMessage(t('zonesAdmin.savePartial', { successful: successfulAssignments, failed: failedAssignments }));
       }
 
       setTimeout(() => setSuccessMessage(''), 5000);
       setSaving(false);
     } catch (err) {
       const error = err as Error;
-      setError(error.message || 'Error al guardar los cambios');
+      setError(error.message || t('zonesAdmin.saveError'));
       setTimeout(() => setError(null), 5000);
       setSaving(false);
     }
-  }, [zoneSelections]);
+  }, [zoneSelections, t]);
 
   const handleCancel = useCallback(() => {
     navigate('/zones/list');
@@ -259,7 +261,7 @@ const ManageZonesMUI = (): React.ReactElement => {
             <Box sx={{ textAlign: 'center' }}>
               <CircularProgress />
               <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-                Cargando zonas, bancas y usuarios...
+                {t('zonesAdmin.loadingAllData')}
               </Typography>
             </Box>
           </Box>
@@ -274,9 +276,9 @@ const ManageZonesMUI = (): React.ReactElement => {
       <Box sx={{ p: 3 }}>
         <Paper elevation={3}>
           <Box sx={{ textAlign: 'center', p: 6 }}>
-            <Typography>No hay zonas disponibles</Typography>
+            <Typography>{t('zonesAdmin.noZonesAvailable')}</Typography>
             <Button onClick={handleCancel} variant="outlined" sx={{ mt: 2 }}>
-              Volver
+              {t('common.back')}
             </Button>
           </Box>
         </Paper>
@@ -289,9 +291,9 @@ const ManageZonesMUI = (): React.ReactElement => {
       <Paper elevation={3}>
         {/* Header */}
         <Box sx={{ p: 3, borderBottom: 1, borderColor: 'divider' }}>
-          <Typography variant="h5" component="h1">Manejar Zonas</Typography>
+          <Typography variant="h5" component="h1">{t('zonesAdmin.manageZones')}</Typography>
           <Typography variant="body2" color="text.secondary">
-            Asigna bancas y usuarios a cada zona
+            {t('zonesAdmin.assignSubtitle')}
           </Typography>
         </Box>
 
@@ -331,26 +333,26 @@ const ManageZonesMUI = (): React.ReactElement => {
           {filteredZones.length === 0 ? (
             <Box sx={{ textAlign: 'center', p: 6 }}>
               <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
-                No se encontraron zonas que coincidan con su busqueda.
+                {t('zonesAdmin.noSearchMatches')}
               </Typography>
               <Button variant="outlined" onClick={handleClearSearch} sx={PILL_BUTTON_STYLE}>
-                Limpiar busqueda
+                {t('zonesAdmin.clearSearch')}
               </Button>
             </Box>
           ) : (
             <Box sx={{ p: 3 }}>
               <SelectionSection
-                title="Bancas"
+                title={t('common.bettingPools')}
                 items={bettingPoolItems}
                 selectedIds={currentSelections.bettingPools}
-                emptyMessage="No hay bancas disponibles"
+                emptyMessage={t('zonesAdmin.noBettingPoolsAvailable')}
                 onToggle={(id) => handleBettingPoolToggle(currentZone.zoneId, id)}
               />
               <SelectionSection
-                title="Usuarios"
+                title={t('zonesAdmin.users')}
                 items={userItems}
                 selectedIds={currentSelections.users}
-                emptyMessage="No hay usuarios disponibles"
+                emptyMessage={t('zonesAdmin.noUsersAvailable')}
                 onToggle={(id) => handleUserToggle(currentZone.zoneId, id)}
               />
             </Box>

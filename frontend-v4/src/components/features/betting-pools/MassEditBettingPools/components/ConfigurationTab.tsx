@@ -16,17 +16,19 @@ import {
   ToggleButton,
   Grid,
 } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import TriStateToggle from './TriStateToggle';
 import type { ConfigurationTabProps } from '../types';
 
 const ConfigurationTab: FC<ConfigurationTabProps> = memo(({ formData, zones, onInputChange }) => {
+  const { t } = useTranslation();
   return (
     <Box>
       {/* SECTION 1: Full-width fields */}
       <Box sx={{ mb: 3 }}>
         {/* Zona */}
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 2 }}>
-          <Typography sx={{ minWidth: 200 }}>Zona</Typography>
+          <Typography sx={{ minWidth: 200 }}>{t('massEditBettingPools.zone')}</Typography>
           <FormControl sx={{ minWidth: 300 }} size="small">
             <Select
               value={formData.zoneId}
@@ -34,7 +36,7 @@ const ConfigurationTab: FC<ConfigurationTabProps> = memo(({ formData, zones, onI
               onChange={(e) => onInputChange('zoneId', e.target.value)}
             >
               <MenuItem value="">
-                <em>Seleccione</em>
+                <em>{t('massEditBettingPools.select')}</em>
               </MenuItem>
               {zones.map(zone => (
                 <MenuItem key={zone.zoneId || zone.id} value={zone.zoneId || zone.id}>
@@ -47,7 +49,7 @@ const ConfigurationTab: FC<ConfigurationTabProps> = memo(({ formData, zones, onI
 
         {/* Tipo de caída */}
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 2 }}>
-          <Typography sx={{ minWidth: 200 }}>Tipo de caída</Typography>
+          <Typography sx={{ minWidth: 200 }}>{t('massEditBettingPools.fallType')}</Typography>
           <ToggleButtonGroup
             value={formData.fallType}
             exclusive
@@ -55,21 +57,21 @@ const ConfigurationTab: FC<ConfigurationTabProps> = memo(({ formData, zones, onI
             size="small"
             sx={{ flexWrap: 'wrap' }}
           >
-            <ToggleButton value="OFF">OFF</ToggleButton>
-            <ToggleButton value="COBRO">COBRO</ToggleButton>
-            <ToggleButton value="DIARIA">DIARIA</ToggleButton>
-            <ToggleButton value="MENSUAL">MENSUAL</ToggleButton>
-            <ToggleButton value="SEMANAL_CON_ACUMULADO">SEMANAL CON ACUMULADO</ToggleButton>
-            <ToggleButton value="SEMANAL_SIN_ACUMULADO">SEMANAL SIN ACUMULADO</ToggleButton>
+            <ToggleButton value="OFF">{t('massEditBettingPools.fall.off')}</ToggleButton>
+            <ToggleButton value="COBRO">{t('massEditBettingPools.fall.cobro')}</ToggleButton>
+            <ToggleButton value="DIARIA">{t('massEditBettingPools.fall.daily')}</ToggleButton>
+            <ToggleButton value="MENSUAL">{t('massEditBettingPools.fall.monthly')}</ToggleButton>
+            <ToggleButton value="SEMANAL_CON_ACUMULADO">{t('massEditBettingPools.fall.weeklyWith')}</ToggleButton>
+            <ToggleButton value="SEMANAL_SIN_ACUMULADO">{t('massEditBettingPools.fall.weeklyWithout')}</ToggleButton>
           </ToggleButtonGroup>
         </Box>
 
         {/* Porcentaje de caída */}
         {formData.fallType && formData.fallType !== 'OFF' && (
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 2 }}>
-            <Typography sx={{ minWidth: 200 }}>Porcentaje de caída</Typography>
+            <Typography sx={{ minWidth: 200 }}>{t('massEditBettingPools.fallPercentage')}</Typography>
             <TextField
-              placeholder="Porcentaje de caída"
+              placeholder={t('massEditBettingPools.fallPercentage')}
               value={formData.fallPercentage ?? ''}
               onChange={(e) => onInputChange('fallPercentage', e.target.value)}
               type="number"
@@ -82,9 +84,9 @@ const ConfigurationTab: FC<ConfigurationTabProps> = memo(({ formData, zones, onI
 
         {/* Balance de desactivación */}
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 2 }}>
-          <Typography sx={{ minWidth: 200 }}>Balance de desactivación</Typography>
+          <Typography sx={{ minWidth: 200 }}>{t('massEditBettingPools.deactivationBalance')}</Typography>
           <TextField
-            placeholder="Balance de desactivación"
+            placeholder={t('massEditBettingPools.deactivationBalance')}
             value={formData.deactivationBalance}
             onChange={(e) => onInputChange('deactivationBalance', e.target.value)}
             size="small"
@@ -94,9 +96,9 @@ const ConfigurationTab: FC<ConfigurationTabProps> = memo(({ formData, zones, onI
 
         {/* Límite de venta diaria */}
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 2 }}>
-          <Typography sx={{ minWidth: 200 }}>Límite de venta diaria</Typography>
+          <Typography sx={{ minWidth: 200 }}>{t('massEditBettingPools.dailySaleLimit')}</Typography>
           <TextField
-            placeholder="Límite de venta diaria"
+            placeholder={t('massEditBettingPools.dailySaleLimit')}
             value={formData.dailySaleLimit}
             onChange={(e) => onInputChange('dailySaleLimit', e.target.value)}
             size="small"
@@ -110,7 +112,7 @@ const ConfigurationTab: FC<ConfigurationTabProps> = memo(({ formData, zones, onI
         {/* Left Column */}
         <Grid item xs={12} md={6}>
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 2 }}>
-            <Typography sx={{ minWidth: 200 }}>Imprimir copia de ticket</Typography>
+            <Typography sx={{ minWidth: 200 }}>{t('massEditBettingPools.printTicketCopy')}</Typography>
             <TriStateToggle
               value={formData.printTicketCopy}
               onChange={(val) => onInputChange('printTicketCopy', val)}
@@ -118,7 +120,7 @@ const ConfigurationTab: FC<ConfigurationTabProps> = memo(({ formData, zones, onI
           </Box>
 
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 2 }}>
-            <Typography sx={{ minWidth: 200 }}>Activa</Typography>
+            <Typography sx={{ minWidth: 200 }}>{t('massEditBettingPools.active')}</Typography>
             <TriStateToggle
               value={formData.isActive}
               onChange={(val) => onInputChange('isActive', val)}
@@ -126,7 +128,7 @@ const ConfigurationTab: FC<ConfigurationTabProps> = memo(({ formData, zones, onI
           </Box>
 
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 2 }}>
-            <Typography sx={{ minWidth: 200 }}>Control de tickets ganadores</Typography>
+            <Typography sx={{ minWidth: 200 }}>{t('massEditBettingPools.winningTicketControl')}</Typography>
             <TriStateToggle
               value={formData.winningTicketControl}
               onChange={(val) => onInputChange('winningTicketControl', val)}
@@ -134,7 +136,7 @@ const ConfigurationTab: FC<ConfigurationTabProps> = memo(({ formData, zones, onI
           </Box>
 
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 2 }}>
-            <Typography sx={{ minWidth: 200 }}>Usar premios normalizados</Typography>
+            <Typography sx={{ minWidth: 200 }}>{t('massEditBettingPools.useNormalizedPrizes')}</Typography>
             <TriStateToggle
               value={formData.useNormalizedPrizes}
               onChange={(val) => onInputChange('useNormalizedPrizes', val)}
@@ -142,7 +144,7 @@ const ConfigurationTab: FC<ConfigurationTabProps> = memo(({ formData, zones, onI
           </Box>
 
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 2 }}>
-            <Typography sx={{ minWidth: 200 }}>Permitir pasar bote</Typography>
+            <Typography sx={{ minWidth: 200 }}>{t('massEditBettingPools.allowPassingPlays')}</Typography>
             <TriStateToggle
               value={formData.allowPassingPlays}
               onChange={(val) => onInputChange('allowPassingPlays', val)}
@@ -150,7 +152,7 @@ const ConfigurationTab: FC<ConfigurationTabProps> = memo(({ formData, zones, onI
           </Box>
 
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 2 }}>
-            <Typography sx={{ minWidth: 200 }}>Minutos para cancelar tickets</Typography>
+            <Typography sx={{ minWidth: 200 }}>{t('massEditBettingPools.minutesToCancelTicket')}</Typography>
             <TextField
               value={formData.minutesToCancelTicket}
               onChange={(e) => onInputChange('minutesToCancelTicket', e.target.value)}
@@ -160,7 +162,7 @@ const ConfigurationTab: FC<ConfigurationTabProps> = memo(({ formData, zones, onI
           </Box>
 
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 2 }}>
-            <Typography sx={{ minWidth: 200 }}>Tickets a cancelar por día</Typography>
+            <Typography sx={{ minWidth: 200 }}>{t('massEditBettingPools.ticketsToCancelPerDay')}</Typography>
             <TextField
               type="number"
               value={formData.ticketsToCancelPerDay}
@@ -174,47 +176,47 @@ const ConfigurationTab: FC<ConfigurationTabProps> = memo(({ formData, zones, onI
         {/* Right Column */}
         <Grid item xs={12} md={6}>
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 2 }}>
-            <Typography sx={{ minWidth: 200 }}>Idioma</Typography>
+            <Typography sx={{ minWidth: 200 }}>{t('massEditBettingPools.language')}</Typography>
             <ToggleButtonGroup
               value={formData.language}
               exclusive
               onChange={(_, newVal) => onInputChange('language', newVal)}
               size="small"
             >
-              <ToggleButton value="ESPAÑOL">ESPAÑOL</ToggleButton>
-              <ToggleButton value="INGLÉS">INGLÉS</ToggleButton>
+              <ToggleButton value="ESPAÑOL">{t('massEditBettingPools.lang.spanish')}</ToggleButton>
+              <ToggleButton value="INGLÉS">{t('massEditBettingPools.lang.english')}</ToggleButton>
             </ToggleButtonGroup>
           </Box>
 
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 2 }}>
-            <Typography sx={{ minWidth: 200 }}>Modo de impresión</Typography>
+            <Typography sx={{ minWidth: 200 }}>{t('massEditBettingPools.printMode')}</Typography>
             <ToggleButtonGroup
               value={formData.printMode}
               exclusive
               onChange={(_, newVal) => onInputChange('printMode', newVal)}
               size="small"
             >
-              <ToggleButton value="DRIVER">DRIVER</ToggleButton>
-              <ToggleButton value="GENÉRICO">GENÉRICO</ToggleButton>
+              <ToggleButton value="DRIVER">{t('massEditBettingPools.printModeDriver')}</ToggleButton>
+              <ToggleButton value="GENÉRICO">{t('massEditBettingPools.printModeGeneric')}</ToggleButton>
             </ToggleButtonGroup>
           </Box>
 
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 2 }}>
-            <Typography sx={{ minWidth: 200 }}>Modo de descuento</Typography>
+            <Typography sx={{ minWidth: 200 }}>{t('massEditBettingPools.discountMode')}</Typography>
             <ToggleButtonGroup
               value={formData.discountMode}
               exclusive
               onChange={(_, newVal) => onInputChange('discountMode', newVal)}
               size="small"
             >
-              <ToggleButton value="OFF">OFF</ToggleButton>
-              <ToggleButton value="GRUPO">GRUPO</ToggleButton>
-              <ToggleButton value="RIFERO">RIFERO</ToggleButton>
+              <ToggleButton value="OFF">{t('massEditBettingPools.discount.off')}</ToggleButton>
+              <ToggleButton value="GRUPO">{t('massEditBettingPools.discount.group')}</ToggleButton>
+              <ToggleButton value="RIFERO">{t('massEditBettingPools.discount.rifero')}</ToggleButton>
             </ToggleButtonGroup>
           </Box>
 
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 2 }}>
-            <Typography sx={{ minWidth: 200 }}>Permitir cambiar contraseña</Typography>
+            <Typography sx={{ minWidth: 200 }}>{t('massEditBettingPools.canChangePassword')}</Typography>
             <TriStateToggle
               value={formData.canChangePassword}
               onChange={(val) => onInputChange('canChangePassword', val)}

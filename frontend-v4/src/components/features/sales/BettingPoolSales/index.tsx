@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box, Paper, Typography, TextField, Autocomplete, Button, Grid, Stack, CircularProgress,
   Table, TableHead, TableBody, TableRow, TableCell, TableContainer, TableSortLabel, Divider,
@@ -20,7 +21,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
 } from 'recharts';
 import api from '@services/api';
-import { getTodayDate } from '@/utils/formatters';
+import { getTodayDate , getActiveLocale } from '@/utils/formatters';
 import { formatCurrency } from '@/utils/formatCurrency';
 import { useTableSort } from '@/utils/useTableSort';
 
@@ -182,27 +183,28 @@ const KpiTile = ({ label, value, icon, accent }: KpiTileProps) => (
 // Per-section tables (each has its own sort)
 // ---------------------------------------------------------------------------
 const DrawTotalsTable = ({ rows }: { rows: DrawSalesDto[] }) => {
+  const { t } = useTranslation();
   const { sortedData, getSortProps } = useTableSort<DrawSalesDto, string>(
     rows,
     (r, k) => (r as unknown as Record<string, string | number>)[k],
     { sortBy: 'drawName', sortOrder: 'asc' },
   );
   if (rows.length === 0) {
-    return <Typography variant="body2" sx={{ color: 'text.secondary' }}>Sin ventas en la fecha seleccionada.</Typography>;
+    return <Typography variant="body2" sx={{ color: 'text.secondary' }}>{t('sales.noSalesOnDate')}</Typography>;
   }
   return (
     <TableContainer component={Paper} variant="outlined">
       <Table size="small">
         <TableHead sx={{ backgroundColor: '#e3e3e3' }}>
           <TableRow>
-            <TableCell sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('drawName')}>Sorteo</TableSortLabel></TableCell>
-            <TableCell align="center" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('ticketCount')}>Tickets</TableSortLabel></TableCell>
-            <TableCell align="center" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('lineCount')}>Líneas</TableSortLabel></TableCell>
-            <TableCell align="center" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('winnerCount')}>Ganadores</TableSortLabel></TableCell>
-            <TableCell align="right" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('totalSold')}>Venta</TableSortLabel></TableCell>
-            <TableCell align="right" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('totalCommissions')}>Comisiones</TableSortLabel></TableCell>
-            <TableCell align="right" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('totalPrizes')}>Premios</TableSortLabel></TableCell>
-            <TableCell align="right" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('totalNet')}>Neto</TableSortLabel></TableCell>
+            <TableCell sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('drawName')}>{t('common.draw')}</TableSortLabel></TableCell>
+            <TableCell align="center" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('ticketCount')}>{t('common.tickets')}</TableSortLabel></TableCell>
+            <TableCell align="center" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('lineCount')}>{t('sales.lineas')}</TableSortLabel></TableCell>
+            <TableCell align="center" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('winnerCount')}>{t('sales.winners')}</TableSortLabel></TableCell>
+            <TableCell align="right" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('totalSold')}>{t('sales.venta')}</TableSortLabel></TableCell>
+            <TableCell align="right" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('totalCommissions')}>{t('sales.comisiones')}</TableSortLabel></TableCell>
+            <TableCell align="right" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('totalPrizes')}>{t('sales.premios')}</TableSortLabel></TableCell>
+            <TableCell align="right" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('totalNet')}>{t('sales.neto')}</TableSortLabel></TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
@@ -238,26 +240,27 @@ const DrawTotalsTable = ({ rows }: { rows: DrawSalesDto[] }) => {
 };
 
 const WinningPlaysTable = ({ rows }: { rows: WinningPlayDto[] }) => {
+  const { t } = useTranslation();
   const { sortedData, getSortProps } = useTableSort<WinningPlayDto, string>(
     rows,
     (r, k) => (r as unknown as Record<string, string | number>)[k],
     { sortBy: 'drawName', sortOrder: 'asc' },
   );
   if (rows.length === 0) {
-    return <Typography variant="body2" sx={{ color: 'text.secondary' }}>Sin tickets ganadores en la fecha seleccionada.</Typography>;
+    return <Typography variant="body2" sx={{ color: 'text.secondary' }}>{t('sales.noWinningTicketsOnDate')}</Typography>;
   }
   return (
     <TableContainer component={Paper} variant="outlined" sx={{ maxHeight: 420 }}>
       <Table size="small" stickyHeader>
         <TableHead>
           <TableRow sx={{ backgroundColor: '#e3e3e3', '& th': { backgroundColor: '#e3e3e3' } }}>
-            <TableCell sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('ticketCode')}>Ticket</TableSortLabel></TableCell>
-            <TableCell sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('drawName')}>Sorteo</TableSortLabel></TableCell>
-            <TableCell sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('betTypeName')}>Tipo</TableSortLabel></TableCell>
-            <TableCell sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('betNumber')}>Número</TableSortLabel></TableCell>
-            <TableCell align="right" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('salesAmount')}>Apuesta</TableSortLabel></TableCell>
-            <TableCell align="right" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('prizeAmount')}>Premio</TableSortLabel></TableCell>
-            <TableCell align="center" sx={{ fontWeight: 600 }}>Pagado</TableCell>
+            <TableCell sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('ticketCode')}>{t('common.ticket')}</TableSortLabel></TableCell>
+            <TableCell sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('drawName')}>{t('common.draw')}</TableSortLabel></TableCell>
+            <TableCell sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('betTypeName')}>{t('common.type')}</TableSortLabel></TableCell>
+            <TableCell sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('betNumber')}>{t('common.number')}</TableSortLabel></TableCell>
+            <TableCell align="right" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('salesAmount')}>{t('sales.bet')}</TableSortLabel></TableCell>
+            <TableCell align="right" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('prizeAmount')}>{t('common.prize')}</TableSortLabel></TableCell>
+            <TableCell align="center" sx={{ fontWeight: 600 }}>{t('sales.paid')}</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
@@ -270,7 +273,7 @@ const WinningPlaysTable = ({ rows }: { rows: WinningPlayDto[] }) => {
               <TableCell align="right">{formatCurrency(w.salesAmount)}</TableCell>
               <TableCell align="right" sx={{ color: '#2e7d32', fontWeight: 600 }}>{formatCurrency(w.prizeAmount)}</TableCell>
               <TableCell align="center">
-                {w.isPaid ? <Chip label="Sí" size="small" color="success" /> : <Chip label="No" size="small" />}
+                {w.isPaid ? <Chip label={t('common.yes')} size="small" color="success" /> : <Chip label={t('common.no')} size="small" />}
               </TableCell>
             </TableRow>
           ))}
@@ -281,6 +284,7 @@ const WinningPlaysTable = ({ rows }: { rows: WinningPlayDto[] }) => {
 };
 
 const TransactionsTable = ({ rows, bettingPoolId }: { rows: TransactionLineReportDto[]; bettingPoolId: number | null }) => {
+  const { t } = useTranslation();
   // Decide debit/credit relative to our banca: it could be in entity1 or entity2 slot.
   const mapped = useMemo(() => rows.map((r) => {
     const isEntity1 = bettingPoolId != null && (r.entity1Code === String(bettingPoolId) || r.entity1Name);
@@ -297,27 +301,27 @@ const TransactionsTable = ({ rows, bettingPoolId }: { rows: TransactionLineRepor
   );
 
   if (rows.length === 0) {
-    return <Typography variant="body2" sx={{ color: 'text.secondary' }}>Sin transacciones en la fecha seleccionada.</Typography>;
+    return <Typography variant="body2" sx={{ color: 'text.secondary' }}>{t('sales.noTransactionsOnDate')}</Typography>;
   }
   return (
     <TableContainer component={Paper} variant="outlined" sx={{ maxHeight: 420 }}>
       <Table size="small" stickyHeader>
         <TableHead>
           <TableRow sx={{ backgroundColor: '#e3e3e3', '& th': { backgroundColor: '#e3e3e3' } }}>
-            <TableCell sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('createdAt')}>Fecha</TableSortLabel></TableCell>
-            <TableCell sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('groupNumber')}>Grupo</TableSortLabel></TableCell>
-            <TableCell sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('transactionType')}>Tipo</TableSortLabel></TableCell>
-            <TableCell sx={{ fontWeight: 600 }}>Contraparte</TableCell>
-            <TableCell align="right" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('debit')}>Débito</TableSortLabel></TableCell>
-            <TableCell align="right" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('credit')}>Crédito</TableSortLabel></TableCell>
-            <TableCell align="right" sx={{ fontWeight: 600 }}>Saldo final</TableCell>
-            <TableCell sx={{ fontWeight: 600 }}>Notas</TableCell>
+            <TableCell sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('createdAt')}>{t('common.date')}</TableSortLabel></TableCell>
+            <TableCell sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('groupNumber')}>{t('sales.group')}</TableSortLabel></TableCell>
+            <TableCell sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('transactionType')}>{t('common.type')}</TableSortLabel></TableCell>
+            <TableCell sx={{ fontWeight: 600 }}>{t('sales.counterparty')}</TableCell>
+            <TableCell align="right" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('debit')}>{t('sales.debit')}</TableSortLabel></TableCell>
+            <TableCell align="right" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('credit')}>{t('sales.credit')}</TableSortLabel></TableCell>
+            <TableCell align="right" sx={{ fontWeight: 600 }}>{t('common.finalBalance')}</TableCell>
+            <TableCell sx={{ fontWeight: 600 }}>{t('common.notes')}</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
           {sortedData.map((t) => (
             <TableRow key={t.lineId} hover>
-              <TableCell>{new Date(t.createdAt).toLocaleString('es-ES')}</TableCell>
+              <TableCell>{new Date(t.createdAt).toLocaleString(getActiveLocale())}</TableCell>
               <TableCell sx={{ fontFamily: 'monospace' }}>{t.groupNumber}</TableCell>
               <TableCell>{t.transactionType}</TableCell>
               <TableCell>{t.entity1Name || t.entity2Name}</TableCell>
@@ -341,6 +345,7 @@ const TransactionsTable = ({ rows, bettingPoolId }: { rows: TransactionLineRepor
 // Main component
 // ---------------------------------------------------------------------------
 const BettingPoolSales = (): React.ReactElement => {
+  const { t } = useTranslation();
   const [fecha, setFecha] = useState<string>(getTodayDate());
   const [banca, setBanca] = useState<BancaOption | null>(null);
   const [bancasList, setBancasList] = useState<BancaOption[]>([]);
@@ -408,12 +413,12 @@ const BettingPoolSales = (): React.ReactElement => {
       <Paper elevation={3}>
         <Box sx={{ p: 3 }}>
           <Typography variant="h5" align="center" sx={{ mb: 3, fontWeight: 400 }}>
-            Reporte por banca
+            {t('sales.bettingPoolReport')}
           </Typography>
 
           <Grid container spacing={2} alignItems="flex-end" sx={{ mb: 3 }}>
             <Grid item xs={12} md={3}>
-              <TextField fullWidth type="date" label="Fecha" value={fecha}
+              <TextField fullWidth type="date" label={t('common.date')} value={fecha}
                 onChange={(e) => setFecha(e.target.value)} InputLabelProps={{ shrink: true }} size="small" />
             </Grid>
             <Grid item xs={12} md={6}>
@@ -423,7 +428,7 @@ const BettingPoolSales = (): React.ReactElement => {
                 value={banca}
                 onChange={(_e, v) => setBanca(v)}
                 isOptionEqualToValue={(a, b) => a.id === b.id}
-                renderInput={(params) => <TextField {...params} label="Banca" size="small" placeholder="Seleccione una banca" />}
+                renderInput={(params) => <TextField {...params} label={t('common.bettingPool')} size="small" placeholder={t('sales.selectBettingPoolPrompt')} />}
               />
             </Grid>
             <Grid item xs={12} md={3}>
@@ -435,14 +440,14 @@ const BettingPoolSales = (): React.ReactElement => {
                 startIcon={loading ? <CircularProgress size={18} color="inherit" /> : <Refresh />}
                 sx={{ borderRadius: '30px', textTransform: 'uppercase' }}
               >
-                Refrescar
+                {t('common.refresh')}
               </Button>
             </Grid>
           </Grid>
 
           {!banca && (
             <Typography variant="body2" align="center" sx={{ color: 'text.secondary', py: 4 }}>
-              Seleccione una banca para ver el reporte.
+              {t('sales.selectBettingPoolForReport')}
             </Typography>
           )}
 
@@ -450,7 +455,7 @@ const BettingPoolSales = (): React.ReactElement => {
             <Stack spacing={4}>
               {/* Resumen de venta */}
               <Box>
-                <SectionTitle>Resumen de venta</SectionTitle>
+                <SectionTitle>{t('sales.salesSummary')}</SectionTitle>
                 {summary ? (
                   <>
                     {/* Highlight banner: balance to date + pending tickets value. */}
@@ -462,7 +467,7 @@ const BettingPoolSales = (): React.ReactElement => {
                           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                         }}>
                           <Box>
-                            <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>Balance a la fecha</Typography>
+                            <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>{t('sales.balanceToDate')}</Typography>
                             <Typography variant="h5" sx={{ fontWeight: 600, color: colorForNet(summary.balance) }}>
                               {formatCurrency(summary.balance)}
                             </Typography>
@@ -480,7 +485,7 @@ const BettingPoolSales = (): React.ReactElement => {
                         }}>
                           <Box>
                             <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
-                              Monto total de tickets pendientes ({summary.pendingCount})
+                              {t('sales.pendingTicketsTotalAmount', { count: summary.pendingCount })}
                             </Typography>
                             <Typography variant="h5" sx={{ fontWeight: 600, color: PALETTE.venta }}>
                               {formatCurrency(summary.pendingTicketsAmount)}
@@ -497,16 +502,16 @@ const BettingPoolSales = (): React.ReactElement => {
                         <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
                           <Stack direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={2}>
                             <Box>
-                              <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>Banca</Typography>
+                              <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>{t('common.bettingPool')}</Typography>
                               <Typography variant="body1" sx={{ fontWeight: 600 }}>{summary.bettingPoolName}</Typography>
-                              <Typography variant="caption" sx={{ color: 'text.secondary' }}>Código: {summary.bettingPoolCode}</Typography>
+                              <Typography variant="caption" sx={{ color: 'text.secondary' }}>{t('common.code')}: {summary.bettingPoolCode}</Typography>
                             </Box>
                             <Stack direction="row" spacing={1}>
                               <Chip label={`P ${summary.pendingCount}`} sx={{ bgcolor: '#fff3e0', color: '#e65100', fontWeight: 600 }} />
                               <Chip label={`L ${summary.loserCount}`} sx={{ bgcolor: '#ffebee', color: '#c62828', fontWeight: 600 }} />
                               <Chip label={`W ${summary.winnerCount}`} sx={{ bgcolor: '#e8f5e9', color: '#2e7d32', fontWeight: 600 }} />
                               <Chip
-                                label={`Total ${summary.pendingCount + summary.loserCount + summary.winnerCount}`}
+                                label={`${t('common.total')} ${summary.pendingCount + summary.loserCount + summary.winnerCount}`}
                                 sx={{ bgcolor: '#e3f2fd', color: '#1565c0', fontWeight: 600 }}
                               />
                             </Stack>
@@ -516,28 +521,28 @@ const BettingPoolSales = (): React.ReactElement => {
                         {/* Money KPI tiles */}
                         <Grid container spacing={2}>
                           <Grid item xs={6} sm={4}>
-                            <KpiTile label="Venta" value={formatCurrency(summary.totalSold)} icon={<AttachMoney fontSize="small" />} accent={PALETTE.venta} />
+                            <KpiTile label={t('sales.venta')} value={formatCurrency(summary.totalSold)} icon={<AttachMoney fontSize="small" />} accent={PALETTE.venta} />
                           </Grid>
                           <Grid item xs={6} sm={4}>
-                            <KpiTile label="Comisiones" value={formatCurrency(summary.totalCommissions)} icon={<AccountBalance fontSize="small" />} accent={PALETTE.comisiones} />
+                            <KpiTile label={t('sales.comisiones')} value={formatCurrency(summary.totalCommissions)} icon={<AccountBalance fontSize="small" />} accent={PALETTE.comisiones} />
                           </Grid>
                           <Grid item xs={6} sm={4}>
-                            <KpiTile label="Premios" value={formatCurrency(summary.totalPrizes)} icon={<EmojiEvents fontSize="small" />} accent={PALETTE.premios} />
+                            <KpiTile label={t('sales.premios')} value={formatCurrency(summary.totalPrizes)} icon={<EmojiEvents fontSize="small" />} accent={PALETTE.premios} />
                           </Grid>
                           <Grid item xs={6} sm={4}>
                             <KpiTile
-                              label="Neto"
+                              label={t('sales.neto')}
                               value={formatCurrency(summary.totalNet)}
                               icon={summary.totalNet >= 0 ? <TrendingUp fontSize="small" /> : <TrendingDown fontSize="small" />}
                               accent={summary.totalNet >= 0 ? PALETTE.neto : PALETTE.netoNeg}
                             />
                           </Grid>
                           <Grid item xs={6} sm={4}>
-                            <KpiTile label="Caída" value={formatCurrency(summary.fall)} icon={<Discount fontSize="small" />} accent="#9e9e9e" />
+                            <KpiTile label={t('sales.caida')} value={formatCurrency(summary.fall)} icon={<Discount fontSize="small" />} accent="#9e9e9e" />
                           </Grid>
                           <Grid item xs={6} sm={4}>
                             <KpiTile
-                              label="Final"
+                              label={t('sales.final')}
                               value={formatCurrency(summary.totalNet - summary.fall)}
                               icon={summary.totalNet - summary.fall >= 0 ? <TrendingUp fontSize="small" /> : <TrendingDown fontSize="small" />}
                               accent={summary.totalNet - summary.fall >= 0 ? PALETTE.neto : PALETTE.netoNeg}
@@ -545,7 +550,7 @@ const BettingPoolSales = (): React.ReactElement => {
                           </Grid>
                           <Grid item xs={6} sm={4}>
                             <KpiTile
-                              label="Caída acumulada"
+                              label={t('sales.accumulatedFall')}
                               value={formatCurrency(summary.accumulatedFall)}
                               icon={summary.accumulatedFall >= 0 ? <TrendingUp fontSize="small" /> : <TrendingDown fontSize="small" />}
                               accent={summary.accumulatedFall >= 0 ? PALETTE.neto : PALETTE.netoNeg}
@@ -556,15 +561,15 @@ const BettingPoolSales = (): React.ReactElement => {
 
                       <Grid item xs={12} md={5}>
                         <Paper variant="outlined" sx={{ p: 2, height: '100%' }}>
-                          <Typography variant="caption" sx={{ color: 'text.secondary' }}>Composición de la venta</Typography>
+                          <Typography variant="caption" sx={{ color: 'text.secondary' }}>{t('sales.salesComposition')}</Typography>
                           <ResponsiveContainer width="100%" height={260}>
                             <PieChart>
                               <Pie
                                 data={[
-                                  { name: 'Comisiones', value: summary.totalCommissions, fill: PALETTE.comisiones },
-                                  { name: 'Descuentos', value: summary.totalDiscounts, fill: PALETTE.descuentos },
-                                  { name: 'Premios', value: summary.totalPrizes, fill: PALETTE.premios },
-                                  { name: 'Neto', value: Math.max(0, summary.totalNet), fill: PALETTE.neto },
+                                  { name: t('sales.comisiones'), value: summary.totalCommissions, fill: PALETTE.comisiones },
+                                  { name: t('sales.descuentos'), value: summary.totalDiscounts, fill: PALETTE.descuentos },
+                                  { name: t('sales.premios'), value: summary.totalPrizes, fill: PALETTE.premios },
+                                  { name: t('sales.neto'), value: Math.max(0, summary.totalNet), fill: PALETTE.neto },
                                 ].filter((d) => d.value > 0)}
                                 dataKey="value"
                                 innerRadius={55}
@@ -584,7 +589,7 @@ const BettingPoolSales = (): React.ReactElement => {
                     </Grid>
                   </>
                 ) : (
-                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>Sin ventas en la fecha seleccionada.</Typography>
+                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>{t('sales.noSalesOnDate')}</Typography>
                 )}
               </Box>
 
@@ -592,19 +597,19 @@ const BettingPoolSales = (): React.ReactElement => {
 
               {/* Totales por sorteo */}
               <Box>
-                <SectionTitle>Totales por sorteo</SectionTitle>
+                <SectionTitle>{t('sales.totalsByDraw')}</SectionTitle>
                 {draws.length > 0 && (
                   <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
                     <ResponsiveContainer width="100%" height={260}>
-                      <BarChart data={draws.map((d) => ({ name: d.drawName, Venta: d.totalSold, Premios: d.totalPrizes, Neto: d.totalNet }))}>
+                      <BarChart data={draws.map((d) => ({ name: d.drawName, [t('sales.venta')]: d.totalSold, [t('sales.premios')]: d.totalPrizes, [t('sales.neto')]: d.totalNet }))}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
                         <XAxis dataKey="name" tick={{ fontSize: 11 }} interval={0} angle={-15} textAnchor="end" height={60} />
                         <YAxis tick={{ fontSize: 11 }} tickFormatter={(v: number) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v)} />
                         <Tooltip formatter={((v: number) => formatCurrency(v)) as unknown as undefined} />
                         <Legend wrapperStyle={{ fontSize: '0.75rem' }} />
-                        <Bar dataKey="Venta" fill={PALETTE.venta} radius={[4, 4, 0, 0]} />
-                        <Bar dataKey="Premios" fill={PALETTE.premios} radius={[4, 4, 0, 0]} />
-                        <Bar dataKey="Neto" fill={PALETTE.neto} radius={[4, 4, 0, 0]} />
+                        <Bar dataKey={t('sales.venta')} fill={PALETTE.venta} radius={[4, 4, 0, 0]} />
+                        <Bar dataKey={t('sales.premios')} fill={PALETTE.premios} radius={[4, 4, 0, 0]} />
+                        <Bar dataKey={t('sales.neto')} fill={PALETTE.neto} radius={[4, 4, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   </Paper>
@@ -616,10 +621,10 @@ const BettingPoolSales = (): React.ReactElement => {
 
               {/* Números ganadores */}
               <Box>
-                <SectionTitle>Números ganadores</SectionTitle>
+                <SectionTitle>{t('sales.winningNumbers')}</SectionTitle>
                 {results.length === 0 ? (
                   <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                    No hay resultados publicados para la fecha seleccionada.
+                    {t('sales.noResultsPublishedForDate')}
                   </Typography>
                 ) : (
                   <Grid container spacing={1}>
@@ -646,7 +651,7 @@ const BettingPoolSales = (): React.ReactElement => {
 
               {/* Tickets ganadores */}
               <Box>
-                <SectionTitle>Tickets ganadores</SectionTitle>
+                <SectionTitle>{t('sales.winningTickets')}</SectionTitle>
                 <WinningPlaysTable rows={winningPlays} />
               </Box>
 
@@ -654,7 +659,7 @@ const BettingPoolSales = (): React.ReactElement => {
 
               {/* Transacciones recientes */}
               <Box>
-                <SectionTitle>Transacciones recientes</SectionTitle>
+                <SectionTitle>{t('sales.recentTransactions')}</SectionTitle>
                 <TransactionsTable rows={transactions} bettingPoolId={banca.id} />
               </Box>
             </Stack>

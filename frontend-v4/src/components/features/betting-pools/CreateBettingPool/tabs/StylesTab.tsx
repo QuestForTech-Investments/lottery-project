@@ -1,4 +1,5 @@
 import React, { type ChangeEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Grid,
   Typography,
@@ -32,14 +33,15 @@ interface StylesTabProps {
  * Contains visual style configuration for sell screen and ticket printing
  */
 const StylesTab: React.FC<StylesTabProps> = ({ formData, handleChange }) => {
+  const { t } = useTranslation();
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h6" gutterBottom>
-        Estilos Visuales
+        {t('createBettingPool.styles.title')}
       </Typography>
 
       <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-        Configura la apariencia de la pantalla de venta y el formato de impresión de tickets
+        {t('createBettingPool.styles.subtitle')}
       </Typography>
 
       <Grid container spacing={3}>
@@ -49,7 +51,7 @@ const StylesTab: React.FC<StylesTabProps> = ({ formData, handleChange }) => {
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
               <PaletteIcon color="primary" />
               <Typography variant="subtitle1" fontWeight="bold">
-                Estilo de Pantalla de Venta
+                {t('createBettingPool.styles.sellScreenTitle')}
               </Typography>
             </Box>
 
@@ -57,7 +59,7 @@ const StylesTab: React.FC<StylesTabProps> = ({ formData, handleChange }) => {
 
             <FormControl component="fieldset" fullWidth>
               <FormLabel component="legend" sx={{ mb: 1 }}>
-                Selecciona el diseño visual para la pantalla de venta
+                {t('createBettingPool.styles.sellScreenLegend')}
               </FormLabel>
               <RadioGroup
                 name="sellScreenStyles"
@@ -69,9 +71,9 @@ const StylesTab: React.FC<StylesTabProps> = ({ formData, handleChange }) => {
                   control={<Radio />}
                   label={
                     <Box>
-                      <Typography variant="body1">Estilo 1 - Clásico</Typography>
+                      <Typography variant="body1">{t('createBettingPool.styles.style1Name')}</Typography>
                       <Typography variant="caption" color="text.secondary">
-                        Diseño tradicional con botones grandes y alto contraste
+                        {t('createBettingPool.styles.style1Desc')}
                       </Typography>
                     </Box>
                   }
@@ -82,9 +84,9 @@ const StylesTab: React.FC<StylesTabProps> = ({ formData, handleChange }) => {
                   control={<Radio />}
                   label={
                     <Box>
-                      <Typography variant="body1">Estilo 2 - Moderno</Typography>
+                      <Typography variant="body1">{t('createBettingPool.styles.style2Name')}</Typography>
                       <Typography variant="caption" color="text.secondary">
-                        Diseño contemporáneo con interfaz limpia y minimalista
+                        {t('createBettingPool.styles.style2Desc')}
                       </Typography>
                     </Box>
                   }
@@ -95,9 +97,9 @@ const StylesTab: React.FC<StylesTabProps> = ({ formData, handleChange }) => {
                   control={<Radio />}
                   label={
                     <Box>
-                      <Typography variant="body1">Estilo 3 - Compacto</Typography>
+                      <Typography variant="body1">{t('createBettingPool.styles.style3Name')}</Typography>
                       <Typography variant="caption" color="text.secondary">
-                        Diseño optimizado para pantallas pequeñas
+                        {t('createBettingPool.styles.style3Desc')}
                       </Typography>
                     </Box>
                   }
@@ -108,9 +110,9 @@ const StylesTab: React.FC<StylesTabProps> = ({ formData, handleChange }) => {
                   control={<Radio />}
                   label={
                     <Box>
-                      <Typography variant="body1">Estilo 4 - Alto Contraste</Typography>
+                      <Typography variant="body1">{t('createBettingPool.styles.style4Name')}</Typography>
                       <Typography variant="caption" color="text.secondary">
-                        Diseño con colores vibrantes para mejor visibilidad
+                        {t('createBettingPool.styles.style4Desc')}
                       </Typography>
                     </Box>
                   }
@@ -127,7 +129,7 @@ const StylesTab: React.FC<StylesTabProps> = ({ formData, handleChange }) => {
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
               <PrintIcon color="primary" />
               <Typography variant="subtitle1" fontWeight="bold">
-                Estilo de Impresión de Tickets
+                {t('createBettingPool.styles.printTitle')}
               </Typography>
             </Box>
 
@@ -135,7 +137,7 @@ const StylesTab: React.FC<StylesTabProps> = ({ formData, handleChange }) => {
 
             <FormControl component="fieldset" fullWidth>
               <FormLabel component="legend" sx={{ mb: 1 }}>
-                Selecciona el formato de impresión para los tickets
+                {t('createBettingPool.styles.printLegend')}
               </FormLabel>
               <RadioGroup
                 name="ticketPrintStyles"
@@ -147,9 +149,9 @@ const StylesTab: React.FC<StylesTabProps> = ({ formData, handleChange }) => {
                   control={<Radio />}
                   label={
                     <Box>
-                      <Typography variant="body1">Original</Typography>
+                      <Typography variant="body1">{t('createBettingPool.styles.printOriginalName')}</Typography>
                       <Typography variant="caption" color="text.secondary">
-                        Formato original estándar del sistema
+                        {t('createBettingPool.styles.printOriginalDesc')}
                       </Typography>
                     </Box>
                   }
@@ -160,9 +162,9 @@ const StylesTab: React.FC<StylesTabProps> = ({ formData, handleChange }) => {
                   control={<Radio />}
                   label={
                     <Box>
-                      <Typography variant="body1">Compacto</Typography>
+                      <Typography variant="body1">{t('createBettingPool.styles.printCompactName')}</Typography>
                       <Typography variant="caption" color="text.secondary">
-                        Formato reducido para ahorrar papel
+                        {t('createBettingPool.styles.printCompactDesc')}
                       </Typography>
                     </Box>
                   }
@@ -173,9 +175,9 @@ const StylesTab: React.FC<StylesTabProps> = ({ formData, handleChange }) => {
                   control={<Radio />}
                   label={
                     <Box>
-                      <Typography variant="body1">Detallado</Typography>
+                      <Typography variant="body1">{t('createBettingPool.styles.printDetailedName')}</Typography>
                       <Typography variant="caption" color="text.secondary">
-                        Formato expandido con información adicional
+                        {t('createBettingPool.styles.printDetailedDesc')}
                       </Typography>
                     </Box>
                   }
@@ -186,9 +188,9 @@ const StylesTab: React.FC<StylesTabProps> = ({ formData, handleChange }) => {
                   control={<Radio />}
                   label={
                     <Box>
-                      <Typography variant="body1">Térmico</Typography>
+                      <Typography variant="body1">{t('createBettingPool.styles.printThermalName')}</Typography>
                       <Typography variant="caption" color="text.secondary">
-                        Optimizado para impresoras térmicas (58mm/80mm)
+                        {t('createBettingPool.styles.printThermalDesc')}
                       </Typography>
                     </Box>
                   }
@@ -203,8 +205,7 @@ const StylesTab: React.FC<StylesTabProps> = ({ formData, handleChange }) => {
         <Grid item xs={12}>
           <Paper variant="outlined" sx={{ p: 2, bgcolor: 'info.lighter' }}>
             <Typography variant="body2" color="info.dark">
-              <strong>Nota:</strong> Los cambios en los estilos se aplicarán inmediatamente después de guardar.
-              Puedes modificar estos ajustes en cualquier momento desde la configuration de la banca.
+              <strong>{t('createBettingPool.styles.noteBold')}</strong> {t('createBettingPool.styles.noteBody')}
             </Typography>
           </Paper>
         </Grid>

@@ -1,5 +1,6 @@
 import { memo, useState, useEffect, type MouseEvent } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import {
   AppBar,
   Toolbar,
@@ -61,6 +62,7 @@ interface QuickAccessButtonConfig {
 const TimeDisplay = memo(() => {
   const { getCurrentTime, timezoneLabel } = useTimezone()
   const [currentTime, setCurrentTime] = useState(getCurrentTime())
+  const { t } = useTranslation()
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -70,7 +72,7 @@ const TimeDisplay = memo(() => {
   }, [getCurrentTime])
 
   return (
-    <Tooltip title={`Zona horaria: ${timezoneLabel}`}>
+    <Tooltip title={`${t('header.timezone')}: ${timezoneLabel}`}>
       <Typography
         variant="body2"
         sx={{
@@ -138,6 +140,7 @@ const quickAccessButtons: QuickAccessButtonConfig[] = []
 
 const Header = ({ sidebarCollapsed, sidebarHovered, onToggleSidebar, isMobile = false }: HeaderProps) => {
   const navigate = useNavigate()
+  const { t } = useTranslation()
   const [settingsAnchorEl, setSettingsAnchorEl] = useState<HTMLElement | null>(null)
   const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] = useState(false)
   const [isTimezoneModalOpen, setIsTimezoneModalOpen] = useState(false)
@@ -339,7 +342,7 @@ const Header = ({ sidebarCollapsed, sidebarHovered, onToggleSidebar, isMobile = 
           {/* Warnings bell — visible whenever the user can see warnings.
               Badge + red color only when there are unseen warnings. */}
           {!isMobile && canSeeWarnings && (
-            <Tooltip title={warningCount > 0 ? `${warningCount} advertencia(s) nueva(s)` : 'Sin advertencias nuevas'}>
+            <Tooltip title={warningCount > 0 ? t('header.warningsNew', { count: warningCount }) : t('header.noWarnings')}>
               <IconButton
                 onClick={() => navigate('/warnings')}
                 onMouseEnter={() => setHoveredIcon('bell')}
@@ -396,7 +399,7 @@ const Header = ({ sidebarCollapsed, sidebarHovered, onToggleSidebar, isMobile = 
           )}
 
           {/* User menu */}
-          <Tooltip title="Cuenta">
+          <Tooltip title={t('header.account')}>
             <Box
               onClick={handleSettingsClick}
               onMouseEnter={() => setHoveredIcon('user')}
@@ -441,7 +444,7 @@ const Header = ({ sidebarCollapsed, sidebarHovered, onToggleSidebar, isMobile = 
                   textTransform: 'uppercase',
                 }}
               >
-                {authService.getCurrentUser()?.username || 'Usuario'}
+                {authService.getCurrentUser()?.username || t('common.user')}
               </Typography>
               <ArrowDropDown
                 sx={{
@@ -481,19 +484,19 @@ const Header = ({ sidebarCollapsed, sidebarHovered, onToggleSidebar, isMobile = 
           <ListItemIcon>
             <Lock fontSize="small" />
           </ListItemIcon>
-          <ListItemText>Cambiar contraseña</ListItemText>
+          <ListItemText>{t('header.changePassword')}</ListItemText>
         </MenuItem>
         <MenuItem onClick={handleTimezone}>
           <ListItemIcon>
             <Schedule fontSize="small" />
           </ListItemIcon>
-          <ListItemText>Zona horaria</ListItemText>
+          <ListItemText>{t('header.timezone')}</ListItemText>
         </MenuItem>
         <MenuItem onClick={handleLogout}>
           <ListItemIcon>
             <Logout fontSize="small" />
           </ListItemIcon>
-          <ListItemText>Cerrar sesión</ListItemText>
+          <ListItemText>{t('header.logout')}</ListItemText>
         </MenuItem>
       </Menu>
 

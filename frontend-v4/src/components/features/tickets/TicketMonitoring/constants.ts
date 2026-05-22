@@ -135,17 +135,18 @@ export const STYLES = {
   emptyCell: { py: 3, color: 'text.secondary' },
 } as const;
 
-// Column widths - compact to leave room for detail panel
+// Column widths — keyed by the i18n key (stable across locales) so the layout
+// stays the same regardless of how long the translated label is.
 export const COLUMN_WIDTHS: Record<string, number> = {
-  'Número': 165,
+  'common.number': 165,
   '': 40,
-  'Fecha': 135,
-  'Usuario': 60,
-  'Monto': 80,
-  'Premio': 60,
-  'Fecha de cancelación': 210,
-  'Estado': 70,
-  'Acciones': 60,
+  'common.date': 135,
+  'common.user': 60,
+  'common.amount': 80,
+  'common.prize': 60,
+  'tickets.anomalies.cancellationDate': 210,
+  'common.status': 70,
+  'common.actions': 60,
 };
 
 // ============================================================================

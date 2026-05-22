@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box, Paper, Typography, TextField, Grid, Button, Stack, Table, TableHead, TableBody,
   TableRow, TableCell, TableContainer, TableSortLabel, CircularProgress, InputAdornment,
@@ -65,6 +66,7 @@ interface BancaRow {
 }
 
 const PlayTypePrizesPercentages = (): React.ReactElement => {
+  const { t } = useTranslation();
   const [fechaInicial, setFechaInicial] = useState<string>(getTodayDate());
   const [fechaFinal, setFechaFinal] = useState<string>(getTodayDate());
   const [zonas, setZonas] = useState<number[]>([]);
@@ -220,13 +222,13 @@ const PlayTypePrizesPercentages = (): React.ReactElement => {
 
   const handleExportPdf = useCallback(() => {
     if (filtered.length === 0) {
-      alert('No hay datos para exportar.');
+      alert(t('sales.noDataToExport'));
       return;
     }
     const columns: ExportColumn<Record<string, unknown>>[] = [
-      { key: 'bettingPoolName', label: 'Banca', align: 'left' as const },
-      { key: 'bettingPoolCode', label: 'Código', align: 'left' as const },
-      { key: 'totalVendido', label: 'Total vendido', align: 'right' as const,
+      { key: 'bettingPoolName', label: t('common.bettingPool'), align: 'left' as const },
+      { key: 'bettingPoolCode', label: t('common.code'), align: 'left' as const },
+      { key: 'totalVendido', label: t('sales.totalSold'), align: 'right' as const,
         getValue: (r) => formatCurrency(Number(r.totalVendido ?? 0)) },
       ...visibleColumns.flatMap((c): ExportColumn<Record<string, unknown>>[] => [
         { key: `${c.header}_amt`, label: `${c.header} $`, align: 'right' as const,
@@ -251,7 +253,7 @@ const PlayTypePrizesPercentages = (): React.ReactElement => {
     });
 
     const totalsRow: Record<string, unknown> = {
-      bettingPoolName: 'Totales',
+      bettingPoolName: t('balances.totals'),
       bettingPoolCode: '',
       totalVendido: totals.totalVendido,
     };
@@ -260,8 +262,8 @@ const PlayTypePrizesPercentages = (): React.ReactElement => {
       totalsRow[`${c.header}_pct`] = '';
     });
 
-    exportToPdf(flatRows, columns, `Reporte de porcentaje de jugadas — ${fechaInicial} al ${fechaFinal}`, totalsRow);
-  }, [filtered, visibleColumns, totals, fechaInicial, fechaFinal]);
+    exportToPdf(flatRows, columns, t('sales.percentagesExportTitle', { start: fechaInicial, end: fechaFinal }), totalsRow);
+  }, [filtered, visibleColumns, totals, fechaInicial, fechaFinal, t]);
 
   const fmtPct = (amt: number, total: number) => (total > 0 ? `${((amt / total) * 100).toFixed(2)}` : '0');
 
@@ -270,22 +272,22 @@ const PlayTypePrizesPercentages = (): React.ReactElement => {
       <Paper elevation={3}>
         <Box sx={{ p: 3 }}>
           <Typography variant="h5" align="center" sx={{ mb: 4, fontWeight: 400 }}>
-            Reporte de porcentaje de jugadas
+            {t('sales.percentages.title')}
           </Typography>
 
           <Grid container spacing={2} alignItems="flex-end" sx={{ mb: 2 }}>
             <Grid item xs={12} md={4}>
-              <TextField fullWidth type="date" label="Fecha inicial" value={fechaInicial}
+              <TextField fullWidth type="date" label={t('common.dateStart')} value={fechaInicial}
                 onChange={(e) => setFechaInicial(e.target.value)} InputLabelProps={{ shrink: true }} size="small" />
             </Grid>
             <Grid item xs={12} md={4}>
-              <TextField fullWidth type="date" label="Fecha final" value={fechaFinal}
+              <TextField fullWidth type="date" label={t('common.dateEnd')} value={fechaFinal}
                 onChange={(e) => setFechaFinal(e.target.value)} InputLabelProps={{ shrink: true }} size="small" />
             </Grid>
             <Grid item xs={12} md={4} sx={{ '& > div': { width: '100%' }, '& .MuiFormControl-root': { width: '100%' } }}>
               <MultiSelectSearch
-                label="Zonas"
-                selectAllLabel="Todas"
+                label={t('common.zones')}
+                selectAllLabel={t('common.all')}
                 options={zonasList.map((z) => ({ id: z.id, label: z.name }))}
                 selectedIds={zonas}
                 onChange={setZonas}
@@ -301,7 +303,7 @@ const PlayTypePrizesPercentages = (): React.ReactElement => {
               startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <Refresh />}
               sx={{ px: 4, borderRadius: '30px', textTransform: 'uppercase' }}
             >
-              Refrescar
+              {t('common.refresh')}
             </Button>
             <Button
               variant="contained"
@@ -315,13 +317,13 @@ const PlayTypePrizesPercentages = (): React.ReactElement => {
 
           {visibleColumns.length === 0 ? (
             <Typography variant="body2" align="center" sx={{ color: 'text.secondary', py: 4 }}>
-              {loading ? 'Cargando…' : 'No hay entradas para las fechas elegidas'}
+              {loading ? t('common.loading') : t('sales.noEntriesForDates')}
             </Typography>
           ) : (
             <>
               <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>Entradas por página</Typography>
+                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>{t('balances.entriesPerPage')}</Typography>
                   <FormControl size="small">
                     <Select value={pageSize} onChange={(e) => { setPageSize(Number(e.target.value)); setPage(0); }} sx={{ height: 28, fontSize: '0.8rem' }}>
                       <MenuItem value={10}>10</MenuItem>
@@ -333,7 +335,7 @@ const PlayTypePrizesPercentages = (): React.ReactElement => {
                 </Box>
                 <TextField
                   size="small"
-                  placeholder="Filtrado rápido"
+                  placeholder={t('common.filterQuick')}
                   value={filtroRapido}
                   onChange={(e) => { setFiltroRapido(e.target.value); setPage(0); }}
                   InputProps={{ endAdornment: <InputAdornment position="end"><SearchIcon /></InputAdornment> }}
@@ -363,17 +365,17 @@ const PlayTypePrizesPercentages = (): React.ReactElement => {
                     <TableRow sx={{ backgroundColor: '#e3e3e3' }}>
                       <TableCell sx={{ fontWeight: 600 }} sortDirection={sortBy === 'name' ? sortOrder : false}>
                         <TableSortLabel active={sortBy === 'name'} direction={sortBy === 'name' ? sortOrder : 'asc'} onClick={() => onSort('name')}>
-                          Banca
+                          {t('common.bettingPool')}
                         </TableSortLabel>
                       </TableCell>
                       <TableCell sx={{ fontWeight: 600 }} sortDirection={sortBy === 'code' ? sortOrder : false}>
                         <TableSortLabel active={sortBy === 'code'} direction={sortBy === 'code' ? sortOrder : 'asc'} onClick={() => onSort('code')}>
-                          Código
+                          {t('common.code')}
                         </TableSortLabel>
                       </TableCell>
                       <TableCell align="right" sx={{ fontWeight: 600 }} sortDirection={sortBy === 'total' ? sortOrder : false}>
                         <TableSortLabel active={sortBy === 'total'} direction={sortBy === 'total' ? sortOrder : 'asc'} onClick={() => onSort('total')}>
-                          Total vendido
+                          {t('sales.totalSold')}
                         </TableSortLabel>
                       </TableCell>
                       {visibleColumns.map((c) => (
@@ -426,7 +428,7 @@ const PlayTypePrizesPercentages = (): React.ReactElement => {
                       </TableRow>
                     ))}
                     <TableRow sx={{ backgroundColor: '#f5f7fa', '& td': { fontWeight: 600 } }}>
-                      <TableCell>Totales</TableCell>
+                      <TableCell>{t('balances.totals')}</TableCell>
                       <TableCell>-</TableCell>
                       <TableCell align="right">{formatCurrency(totals.totalVendido)}</TableCell>
                       {visibleColumns.map((c) => {
@@ -443,13 +445,13 @@ const PlayTypePrizesPercentages = (): React.ReactElement => {
 
               <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mt: 1 }}>
                 <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                  Mostrando {paged.length} de {filtered.length} bancas
+                  {t('sales.showingBettingPools', { shown: paged.length, total: filtered.length })}
                 </Typography>
                 {filtered.length > pageSize && (
                   <Stack direction="row" spacing={1} alignItems="center">
-                    <Button size="small" disabled={page === 0} onClick={() => setPage((p) => Math.max(0, p - 1))}>Anterior</Button>
-                    <Typography variant="caption">Página {page + 1} / {Math.max(1, Math.ceil(filtered.length / pageSize))}</Typography>
-                    <Button size="small" disabled={(page + 1) * pageSize >= filtered.length} onClick={() => setPage((p) => p + 1)}>Siguiente</Button>
+                    <Button size="small" disabled={page === 0} onClick={() => setPage((p) => Math.max(0, p - 1))}>{t('common.previous')}</Button>
+                    <Typography variant="caption">{t('common.pageOf', { current: page + 1, total: Math.max(1, Math.ceil(filtered.length / pageSize)) })}</Typography>
+                    <Button size="small" disabled={(page + 1) * pageSize >= filtered.length} onClick={() => setPage((p) => p + 1)}>{t('common.next')}</Button>
                   </Stack>
                 )}
               </Stack>

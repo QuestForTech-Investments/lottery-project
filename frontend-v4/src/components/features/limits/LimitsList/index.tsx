@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Typography,
@@ -42,6 +43,7 @@ import {
   LimitParams,
   DaysOfWeek,
 } from '@/types/limits';
+import { getActiveLocale } from '@/utils/formatters';
 
 const DAY_LABELS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 const DAY_BITMASKS = [1, 2, 4, 8, 16, 32, 64];
@@ -120,6 +122,7 @@ const formatBetNumberDisplay = (pattern: string | undefined, gameTypeName: strin
 };
 
 const LimitsList = (): React.ReactElement => {
+  const { t } = useTranslation();
   const [filterLimitType, setFilterLimitType] = useState<string>('');
   const [filterDrawId, setFilterDrawId] = useState<string>('');
   const [filterDay, setFilterDay] = useState<string>('');
@@ -160,9 +163,9 @@ const LimitsList = (): React.ReactElement => {
       if (filterDay) filter.daysOfWeek = [parseInt(filterDay)];
       if (filterZone) filter.zoneId = parseInt(filterZone);
       setAllLimits(await limitService.getLimits(filter));
-    } catch (err) { setError(handleLimitError(err, 'cargar límites')); }
+    } catch (err) { setError(handleLimitError(err, t('limitsAdmin.list.errLoad'))); }
     finally { setLoading(false); }
-  }, [filterLimitType, filterDrawId, filterDay, filterZone]);
+  }, [filterLimitType, filterDrawId, filterDay, filterZone, t]);
 
   useEffect(() => { loadLimits(); }, []);
 
@@ -250,9 +253,9 @@ const LimitsList = (): React.ReactElement => {
         if (!newAmounts || newAmounts.length === 0) return null as unknown as typeof l; // mark for removal
         return { ...l, amounts: newAmounts };
       }).filter(Boolean));
-      setSnackbar({ open: true, message: 'Monto eliminado', severity: 'success' });
-    } catch (err) { setSnackbar({ open: true, message: handleLimitError(err, 'eliminar monto'), severity: 'error' }); }
-  }, []);
+      setSnackbar({ open: true, message: t('limitsAdmin.list.msgAmountDeleted'), severity: 'success' });
+    } catch (err) { setSnackbar({ open: true, message: handleLimitError(err, t('limitsAdmin.list.errDeleteAmount')), severity: 'error' }); }
+  }, [t]);
 
   // Update a single amount inline
   const handleUpdateAmount = useCallback(async (ruleId: number, gameTypeId: number, newAmount: number) => {
@@ -264,10 +267,10 @@ const LimitsList = (): React.ReactElement => {
         if (l.limitRuleId !== ruleId) return l;
         return { ...l, amounts: l.amounts?.map(a => a.gameTypeId === gameTypeId ? { ...a, amount: newAmount } : a) };
       }));
-      setSnackbar({ open: true, message: 'Monto actualizado', severity: 'success' });
-    } catch (err) { setSnackbar({ open: true, message: handleLimitError(err, 'actualizar monto'), severity: 'error' }); }
+      setSnackbar({ open: true, message: t('limitsAdmin.list.msgAmountUpdated'), severity: 'success' });
+    } catch (err) { setSnackbar({ open: true, message: handleLimitError(err, t('limitsAdmin.list.errUpdateAmount')), severity: 'error' }); }
     finally { setUpdatingAmount(null); }
-  }, []);
+  }, [t]);
 
   // Delete entire rule
   const handleDeleteClick = useCallback((id: number) => { setLimitToDelete(id); setDeleteDialogOpen(true); }, []);
@@ -283,19 +286,19 @@ const LimitsList = (): React.ReactElement => {
           (!deleteAllTarget.zoneId || l.zoneId === deleteAllTarget.zoneId) &&
           (!deleteAllTarget.bettingPoolId || l.bettingPoolId === deleteAllTarget.bettingPoolId)
         )));
-        setSnackbar({ open: true, message: 'Todos los límites eliminados', severity: 'success' });
+        setSnackbar({ open: true, message: t('limitsAdmin.list.msgAllDeleted'), severity: 'success' });
       } else if (limitToDelete !== null) {
         await limitService.deleteLimit(limitToDelete);
         setAllLimits(prev => prev.filter(l => l.limitRuleId !== limitToDelete));
-        setSnackbar({ open: true, message: 'Límite eliminado', severity: 'success' });
+        setSnackbar({ open: true, message: t('limitsAdmin.list.msgLimitDeleted'), severity: 'success' });
       }
-    } catch (err) { setSnackbar({ open: true, message: handleLimitError(err, 'eliminar'), severity: 'error' }); }
+    } catch (err) { setSnackbar({ open: true, message: handleLimitError(err, t('limitsAdmin.list.errDelete')), severity: 'error' }); }
     finally { setDeleteDialogOpen(false); setLimitToDelete(null); setDeleteAllTarget(null); }
-  }, [limitToDelete, deleteAllTarget]);
+  }, [limitToDelete, deleteAllTarget, t]);
 
   const formatDate = (d?: string): string => {
     if (!d) return '';
-    try { return new Date(d).toLocaleDateString('es-DO', { day: '2-digit', month: '2-digit', year: 'numeric' }); }
+    try { return new Date(d).toLocaleDateString(getActiveLocale(), { day: '2-digit', month: '2-digit', year: 'numeric' }); }
     catch { return d; }
   };
 
@@ -346,7 +349,7 @@ const LimitsList = (): React.ReactElement => {
               }}
               sx={{ color: '#ef8157', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase' }}
             >
-              Borrar todos
+              {t('limitsAdmin.list.deleteAll')}
             </Button>
           </Box>
         )}
@@ -356,10 +359,10 @@ const LimitsList = (): React.ReactElement => {
           <Table size="small">
             <TableHead>
               <TableRow sx={styles.tableHeader}>
-                <TableCell>Tipo de jugada</TableCell>
-                <TableCell>Numero</TableCell>
-                <TableCell>Monto</TableCell>
-                <TableCell>Fecha de expiración</TableCell>
+                <TableCell>{t('limitsAdmin.list.tableGameType')}</TableCell>
+                <TableCell>{t('limitsAdmin.list.tableNumber')}</TableCell>
+                <TableCell>{t('limitsAdmin.list.tableAmount')}</TableCell>
+                <TableCell>{t('limitsAdmin.list.tableExpiration')}</TableCell>
                 <TableCell align="right" width={50}></TableCell>
               </TableRow>
             </TableHead>
@@ -403,7 +406,7 @@ const LimitsList = (): React.ReactElement => {
                 }
                 return (
                   <TableRow key={limit.limitRuleId} hover>
-                    <TableCell sx={styles.tableCell}>{limit.gameTypeName || 'General'}</TableCell>
+                    <TableCell sx={styles.tableCell}>{limit.gameTypeName || t('limitsAdmin.list.general')}</TableCell>
                     <TableCell sx={{ ...styles.tableCell, fontWeight: 600, color: limit.betNumberPattern ? ACCENT : '#ccc' }}>
                       {formatBetNumberDisplay(limit.betNumberPattern, limit.gameTypeName)}
                     </TableCell>
@@ -421,7 +424,7 @@ const LimitsList = (): React.ReactElement => {
                 );
               }) : (
                 <TableRow>
-                  <TableCell colSpan={4} align="center" sx={{ py: 3, color: '#999' }}>Sin límites para este sorteo</TableCell>
+                  <TableCell colSpan={4} align="center" sx={{ py: 3, color: '#999' }}>{t('limitsAdmin.list.noLimitsForDraw')}</TableCell>
                 </TableRow>
               )}
             </TableBody>
@@ -441,7 +444,7 @@ const LimitsList = (): React.ReactElement => {
 
   return (
     <Box sx={styles.container}>
-      <Typography sx={styles.title}>Lista de límites</Typography>
+      <Typography sx={styles.title}>{t('limitsAdmin.list.title')}</Typography>
       {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>{error}</Alert>}
 
       {/* Filters */}
@@ -449,37 +452,37 @@ const LimitsList = (): React.ReactElement => {
         <Box sx={{ p: 3 }}>
           <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap', justifyContent: 'center' }}>
             <Box sx={{ minWidth: 180 }}>
-              <Typography component="label" sx={styles.label}>Tipo de Límite</Typography>
+              <Typography component="label" sx={styles.label}>{t('limitsAdmin.list.filterLimitType')}</Typography>
               <FormControl fullWidth size="small">
                 <Select value={filterLimitType} onChange={(e: SelectChangeEvent) => setFilterLimitType(e.target.value)} displayEmpty sx={styles.select}>
-                  <MenuItem value=""><em style={{ color: '#9a9a9a' }}>Todos</em></MenuItem>
+                  <MenuItem value=""><em style={{ color: '#9a9a9a' }}>{t('limitsAdmin.list.allM')}</em></MenuItem>
                   {limitTypeOptions.map(o => <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>)}
                 </Select>
               </FormControl>
             </Box>
             <Box sx={{ minWidth: 180 }}>
-              <Typography component="label" sx={styles.label}>Sorteos</Typography>
+              <Typography component="label" sx={styles.label}>{t('limitsAdmin.list.filterDraws')}</Typography>
               <FormControl fullWidth size="small" disabled={paramsLoading}>
                 <Select value={filterDrawId} onChange={(e: SelectChangeEvent) => setFilterDrawId(e.target.value)} displayEmpty sx={styles.select}>
-                  <MenuItem value=""><em style={{ color: '#9a9a9a' }}>Todos</em></MenuItem>
+                  <MenuItem value=""><em style={{ color: '#9a9a9a' }}>{t('limitsAdmin.list.allM')}</em></MenuItem>
                   {(params?.draws || []).map(d => <MenuItem key={d.value} value={d.value.toString()}>{d.label}</MenuItem>)}
                 </Select>
               </FormControl>
             </Box>
             <Box sx={{ minWidth: 160 }}>
-              <Typography component="label" sx={styles.label}>Dias</Typography>
+              <Typography component="label" sx={styles.label}>{t('limitsAdmin.list.filterDays')}</Typography>
               <FormControl fullWidth size="small">
                 <Select value={filterDay} onChange={(e: SelectChangeEvent) => setFilterDay(e.target.value)} displayEmpty sx={styles.select}>
-                  <MenuItem value=""><em style={{ color: '#9a9a9a' }}>Todos</em></MenuItem>
+                  <MenuItem value=""><em style={{ color: '#9a9a9a' }}>{t('limitsAdmin.list.allM')}</em></MenuItem>
                   {DaysOfWeek.map(d => <MenuItem key={d.value} value={d.value.toString()}>{d.label}</MenuItem>)}
                 </Select>
               </FormControl>
             </Box>
             <Box sx={{ minWidth: 160 }}>
-              <Typography component="label" sx={styles.label}>Zonas</Typography>
+              <Typography component="label" sx={styles.label}>{t('limitsAdmin.list.filterZones')}</Typography>
               <FormControl fullWidth size="small" disabled={paramsLoading}>
                 <Select value={filterZone} onChange={(e: SelectChangeEvent) => setFilterZone(e.target.value)} displayEmpty sx={styles.select}>
-                  <MenuItem value=""><em style={{ color: '#9a9a9a' }}>Todas</em></MenuItem>
+                  <MenuItem value=""><em style={{ color: '#9a9a9a' }}>{t('limitsAdmin.list.allF')}</em></MenuItem>
                   {(params?.zones || []).map(z => <MenuItem key={z.value} value={z.value.toString()}>{z.label}</MenuItem>)}
                 </Select>
               </FormControl>
@@ -487,7 +490,7 @@ const LimitsList = (): React.ReactElement => {
           </Box>
           <Box sx={{ textAlign: 'center' }}>
             <Button variant="contained" onClick={loadLimits} disabled={loading} disableElevation sx={styles.refreshButton}>
-              {loading ? 'Cargando...' : 'Refrescar'}
+              {loading ? t('limitsAdmin.list.loading') : t('limitsAdmin.list.refresh')}
             </Button>
           </Box>
         </Box>
@@ -503,7 +506,7 @@ const LimitsList = (): React.ReactElement => {
 
       {activeTypes.length === 0 && !loading && (
         <Box sx={{ ...styles.card, p: 4, textAlign: 'center' }}>
-          <Typography sx={{ color: '#9a9a9a' }}>No hay límites configurados para este día</Typography>
+          <Typography sx={{ color: '#9a9a9a' }}>{t('limitsAdmin.list.noLimitsForDay')}</Typography>
         </Box>
       )}
 
@@ -569,15 +572,15 @@ const LimitsList = (): React.ReactElement => {
 
       {/* Delete Dialog */}
       <Dialog open={deleteDialogOpen} onClose={() => { setDeleteDialogOpen(false); setLimitToDelete(null); setDeleteAllTarget(null); }}>
-        <DialogTitle>Confirmar eliminación</DialogTitle>
+        <DialogTitle>{t('limitsAdmin.list.confirmDeleteTitle')}</DialogTitle>
         <DialogContent><DialogContentText>
           {deleteAllTarget
-            ? '¿Está seguro de que desea eliminar TODOS los límites de este sorteo?'
-            : '¿Está seguro de que desea eliminar este límite?'}
+            ? t('limitsAdmin.list.confirmDeleteAll')
+            : t('limitsAdmin.list.confirmDeleteOne')}
         </DialogContentText></DialogContent>
         <DialogActions>
-          <Button onClick={() => { setDeleteDialogOpen(false); setLimitToDelete(null); setDeleteAllTarget(null); }} sx={{ color: '#666' }}>Cancelar</Button>
-          <Button onClick={handleConfirmDelete} sx={{ bgcolor: '#ef8157', color: 'white', '&:hover': { bgcolor: '#e06a3f' } }}>Eliminar</Button>
+          <Button onClick={() => { setDeleteDialogOpen(false); setLimitToDelete(null); setDeleteAllTarget(null); }} sx={{ color: '#666' }}>{t('common.cancel')}</Button>
+          <Button onClick={handleConfirmDelete} sx={{ bgcolor: '#ef8157', color: 'white', '&:hover': { bgcolor: '#e06a3f' } }}>{t('common.delete')}</Button>
         </DialogActions>
       </Dialog>
 

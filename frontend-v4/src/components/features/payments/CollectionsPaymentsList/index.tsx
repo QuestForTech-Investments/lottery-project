@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Paper,
@@ -20,7 +21,7 @@ import QuickFilter from '../../balances/common/QuickFilter';
 import CreateCobroPagoModal from './CreateCobroPagoModal';
 import TransactionGroupDetailModal from '../../transactions/TransactionGroupsList/TransactionGroupDetailModal';
 import api from '@services/api';
-import { getTodayDate } from '@/utils/formatters';
+import { getTodayDate , getActiveLocale } from '@/utils/formatters';
 import { useTableSort } from '@/utils/useTableSort';
 
 // Raw shape returned by /transaction-groups.
@@ -62,6 +63,7 @@ const statusChipColor = (status: string): { bg: string; color: string } => {
 };
 
 const CollectionsPaymentsList = (): React.ReactElement => {
+  const { t } = useTranslation();
   const [startDate, setStartDate] = useState<string>(getTodayDate());
   const [endDate, setEndDate] = useState<string>(getTodayDate());
   const [quickFilter, setQuickFilter] = useState<string>('');
@@ -87,8 +89,8 @@ const CollectionsPaymentsList = (): React.ReactElement => {
         return {
           groupId: g.groupId,
           numero: g.groupNumber,
-          fecha: created.toLocaleDateString('es-ES'),
-          hora: created.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+          fecha: created.toLocaleDateString(getActiveLocale()),
+          hora: created.toLocaleTimeString(getActiveLocale(), { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
           createdAt: g.createdAt,
           creadoPor: g.createdByName ?? '-',
           notas: g.notes ?? '',
@@ -99,12 +101,12 @@ const CollectionsPaymentsList = (): React.ReactElement => {
     } catch (err) {
       const e = err as Error;
       console.error('Error loading transaction groups:', err);
-      setError(e.message || 'Error al cargar cobros y pagos');
+      setError(e.message || t('payments.loadError'));
       setTransactions([]);
     } finally {
       setLoading(false);
     }
-  }, [startDate, endDate]);
+  }, [startDate, endDate, t]);
 
   // Auto-load on mount.
   useEffect(() => {
@@ -148,7 +150,7 @@ const CollectionsPaymentsList = (): React.ReactElement => {
     <Box sx={{ p: 3 }}>
       <Paper sx={{ p: 3 }}>
         <Typography variant="h5" sx={{ textAlign: 'center', fontWeight: 400, mb: 3 }}>
-          Cobros y pagos
+          {t('payments.title')}
         </Typography>
 
         {error && (
@@ -158,8 +160,8 @@ const CollectionsPaymentsList = (): React.ReactElement => {
         )}
 
         <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap', mb: 2 }}>
-          <DateFilter value={startDate} onChange={setStartDate} label="Fecha inicial" />
-          <DateFilter value={endDate} onChange={setEndDate} label="Fecha final" />
+          <DateFilter value={startDate} onChange={setStartDate} label={t('common.dateStart')} />
+          <DateFilter value={endDate} onChange={setEndDate} label={t('common.dateEnd')} />
         </Box>
 
         <Box sx={{ mb: 3 }}>
@@ -175,12 +177,12 @@ const CollectionsPaymentsList = (): React.ReactElement => {
               fontWeight: 600,
             }}
           >
-            Filtrar
+            {t('common.filter')}
           </Button>
         </Box>
 
         <Box sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end' }}>
-          <QuickFilter value={quickFilter} onChange={setQuickFilter} placeholder="Filtrado rápido" />
+          <QuickFilter value={quickFilter} onChange={setQuickFilter} placeholder={t('common.filterQuick')} />
         </Box>
 
         <TableContainer component={Paper} variant="outlined">
@@ -188,21 +190,21 @@ const CollectionsPaymentsList = (): React.ReactElement => {
             <TableHead sx={{ bgcolor: '#e3e3e3' }}>
               <TableRow>
                 <TableCell sx={{ fontSize: '13px', fontWeight: 600, py: 1.5 }}>
-                  <TableSortLabel {...getSortProps('numero')}>Número</TableSortLabel>
+                  <TableSortLabel {...getSortProps('numero')}>{t('common.number')}</TableSortLabel>
                 </TableCell>
                 <TableCell sx={{ fontSize: '13px', fontWeight: 600, py: 1.5 }}>
-                  <TableSortLabel {...getSortProps('fecha')}>Fecha</TableSortLabel>
+                  <TableSortLabel {...getSortProps('fecha')}>{t('common.date')}</TableSortLabel>
                 </TableCell>
                 <TableCell sx={{ fontSize: '13px', fontWeight: 600, py: 1.5 }}>
-                  <TableSortLabel {...getSortProps('hora')}>Hora</TableSortLabel>
+                  <TableSortLabel {...getSortProps('hora')}>{t('common.time')}</TableSortLabel>
                 </TableCell>
                 <TableCell sx={{ fontSize: '13px', fontWeight: 600, py: 1.5 }}>
-                  <TableSortLabel {...getSortProps('creadoPor')}>Creado por</TableSortLabel>
+                  <TableSortLabel {...getSortProps('creadoPor')}>{t('common.createdBy')}</TableSortLabel>
                 </TableCell>
                 <TableCell sx={{ fontSize: '13px', fontWeight: 600, py: 1.5 }}>
-                  <TableSortLabel {...getSortProps('status')}>Estado</TableSortLabel>
+                  <TableSortLabel {...getSortProps('status')}>{t('common.status')}</TableSortLabel>
                 </TableCell>
-                <TableCell sx={{ fontSize: '13px', fontWeight: 600, py: 1.5 }}>Notas</TableCell>
+                <TableCell sx={{ fontSize: '13px', fontWeight: 600, py: 1.5 }}>{t('common.notes')}</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -216,7 +218,7 @@ const CollectionsPaymentsList = (): React.ReactElement => {
                 <TableRow>
                   <TableCell colSpan={6} sx={{ py: 4 }}>
                     <Alert severity="info" sx={{ bgcolor: '#d1ecf1', color: '#0c5460', border: '1px solid #bee5eb' }}>
-                      No hay entradas disponibles
+                      {t('common.noEntries')}
                     </Alert>
                   </TableCell>
                 </TableRow>
@@ -261,7 +263,7 @@ const CollectionsPaymentsList = (): React.ReactElement => {
 
         <Box sx={{ mt: 2 }}>
           <Typography sx={{ fontSize: '13px', color: 'text.secondary' }}>
-            Mostrando {sortedData.length} de {transactions.length} entradas
+            {t('common.showingEntries', { shown: sortedData.length, total: transactions.length })}
           </Typography>
         </Box>
 
@@ -279,7 +281,7 @@ const CollectionsPaymentsList = (): React.ReactElement => {
               minWidth: '120px',
             }}
           >
-            Crear
+            {t('common.create')}
           </Button>
         </Box>
       </Paper>

@@ -1,4 +1,5 @@
 import React, { useState, memo, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Paper,
@@ -53,6 +54,7 @@ function a11yProps(index: number) {
  * Tabbed interface for managing users - Administradores and Bancas
  */
 const UsersTabbedMUI: React.FC = () => {
+  const { t } = useTranslation();
   const [tabValue, setTabValue] = useState<number>(0);
 
   /**
@@ -68,7 +70,7 @@ const UsersTabbedMUI: React.FC = () => {
         {/* Header */}
         <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
           <Typography variant="h5" component="h1" align="center">
-            Lista de usuarios
+            {t('usersAdmin.listTitle')}
           </Typography>
         </Box>
 
@@ -95,13 +97,13 @@ const UsersTabbedMUI: React.FC = () => {
             <Tab
               icon={<AdminIcon />}
               iconPosition="start"
-              label="Administradores"
+              label={t('usersAdmin.administrators')}
               {...a11yProps(0)}
             />
             <Tab
               icon={<StoreIcon />}
               iconPosition="start"
-              label="Bancas"
+              label={t('common.bettingPools')}
               {...a11yProps(1)}
             />
           </Tabs>

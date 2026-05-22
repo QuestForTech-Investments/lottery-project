@@ -1,4 +1,5 @@
 import { memo, type FC, useMemo, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Box, Typography } from '@mui/material';
 import { formatCurrency } from '@/utils/formatCurrency';
 
@@ -57,12 +58,12 @@ interface BancasTabProps {
 }
 
 const FILTER_OPTIONS: FilterOption[] = [
-  { value: 'todos', label: 'Todos' },
-  { value: 'con_ventas', label: 'Con ventas' },
-  { value: 'con_premios', label: 'Con premios' },
-  { value: 'con_tickets_pendientes', label: 'Con tickets pendientes' },
-  { value: 'ventas_negativas', label: 'Con ventas netas negativas' },
-  { value: 'ventas_positivas', label: 'Con ventas netas positivas' },
+  { value: 'todos', label: 'common.all' },
+  { value: 'con_ventas', label: 'sales.filters.withSales' },
+  { value: 'con_premios', label: 'sales.filters.withPrizes' },
+  { value: 'con_tickets_pendientes', label: 'sales.filters.pendingTickets' },
+  { value: 'ventas_negativas', label: 'sales.filters.negativeNet' },
+  { value: 'ventas_positivas', label: 'sales.filters.positiveNet' },
 ];
 
 /**
@@ -76,6 +77,7 @@ export const BancasTab: FC<BancasTabProps> = memo(({
   setFilterType,
   setFiltroRapido,
 }) => {
+  const { t } = useTranslation();
   // Filter data based on type filter and search
   const filteredData = useMemo(() => {
     let result = bancasData;
@@ -113,25 +115,25 @@ export const BancasTab: FC<BancasTabProps> = memo(({
   // Table columns
   const columns: Column<BancaData>[] = useMemo(
     () => [
-      { id: 'ref', label: 'Ref.' },
-      { id: 'codigo', label: 'Código' },
-      { id: 'tickets', label: 'Tickets', align: 'right' },
-      { id: 'venta', label: 'Venta', align: 'right', format: (v) => formatCurrency(v as number) },
-      { id: 'comisiones', label: 'Comisiones', align: 'right', format: (v) => formatCurrency(v as number) },
-      { id: 'descuentos', label: 'Descuentos', align: 'right', format: (v) => formatCurrency(v as number) },
-      { id: 'premios', label: 'Premios', align: 'right', format: (v) => formatCurrency(v as number) },
-      { id: 'neto', label: 'Neto', align: 'right', format: coloredCurrency },
-      { id: 'caida', label: 'Caída', align: 'right', format: greenIfPositive },
-      { id: 'gastos', label: 'Gastos', align: 'right', format: (v) => formatCurrency(v as number) },
-      { id: 'final', label: 'Final', align: 'right', format: coloredCurrency },
+      { id: 'ref', label: t('sales.ref') },
+      { id: 'codigo', label: t('common.code') },
+      { id: 'tickets', label: t('common.tickets'), align: 'right' },
+      { id: 'venta', label: t('sales.venta'), align: 'right', format: (v) => formatCurrency(v as number) },
+      { id: 'comisiones', label: t('sales.comisiones'), align: 'right', format: (v) => formatCurrency(v as number) },
+      { id: 'descuentos', label: t('sales.descuentos'), align: 'right', format: (v) => formatCurrency(v as number) },
+      { id: 'premios', label: t('sales.premios'), align: 'right', format: (v) => formatCurrency(v as number) },
+      { id: 'neto', label: t('sales.neto'), align: 'right', format: coloredCurrency },
+      { id: 'caida', label: t('sales.caida'), align: 'right', format: greenIfPositive },
+      { id: 'gastos', label: t('sales.gastos'), align: 'right', format: (v) => formatCurrency(v as number) },
+      { id: 'final', label: t('sales.final'), align: 'right', format: coloredCurrency },
     ],
-    []
+    [t]
   );
 
   return (
     <>
       <Typography variant="h5" align="center" gutterBottom sx={{ fontWeight: 400, mb: 3, fontSize: '1.7rem' }}>
-        Total:{' '}
+        {t('common.total')}:{' '}
         <Box
           component="span"
           sx={{
@@ -149,16 +151,16 @@ export const BancasTab: FC<BancasTabProps> = memo(({
       {/* Filter toggle */}
       <Box sx={{ mb: 2 }}>
         <FilterToggleGroup
-          options={FILTER_OPTIONS}
+          options={FILTER_OPTIONS.map(o => ({ ...o, label: t(o.label) }))}
           value={filterType}
           onChange={setFilterType}
-          label="Filtrar"
+          label={t('common.filter')}
         />
       </Box>
 
       {/* Search */}
       <Box sx={{ mb: 2 }}>
-        <SearchInput value={filtroRapido} onChange={setFiltroRapido} placeholder="Filtro rapido" />
+        <SearchInput value={filtroRapido} onChange={setFiltroRapido} placeholder={t('common.filterQuick')} />
       </Box>
 
       {/* Data table */}
@@ -166,7 +168,7 @@ export const BancasTab: FC<BancasTabProps> = memo(({
         columns={columns}
         data={filteredData}
         totals={{
-          ref: 'Totales',
+          ref: t('balances.totals'),
           codigo: '-',
           tickets: totals.tickets,
           venta: totals.venta,
@@ -179,11 +181,11 @@ export const BancasTab: FC<BancasTabProps> = memo(({
           final: totals.final,
         }}
         totalsLabel=""
-        emptyMessage="No hay datos de bancas disponibles"
+        emptyMessage={t('sales.noBancasData')}
       />
 
       <Typography variant="caption" sx={{ color: 'text.secondary', mt: 1, display: 'block' }}>
-        Mostrando {filteredData.length} entradas
+        {t('sales.showingEntries', { count: filteredData.length })}
       </Typography>
     </>
   );

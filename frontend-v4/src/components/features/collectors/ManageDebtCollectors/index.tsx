@@ -1,4 +1,5 @@
 import React, { useState, useCallback, type ChangeEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Card,
@@ -44,6 +45,7 @@ const initialFormData: FormData = {
 };
 
 const ManageDebtCollectors = (): React.ReactElement => {
+  const { t } = useTranslation();
   const [quickFilter, setQuickFilter] = useState<string>('');
   const [formData, setFormData] = useState<FormData>(initialFormData);
 
@@ -70,7 +72,7 @@ const ManageDebtCollectors = (): React.ReactElement => {
 
   const handleAgregar = useCallback((): void => {
     if (!formData.usuario || !formData.bancos) {
-      alert('Por favor complete los campos obligatorios');
+      alert(t('collectorsAdmin.manage.msgFillRequired'));
       return;
     }
 
@@ -86,18 +88,18 @@ const ManageDebtCollectors = (): React.ReactElement => {
     // Reset form
     setFormData(initialFormData);
 
-    alert('Cobrador agregado exitosamente');
-  }, [formData, collectors.length]);
+    alert(t('collectorsAdmin.manage.msgAdded'));
+  }, [formData, collectors.length, t]);
 
   const handleEdit = useCallback((id: number): void => {
-    alert(`Editar cobrador ${id} (mockup)`);
-  }, []);
+    alert(t('collectorsAdmin.manage.msgEditMock', { id }));
+  }, [t]);
 
   const handleDelete = useCallback((id: number): void => {
-    if (window.confirm('¿Está seguro que desea eliminar este cobrador?')) {
+    if (window.confirm(t('collectorsAdmin.manage.confirmDelete'))) {
       setCollectors(prev => prev.filter(c => c.id !== id));
     }
-  }, []);
+  }, [t]);
 
   return (
     <Box sx={{ p: 3, bgcolor: '#f5f5f5', minHeight: '100vh' }}>
@@ -114,21 +116,21 @@ const ManageDebtCollectors = (): React.ReactElement => {
               color: '#2c2c2c'
             }}
           >
-            Manejo de cobradores
+            {t('collectorsAdmin.manage.title')}
           </Typography>
 
           {/* Formulario */}
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(4, 1fr)' }, gap: 2, mb: 3 }}>
             {/* Usuario */}
             <FormControl fullWidth>
-              <InputLabel sx={{ fontSize: '12px' }}>Usuario</InputLabel>
+              <InputLabel sx={{ fontSize: '12px' }}>{t('collectorsAdmin.manage.userLabel')}</InputLabel>
               <Select
                 value={formData.usuario}
                 onChange={(e) => handleFormChange('usuario', e.target.value)}
-                label="Usuario"
+                label={t('collectorsAdmin.manage.userLabel')}
                 sx={{ fontSize: '14px' }}
               >
-                <MenuItem value=""><em>Seleccione</em></MenuItem>
+                <MenuItem value=""><em>{t('collectorsAdmin.manage.selectPlaceholder')}</em></MenuItem>
                 <MenuItem value="admin" sx={{ fontSize: '14px' }}>admin</MenuItem>
                 <MenuItem value="carlos" sx={{ fontSize: '14px' }}>carlos</MenuItem>
                 <MenuItem value="pedro" sx={{ fontSize: '14px' }}>pedro</MenuItem>
@@ -138,14 +140,14 @@ const ManageDebtCollectors = (): React.ReactElement => {
 
             {/* Bancas */}
             <FormControl fullWidth>
-              <InputLabel sx={{ fontSize: '12px' }}>Bancas</InputLabel>
+              <InputLabel sx={{ fontSize: '12px' }}>{t('collectorsAdmin.manage.bettingPoolsLabel')}</InputLabel>
               <Select
                 value={formData.bancas}
                 onChange={(e) => handleFormChange('bancas', e.target.value)}
-                label="Bancas"
+                label={t('collectorsAdmin.manage.bettingPoolsLabel')}
                 sx={{ fontSize: '14px' }}
               >
-                <MenuItem value=""><em>Seleccione</em></MenuItem>
+                <MenuItem value=""><em>{t('collectorsAdmin.manage.selectPlaceholder')}</em></MenuItem>
                 <MenuItem value="LA CENTRAL 01" sx={{ fontSize: '14px' }}>LA CENTRAL 01</MenuItem>
                 <MenuItem value="LA CENTRAL 02" sx={{ fontSize: '14px' }}>LA CENTRAL 02</MenuItem>
                 <MenuItem value="BANCA NORTE" sx={{ fontSize: '14px' }}>BANCA NORTE</MenuItem>
@@ -155,14 +157,14 @@ const ManageDebtCollectors = (): React.ReactElement => {
 
             {/* Zonas */}
             <FormControl fullWidth>
-              <InputLabel sx={{ fontSize: '12px' }}>Zonas</InputLabel>
+              <InputLabel sx={{ fontSize: '12px' }}>{t('collectorsAdmin.manage.zonesLabel')}</InputLabel>
               <Select
                 value={formData.zonas}
                 onChange={(e) => handleFormChange('zonas', e.target.value)}
-                label="Zonas"
+                label={t('collectorsAdmin.manage.zonesLabel')}
                 sx={{ fontSize: '14px' }}
               >
-                <MenuItem value=""><em>Seleccione</em></MenuItem>
+                <MenuItem value=""><em>{t('collectorsAdmin.manage.selectPlaceholder')}</em></MenuItem>
                 <MenuItem value="Zona Norte" sx={{ fontSize: '14px' }}>Zona Norte</MenuItem>
                 <MenuItem value="Zona Sur" sx={{ fontSize: '14px' }}>Zona Sur</MenuItem>
                 <MenuItem value="Zona Este" sx={{ fontSize: '14px' }}>Zona Este</MenuItem>
@@ -172,14 +174,14 @@ const ManageDebtCollectors = (): React.ReactElement => {
 
             {/* Bancos */}
             <FormControl fullWidth>
-              <InputLabel sx={{ fontSize: '12px' }}>Bancos</InputLabel>
+              <InputLabel sx={{ fontSize: '12px' }}>{t('collectorsAdmin.manage.banksLabel')}</InputLabel>
               <Select
                 value={formData.bancos}
                 onChange={(e) => handleFormChange('bancos', e.target.value)}
-                label="Bancos"
+                label={t('collectorsAdmin.manage.banksLabel')}
                 sx={{ fontSize: '14px' }}
               >
-                <MenuItem value=""><em>Seleccione</em></MenuItem>
+                <MenuItem value=""><em>{t('collectorsAdmin.manage.selectPlaceholder')}</em></MenuItem>
                 <MenuItem value="BANCO LA CENTRAL" sx={{ fontSize: '14px' }}>BANCO LA CENTRAL</MenuItem>
                 <MenuItem value="BANCO POPULAR" sx={{ fontSize: '14px' }}>BANCO POPULAR</MenuItem>
                 <MenuItem value="BANCO BHD" sx={{ fontSize: '14px' }}>BANCO BHD</MenuItem>
@@ -202,14 +204,14 @@ const ManageDebtCollectors = (): React.ReactElement => {
                 textTransform: 'none'
               }}
             >
-              AGREGAR
+              {t('collectorsAdmin.manage.addButton')}
             </Button>
           </Box>
 
           {/* Quick Filter */}
           <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
             <TextField
-              placeholder="Filtrado rápido"
+              placeholder={t('collectorsAdmin.manage.quickFilterPlaceholder')}
               value={quickFilter}
               onChange={handleQuickFilterChange}
               size="small"
@@ -230,10 +232,10 @@ const ManageDebtCollectors = (): React.ReactElement => {
             <Table>
               <TableHead>
                 <TableRow sx={{ bgcolor: '#e3e3e3' }}>
-                  <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878' }}>Usuario</TableCell>
-                  <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878' }}>Bancas</TableCell>
-                  <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878' }}>Bancos</TableCell>
-                  <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878', textAlign: 'center' }}>Actions</TableCell>
+                  <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878' }}>{t('collectorsAdmin.manage.headerUser')}</TableCell>
+                  <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878' }}>{t('collectorsAdmin.manage.headerBettingPools')}</TableCell>
+                  <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878' }}>{t('collectorsAdmin.manage.headerBanks')}</TableCell>
+                  <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878', textAlign: 'center' }}>{t('collectorsAdmin.manage.headerActions')}</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -264,7 +266,7 @@ const ManageDebtCollectors = (): React.ReactElement => {
                 ) : (
                   <TableRow>
                     <TableCell colSpan={4} sx={{ textAlign: 'center', color: '#999', py: 3 }}>
-                      No hay entradas disponibles
+                      {t('collectorsAdmin.manage.noEntries')}
                     </TableCell>
                   </TableRow>
                 )}
@@ -274,7 +276,7 @@ const ManageDebtCollectors = (): React.ReactElement => {
 
           {/* Footer */}
           <Typography sx={{ textAlign: 'center', fontSize: '12px', color: '#999', mt: 2 }}>
-            Mostrando {filteredCollectors.length} de {collectors.length} entradas
+            {t('collectorsAdmin.manage.showingEntries', { shown: filteredCollectors.length, total: collectors.length })}
           </Typography>
         </CardContent>
       </Card>

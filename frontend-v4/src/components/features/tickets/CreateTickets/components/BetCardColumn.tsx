@@ -1,4 +1,5 @@
 import React, { memo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Box, Paper, IconButton } from '@mui/material';
 import { Trash2 } from 'lucide-react';
 import type { Bet, ColumnType } from '../types';
@@ -66,7 +67,9 @@ const BetCardColumn: React.FC<BetCardColumnProps> = memo(({
   onDeleteBet,
   onDeleteAll,
   total
-}) => (
+}) => {
+  const { t } = useTranslation();
+  return (
   <Paper sx={{ flex: 1, overflow: 'hidden' }}>
     <Box sx={{ bgcolor: headerColor, color: 'white', p: 1, textAlign: 'center', fontWeight: 'bold' }}>
       {title}
@@ -80,8 +83,8 @@ const BetCardColumn: React.FC<BetCardColumnProps> = memo(({
       fontWeight: 'bold',
       borderBottom: '1px solid #ccc',
     }}>
-      <Box sx={{ textAlign: 'center' }}>LOT</Box>
-      <Box sx={{ textAlign: 'center' }}>NUM</Box>
+      <Box sx={{ textAlign: 'center' }}>{t('tickets.create.lotShort')}</Box>
+      <Box sx={{ textAlign: 'center' }}>{t('tickets.create.numShort')}</Box>
       <Box sx={{ textAlign: 'center' }}>$</Box>
       <Box sx={{ textAlign: 'center' }}>
         <IconButton size="small" onClick={() => onDeleteAll(columnType)}>
@@ -113,10 +116,11 @@ const BetCardColumn: React.FC<BetCardColumnProps> = memo(({
       ))}
     </Box>
     <Box sx={{ bgcolor: headerColor, color: 'white', p: 1, textAlign: 'center', fontWeight: 'bold', fontSize: '14px' }}>
-      TOTAL: ${total}
+      {t('common.total').toUpperCase()}: ${total}
     </Box>
   </Paper>
-));
+  );
+});
 
 BetCardColumn.displayName = 'BetCardColumn';
 

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -19,7 +20,7 @@ import {
   Tooltip,
 } from '@mui/material';
 import { DeleteOutline } from '@mui/icons-material';
-import { getTodayDate } from '@/utils/formatters';
+import { getTodayDate, getActiveLocale } from '@/utils/formatters';
 import { formatCurrency } from '@/utils/formatCurrency';
 import {
   getWarnings,
@@ -51,7 +52,7 @@ const SEVERITY_COLORS: Record<WarningSeverity, { bg: string; text: string }> = {
 
 const formatDateTime = (iso: string): string => {
   const d = new Date(iso);
-  return d.toLocaleString('es-DO', {
+  return d.toLocaleString(getActiveLocale(), {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
@@ -201,13 +202,14 @@ const renderResultDiff = (meta: ResultChangeMeta) => {
   );
 };
 
-const PRIORITY_STYLE: Record<NotificationItem['priority'], { bg: string; text: string; label: string }> = {
-  high:   { bg: '#ffebee', text: '#c62828', label: 'ALTA' },
-  medium: { bg: '#fff3e0', text: '#e65100', label: 'MEDIA' },
-  low:    { bg: '#e3f2fd', text: '#1565c0', label: 'BAJA' },
+const PRIORITY_STYLE: Record<NotificationItem['priority'], { bg: string; text: string }> = {
+  high:   { bg: '#ffebee', text: '#c62828' },
+  medium: { bg: '#fff3e0', text: '#e65100' },
+  low:    { bg: '#e3f2fd', text: '#1565c0' },
 };
 
 const WarningsList: React.FC = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [date, setDate] = useState<string>(getTodayDate());
   const [filter, setFilter] = useState<string>('');
@@ -414,13 +416,13 @@ const WarningsList: React.FC = () => {
               fontFamily: 'Montserrat, sans-serif',
             }}
           >
-            Advertencias
+            {t('warningsAdmin.title')}
           </Typography>
 
           <Box sx={{ display: 'flex', gap: 2, mb: 3, alignItems: 'flex-end', flexWrap: 'wrap' }}>
             <TextField
               type="date"
-              label="Fecha"
+              label={t('common.date')}
               value={date}
               onChange={(e) => setDate(e.target.value)}
               size="small"
@@ -428,8 +430,8 @@ const WarningsList: React.FC = () => {
               InputLabelProps={{ shrink: true }}
             />
             <TextField
-              label="Filtrar"
-              placeholder="Banca, usuario, mensaje..."
+              label={t('common.filter')}
+              placeholder={t('warningsAdmin.filterPlaceholder')}
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
               size="small"
@@ -453,7 +455,7 @@ const WarningsList: React.FC = () => {
             <Tab
               label={
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  Tickets
+                  {t('warningsAdmin.tabs.tickets')}
                   {tabBadge(totalTickets + totalResultChanges)}
                 </Box>
               }
@@ -461,7 +463,7 @@ const WarningsList: React.FC = () => {
             <Tab
               label={
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  Notificaciones
+                  {t('warningsAdmin.tabs.notifications')}
                   {tabBadge(unreadNotifications)}
                 </Box>
               }
@@ -469,7 +471,7 @@ const WarningsList: React.FC = () => {
             <Tab
               label={
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  Resultados no publicados
+                  {t('warningsAdmin.tabs.unpublishedResults')}
                   {tabBadge(totalLateResults)}
                 </Box>
               }
@@ -477,7 +479,7 @@ const WarningsList: React.FC = () => {
             <Tab
               label={
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  Historial de resultado no publicado
+                  {t('warningsAdmin.tabs.unpublishedHistory')}
                   {tabBadge(historyWarnings.length)}
                 </Box>
               }
@@ -487,25 +489,25 @@ const WarningsList: React.FC = () => {
           {activeTab === 0 && (
             <>
               {/* Tickets table */}
-              <SectionHeader title="Tickets" count={totalTickets} />
+              <SectionHeader title={t('warningsAdmin.tabs.tickets')} count={totalTickets} />
               <Table size="small" sx={{ mb: 4 }}>
                 <TableHead>
                   <TableRow sx={{ bgcolor: '#f5f5f5' }}>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Tipo</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Banca</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Usuario</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Ticket</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }} align="right">Monto</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }} align="right">Premio</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Mensaje</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Fecha</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>{t('warningsAdmin.cols.type')}</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>{t('common.bettingPool')}</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>{t('common.user')}</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>{t('warningsAdmin.cols.ticket')}</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }} align="right">{t('common.amount')}</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }} align="right">{t('common.prize')}</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>{t('warningsAdmin.cols.message')}</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>{t('common.date')}</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {ticketWarnings.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={8} align="center" sx={{ py: 3, color: '#888' }}>
-                        {loading ? 'Cargando...' : 'No hay advertencias de tickets'}
+                        {loading ? t('common.loading') : t('warningsAdmin.empty.tickets')}
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -555,21 +557,21 @@ const WarningsList: React.FC = () => {
               </Table>
 
               {/* Cambio de resultados table */}
-              <SectionHeader title="Cambio de resultados" count={totalResultChanges} />
+              <SectionHeader title={t('warningsAdmin.sections.resultChanges')} count={totalResultChanges} />
               <Table size="small">
                 <TableHead>
                   <TableRow sx={{ bgcolor: '#f5f5f5' }}>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Sorteo</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Usuario</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Cambios</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Fecha</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>{t('common.draw')}</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>{t('common.user')}</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>{t('warningsAdmin.cols.changes')}</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>{t('common.date')}</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {resultChangeWarnings.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={4} align="center" sx={{ py: 3, color: '#888' }}>
-                        {loading ? 'Cargando...' : 'No hay cambios de resultados'}
+                        {loading ? t('common.loading') : t('warningsAdmin.empty.resultChanges')}
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -596,16 +598,16 @@ const WarningsList: React.FC = () => {
             <Table size="small">
               <TableHead>
                 <TableRow sx={{ bgcolor: '#f5f5f5' }}>
-                  <TableCell sx={{ fontWeight: 'bold' }}>Tipo</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold' }}>Mensaje</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold' }}>Fecha</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold' }}>{t('warningsAdmin.cols.type')}</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold' }}>{t('warningsAdmin.cols.message')}</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold' }}>{t('common.date')}</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {resultLateWarnings.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={3} align="center" sx={{ py: 3, color: '#888' }}>
-                      {loading ? 'Cargando...' : 'No hay resultados pendientes de publicar'}
+                      {loading ? t('common.loading') : t('warningsAdmin.empty.unpublishedResults')}
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -626,7 +628,7 @@ const WarningsList: React.FC = () => {
               <Box sx={{ display: 'flex', gap: 2, mb: 2, alignItems: 'flex-end', flexWrap: 'wrap' }}>
                 <TextField
                   type="number"
-                  label="Últimos N días"
+                  label={t('warningsAdmin.lastNDays')}
                   size="small"
                   value={historyDays}
                   onChange={(e) => {
@@ -640,13 +642,13 @@ const WarningsList: React.FC = () => {
                 {loadingHistory && <CircularProgress size={20} sx={{ color: '#6366f1' }} />}
               </Box>
 
-              <SectionHeader title="Resultados no publicados" count={historyWarnings.length} />
+              <SectionHeader title={t('warningsAdmin.sections.unpublishedResults')} count={historyWarnings.length} />
               <Table size="small">
                 <TableHead>
                   <TableRow sx={{ bgcolor: '#f5f5f5' }}>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Tipo</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Mensaje</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Fecha</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>{t('warningsAdmin.cols.type')}</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>{t('warningsAdmin.cols.message')}</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>{t('common.date')}</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -654,8 +656,8 @@ const WarningsList: React.FC = () => {
                     <TableRow>
                       <TableCell colSpan={3} align="center" sx={{ py: 3, color: '#888' }}>
                         {loadingHistory
-                          ? 'Cargando...'
-                          : `No hay resultados sin publicar en los últimos ${historyDays} días`}
+                          ? t('common.loading')
+                          : t('warningsAdmin.empty.unpublishedHistory', { total: historyDays })}
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -674,28 +676,29 @@ const WarningsList: React.FC = () => {
 
           {activeTab === 1 && (
             <>
-              <SectionHeader title="Notificaciones" count={totalNotifications} />
+              <SectionHeader title={t('warningsAdmin.tabs.notifications')} count={totalNotifications} />
               <Table size="small">
                 <TableHead>
                   <TableRow sx={{ bgcolor: '#f5f5f5' }}>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Prioridad</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Mensaje</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>De</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Recibida</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Expira</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold', textAlign: 'center', width: 56 }}>Acciones</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>{t('warningsAdmin.cols.priority')}</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>{t('warningsAdmin.cols.message')}</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>{t('warningsAdmin.cols.from')}</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>{t('warningsAdmin.cols.received')}</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>{t('warningsAdmin.cols.expires')}</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', textAlign: 'center', width: 56 }}>{t('common.actions')}</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {notifications.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={6} align="center" sx={{ py: 3, color: '#888' }}>
-                        {loadingNotifs ? 'Cargando...' : 'No tiene notificaciones'}
+                        {loadingNotifs ? t('common.loading') : t('warningsAdmin.empty.notifications')}
                       </TableCell>
                     </TableRow>
                   ) : (
                     notifications.map((n) => {
                       const p = PRIORITY_STYLE[n.priority] || PRIORITY_STYLE.medium;
+                      const priorityLabel = t(`warningsAdmin.priority.${n.priority}`);
                       return (
                         <TableRow
                           key={n.notificationId}
@@ -704,7 +707,7 @@ const WarningsList: React.FC = () => {
                         >
                           <TableCell>
                             <Chip
-                              label={p.label}
+                              label={priorityLabel}
                               size="small"
                               sx={{ bgcolor: p.bg, color: p.text, fontWeight: 600 }}
                             />
@@ -716,7 +719,7 @@ const WarningsList: React.FC = () => {
                           <TableCell>{formatDateTime(n.createdAt)}</TableCell>
                           <TableCell>{n.expiresAt ? formatDateTime(n.expiresAt) : '-'}</TableCell>
                           <TableCell align="center">
-                            <Tooltip title="Eliminar">
+                            <Tooltip title={t('common.delete')}>
                               <IconButton
                                 size="small"
                                 onClick={() => handleDeleteNotification(n.notificationId)}

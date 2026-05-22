@@ -964,6 +964,42 @@ public class UsersController : ControllerBase
     /// Set or change the 4-digit PIN for the current admin user.
     /// Clears must_set_pin on success.
     /// </summary>
+    public class SetLanguageDto
+    {
+        /// <summary>BCP-47 language tag: "es" | "en" | "fr" | "ht".</summary>
+        public string Language { get; set; } = string.Empty;
+    }
+
+    /// <summary>
+    /// Set the current user's preferred UI language. Stored on the user row so
+    /// it persists across devices. Allowed: es | en | fr | ht.
+    /// </summary>
+    [HttpPut("me/preferred-language")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> SetMyPreferredLanguage([FromBody] SetLanguageDto dto)
+    {
+        var userId = GetCurrentUserId();
+        if (userId == null) return Unauthorized();
+
+        var allowed = new[] { "es", "en", "fr", "ht" };
+        var lang = dto.Language?.Trim().ToLowerInvariant();
+        if (string.IsNullOrEmpty(lang) || Array.IndexOf(allowed, lang) < 0)
+        {
+            return BadRequest(new { message = "Idioma inválido. Use es, en, fr o ht." });
+        }
+
+        var user = await _userRepository.GetByIdAsync(userId.Value);
+        if (user == null) return NotFound();
+
+        user.PreferredLanguage = lang;
+        user.UpdatedAt = DateTime.UtcNow;
+        await _userRepository.UpdateAsync(user);
+        await _context.SaveChangesAsync();
+
+        return NoContent();
+    }
+
     [HttpPut("me/pin")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]

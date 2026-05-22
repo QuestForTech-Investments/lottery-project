@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { formatCurrency } from '@/utils/formatCurrency';
 import {
   Box, Paper, Typography, TextField, Grid, Autocomplete, Button, Stack,
@@ -61,6 +62,7 @@ interface DailySalesDto {
 const SELECT_ALL_ID = -1;
 
 const SalesByDate = (): React.ReactElement => {
+  const { t } = useTranslation();
   const [fechaInicial, setFechaInicial] = useState<string>(getTodayDate());
   const [fechaFinal, setFechaFinal] = useState<string>(getTodayDate());
   const [bancas, setBancas] = useState<Banca[]>([]);
@@ -188,18 +190,18 @@ const SalesByDate = (): React.ReactElement => {
 
   const handleExportPdf = useCallback(() => {
     if (filteredData.length === 0) {
-      alert('No hay datos para exportar.');
+      alert(t('sales.noDataToExport'));
       return;
     }
     const moneyKeys = new Set(['venta', 'premios', 'comisiones', 'descuentos', 'caida', 'neto']);
     const columns: ExportColumn<Record<string, unknown>>[] = [
-      { key: 'fecha', label: 'Fecha', align: 'left' as const },
-      { key: 'venta', label: 'Venta', align: 'right' as const },
-      { key: 'premios', label: 'Premios', align: 'right' as const },
-      { key: 'comisiones', label: 'Comisiones', align: 'right' as const },
-      { key: 'descuentos', label: 'Descuentos', align: 'right' as const },
-      { key: 'caida', label: 'Caída', align: 'right' as const },
-      { key: 'neto', label: 'Neto', align: 'right' as const },
+      { key: 'fecha', label: t('common.date'), align: 'left' as const },
+      { key: 'venta', label: t('sales.venta'), align: 'right' as const },
+      { key: 'premios', label: t('sales.premios'), align: 'right' as const },
+      { key: 'comisiones', label: t('sales.comisiones'), align: 'right' as const },
+      { key: 'descuentos', label: t('sales.descuentos'), align: 'right' as const },
+      { key: 'caida', label: t('sales.caida'), align: 'right' as const },
+      { key: 'neto', label: t('sales.neto'), align: 'right' as const },
     ].map((c) => ({
       ...c,
       getValue: moneyKeys.has(c.key)
@@ -210,19 +212,19 @@ const SalesByDate = (): React.ReactElement => {
     exportToPdf(
       filteredData as unknown as Record<string, unknown>[],
       columns,
-      `Ventas por fecha — ${fechaInicial} al ${fechaFinal}`,
-      { fecha: 'Totales', ...totals },
+      t('sales.byDateExportTitle', { start: fechaInicial, end: fechaFinal }),
+      { fecha: t('balances.totals'), ...totals },
     );
-  }, [filteredData, fechaInicial, fechaFinal, totals]);
+  }, [filteredData, fechaInicial, fechaFinal, totals, t]);
 
   // Prepend a synthetic "Todas/Todos" entry to drive the bulk toggle.
   const bancaOptions: Banca[] = useMemo(
-    () => [{ id: SELECT_ALL_ID, codigo: '', nombre: 'Todas' } as Banca, ...bancasList],
-    [bancasList],
+    () => [{ id: SELECT_ALL_ID, codigo: '', nombre: t('common.all') } as Banca, ...bancasList],
+    [bancasList, t],
   );
   const zonaOptions: Zona[] = useMemo(
-    () => [{ id: SELECT_ALL_ID, name: 'Todas' } as Zona, ...zonasList],
-    [zonasList],
+    () => [{ id: SELECT_ALL_ID, name: t('common.all') } as Zona, ...zonasList],
+    [zonasList, t],
   );
 
   return (
@@ -230,23 +232,23 @@ const SalesByDate = (): React.ReactElement => {
       <Paper elevation={3}>
         <Box sx={{ p: 3 }}>
           <Typography variant="h5" align="center" sx={{ mb: 4, fontWeight: 400 }}>
-            Ventas por fecha
+            {t('sales.byDate.title')}
           </Typography>
 
           <Grid container spacing={2} sx={{ mb: 2 }}>
             <Grid item xs={12} md={3}>
-              <TextField fullWidth type="date" label="Fecha inicial" value={fechaInicial}
+              <TextField fullWidth type="date" label={t('common.dateStart')} value={fechaInicial}
                 onChange={(e) => setFechaInicial(e.target.value)} InputLabelProps={{ shrink: true }} size="small" />
             </Grid>
             <Grid item xs={12} md={3}>
-              <TextField fullWidth type="date" label="Fecha final" value={fechaFinal}
+              <TextField fullWidth type="date" label={t('common.dateEnd')} value={fechaFinal}
                 onChange={(e) => setFechaFinal(e.target.value)} InputLabelProps={{ shrink: true }} size="small" />
             </Grid>
             <Grid item xs={12} md={3}>
               <Autocomplete
                 multiple
                 options={bancaOptions}
-                getOptionLabel={(o) => (o.id === SELECT_ALL_ID ? 'Todas' : `${o.codigo} - ${o.nombre}`)}
+                getOptionLabel={(o) => (o.id === SELECT_ALL_ID ? t('common.all') : `${o.codigo} - ${o.nombre}`)}
                 isOptionEqualToValue={(o, v) => o.id === v.id}
                 value={bancas}
                 onChange={onBancasChange}
@@ -254,21 +256,21 @@ const SalesByDate = (): React.ReactElement => {
                 renderInput={(params) => (
                   <TextField
                     {...params}
-                    label="Bancas"
+                    label={t('common.bettingPools')}
                     size="small"
                     InputProps={{
                       ...params.InputProps,
                       startAdornment: bancas.length > 0 ? (
                         <InputAdornment position="start" sx={{ ml: 1 }}>
                           {bancas.length === bancasList.length && bancasList.length > 0
-                            ? 'Todas'
+                            ? t('common.all')
                             : bancas.length === 1
                               ? `${bancas[0].codigo} - ${bancas[0].nombre}`
-                              : `${bancas.length} seleccionadas`}
+                              : t('balances.selectedCount', { count: bancas.length })}
                         </InputAdornment>
                       ) : null,
                     }}
-                    placeholder={bancas.length === 0 ? 'Seleccione' : ''}
+                    placeholder={bancas.length === 0 ? t('common.select') : ''}
                   />
                 )}
               />
@@ -285,21 +287,21 @@ const SalesByDate = (): React.ReactElement => {
                 renderInput={(params) => (
                   <TextField
                     {...params}
-                    label="Zonas"
+                    label={t('common.zones')}
                     size="small"
                     InputProps={{
                       ...params.InputProps,
                       startAdornment: zonas.length > 0 ? (
                         <InputAdornment position="start" sx={{ ml: 1 }}>
                           {zonas.length === zonasList.length && zonasList.length > 0
-                            ? 'Todas'
+                            ? t('common.all')
                             : zonas.length === 1
                               ? zonas[0].name
-                              : `${zonas.length} seleccionadas`}
+                              : t('balances.selectedCount', { count: zonas.length })}
                         </InputAdornment>
                       ) : null,
                     }}
-                    placeholder={zonas.length === 0 ? 'Seleccione' : ''}
+                    placeholder={zonas.length === 0 ? t('common.select') : ''}
                   />
                 )}
               />
@@ -321,7 +323,7 @@ const SalesByDate = (): React.ReactElement => {
                 color: 'white',
               }}
             >
-              Ver ventas
+              {t('transactions.viewSales')}
             </Button>
             <Button
               variant="contained"
@@ -342,7 +344,7 @@ const SalesByDate = (): React.ReactElement => {
           <Box sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end' }}>
             <TextField
               size="small"
-              placeholder="Filtrado rápido"
+              placeholder={t('common.filterQuick')}
               value={filtroRapido}
               onChange={(e) => setFiltroRapido(e.target.value)}
               InputProps={{
@@ -359,20 +361,20 @@ const SalesByDate = (): React.ReactElement => {
           <Table size="small">
             <TableHead sx={{ backgroundColor: '#e3e3e3' }}>
               <TableRow>
-                <TableCell sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.75rem' }}><TableSortLabel {...getSortProps('fecha')}>Fecha</TableSortLabel></TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.75rem' }}><TableSortLabel {...getSortProps('venta')}>Venta</TableSortLabel></TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.75rem' }}><TableSortLabel {...getSortProps('premios')}>Premios</TableSortLabel></TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.75rem' }}><TableSortLabel {...getSortProps('comisiones')}>Comisiones</TableSortLabel></TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.75rem' }}><TableSortLabel {...getSortProps('descuentos')}>Descuentos</TableSortLabel></TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.75rem' }}><TableSortLabel {...getSortProps('caida')}>Caída</TableSortLabel></TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.75rem' }}><TableSortLabel {...getSortProps('neto')}>Neto</TableSortLabel></TableCell>
+                <TableCell sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.75rem' }}><TableSortLabel {...getSortProps('fecha')}>{t('common.date')}</TableSortLabel></TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.75rem' }}><TableSortLabel {...getSortProps('venta')}>{t('sales.venta')}</TableSortLabel></TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.75rem' }}><TableSortLabel {...getSortProps('premios')}>{t('sales.premios')}</TableSortLabel></TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.75rem' }}><TableSortLabel {...getSortProps('comisiones')}>{t('sales.comisiones')}</TableSortLabel></TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.75rem' }}><TableSortLabel {...getSortProps('descuentos')}>{t('sales.descuentos')}</TableSortLabel></TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.75rem' }}><TableSortLabel {...getSortProps('caida')}>{t('sales.caida')}</TableSortLabel></TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.75rem' }}><TableSortLabel {...getSortProps('neto')}>{t('sales.neto')}</TableSortLabel></TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {sortedData.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} align="center" sx={{ py: 3, color: 'text.secondary' }}>
-                    No hay entradas disponibles
+                    {t('common.noEntries')}
                   </TableCell>
                 </TableRow>
               ) : (
@@ -389,7 +391,7 @@ const SalesByDate = (): React.ReactElement => {
                     </TableRow>
                   ))}
                   <TableRow sx={{ backgroundColor: '#f5f7fa', '& td': { fontWeight: 600 } }}>
-                    <TableCell>Totales</TableCell>
+                    <TableCell>{t('balances.totals')}</TableCell>
                     <TableCell align="right">{formatCurrency(totals.venta)}</TableCell>
                     <TableCell align="right">{formatCurrency(totals.premios)}</TableCell>
                     <TableCell align="right">{formatCurrency(totals.comisiones)}</TableCell>
@@ -402,7 +404,7 @@ const SalesByDate = (): React.ReactElement => {
             </TableBody>
           </Table>
           <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-            Mostrando {filteredData.length} de {data.length} entradas
+            {t('common.showingEntries', { shown: filteredData.length, total: data.length })}
           </Typography>
         </Box>
       </Paper>

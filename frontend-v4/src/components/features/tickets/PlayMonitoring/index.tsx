@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Paper,
@@ -19,7 +20,7 @@ import {
   Button,
 } from '@mui/material';
 import { PictureAsPdf } from '@mui/icons-material';
-import { getTodayDate } from '@/utils/formatters';
+import { getTodayDate , getActiveLocale } from '@/utils/formatters';
 import { formatCurrency } from '@/utils/formatCurrency';
 import {
   getPlaysByNumber,
@@ -73,6 +74,7 @@ const SingleNumberSection: React.FC<{
   betTypeCode: string;
   rows: PlayByNumberRow[];
 }> = ({ name, betTypeCode, rows }) => {
+  const { t } = useTranslation();
   const hover = React.useContext(HoverCtx);
   const [filter, setFilter] = useState<string>('');
   const maxDigits = expectedDigits(betTypeCode) || 2;
@@ -158,7 +160,7 @@ const SingleNumberSection: React.FC<{
               N°
             </Typography>
             <Typography sx={{ fontSize: '10px', fontWeight: 600, color: '#94a3b8', letterSpacing: 1 }}>
-              MONTO
+              {t('common.amount').toUpperCase()}
             </Typography>
           </Box>
         ))}
@@ -221,7 +223,7 @@ const SingleNumberSection: React.FC<{
                   fontWeight: 600,
                   color: style.amtColor,
                 }}>
-                  {cell.amount > 0 ? cell.amount.toLocaleString('es-DO', { maximumFractionDigits: 0 }) : 0}
+                  {cell.amount > 0 ? cell.amount.toLocaleString(getActiveLocale(), { maximumFractionDigits: 0 }) : 0}
                 </Typography>
               </Box>
             );
@@ -238,6 +240,7 @@ const CombinationSection: React.FC<{
   rows: PlayByNumberRow[];
   grandTotal: number;
 }> = ({ name, betTypeCode, rows, grandTotal }) => {
+  const { t } = useTranslation();
   const hover = React.useContext(HoverCtx);
   const [filter, setFilter] = useState<string>('');
   const maxDigits = expectedDigits(betTypeCode) || 6;
@@ -294,7 +297,7 @@ const CombinationSection: React.FC<{
           N° <Box component="span" sx={{ color: '#cbd5e1', fontWeight: 400 }}>({lineCount})</Box>
         </Typography>
         <Typography sx={{ fontSize: '10px', fontWeight: 600, color: '#94a3b8', letterSpacing: 1 }}>
-          MONTO
+          {t('common.amount').toUpperCase()}
         </Typography>
       </Box>
 
@@ -313,7 +316,7 @@ const CombinationSection: React.FC<{
       >
         {visible.length === 0 && (
           <Box sx={{ px: 1.5, py: 1, color: '#94a3b8', fontSize: '12px', textAlign: 'center' }}>
-            Sin coincidencias
+            {t('common.noResults')}
           </Box>
         )}
         {visible.map((r) => (
@@ -340,7 +343,7 @@ const CombinationSection: React.FC<{
               {formatBetNumber(betTypeCode, r.betNumber)}
             </Typography>
             <Typography sx={{ fontFamily: 'monospace', fontSize: '16px', fontWeight: 600, color: NEUTRAL.amtColor }}>
-              {r.totalAmount.toLocaleString('es-DO', { maximumFractionDigits: 0 })}
+              {r.totalAmount.toLocaleString(getActiveLocale(), { maximumFractionDigits: 0 })}
             </Typography>
           </Box>
         ))}
@@ -350,6 +353,7 @@ const CombinationSection: React.FC<{
 };
 
 const PlayMonitoring: React.FC = () => {
+  const { t } = useTranslation();
   const [date, setDate] = useState<string>(getTodayDate());
   const [zones, setZones] = useState<Zone[]>([]);
   const [selectedZoneIds, setSelectedZoneIds] = useState<number[]>([]);
@@ -456,12 +460,12 @@ const PlayMonitoring: React.FC = () => {
       setRows(data);
     } catch (e) {
       console.error(e);
-      setError('Error al cargar el monitoreo');
+      setError(t('tickets.plays.loadError'));
       setRows([]);
     } finally {
       setLoading(false);
     }
-  }, [date, selectedDrawId, selectedZoneIds, selectedBanca]);
+  }, [date, selectedDrawId, selectedZoneIds, selectedBanca, t]);
 
   useEffect(() => {
     fetchData();
@@ -548,11 +552,11 @@ const PlayMonitoring: React.FC = () => {
         } catch (e) {
           if (lastFetchKey.current !== fetchKey) return;
           console.error(e);
-          setHoverState({ anchor, betTypeCode, betNumber, loading: false, rows: [], error: 'Error al cargar' });
+          setHoverState({ anchor, betTypeCode, betNumber, loading: false, rows: [], error: t('actionsMessages.loadError') });
         }
       }, 200);
     },
-    [date, selectedDrawId, selectedZoneIds, selectedBanca],
+    [date, selectedDrawId, selectedZoneIds, selectedBanca, t],
   );
 
   const hideDetail = useCallback(() => {
@@ -578,14 +582,14 @@ const PlayMonitoring: React.FC = () => {
     const esc = (s: string) =>
       s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-    const filters: string[] = [`Fecha: ${date}`];
-    if (drawLabel) filters.push(`Sorteo: ${drawLabel}`);
+    const filters: string[] = [`${t('common.date')}: ${date}`];
+    if (drawLabel) filters.push(`${t('common.draw')}: ${drawLabel}`);
     if (selectedZoneIds.length > 0) {
       const names = zones.filter((z) => selectedZoneIds.includes(z.zoneId)).map((z) => z.zoneName).join(', ');
-      filters.push(`Zonas: ${names}`);
+      filters.push(`${t('common.zones')}: ${names}`);
     }
     if (selectedBanca) {
-      filters.push(`Banca: ${selectedBanca.bettingPoolCode ? `${selectedBanca.bettingPoolCode} - ` : ''}${selectedBanca.bettingPoolName}`);
+      filters.push(`${t('common.bettingPool')}: ${selectedBanca.bettingPoolCode ? `${selectedBanca.bettingPoolCode} - ` : ''}${selectedBanca.bettingPoolName}`);
     }
 
     const sectionsHtml = allGroups
@@ -599,7 +603,7 @@ const PlayMonitoring: React.FC = () => {
             <tr>
               <td style="font-family:monospace">${esc(formatBetNumber(code, r.betNumber))}</td>
               <td style="text-align:right">${r.lineCount}</td>
-              <td style="text-align:right;font-family:monospace">${r.totalAmount.toLocaleString('es-DO', { maximumFractionDigits: 0 })}</td>
+              <td style="text-align:right;font-family:monospace">${r.totalAmount.toLocaleString(getActiveLocale(), { maximumFractionDigits: 0 })}</td>
             </tr>`,
           )
           .join('');
@@ -612,9 +616,9 @@ const PlayMonitoring: React.FC = () => {
             <table>
               <thead>
                 <tr>
-                  <th>Número</th>
-                  <th style="text-align:right">Líneas</th>
-                  <th style="text-align:right">Monto</th>
+                  <th>${esc(t('common.number'))}</th>
+                  <th style="text-align:right">${esc(t('tickets.plays.lines'))}</th>
+                  <th style="text-align:right">${esc(t('common.amount'))}</th>
                 </tr>
               </thead>
               <tbody>${body}</tbody>
@@ -623,7 +627,7 @@ const PlayMonitoring: React.FC = () => {
       })
       .join('');
 
-    const title = `Monitoreo de jugadas — ${drawLabel ?? `Sorteo ${selectedDrawId}`}`;
+    const title = `${t('tickets.plays.title')} — ${drawLabel ?? `${t('common.draw')} ${selectedDrawId}`}`;
 
     w.document.write(`<!doctype html>
 <html lang="es">
@@ -650,13 +654,13 @@ const PlayMonitoring: React.FC = () => {
 <body>
   <h1>${esc(title)}</h1>
   <div class="filters">${filters.map(esc).join(' &nbsp;·&nbsp; ')}</div>
-  <div class="grand">Total: ${esc(formatCurrency(grandTotal))}</div>
+  <div class="grand">${esc(t('common.total'))}: ${esc(formatCurrency(grandTotal))}</div>
   <div class="grid">${sectionsHtml}</div>
   <script>window.onload = () => setTimeout(() => window.print(), 250);</script>
 </body>
 </html>`);
     w.document.close();
-  }, [allGroups, date, drawLabel, grandTotal, rows.length, selectedBanca, selectedDrawId, selectedZoneIds, zones]);
+  }, [allGroups, date, drawLabel, grandTotal, rows.length, selectedBanca, selectedDrawId, selectedZoneIds, zones, t]);
 
   return (
     <HoverCtx.Provider value={hoverCtxValue}>
@@ -667,13 +671,13 @@ const PlayMonitoring: React.FC = () => {
             align="center"
             sx={{ color: '#2c2c2c', mb: 3, fontWeight: 500, fontFamily: 'Montserrat, sans-serif' }}
           >
-            Monitoreo de jugadas
+            {t('tickets.plays.title')}
           </Typography>
 
           <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 2, mb: 2 }}>
             <TextField
               type="date"
-              label="Fecha"
+              label={t('common.date')}
               value={date}
               onChange={(e) => setDate(e.target.value)}
               size="small"
@@ -682,7 +686,7 @@ const PlayMonitoring: React.FC = () => {
             <TextField
               select
               size="small"
-              label="Sorteo"
+              label={t('common.draw')}
               value={selectedDrawId ?? ''}
               onChange={(e) => setSelectedDrawId(e.target.value ? Number(e.target.value) : null)}
             >
@@ -700,7 +704,7 @@ const PlayMonitoring: React.FC = () => {
               onChange={(_, vals) => setSelectedZoneIds(vals.map((v) => v.zoneId))}
               getOptionLabel={(z) => z.zoneName}
               isOptionEqualToValue={(a, b) => a.zoneId === b.zoneId}
-              renderInput={(params) => <TextField {...params} label="Zonas" placeholder="Todas" />}
+              renderInput={(params) => <TextField {...params} label={t('common.zones')} placeholder={t('common.all')} />}
               renderTags={(value, getTagProps) =>
                 value.map((option, index) => (
                   <Chip size="small" label={option.zoneName} {...getTagProps({ index })} key={option.zoneId} />
@@ -714,14 +718,14 @@ const PlayMonitoring: React.FC = () => {
               onChange={(_, v) => setSelectedBanca(v)}
               getOptionLabel={(b) => (b.bettingPoolCode ? `${b.bettingPoolCode} — ${b.bettingPoolName}` : b.bettingPoolName)}
               isOptionEqualToValue={(a, b) => a.bettingPoolId === b.bettingPoolId}
-              renderInput={(params) => <TextField {...params} label="Banca" placeholder="Todas" />}
+              renderInput={(params) => <TextField {...params} label={t('common.bettingPool')} placeholder={t('common.all')} />}
             />
           </Box>
 
           {selectedDrawId && (
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2, my: 2, flexWrap: 'wrap' }}>
               <Typography sx={{ fontSize: '22px', fontWeight: 500, fontFamily: 'Montserrat, sans-serif', color: '#2c2c2c' }}>
-                Total para sorteo <b>{drawLabel}</b>:{' '}
+                {t('tickets.plays.totalForDraw')} <b>{drawLabel}</b>:{' '}
                 <Box component="span" sx={{ color: '#2c2c2c', fontWeight: 700 }}>
                   {formatCurrency(grandTotal)}
                 </Box>
@@ -748,7 +752,7 @@ const PlayMonitoring: React.FC = () => {
 
           {!selectedDrawId && (
             <Typography sx={{ textAlign: 'center', color: '#888', py: 6, fontSize: '15px' }}>
-              Selecciona un <b>sorteo</b> para ver las jugadas.
+              {t('tickets.plays.selectDrawPrompt')}
             </Typography>
           )}
 
@@ -764,7 +768,7 @@ const PlayMonitoring: React.FC = () => {
 
           {selectedDrawId && !loading && !error && rows.length === 0 && (
             <Typography sx={{ textAlign: 'center', color: '#888', py: 4 }}>
-              No hay jugadas registradas para los filtros seleccionados.
+              {t('tickets.plays.noPlaysForFilters')}
             </Typography>
           )}
 
@@ -812,16 +816,16 @@ const PlayMonitoring: React.FC = () => {
               )}
               {!hoverState.loading && !hoverState.error && hoverState.rows.length === 0 && (
                 <Typography sx={{ color: '#888', fontSize: '12px', textAlign: 'center', py: 1 }}>
-                  Sin coincidencias
+                  {t('common.noResults')}
                 </Typography>
               )}
               {!hoverState.loading && !hoverState.error && hoverState.rows.length > 0 && (
                 <Table size="small">
                   <TableHead>
                     <TableRow sx={{ bgcolor: '#e3f2fd' }}>
-                      <TableCell sx={{ fontWeight: 700, fontSize: '11px', py: 0.5, color: '#1976d2', letterSpacing: 0.3 }}>BANCA</TableCell>
-                      <TableCell sx={{ fontWeight: 700, fontSize: '11px', py: 0.5, color: '#1976d2', letterSpacing: 0.3 }}>REFERENCIA</TableCell>
-                      <TableCell sx={{ fontWeight: 700, fontSize: '11px', py: 0.5, color: '#1976d2', letterSpacing: 0.3 }} align="right">IMPORTE</TableCell>
+                      <TableCell sx={{ fontWeight: 700, fontSize: '11px', py: 0.5, color: '#1976d2', letterSpacing: 0.3 }}>{t('common.bettingPool').toUpperCase()}</TableCell>
+                      <TableCell sx={{ fontWeight: 700, fontSize: '11px', py: 0.5, color: '#1976d2', letterSpacing: 0.3 }}>{t('tickets.plays.reference').toUpperCase()}</TableCell>
+                      <TableCell sx={{ fontWeight: 700, fontSize: '11px', py: 0.5, color: '#1976d2', letterSpacing: 0.3 }} align="right">{t('common.amount').toUpperCase()}</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -837,7 +841,7 @@ const PlayMonitoring: React.FC = () => {
                           {r.reference || '-'}
                         </TableCell>
                         <TableCell sx={{ fontSize: '12px', py: 0.5, textAlign: 'right', fontFamily: 'monospace', fontWeight: 600 }}>
-                          {r.totalAmount.toLocaleString('es-DO', { maximumFractionDigits: 0 })}
+                          {r.totalAmount.toLocaleString(getActiveLocale(), { maximumFractionDigits: 0 })}
                         </TableCell>
                       </TableRow>
                     ))}

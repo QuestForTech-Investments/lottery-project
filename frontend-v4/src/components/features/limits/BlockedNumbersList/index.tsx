@@ -6,6 +6,7 @@ import {
 } from '@mui/material';
 import { Delete as DeleteIcon, Refresh as RefreshIcon } from '@mui/icons-material';
 import { getBlockedNumbers, deleteBlockedNumber, type BlockedNumber } from '@/services/blockedNumbersService';
+import { getActiveLocale } from '@/utils/formatters';
 
 const ACCENT = '#6366f1';
 
@@ -60,7 +61,7 @@ const BlockedNumbersList: React.FC = () => {
 
   const formatDate = (d?: string | null) => {
     if (!d) return '—';
-    try { return new Date(d).toLocaleDateString('es-DO', { day: '2-digit', month: '2-digit', year: 'numeric' }); }
+    try { return new Date(d).toLocaleDateString(getActiveLocale(), { day: '2-digit', month: '2-digit', year: 'numeric' }); }
     catch { return d; }
   };
 

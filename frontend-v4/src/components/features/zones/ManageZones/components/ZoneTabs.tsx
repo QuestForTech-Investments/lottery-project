@@ -5,6 +5,7 @@
  */
 
 import { memo, type FC } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Box, Tabs, Tab, IconButton, Typography } from '@mui/material';
 import { ChevronLeft, ChevronRight } from '@mui/icons-material';
 import type { ZoneTabsProps } from '../types';
@@ -18,7 +19,9 @@ const ZoneTabs: FC<ZoneTabsProps> = memo(({
   onTabChange,
   onScrollLeft,
   onScrollRight,
-}) => (
+}) => {
+  const { t } = useTranslation();
+  return (
   <Box sx={{ display: 'flex', alignItems: 'center', borderBottom: 1, borderColor: 'divider', bgcolor: '#f8f9fa', position: 'relative' }}>
     <IconButton
       onClick={onScrollLeft}
@@ -32,7 +35,7 @@ const ZoneTabs: FC<ZoneTabsProps> = memo(({
       {zones.length === 0 ? (
         <Box sx={{ p: 3, textAlign: 'center', color: 'text.secondary', width: '100%' }}>
           <Typography variant="body2">
-            No se encontraron zonas que coincidan con "{searchText}"
+            {t('zonesAdmin.noSearchMatchesQuery', { query: searchText })}
           </Typography>
         </Box>
       ) : (
@@ -58,7 +61,8 @@ const ZoneTabs: FC<ZoneTabsProps> = memo(({
       <ChevronRight />
     </IconButton>
   </Box>
-));
+  );
+});
 
 ZoneTabs.displayName = 'ZoneTabs';
 

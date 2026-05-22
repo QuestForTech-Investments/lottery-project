@@ -5,6 +5,7 @@
  */
 
 import { memo, type FC } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Typography,
@@ -66,10 +67,11 @@ const ResultsTableSection: FC<ResultsTableSectionProps> = memo(({
   onDelete,
   onEdit,
 }) => {
+  const { t } = useTranslation();
   return (
     <Box sx={{ mt: 2 }} className="results-table-section">
       <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: COLORS.primary }}>
-        Resultados {selectedDate}
+        {t('resultsAdmin.table.heading', { date: selectedDate })}
       </Typography>
 
       {/* Action buttons and filter */}
@@ -93,7 +95,7 @@ const ResultsTableSection: FC<ResultsTableSectionProps> = memo(({
               color: '#fff',
             }}
           >
-            PUBLICAR RESULTADOS
+            {t('resultsAdmin.table.publishAll')}
           </Button>
           <Button
             variant="contained"
@@ -110,12 +112,12 @@ const ResultsTableSection: FC<ResultsTableSectionProps> = memo(({
               borderRadius: 6,
             }}
           >
-            DESBLOQUEAR
+            {t('resultsAdmin.table.unlock')}
           </Button>
         </Box>
         <TextField
           size="small"
-          placeholder="Filtrar sorteo..."
+          placeholder={t('resultsAdmin.table.filterPlaceholder')}
           value={drawFilter}
           onChange={(e) => onDrawFilterChange(e.target.value)}
           sx={{
@@ -138,28 +140,28 @@ const ResultsTableSection: FC<ResultsTableSectionProps> = memo(({
             <TableHead>
               <TableRow>
                 <TableCell sx={{ fontWeight: 600, bgcolor: COLORS.headerBg, minWidth: 140, fontSize: '13px', color: '#555' }}>
-                  Sorteos
+                  {t('resultsAdmin.common.drawColumn')}
                 </TableCell>
                 <TableCell align="center" sx={{ fontWeight: 600, bgcolor: COLORS.headerBg, minWidth: 55, fontSize: '13px', color: '#555' }}>
-                  1ra
+                  {t('resultsAdmin.table.headers.first')}
                 </TableCell>
                 <TableCell align="center" sx={{ fontWeight: 600, bgcolor: COLORS.headerBg, minWidth: 55, fontSize: '13px', color: '#555' }}>
-                  2da
+                  {t('resultsAdmin.table.headers.second')}
                 </TableCell>
                 <TableCell align="center" sx={{ fontWeight: 600, bgcolor: COLORS.headerBg, minWidth: 55, fontSize: '13px', color: '#555' }}>
-                  3ra
+                  {t('resultsAdmin.table.headers.third')}
                 </TableCell>
                 <TableCell align="center" sx={{ fontWeight: 600, bgcolor: COLORS.headerBg, minWidth: 65, fontSize: '13px', color: '#555' }}>
-                  Pick 3
+                  {t('resultsAdmin.table.headers.pick3')}
                 </TableCell>
                 <TableCell align="center" sx={{ fontWeight: 600, bgcolor: COLORS.headerBg, minWidth: 65, fontSize: '13px', color: '#555' }}>
-                  Pick 4
+                  {t('resultsAdmin.table.headers.pick4')}
                 </TableCell>
                 <TableCell align="center" sx={{ fontWeight: 600, bgcolor: COLORS.headerBg, minWidth: 75, fontSize: '13px', color: '#555' }}>
-                  Pick 5
+                  {t('resultsAdmin.table.headers.pick5')}
                 </TableCell>
                 <TableCell align="center" sx={{ fontWeight: 600, bgcolor: COLORS.headerBg, minWidth: 110, fontSize: '13px', color: '#555' }}>
-                  Acciones
+                  {t('common.actions')}
                 </TableCell>
               </TableRow>
             </TableHead>
@@ -167,7 +169,7 @@ const ResultsTableSection: FC<ResultsTableSectionProps> = memo(({
               {filteredDrawResults.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={8} align="center" sx={{ py: 4, color: 'text.secondary' }}>
-                    {drawFilter ? 'No se encontraron sorteos' : 'No hay sorteos configurados'}
+                    {drawFilter ? t('resultsAdmin.table.noDrawsFound') : t('resultsAdmin.table.noDrawsConfigured')}
                   </TableCell>
                 </TableRow>
               ) : (
@@ -200,11 +202,10 @@ const ResultsTableSection: FC<ResultsTableSectionProps> = memo(({
         }}
       >
         <Typography variant="body2" color="text.secondary">
-          Total: {totalCount} sorteos | Con resultado: {withResultsCount} |
-          Pendientes: {pendingCount}
+          {t('resultsAdmin.table.summary', { total: totalCount, withResults: withResultsCount, pending: pendingCount })}
         </Typography>
         <Typography variant="caption" color="text.secondary">
-          Última actualización: {lastRefresh.toLocaleTimeString()}
+          {t('resultsAdmin.table.lastRefresh', { time: lastRefresh.toLocaleTimeString() })}
         </Typography>
       </Box>
     </Box>

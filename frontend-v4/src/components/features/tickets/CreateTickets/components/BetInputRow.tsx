@@ -1,4 +1,5 @@
 import React, { memo, type RefObject, type KeyboardEvent, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Box, TextField, Typography, IconButton } from '@mui/material';
 import type { Draw } from '../types';
 
@@ -56,6 +57,7 @@ const BetInputRow: React.FC<BetInputRowProps> = memo(({
   compoundMode = false,
   onOpenConvertModal,
 }) => {
+  const { t } = useTranslation();
   const handleAmountChange = (value: string) => {
     const pattern = allowSplitAmount
       ? /^\d*\.?\d*(\+\d*\.?\d*)?$/
@@ -92,18 +94,18 @@ const BetInputRow: React.FC<BetInputRowProps> = memo(({
     middleTextColor = '#666';
     middleFontSize = '28px';
   } else if (limitChecking) {
-    middleText = 'Buscando...';
+    middleText = t('tickets.create.searching');
     middleBgColor = '#fff8e1';
     middleTextColor = '#8d6e00';
     middleFontSize = '16px';
   } else if (hasLimit) {
     if (limitAvailable === -1) {
-      middleText = 'Sin Límite';
+      middleText = t('tickets.create.noLimit');
       middleBgColor = '#e8f5e9';
       middleTextColor = '#2e7d32';
       middleFontSize = '18px';
     } else if (limitAvailable === 0) {
-      middleText = 'BLOQUEADO';
+      middleText = t('ticketStatus.blocked').toUpperCase();
       middleBgColor = '#c62828';
       middleTextColor = '#fff';
       middleFontSize = '18px';
@@ -119,7 +121,7 @@ const BetInputRow: React.FC<BetInputRowProps> = memo(({
   <>
     <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
       <TextField
-        placeholder="JUGADA"
+        placeholder={t('tickets.create.playPlaceholder')}
         value={betNumber}
         onChange={(e) => {
           const next = e.target.value.toUpperCase();
@@ -163,7 +165,7 @@ const BetInputRow: React.FC<BetInputRowProps> = memo(({
         }}
       />
       <TextField
-        placeholder="MONTO"
+        placeholder={t('tickets.create.amountPlaceholder')}
         value={amount}
         onChange={(e) => handleAmountChange(e.target.value)}
         onKeyDown={onAmountKeyDown}
@@ -185,18 +187,18 @@ const BetInputRow: React.FC<BetInputRowProps> = memo(({
         onClick={onAddBet}
         disabled={!betNumber || !amount || !selectedDraw || limitChecking}
         sx={{ bgcolor: '#8b5cf6', color: 'white', '&:hover': { bgcolor: '#7c3aed' } }}
-        title={limitChecking ? 'Esperando disponibilidad...' : 'Agregar jugada (o presione Enter)'}
+        title={limitChecking ? t('tickets.create.waitingAvailability') : t('tickets.create.addPlayHint')}
       >
         ➕
       </IconButton>
       <Typography sx={{ fontSize: '14px', color: '#666' }}>
-        <strong>Jugadas:</strong> {totalBets}
+        <strong>{t('tickets.create.plays')}:</strong> {totalBets}
       </Typography>
       <Typography sx={{ fontSize: '14px', color: '#666' }}>
-        <strong>Total:</strong> ${grandTotal}
+        <strong>{t('tickets.create.totalLabel')}:</strong> ${grandTotal}
       </Typography>
       <Typography sx={{ fontSize: '12px', color: '#888', fontStyle: 'italic', ml: 'auto' }}>
-        Use Tab para navegar, Enter para agregar
+        {t('tickets.create.tabHint')}
       </Typography>
     </Box>
   </>

@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import api from '@/services/api';
 import {
   Box,
@@ -70,6 +71,7 @@ interface TableColumn {
  * Modern Material-UI version of BancasList
  */
 const BancasListMUI: React.FC = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const {
     bettingPools,
@@ -120,17 +122,17 @@ const BancasListMUI: React.FC = () => {
 
   const handleSaveCaida = async (): Promise<void> => {
     const val = parseFloat(caidaNewValue);
-    if (isNaN(val)) { setCaidaError('Ingrese un valor válido'); return; }
-    if (val > 0) { setCaidaError('La caída acumulada debe ser negativa o cero'); return; }
+    if (isNaN(val)) { setCaidaError(t('bettingPoolsAdmin.enterValidValue')); return; }
+    if (val > 0) { setCaidaError(t('bettingPoolsAdmin.accumulatedFallMustBeNegative')); return; }
 
     setCaidaSaving(true);
     try {
       await updateAccumulatedFall(caidaModal.poolId, val);
       setCaidaModal({ open: false, poolId: 0, poolName: '', currentValue: 0 });
-      setSnackbar({ open: true, message: 'Caída acumulada actualizada' });
+      setSnackbar({ open: true, message: t('bettingPoolsAdmin.accumulatedFallUpdated') });
       handleRefresh();
     } catch {
-      setCaidaError('Error al actualizar la caída acumulada');
+      setCaidaError(t('bettingPoolsAdmin.accumulatedFallUpdateError'));
     } finally {
       setCaidaSaving(false);
     }
@@ -156,7 +158,7 @@ const BancasListMUI: React.FC = () => {
         u => u.username.toLowerCase() === confirmTarget.username.toLowerCase()
       );
       if (!match) {
-        alert('No se encontró el usuario en esta banca.');
+        alert(t('bettingPoolsAdmin.userNotFoundInPool'));
         setConfirmTarget(null);
         return;
       }
@@ -164,7 +166,7 @@ const BancasListMUI: React.FC = () => {
       setTempDialog({ open: true, username: res.username, password: res.temporaryPassword });
       setConfirmTarget(null);
     } catch (err) {
-      alert(handleApiError(err) || 'No se pudo generar la clave temporal');
+      alert(handleApiError(err) || t('bettingPoolsAdmin.couldNotGenerateTempPassword'));
       setConfirmTarget(null);
     } finally {
       setGeneratingPassword(false);
@@ -196,16 +198,16 @@ const BancasListMUI: React.FC = () => {
    * Table columns configuration
    */
   const columns: TableColumn[] = [
-    { id: 'number', label: 'Número', sortable: true, align: 'left' },
-    { id: 'name', label: 'Nombre', sortable: true, align: 'left' },
-    { id: 'reference', label: 'Referencia', sortable: true, align: 'left' },
-    { id: 'users', label: 'Usuarios', sortable: true, align: 'left' },
-    { id: 'isActive', label: 'Activa', sortable: true, align: 'center' },
-    { id: 'zone', label: 'Zona', sortable: true, align: 'left' },
-    { id: 'balance', label: 'Balance', sortable: true, align: 'right' },
-    { id: 'accumulatedFall', label: 'Caída Acumulada', sortable: true, align: 'right' },
-    { id: 'loans', label: 'Préstamos', sortable: true, align: 'right' },
-    { id: 'actions', label: 'Acciones', sortable: false, align: 'center' },
+    { id: 'number', label: t('bettingPoolsAdmin.tableNumber'), sortable: true, align: 'left' },
+    { id: 'name', label: t('bettingPoolsAdmin.tableName'), sortable: true, align: 'left' },
+    { id: 'reference', label: t('bettingPoolsAdmin.tableReference'), sortable: true, align: 'left' },
+    { id: 'users', label: t('bettingPoolsAdmin.tableUsers'), sortable: true, align: 'left' },
+    { id: 'isActive', label: t('bettingPoolsAdmin.tableActive'), sortable: true, align: 'center' },
+    { id: 'zone', label: t('bettingPoolsAdmin.tableZone'), sortable: true, align: 'left' },
+    { id: 'balance', label: t('bettingPoolsAdmin.tableBalance'), sortable: true, align: 'right' },
+    { id: 'accumulatedFall', label: t('bettingPoolsAdmin.tableAccumulatedFall'), sortable: true, align: 'right' },
+    { id: 'loans', label: t('bettingPoolsAdmin.tableLoans'), sortable: true, align: 'right' },
+    { id: 'actions', label: t('bettingPoolsAdmin.tableActions'), sortable: false, align: 'center' },
   ];
 
   return (
@@ -214,7 +216,7 @@ const BancasListMUI: React.FC = () => {
         {/* Header */}
         <Box sx={{ p: 3, borderBottom: 1, borderColor: 'divider' }}>
           <Typography variant="h5" component="h1" gutterBottom align="center">
-            Lista de Bancas
+            {t('bettingPoolsAdmin.listTitle')}
           </Typography>
         </Box>
 
@@ -230,7 +232,7 @@ const BancasListMUI: React.FC = () => {
                   onClick={handleRefresh}
                   startIcon={<RefreshIcon />}
                 >
-                  Reintentar
+                  {t('sales.retry')}
                 </Button>
               }
             >
@@ -243,22 +245,22 @@ const BancasListMUI: React.FC = () => {
         <Toolbar sx={{ justifyContent: 'space-between', gap: 2, flexWrap: 'wrap' }}>
           {/* Zone Filter */}
           <FormControl size="small" sx={{ minWidth: 200 }}>
-            <InputLabel>Zonas</InputLabel>
+            <InputLabel>{t('common.zones')}</InputLabel>
             <Select
               multiple
               value={selectedZones}
               onChange={(e: SelectChangeEvent<string[]>) => handleZoneChange(e.target.value as string[])}
-              input={<OutlinedInput label="Zonas" />}
+              input={<OutlinedInput label={t('common.zones')} />}
               renderValue={(selected) => {
                 if (selected.includes('all')) {
-                  return `${availableZones.length} seleccionadas`;
+                  return t('bettingPoolsAdmin.selectedCount', { count: availableZones.length });
                 }
-                return `${selected.length} seleccionadas`;
+                return t('bettingPoolsAdmin.selectedCount', { count: selected.length });
               }}
             >
               <MenuItem value="all">
                 <Checkbox checked={selectedZones.includes('all')} />
-                <ListItemText primary="Todas" />
+                <ListItemText primary={t('common.all')} />
               </MenuItem>
               {availableZones.map((zone) => (
                 <MenuItem key={zone} value={zone}>
@@ -271,7 +273,7 @@ const BancasListMUI: React.FC = () => {
 
           {/* Search */}
           <TextField
-            placeholder="Búsqueda rápida..."
+            placeholder={t('bettingPoolsAdmin.quickSearchPlaceholder')}
             value={searchText}
             onChange={handleSearchChange}
             variant="outlined"
@@ -300,10 +302,10 @@ const BancasListMUI: React.FC = () => {
           <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
             {!loading && (
               <Typography variant="body2" color="text.secondary">
-                {totalBettingPools} de {allBettingPoolsCount} pools
+                {t('bettingPoolsAdmin.countOfTotal', { shown: totalBettingPools, total: allBettingPoolsCount })}
               </Typography>
             )}
-            <Tooltip title="Actualizar lista">
+            <Tooltip title={t('bettingPoolsAdmin.refreshList')}>
               <span>
                 <IconButton
                   onClick={handleRefresh}
@@ -323,7 +325,7 @@ const BancasListMUI: React.FC = () => {
             <Box sx={{ textAlign: 'center' }}>
               <CircularProgress />
               <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-                Cargando bancas...
+                {t('bettingPoolsAdmin.loadingBettingPools')}
               </Typography>
             </Box>
           </Box>
@@ -363,8 +365,8 @@ const BancasListMUI: React.FC = () => {
                       <TableCell colSpan={columns.length} align="center" sx={{ py: 6 }}>
                         <Typography variant="body1" color="text.secondary">
                           {searchText || selectedZones.length > 1
-                            ? 'No se encontraron betting pools que coincidan con los filtros'
-                            : 'No hay betting pools disponibles'}
+                            ? t('bettingPoolsAdmin.noBettingPoolsMatch')
+                            : t('bettingPoolsAdmin.noBettingPoolsAvailable')}
                         </Typography>
                       </TableCell>
                     </TableRow>
@@ -397,13 +399,13 @@ const BancasListMUI: React.FC = () => {
                                   onClick={() => setConfirmTarget({ poolId: pool.id, username: user })}
                                   icon={<KeyIcon />}
                                   sx={{ cursor: 'pointer' }}
-                                  title="Generar clave temporal"
+                                  title={t('bettingPoolsAdmin.generateTempPassword')}
                                 />
                               ))}
                             </Box>
                           ) : (
                             <Typography variant="caption" color="text.secondary">
-                              Sin usuarios
+                              {t('bettingPoolsAdmin.noUsers')}
                             </Typography>
                           )}
                         </TableCell>
@@ -457,7 +459,7 @@ const BancasListMUI: React.FC = () => {
                           </Typography>
                         </TableCell>
                         <TableCell align="center">
-                          <Tooltip title="Editar betting pool">
+                          <Tooltip title={t('bettingPoolsAdmin.editBettingPool')}>
                             <IconButton
                               size="small"
                               color="primary"
@@ -483,12 +485,14 @@ const BancasListMUI: React.FC = () => {
                 onPageChange={handleChangePage}
                 rowsPerPage={rowsPerPage}
                 onRowsPerPageChange={handleChangeRowsPerPage}
-                rowsPerPageOptions={[10, 25, 50, 100, 200, { value: -1, label: 'Todos' }]}
-                labelRowsPerPage="Filas por página:"
+                rowsPerPageOptions={[10, 25, 50, 100, 200, { value: -1, label: t('bettingPoolsAdmin.rowsAll') }]}
+                labelRowsPerPage={t('bettingPoolsAdmin.rowsLabel')}
                 labelDisplayedRows={({ from, to, count }) =>
                   rowsPerPage === -1
-                    ? `${count} registros`
-                    : `${from}-${to} de ${count !== -1 ? count : `más de ${to}`}`
+                    ? t('bettingPoolsAdmin.totalRecords', { total: count })
+                    : count !== -1
+                      ? t('bettingPoolsAdmin.fromToOfTotal', { from, to, total: count })
+                      : t('bettingPoolsAdmin.fromToMoreThan', { from, to })
                 }
               />
             )}
@@ -498,9 +502,9 @@ const BancasListMUI: React.FC = () => {
 
       <ConfirmActionDialog
         isOpen={!!confirmTarget}
-        title="Generar clave temporal"
-        message={`Se generará una nueva clave de 6 dígitos para el usuario "${confirmTarget?.username.toUpperCase() ?? ''}". El usuario deberá cambiarla al iniciar sesión y la actual dejará de funcionar.`}
-        confirmLabel="Generar"
+        title={t('bettingPoolsAdmin.confirmGeneratePasswordTitle')}
+        message={t('bettingPoolsAdmin.confirmGeneratePasswordMessage', { username: confirmTarget?.username.toUpperCase() ?? '' })}
+        confirmLabel={t('bettingPoolsAdmin.generate')}
         severity="warning"
         loading={generatingPassword}
         onConfirm={handleConfirmGenerate}
@@ -521,14 +525,14 @@ const BancasListMUI: React.FC = () => {
         maxWidth="xs"
         fullWidth
       >
-        <DialogTitle sx={{ pb: 1 }}>Editar caída acumulada</DialogTitle>
+        <DialogTitle sx={{ pb: 1 }}>{t('bettingPoolsAdmin.editAccumulatedFallTitle')}</DialogTitle>
         <DialogContent>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
             {caidaModal.poolName}
           </Typography>
 
           <TextField
-            label="Caída acumulada actual"
+            label={t('bettingPoolsAdmin.currentAccumulatedFall')}
             value={formatCurrency(caidaModal.currentValue)}
             fullWidth
             size="small"
@@ -537,7 +541,7 @@ const BancasListMUI: React.FC = () => {
           />
 
           <TextField
-            label="Nueva caída acumulada"
+            label={t('bettingPoolsAdmin.newAccumulatedFall')}
             type="number"
             value={caidaNewValue}
             onChange={(e) => { setCaidaNewValue(e.target.value); setCaidaError(''); }}
@@ -546,7 +550,7 @@ const BancasListMUI: React.FC = () => {
             size="small"
             autoFocus
             error={!!caidaError}
-            helperText={caidaError || 'Solo valores negativos o cero'}
+            helperText={caidaError || t('bettingPoolsAdmin.accumulatedFallHelper')}
             inputProps={{ max: 0, step: 0.01 }}
           />
         </DialogContent>
@@ -555,7 +559,7 @@ const BancasListMUI: React.FC = () => {
             onClick={() => setCaidaModal({ open: false, poolId: 0, poolName: '', currentValue: 0 })}
             sx={{ color: '#666' }}
           >
-            Cancelar
+            {t('common.cancel')}
           </Button>
           <Button
             onClick={handleSaveCaida}
@@ -563,7 +567,7 @@ const BancasListMUI: React.FC = () => {
             variant="contained"
             sx={{ bgcolor: '#51cbce', '&:hover': { bgcolor: '#45b8bb' } }}
           >
-            {caidaSaving ? 'Guardando...' : 'OK'}
+            {caidaSaving ? t('common.saving') : t('bettingPoolsAdmin.ok')}
           </Button>
         </DialogActions>
       </Dialog>

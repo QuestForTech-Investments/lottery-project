@@ -17,6 +17,7 @@ import {
   ContentCopy as CopyIcon,
   Warning as WarningIcon,
 } from '@mui/icons-material';
+import { useTranslation } from 'react-i18next';
 import * as userService from '@/services/userService';
 import { handleApiError } from '@/utils';
 import * as logger from '@/utils/logger';
@@ -33,6 +34,7 @@ interface PasswordModalProps {
  * Modal for generating and setting temporary or permanent passwords for users
  */
 export default function PasswordModal({ isOpen, onClose, userId, username }: PasswordModalProps): React.ReactElement {
+  const { t } = useTranslation();
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -92,7 +94,7 @@ export default function PasswordModal({ isOpen, onClose, userId, username }: Pas
    */
   const handleTemporaryPassword = async (): Promise<void> => {
     if (!userId) {
-      setError('ID de usuario no disponible');
+      setError(t('modals.password.userIdUnavailable'));
       return;
     }
 
@@ -110,7 +112,7 @@ export default function PasswordModal({ isOpen, onClose, userId, username }: Pas
       });
 
       logger.success('PASSWORD_MODAL', 'Temporary password generated successfully');
-      setSuccess(`Contraseña temporal: ${newPassword}`);
+      setSuccess(t('modals.password.temporaryGenerated', { password: newPassword }));
 
       // Close modal after 5 seconds to give time to copy the password
       setTimeout(() => {
@@ -132,7 +134,7 @@ export default function PasswordModal({ isOpen, onClose, userId, username }: Pas
    */
   const handlePermanentPassword = async (): Promise<void> => {
     if (!userId) {
-      setError('ID de usuario no disponible');
+      setError(t('modals.password.userIdUnavailable'));
       return;
     }
 
@@ -150,7 +152,7 @@ export default function PasswordModal({ isOpen, onClose, userId, username }: Pas
       });
 
       logger.success('PASSWORD_MODAL', 'Permanent password generated successfully');
-      setSuccess(`Contraseña permanente: ${newPassword}`);
+      setSuccess(t('modals.password.permanentGenerated', { password: newPassword }));
 
       // Close modal after 5 seconds to give time to copy the password
       setTimeout(() => {
@@ -198,7 +200,7 @@ export default function PasswordModal({ isOpen, onClose, userId, username }: Pas
       <DialogTitle id="password-modal-title">
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Typography variant="h6" component="span">
-            Generate contraseña
+            {t('modals.password.title')}
           </Typography>
           <IconButton
             edge="end"
@@ -216,7 +218,7 @@ export default function PasswordModal({ isOpen, onClose, userId, username }: Pas
         {/* Username Display */}
         <Box sx={{ mb: 3 }}>
           <TextField
-            label="Nombre de usuario"
+            label={t('modals.password.usernameLabel')}
             value={username}
             fullWidth
             InputProps={{
@@ -238,7 +240,7 @@ export default function PasswordModal({ isOpen, onClose, userId, username }: Pas
                 startIcon={<CopyIcon />}
                 onClick={handleCopyPassword}
               >
-                Copiar
+                {t('modals.password.copy')}
               </Button>
             }
             sx={{ mb: 2 }}
@@ -247,7 +249,7 @@ export default function PasswordModal({ isOpen, onClose, userId, username }: Pas
               {success}
             </Typography>
             <Typography variant="caption" display="block" sx={{ mt: 1 }}>
-              Esta ventana se cerrará automaticmente en 5 segundos.
+              {t('modals.password.autoClose')}
             </Typography>
           </Alert>
         )}
@@ -264,7 +266,7 @@ export default function PasswordModal({ isOpen, onClose, userId, username }: Pas
           <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', p: 2 }}>
             <CircularProgress size={40} />
             <Typography variant="body2" sx={{ ml: 2 }}>
-              Generando contraseña...
+              {t('modals.password.generating')}
             </Typography>
           </Box>
         )}
@@ -276,7 +278,7 @@ export default function PasswordModal({ isOpen, onClose, userId, username }: Pas
           disabled={isGenerating}
           color="inherit"
         >
-          Cerrar
+          {t('common.close')}
         </Button>
         <Button
           onClick={handleTemporaryPassword}
@@ -285,7 +287,7 @@ export default function PasswordModal({ isOpen, onClose, userId, username }: Pas
           color="error"
           startIcon={<WarningIcon />}
         >
-          Contraseña temporal
+          {t('modals.password.temporaryButton')}
         </Button>
         <Button
           onClick={handlePermanentPassword}
@@ -294,7 +296,7 @@ export default function PasswordModal({ isOpen, onClose, userId, username }: Pas
           color="primary"
           startIcon={<WarningIcon />}
         >
-          Contraseña permanente
+          {t('modals.password.permanentButton')}
         </Button>
       </DialogActions>
     </Dialog>

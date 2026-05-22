@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Typography,
@@ -21,6 +22,7 @@ const ACCENT = '#6366f1';
 const ACCENT_HOVER = '#5558e6';
 
 const LimitDefaults = (): React.ReactElement => {
+  const { t } = useTranslation();
   const { hasPermission } = useUserPermissions();
   const canManage = hasPermission('MANAGE_LIMIT_DEFAULTS');
 
@@ -65,18 +67,18 @@ const LimitDefaults = (): React.ReactElement => {
       });
       await updateLimitDefaults(items);
       await loadDefaults();
-      setSnackbar({ open: true, message: 'Valores por defecto actualizados', severity: 'success' });
+      setSnackbar({ open: true, message: t('limitsAdmin.defaults.msgUpdated'), severity: 'success' });
     } catch {
-      setSnackbar({ open: true, message: 'Error al actualizar valores por defecto', severity: 'error' });
+      setSnackbar({ open: true, message: t('limitsAdmin.defaults.msgError'), severity: 'error' });
     } finally {
       setSaving(false);
     }
-  }, [editedDefaults, loadDefaults]);
+  }, [editedDefaults, loadDefaults, t]);
 
   if (!canManage) {
     return (
       <Box sx={{ p: 3 }}>
-        <Alert severity="warning">No tiene permisos para acceder a esta configuración.</Alert>
+        <Alert severity="warning">{t('limitsAdmin.defaults.noPermission')}</Alert>
       </Box>
     );
   }
@@ -102,8 +104,8 @@ const LimitDefaults = (): React.ReactElement => {
           <Table size="small">
             <TableHead>
               <TableRow sx={{ bgcolor: '#f8f8f8' }}>
-                <TableCell sx={{ fontWeight: 600, color: '#555', fontSize: '13px' }}>Tipo de Jugada</TableCell>
-                <TableCell sx={{ fontWeight: 600, color: '#555', fontSize: '13px', width: 180 }}>Monto por Defecto</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: '#555', fontSize: '13px' }}>{t('limitsAdmin.defaults.tableGameType')}</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: '#555', fontSize: '13px', width: 180 }}>{t('limitsAdmin.defaults.tableDefaultAmount')}</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -137,15 +139,15 @@ const LimitDefaults = (): React.ReactElement => {
   return (
     <Box sx={{ p: 3, bgcolor: '#f5f5f5', minHeight: '100vh' }}>
       <Typography sx={{ textAlign: 'center', mb: 1, fontSize: '28px', fontWeight: 400, color: '#2c2c2c', fontFamily: 'Montserrat, "Helvetica Neue", Arial, sans-serif' }}>
-        Configuración de Límites
+        {t('limitsAdmin.defaults.title')}
       </Typography>
       <Typography sx={{ textAlign: 'center', mb: 3, color: '#888', fontSize: '14px' }}>
-        Valores predeterminados al crear límites automáticos para zonas nuevas y al pre-llenar límites de banca.
+        {t('limitsAdmin.defaults.subtitle')}
       </Typography>
 
       <Box sx={{ maxWidth: 700, mx: 'auto' }}>
-        {renderTable('zona', 'Valores por Defecto — Zona')}
-        {renderTable('banca', 'Valores por Defecto — Banca')}
+        {renderTable('zona', t('limitsAdmin.defaults.sectionZone'))}
+        {renderTable('banca', t('limitsAdmin.defaults.sectionBanca'))}
 
         <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 2 }}>
           <Button
@@ -153,14 +155,14 @@ const LimitDefaults = (): React.ReactElement => {
             sx={{ color: '#666', textTransform: 'none' }}
             disabled={editedDefaults.size === 0}
           >
-            Cancelar
+            {t('limitsAdmin.defaults.cancel')}
           </Button>
           <Button
             onClick={handleSave}
             disabled={editedDefaults.size === 0 || saving}
             sx={{ bgcolor: ACCENT, color: 'white', textTransform: 'none', px: 3, '&:hover': { bgcolor: ACCENT_HOVER }, '&.Mui-disabled': { bgcolor: '#ccc' } }}
           >
-            {saving ? 'Guardando...' : 'Guardar Cambios'}
+            {saving ? t('limitsAdmin.defaults.saving') : t('limitsAdmin.defaults.saveChanges')}
           </Button>
         </Box>
       </Box>

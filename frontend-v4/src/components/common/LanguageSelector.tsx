@@ -2,6 +2,8 @@ import { useState, MouseEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Menu, MenuItem, ListItemIcon, ListItemText, Box, IconButton } from '@mui/material'
 import { ArrowDropDown } from '@mui/icons-material'
+import { updateMyPreferredLanguage } from '@services/userService'
+import { isAuthenticated } from '@services/authService'
 
 const languages = [
   { code: 'es', name: 'language.spanish', flag: '🇪🇸' },
@@ -42,6 +44,13 @@ export default function LanguageSelector({
   const changeLanguage = (languageCode: string) => {
     i18n.changeLanguage(languageCode)
     handleClose()
+    // Best-effort persistence — if the user is logged in, sync their preference
+    // to the server so it survives across devices. Swallow failures: the local
+    // i18n change still works via localStorage.
+    if (isAuthenticated()) {
+      const lang = languageCode as 'es' | 'en' | 'fr' | 'ht'
+      updateMyPreferredLanguage(lang).catch(() => { /* non-fatal */ })
+    }
   }
 
   const activeColor = '#4dd4d4'

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, type ChangeEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Card,
@@ -37,6 +38,7 @@ import {
   type TransactionLineReportAPI,
   type EntityOption
 } from '@services/transactionGroupService';
+import { getActiveLocale } from '@/utils/formatters';
 
 type SortDirection = 'asc' | 'desc';
 type SortKey = 'transactionType' | 'createdAt' | 'createdByName' | 'entity1Name' | 'entity2Name' | 'debit' | 'credit' | null;
@@ -46,22 +48,26 @@ interface SortConfig {
   direction: SortDirection;
 }
 
-const ENTITY_TYPE_LABELS: Record<string, string> = {
-  bettingPool: 'Banca',
-  accountableEntity: 'Banco',
-  zone: 'Zona',
-  group: 'Grupo',
-  externalAgent: 'Agente externo',
-  employee: 'Empleado',
-  personalClient: 'Cliente personal',
-  system: 'Sistema',
-  accumulatedDrop: 'Caída acumulada',
-  other: 'Otros'
+// Entity-type → i18n-key map. Translated at render with t().
+const ENTITY_TYPE_KEYS: Record<string, string> = {
+  bettingPool: 'common.bettingPool',
+  accountableEntity: 'common.bank',
+  zone: 'common.zone',
+  group: 'transactions.group',
+  externalAgent: 'transactions.externalAgent',
+  employee: 'transactions.employee',
+  personalClient: 'transactions.personalClient',
+  system: 'transactions.system',
+  accumulatedDrop: 'transactions.accumulatedDrop',
+  other: 'transactions.other'
 };
 
-const getEntityTypeLabel = (type: string): string => ENTITY_TYPE_LABELS[type] ?? type;
-
 const TransactionsList = (): React.ReactElement => {
+  const { t } = useTranslation();
+  const getEntityTypeLabel = useCallback((type: string): string => {
+    const key = ENTITY_TYPE_KEYS[type];
+    return key ? t(key) : type;
+  }, [t]);
   const [quickFilter, setQuickFilter] = useState<string>('');
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: null, direction: 'asc' });
   const [loading, setLoading] = useState(true);
@@ -164,7 +170,7 @@ const TransactionsList = (): React.ReactElement => {
 
   const formatDate = (dateStr: string | null): string => {
     if (!dateStr) return '';
-    return parseUtc(dateStr).toLocaleDateString('es-DO', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    return parseUtc(dateStr).toLocaleDateString(getActiveLocale(), { day: '2-digit', month: '2-digit', year: 'numeric' });
   };
 
   const formatTime = (dateStr: string | null): string => {
@@ -229,7 +235,7 @@ const TransactionsList = (): React.ReactElement => {
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h4" sx={{ mb: 3, textAlign: 'center', fontWeight: 500 }}>
-        Lista de transacciones
+        {t('transactions.title')}
       </Typography>
 
       <Card>
@@ -237,19 +243,19 @@ const TransactionsList = (): React.ReactElement => {
           <Box sx={{ mb: 3 }}>
             <Grid container spacing={2} sx={{ mb: 2 }}>
               <Grid item xs={12} md={6}>
-                <TextField type="date" label="Fecha inicial" value={startDate} onChange={(e: ChangeEvent<HTMLInputElement>) => setStartDate(e.target.value)} fullWidth InputLabelProps={{ shrink: true }} size="small" />
+                <TextField type="date" label={t('common.dateStart')} value={startDate} onChange={(e: ChangeEvent<HTMLInputElement>) => setStartDate(e.target.value)} fullWidth InputLabelProps={{ shrink: true }} size="small" />
               </Grid>
               <Grid item xs={12} md={6}>
-                <TextField type="date" label="Fecha final" value={endDate} onChange={(e: ChangeEvent<HTMLInputElement>) => setEndDate(e.target.value)} fullWidth InputLabelProps={{ shrink: true }} size="small" />
+                <TextField type="date" label={t('common.dateEnd')} value={endDate} onChange={(e: ChangeEvent<HTMLInputElement>) => setEndDate(e.target.value)} fullWidth InputLabelProps={{ shrink: true }} size="small" />
               </Grid>
             </Grid>
 
             <Grid container spacing={2} sx={{ mb: 2 }}>
               <Grid item xs={12} md={3}>
                 <FormControl fullWidth size="small">
-                  <InputLabel>Tipo de entidad</InputLabel>
-                  <Select value={selectedEntityType} label="Tipo de entidad" onChange={(e: SelectChangeEvent) => setSelectedEntityType(e.target.value)}>
-                    <MenuItem value="">Seleccione</MenuItem>
+                  <InputLabel>{t('transactions.entityType')}</InputLabel>
+                  <Select value={selectedEntityType} label={t('transactions.entityType')} onChange={(e: SelectChangeEvent) => setSelectedEntityType(e.target.value)}>
+                    <MenuItem value="">{t('common.select')}</MenuItem>
                     {entityTypeOptions.map((type) => (
                       <MenuItem key={type} value={type}>{getEntityTypeLabel(type)}</MenuItem>
                     ))}
@@ -258,9 +264,9 @@ const TransactionsList = (): React.ReactElement => {
               </Grid>
               <Grid item xs={12} md={3}>
                 <FormControl fullWidth size="small">
-                  <InputLabel>Entidad</InputLabel>
-                  <Select value={selectedEntity} label="Entidad" onChange={(e: SelectChangeEvent) => setSelectedEntity(e.target.value)} disabled={!selectedEntityType}>
-                    <MenuItem value="">Seleccione</MenuItem>
+                  <InputLabel>{t('transactions.entity')}</InputLabel>
+                  <Select value={selectedEntity} label={t('transactions.entity')} onChange={(e: SelectChangeEvent) => setSelectedEntity(e.target.value)} disabled={!selectedEntityType}>
+                    <MenuItem value="">{t('common.select')}</MenuItem>
                     {entityOptions.map((entity) => (
                       <MenuItem key={entity.id} value={entity.name}>
                         {entity.code ? `${entity.name} (${entity.code})` : entity.name}
@@ -271,9 +277,9 @@ const TransactionsList = (): React.ReactElement => {
               </Grid>
               <Grid item xs={12} md={3}>
                 <FormControl fullWidth size="small">
-                  <InputLabel>Tipo de transacción</InputLabel>
-                  <Select value={selectedTransactionType} label="Tipo de transacción" onChange={(e: SelectChangeEvent) => setSelectedTransactionType(e.target.value)}>
-                    <MenuItem value="">Todos</MenuItem>
+                  <InputLabel>{t('transactions.transactionType')}</InputLabel>
+                  <Select value={selectedTransactionType} label={t('transactions.transactionType')} onChange={(e: SelectChangeEvent) => setSelectedTransactionType(e.target.value)}>
+                    <MenuItem value="">{t('common.all')}</MenuItem>
                     {transactionTypeOptions.map((type) => (
                       <MenuItem key={type} value={type}>{type}</MenuItem>
                     ))}
@@ -282,9 +288,9 @@ const TransactionsList = (): React.ReactElement => {
               </Grid>
               <Grid item xs={12} md={3}>
                 <FormControl fullWidth size="small">
-                  <InputLabel>Creado por</InputLabel>
-                  <Select value={selectedCreatedBy} label="Creado por" onChange={(e: SelectChangeEvent) => setSelectedCreatedBy(e.target.value)}>
-                    <MenuItem value="">Seleccione</MenuItem>
+                  <InputLabel>{t('common.createdBy')}</InputLabel>
+                  <Select value={selectedCreatedBy} label={t('common.createdBy')} onChange={(e: SelectChangeEvent) => setSelectedCreatedBy(e.target.value)}>
+                    <MenuItem value="">{t('common.select')}</MenuItem>
                     {createdByOptions.map((user) => (
                       <MenuItem key={user} value={user}>{user}</MenuItem>
                     ))}
@@ -294,18 +300,18 @@ const TransactionsList = (): React.ReactElement => {
             </Grid>
 
             <Box sx={{ mb: 2 }}>
-              <FormControlLabel control={<Checkbox checked={showNotes} onChange={(e: ChangeEvent<HTMLInputElement>) => setShowNotes(e.target.checked)} />} label="Mostrar notas" />
+              <FormControlLabel control={<Checkbox checked={showNotes} onChange={(e: ChangeEvent<HTMLInputElement>) => setShowNotes(e.target.checked)} />} label={t('transactions.showNotes')} />
             </Box>
 
             <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-              <Button variant="contained" onClick={handleFilter} sx={{ backgroundColor: '#8b5cf6', '&:hover': { backgroundColor: '#45b5b8' } }}>FILTRAR</Button>
+              <Button variant="contained" onClick={handleFilter} sx={{ backgroundColor: '#8b5cf6', '&:hover': { backgroundColor: '#45b5b8' } }}>{t('common.filter').toUpperCase()}</Button>
               <Button variant="contained" startIcon={<FileDownloadIcon />} sx={{ backgroundColor: '#8b5cf6', '&:hover': { backgroundColor: '#45b5b8' } }}>CSV</Button>
               <Button variant="contained" startIcon={<PdfIcon />} sx={{ backgroundColor: '#8b5cf6', '&:hover': { backgroundColor: '#45b5b8' } }}>PDF</Button>
             </Box>
           </Box>
 
           <Box sx={{ mb: 2 }}>
-            <TextField size="small" placeholder="Filtro rapido" value={quickFilter} onChange={(e: ChangeEvent<HTMLInputElement>) => setQuickFilter(e.target.value)} InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon /></InputAdornment> }} sx={{ maxWidth: 300 }} />
+            <TextField size="small" placeholder={t('common.filterQuick')} value={quickFilter} onChange={(e: ChangeEvent<HTMLInputElement>) => setQuickFilter(e.target.value)} InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon /></InputAdornment> }} sx={{ maxWidth: 300 }} />
           </Box>
 
           {loading ? (
@@ -317,25 +323,25 @@ const TransactionsList = (): React.ReactElement => {
               <Table size="small">
                 <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
                   <TableRow>
-                    <TableCell><TableSortLabel active={sortConfig.key === 'transactionType'} direction={sortConfig.key === 'transactionType' ? sortConfig.direction : 'asc'} onClick={() => handleSort('transactionType')}>Concepto</TableSortLabel></TableCell>
-                    <TableCell><TableSortLabel active={sortConfig.key === 'createdAt'} direction={sortConfig.key === 'createdAt' ? sortConfig.direction : 'asc'} onClick={() => handleSort('createdAt')}>Fecha</TableSortLabel></TableCell>
-                    <TableCell sx={{ minWidth: 100, whiteSpace: 'nowrap' }}>Hora</TableCell>
-                    <TableCell><TableSortLabel active={sortConfig.key === 'createdByName'} direction={sortConfig.key === 'createdByName' ? sortConfig.direction : 'asc'} onClick={() => handleSort('createdByName')}>Creado por</TableSortLabel></TableCell>
-                    <TableCell><TableSortLabel active={sortConfig.key === 'entity1Name'} direction={sortConfig.key === 'entity1Name' ? sortConfig.direction : 'asc'} onClick={() => handleSort('entity1Name')}>Entidad #1</TableSortLabel></TableCell>
-                    <TableCell><TableSortLabel active={sortConfig.key === 'entity2Name'} direction={sortConfig.key === 'entity2Name' ? sortConfig.direction : 'asc'} onClick={() => handleSort('entity2Name')}>Entidad #2</TableSortLabel></TableCell>
-                    <TableCell align="right">Saldo inicial de Entidad #1</TableCell>
-                    <TableCell align="right">Saldo inicial de Entidad #2</TableCell>
-                    <TableCell align="right" sx={{ color: '#dc3545' }}><TableSortLabel active={sortConfig.key === 'debit'} direction={sortConfig.key === 'debit' ? sortConfig.direction : 'asc'} onClick={() => handleSort('debit')}>Débito</TableSortLabel></TableCell>
-                    <TableCell align="right" sx={{ color: '#28a745' }}><TableSortLabel active={sortConfig.key === 'credit'} direction={sortConfig.key === 'credit' ? sortConfig.direction : 'asc'} onClick={() => handleSort('credit')}>Crédito</TableSortLabel></TableCell>
-                    <TableCell align="right">Saldo final de Entidad #1</TableCell>
-                    <TableCell align="right">Saldo final de Entidad #2</TableCell>
-                    {showNotes && <TableCell>Notas</TableCell>}
+                    <TableCell><TableSortLabel active={sortConfig.key === 'transactionType'} direction={sortConfig.key === 'transactionType' ? sortConfig.direction : 'asc'} onClick={() => handleSort('transactionType')}>{t('transactions.concept')}</TableSortLabel></TableCell>
+                    <TableCell><TableSortLabel active={sortConfig.key === 'createdAt'} direction={sortConfig.key === 'createdAt' ? sortConfig.direction : 'asc'} onClick={() => handleSort('createdAt')}>{t('common.date')}</TableSortLabel></TableCell>
+                    <TableCell sx={{ minWidth: 100, whiteSpace: 'nowrap' }}>{t('common.time')}</TableCell>
+                    <TableCell><TableSortLabel active={sortConfig.key === 'createdByName'} direction={sortConfig.key === 'createdByName' ? sortConfig.direction : 'asc'} onClick={() => handleSort('createdByName')}>{t('common.createdBy')}</TableSortLabel></TableCell>
+                    <TableCell><TableSortLabel active={sortConfig.key === 'entity1Name'} direction={sortConfig.key === 'entity1Name' ? sortConfig.direction : 'asc'} onClick={() => handleSort('entity1Name')}>{t('transactions.entity1')}</TableSortLabel></TableCell>
+                    <TableCell><TableSortLabel active={sortConfig.key === 'entity2Name'} direction={sortConfig.key === 'entity2Name' ? sortConfig.direction : 'asc'} onClick={() => handleSort('entity2Name')}>{t('transactions.entity2')}</TableSortLabel></TableCell>
+                    <TableCell align="right">{t('transactions.initialBalance1')}</TableCell>
+                    <TableCell align="right">{t('transactions.initialBalance2')}</TableCell>
+                    <TableCell align="right" sx={{ color: '#dc3545' }}><TableSortLabel active={sortConfig.key === 'debit'} direction={sortConfig.key === 'debit' ? sortConfig.direction : 'asc'} onClick={() => handleSort('debit')}>{t('transactions.debit')}</TableSortLabel></TableCell>
+                    <TableCell align="right" sx={{ color: '#28a745' }}><TableSortLabel active={sortConfig.key === 'credit'} direction={sortConfig.key === 'credit' ? sortConfig.direction : 'asc'} onClick={() => handleSort('credit')}>{t('transactions.credit')}</TableSortLabel></TableCell>
+                    <TableCell align="right">{t('transactions.finalBalance1')}</TableCell>
+                    <TableCell align="right">{t('transactions.finalBalance2')}</TableCell>
+                    {showNotes && <TableCell>{t('common.notes')}</TableCell>}
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {filteredAndSortedData.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={showNotes ? 13 : 12} align="center" sx={{ py: 3 }}>No hay entradas disponibles</TableCell>
+                      <TableCell colSpan={showNotes ? 13 : 12} align="center" sx={{ py: 3 }}>{t('common.noEntries')}</TableCell>
                     </TableRow>
                   ) : (
                     <>
@@ -357,7 +363,7 @@ const TransactionsList = (): React.ReactElement => {
                         </TableRow>
                       ))}
                       <TableRow sx={{ backgroundColor: '#f8f9fa', fontWeight: 600 }}>
-                        <TableCell colSpan={8} align="right"><strong>Totales</strong></TableCell>
+                        <TableCell colSpan={8} align="right"><strong>{t('balances.totals')}</strong></TableCell>
                         <TableCell align="right" sx={{ color: '#dc3545', fontWeight: 600 }}>{formatCurrency(totalDebit)}</TableCell>
                         <TableCell align="right" sx={{ color: '#28a745', fontWeight: 600 }}>{formatCurrency(totalCredit)}</TableCell>
                         <TableCell colSpan={showNotes ? 3 : 2}></TableCell>
@@ -369,7 +375,7 @@ const TransactionsList = (): React.ReactElement => {
             </TableContainer>
           )}
 
-          <Typography variant="body2" sx={{ mt: 2, color: 'text.secondary' }}>Mostrando {filteredAndSortedData.length} entradas</Typography>
+          <Typography variant="body2" sx={{ mt: 2, color: 'text.secondary' }}>{t('balances.showingCount', { count: filteredAndSortedData.length })}</Typography>
         </CardContent>
       </Card>
     </Box>

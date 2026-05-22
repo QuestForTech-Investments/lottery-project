@@ -5,6 +5,7 @@
  */
 
 import { memo, type FC } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Box, Button } from '@mui/material';
 import { COLORS } from '../constants';
 
@@ -27,6 +28,7 @@ const StatusFilterTabs: FC<StatusFilterTabsProps> = memo(({
   filterCounts,
   onFilterChange,
 }) => {
+  const { t } = useTranslation();
   const baseButtonStyle = {
     borderRadius: 20,
     textTransform: 'none',
@@ -53,7 +55,7 @@ const StatusFilterTabs: FC<StatusFilterTabsProps> = memo(({
           },
         }}
       >
-        Todos ({filterCounts.all})
+        {t('resultsAdmin.statusFilter.all', { total: filterCounts.all })}
       </Button>
       <Button
         variant={statusFilter === 'pending' ? 'contained' : 'outlined'}
@@ -70,7 +72,7 @@ const StatusFilterTabs: FC<StatusFilterTabsProps> = memo(({
           },
         }}
       >
-        Sin resultado ({filterCounts.pending})
+        {t('resultsAdmin.statusFilter.pending', { total: filterCounts.pending })}
       </Button>
       <Button
         variant={statusFilter === 'completed' ? 'contained' : 'outlined'}
@@ -87,7 +89,7 @@ const StatusFilterTabs: FC<StatusFilterTabsProps> = memo(({
           },
         }}
       >
-        Con resultado ({filterCounts.completed})
+        {t('resultsAdmin.statusFilter.completed', { total: filterCounts.completed })}
       </Button>
     </Box>
   );

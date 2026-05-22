@@ -16,15 +16,17 @@ import {
   FormControlLabel,
   Checkbox,
 } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import type { DrawsTabProps } from '../types';
 
 const DrawsTab: FC<DrawsTabProps> = memo(({ draws, formData, onInputChange }) => {
+  const { t } = useTranslation();
   return (
     <Box>
       {/* Sorteos activos */}
       <Box sx={{ mb: 4 }}>
         <Typography variant="subtitle1" gutterBottom fontWeight="bold">
-          Sorteos activos
+          {t('massEditBettingPools.activeDraws')}
         </Typography>
         <Paper variant="outlined" sx={{ p: 2, maxHeight: 300, overflowY: 'auto' }}>
           <Grid container spacing={1}>
@@ -61,7 +63,7 @@ const DrawsTab: FC<DrawsTabProps> = memo(({ draws, formData, onInputChange }) =>
 
       {/* Aplicar cierre anticipado */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-        <Typography sx={{ minWidth: 200 }}>Aplicar cierre anticipado a</Typography>
+        <Typography sx={{ minWidth: 200 }}>{t('massEditBettingPools.applyEarlyClosingTo')}</Typography>
         <FormControl sx={{ minWidth: 300 }} size="small">
           <Select
             value={formData.earlyClosingDrawId || ''}
@@ -69,7 +71,7 @@ const DrawsTab: FC<DrawsTabProps> = memo(({ draws, formData, onInputChange }) =>
             onChange={(e) => onInputChange('earlyClosingDrawId', e.target.value)}
           >
             <MenuItem value="">
-              <em>Ninguno</em>
+              <em>{t('massEditBettingPools.none')}</em>
             </MenuItem>
             {draws.map(draw => (
               <MenuItem key={draw.drawId || draw.id} value={draw.drawId || draw.id}>

@@ -1,4 +1,5 @@
 import { useState, type SyntheticEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Dialog,
   DialogTitle,
@@ -36,6 +37,7 @@ interface HelpModalProps {
 }
 
 const HelpModal: React.FC<HelpModalProps> = ({ open, onClose }) => {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<number>(0);
 
   const handleTabChange = (_event: SyntheticEvent, newValue: number): void => {
@@ -220,7 +222,7 @@ const HelpModal: React.FC<HelpModalProps> = ({ open, onClose }) => {
     >
       <DialogTitle sx={{ m: 0, p: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <Typography variant="h5" component="span">
-          Ayuda
+          {t('tickets.create.help')}
         </Typography>
         <IconButton
           aria-label="close"
@@ -235,8 +237,8 @@ const HelpModal: React.FC<HelpModalProps> = ({ open, onClose }) => {
 
       <Box sx={{ borderBottom: 1, borderColor: 'divider', px: 2 }}>
         <Tabs value={activeTab} onChange={handleTabChange}>
-          <Tab label="Teclas" />
-          <Tab label="¿Cómo jugar?" />
+          <Tab label={t('tickets.create.tabKeys')} />
+          <Tab label={t('tickets.create.tabHowToPlay')} />
         </Tabs>
       </Box>
 
@@ -246,8 +248,8 @@ const HelpModal: React.FC<HelpModalProps> = ({ open, onClose }) => {
             <Table size="small">
               <TableHead>
                 <TableRow>
-                  <TableCell sx={{ fontWeight: 'bold', width: '15%' }}>Tecla</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold' }}>Función</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold', width: '15%' }}>{t('tickets.create.key')}</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold' }}>{t('tickets.create.function')}</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -286,7 +288,7 @@ const HelpModal: React.FC<HelpModalProps> = ({ open, onClose }) => {
 
       <DialogActions sx={{ px: 3, py: 2 }}>
         <Button onClick={onClose} variant="contained" sx={{ bgcolor: '#8b5cf6', '&:hover': { bgcolor: '#7c3aed' } }}>
-          Cerrar
+          {t('common.close')}
         </Button>
       </DialogActions>
     </Dialog>

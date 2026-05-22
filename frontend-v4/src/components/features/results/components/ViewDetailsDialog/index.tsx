@@ -1,4 +1,5 @@
 import { memo, type FC } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Dialog,
   DialogTitle,
@@ -28,6 +29,7 @@ export const ViewDetailsDialog: FC<ViewDetailsDialogProps> = memo(({
   open,
   onClose,
 }) => {
+  const { t } = useTranslation();
   if (!row) return null;
 
   const category = getDrawCategory(row.drawName);
@@ -37,20 +39,20 @@ export const ViewDetailsDialog: FC<ViewDetailsDialogProps> = memo(({
   const fields: { label: string; value: string }[] = [];
 
   // Base fields (always shown if have value)
-  if (row.num1) fields.push({ label: '1RA', value: row.num1 });
-  if (row.num2) fields.push({ label: '2DA', value: row.num2 });
-  if (row.num3) fields.push({ label: '3RA', value: row.num3 });
+  if (row.num1) fields.push({ label: t('resultsAdmin.labels.firstUpper'), value: row.num1 });
+  if (row.num2) fields.push({ label: t('resultsAdmin.labels.secondUpper'), value: row.num2 });
+  if (row.num3) fields.push({ label: t('resultsAdmin.labels.thirdUpper'), value: row.num3 });
 
   // USA-specific fields
   if (isUsaDraw) {
-    if (row.cash3 != null && row.cash3 !== '') fields.push({ label: 'PICK THREE', value: row.cash3 });
-    if (row.play4 != null && row.play4 !== '') fields.push({ label: 'PICK FOUR', value: row.play4 });
-    if (row.pick5 != null && row.pick5 !== '') fields.push({ label: 'PICK FIVE', value: row.pick5 });
-    if (row.bolita1 != null && row.bolita1 !== '') fields.push({ label: 'BOLITA 1', value: row.bolita1 });
-    if (row.bolita2 != null && row.bolita2 !== '') fields.push({ label: 'BOLITA 2', value: row.bolita2 });
-    if (row.singulaccion1 != null && row.singulaccion1 !== '') fields.push({ label: 'SINGULACCION 1', value: row.singulaccion1 });
-    if (row.singulaccion2 != null && row.singulaccion2 !== '') fields.push({ label: 'SINGULACCION 2', value: row.singulaccion2 });
-    if (row.singulaccion3 != null && row.singulaccion3 !== '') fields.push({ label: 'SINGULACCION 3', value: row.singulaccion3 });
+    if (row.cash3 != null && row.cash3 !== '') fields.push({ label: t('resultsAdmin.labels.pickThree'), value: row.cash3 });
+    if (row.play4 != null && row.play4 !== '') fields.push({ label: t('resultsAdmin.labels.pickFour'), value: row.play4 });
+    if (row.pick5 != null && row.pick5 !== '') fields.push({ label: t('resultsAdmin.labels.pickFive'), value: row.pick5 });
+    if (row.bolita1 != null && row.bolita1 !== '') fields.push({ label: t('resultsAdmin.labels.bolita1Upper'), value: row.bolita1 });
+    if (row.bolita2 != null && row.bolita2 !== '') fields.push({ label: t('resultsAdmin.labels.bolita2Upper'), value: row.bolita2 });
+    if (row.singulaccion1 != null && row.singulaccion1 !== '') fields.push({ label: t('resultsAdmin.labels.singulaccion1Upper'), value: row.singulaccion1 });
+    if (row.singulaccion2 != null && row.singulaccion2 !== '') fields.push({ label: t('resultsAdmin.labels.singulaccion2Upper'), value: row.singulaccion2 });
+    if (row.singulaccion3 != null && row.singulaccion3 !== '') fields.push({ label: t('resultsAdmin.labels.singulaccion3Upper'), value: row.singulaccion3 });
   }
 
   return (
@@ -126,7 +128,7 @@ export const ViewDetailsDialog: FC<ViewDetailsDialogProps> = memo(({
             textTransform: 'none',
           }}
         >
-          Cerrar
+          {t('common.close')}
         </Button>
       </DialogActions>
     </Dialog>

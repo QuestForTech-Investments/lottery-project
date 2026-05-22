@@ -8,6 +8,7 @@
  */
 
 import React, { useState, memo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Card,
@@ -26,6 +27,7 @@ import {
 } from './components';
 
 const CleanPendingPayments: React.FC = () => {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<number>(0);
 
   const {
@@ -81,10 +83,10 @@ const CleanPendingPayments: React.FC = () => {
         <Card>
           <CardContent>
             <Typography color="error" variant="h6">
-              Error: {error}
+              {t('bettingPoolsAdmin.errorPrefix', { message: error })}
             </Typography>
             <Button onClick={loadBettingPools} sx={{ mt: 2 }}>
-              Reintentar
+              {t('sales.retry')}
             </Button>
           </CardContent>
         </Card>
@@ -101,8 +103,8 @@ const CleanPendingPayments: React.FC = () => {
             onChange={(_, newValue) => setActiveTab(newValue)}
             sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}
           >
-            <Tab label="Lista" />
-            <Tab label="Reporte" />
+            <Tab label={t('bettingPoolsAdmin.tabList')} />
+            <Tab label={t('bettingPoolsAdmin.tabReport')} />
           </Tabs>
 
           {activeTab === 0 && (

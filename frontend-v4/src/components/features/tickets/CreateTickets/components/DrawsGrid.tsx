@@ -1,4 +1,5 @@
 import React, { memo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Box, Typography, CircularProgress } from '@mui/material';
 import { Dices } from 'lucide-react';
 import type { Draw, BettingPool } from '../types';
@@ -31,6 +32,7 @@ const DrawsGrid: React.FC<DrawsGridProps> = memo(({
   allowedDrawIds,
   onDrawClick,
 }) => {
+  const { t } = useTranslation();
   // Filter draws based on betting pool restrictions
   const filteredDraws = draws.filter((draw) => {
     if (!selectedPool) return true;
@@ -56,10 +58,10 @@ const DrawsGrid: React.FC<DrawsGridProps> = memo(({
       {loadingDraws ? (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <CircularProgress size={20} sx={{ color: '#8b5cf6' }} />
-          <Typography sx={{ fontSize: '12px', color: '#666' }}>Cargando sorteos...</Typography>
+          <Typography sx={{ fontSize: '12px', color: '#666' }}>{t('tickets.create.loadingDraws')}</Typography>
         </Box>
       ) : filteredDraws.length === 0 ? (
-        <Typography sx={{ fontSize: '12px', color: '#666' }}>No hay sorteos disponibles</Typography>
+        <Typography sx={{ fontSize: '12px', color: '#666' }}>{t('tickets.create.noDrawsAvailable')}</Typography>
       ) : (
         filteredDraws.map((draw) => {
           const isSelected = multiLotteryMode

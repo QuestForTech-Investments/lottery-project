@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, type ChangeEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import CreateTransactionGroupModal from './CreateTransactionGroupModal';
 import TransactionGroupDetailModal from './TransactionGroupDetailModal';
 import {
@@ -25,6 +26,7 @@ import {
 } from '@mui/material';
 import { Search as SearchIcon, CalendarToday as CalendarIcon } from '@mui/icons-material';
 import { getTransactionGroups, type TransactionGroupAPI } from '@services/transactionGroupService';
+import { getActiveLocale } from '@/utils/formatters';
 
 type SortDirection = 'asc' | 'desc';
 type SortKey = 'groupNumber' | 'createdAt' | 'createdByName' | 'isAutomatic' | 'status' | 'notes' | null;
@@ -34,15 +36,12 @@ interface SortConfig {
   direction: SortDirection;
 }
 
-const getStatusLabel = (status: string): string => {
-  switch (status) {
-    case 'PendienteAprobacion': return 'Pend. aprobación';
-    case 'PendienteEliminacion': return 'Pend. eliminación';
-    case 'Aprobado': return 'Aprobado';
-    case 'Rechazado': return 'Rechazado';
-    case 'Eliminado': return 'Eliminado';
-    default: return status;
-  }
+const STATUS_KEYS: Record<string, string> = {
+  PendienteAprobacion: 'transactions.groups.pendingApproval',
+  PendienteEliminacion: 'transactions.groups.pendingDeletion',
+  Aprobado: 'transactions.groups.approved',
+  Rechazado: 'transactions.groups.rejected',
+  Eliminado: 'transactions.groups.deleted',
 };
 
 const getStatusChipStyle = (status: string): Record<string, string> => {
@@ -57,6 +56,11 @@ const getStatusChipStyle = (status: string): Record<string, string> => {
 };
 
 const TransactionGroupsList = (): React.ReactElement => {
+  const { t } = useTranslation();
+  const getStatusLabel = useCallback((status: string): string => {
+    const key = STATUS_KEYS[status];
+    return key ? t(key) : status;
+  }, [t]);
   const today = new Date().toLocaleDateString('en-CA');
   const [startDate, setStartDate] = useState<string>(today);
   const [endDate, setEndDate] = useState<string>(today);
@@ -103,12 +107,12 @@ const TransactionGroupsList = (): React.ReactElement => {
 
   const formatDate = (dateStr: string | null): string => {
     if (!dateStr) return '';
-    return parseUtc(dateStr).toLocaleDateString('es-DO', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    return parseUtc(dateStr).toLocaleDateString(getActiveLocale(), { day: '2-digit', month: '2-digit', year: 'numeric' });
   };
 
   const formatTime = (dateStr: string | null): string => {
     if (!dateStr) return '';
-    return parseUtc(dateStr).toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    return parseUtc(dateStr).toLocaleTimeString(getActiveLocale(), { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   };
 
   const filteredAndSortedData = useMemo(() => {
@@ -157,7 +161,7 @@ const TransactionGroupsList = (): React.ReactElement => {
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h4" sx={{ mb: 3, textAlign: 'center', fontWeight: 600, color: '#2c2c2c' }}>
-        Lista de grupo de transacciones
+        {t('transactions.groups.title')}
       </Typography>
 
       <Card elevation={1}>
@@ -165,7 +169,7 @@ const TransactionGroupsList = (): React.ReactElement => {
           <Grid container spacing={3} sx={{ mb: 3 }}>
             <Grid item xs={12} md={4}>
               <TextField
-                fullWidth size="small" label="Fecha inicial" type="date"
+                fullWidth size="small" label={t('common.dateStart')} type="date"
                 value={startDate} onChange={(e: ChangeEvent<HTMLInputElement>) => setStartDate(e.target.value)}
                 InputLabelProps={{ shrink: true }}
                 InputProps={{ startAdornment: <InputAdornment position="start"><CalendarIcon fontSize="small" /></InputAdornment> }}
@@ -173,7 +177,7 @@ const TransactionGroupsList = (): React.ReactElement => {
             </Grid>
             <Grid item xs={12} md={4}>
               <TextField
-                fullWidth size="small" label="Fecha final" type="date"
+                fullWidth size="small" label={t('common.dateEnd')} type="date"
                 value={endDate} onChange={(e: ChangeEvent<HTMLInputElement>) => setEndDate(e.target.value)}
                 InputLabelProps={{ shrink: true }}
                 InputProps={{ startAdornment: <InputAdornment position="start"><CalendarIcon fontSize="small" /></InputAdornment> }}
@@ -181,19 +185,19 @@ const TransactionGroupsList = (): React.ReactElement => {
             </Grid>
             <Grid item xs={12} md={4} sx={{ display: 'flex', alignItems: 'flex-end' }}>
               <Button fullWidth variant="contained" onClick={handleFilter} sx={{ bgcolor: '#8b5cf6', '&:hover': { bgcolor: '#45b5b8' }, fontWeight: 600, textTransform: 'uppercase' }}>
-                Filtrar
+                {t('common.filter')}
               </Button>
             </Grid>
           </Grid>
 
           <Box sx={{ textAlign: 'center', mb: 3 }}>
             <Button variant="contained" onClick={() => setCreateModalOpen(true)} sx={{ bgcolor: '#8b5cf6', '&:hover': { bgcolor: '#45b5b8' }, fontWeight: 600, textTransform: 'uppercase', px: 4 }}>
-              Crear
+              {t('common.create')}
             </Button>
           </Box>
 
           <TextField
-            fullWidth size="small" placeholder="Filtro rapido"
+            fullWidth size="small" placeholder={t('common.filterQuick')}
             value={quickFilter} onChange={(e: ChangeEvent<HTMLInputElement>) => setQuickFilter(e.target.value)}
             sx={{ mb: 2 }}
             InputProps={{ endAdornment: <InputAdornment position="end"><IconButton size="small"><SearchIcon fontSize="small" /></IconButton></InputAdornment> }}
@@ -208,21 +212,21 @@ const TransactionGroupsList = (): React.ReactElement => {
               <Table size="small">
                 <TableHead sx={{ bgcolor: '#f8f9fa' }}>
                   <TableRow>
-                    <TableCell><TableSortLabel active={sortConfig.key === 'groupNumber'} direction={sortConfig.key === 'groupNumber' ? sortConfig.direction : 'asc'} onClick={() => handleSort('groupNumber')} sx={{ fontWeight: 600 }}>Número</TableSortLabel></TableCell>
-                    <TableCell><TableSortLabel active={sortConfig.key === 'createdAt'} direction={sortConfig.key === 'createdAt' ? sortConfig.direction : 'asc'} onClick={() => handleSort('createdAt')} sx={{ fontWeight: 600 }}>Fecha</TableSortLabel></TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Hora</TableCell>
-                    <TableCell><TableSortLabel active={sortConfig.key === 'createdByName'} direction={sortConfig.key === 'createdByName' ? sortConfig.direction : 'asc'} onClick={() => handleSort('createdByName')} sx={{ fontWeight: 600 }}>Creado por</TableSortLabel></TableCell>
-                    <TableCell align="center"><TableSortLabel active={sortConfig.key === 'isAutomatic'} direction={sortConfig.key === 'isAutomatic' ? sortConfig.direction : 'asc'} onClick={() => handleSort('isAutomatic')} sx={{ fontWeight: 600 }}>¿Es automático?</TableSortLabel></TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Referencia</TableCell>
-                    <TableCell align="center"><TableSortLabel active={sortConfig.key === 'status'} direction={sortConfig.key === 'status' ? sortConfig.direction : 'asc'} onClick={() => handleSort('status')} sx={{ fontWeight: 600 }}>Estado</TableSortLabel></TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Notas</TableCell>
+                    <TableCell><TableSortLabel active={sortConfig.key === 'groupNumber'} direction={sortConfig.key === 'groupNumber' ? sortConfig.direction : 'asc'} onClick={() => handleSort('groupNumber')} sx={{ fontWeight: 600 }}>{t('common.number')}</TableSortLabel></TableCell>
+                    <TableCell><TableSortLabel active={sortConfig.key === 'createdAt'} direction={sortConfig.key === 'createdAt' ? sortConfig.direction : 'asc'} onClick={() => handleSort('createdAt')} sx={{ fontWeight: 600 }}>{t('common.date')}</TableSortLabel></TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>{t('common.time')}</TableCell>
+                    <TableCell><TableSortLabel active={sortConfig.key === 'createdByName'} direction={sortConfig.key === 'createdByName' ? sortConfig.direction : 'asc'} onClick={() => handleSort('createdByName')} sx={{ fontWeight: 600 }}>{t('common.createdBy')}</TableSortLabel></TableCell>
+                    <TableCell align="center"><TableSortLabel active={sortConfig.key === 'isAutomatic'} direction={sortConfig.key === 'isAutomatic' ? sortConfig.direction : 'asc'} onClick={() => handleSort('isAutomatic')} sx={{ fontWeight: 600 }}>{t('transactions.groups.isAutomatic')}</TableSortLabel></TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>{t('balances.reference')}</TableCell>
+                    <TableCell align="center"><TableSortLabel active={sortConfig.key === 'status'} direction={sortConfig.key === 'status' ? sortConfig.direction : 'asc'} onClick={() => handleSort('status')} sx={{ fontWeight: 600 }}>{t('common.status')}</TableSortLabel></TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>{t('common.notes')}</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {filteredAndSortedData.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={8} align="center" sx={{ py: 3 }}>
-                        <Typography variant="body2" color="text.secondary">No hay entradas disponibles</Typography>
+                        <Typography variant="body2" color="text.secondary">{t('common.noEntries')}</Typography>
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -241,7 +245,7 @@ const TransactionGroupsList = (): React.ReactElement => {
                         <TableCell>{formatTime(item.createdAt)}</TableCell>
                         <TableCell>{item.createdByName ?? ''}</TableCell>
                         <TableCell align="center">
-                          <Chip label={item.isAutomatic ? 'Sí' : 'No'} color={item.isAutomatic ? 'success' : 'default'} size="small" sx={{ fontSize: '12px' }} />
+                          <Chip label={item.isAutomatic ? t('common.yes') : t('common.no')} color={item.isAutomatic ? 'success' : 'default'} size="small" sx={{ fontSize: '12px' }} />
                         </TableCell>
                         <TableCell sx={{ fontSize: '13px' }}>
                           {(() => {
@@ -284,12 +288,12 @@ const TransactionGroupsList = (): React.ReactElement => {
           )}
 
           <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-            Mostrando {filteredAndSortedData.length} entradas
+            {t('balances.showingCount', { count: filteredAndSortedData.length })}
           </Typography>
 
           <Box sx={{ textAlign: 'center', mt: 3 }}>
             <Button variant="contained" onClick={() => setCreateModalOpen(true)} sx={{ bgcolor: '#8b5cf6', '&:hover': { bgcolor: '#45b5b8' }, fontWeight: 600, textTransform: 'uppercase', px: 4 }}>
-              Crear
+              {t('common.create')}
             </Button>
           </Box>
         </CardContent>

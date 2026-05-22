@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Trans } from 'react-i18next';
 import {
   Dialog,
   DialogTitle,
@@ -43,15 +45,12 @@ interface Props {
 
 const formatCurrency = (val: number): string => `$${val.toFixed(2)}`;
 
-const getStatusLabel = (status: string): string => {
-  switch (status) {
-    case 'PendienteAprobacion': return 'Pendiente de aprobación';
-    case 'PendienteEliminacion': return 'Pendiente de eliminación';
-    case 'Aprobado': return 'Aprobado';
-    case 'Rechazado': return 'Rechazado';
-    case 'Eliminado': return 'Eliminado';
-    default: return status;
-  }
+const STATUS_KEYS: Record<string, string> = {
+  PendienteAprobacion: 'transactions.groups.pendingApproval',
+  PendienteEliminacion: 'transactions.groups.pendingDeletion',
+  Aprobado: 'transactions.groups.approved',
+  Rechazado: 'transactions.groups.rejected',
+  Eliminado: 'transactions.groups.deleted',
 };
 
 const getStatusChipStyle = (status: string): Record<string, string> => {
@@ -70,6 +69,11 @@ const canDelete = (status?: string): boolean => {
 };
 
 const TransactionGroupDetailModal: React.FC<Props> = ({ open, groupId, onClose, onDeleted }) => {
+  const { t } = useTranslation();
+  const getStatusLabel = useCallback((status: string): string => {
+    const key = STATUS_KEYS[status];
+    return key ? t(key) : status;
+  }, [t]);
   const [loading, setLoading] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
@@ -107,20 +111,33 @@ const TransactionGroupDetailModal: React.FC<Props> = ({ open, groupId, onClose, 
     setDeleting(true);
     try {
       await deleteTransactionGroup(groupId);
-      setSnackbar({ open: true, message: 'Grupo eliminado exitosamente', severity: 'success' });
+      setSnackbar({ open: true, message: t('transactions.groups.deleteSuccess'), severity: 'success' });
       onClose();
       onDeleted?.();
     } catch (err) {
       console.error('Error deleting transaction group:', err);
-      setSnackbar({ open: true, message: 'Error al eliminar el grupo', severity: 'error' });
+      setSnackbar({ open: true, message: t('transactions.groups.deleteError'), severity: 'error' });
     } finally {
       setDeleting(false);
     }
-  }, [groupId, onClose, onDeleted]);
+  }, [groupId, onClose, onDeleted, t]);
 
   const exportCsv = useCallback(() => {
     if (!lines.length) return;
-    const headers = ['Tipo', 'Entidad #1', 'Código entidad #1', 'Entidad #2', 'Código entidad #2', 'Saldo inicial Entidad #1', 'Saldo inicial Entidad #2', 'Débito', 'Crédito', 'Saldo final Entidad #1', 'Saldo final Entidad #2', 'Notas'];
+    const headers = [
+      t('common.type'),
+      t('transactions.entity1'),
+      `${t('common.code')} ${t('transactions.entity1')}`,
+      t('transactions.entity2'),
+      `${t('common.code')} ${t('transactions.entity2')}`,
+      t('transactions.initialBalance1'),
+      t('transactions.initialBalance2'),
+      t('transactions.debit'),
+      t('transactions.credit'),
+      t('transactions.finalBalance1'),
+      t('transactions.finalBalance2'),
+      t('common.notes'),
+    ];
     const rows = lines.map(l => [
       l.transactionType,
       l.entity1Name,
@@ -144,7 +161,7 @@ const TransactionGroupDetailModal: React.FC<Props> = ({ open, groupId, onClose, 
     a.download = `grupo-${group?.groupNumber ?? groupId}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-  }, [lines, totalDebit, totalCredit, group, groupId]);
+  }, [lines, totalDebit, totalCredit, group, groupId, t]);
 
   const exportPdf = useCallback(() => {
     if (!lines.length) return;
@@ -166,26 +183,26 @@ const TransactionGroupDetailModal: React.FC<Props> = ({ open, groupId, onClose, 
         <td>${l.notes ?? ''}</td>
       </tr>`).join('');
 
-    printWindow.document.write(`<html><head><title>Grupo ${group?.groupNumber}</title>
+    printWindow.document.write(`<html><head><title>${t('transactions.groups.title')} ${group?.groupNumber}</title>
       <style>body{font-family:Arial,sans-serif;font-size:12px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ddd;padding:4px 6px}th{background:#f5f5f5;font-weight:600}td{font-size:11px}</style>
       </head><body>
-      <h3>Grupo de transacciones: ${group?.groupNumber}</h3>
+      <h3>${t('transactions.groups.title')}: ${group?.groupNumber}</h3>
       <table>
-        <thead><tr><th>Tipo</th><th>Entidad #1</th><th>Código #1</th><th>Entidad #2</th><th>Código #2</th><th>Saldo ini. #1</th><th>Saldo ini. #2</th><th>Débito</th><th>Crédito</th><th>Saldo fin. #1</th><th>Saldo fin. #2</th><th>Notas</th></tr></thead>
+        <thead><tr><th>${t('common.type')}</th><th>${t('transactions.entity1')}</th><th>${t('common.code')} #1</th><th>${t('transactions.entity2')}</th><th>${t('common.code')} #2</th><th>${t('transactions.initialBalance1')}</th><th>${t('transactions.initialBalance2')}</th><th>${t('transactions.debit')}</th><th>${t('transactions.credit')}</th><th>${t('transactions.finalBalance1')}</th><th>${t('transactions.finalBalance2')}</th><th>${t('common.notes')}</th></tr></thead>
         <tbody>${tableRows}
           <tr style="background:#f8f9fa;font-weight:600"><td colspan="7"></td><td style="text-align:right;color:#dc3545">${formatCurrency(totalDebit)}</td><td style="text-align:right;color:#28a745">${formatCurrency(totalCredit)}</td><td colspan="3"></td></tr>
         </tbody>
       </table></body></html>`);
     printWindow.document.close();
     printWindow.print();
-  }, [lines, totalDebit, totalCredit, group]);
+  }, [lines, totalDebit, totalCredit, group, t]);
 
   return (
     <>
       <Dialog open={open} onClose={onClose} maxWidth="xl" fullWidth>
         <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1 }}>
           <Typography variant="h6" sx={{ fontWeight: 600 }}>
-            {group ? `Grupo ${group.groupNumber}` : 'Detalle de grupo'}
+            {group ? t('transactions.groups.groupLabel', { number: group.groupNumber }) : t('transactions.detail.title')}
           </Typography>
           <IconButton onClick={onClose} size="small">
             <CloseIcon />
@@ -210,12 +227,12 @@ const TransactionGroupDetailModal: React.FC<Props> = ({ open, groupId, onClose, 
                 />
                 {group?.approvedByName && (
                   <Typography variant="body2" color="text.secondary">
-                    {group.status === 'Rechazado' ? 'Rechazado' : 'Aprobado'} por: <strong>{group.approvedByName}</strong>
+                    {group.status === 'Rechazado' ? t('transactions.groups.rejected') : t('transactions.groups.approved')} {t('transactions.byUser')}: <strong>{group.approvedByName}</strong>
                   </Typography>
                 )}
                 {group?.rejectionReason && (
                   <Typography variant="body2" color="error">
-                    Razón: {group.rejectionReason}
+                    {t('transactions.reason')}: {group.rejectionReason}
                   </Typography>
                 )}
               </Box>
@@ -234,7 +251,7 @@ const TransactionGroupDetailModal: React.FC<Props> = ({ open, groupId, onClose, 
                   <Button variant="contained" size="small" startIcon={<DeleteIcon />} onClick={() => setConfirmDeleteOpen(true)}
                     disabled={deleting}
                     sx={{ bgcolor: '#dc3545', '&:hover': { bgcolor: '#c82333' }, textTransform: 'none', fontWeight: 600 }}>
-                    {deleting ? <CircularProgress size={20} color="inherit" /> : 'Eliminar'}
+                    {deleting ? <CircularProgress size={20} color="inherit" /> : t('common.delete')}
                   </Button>
                 ) : null}
               </Box>
@@ -243,25 +260,25 @@ const TransactionGroupDetailModal: React.FC<Props> = ({ open, groupId, onClose, 
                 <Table size="small">
                   <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
                     <TableRow>
-                      <TableCell sx={{ fontWeight: 600 }}>Tipo</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>Entidad #1</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>Código entidad #1</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>Entidad #2</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>Código entidad #2</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 600 }}>Saldo inicial de Entidad #1</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 600 }}>Saldo inicial de Entidad #2</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 600 }}>Débito</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 600 }}>Crédito</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 600 }}>Saldo final de Entidad #1</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 600 }}>Saldo final de Entidad #2</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>Notas</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>{t('common.type')}</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>{t('transactions.entity1')}</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>{t('common.code')} {t('transactions.entity1')}</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>{t('transactions.entity2')}</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>{t('common.code')} {t('transactions.entity2')}</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 600 }}>{t('transactions.initialBalance1')}</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 600 }}>{t('transactions.initialBalance2')}</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 600 }}>{t('transactions.debit')}</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 600 }}>{t('transactions.credit')}</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 600 }}>{t('transactions.finalBalance1')}</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 600 }}>{t('transactions.finalBalance2')}</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>{t('common.notes')}</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     {lines.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={12} align="center" sx={{ py: 3 }}>
-                          No hay líneas en este grupo
+                          {t('transactions.detail.noLines')}
                         </TableCell>
                       </TableRow>
                     ) : (
@@ -290,8 +307,8 @@ const TransactionGroupDetailModal: React.FC<Props> = ({ open, groupId, onClose, 
                         </TableRow>
                         <TableRow>
                           <TableCell colSpan={7} />
-                          <TableCell align="right" sx={{ fontWeight: 600 }}>Total débito</TableCell>
-                          <TableCell align="right" sx={{ fontWeight: 600 }}>Total crédito</TableCell>
+                          <TableCell align="right" sx={{ fontWeight: 600 }}>{t('transactions.totalDebit')}</TableCell>
+                          <TableCell align="right" sx={{ fontWeight: 600 }}>{t('transactions.totalCredit')}</TableCell>
                           <TableCell colSpan={3} />
                         </TableRow>
                       </>
@@ -305,18 +322,26 @@ const TransactionGroupDetailModal: React.FC<Props> = ({ open, groupId, onClose, 
       </Dialog>
 
       <Dialog open={confirmDeleteOpen} onClose={() => setConfirmDeleteOpen(false)}>
-        <DialogTitle>Confirmar eliminación</DialogTitle>
+        <DialogTitle>{t('transactions.groups.confirmDeleteTitle')}</DialogTitle>
         <DialogContent>
           <DialogContentText>
             {group?.status === 'PendienteAprobacion'
-              ? <>¿Está seguro que desea eliminar el grupo <strong>{group?.groupNumber}</strong>? Esta transacción aún no ha sido aprobada, por lo que no afectará los balances.</>
-              : <>¿Está seguro que desea eliminar el grupo <strong>{group?.groupNumber}</strong>? Los balances de las entidades serán revertidos o se enviará para aprobación.</>
+              ? <Trans
+                  i18nKey="transactions.groups.confirmDeletePending"
+                  values={{ number: group?.groupNumber ?? '' }}
+                  components={{ b: <strong /> }}
+                />
+              : <Trans
+                  i18nKey="transactions.groups.confirmDelete"
+                  values={{ number: group?.groupNumber ?? '' }}
+                  components={{ b: <strong /> }}
+                />
             }
           </DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setConfirmDeleteOpen(false)}>Cancelar</Button>
-          <Button onClick={handleDelete} color="error" variant="contained">Eliminar</Button>
+          <Button onClick={() => setConfirmDeleteOpen(false)}>{t('common.cancel')}</Button>
+          <Button onClick={handleDelete} color="error" variant="contained">{t('common.delete')}</Button>
         </DialogActions>
       </Dialog>
 
