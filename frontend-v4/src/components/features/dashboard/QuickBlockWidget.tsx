@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Paper, Typography, Box, FormControl, InputLabel, Select, MenuItem, TextField,
   Button, Chip, Snackbar, Alert, CircularProgress
@@ -57,6 +58,7 @@ interface PendingBlock {
 }
 
 const QuickBlockWidget: React.FC = () => {
+  const { t } = useTranslation();
   const { hasPermission, loading: permsLoading } = useUserPermissions();
   const canQuickBlock = hasPermission('BLOCK_NUMBERS_QUICK');
 
@@ -103,11 +105,11 @@ const QuickBlockWidget: React.FC = () => {
     const gId = parseInt(gameTypeId);
     const num = betNumber.trim();
     if (!dId || !gId || !num) {
-      setSnackbar({ open: true, message: 'Complete sorteo, tipo de jugada y número', severity: 'error' });
+      setSnackbar({ open: true, message: t('dashboard.quickBlock.errorIncomplete'), severity: 'error' });
       return;
     }
     if (currentFormat && !isNumberComplete(num, currentFormat)) {
-      setSnackbar({ open: true, message: `Formato incompleto. Esperado: ${currentFormat.placeholder}`, severity: 'error' });
+      setSnackbar({ open: true, message: t('dashboard.quickBlock.errorFormat', { format: currentFormat.placeholder }), severity: 'error' });
       return;
     }
     setPending(prev => [...prev, {
@@ -120,7 +122,7 @@ const QuickBlockWidget: React.FC = () => {
       expirationDate: expirationDate || undefined,
     }]);
     setBetNumber('');
-  }, [drawId, gameTypeId, betNumber, expirationDate, drawMap, gameTypeMap, currentFormat]);
+  }, [drawId, gameTypeId, betNumber, expirationDate, drawMap, gameTypeMap, currentFormat, t]);
 
   const handleRemove = (id: number) => setPending(prev => prev.filter(p => p.id !== id));
 
@@ -136,9 +138,9 @@ const QuickBlockWidget: React.FC = () => {
       }));
       await createBlockedNumbers(items);
       setPending([]);
-      setSnackbar({ open: true, message: `${items.length} número(s) bloqueado(s)`, severity: 'success' });
+      setSnackbar({ open: true, message: t('dashboard.quickBlock.blocked', { total: items.length }), severity: 'success' });
     } catch {
-      setSnackbar({ open: true, message: 'Error al bloquear números', severity: 'error' });
+      setSnackbar({ open: true, message: t('dashboard.quickBlock.blockError'), severity: 'error' });
     } finally {
       setSaving(false);
     }
@@ -152,7 +154,7 @@ const QuickBlockWidget: React.FC = () => {
   return (
     <Paper elevation={3} sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
       <Typography variant="subtitle1" fontWeight="bold" align="center" sx={{ mb: 1 }}>
-        Bloqueo rápido de números
+        {t('dashboard.quickBlock.title')}
       </Typography>
 
       {loading ? (
@@ -162,27 +164,27 @@ const QuickBlockWidget: React.FC = () => {
       ) : (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, flex: 1 }}>
           <FormControl fullWidth size="small">
-            <InputLabel>Sorteo</InputLabel>
-            <Select value={drawId} onChange={(e) => setDrawId(e.target.value)} label="Sorteo">
-              <MenuItem value="">Seleccione</MenuItem>
+            <InputLabel>{t('dashboard.quickBlock.draw')}</InputLabel>
+            <Select value={drawId} onChange={(e) => setDrawId(e.target.value)} label={t('dashboard.quickBlock.draw')}>
+              <MenuItem value="">{t('common.select')}</MenuItem>
               {draws.map(d => <MenuItem key={d.value} value={d.value}>{d.label}</MenuItem>)}
             </Select>
           </FormControl>
 
           <FormControl fullWidth size="small">
-            <InputLabel>Tipo de jugada</InputLabel>
+            <InputLabel>{t('dashboard.quickBlock.playType')}</InputLabel>
             <Select
               value={gameTypeId}
               onChange={(e) => { setGameTypeId(e.target.value); setBetNumber(''); }}
-              label="Tipo de jugada"
+              label={t('dashboard.quickBlock.playType')}
             >
-              <MenuItem value="">Seleccione</MenuItem>
+              <MenuItem value="">{t('common.select')}</MenuItem>
               {gameTypes.map(g => <MenuItem key={g.value} value={g.value}>{g.label}</MenuItem>)}
             </Select>
           </FormControl>
 
           <TextField
-            fullWidth size="small" label="Número"
+            fullWidth size="small" label={t('dashboard.quickBlock.number')}
             placeholder={currentFormat?.placeholder || ''}
             value={betNumber}
             onChange={(e) => {
@@ -195,7 +197,7 @@ const QuickBlockWidget: React.FC = () => {
           />
 
           <TextField
-            fullWidth size="small" type="date" label="Fecha expiración (opcional)"
+            fullWidth size="small" type="date" label={t('dashboard.quickBlock.expiration')}
             value={expirationDate}
             onChange={(e) => setExpirationDate(e.target.value)}
             InputLabelProps={{ shrink: true }}
@@ -218,12 +220,12 @@ const QuickBlockWidget: React.FC = () => {
           <Box sx={{ display: 'flex', gap: 1, mt: 'auto' }}>
             <Button variant="outlined" size="small" startIcon={<AddIcon />} onClick={handleAdd}
               sx={{ flex: 1, color: ACCENT, borderColor: ACCENT }}>
-              Agregar
+              {t('common.add')}
             </Button>
             <Button variant="contained" size="small" onClick={handleSave}
               disabled={pending.length === 0 || saving}
               sx={{ flex: 1, bgcolor: ACCENT, '&:hover': { bgcolor: '#5558e6' } }}>
-              {saving ? '...' : 'Bloquear'}
+              {saving ? '...' : t('dashboard.quickBlock.block')}
             </Button>
           </Box>
         </Box>

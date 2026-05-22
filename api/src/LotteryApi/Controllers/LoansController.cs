@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using LotteryApi.Data;
 using LotteryApi.DTOs;
+using LotteryApi.Exceptions;
+using LotteryApi.Helpers;
 using LotteryApi.Models;
 using LotteryApi.Services;
 using System.Security.Claims;
@@ -148,9 +150,9 @@ public class LoansController : ControllerBase
                 .FirstOrDefaultAsync(l => l.LoanId == id);
 
             if (loan == null)
-                return NotFound(new { error = "Préstamo no encontrado" });
+                return ApiErrorResult.NotFound(ErrorCodes.LoanNotFound, "Préstamo no encontrado");
 
-            if (!await IsLoanAllowedAsync(loan)) return NotFound(new { error = "Préstamo no encontrado" });
+            if (!await IsLoanAllowedAsync(loan)) return ApiErrorResult.NotFound(ErrorCodes.LoanNotFound, "Préstamo no encontrado");
 
             var dto = new LoanDto
             {
@@ -287,12 +289,12 @@ public class LoansController : ControllerBase
         {
             var loan = await _context.Loans.FirstOrDefaultAsync(l => l.LoanId == id);
             if (loan == null)
-                return NotFound(new { error = "Préstamo no encontrado" });
+                return ApiErrorResult.NotFound(ErrorCodes.LoanNotFound, "Préstamo no encontrado");
 
             if (!await IsLoanAllowedAsync(loan)) return Forbid();
 
             if (loan.Status != "active")
-                return BadRequest(new { error = "El préstamo no está activo" });
+                return ApiErrorResult.BadRequest(ErrorCodes.LoanNotActive, "El préstamo no está activo");
 
             var userId = GetCurrentUserId();
 
@@ -352,12 +354,12 @@ public class LoansController : ControllerBase
         {
             var loan = await _context.Loans.FirstOrDefaultAsync(l => l.LoanId == id);
             if (loan == null)
-                return NotFound(new { error = "Préstamo no encontrado" });
+                return ApiErrorResult.NotFound(ErrorCodes.LoanNotFound, "Préstamo no encontrado");
 
             if (!await IsLoanAllowedAsync(loan)) return Forbid();
 
             if (loan.Status != "active")
-                return BadRequest(new { error = "Solo se pueden editar préstamos activos" });
+                return ApiErrorResult.BadRequest(ErrorCodes.LoanOnlyActiveEditable, "Solo se pueden editar préstamos activos");
 
             if (dto.InstallmentAmount.HasValue) loan.InstallmentAmount = dto.InstallmentAmount.Value;
             if (!string.IsNullOrWhiteSpace(dto.Frequency)) loan.Frequency = dto.Frequency;
@@ -387,12 +389,12 @@ public class LoansController : ControllerBase
         {
             var loan = await _context.Loans.FirstOrDefaultAsync(l => l.LoanId == id);
             if (loan == null)
-                return NotFound(new { error = "Préstamo no encontrado" });
+                return ApiErrorResult.NotFound(ErrorCodes.LoanNotFound, "Préstamo no encontrado");
 
             if (!await IsLoanAllowedAsync(loan)) return Forbid();
 
             if (loan.Status != "active")
-                return BadRequest(new { error = "Solo se pueden cancelar préstamos activos" });
+                return ApiErrorResult.BadRequest(ErrorCodes.LoanOnlyActiveCancellable, "Solo se pueden cancelar préstamos activos");
 
             loan.Status = "cancelled";
             loan.UpdatedAt = DateTime.UtcNow;

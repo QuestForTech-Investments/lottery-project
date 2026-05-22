@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, type ChangeEvent, type DragEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Card,
@@ -71,6 +72,7 @@ interface EditForm {
 }
 
 const DrawsList = (): React.ReactElement => {
+  const { t } = useTranslation();
   const [quickFilter, setQuickFilter] = useState<string>('');
   const [sortBy, setSortBy] = useState<SortableColumn | null>('displayOrder');
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
@@ -106,12 +108,12 @@ const DrawsList = (): React.ReactElement => {
           }));
           setDraws(transformedDraws);
         } else {
-          setError('No se pudieron cargar los sorteos');
+          setError(t('drawsAdmin.list.loadError'));
         }
       } catch (err) {
         const error = err as Error;
         console.error('Error loading draws:', err);
-        setError('Error al cargar los sorteos: ' + (error.message || 'Error desconocido'));
+        setError(t('drawsAdmin.list.loadErrorWithMessage', { message: error.message || t('drawsAdmin.list.unknownError') }));
       } finally {
         setLoading(false);
       }
@@ -166,7 +168,7 @@ const DrawsList = (): React.ReactElement => {
 
       setSnackbar({
         open: true,
-        message: `Color actualizado para "${draw.name}"`,
+        message: t('drawsAdmin.list.colorUpdated', { name: draw.name }),
         severity: 'success'
       });
     } catch (err) {
@@ -176,11 +178,11 @@ const DrawsList = (): React.ReactElement => {
       setDraws(prev => prev.map(d => d.id === id ? { ...d, color: draw.color } : d));
       setSnackbar({
         open: true,
-        message: 'Error al guardar el color: ' + (error.message || 'Error desconocido'),
+        message: t('drawsAdmin.list.colorSaveError', { message: error.message || t('drawsAdmin.list.unknownError') }),
         severity: 'error'
       });
     }
-  }, [draws]);
+  }, [draws, t]);
 
   const handleEdit = useCallback((id: number) => {
     const draw = draws.find(d => d.id === id);
@@ -225,7 +227,7 @@ const DrawsList = (): React.ReactElement => {
 
       setSnackbar({
         open: true,
-        message: `Sorteo "${editingDraw.name}" actualizado correctamente`,
+        message: t('drawsAdmin.edit.updateSuccess', { name: editingDraw.name }),
         severity: 'success'
       });
 
@@ -235,13 +237,13 @@ const DrawsList = (): React.ReactElement => {
       console.error('Error updating draw:', err);
       setSnackbar({
         open: true,
-        message: 'Error al actualizar el sorteo: ' + (error.message || 'Error desconocido'),
+        message: t('drawsAdmin.edit.updateError', { message: error.message || t('drawsAdmin.list.unknownError') }),
         severity: 'error'
       });
     } finally {
       setSaving(false);
     }
-  }, [editingDraw, editForm, handleCloseEditModal]);
+  }, [editingDraw, editForm, handleCloseEditModal, t]);
 
   const handleDragStart = useCallback((e: DragEvent<HTMLTableRowElement>, index: number) => {
     e.dataTransfer.effectAllowed = 'move';
@@ -302,7 +304,7 @@ const DrawsList = (): React.ReactElement => {
       });
       setSnackbar({
         open: true,
-        message: `"${draggedDraw.name}" movido a posición ${dropIndex + 1}`,
+        message: t('drawsAdmin.list.movedToPosition', { name: draggedDraw.name, position: dropIndex + 1 }),
         severity: 'success'
       });
     } catch (err) {
@@ -310,11 +312,11 @@ const DrawsList = (): React.ReactElement => {
       console.error('Error saving display order:', err);
       setSnackbar({
         open: true,
-        message: 'Error al guardar el orden: ' + (error.message || 'Error desconocido'),
+        message: t('drawsAdmin.list.orderSaveError', { message: error.message || t('drawsAdmin.list.unknownError') }),
         severity: 'error'
       });
     }
-  }, [sortedDraws]);
+  }, [sortedDraws, t]);
 
   const handleCloseSnackbar = useCallback(() => {
     setSnackbar(prev => ({ ...prev, open: false }));
@@ -344,7 +346,7 @@ const DrawsList = (): React.ReactElement => {
     return (
       <Box sx={{ p: 3, bgcolor: '#f5f5f5', minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
         <CircularProgress sx={{ color: '#8b5cf6' }} />
-        <Typography sx={{ ml: 2, color: '#666' }}>Cargando sorteos...</Typography>
+        <Typography sx={{ ml: 2, color: '#666' }}>{t('drawsAdmin.list.loading')}</Typography>
       </Box>
     );
   }
@@ -364,7 +366,7 @@ const DrawsList = (): React.ReactElement => {
               color: '#2c2c2c'
             }}
           >
-            Lista de sorteos
+            {t('drawsAdmin.list.title')}
           </Typography>
 
           {/* Error message */}
@@ -377,7 +379,7 @@ const DrawsList = (): React.ReactElement => {
           {/* Quick Filter */}
           <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
             <TextField
-              placeholder="Filtrado rápido"
+              placeholder={t('common.filterQuick')}
               value={quickFilter}
               onChange={handleFilterChange}
               size="small"
@@ -398,14 +400,14 @@ const DrawsList = (): React.ReactElement => {
             <Table>
               <TableHead>
                 <TableRow sx={{ bgcolor: '#e3e3e3' }}>
-                  <TableCell sx={{ fontSize: '14px', fontWeight: 600, color: '#787878', width: '70px', py: 2 }}>Index</TableCell>
+                  <TableCell sx={{ fontSize: '14px', fontWeight: 600, color: '#787878', width: '70px', py: 2 }}>{t('drawsAdmin.list.index')}</TableCell>
                   <TableCell sx={{ fontSize: '14px', fontWeight: 600, color: '#787878', py: 2 }}>
                     <TableSortLabel
                       active={sortBy === 'name'}
                       direction={sortBy === 'name' ? sortOrder : 'asc'}
                       onClick={() => handleSort('name')}
                     >
-                      Nombre
+                      {t('common.name')}
                     </TableSortLabel>
                   </TableCell>
                   <TableCell sx={{ fontSize: '14px', fontWeight: 600, color: '#787878', py: 2 }}>
@@ -414,7 +416,7 @@ const DrawsList = (): React.ReactElement => {
                       direction={sortBy === 'abbreviation' ? sortOrder : 'asc'}
                       onClick={() => handleSort('abbreviation')}
                     >
-                      Abreviación
+                      {t('drawsAdmin.list.abbreviation')}
                     </TableSortLabel>
                   </TableCell>
                   <TableCell sx={{ fontSize: '14px', fontWeight: 600, color: '#787878', width: '80px', py: 2 }}>
@@ -423,11 +425,11 @@ const DrawsList = (): React.ReactElement => {
                       direction={sortBy === 'displayOrder' ? sortOrder : 'asc'}
                       onClick={() => handleSort('displayOrder')}
                     >
-                      Orden
+                      {t('drawsAdmin.list.displayOrder')}
                     </TableSortLabel>
                   </TableCell>
-                  <TableCell sx={{ fontSize: '14px', fontWeight: 600, color: '#787878', width: '120px', py: 2 }}>Color</TableCell>
-                  <TableCell sx={{ fontSize: '14px', fontWeight: 600, color: '#787878', textAlign: 'center', width: '120px', py: 2 }}>Acciones</TableCell>
+                  <TableCell sx={{ fontSize: '14px', fontWeight: 600, color: '#787878', width: '120px', py: 2 }}>{t('drawsAdmin.list.color')}</TableCell>
+                  <TableCell sx={{ fontSize: '14px', fontWeight: 600, color: '#787878', textAlign: 'center', width: '120px', py: 2 }}>{t('common.actions')}</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -479,7 +481,7 @@ const DrawsList = (): React.ReactElement => {
                 ) : (
                   <TableRow>
                     <TableCell colSpan={6} sx={{ textAlign: 'center', color: '#999', py: 3 }}>
-                      No hay entradas disponibles
+                      {t('common.noEntries')}
                     </TableCell>
                   </TableRow>
                 )}
@@ -489,7 +491,7 @@ const DrawsList = (): React.ReactElement => {
 
           {/* Footer */}
           <Typography sx={{ textAlign: 'center', fontSize: '12px', color: '#999', mt: 2 }}>
-            Mostrando {sortedDraws.length} de {draws.length} entradas
+            {t('common.showingEntries', { shown: sortedDraws.length, total: draws.length })}
           </Typography>
         </CardContent>
       </Card>
@@ -503,7 +505,7 @@ const DrawsList = (): React.ReactElement => {
       >
         <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1 }}>
           <Typography variant="h6" sx={{ fontWeight: 500 }}>
-            Editar sorteo
+            {t('drawsAdmin.edit.title')}
           </Typography>
           <IconButton onClick={handleCloseEditModal} size="small">
             <CloseIcon />
@@ -514,7 +516,7 @@ const DrawsList = (): React.ReactElement => {
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
               {/* Nombre del sorteo (solo lectura) */}
               <TextField
-                label="Nombre del sorteo"
+                label={t('drawsAdmin.edit.drawNameLabel')}
                 value={editingDraw.name}
                 disabled
                 fullWidth
@@ -523,30 +525,30 @@ const DrawsList = (): React.ReactElement => {
 
               {/* Abreviación */}
               <TextField
-                label="Abreviación"
+                label={t('drawsAdmin.edit.abbreviationLabel')}
                 value={editForm.abbreviation}
                 onChange={handleEditFormAbbreviationChange}
                 fullWidth
                 size="small"
-                placeholder="Ingrese la abreviación"
+                placeholder={t('drawsAdmin.edit.abbreviationPlaceholder')}
               />
 
               {/* Orden de visualización */}
               <TextField
-                label="Orden de visualización"
+                label={t('drawsAdmin.edit.displayOrderLabel')}
                 type="number"
                 value={editForm.displayOrder}
                 onChange={handleEditFormDisplayOrderChange}
                 fullWidth
                 size="small"
                 placeholder="0"
-                helperText="Menor número = aparece primero"
+                helperText={t('drawsAdmin.edit.displayOrderHelp')}
               />
 
               {/* Color */}
               <Box>
                 <Typography variant="body2" sx={{ mb: 1, color: '#666' }}>
-                  Color
+                  {t('drawsAdmin.edit.colorLabel')}
                 </Typography>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                   <input
@@ -567,7 +569,7 @@ const DrawsList = (): React.ReactElement => {
                     onChange={handleEditFormColorChange}
                     size="small"
                     sx={{ width: '120px' }}
-                    placeholder="#000000"
+                    placeholder={t('drawsAdmin.edit.colorPlaceholder')}
                   />
                   <Box
                     sx={{
@@ -589,7 +591,7 @@ const DrawsList = (): React.ReactElement => {
             variant="outlined"
             sx={{ color: '#666', borderColor: '#ddd' }}
           >
-            Cancelar
+            {t('common.cancel')}
           </Button>
           <Button
             onClick={handleSaveEdit}
@@ -601,7 +603,7 @@ const DrawsList = (): React.ReactElement => {
               '&:disabled': { bgcolor: '#ccc' }
             }}
           >
-            {saving ? 'Guardando...' : 'Actualizar'}
+            {saving ? t('drawsAdmin.edit.saving') : t('common.update')}
           </Button>
         </DialogActions>
       </Dialog>

@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Paper,
@@ -45,6 +46,7 @@ const PRIMARY = '#51cbce';
 const PRIMARY_HOVER = '#45b8bb';
 
 const SendNotification = (): React.ReactElement => {
+  const { t } = useTranslation();
   const [bancasList, setBancasList] = useState<{ id: number; label: string }[]>([]);
   const [zonasList, setZonasList] = useState<{ id: number; label: string }[]>([]);
   const [adminsList, setAdminsList] = useState<{ id: number; label: string }[]>([]);
@@ -108,19 +110,19 @@ const SendNotification = (): React.ReactElement => {
 
   // Validation — derived so the button enables/disables live without state.
   const validationError = useMemo(() => {
-    if (!message.trim()) return 'Escriba un mensaje.';
-    if (audience.length === 0) return 'Seleccione al menos un destinatario (bancas o administradores).';
+    if (!message.trim()) return t('notificationsAdmin.validation.writeMessage');
+    if (audience.length === 0) return t('notificationsAdmin.validation.selectAudience');
     if (toBanca && selectedBancas.length === 0 && selectedZones.length === 0) {
-      return 'Seleccione al menos una banca o zona destinataria.';
+      return t('notificationsAdmin.validation.selectBancaOrZone');
     }
     if (toAdmin && selectedAdmins.length === 0) {
-      return 'Seleccione al menos un administrador.';
+      return t('notificationsAdmin.validation.selectAdmin');
     }
     if (kind === 'expiration_date' && !expiresAt) {
-      return 'Seleccione una fecha de expiración.';
+      return t('notificationsAdmin.validation.selectExpiration');
     }
     return null;
-  }, [message, audience.length, toBanca, toAdmin, selectedBancas.length, selectedZones.length, selectedAdmins.length, kind, expiresAt]);
+  }, [message, audience.length, toBanca, toAdmin, selectedBancas.length, selectedZones.length, selectedAdmins.length, kind, expiresAt, t]);
 
   const handleMessageChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setMessage(e.target.value.slice(0, MAX_MESSAGE));
@@ -146,23 +148,23 @@ const SendNotification = (): React.ReactElement => {
         expiresAt: kind === 'expiration_date' ? expiresAt : null,
         message: message.trim(),
       });
-      setSuccess('Notificación enviada.');
+      setSuccess(t('notificationsAdmin.sent'));
       // Reset form (keep audience + recipient picks so the user can send a follow-up).
       setMessage('');
       setExpiresAt('');
     } catch (err) {
       console.error('Error sending notification:', err);
-      setError('No se pudo enviar la notificación. Intente nuevamente.');
+      setError(t('notificationsAdmin.errorSend'));
     } finally {
       setSubmitting(false);
     }
-  }, [validationError, audience, selectedBancas, selectedZones, priority, kind, expiresAt, message]);
+  }, [validationError, audience, selectedBancas, selectedZones, selectedAdmins, toBanca, toAdmin, priority, kind, expiresAt, message, t]);
 
   return (
     <Box sx={{ p: 3 }}>
       <Paper sx={{ p: 3 }}>
         <Typography variant="h5" sx={{ textAlign: 'center', fontWeight: 400, mb: 3 }}>
-          Enviar notificaciones
+          {t('notificationsAdmin.title')}
         </Typography>
 
         {success && (
@@ -179,8 +181,8 @@ const SendNotification = (): React.ReactElement => {
         <Grid container spacing={2} alignItems="flex-end" sx={{ mb: 2 }}>
           <Grid item xs={12} md={6}>
             <MultiSelectSearch
-              label="Bancas"
-              selectAllLabel="Todas"
+              label={t('common.bettingPools')}
+              selectAllLabel={t('notificationsAdmin.allFemPlural')}
               options={bancasList}
               selectedIds={selectedBancas}
               onChange={setSelectedBancas}
@@ -188,8 +190,8 @@ const SendNotification = (): React.ReactElement => {
           </Grid>
           <Grid item xs={12} md={6}>
             <MultiSelectSearch
-              label="Zonas"
-              selectAllLabel="Todas"
+              label={t('common.zones')}
+              selectAllLabel={t('notificationsAdmin.allFemPlural')}
               options={zonasList}
               selectedIds={selectedZones}
               onChange={setSelectedZones}
@@ -199,7 +201,7 @@ const SendNotification = (): React.ReactElement => {
 
         <Box sx={{ mb: 2 }}>
           <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5 }}>
-            Enviar a
+            {t('notificationsAdmin.sendTo')}
           </Typography>
           <ToggleButtonGroup
             size="small"
@@ -210,16 +212,16 @@ const SendNotification = (): React.ReactElement => {
               setAudience(v);
             }}
           >
-            <ToggleButton value="banca" sx={{ textTransform: 'uppercase', fontWeight: 600 }}>Bancas</ToggleButton>
-            <ToggleButton value="admin" sx={{ textTransform: 'uppercase', fontWeight: 600 }}>Administradores de mi grupo</ToggleButton>
+            <ToggleButton value="banca" sx={{ textTransform: 'uppercase', fontWeight: 600 }}>{t('common.bettingPools')}</ToggleButton>
+            <ToggleButton value="admin" sx={{ textTransform: 'uppercase', fontWeight: 600 }}>{t('notificationsAdmin.audienceGroupAdmins')}</ToggleButton>
           </ToggleButtonGroup>
         </Box>
 
         {toAdmin && (
           <Box sx={{ mb: 2 }}>
             <MultiSelectSearch
-              label="Administradores"
-              selectAllLabel="Todos"
+              label={t('notificationsAdmin.admins')}
+              selectAllLabel={t('notificationsAdmin.allMascPlural')}
               options={adminsList}
               selectedIds={selectedAdmins}
               onChange={setSelectedAdmins}
@@ -229,7 +231,7 @@ const SendNotification = (): React.ReactElement => {
 
         <Box sx={{ mb: 2 }}>
           <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5 }}>
-            Tipo de notificación
+            {t('notificationsAdmin.kindLabel')}
           </Typography>
           <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap">
             <ToggleButtonGroup
@@ -238,8 +240,8 @@ const SendNotification = (): React.ReactElement => {
               value={kind}
               onChange={(_, v: NotificationKind | null) => v && setKind(v)}
             >
-              <ToggleButton value="mark_as_read" sx={{ textTransform: 'uppercase', fontWeight: 600 }}>Marcar como leída</ToggleButton>
-              <ToggleButton value="expiration_date" sx={{ textTransform: 'uppercase', fontWeight: 600 }}>Con fecha de expiración</ToggleButton>
+              <ToggleButton value="mark_as_read" sx={{ textTransform: 'uppercase', fontWeight: 600 }}>{t('notificationsAdmin.markAsRead')}</ToggleButton>
+              <ToggleButton value="expiration_date" sx={{ textTransform: 'uppercase', fontWeight: 600 }}>{t('notificationsAdmin.withExpiration')}</ToggleButton>
             </ToggleButtonGroup>
 
             {/* Only relevant when the second mode is picked. */}
@@ -247,7 +249,7 @@ const SendNotification = (): React.ReactElement => {
               <TextField
                 type="date"
                 size="small"
-                label="Expira"
+                label={t('notificationsAdmin.expires')}
                 InputLabelProps={{ shrink: true }}
                 value={expiresAt}
                 onChange={(e) => setExpiresAt(e.target.value)}
@@ -258,7 +260,7 @@ const SendNotification = (): React.ReactElement => {
 
         <Box sx={{ mb: 2 }}>
           <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5 }}>
-            Tipo de prioridad
+            {t('notificationsAdmin.priorityLabel')}
           </Typography>
           <ToggleButtonGroup
             exclusive
@@ -266,15 +268,15 @@ const SendNotification = (): React.ReactElement => {
             value={priority}
             onChange={(_, v: Priority | null) => v && setPriority(v)}
           >
-            <ToggleButton value="low" sx={{ textTransform: 'uppercase', fontWeight: 600 }}>Baja</ToggleButton>
-            <ToggleButton value="medium" sx={{ textTransform: 'uppercase', fontWeight: 600 }}>Media</ToggleButton>
-            <ToggleButton value="high" sx={{ textTransform: 'uppercase', fontWeight: 600 }}>Alta</ToggleButton>
+            <ToggleButton value="low" sx={{ textTransform: 'uppercase', fontWeight: 600 }}>{t('notificationsAdmin.priorityLow')}</ToggleButton>
+            <ToggleButton value="medium" sx={{ textTransform: 'uppercase', fontWeight: 600 }}>{t('notificationsAdmin.priorityMedium')}</ToggleButton>
+            <ToggleButton value="high" sx={{ textTransform: 'uppercase', fontWeight: 600 }}>{t('notificationsAdmin.priorityHigh')}</ToggleButton>
           </ToggleButtonGroup>
         </Box>
 
         <Box sx={{ mb: 1 }}>
           <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5 }}>
-            Mensaje
+            {t('notificationsAdmin.message')}
           </Typography>
           <TextField
             fullWidth
@@ -283,11 +285,11 @@ const SendNotification = (): React.ReactElement => {
             maxRows={6}
             value={message}
             onChange={handleMessageChange}
-            placeholder="Escriba su notificación…"
+            placeholder={t('notificationsAdmin.messagePlaceholder')}
             inputProps={{ maxLength: MAX_MESSAGE }}
           />
           <Typography variant="caption" sx={{ display: 'block', textAlign: 'right', color: charsLeft < 20 ? 'warning.main' : 'text.secondary', mt: 0.5 }}>
-            {charsLeft} caracteres restantes.
+            {t('notificationsAdmin.charsLeft', { total: charsLeft })}
           </Typography>
         </Box>
 
@@ -306,7 +308,7 @@ const SendNotification = (): React.ReactElement => {
               py: 1.25,
             }}
           >
-            Crear notificación
+            {t('notificationsAdmin.createNotification')}
           </Button>
         </Box>
       </Paper>

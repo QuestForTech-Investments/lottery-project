@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using LotteryApi.Data;
 using LotteryApi.DTOs;
+using LotteryApi.Exceptions;
+using LotteryApi.Helpers;
 using LotteryApi.Models;
 using LotteryApi.Services;
 
@@ -76,13 +78,13 @@ public class BancaPrizeConfigController : ControllerBase
             if (!bettingPoolExists)
             {
                 _logger.LogWarning("Betting pool {BettingPoolId} not found", bettingPoolId);
-                return NotFound(new { message = $"Banca con ID {bettingPoolId} no encontrada" });
+                return ApiErrorResult.NotFound(ErrorCodes.BettingPoolNotFound, $"Banca con ID {bettingPoolId} no encontrada");
             }
 
             if (request.PrizeConfigs == null || !request.PrizeConfigs.Any())
             {
                 _logger.LogWarning("Empty prize configs received for betting pool {BettingPoolId}", bettingPoolId);
-                return BadRequest(new { message = "Debe proporcionar al menos una configuración de premio" });
+                return ApiErrorResult.BadRequest(ErrorCodes.PrizeConfigRequired, "Debe proporcionar al menos una configuración de premio");
             }
 
             int savedCount = 0;
@@ -200,7 +202,7 @@ public class BancaPrizeConfigController : ControllerBase
     public async Task<ActionResult<List<BancaPrizeConfigDto>>> GetPrizeConfig(int bettingPoolId)
     {
         if (!await HasPermissionAsync("CHANGE_GAME_PRIZES")) return Forbid();
-        if (!await _zoneScope.IsBettingPoolAllowedAsync(bettingPoolId)) return NotFound(new { message = "Banca no encontrada" });
+        if (!await _zoneScope.IsBettingPoolAllowedAsync(bettingPoolId)) return ApiErrorResult.NotFound(ErrorCodes.BettingPoolNotFound, "Banca no encontrada");
         try
         {
             // Validar que la banca existe
@@ -210,7 +212,7 @@ public class BancaPrizeConfigController : ControllerBase
             if (!bettingPoolExists)
             {
                 _logger.LogWarning("Betting pool {BettingPoolId} not found", bettingPoolId);
-                return NotFound(new { message = $"Banca con ID {bettingPoolId} no encontrada" });
+                return ApiErrorResult.NotFound(ErrorCodes.BettingPoolNotFound, $"Banca con ID {bettingPoolId} no encontrada");
             }
 
             // Obtener configuraciones con información del prize field
@@ -285,13 +287,13 @@ public class BancaPrizeConfigController : ControllerBase
             if (!bettingPoolExists)
             {
                 _logger.LogWarning("Betting pool {BettingPoolId} not found", bettingPoolId);
-                return NotFound(new { message = $"Banca con ID {bettingPoolId} no encontrada" });
+                return ApiErrorResult.NotFound(ErrorCodes.BettingPoolNotFound, $"Banca con ID {bettingPoolId} no encontrada");
             }
 
             if (request.PrizeConfigs == null || !request.PrizeConfigs.Any())
             {
                 _logger.LogWarning("Empty prize configs received for betting pool {BettingPoolId}", bettingPoolId);
-                return BadRequest(new { message = "Debe proporcionar al menos una configuración de premio" });
+                return ApiErrorResult.BadRequest(ErrorCodes.PrizeConfigRequired, "Debe proporcionar al menos una configuración de premio");
             }
 
             _logger.LogInformation(
@@ -433,7 +435,7 @@ public class BancaPrizeConfigController : ControllerBase
             if (!bettingPoolExists)
             {
                 _logger.LogWarning("Betting pool {BettingPoolId} not found", bettingPoolId);
-                return NotFound(new { message = $"Banca con ID {bettingPoolId} no encontrada" });
+                return ApiErrorResult.NotFound(ErrorCodes.BettingPoolNotFound, $"Banca con ID {bettingPoolId} no encontrada");
             }
 
             // Eliminar todas las configuraciones de esta banca

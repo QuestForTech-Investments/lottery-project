@@ -11,6 +11,7 @@ import {
   CircularProgress,
 } from '@mui/material'
 import { Pin as PinIcon } from '@mui/icons-material'
+import { useTranslation } from 'react-i18next'
 import * as userService from '@services/userService'
 import { handleApiError } from '@utils/index'
 
@@ -24,6 +25,7 @@ interface Props {
  * Blocking: no close button, no escape, no click-outside.
  */
 export default function ForceSetPinModal({ isOpen, onCompleted }: Props) {
+  const { t } = useTranslation()
   const [pin, setPin] = useState('')
   const [confirmPin, setConfirmPin] = useState('')
   const [loading, setLoading] = useState(false)
@@ -42,7 +44,7 @@ export default function ForceSetPinModal({ isOpen, onCompleted }: Props) {
       await userService.setMyPin(pin)
       onCompleted()
     } catch (err) {
-      setError(handleApiError(err) || 'No se pudo establecer el PIN')
+      setError(handleApiError(err) || t('modals.forceSetPin.couldNotSet'))
     } finally {
       setLoading(false)
     }
@@ -53,17 +55,17 @@ export default function ForceSetPinModal({ isOpen, onCompleted }: Props) {
       <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, bgcolor: '#e3f2fd', color: '#1565c0' }}>
         <PinIcon />
         <Typography component="span" sx={{ fontWeight: 600, fontFamily: 'Montserrat, sans-serif' }}>
-          Establece tu PIN de seguridad
+          {t('confirmPin.setupTitle')}
         </Typography>
       </DialogTitle>
 
       <DialogContent>
         <Alert severity="info" sx={{ mb: 2, mt: 1 }}>
-          Como usuario administrativo, debes definir un PIN de 4 dígitos para confirmar acciones sensibles.
+          {t('modals.forceSetPin.info')}
         </Alert>
 
         <TextField
-          label="PIN (4 dígitos)"
+          label={t('modals.forceSetPin.pinLabel')}
           type="password"
           value={pin}
           onChange={(e) => setPin(onlyDigits(e.target.value))}
@@ -73,7 +75,7 @@ export default function ForceSetPinModal({ isOpen, onCompleted }: Props) {
           inputProps={{ inputMode: 'numeric', maxLength: 4, pattern: '\\d{4}' }}
         />
         <TextField
-          label="Confirmar PIN"
+          label={t('confirmPin.confirmPinLabel')}
           type="password"
           value={confirmPin}
           onChange={(e) => setConfirmPin(onlyDigits(e.target.value))}
@@ -81,7 +83,7 @@ export default function ForceSetPinModal({ isOpen, onCompleted }: Props) {
           margin="dense"
           inputProps={{ inputMode: 'numeric', maxLength: 4, pattern: '\\d{4}' }}
           error={confirmPin.length > 0 && !matches}
-          helperText={confirmPin.length > 0 && !matches ? 'Los PIN no coinciden' : ''}
+          helperText={confirmPin.length > 0 && !matches ? t('confirmPin.pinsDontMatch') : ''}
         />
 
         {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
@@ -100,7 +102,7 @@ export default function ForceSetPinModal({ isOpen, onCompleted }: Props) {
             py: 1.2,
           }}
         >
-          {loading ? <CircularProgress size={22} sx={{ color: 'white' }} /> : 'Establecer PIN'}
+          {loading ? <CircularProgress size={22} sx={{ color: 'white' }} /> : t('modals.forceSetPin.setPin')}
         </Button>
       </DialogActions>
     </Dialog>

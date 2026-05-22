@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using LotteryApi.Data;
+using LotteryApi.Exceptions;
 using LotteryApi.Helpers;
 using LotteryApi.Services;
 using LotteryApi.Services.Caida;
@@ -160,7 +161,7 @@ public class CaidaController : ControllerBase
             .FirstOrDefaultAsync(c => c.BettingPoolId == bettingPoolId);
 
         if (config == null)
-            return NotFound(new { message = "Configuración de banca no encontrada" });
+            return ApiErrorResult.NotFound(ErrorCodes.BancaConfigNotFound, "Configuración de banca no encontrada");
 
         var previousValue = config.AccumulatedFall;
         var now = DateTime.UtcNow;

@@ -1,4 +1,5 @@
 import React, { memo, type ChangeEvent, type SyntheticEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Grid,
   TextField,
@@ -54,6 +55,7 @@ const BetTypeFieldGrid: React.FC<BetTypeFieldGridProps> = memo(({
   draws = [],
   allowedValuesMap = {},
 }) => {
+  const { t } = useTranslation();
   /**
    * Generate field key based on field type
    */
@@ -323,7 +325,7 @@ const BetTypeFieldGrid: React.FC<BetTypeFieldGridProps> = memo(({
                     })
                   ) : (
                     <Typography variant="caption" color="text.secondary">
-                      Sin campos
+                      {t('createBettingPool.prizes.noFields')}
                     </Typography>
                   )}
                 </Box>
@@ -352,7 +354,7 @@ const BetTypeFieldGrid: React.FC<BetTypeFieldGridProps> = memo(({
               fontWeight: 'bold'
             }}
           >
-            {saving ? 'Guardando...' : 'ACTUALIZAR'}
+            {saving ? t('createBettingPool.prizes.saving') : t('createBettingPool.prizes.update')}
           </Button>
         </Box>
       )}

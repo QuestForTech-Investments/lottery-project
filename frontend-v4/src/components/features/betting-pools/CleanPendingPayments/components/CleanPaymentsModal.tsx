@@ -5,6 +5,7 @@
  */
 
 import { memo, type FC } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Typography,
@@ -41,23 +42,24 @@ const CleanPaymentsModal: FC<CleanPaymentsModalProps> = memo(({
   onClose,
   onClean,
 }) => {
+  const { t } = useTranslation();
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>Limpiar pendientes de pago</DialogTitle>
+      <DialogTitle>{t('bettingPoolsAdmin.cleanPendingPaymentsTitle')}</DialogTitle>
       <DialogContent>
         <Box sx={{ mb: 2 }}>
           <Typography variant="body1">
-            <strong>Nombre:</strong>{' '}
+            <strong>{t('bettingPoolsAdmin.cleanModalNameLabel')}</strong>{' '}
             {selectedPool?.bettingPoolName || selectedPool?.name}
           </Typography>
           <Typography variant="body1">
-            <strong>Número:</strong>{' '}
+            <strong>{t('bettingPoolsAdmin.cleanModalNumberLabel')}</strong>{' '}
             {selectedPool?.bettingPoolCode || selectedPool?.code || `#${selectedPool?.bettingPoolId || selectedPool?.id}`}
           </Typography>
         </Box>
 
         <TextField
-          label="Fecha"
+          label={t('bettingPoolsAdmin.cleanModalDateLabel')}
           type="date"
           value={cleanDate}
           onChange={(e) => onDateChange(e.target.value)}
@@ -67,23 +69,22 @@ const CleanPaymentsModal: FC<CleanPaymentsModalProps> = memo(({
         />
 
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          Se limpiaran todos los tickets pendientes de pago hasta la fecha
-          seleccionada
+          {t('bettingPoolsAdmin.cleanModalDescription')}
         </Typography>
 
         <Box sx={{ backgroundColor: 'grey.50', p: 2, borderRadius: 1, position: 'relative', minHeight: 64 }}>
           {previewLoading ? (
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, color: 'text.secondary' }}>
               <CircularProgress size={18} />
-              <Typography variant="body2">Calculando…</Typography>
+              <Typography variant="body2">{t('bettingPoolsAdmin.calculating')}</Typography>
             </Box>
           ) : (
             <>
               <Typography variant="body1">
-                <strong>Tickets:</strong> {cleanSummary.tickets}
+                <strong>{t('bettingPoolsAdmin.ticketsLabel')}</strong> {cleanSummary.tickets}
               </Typography>
               <Typography variant="body1">
-                <strong>Monto de premios a limpiar:</strong> $
+                <strong>{t('bettingPoolsAdmin.prizesAmountToClean')}</strong> $
                 {cleanSummary.amount.toFixed(2)}
               </Typography>
             </>
@@ -91,13 +92,13 @@ const CleanPaymentsModal: FC<CleanPaymentsModalProps> = memo(({
         </Box>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
+        <Button onClick={onClose}>{t('common.cancel')}</Button>
         <Button
           variant="contained"
           onClick={onClean}
           disabled={cleaning || previewLoading}
         >
-          {cleaning ? 'Limpiando...' : 'OK'}
+          {cleaning ? t('bettingPoolsAdmin.cleaning') : t('bettingPoolsAdmin.ok')}
         </Button>
       </DialogActions>
     </Dialog>

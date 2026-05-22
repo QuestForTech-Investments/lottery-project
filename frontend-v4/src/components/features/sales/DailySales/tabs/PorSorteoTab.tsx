@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Card,
@@ -68,6 +69,7 @@ interface PorSorteoTabProps {
 }
 
 const PorSorteoTab = ({ selectedDate, setSelectedDate, zones, selectedZones, handleZoneChange }: PorSorteoTabProps): React.ReactElement => {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<DrawSalesDto[]>([]);
   const [summary, setSummary] = useState({ totalSold: 0, totalPrizes: 0, totalCommissions: 0, totalNet: 0 });
@@ -113,13 +115,13 @@ const PorSorteoTab = ({ selectedDate, setSelectedDate, zones, selectedZones, han
     <Card>
       <CardContent>
         <Typography variant="h4" align="center" gutterBottom sx={{ fontWeight: 400, mb: 4, fontSize: '1.75rem' }}>
-          Ventas por sorteo
+          {t('sales.salesByDraw')}
         </Typography>
 
         <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap', alignItems: 'flex-end' }}>
           <Box>
             <Typography variant="caption" sx={{ color: 'text.secondary', mb: 0.5, display: 'block' }}>
-              Fecha
+              {t('common.date')}
             </Typography>
             <TextField
               type="date"
@@ -135,8 +137,8 @@ const PorSorteoTab = ({ selectedDate, setSelectedDate, zones, selectedZones, han
           </Box>
 
           <MultiSelectSearch
-            label="Zonas"
-            selectAllLabel="Todas"
+            label={t('common.zones')}
+            selectAllLabel={t('common.all')}
             options={zones.map((z) => ({ id: z.zoneId || z.id || 0, label: z.zoneName || z.name || '' }))}
             selectedIds={selectedZones}
             onChange={(ids) => {
@@ -160,12 +162,12 @@ const PorSorteoTab = ({ selectedDate, setSelectedDate, zones, selectedZones, han
               fontWeight: 500
             }}
           >
-            {loading ? <CircularProgress size={16} color="inherit" /> : 'Ver ventas'}
+            {loading ? <CircularProgress size={16} color="inherit" /> : t('transactions.viewSales')}
           </Button>
         </Box>
 
         <Typography variant="h5" align="center" gutterBottom sx={{ fontWeight: 400, mb: 4, fontSize: '1.7rem' }}>
-          Total neto: <Box component="span" sx={{
+          {t('sales.totalNet')}: <Box component="span" sx={{
             backgroundColor: '#ede9fe',
             px: 2,
             py: 0.5,
@@ -176,14 +178,14 @@ const PorSorteoTab = ({ selectedDate, setSelectedDate, zones, selectedZones, han
 
         {data.length === 0 && !loading && (
           <Typography variant="h6" align="center" sx={{ color: 'text.secondary', mb: 4, fontSize: '1.25rem' }}>
-            No hay entradas para el sorteo y la fecha elegidos
+            {t('sales.noEntriesForDrawDate')}
           </Typography>
         )}
 
         <Box sx={{ mb: 2 }}>
           <TextField
             size="small"
-            placeholder="Filtrado rápido"
+            placeholder={t('common.filterQuick')}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             InputProps={{
@@ -201,18 +203,18 @@ const PorSorteoTab = ({ selectedDate, setSelectedDate, zones, selectedZones, han
           <Table size="small">
             <TableHead sx={{ backgroundColor: '#e3e3e3' }}>
               <TableRow>
-                <TableCell sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('drawName')}>Sorteo</TableSortLabel></TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('totalSold')}>Total Vendido</TableSortLabel></TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('totalPrizes')}>Total premios</TableSortLabel></TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('totalCommissions')}>Total comisiones</TableSortLabel></TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('totalNet')}>Total neto</TableSortLabel></TableCell>
+                <TableCell sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('drawName')}>{t('common.draw')}</TableSortLabel></TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('totalSold')}>{t('sales.totalSold')}</TableSortLabel></TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('totalPrizes')}>{t('sales.totalPrizes')}</TableSortLabel></TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('totalCommissions')}>{t('sales.totalCommissions')}</TableSortLabel></TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('totalNet')}>{t('sales.totalNet')}</TableSortLabel></TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {sortedData.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} align="center" sx={{ py: 3, color: 'text.secondary' }}>
-                    {loading ? 'Cargando...' : 'No hay entradas para el sorteo y la fecha elegidos'}
+                    {loading ? t('common.loading') : t('sales.noEntriesForDrawDate')}
                   </TableCell>
                 </TableRow>
               ) : (
@@ -258,7 +260,7 @@ const PorSorteoTab = ({ selectedDate, setSelectedDate, zones, selectedZones, han
                 ))
               )}
               <TableRow sx={{ backgroundColor: '#f5f7fa', '& td': { fontWeight: 600 } }}>
-                <TableCell>Totales</TableCell>
+                <TableCell>{t('balances.totals')}</TableCell>
                 <TableCell align="right">{formatCurrency(summary.totalSold)}</TableCell>
                 <TableCell align="right">{formatCurrency(summary.totalPrizes)}</TableCell>
                 <TableCell align="right">{formatCurrency(summary.totalCommissions)}</TableCell>
@@ -269,7 +271,7 @@ const PorSorteoTab = ({ selectedDate, setSelectedDate, zones, selectedZones, han
         </TableContainer>
 
         <Typography variant="body2" sx={{ mt: 2 }}>
-          Mostrando {filteredData.length} de {data.length} entradas
+          {t('common.showingEntries', { shown: filteredData.length, total: data.length })}
         </Typography>
       </CardContent>
     </Card>

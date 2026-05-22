@@ -5,6 +5,7 @@
  */
 
 import { memo, type FC } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Typography,
@@ -47,16 +48,17 @@ const BettingPoolsListTab: FC<BettingPoolsListTabProps> = memo(({
   onSort,
   onOpenModal,
 }) => {
+  const { t } = useTranslation();
   return (
     <Box>
       <Typography variant="h5" component="h1" gutterBottom>
-        Lista de bancas
+        {t('bettingPoolsAdmin.accessListTitle')}
       </Typography>
 
       {/* Quick Filter */}
       <Box sx={{ mb: 3 }}>
         <TextField
-          placeholder="Filtrado rápido"
+          placeholder={t('bettingPoolsAdmin.quickFilter')}
           value={searchTerm}
           onChange={(e) => onSearchChange(e.target.value)}
           size="small"
@@ -82,7 +84,7 @@ const BettingPoolsListTab: FC<BettingPoolsListTabProps> = memo(({
                   direction={orderBy === 'number' ? order : 'asc'}
                   onClick={() => onSort('number')}
                 >
-                  Número
+                  {t('bettingPoolsAdmin.tableNumber')}
                 </TableSortLabel>
               </TableCell>
               <TableCell>
@@ -91,7 +93,7 @@ const BettingPoolsListTab: FC<BettingPoolsListTabProps> = memo(({
                   direction={orderBy === 'name' ? order : 'asc'}
                   onClick={() => onSort('name')}
                 >
-                  Nombre
+                  {t('bettingPoolsAdmin.tableName')}
                 </TableSortLabel>
               </TableCell>
               <TableCell>
@@ -100,11 +102,11 @@ const BettingPoolsListTab: FC<BettingPoolsListTabProps> = memo(({
                   direction={orderBy === 'reference' ? order : 'asc'}
                   onClick={() => onSort('reference')}
                 >
-                  Referencia
+                  {t('bettingPoolsAdmin.tableReference')}
                 </TableSortLabel>
               </TableCell>
-              <TableCell>Usuarios</TableCell>
-              <TableCell>Actions</TableCell>
+              <TableCell>{t('bettingPoolsAdmin.tableUsers')}</TableCell>
+              <TableCell>{t('bettingPoolsAdmin.actionsHeader')}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -125,7 +127,7 @@ const BettingPoolsListTab: FC<BettingPoolsListTabProps> = memo(({
                     size="small"
                     color="primary"
                     onClick={() => onOpenModal(pool)}
-                    title="Limpiar pendientes de pago"
+                    title={t('bettingPoolsAdmin.cleanPendingPaymentsAction')}
                   >
                     <CleanIcon />
                   </IconButton>
@@ -137,7 +139,7 @@ const BettingPoolsListTab: FC<BettingPoolsListTabProps> = memo(({
       </TableContainer>
 
       <Typography variant="body2" sx={{ mt: 2, color: 'text.secondary' }}>
-        Mostrando {filteredData.length} de {totalCount} entradas
+        {t('common.showingEntries', { shown: filteredData.length, total: totalCount })}
       </Typography>
     </Box>
   );

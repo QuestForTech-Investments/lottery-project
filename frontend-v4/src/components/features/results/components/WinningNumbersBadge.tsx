@@ -5,6 +5,7 @@
  */
 
 import { memo, type FC } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Box, Typography } from '@mui/material';
 
 interface NumberBadgeProps {
@@ -45,6 +46,7 @@ interface WinningNumbersBadgeProps {
  * Parse and render winning numbers with formatted badges
  */
 const WinningNumbersBadge: FC<WinningNumbersBadgeProps> = memo(({ winningNumbers }) => {
+  const { t } = useTranslation();
   if (!winningNumbers) return <>-</>;
 
   // Check if already formatted with labels (e.g., "1ra: 40, 2da: 56, 3ra: 91")
@@ -69,22 +71,22 @@ const WinningNumbersBadge: FC<WinningNumbersBadgeProps> = memo(({ winningNumbers
 
   if (cleanNumbers.length >= 6) {
     const labels: { label: string; value: string }[] = [
-      { label: '1ra', value: cleanNumbers.substring(0, 2) },
-      { label: '2da', value: cleanNumbers.substring(2, 4) },
-      { label: '3ra', value: cleanNumbers.substring(4, 6) },
+      { label: t('resultsAdmin.labels.first'), value: cleanNumbers.substring(0, 2) },
+      { label: t('resultsAdmin.labels.second'), value: cleanNumbers.substring(2, 4) },
+      { label: t('resultsAdmin.labels.third'), value: cleanNumbers.substring(4, 6) },
     ];
 
     const remaining = cleanNumbers.substring(6);
 
     // Parse additional numbers (Pick 3, Pick 4, Pick 5)
     if (remaining.length >= 3) {
-      labels.push({ label: 'Pick 3', value: remaining.substring(0, 3) });
+      labels.push({ label: t('resultsAdmin.labels.pick3'), value: remaining.substring(0, 3) });
       const afterCash3 = remaining.substring(3);
       if (afterCash3.length >= 4) {
-        labels.push({ label: 'Pick 4', value: afterCash3.substring(0, 4) });
+        labels.push({ label: t('resultsAdmin.labels.pick4'), value: afterCash3.substring(0, 4) });
         const afterPlay4 = afterCash3.substring(4);
         if (afterPlay4.length >= 5) {
-          labels.push({ label: 'Pick 5', value: afterPlay4.substring(0, 5) });
+          labels.push({ label: t('resultsAdmin.labels.pick5'), value: afterPlay4.substring(0, 5) });
         }
       }
     }

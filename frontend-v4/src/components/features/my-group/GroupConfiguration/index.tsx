@@ -17,6 +17,7 @@ import {
   Alert,
   CircularProgress,
 } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 
 // Types and constants
 import type { PrizesData, CommissionsData, FooterData } from './types';
@@ -127,6 +128,7 @@ const fromConfigs = (configs: GroupDefaultConfig[]): { prizes: PrizesData; commi
 // ============================================================================
 
 const GroupConfiguration = (): React.ReactElement => {
+  const { t } = useTranslation();
   const { hasPermission, loading: permLoading } = useUserPermissions();
   const canManage = hasPermission('MANAGE_MY_GROUP');
   const [activeMainTab, setActiveMainTab] = useState<number>(0);
@@ -253,21 +255,21 @@ const GroupConfiguration = (): React.ReactElement => {
         saveFooterDefaults(footerLines),
         saveBpDefaults(formDataToMap(bpConfig)),
       ]);
-      setSnack({ open: true, message: 'Configuración actualizada', severity: 'success' });
+      setSnack({ open: true, message: t('myGroupAdmin.snack.success'), severity: 'success' });
     } catch (err) {
       console.error('Error saving group config:', err);
-      setSnack({ open: true, message: 'Error al guardar. Intente nuevamente.', severity: 'error' });
+      setSnack({ open: true, message: t('myGroupAdmin.snack.error'), severity: 'error' });
     } finally {
       setSaving(false);
     }
-  }, [prizesData, commissionsData, allowedValues, footerData, bpConfig]);
+  }, [prizesData, commissionsData, allowedValues, footerData, bpConfig, t]);
 
   if (!permLoading && !canManage) {
     return (
       <Box sx={{ bgcolor: '#f5f5f5', minHeight: '100vh', p: 3 }}>
         <Box sx={{ maxWidth: 600, mx: 'auto', mt: 8 }}>
           <Alert severity="error">
-            No tiene permiso para acceder a esta sección. Se requiere el permiso <strong>MANAGE_MY_GROUP</strong>.
+            <span dangerouslySetInnerHTML={{ __html: t('myGroupAdmin.noPermission') }} />
           </Alert>
         </Box>
       </Box>
@@ -277,7 +279,7 @@ const GroupConfiguration = (): React.ReactElement => {
   return (
     <Box sx={{ bgcolor: '#f5f5f5', minHeight: '100vh', p: 3 }}>
       <Typography variant="h4" sx={{ textAlign: 'center', mb: 3, fontFamily: 'Montserrat, sans-serif', fontWeight: 600 }}>
-        Actualizar grupo
+        {t('myGroupAdmin.title')}
       </Typography>
 
       <Card sx={{ boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
@@ -289,10 +291,10 @@ const GroupConfiguration = (): React.ReactElement => {
             sx={TABS_STYLE}
             TabIndicatorProps={TAB_INDICATOR_PROPS}
           >
-            <Tab label="Premios y Comisiones Predeterminados" />
-            <Tab label="Valores permitidos" />
-            <Tab label="Configuración Predeterminada" />
-            <Tab label="Pie de Página" />
+            <Tab label={t('myGroupAdmin.tabs.prizesAndCommissions')} />
+            <Tab label={t('myGroupAdmin.tabs.allowedValues')} />
+            <Tab label={t('myGroupAdmin.tabs.defaultConfiguration')} />
+            <Tab label={t('myGroupAdmin.tabs.footer')} />
           </Tabs>
 
           <Box component="form" onSubmit={handleSubmit}>
@@ -300,7 +302,7 @@ const GroupConfiguration = (): React.ReactElement => {
             {activeMainTab === 0 && (
               <Box>
                 <Typography variant="h5" sx={{ textAlign: 'center', mb: 2, fontSize: '18px', fontWeight: 600 }}>
-                  Premios y comisiones predeterminados
+                  {t('myGroupAdmin.sections.prizesAndCommissions')}
                 </Typography>
 
                 {/* Sub-tabs */}
@@ -310,8 +312,8 @@ const GroupConfiguration = (): React.ReactElement => {
                   sx={TABS_STYLE}
                   TabIndicatorProps={TAB_INDICATOR_PROPS}
                 >
-                  <Tab label="Premios" />
-                  <Tab label="Comisiones" />
+                  <Tab label={t('myGroupAdmin.tabs.prizes')} />
+                  <Tab label={t('myGroupAdmin.tabs.commissions')} />
                 </Tabs>
 
                 {/* Sub-tab: Premios */}
@@ -344,7 +346,7 @@ const GroupConfiguration = (): React.ReactElement => {
             {activeMainTab === 2 && (
               <Box>
                 <Typography variant="h5" sx={{ textAlign: 'center', mb: 2, fontSize: '18px', fontWeight: 600 }}>
-                  Configuración predeterminada
+                  {t('myGroupAdmin.sections.defaultConfiguration')}
                 </Typography>
                 <ConfigurationTab
                   formData={bpConfig as unknown as Parameters<typeof ConfigurationTab>[0]['formData']}
@@ -385,7 +387,7 @@ const GroupConfiguration = (): React.ReactElement => {
                   textTransform: 'uppercase'
                 }}
               >
-                {saving ? 'GUARDANDO…' : 'ACTUALIZAR'}
+                {saving ? t('myGroupAdmin.saving') : t('myGroupAdmin.update')}
               </Button>
             </Box>
           </Box>

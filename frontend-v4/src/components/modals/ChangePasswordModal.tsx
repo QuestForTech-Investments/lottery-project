@@ -22,6 +22,7 @@ import {
   Clear as ClearIcon,
   Pin as PinIcon,
 } from '@mui/icons-material';
+import { useTranslation } from 'react-i18next';
 import * as userService from '@/services/userService';
 import * as authService from '@/services/authService';
 import { handleApiError } from '@/utils';
@@ -47,6 +48,7 @@ type Step = 'password' | 'pin' | 'done';
  * to a PIN change step (security policy: keep both credentials fresh).
  */
 export default function ChangePasswordModal({ isOpen, onClose }: ChangePasswordModalProps) {
+  const { t } = useTranslation();
   const [step, setStep] = useState<Step>('password');
 
   // Password state
@@ -117,7 +119,7 @@ export default function ChangePasswordModal({ isOpen, onClose }: ChangePasswordM
   const handleSubmitPassword = async () => {
     const currentUser = authService.getCurrentUser();
     if (!currentUser?.id) {
-      setError('No se pudo obtener el usuario actual. Por favor, inicie sesión nuevamente.');
+      setError(t('modals.changePassword.errors.noCurrentUser'));
       return;
     }
 
@@ -139,7 +141,7 @@ export default function ChangePasswordModal({ isOpen, onClose }: ChangePasswordM
     } catch (err) {
       const errorMessage = handleApiError(err);
       if (errorMessage.toLowerCase().includes('actual') || errorMessage.toLowerCase().includes('current') || errorMessage.toLowerCase().includes('incorrect')) {
-        setError('La contraseña actual es incorrecta');
+        setError(t('modals.changePassword.errors.currentIncorrect'));
       } else {
         setError(errorMessage);
       }
@@ -156,7 +158,7 @@ export default function ChangePasswordModal({ isOpen, onClose }: ChangePasswordM
       setStep('done');
       setTimeout(() => handleClose(), 2000);
     } catch (err) {
-      setError(handleApiError(err) || 'No se pudo establecer el PIN');
+      setError(handleApiError(err) || t('modals.changePassword.errors.couldNotSetPin'));
     } finally {
       setIsLoading(false);
     }
@@ -178,9 +180,9 @@ export default function ChangePasswordModal({ isOpen, onClose }: ChangePasswordM
   );
 
   const titleText =
-    step === 'pin' ? 'Cambiar PIN de seguridad'
-    : step === 'done' ? 'Listo'
-    : 'Cambiar contraseña';
+    step === 'pin' ? t('modals.changePassword.titlePin')
+    : step === 'done' ? t('modals.changePassword.titleDone')
+    : t('modals.changePassword.title');
 
   return (
     <Dialog
@@ -217,10 +219,10 @@ export default function ChangePasswordModal({ isOpen, onClose }: ChangePasswordM
         {step === 'done' && (
           <Alert severity="success">
             <Typography variant="body2" fontWeight="bold">
-              ¡Listo!
+              {t('modals.changePassword.doneMsg')}
             </Typography>
             <Typography variant="caption" display="block" sx={{ mt: 0.5 }}>
-              Esta ventana se cerrará automáticamente.
+              {t('modals.changePassword.autoClose')}
             </Typography>
           </Alert>
         )}
@@ -234,7 +236,7 @@ export default function ChangePasswordModal({ isOpen, onClose }: ChangePasswordM
         {step === 'password' && (
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
             <TextField
-              label="Contraseña actual"
+              label={t('modals.changePassword.currentPassword')}
               type="password"
               value={currentPassword}
               onChange={(e) => setCurrentPassword(e.target.value)}
@@ -246,7 +248,7 @@ export default function ChangePasswordModal({ isOpen, onClose }: ChangePasswordM
             />
 
             <TextField
-              label="Nueva contraseña"
+              label={t('usersAdmin.newPassword')}
               type="password"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
@@ -259,18 +261,18 @@ export default function ChangePasswordModal({ isOpen, onClose }: ChangePasswordM
 
             <Box sx={{ bgcolor: 'grey.50', borderRadius: 1, p: 1 }}>
               <Typography variant="caption" color="text.secondary" fontWeight="bold">
-                Requisitos de contraseña:
+                {t('modals.changePassword.requirements')}
               </Typography>
               <List dense disablePadding>
-                <ValidationItem valid={validation.minLength} text="Mínimo 8 caracteres" />
-                <ValidationItem valid={validation.hasLetter} text="Al menos una letra" />
-                <ValidationItem valid={validation.hasNumber} text="Al menos un número" />
-                <ValidationItem valid={validation.hasSpecial} text='Al menos un carácter especial (!@#$%^&*)' />
+                <ValidationItem valid={validation.minLength} text={t('modals.changePassword.minLength8')} />
+                <ValidationItem valid={validation.hasLetter} text={t('modals.changePassword.atLeastLetter')} />
+                <ValidationItem valid={validation.hasNumber} text={t('modals.changePassword.atLeastNumber')} />
+                <ValidationItem valid={validation.hasSpecial} text={t('modals.changePassword.atLeastSpecial')} />
               </List>
             </Box>
 
             <TextField
-              label="Confirmar nueva contraseña"
+              label={t('usersAdmin.confirmPassword')}
               type="password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
@@ -279,7 +281,7 @@ export default function ChangePasswordModal({ isOpen, onClose }: ChangePasswordM
               disabled={isLoading}
               autoComplete="new-password"
               error={confirmPassword.length > 0 && !passwordsMatch}
-              helperText={confirmPassword.length > 0 && !passwordsMatch ? 'Las contraseñas no coinciden' : ''}
+              helperText={confirmPassword.length > 0 && !passwordsMatch ? t('usersAdmin.passwordMustMatch') : ''}
             />
           </Box>
         )}
@@ -287,11 +289,11 @@ export default function ChangePasswordModal({ isOpen, onClose }: ChangePasswordM
         {step === 'pin' && (
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <Alert severity="warning">
-              Tu contraseña fue actualizada. Para continuar, debes establecer un nuevo PIN de 4 dígitos.
+              {t('modals.changePassword.pinWarning')}
             </Alert>
 
             <TextField
-              label="Nuevo PIN (4 dígitos)"
+              label={t('confirmPin.newPinLabel')}
               type="password"
               value={newPin}
               onChange={(e) => setNewPin(onlyDigits(e.target.value))}
@@ -302,7 +304,7 @@ export default function ChangePasswordModal({ isOpen, onClose }: ChangePasswordM
             />
 
             <TextField
-              label="Confirmar PIN"
+              label={t('confirmPin.confirmPinLabel')}
               type="password"
               value={confirmPin}
               onChange={(e) => setConfirmPin(onlyDigits(e.target.value))}
@@ -310,7 +312,7 @@ export default function ChangePasswordModal({ isOpen, onClose }: ChangePasswordM
               disabled={isLoading}
               inputProps={{ inputMode: 'numeric', maxLength: 4, pattern: '\\d{4}' }}
               error={confirmPin.length > 0 && !pinsMatch}
-              helperText={confirmPin.length > 0 && !pinsMatch ? 'Los PIN no coinciden' : ''}
+              helperText={confirmPin.length > 0 && !pinsMatch ? t('confirmPin.pinsDontMatch') : ''}
             />
           </Box>
         )}
@@ -320,7 +322,7 @@ export default function ChangePasswordModal({ isOpen, onClose }: ChangePasswordM
         {step === 'password' && (
           <>
             <Button onClick={handleClose} disabled={isLoading} color="inherit">
-              Cancelar
+              {t('common.cancel')}
             </Button>
             <Button
               onClick={handleSubmitPassword}
@@ -329,7 +331,7 @@ export default function ChangePasswordModal({ isOpen, onClose }: ChangePasswordM
               sx={{ bgcolor: '#6366f1', '&:hover': { bgcolor: '#4f46e5' } }}
               startIcon={isLoading ? <CircularProgress size={20} color="inherit" /> : null}
             >
-              {isLoading ? 'Cambiando...' : 'Cambiar contraseña'}
+              {isLoading ? t('modals.changePassword.changing') : t('modals.changePassword.change')}
             </Button>
           </>
         )}
@@ -343,13 +345,13 @@ export default function ChangePasswordModal({ isOpen, onClose }: ChangePasswordM
             sx={{ bgcolor: '#6366f1', '&:hover': { bgcolor: '#4f46e5' } }}
             startIcon={isLoading ? <CircularProgress size={20} color="inherit" /> : null}
           >
-            {isLoading ? 'Guardando...' : 'Guardar PIN'}
+            {isLoading ? t('common.saving') : t('modals.changePassword.savePin')}
           </Button>
         )}
 
         {step === 'done' && (
           <Button onClick={handleClose} color="inherit">
-            Cerrar
+            {t('common.close')}
           </Button>
         )}
       </DialogActions>

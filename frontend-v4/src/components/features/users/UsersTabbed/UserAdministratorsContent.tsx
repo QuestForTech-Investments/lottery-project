@@ -1,4 +1,5 @@
 import React, { useState, memo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Table,
@@ -32,6 +33,7 @@ import { handleApiError } from '@utils/index';
  * Content for Administrators tab - matches original Vue.js design
  */
 const UserAdministratorsContent: React.FC = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const {
     administradores,
@@ -74,7 +76,7 @@ const UserAdministratorsContent: React.FC = () => {
       setTempDialog({ open: true, username: res.username, password: res.temporaryPassword });
       setConfirmTarget(null);
     } catch (err) {
-      alert(handleApiError(err) || 'No se pudo generar la clave temporal');
+      alert(handleApiError(err) || t('usersAdmin.tempPasswordError'));
       setConfirmTarget(null);
     } finally {
       setGeneratingFor(null);
@@ -94,7 +96,7 @@ const UserAdministratorsContent: React.FC = () => {
       setDeleteTarget(null);
       refreshData();
     } catch (err) {
-      alert(handleApiError(err) || 'No se pudo eliminar el usuario');
+      alert(handleApiError(err) || t('usersAdmin.deleteUserError'));
       setDeleteTarget(null);
     } finally {
       setDeletingFor(null);
@@ -114,7 +116,7 @@ const UserAdministratorsContent: React.FC = () => {
       <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
         <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
           <TextField
-            placeholder="Filtrado por usuario"
+            placeholder={t('usersAdmin.filterByUser')}
             value={searchText}
             onChange={handleSearchChange}
             size="small"
@@ -130,7 +132,7 @@ const UserAdministratorsContent: React.FC = () => {
             }}
           />
           <TextField
-            placeholder="Filtro rapido"
+            placeholder={t('common.filterQuick')}
             value={quickFilter}
             onChange={(e) => setQuickFilter(e.target.value)}
             size="small"
@@ -154,10 +156,10 @@ const UserAdministratorsContent: React.FC = () => {
           <TableHead>
             <TableRow sx={{ bgcolor: '#e3e3e3' }}>
               <TableCell>
-                <strong>Usuario</strong>
+                <strong>{t('usersAdmin.user')}</strong>
               </TableCell>
               <TableCell align="center">
-                <strong>Acciones</strong>
+                <strong>{t('usersAdmin.actions')}</strong>
               </TableCell>
             </TableRow>
           </TableHead>
@@ -168,7 +170,7 @@ const UserAdministratorsContent: React.FC = () => {
                   <Box sx={{ py: 3, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 2 }}>
                     <CircularProgress size={24} />
                     <Typography variant="body2" color="text.secondary">
-                      Cargando administradores...
+                      {t('usersAdmin.loadingAdmins')}
                     </Typography>
                   </Box>
                 </TableCell>
@@ -177,7 +179,7 @@ const UserAdministratorsContent: React.FC = () => {
               <TableRow>
                 <TableCell colSpan={2} align="center">
                   <Typography variant="body2" color="text.secondary" sx={{ py: 3 }}>
-                    No se encontraron administradores
+                    {t('usersAdmin.noAdminsFound')}
                   </Typography>
                 </TableCell>
               </TableRow>
@@ -197,7 +199,7 @@ const UserAdministratorsContent: React.FC = () => {
                         size="small"
                         onClick={() => setConfirmTarget({ userId: admin.userId, username: admin.username })}
                         disabled={generatingFor === admin.userId}
-                        title="Generar clave temporal"
+                        title={t('usersAdmin.generateTempPassword')}
                         sx={{
                           color: '#6366f1',
                           '&:hover': { bgcolor: 'rgba(99, 102, 241, 0.1)' },
@@ -208,7 +210,7 @@ const UserAdministratorsContent: React.FC = () => {
                       <IconButton
                         size="small"
                         onClick={() => handleEditClick(admin.userId)}
-                        title="Editar usuario"
+                        title={t('usersAdmin.editUser')}
                         sx={{
                           color: '#6366f1',
                           '&:hover': { bgcolor: 'rgba(99, 102, 241, 0.1)' },
@@ -220,7 +222,7 @@ const UserAdministratorsContent: React.FC = () => {
                         size="small"
                         onClick={() => setDeleteTarget({ userId: admin.userId, username: admin.username })}
                         disabled={deletingFor === admin.userId}
-                        title="Eliminar usuario"
+                        title={t('usersAdmin.deleteUser')}
                         sx={{
                           color: '#d32f2f',
                           '&:hover': { bgcolor: 'rgba(211, 47, 47, 0.1)' },
@@ -240,15 +242,15 @@ const UserAdministratorsContent: React.FC = () => {
       {/* Footer with count */}
       <Box sx={{ p: 2, borderTop: 1, borderColor: 'divider' }}>
         <Typography variant="body2" color="text.secondary">
-          Mostrando {filteredAdministradores.length} entradas
+          {t('usersAdmin.showingEntries', { count: filteredAdministradores.length })}
         </Typography>
       </Box>
 
       <ConfirmActionDialog
         isOpen={!!confirmTarget}
-        title="Generar clave temporal"
-        message={`Se generará una nueva clave para "${confirmTarget?.username}". El usuario deberá cambiarla al iniciar sesión y la actual dejará de funcionar.`}
-        confirmLabel="Generar"
+        title={t('usersAdmin.tempPasswordTitle')}
+        message={t('usersAdmin.tempPasswordMessage', { username: confirmTarget?.username ?? '' })}
+        confirmLabel={t('usersAdmin.generate')}
         severity="warning"
         loading={generatingFor !== null}
         onConfirm={handleConfirmGenerate}
@@ -257,9 +259,9 @@ const UserAdministratorsContent: React.FC = () => {
 
       <ConfirmActionDialog
         isOpen={!!deleteTarget}
-        title="Eliminar usuario"
-        message={`¿Eliminar al usuario "${deleteTarget?.username}"? El usuario será desactivado y no podrá acceder al sistema.`}
-        confirmLabel="Eliminar"
+        title={t('usersAdmin.deleteUser')}
+        message={t('usersAdmin.deleteUserMessage', { username: deleteTarget?.username ?? '' })}
+        confirmLabel={t('common.delete')}
         severity="danger"
         loading={deletingFor !== null}
         onConfirm={handleConfirmDelete}

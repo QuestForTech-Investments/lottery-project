@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using LotteryApi.Data;
 using LotteryApi.DTOs;
+using LotteryApi.Exceptions;
 using LotteryApi.Models;
 using LotteryApi.Helpers;
 using LotteryApi.Services;
@@ -145,7 +146,7 @@ public class ResultsController : ControllerBase
 
         if (result == null)
         {
-            return NotFound(new { message = $"Result with ID {id} not found" });
+            return ApiErrorResult.NotFound(ErrorCodes.ResultNotFound, $"Result with ID {id} not found");
         }
 
         return Ok(MapToDto(result));
@@ -200,14 +201,14 @@ public class ResultsController : ControllerBase
         if (!validation.IsValid)
         {
             _logger.LogWarning("Invalid winning number rejected: {WinningNumber} - {Error}", dto.WinningNumber, validation.ErrorMessage);
-            return BadRequest(new { message = validation.ErrorMessage });
+            return ApiErrorResult.BadRequest(ErrorCodes.InvalidWinningNumber, validation.ErrorMessage ?? "Invalid winning number");
         }
 
         // Check if draw exists
         var draw = await _context.Draws.FindAsync(dto.DrawId);
         if (draw == null)
         {
-            return BadRequest(new { message = $"Draw with ID {dto.DrawId} not found" });
+            return ApiErrorResult.BadRequest(ErrorCodes.DrawNotFound, $"Draw with ID {dto.DrawId} not found");
         }
 
         // Check if result already exists for this draw and date
@@ -343,7 +344,7 @@ public class ResultsController : ControllerBase
         if (!validation.IsValid)
         {
             _logger.LogWarning("Invalid winning number rejected on update: {WinningNumber} - {Error}", dto.WinningNumber, validation.ErrorMessage);
-            return BadRequest(new { message = validation.ErrorMessage });
+            return ApiErrorResult.BadRequest(ErrorCodes.InvalidWinningNumber, validation.ErrorMessage ?? "Invalid winning number");
         }
 
         var result = await _context.Results
@@ -352,7 +353,7 @@ public class ResultsController : ControllerBase
 
         if (result == null)
         {
-            return NotFound(new { message = $"Result with ID {id} not found" });
+            return ApiErrorResult.NotFound(ErrorCodes.ResultNotFound, $"Result with ID {id} not found");
         }
 
         var previousNumber = result.WinningNumber;
@@ -431,7 +432,7 @@ public class ResultsController : ControllerBase
     public async Task<IActionResult> DeleteResult(int id)
     {
         var result = await _context.Results.FindAsync(id);
-        if (result == null) return NotFound(new { message = $"Result with ID {id} not found" });
+        if (result == null) return ApiErrorResult.NotFound(ErrorCodes.ResultNotFound, $"Result with ID {id} not found");
 
         // Permission depends on whether we're deleting today's or a past day's result.
         if (!await CanWriteResultForAsync(result.ResultDate)) return Forbid();
@@ -462,7 +463,7 @@ public class ResultsController : ControllerBase
 
         if (result == null)
         {
-            return NotFound(new { message = $"Result with ID {id} not found" });
+            return ApiErrorResult.NotFound(ErrorCodes.ResultNotFound, $"Result with ID {id} not found");
         }
 
         result.ApprovedAt = DateTime.UtcNow;

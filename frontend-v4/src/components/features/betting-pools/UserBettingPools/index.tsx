@@ -1,4 +1,5 @@
 import React, { useState, memo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Paper,
@@ -50,6 +51,7 @@ interface _User {
  * Modern Material-UI version of UserBancas
  */
 const UserBancasMUI: React.FC = () => {
+  const { t } = useTranslation();
   const {
     users,
     totalUsers,
@@ -82,25 +84,25 @@ const UserBancasMUI: React.FC = () => {
   const handleSavePassword = (): void => {
     // Validate password length
     if (newPassword.length < 6) {
-      alert('La contraseña debe tener al menos 6 caracteres');
+      alert(t('bettingPoolsAdmin.passwordMinLength'));
       return;
     }
 
     // Must contain at least one letter
     if (!/[a-zA-Z]/.test(newPassword)) {
-      alert('La contraseña debe contener al menos una letra');
+      alert(t('bettingPoolsAdmin.passwordMustHaveLetter'));
       return;
     }
 
     // Must contain at least one number
     if (!/\d/.test(newPassword)) {
-      alert('La contraseña debe contener al menos un número');
+      alert(t('bettingPoolsAdmin.passwordMustHaveNumber'));
       return;
     }
 
     // Passwords must match
     if (newPassword !== confirmPassword) {
-      alert('Las contraseñas no coinciden');
+      alert(t('bettingPoolsAdmin.passwordsDoNotMatch'));
       return;
     }
 
@@ -129,12 +131,12 @@ const UserBancasMUI: React.FC = () => {
             variant="h6"
             component="div"
           >
-            Lista de Usuarios de Bancas
+            {t('bettingPoolsAdmin.userBettingPoolsTitle')}
           </Typography>
           <IconButton
             onClick={refreshData}
             disabled={loading}
-            title="Actualizar datos"
+            title={t('bettingPoolsAdmin.refreshData')}
             sx={{ mr: 1 }}
           >
             <RefreshIcon />
@@ -153,25 +155,25 @@ const UserBancasMUI: React.FC = () => {
           <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
             {/* Zone Filter */}
             <FormControl sx={{ minWidth: 300 }}>
-              <InputLabel>Zonas</InputLabel>
+              <InputLabel>{t('common.zones')}</InputLabel>
               <Select
                 multiple
                 value={selectedZones}
                 onChange={handleZoneChange}
-                label="Zonas"
+                label={t('common.zones')}
                 renderValue={(selected) => (
                   <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                     {selected.length === zones.length ? (
-                      <Chip size="small" label="Todas las zonas" />
+                      <Chip size="small" label={t('bettingPoolsAdmin.allZones')} />
                     ) : (
-                      <Chip size="small" label={`${selected.length} seleccionadas`} />
+                      <Chip size="small" label={t('bettingPoolsAdmin.selectedCount', { count: selected.length })} />
                     )}
                   </Box>
                 )}
               >
                 <MenuItem value="all">
                   <Checkbox checked={selectedZones.length === zones.length} />
-                  <ListItemText primary="Seleccionar todas" />
+                  <ListItemText primary={t('bettingPoolsAdmin.selectAll')} />
                 </MenuItem>
                 {zones.map((zone) => (
                   <MenuItem key={zone} value={zone}>
@@ -184,7 +186,7 @@ const UserBancasMUI: React.FC = () => {
 
             {/* Search Filter */}
             <TextField
-              placeholder="Búsqueda rápida..."
+              placeholder={t('bettingPoolsAdmin.quickSearchPlaceholder')}
               value={searchText}
               onChange={handleSearchChange}
               sx={{ minWidth: 300 }}
@@ -212,19 +214,19 @@ const UserBancasMUI: React.FC = () => {
             <TableHead>
               <TableRow>
                 <TableCell>
-                  <strong>Usuario</strong>
+                  <strong>{t('bettingPoolsAdmin.userTableUser')}</strong>
                 </TableCell>
                 <TableCell>
-                  <strong>Banca</strong>
+                  <strong>{t('bettingPoolsAdmin.userTableBettingPool')}</strong>
                 </TableCell>
                 <TableCell>
-                  <strong>Referencia</strong>
+                  <strong>{t('bettingPoolsAdmin.userTableReference')}</strong>
                 </TableCell>
                 <TableCell align="center">
-                  <strong>Requiere cambio de contraseña</strong>
+                  <strong>{t('bettingPoolsAdmin.userTableRequiresPasswordChange')}</strong>
                 </TableCell>
                 <TableCell align="center">
-                  <strong>Acciones</strong>
+                  <strong>{t('bettingPoolsAdmin.userTableActions')}</strong>
                 </TableCell>
               </TableRow>
             </TableHead>
@@ -235,7 +237,7 @@ const UserBancasMUI: React.FC = () => {
                     <Box sx={{ py: 3, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 2 }}>
                       <CircularProgress size={24} />
                       <Typography variant="body2" color="text.secondary">
-                        Cargando usuarios...
+                        {t('bettingPoolsAdmin.loadingUsers')}
                       </Typography>
                     </Box>
                   </TableCell>
@@ -244,7 +246,7 @@ const UserBancasMUI: React.FC = () => {
                 <TableRow>
                   <TableCell colSpan={5} align="center">
                     <Typography variant="body2" color="text.secondary" sx={{ py: 3 }}>
-                      No se encontraron usuarios
+                      {t('bettingPoolsAdmin.noUsersFound')}
                     </Typography>
                   </TableCell>
                 </TableRow>
@@ -270,7 +272,7 @@ const UserBancasMUI: React.FC = () => {
                         color="primary"
                         size="small"
                         onClick={() => handlePasswordClick(user.id)}
-                        title="Cambiar contraseña"
+                        title={t('bettingPoolsAdmin.changePassword')}
                       >
                         <KeyIcon />
                       </IconButton>
@@ -291,9 +293,11 @@ const UserBancasMUI: React.FC = () => {
           page={page}
           onPageChange={handleChangePage}
           onRowsPerPageChange={handleChangeRowsPerPage}
-          labelRowsPerPage="Filas por página:"
+          labelRowsPerPage={t('bettingPoolsAdmin.rowsPerPageLabel')}
           labelDisplayedRows={({ from, to, count }) =>
-            `${from}-${to} de ${count !== -1 ? count : `más de ${to}`}`
+            count !== -1
+              ? t('bettingPoolsAdmin.fromToOfTotal', { from, to, total: count })
+              : t('bettingPoolsAdmin.fromToMoreThan', { from, to })
           }
         />
       </Paper>
@@ -301,30 +305,30 @@ const UserBancasMUI: React.FC = () => {
       {/* Password Change Dialog */}
       <Dialog open={passwordModalOpen} onClose={handleClose} maxWidth="sm" fullWidth>
         <DialogTitle>
-          Cambiar Contraseña - Usuario {selectedUsername}
+          {t('bettingPoolsAdmin.changePasswordTitle', { username: selectedUsername })}
         </DialogTitle>
         <DialogContent>
           <Box sx={{ pt: 2 }}>
             <TextField
               fullWidth
               type="password"
-              label="Nueva Contraseña"
+              label={t('bettingPoolsAdmin.newPasswordLabel')}
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
-              helperText="Mínimo 6 caracteres, al menos una letra y un número"
+              helperText={t('bettingPoolsAdmin.passwordHelper')}
               sx={{ mb: 2 }}
               autoComplete="new-password"
             />
             <TextField
               fullWidth
               type="password"
-              label="Confirmar Contraseña"
+              label={t('bettingPoolsAdmin.confirmPasswordLabel')}
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               error={newPassword !== confirmPassword && confirmPassword !== ''}
               helperText={
                 newPassword !== confirmPassword && confirmPassword !== ''
-                  ? 'Las contraseñas no coinciden'
+                  ? t('bettingPoolsAdmin.passwordsDoNotMatch')
                   : ''
               }
               autoComplete="new-password"
@@ -333,7 +337,7 @@ const UserBancasMUI: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={handleClose}>
-            Cancelar
+            {t('common.cancel')}
           </Button>
           <Button
             onClick={handleSavePassword}
@@ -347,7 +351,7 @@ const UserBancasMUI: React.FC = () => {
               !/\d/.test(newPassword)
             }
           >
-            Guardar
+            {t('common.save')}
           </Button>
         </DialogActions>
       </Dialog>

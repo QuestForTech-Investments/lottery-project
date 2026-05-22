@@ -1,4 +1,5 @@
 import { useState, memo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Paper,
@@ -34,6 +35,7 @@ import useUserAdministrators from './hooks/useUserAdministrators';
  * Modern Material-UI version of UserAdministrators
  */
 const UserAdministratorsMUI = () => {
+  const { t } = useTranslation();
   const {
     administradores,
     totalAdministradores,
@@ -61,25 +63,25 @@ const UserAdministratorsMUI = () => {
   const handleSavePassword = () => {
     // Validate password length
     if (newPassword.length < 6) {
-      alert('La contraseña debe tener al menos 6 caracteres');
+      alert(t('usersAdmin.passwordMinLength'));
       return;
     }
 
     // Must contain at least one letter
     if (!/[a-zA-Z]/.test(newPassword)) {
-      alert('La contraseña debe contener al menos una letra');
+      alert(t('usersAdmin.passwordMustContainLetter'));
       return;
     }
 
     // Must contain at least one number
     if (!/\d/.test(newPassword)) {
-      alert('La contraseña debe contener al menos un número');
+      alert(t('usersAdmin.passwordMustContainNumber'));
       return;
     }
 
     // Passwords must match
     if (newPassword !== confirmPassword) {
-      alert('Las contraseñas no coinciden');
+      alert(t('usersAdmin.passwordMustMatch'));
       return;
     }
 
@@ -108,14 +110,14 @@ const UserAdministratorsMUI = () => {
             variant="h6"
             component="div"
           >
-            Administradores
+            {t('usersAdmin.administrators')}
           </Typography>
         </Toolbar>
 
         {/* Search Filter */}
         <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
           <TextField
-            placeholder="Búsqueda rápida por nombre de usuario..."
+            placeholder={t('usersAdmin.searchPlaceholder')}
             value={searchText}
             onChange={handleSearchChange}
             sx={{ minWidth: 300 }}
@@ -142,13 +144,13 @@ const UserAdministratorsMUI = () => {
             <TableHead>
               <TableRow>
                 <TableCell>
-                  <strong>Nombre de usuario</strong>
+                  <strong>{t('usersAdmin.usernameColumn')}</strong>
                 </TableCell>
                 <TableCell align="center">
-                  <strong>Requiere cambio de contraseña</strong>
+                  <strong>{t('usersAdmin.requiresPasswordChange')}</strong>
                 </TableCell>
                 <TableCell align="center">
-                  <strong>Acciones</strong>
+                  <strong>{t('usersAdmin.actions')}</strong>
                 </TableCell>
               </TableRow>
             </TableHead>
@@ -157,7 +159,7 @@ const UserAdministratorsMUI = () => {
                 <TableRow>
                   <TableCell colSpan={3} align="center">
                     <Typography variant="body2" color="text.secondary" sx={{ py: 3 }}>
-                      No se encontraron administradores
+                      {t('usersAdmin.noAdminsFound')}
                     </Typography>
                   </TableCell>
                 </TableRow>
@@ -182,7 +184,7 @@ const UserAdministratorsMUI = () => {
                           color="primary"
                           size="small"
                           onClick={() => handlePasswordClick(admin.userId, admin.username)}
-                          title="Cambiar contraseña"
+                          title={t('usersAdmin.changePassword')}
                         >
                           <KeyIcon />
                         </IconButton>
@@ -192,9 +194,9 @@ const UserAdministratorsMUI = () => {
                             size="small"
                             startIcon={<ReplayIcon />}
                             onClick={() => handleResetPassword(admin.username)}
-                            title="Restablecer contraseña"
+                            title={t('usersAdmin.resetPassword')}
                           >
-                            Restablecer
+                            {t('usersAdmin.resetPasswordShort')}
                           </Button>
                         )}
                       </Box>
@@ -215,9 +217,11 @@ const UserAdministratorsMUI = () => {
           page={page}
           onPageChange={handleChangePage}
           onRowsPerPageChange={handleChangeRowsPerPage}
-          labelRowsPerPage="Filas por página:"
+          labelRowsPerPage={t('usersAdmin.rowsPerPage')}
           labelDisplayedRows={({ from, to, count }) =>
-            `${from}-${to} de ${count !== -1 ? count : `más de ${to}`}`
+            count !== -1
+              ? t('usersAdmin.fromTo', { from, to, total: count })
+              : t('usersAdmin.fromToMoreThan', { from, to })
           }
         />
       </Paper>
@@ -225,30 +229,30 @@ const UserAdministratorsMUI = () => {
       {/* Password Change Dialog */}
       <Dialog open={passwordModalOpen} onClose={handleClose} maxWidth="sm" fullWidth>
         <DialogTitle>
-          Cambiar Contraseña - {selectedUsername}
+          {t('usersAdmin.changePasswordTitle', { username: selectedUsername })}
         </DialogTitle>
         <DialogContent>
           <Box sx={{ pt: 2 }}>
             <TextField
               fullWidth
               type="password"
-              label="Nueva Contraseña"
+              label={t('usersAdmin.newPassword')}
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
-              helperText="Mínimo 6 caracteres, al menos una letra y un número"
+              helperText={t('usersAdmin.newPasswordHint')}
               sx={{ mb: 2 }}
               autoComplete="new-password"
             />
             <TextField
               fullWidth
               type="password"
-              label="Confirmar Contraseña"
+              label={t('usersAdmin.confirmPassword')}
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               error={newPassword !== confirmPassword && confirmPassword !== ''}
               helperText={
                 newPassword !== confirmPassword && confirmPassword !== ''
-                  ? 'Las contraseñas no coinciden'
+                  ? t('usersAdmin.passwordMustMatch')
                   : ''
               }
               autoComplete="new-password"
@@ -257,7 +261,7 @@ const UserAdministratorsMUI = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={handleClose}>
-            Cancelar
+            {t('common.cancel')}
           </Button>
           <Button
             onClick={handleSavePassword}
@@ -271,7 +275,7 @@ const UserAdministratorsMUI = () => {
               !/\d/.test(newPassword)
             }
           >
-            Guardar
+            {t('usersAdmin.savePassword')}
           </Button>
         </DialogActions>
       </Dialog>

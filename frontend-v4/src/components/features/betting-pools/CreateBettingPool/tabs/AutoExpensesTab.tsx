@@ -1,4 +1,5 @@
 import React, { useState, type ChangeEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Grid,
   TextField,
@@ -38,21 +39,6 @@ interface AutoExpense {
   active: boolean;
 }
 
-const DAY_OF_WEEK_OPTIONS = [
-  { value: 0, label: 'Lunes' },
-  { value: 1, label: 'Martes' },
-  { value: 2, label: 'Miércoles' },
-  { value: 3, label: 'Jueves' },
-  { value: 4, label: 'Viernes' },
-  { value: 5, label: 'Sábado' },
-  { value: 6, label: 'Domingo' },
-];
-
-const frequencyHelperText: Record<string, string> = {
-  semanal: 'Sera aplicado a las 12:00 AM del día de la semana especificado',
-  quincenal: 'Sera aplicado a las 12:00 AM los días 15 y 30 (o ultimo día del mes) de cada mes',
-  mensual: 'Sera aplicado cada mes a las 12:00 AM de la fecha especificada (o ultimo día del mes)',
-};
 
 interface AutoExpensesFormData {
   autoExpenses: AutoExpense[];
@@ -73,17 +59,31 @@ interface AutoExpensesTabProps {
 
 type FrequencyType = 'semanal' | 'quincenal' | 'mensual';
 
-const frequencyLabels: Record<FrequencyType, string> = {
-  semanal: 'Semanal',
-  quincenal: 'Quincenal',
-  mensual: 'Mensual',
-};
-
 /**
  * AutoExpensesTab Component
  * Contains automatic expenses configuration
  */
 const AutoExpensesTab: React.FC<AutoExpensesTabProps> = ({ formData, handleChange }) => {
+  const { t } = useTranslation();
+  const DAY_OF_WEEK_OPTIONS = [
+    { value: 0, label: t('createBettingPool.autoExpenses.dayLunes') },
+    { value: 1, label: t('createBettingPool.autoExpenses.dayMartes') },
+    { value: 2, label: t('createBettingPool.autoExpenses.dayMiercoles') },
+    { value: 3, label: t('createBettingPool.autoExpenses.dayJueves') },
+    { value: 4, label: t('createBettingPool.autoExpenses.dayViernes') },
+    { value: 5, label: t('createBettingPool.autoExpenses.daySabado') },
+    { value: 6, label: t('createBettingPool.autoExpenses.dayDomingo') },
+  ];
+  const frequencyHelperText: Record<string, string> = {
+    semanal: t('createBettingPool.autoExpenses.helperWeekly'),
+    quincenal: t('createBettingPool.autoExpenses.helperBiweekly'),
+    mensual: t('createBettingPool.autoExpenses.helperMonthly'),
+  };
+  const frequencyLabels: Record<FrequencyType, string> = {
+    semanal: t('createBettingPool.autoExpenses.frequencyWeekly'),
+    quincenal: t('createBettingPool.autoExpenses.frequencyBiweekly'),
+    mensual: t('createBettingPool.autoExpenses.frequencyMonthly'),
+  };
   const [openDialog, setOpenDialog] = useState<boolean>(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [currentExpense, setCurrentExpense] = useState<AutoExpense>({
@@ -176,7 +176,7 @@ const AutoExpensesTab: React.FC<AutoExpensesTabProps> = ({ formData, handleChang
       return `${base} (${day?.label || ''})`;
     }
     if (expense.frequency === 'mensual' && expense.dayOfMonth != null) {
-      return `${base} (Día ${expense.dayOfMonth})`;
+      return `${base} (${t('createBettingPool.autoExpenses.labelDay', { value: expense.dayOfMonth })})`;
     }
     return base;
   };
@@ -184,11 +184,11 @@ const AutoExpensesTab: React.FC<AutoExpensesTabProps> = ({ formData, handleChang
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h6" gutterBottom>
-        Gastos Automáticos
+        {t('createBettingPool.autoExpenses.title')}
       </Typography>
 
       <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-        Configura los gastos que se deducirán automaticmente del balance de la banca
+        {t('createBettingPool.autoExpenses.subtitle')}
       </Typography>
 
       <Grid container spacing={3}>
@@ -200,7 +200,7 @@ const AutoExpensesTab: React.FC<AutoExpensesTabProps> = ({ formData, handleChang
             onClick={handleAddExpense}
             sx={{ mb: 2 }}
           >
-            Agregar Gasto Automático
+            {t('createBettingPool.autoExpenses.addButton')}
           </Button>
         </Grid>
 
@@ -209,10 +209,10 @@ const AutoExpensesTab: React.FC<AutoExpensesTabProps> = ({ formData, handleChang
           {formData.autoExpenses.length === 0 ? (
             <Paper variant="outlined" sx={{ p: 4, textAlign: 'center' }}>
               <Typography variant="body1" color="text.secondary">
-                No hay gastos automáticos configurados
+                {t('createBettingPool.autoExpenses.emptyTitle')}
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                Haz clic en "Agregar Gasto Automático" para comenzar
+                {t('createBettingPool.autoExpenses.emptyHint')}
               </Typography>
             </Paper>
           ) : (
@@ -220,11 +220,11 @@ const AutoExpensesTab: React.FC<AutoExpensesTabProps> = ({ formData, handleChang
               <Table>
                 <TableHead>
                   <TableRow>
-                    <TableCell><strong>Descripción</strong></TableCell>
-                    <TableCell align="right"><strong>Monto</strong></TableCell>
-                    <TableCell><strong>Frecuencia</strong></TableCell>
-                    <TableCell><strong>Estado</strong></TableCell>
-                    <TableCell align="center"><strong>Acciones</strong></TableCell>
+                    <TableCell><strong>{t('createBettingPool.autoExpenses.colDescription')}</strong></TableCell>
+                    <TableCell align="right"><strong>{t('createBettingPool.autoExpenses.colAmount')}</strong></TableCell>
+                    <TableCell><strong>{t('createBettingPool.autoExpenses.colFrequency')}</strong></TableCell>
+                    <TableCell><strong>{t('createBettingPool.autoExpenses.colStatus')}</strong></TableCell>
+                    <TableCell align="center"><strong>{t('createBettingPool.autoExpenses.colActions')}</strong></TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -240,7 +240,7 @@ const AutoExpensesTab: React.FC<AutoExpensesTabProps> = ({ formData, handleChang
                           variant="body2"
                           color={expense.active ? 'success.main' : 'text.secondary'}
                         >
-                          {expense.active ? 'Activo' : 'Inactivo'}
+                          {expense.active ? t('createBettingPool.autoExpenses.statusActive') : t('createBettingPool.autoExpenses.statusInactive')}
                         </Typography>
                       </TableCell>
                       <TableCell align="center">
@@ -272,8 +272,8 @@ const AutoExpensesTab: React.FC<AutoExpensesTabProps> = ({ formData, handleChang
           <Grid item xs={12}>
             <Paper variant="outlined" sx={{ p: 2, bgcolor: 'primary.lighter' }}>
               <Typography variant="body2">
-                <strong>Total de gastos automáticos:</strong>{' '}
-                {formData.autoExpenses.length} configurado(s)
+                <strong>{t('createBettingPool.autoExpenses.totalLabel')}</strong>{' '}
+                {t('createBettingPool.autoExpenses.totalConfigured', { value: formData.autoExpenses.length })}
               </Typography>
             </Paper>
           </Grid>
@@ -283,7 +283,7 @@ const AutoExpensesTab: React.FC<AutoExpensesTabProps> = ({ formData, handleChang
       {/* Add/Edit Expense Dialog */}
       <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="sm" fullWidth>
         <DialogTitle>
-          {editingIndex !== null ? 'Editar Gasto Automático' : 'Nuevo Gasto Automático'}
+          {editingIndex !== null ? t('createBettingPool.autoExpenses.editTitle') : t('createBettingPool.autoExpenses.newTitle')}
         </DialogTitle>
         <DialogContent>
           <Box sx={{ pt: 2 }}>
@@ -291,30 +291,30 @@ const AutoExpensesTab: React.FC<AutoExpensesTabProps> = ({ formData, handleChang
               <Grid item xs={12}>
                 <TextField
                   fullWidth
-                  label="Descripción"
+                  label={t('createBettingPool.autoExpenses.descriptionLabel')}
                   name="description"
                   value={currentExpense.description}
                   onChange={handleExpenseFieldChange}
                   required
-                  helperText="Nombre o concepto del gasto"
+                  helperText={t('createBettingPool.autoExpenses.descriptionHelper')}
                 />
               </Grid>
               <Grid item xs={12} md={6}>
                 <TextField
                   fullWidth
                   type="number"
-                  label="Monto"
+                  label={t('createBettingPool.autoExpenses.amountLabel')}
                   name="amount"
                   value={currentExpense.amount}
                   onChange={handleExpenseFieldChange}
                   required
                   inputProps={{ step: "0.01", min: "0" }}
-                  helperText="Monto del gasto"
+                  helperText={t('createBettingPool.autoExpenses.amountHelper')}
                 />
               </Grid>
               <Grid item xs={12} md={6}>
                 <FormControl fullWidth required>
-                  <InputLabel>Frecuencia</InputLabel>
+                  <InputLabel>{t('createBettingPool.autoExpenses.frequencyLabel')}</InputLabel>
                   <Select
                     name="frequency"
                     value={currentExpense.frequency}
@@ -328,11 +328,11 @@ const AutoExpensesTab: React.FC<AutoExpensesTabProps> = ({ formData, handleChang
                         dayOfMonth: e.target.value === 'mensual' ? 1 : undefined,
                       }));
                     }}
-                    label="Frecuencia"
+                    label={t('createBettingPool.autoExpenses.frequencyLabel')}
                   >
-                    <MenuItem value="semanal">Semanal</MenuItem>
-                    <MenuItem value="quincenal">Quincenal</MenuItem>
-                    <MenuItem value="mensual">Mensual</MenuItem>
+                    <MenuItem value="semanal">{t('createBettingPool.autoExpenses.frequencyWeekly')}</MenuItem>
+                    <MenuItem value="quincenal">{t('createBettingPool.autoExpenses.frequencyBiweekly')}</MenuItem>
+                    <MenuItem value="mensual">{t('createBettingPool.autoExpenses.frequencyMonthly')}</MenuItem>
                   </Select>
                   <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
                     {frequencyHelperText[currentExpense.frequency] || ''}
@@ -344,11 +344,11 @@ const AutoExpensesTab: React.FC<AutoExpensesTabProps> = ({ formData, handleChang
               {currentExpense.frequency === 'semanal' && (
                 <Grid item xs={12} md={6}>
                   <FormControl fullWidth required>
-                    <InputLabel>Día de la semana</InputLabel>
+                    <InputLabel>{t('createBettingPool.autoExpenses.dayOfWeekLabel')}</InputLabel>
                     <Select
                       value={currentExpense.dayOfWeek ?? 0}
                       onChange={(e) => setCurrentExpense(prev => ({ ...prev, dayOfWeek: Number(e.target.value) }))}
-                      label="Día de la semana"
+                      label={t('createBettingPool.autoExpenses.dayOfWeekLabel')}
                     >
                       {DAY_OF_WEEK_OPTIONS.map(d => (
                         <MenuItem key={d.value} value={d.value}>{d.label}</MenuItem>
@@ -365,11 +365,11 @@ const AutoExpensesTab: React.FC<AutoExpensesTabProps> = ({ formData, handleChang
                     fullWidth
                     required
                     type="number"
-                    label="Día del mes"
+                    label={t('createBettingPool.autoExpenses.dayOfMonthLabel')}
                     value={currentExpense.dayOfMonth ?? 1}
                     onChange={(e) => setCurrentExpense(prev => ({ ...prev, dayOfMonth: Math.min(31, Math.max(1, Number(e.target.value))) }))}
                     inputProps={{ min: 1, max: 31 }}
-                    helperText="Si el mes no tiene este día, se usará el último día del mes"
+                    helperText={t('createBettingPool.autoExpenses.dayOfMonthHelper')}
                   />
                 </Grid>
               )}
@@ -378,14 +378,14 @@ const AutoExpensesTab: React.FC<AutoExpensesTabProps> = ({ formData, handleChang
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpenDialog(false)}>
-            Cancelar
+            {t('createBettingPool.cancel')}
           </Button>
           <Button
             onClick={handleSaveExpense}
             variant="contained"
             disabled={!currentExpense.description || !currentExpense.amount}
           >
-            {editingIndex !== null ? 'Actualizar' : 'Agregar'}
+            {editingIndex !== null ? t('createBettingPool.autoExpenses.update') : t('createBettingPool.autoExpenses.add')}
           </Button>
         </DialogActions>
       </Dialog>

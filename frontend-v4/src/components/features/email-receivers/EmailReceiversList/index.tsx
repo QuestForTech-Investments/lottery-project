@@ -22,6 +22,7 @@ import {
   Edit as EditIcon,
   Delete as DeleteIcon
 } from '@mui/icons-material';
+import { useTranslation } from 'react-i18next';
 
 interface _Receiver {
   id: number;
@@ -45,6 +46,7 @@ interface SortConfig {
  * Lista de receptores de correo con funcionalidad CRUD
  */
 const EmailReceiversList = (): React.ReactElement => {
+  const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: null, direction: 'asc' });
 
@@ -105,19 +107,24 @@ const EmailReceiversList = (): React.ReactElement => {
   }, [receivers, searchTerm, sortConfig]);
 
   const handleEdit = (id: number): void => {
-    alert(`Editar receptor #${id} (mockup)`);
+    alert(t('emailReceiversAdmin.list.editAlert', { id }));
   };
 
   const handleDelete = (id: number): void => {
-    if (window.confirm('¿Está seguro de eliminar este receptor de correo?')) {
-      alert(`Receptor #${id} eliminado (mockup)`);
+    if (window.confirm(t('emailReceiversAdmin.list.deleteConfirm'))) {
+      alert(t('emailReceiversAdmin.list.deletedAlert', { id }));
     }
   };
 
   const handleInfo = (id: number): void => {
     const receiver = receivers.find(r => r.id === id);
     if (!receiver) return;
-    alert(`Información del receptor:\n\nNombre: ${receiver.nombre}\nEmail: ${receiver.email}\nTipo de notificación: ${receiver.tipoNotificacion}\nEstado: ${receiver.activo ? 'Activo' : 'Inactivo'}`);
+    alert(t('emailReceiversAdmin.list.infoAlert', {
+      name: receiver.nombre,
+      email: receiver.email,
+      notificationType: receiver.tipoNotificacion,
+      status: receiver.activo ? t('common.active') : t('common.inactive')
+    }));
   };
 
   return (
@@ -135,7 +142,7 @@ const EmailReceiversList = (): React.ReactElement => {
               color: '#2c2c2c'
             }}
           >
-            Lista de receptores de correo
+            {t('emailReceiversAdmin.list.title')}
           </Typography>
 
           {/* Filtro rápido */}
@@ -143,7 +150,7 @@ const EmailReceiversList = (): React.ReactElement => {
             <TextField
               fullWidth
               size="small"
-              placeholder="Filtrado rápido"
+              placeholder={t('common.filterQuick')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               InputProps={{
@@ -172,28 +179,28 @@ const EmailReceiversList = (): React.ReactElement => {
                     onClick={() => handleSort('nombre')}
                     sx={{ cursor: 'pointer', userSelect: 'none', fontSize: '14px', fontFamily: 'Montserrat, sans-serif', fontWeight: 600 }}
                   >
-                    Nombre {sortConfig.key === 'nombre' && (sortConfig.direction === 'asc' ? '▲' : '▼')}
+                    {t('common.name')} {sortConfig.key === 'nombre' && (sortConfig.direction === 'asc' ? '▲' : '▼')}
                   </TableCell>
                   <TableCell
                     onClick={() => handleSort('email')}
                     sx={{ cursor: 'pointer', userSelect: 'none', fontSize: '14px', fontFamily: 'Montserrat, sans-serif', fontWeight: 600 }}
                   >
-                    Correo electrónico {sortConfig.key === 'email' && (sortConfig.direction === 'asc' ? '▲' : '▼')}
+                    {t('emailReceiversAdmin.fields.email')} {sortConfig.key === 'email' && (sortConfig.direction === 'asc' ? '▲' : '▼')}
                   </TableCell>
                   <TableCell
                     onClick={() => handleSort('tipoNotificacion')}
                     sx={{ cursor: 'pointer', userSelect: 'none', fontSize: '14px', fontFamily: 'Montserrat, sans-serif', fontWeight: 600 }}
                   >
-                    Tipo de notificación {sortConfig.key === 'tipoNotificacion' && (sortConfig.direction === 'asc' ? '▲' : '▼')}
+                    {t('emailReceiversAdmin.fields.notificationType')} {sortConfig.key === 'tipoNotificacion' && (sortConfig.direction === 'asc' ? '▲' : '▼')}
                   </TableCell>
                   <TableCell
                     onClick={() => handleSort('activo')}
                     sx={{ cursor: 'pointer', userSelect: 'none', fontSize: '14px', fontFamily: 'Montserrat, sans-serif', fontWeight: 600, textAlign: 'center' }}
                   >
-                    Estado {sortConfig.key === 'activo' && (sortConfig.direction === 'asc' ? '▲' : '▼')}
+                    {t('common.status')} {sortConfig.key === 'activo' && (sortConfig.direction === 'asc' ? '▲' : '▼')}
                   </TableCell>
                   <TableCell sx={{ fontSize: '14px', fontFamily: 'Montserrat, sans-serif', fontWeight: 600, textAlign: 'center' }}>
-                    Acciones
+                    {t('common.actions')}
                   </TableCell>
                 </TableRow>
               </TableHead>
@@ -201,7 +208,7 @@ const EmailReceiversList = (): React.ReactElement => {
                 {filteredAndSortedReceivers.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} align="center" sx={{ py: 5, color: '#999', fontSize: '14px', fontFamily: 'Montserrat, sans-serif' }}>
-                      No se encontraron receptores de correo
+                      {t('emailReceiversAdmin.list.noResults')}
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -221,7 +228,7 @@ const EmailReceiversList = (): React.ReactElement => {
                       </TableCell>
                       <TableCell align="center">
                         <Chip
-                          label={receiver.activo ? 'Activo' : 'Inactivo'}
+                          label={receiver.activo ? t('common.active') : t('common.inactive')}
                           color={receiver.activo ? 'success' : 'error'}
                           size="small"
                           sx={{ fontSize: '12px', fontFamily: 'Montserrat, sans-serif' }}
@@ -232,7 +239,7 @@ const EmailReceiversList = (): React.ReactElement => {
                           size="small"
                           onClick={() => handleInfo(receiver.id)}
                           sx={{ color: '#17a2b8', mr: 0.5 }}
-                          title="Ver información"
+                          title={t('emailReceiversAdmin.list.viewInfo')}
                         >
                           <InfoIcon fontSize="small" />
                         </IconButton>
@@ -240,7 +247,7 @@ const EmailReceiversList = (): React.ReactElement => {
                           size="small"
                           onClick={() => handleEdit(receiver.id)}
                           sx={{ color: '#007bff', mr: 0.5 }}
-                          title="Editar"
+                          title={t('common.edit')}
                         >
                           <EditIcon fontSize="small" />
                         </IconButton>
@@ -248,7 +255,7 @@ const EmailReceiversList = (): React.ReactElement => {
                           size="small"
                           onClick={() => handleDelete(receiver.id)}
                           sx={{ color: '#dc3545' }}
-                          title="Eliminar"
+                          title={t('common.delete')}
                         >
                           <DeleteIcon fontSize="small" />
                         </IconButton>
@@ -271,7 +278,7 @@ const EmailReceiversList = (): React.ReactElement => {
               fontFamily: 'Montserrat, sans-serif'
             }}
           >
-            Mostrando {filteredAndSortedReceivers.length} de {receivers.length} entradas
+            {t('common.showingEntries', { shown: filteredAndSortedReceivers.length, total: receivers.length })}
           </Box>
         </CardContent>
       </Card>

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Dialog,
   DialogTitle,
@@ -82,6 +83,7 @@ interface Props {
 }
 
 const CreateCobroPagoModal = ({ open, onClose, onCreated }: Props): React.ReactElement => {
+  const { t } = useTranslation();
   const [transactionType, setTransactionType] = useState<TransactionType | ''>('');
   const [banca, setBanca] = useState<EntityOption | null>(null);
   const [banco, setBanco] = useState<EntityOption | null>(null);
@@ -308,16 +310,16 @@ const CreateCobroPagoModal = ({ open, onClose, onCreated }: Props): React.ReactE
         lines: lines.map(buildLinePayload),
       };
       await api.post('/transaction-groups', payload);
-      setSnackbar({ open: true, message: 'Transacción registrada exitosamente', severity: 'success' });
+      setSnackbar({ open: true, message: t('payments.savedSuccess'), severity: 'success' });
       handleClose();
       onCreated?.();
     } catch (err) {
       console.error('Error creating transaction group:', err);
-      setSnackbar({ open: true, message: 'Error al registrar transacción', severity: 'error' });
+      setSnackbar({ open: true, message: t('payments.saveError'), severity: 'error' });
     } finally {
       setCreating(false);
     }
-  }, [lines, handleClose, onCreated, buildLinePayload]);
+  }, [lines, handleClose, onCreated, buildLinePayload, t]);
 
   const attemptCreate = useCallback(() => {
     if (lines.length === 0 || creating) return;
@@ -331,7 +333,7 @@ const CreateCobroPagoModal = ({ open, onClose, onCreated }: Props): React.ReactE
     <>
       <Dialog open={open} onClose={handleClose} maxWidth="lg" fullWidth>
         <DialogTitle sx={{ fontWeight: 600, color: '#2c2c2c', fontFamily: 'Montserrat, sans-serif' }}>
-          Crear Transacciones
+          {t('payments.createTitle')}
         </DialogTitle>
         <DialogContent dividers>
           <Grid container spacing={3}>
@@ -339,13 +341,13 @@ const CreateCobroPagoModal = ({ open, onClose, onCreated }: Props): React.ReactE
             <Grid item xs={12} md={7}>
               {/* Tipo */}
               <FormControl fullWidth size="small" sx={{ mb: 2 }} required>
-                <InputLabel>Tipo</InputLabel>
+                <InputLabel>{t('common.type')}</InputLabel>
                 <Select
                   value={transactionType}
                   onChange={(e: SelectChangeEvent) => handleTypeChange(e.target.value)}
-                  label="Tipo"
+                  label={t('common.type')}
                 >
-                  <MenuItem value=""><em>Seleccione uno...</em></MenuItem>
+                  <MenuItem value=""><em>{t('common.selectOne')}</em></MenuItem>
                   {TRANSACTION_TYPES.map((t) => (
                     <MenuItem key={t} value={t}>{t}</MenuItem>
                   ))}
@@ -355,11 +357,11 @@ const CreateCobroPagoModal = ({ open, onClose, onCreated }: Props): React.ReactE
               {/* Categoría de gastos (solo Gasto) */}
               {isGasto && (
                 <FormControl fullWidth size="small" sx={{ mb: 2 }} required>
-                  <InputLabel>Categoría de gastos</InputLabel>
+                  <InputLabel>{t('transactions.expenseCategory')}</InputLabel>
                   <Select
                     value={expenseCategory}
                     onChange={(e: SelectChangeEvent) => setExpenseCategory(e.target.value)}
-                    label="Categoría de gastos"
+                    label={t('transactions.expenseCategory')}
                   >
                     {(() => {
                       const parents = expenseCategories.filter((c) => c.parentCategoryId === null);
@@ -396,7 +398,7 @@ const CreateCobroPagoModal = ({ open, onClose, onCreated }: Props): React.ReactE
 
               {/* BANCA */}
               <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block', fontWeight: 700, letterSpacing: 0.5 }}>
-                BANCA
+                {t('common.bettingPool').toUpperCase()}
               </Typography>
               <Grid container spacing={2} sx={{ mb: 2 }}>
                 <Grid item xs={12} sm={8}>
@@ -407,7 +409,7 @@ const CreateCobroPagoModal = ({ open, onClose, onCreated }: Props): React.ReactE
                     value={banca}
                     onChange={(_e, val) => setBanca(val)}
                     disabled={disabledForm}
-                    renderInput={(params) => <TextField {...params} label="Nombre" placeholder="Seleccione" />}
+                    renderInput={(params) => <TextField {...params} label={t('common.name')} placeholder={t('common.select')} />}
                   />
                 </Grid>
                 <Grid item xs={12} sm={4}>
@@ -431,7 +433,7 @@ const CreateCobroPagoModal = ({ open, onClose, onCreated }: Props): React.ReactE
                     }}
                     disabled={disabledForm}
                     renderInput={(params) => (
-                      <TextField {...params} inputRef={bancaCodeRef} label="Código" placeholder="Código" />
+                      <TextField {...params} inputRef={bancaCodeRef} label={t('common.code')} placeholder={t('common.code')} />
                     )}
                   />
                 </Grid>
@@ -441,7 +443,7 @@ const CreateCobroPagoModal = ({ open, onClose, onCreated }: Props): React.ReactE
               <TextField
                 fullWidth
                 size="small"
-                label="Monto"
+                label={t('common.amount')}
                 type="number"
                 inputRef={amountRef}
                 value={amount}
@@ -458,13 +460,13 @@ const CreateCobroPagoModal = ({ open, onClose, onCreated }: Props): React.ReactE
                 }}
                 disabled={disabledForm}
                 color={amountWarning ? 'warning' : undefined}
-                helperText={amountWarning ? `Monto superior a ${formatCurrency(HIGH_AMOUNT_PIN_THRESHOLD)}` : undefined}
+                helperText={amountWarning ? t('transactions.create.amountOverThreshold', { threshold: formatCurrency(HIGH_AMOUNT_PIN_THRESHOLD) }) : undefined}
                 sx={{ mb: 2, ...(amountWarning && { '& .MuiOutlinedInput-root': { bgcolor: '#fff3e0' } }) }}
               />
 
               {/* BANCO */}
               <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block', fontWeight: 700, letterSpacing: 0.5 }}>
-                BANCO
+                {t('common.bank').toUpperCase()}
               </Typography>
               <Grid container spacing={2} sx={{ mb: 2 }}>
                 <Grid item xs={12} sm={8}>
@@ -475,7 +477,7 @@ const CreateCobroPagoModal = ({ open, onClose, onCreated }: Props): React.ReactE
                     value={banco}
                     onChange={(_e, val) => setBanco(val)}
                     disabled={disabledForm}
-                    renderInput={(params) => <TextField {...params} label="Nombre" placeholder="Seleccione" />}
+                    renderInput={(params) => <TextField {...params} label={t('common.name')} placeholder={t('common.select')} />}
                   />
                 </Grid>
                 <Grid item xs={12} sm={4}>
@@ -488,7 +490,7 @@ const CreateCobroPagoModal = ({ open, onClose, onCreated }: Props): React.ReactE
                     onChange={(_e, val) => setBanco(val)}
                     disabled={disabledForm}
                     renderInput={(params) => (
-                      <TextField {...params} inputRef={bancoCodeRef} label="Código" placeholder="Código" />
+                      <TextField {...params} inputRef={bancoCodeRef} label={t('common.code')} placeholder={t('common.code')} />
                     )}
                   />
                 </Grid>
@@ -498,7 +500,7 @@ const CreateCobroPagoModal = ({ open, onClose, onCreated }: Props): React.ReactE
               <TextField
                 fullWidth
                 size="small"
-                label="Notas"
+                label={t('common.notes')}
                 value={lineNotes}
                 onChange={(e) => setLineNotes(e.target.value)}
                 disabled={disabledForm}
@@ -509,14 +511,14 @@ const CreateCobroPagoModal = ({ open, onClose, onCreated }: Props): React.ReactE
             {/* RIGHT COLUMN — Entidad fuente / destino balances */}
             <Grid item xs={12} md={5}>
               <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block', fontWeight: 700, letterSpacing: 0.5 }}>
-                ENTIDAD FUENTE{fuente ? ` — ${fuenteLabel}` : ''}
+                {t('payments.entityFuente')}{fuente ? ` — ${fuenteLabel === 'Banca' ? t('common.bettingPool') : t('common.bank')}` : ''}
               </Typography>
               <Grid container spacing={2} sx={{ mb: 3 }}>
                 <Grid item xs={6}>
                   <TextField
                     fullWidth
                     size="small"
-                    label="Balance inicial"
+                    label={t('common.initialBalance')}
                     value={fuente ? formatCurrency(fuenteInitial) : '0.00'}
                     disabled
                     InputProps={{ sx: { bgcolor: '#f0f0f0' } }}
@@ -526,7 +528,7 @@ const CreateCobroPagoModal = ({ open, onClose, onCreated }: Props): React.ReactE
                   <TextField
                     fullWidth
                     size="small"
-                    label="Balance final"
+                    label={t('common.finalBalance')}
                     value={fuente ? formatCurrency(fuenteFinal) : '0.00'}
                     disabled
                     InputProps={{
@@ -540,14 +542,14 @@ const CreateCobroPagoModal = ({ open, onClose, onCreated }: Props): React.ReactE
               </Grid>
 
               <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block', fontWeight: 700, letterSpacing: 0.5 }}>
-                ENTIDAD DESTINO{destino ? ` — ${destinoLabel}` : ''}
+                {t('payments.entityDestino')}{destino ? ` — ${destinoLabel === 'Banca' ? t('common.bettingPool') : t('common.bank')}` : ''}
               </Typography>
               <Grid container spacing={2} sx={{ mb: 3 }}>
                 <Grid item xs={6}>
                   <TextField
                     fullWidth
                     size="small"
-                    label="Balance inicial"
+                    label={t('common.initialBalance')}
                     value={destino ? formatCurrency(destinoInitial) : '0.00'}
                     disabled
                     InputProps={{ sx: { bgcolor: '#f0f0f0' } }}
@@ -557,7 +559,7 @@ const CreateCobroPagoModal = ({ open, onClose, onCreated }: Props): React.ReactE
                   <TextField
                     fullWidth
                     size="small"
-                    label="Balance final"
+                    label={t('common.finalBalance')}
                     value={destino ? formatCurrency(destinoFinal) : '0.00'}
                     disabled
                     InputProps={{
@@ -585,7 +587,7 @@ const CreateCobroPagoModal = ({ open, onClose, onCreated }: Props): React.ReactE
                 fontWeight: 600,
               }}
             >
-              Agregar línea
+              {t('transactions.create.addLine')}
             </Button>
           </Box>
 
@@ -594,16 +596,16 @@ const CreateCobroPagoModal = ({ open, onClose, onCreated }: Props): React.ReactE
             <Table size="small">
               <TableHead sx={{ bgcolor: '#f8f9fa' }}>
                 <TableRow>
-                  <TableCell sx={{ fontWeight: 600, fontSize: '12px' }}>Tipo</TableCell>
-                  <TableCell sx={{ fontWeight: 600, fontSize: '12px' }}>Banca</TableCell>
-                  <TableCell sx={{ fontWeight: 600, fontSize: '12px' }}>Banco</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 600, fontSize: '12px' }}>Monto</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 600, fontSize: '12px' }}>Banca: inicial</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 600, fontSize: '12px' }}>Banca: final</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 600, fontSize: '12px' }}>Banco: inicial</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 600, fontSize: '12px' }}>Banco: final</TableCell>
-                  <TableCell sx={{ fontWeight: 600, fontSize: '12px' }}>Notas</TableCell>
-                  <TableCell align="center" sx={{ fontWeight: 600, fontSize: '12px' }}>Borrar</TableCell>
+                  <TableCell sx={{ fontWeight: 600, fontSize: '12px' }}>{t('common.type')}</TableCell>
+                  <TableCell sx={{ fontWeight: 600, fontSize: '12px' }}>{t('common.bettingPool')}</TableCell>
+                  <TableCell sx={{ fontWeight: 600, fontSize: '12px' }}>{t('common.bank')}</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 600, fontSize: '12px' }}>{t('common.amount')}</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 600, fontSize: '12px' }}>{t('common.bettingPool')}: {t('common.initialBalance').toLowerCase()}</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 600, fontSize: '12px' }}>{t('common.bettingPool')}: {t('common.finalBalance').toLowerCase()}</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 600, fontSize: '12px' }}>{t('common.bank')}: {t('common.initialBalance').toLowerCase()}</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 600, fontSize: '12px' }}>{t('common.bank')}: {t('common.finalBalance').toLowerCase()}</TableCell>
+                  <TableCell sx={{ fontWeight: 600, fontSize: '12px' }}>{t('common.notes')}</TableCell>
+                  <TableCell align="center" sx={{ fontWeight: 600, fontSize: '12px' }}>{t('common.delete')}</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -611,7 +613,7 @@ const CreateCobroPagoModal = ({ open, onClose, onCreated }: Props): React.ReactE
                   <TableRow>
                     <TableCell colSpan={10}>
                       <Alert severity="info" sx={{ justifyContent: 'center' }}>
-                        No hay información disponible
+                        {t('common.noInfo')}
                       </Alert>
                     </TableCell>
                   </TableRow>
@@ -652,7 +654,7 @@ const CreateCobroPagoModal = ({ open, onClose, onCreated }: Props): React.ReactE
                   ))
                 )}
                 <TableRow sx={{ bgcolor: '#f8f9fa' }}>
-                  <TableCell colSpan={3} sx={{ fontWeight: 700 }}>Total</TableCell>
+                  <TableCell colSpan={3} sx={{ fontWeight: 700 }}>{t('common.total')}</TableCell>
                   <TableCell align="right" sx={{ fontWeight: 700 }}>{formatCurrency(totalAmount)}</TableCell>
                   <TableCell colSpan={6} />
                 </TableRow>
@@ -663,7 +665,7 @@ const CreateCobroPagoModal = ({ open, onClose, onCreated }: Props): React.ReactE
         </DialogContent>
         <DialogActions sx={{ p: 2, gap: 1 }}>
           <Button onClick={handleClose} variant="outlined" sx={{ textTransform: 'none' }}>
-            Cancelar
+            {t('common.cancel')}
           </Button>
           <Button
             onClick={attemptCreate}
@@ -676,7 +678,7 @@ const CreateCobroPagoModal = ({ open, onClose, onCreated }: Props): React.ReactE
               fontWeight: 600,
             }}
           >
-            Registrar
+            {t('common.register')}
           </Button>
         </DialogActions>
       </Dialog>
@@ -698,8 +700,11 @@ const CreateCobroPagoModal = ({ open, onClose, onCreated }: Props): React.ReactE
 
       <ConfirmPinModal
         isOpen={pinOpen}
-        title="Confirmar transacción"
-        description={`Esta transacción supera ${formatCurrency(HIGH_AMOUNT_PIN_THRESHOLD)} (total ${formatCurrency(totalAmount)}). Confirma con tu PIN para continuar.`}
+        title={t('transactions.create.confirmTitle')}
+        description={t('transactions.create.confirmDescription', {
+          threshold: formatCurrency(HIGH_AMOUNT_PIN_THRESHOLD),
+          total: formatCurrency(totalAmount),
+        })}
         onConfirmed={() => {
           setPinOpen(false);
           submitCreate();

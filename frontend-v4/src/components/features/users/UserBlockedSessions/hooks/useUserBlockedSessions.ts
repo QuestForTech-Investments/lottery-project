@@ -5,6 +5,7 @@ import {
   type BlockedSession,
   type BlockedType,
 } from '@services/blockedSessionsService';
+import { getActiveLocale } from '@/utils/formatters';
 
 interface BlockedRow {
   id: string;
@@ -23,7 +24,7 @@ const TAB_TO_TYPE: Record<TabValue, BlockedType> = {
 
 const formatBlockedAt = (iso: string): string => {
   try {
-    return new Date(iso).toLocaleString('es-DO', {
+    return new Date(iso).toLocaleString(getActiveLocale(), {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',

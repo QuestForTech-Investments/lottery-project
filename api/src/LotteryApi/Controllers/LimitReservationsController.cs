@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using LotteryApi.Data;
+using LotteryApi.Exceptions;
+using LotteryApi.Helpers;
 using LotteryApi.Models.Enums;
 using LotteryApi.Services;
 using System.ComponentModel.DataAnnotations;
@@ -151,7 +153,7 @@ public class LimitReservationsController : ControllerBase
     {
         var released = _reservationService.Release(reservationId);
         if (!released)
-            return NotFound(new { message = "Reservación no encontrada o ya expirada" });
+            return ApiErrorResult.NotFound(ErrorCodes.ReservationNotFound, "Reservación no encontrada o ya expirada");
 
         return Ok(new ReleaseLimitResponse { Released = true });
     }

@@ -1,4 +1,6 @@
 using LotteryApi.Data;
+using LotteryApi.Exceptions;
+using LotteryApi.Helpers;
 using LotteryApi.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -67,12 +69,12 @@ public class NotificationsController : ControllerBase
 
         if (string.IsNullOrWhiteSpace(dto.Message))
         {
-            return BadRequest(new { error = "El mensaje es requerido." });
+            return ApiErrorResult.BadRequest(ErrorCodes.NotificationMessageRequired, "El mensaje es requerido.");
         }
         var audience = dto.Audience ?? new List<string>();
         if (audience.Count == 0)
         {
-            return BadRequest(new { error = "Seleccione al menos un destinatario." });
+            return ApiErrorResult.BadRequest(ErrorCodes.NotificationRecipientsRequired, "Seleccione al menos un destinatario.");
         }
 
         var toBanca = audience.Contains("banca");
@@ -81,16 +83,16 @@ public class NotificationsController : ControllerBase
         if (toBanca && (dto.BancaIds == null || dto.BancaIds.Count == 0)
             && (dto.ZoneIds == null || dto.ZoneIds.Count == 0))
         {
-            return BadRequest(new { error = "Seleccione al menos una banca o zona destinataria." });
+            return ApiErrorResult.BadRequest(ErrorCodes.NotificationBancaRecipientsRequired, "Seleccione al menos una banca o zona destinataria.");
         }
         if (toAdmin && (dto.AdminUserIds == null || dto.AdminUserIds.Count == 0))
         {
-            return BadRequest(new { error = "Seleccione al menos un administrador destinatario." });
+            return ApiErrorResult.BadRequest(ErrorCodes.NotificationAdminRecipientsRequired, "Seleccione al menos un administrador destinatario.");
         }
         if (string.Equals(dto.NotificationType, "expiration_date", StringComparison.OrdinalIgnoreCase)
             && !dto.ExpiresAt.HasValue)
         {
-            return BadRequest(new { error = "La fecha de expiración es requerida." });
+            return ApiErrorResult.BadRequest(ErrorCodes.NotificationExpirationRequired, "La fecha de expiración es requerida.");
         }
 
         var notif = new Notification
@@ -251,7 +253,7 @@ public class NotificationsController : ControllerBase
 
         if (row == null)
         {
-            return NotFound(new { error = "Notificación no encontrada en su bandeja." });
+            return ApiErrorResult.NotFound(ErrorCodes.NotificationNotFound, "Notificación no encontrada en su bandeja.");
         }
 
         _context.NotificationReads.Remove(row);
@@ -304,7 +306,7 @@ public class NotificationsController : ControllerBase
     public async Task<ActionResult<List<NotificationListItem>>> GetMineBanca()
     {
         var bancaId = CurrentBancaId();
-        if (bancaId == null) return Unauthorized(new { error = "El usuario no está asociado a una banca." });
+        if (bancaId == null) return ApiErrorResult.Unauthorized(ErrorCodes.UserNotAssociatedToBanca, "El usuario no está asociado a una banca.");
 
         var now = DateTime.UtcNow;
         var query =
@@ -337,7 +339,7 @@ public class NotificationsController : ControllerBase
     public async Task<ActionResult<object>> GetMyCountBanca()
     {
         var bancaId = CurrentBancaId();
-        if (bancaId == null) return Unauthorized(new { error = "El usuario no está asociado a una banca." });
+        if (bancaId == null) return ApiErrorResult.Unauthorized(ErrorCodes.UserNotAssociatedToBanca, "El usuario no está asociado a una banca.");
 
         var now = DateTime.UtcNow;
         var unread = await (
@@ -359,7 +361,7 @@ public class NotificationsController : ControllerBase
     public async Task<ActionResult<object>> MarkReadBanca([FromBody] MarkReadRequest? request)
     {
         var bancaId = CurrentBancaId();
-        if (bancaId == null) return Unauthorized(new { error = "El usuario no está asociado a una banca." });
+        if (bancaId == null) return ApiErrorResult.Unauthorized(ErrorCodes.UserNotAssociatedToBanca, "El usuario no está asociado a una banca.");
 
         var ids = request?.NotificationIds;
         var now = DateTime.UtcNow;
@@ -390,7 +392,7 @@ public class NotificationsController : ControllerBase
     public async Task<ActionResult<object>> DeleteFromBancaInbox(long notificationId)
     {
         var bancaId = CurrentBancaId();
-        if (bancaId == null) return Unauthorized(new { error = "El usuario no está asociado a una banca." });
+        if (bancaId == null) return ApiErrorResult.Unauthorized(ErrorCodes.UserNotAssociatedToBanca, "El usuario no está asociado a una banca.");
 
         var row = await _context.NotificationReads
             .FirstOrDefaultAsync(r => r.NotificationId == notificationId
@@ -399,7 +401,7 @@ public class NotificationsController : ControllerBase
 
         if (row == null)
         {
-            return NotFound(new { error = "Notificación no encontrada en la bandeja de la banca." });
+            return ApiErrorResult.NotFound(ErrorCodes.NotificationNotFound, "Notificación no encontrada en la bandeja de la banca.");
         }
 
         _context.NotificationReads.Remove(row);

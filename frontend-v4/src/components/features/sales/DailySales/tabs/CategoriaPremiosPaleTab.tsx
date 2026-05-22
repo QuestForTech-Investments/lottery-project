@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Card,
@@ -54,6 +55,7 @@ interface CategoriaPremiosPaleTabProps {
 }
 
 const CategoriaPremiosPaleTab = ({ selectedDate, setSelectedDate }: CategoriaPremiosPaleTabProps): React.ReactElement => {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<PayoutGroupDto[]>([]);
   const [summary, setSummary] = useState({ totalSold: 0, totalPrizes: 0, totalCommissions: 0, totalNet: 0 });
@@ -113,7 +115,7 @@ const CategoriaPremiosPaleTab = ({ selectedDate, setSelectedDate }: CategoriaPre
     <Card>
       <CardContent>
         <Typography variant="h5" align="center" gutterBottom sx={{ fontWeight: 400, mb: 3, fontSize: '1.7rem' }}>
-          Total: <Box component="span" sx={{
+          {t('common.total')}: <Box component="span" sx={{
             backgroundColor: '#ede9fe',
             px: 2,
             py: 0.5,
@@ -125,7 +127,7 @@ const CategoriaPremiosPaleTab = ({ selectedDate, setSelectedDate }: CategoriaPre
         <Box sx={{ display: 'flex', gap: 2, mb: 3, alignItems: 'flex-end' }}>
           <Box>
             <Typography variant="caption" sx={{ color: 'text.secondary', mb: 0.5, display: 'block' }}>
-              Fecha
+              {t('common.date')}
             </Typography>
             <TextField
               type="date"
@@ -153,14 +155,14 @@ const CategoriaPremiosPaleTab = ({ selectedDate, setSelectedDate }: CategoriaPre
               fontWeight: 500,
             }}
           >
-            {loading ? <CircularProgress size={16} color="inherit" /> : 'Ver reporte'}
+            {loading ? <CircularProgress size={16} color="inherit" /> : t('sales.viewReport')}
           </Button>
         </Box>
 
         <Box sx={{ mb: 2, textAlign: 'right' }}>
           <TextField
             size="small"
-            placeholder="Filtrado rápido"
+            placeholder={t('common.filterQuick')}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             InputProps={{
@@ -178,22 +180,22 @@ const CategoriaPremiosPaleTab = ({ selectedDate, setSelectedDate }: CategoriaPre
           <Table size="small">
             <TableHead sx={{ backgroundColor: '#e3e3e3' }}>
               <TableRow>
-                <TableCell sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('multiplier')}>Premio</TableSortLabel></TableCell>
-                <TableCell align="center" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('pendingCount')}>P</TableSortLabel></TableCell>
-                <TableCell align="center" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('loserCount')}>L</TableSortLabel></TableCell>
-                <TableCell align="center" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('winnerCount')}>W</TableSortLabel></TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('total')}>Total</TableSortLabel></TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('totalSold')}>Venta</TableSortLabel></TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600 }}>Comisiones</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('totalPrizes')}>Premios</TableSortLabel></TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('totalNet')}>Neto</TableSortLabel></TableCell>
+                <TableCell sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('multiplier')}>{t('common.prize')}</TableSortLabel></TableCell>
+                <TableCell align="center" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('pendingCount')}>{t('sales.pendingShort')}</TableSortLabel></TableCell>
+                <TableCell align="center" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('loserCount')}>{t('sales.loserShort')}</TableSortLabel></TableCell>
+                <TableCell align="center" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('winnerCount')}>{t('sales.winnerShort')}</TableSortLabel></TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('total')}>{t('common.total')}</TableSortLabel></TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('totalSold')}>{t('sales.venta')}</TableSortLabel></TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600 }}>{t('sales.comisiones')}</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('totalPrizes')}>{t('sales.premios')}</TableSortLabel></TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('totalNet')}>{t('sales.neto')}</TableSortLabel></TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {sortedData.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={9} align="center" sx={{ py: 3, color: 'text.secondary' }}>
-                    {loading ? 'Cargando...' : 'No hay entradas para el sorteo y la fecha elegidos'}
+                    {loading ? t('common.loading') : t('sales.noEntriesForDrawDate')}
                   </TableCell>
                 </TableRow>
               ) : (
@@ -219,7 +221,7 @@ const CategoriaPremiosPaleTab = ({ selectedDate, setSelectedDate }: CategoriaPre
                     </TableRow>
                   ))}
                   <TableRow sx={{ backgroundColor: '#f5f7fa', '& td': { fontWeight: 600 } }}>
-                    <TableCell>Totales</TableCell>
+                    <TableCell>{t('balances.totals')}</TableCell>
                     <TableCell align="center">{totals.pendingCount}</TableCell>
                     <TableCell align="center">{totals.loserCount}</TableCell>
                     <TableCell align="center">{totals.winnerCount}</TableCell>
@@ -236,7 +238,7 @@ const CategoriaPremiosPaleTab = ({ selectedDate, setSelectedDate }: CategoriaPre
         </TableContainer>
 
         <Typography variant="body2" sx={{ mt: 2 }}>
-          Mostrando {filteredData.length} grupo(s) de pago
+          {t('sales.showingPayoutGroups', { count: filteredData.length })}
         </Typography>
 
         <PayoutBancasDialog

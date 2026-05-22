@@ -9,6 +9,7 @@
  */
 
 import React, { memo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box, TextField, Typography, Autocomplete, Chip,
   Dialog, DialogContent, Snackbar, Alert
@@ -28,6 +29,7 @@ import type { TicketDateMode } from './types';
  * CreateTickets - Exact replica of the original Vue.js application
  */
 const CreateTickets: React.FC = () => {
+  const { t } = useTranslation();
   const {
     betNumberInputRef,
     amountInputRef,
@@ -109,7 +111,7 @@ const CreateTickets: React.FC = () => {
       {/* Header: Pool Selector + Draw Preview */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, mb: 2 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Typography sx={{ color: '#666', fontSize: '14px' }}>Banca</Typography>
+          <Typography sx={{ color: '#666', fontSize: '14px' }}>{t('common.bettingPool')}</Typography>
           <Autocomplete
             size="small"
             options={pools}
@@ -130,7 +132,7 @@ const CreateTickets: React.FC = () => {
             value={selectedPool}
             onChange={(_, newValue) => setSelectedPool(newValue)}
             sx={{ width: 280, bgcolor: 'white' }}
-            renderInput={(params) => <TextField {...params} variant="outlined" placeholder="Buscar banca..." />}
+            renderInput={(params) => <TextField {...params} variant="outlined" placeholder={t('tickets.create.searchBettingPool')} />}
           />
         </Box>
 
@@ -317,7 +319,9 @@ interface DrawPreviewProps {
   multiLotteryMode: boolean;
 }
 
-const DrawPreview = memo<DrawPreviewProps>(({ selectedDraw, selectedDraws, multiLotteryMode }) => (
+const DrawPreview = memo<DrawPreviewProps>(({ selectedDraw, selectedDraws, multiLotteryMode }) => {
+  const { t } = useTranslation();
+  return (
   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
     {multiLotteryMode && selectedDraws.length > 1 ? (
       <Box sx={{ display: 'flex', gap: 0.5 }}>
@@ -371,11 +375,12 @@ const DrawPreview = memo<DrawPreviewProps>(({ selectedDraw, selectedDraws, multi
     )}
     <Typography sx={{ fontWeight: 'bold', color: '#333', fontSize: '16px' }}>
       {multiLotteryMode && selectedDraws.length > 1
-        ? `${selectedDraws.length} sorteos seleccionados`
-        : selectedDraw?.name || 'Seleccione un sorteo'}
+        ? t('tickets.create.drawsSelected', { count: selectedDraws.length })
+        : selectedDraw?.name || t('tickets.create.selectDraw')}
     </Typography>
   </Box>
-));
+  );
+});
 
 DrawPreview.displayName = 'DrawPreview';
 
@@ -401,6 +406,7 @@ const ActionButtonsRow = memo<ActionButtonsRowProps>(({
   onTogglePreviousDay, onToggleFutureDate, onFutureDateChange,
   onDuplicate, onCreate, onHelp,
 }) => {
+  const { t } = useTranslation();
   // Compute min/max for the future date picker
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
@@ -428,7 +434,7 @@ const ActionButtonsRow = memo<ActionButtonsRowProps>(({
               '&:hover': { bgcolor: isPreviousDayActive ? '#bf360c' : '#455a64' },
             }}
           >
-            VENTA DIA ANTERIOR
+            {t('tickets.create.previousDaySale')}
           </Box>
         )}
         {canFutureDate && (
@@ -445,7 +451,7 @@ const ActionButtonsRow = memo<ActionButtonsRowProps>(({
                 '&:hover': { bgcolor: isFutureDateActive ? '#0d47a1' : '#455a64' },
               }}
             >
-              VENTA FUTURA
+              {t('tickets.create.futureSale')}
             </Box>
             {isFutureDateActive && (
               <TextField
@@ -472,7 +478,7 @@ const ActionButtonsRow = memo<ActionButtonsRowProps>(({
             '&:hover': { bgcolor: totalBets === 0 ? '#ccc' : '#757575' },
           }}
         >
-          DUPLICAR
+          {t('tickets.create.duplicate')}
         </Box>
         <Box
           component="button"
@@ -487,7 +493,7 @@ const ActionButtonsRow = memo<ActionButtonsRowProps>(({
             '&:hover': { bgcolor: (totalBets === 0 || creatingTicket) ? '#ccc' : '#7c3aed' },
           }}
         >
-          {creatingTicket ? 'CREANDO...' : 'CREAR TICKET'}
+          {creatingTicket ? t('tickets.create.creating') : t('tickets.create.createTicket')}
         </Box>
         <Box
           component="button"
@@ -499,7 +505,7 @@ const ActionButtonsRow = memo<ActionButtonsRowProps>(({
             '&:hover': { bgcolor: '#388e3c' },
           }}
         >
-          AYUDA
+          {t('tickets.create.help')}
         </Box>
       </Box>
       {/* Indicator chips */}
@@ -508,8 +514,8 @@ const ActionButtonsRow = memo<ActionButtonsRowProps>(({
           <Chip
             label={
               isPreviousDayActive
-                ? `Fecha de sorteo: ${effectiveTicketDate} (dia anterior)`
-                : `Fecha de sorteo: ${effectiveTicketDate} (futura)`
+                ? t('tickets.create.drawDatePrevious', { date: effectiveTicketDate })
+                : t('tickets.create.drawDateFuture', { date: effectiveTicketDate })
             }
             color={isPreviousDayActive ? 'warning' : 'info'}
             variant="filled"

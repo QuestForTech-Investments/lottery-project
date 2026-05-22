@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using LotteryApi.Data;
 using LotteryApi.DTOs;
+using LotteryApi.Exceptions;
 using LotteryApi.Helpers;
 using LotteryApi.Services;
 using LotteryApi.Services.Caida;
@@ -90,7 +91,7 @@ public class SalesReportsController : ControllerBase
             // Validate date range
             if (filter.EndDate < filter.StartDate)
             {
-                return BadRequest(new { message = "La fecha de fin debe ser mayor o igual a la fecha de inicio" });
+                return ApiErrorResult.BadRequest(ErrorCodes.InvalidDateRange, "La fecha de fin debe ser mayor o igual a la fecha de inicio");
             }
 
             // Adjust EndDate to include the entire day (23:59:59.999)
@@ -209,7 +210,7 @@ public class SalesReportsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error generating sales report");
-            return StatusCode(500, new { message = "Error al generar el reporte de ventas" });
+            return ApiErrorResult.Error(ErrorCodes.InternalError, "Error al generar el reporte de ventas", 500);
         }
     }
 
@@ -357,7 +358,7 @@ public class SalesReportsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting daily sales summary");
-            return StatusCode(500, new { message = "Error al obtener el resumen de ventas del día" });
+            return ApiErrorResult.Error(ErrorCodes.InternalError, "Error al obtener el resumen de ventas del día", 500);
         }
     }
 
@@ -496,7 +497,7 @@ public class SalesReportsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting daily sales summary range");
-            return StatusCode(500, new { message = "Error al obtener el resumen de ventas por fecha" });
+            return ApiErrorResult.Error(ErrorCodes.InternalError, "Error al obtener el resumen de ventas por fecha", 500);
         }
     }
 
@@ -528,7 +529,7 @@ public class SalesReportsController : ControllerBase
             // Validate date range
             if (endDate < startDate)
             {
-                return BadRequest(new { message = "La fecha de fin debe ser mayor o igual a la fecha de inicio" });
+                return ApiErrorResult.BadRequest(ErrorCodes.InvalidDateRange, "La fecha de fin debe ser mayor o igual a la fecha de inicio");
             }
 
             _logger.LogInformation(
@@ -688,7 +689,7 @@ public class SalesReportsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting sales by betting pool");
-            return StatusCode(500, new { message = "Error al obtener las ventas por banca" });
+            return ApiErrorResult.Error(ErrorCodes.InternalError, "Error al obtener las ventas por banca", 500);
         }
     }
 
@@ -826,7 +827,7 @@ public class SalesReportsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting sales by draw");
-            return StatusCode(500, new { message = "Error al obtener las ventas por sorteo" });
+            return ApiErrorResult.Error(ErrorCodes.InternalError, "Error al obtener las ventas por sorteo", 500);
         }
     }
 
@@ -967,7 +968,7 @@ public class SalesReportsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting sales by zone");
-            return StatusCode(500, new { message = "Error al obtener las ventas por zona" });
+            return ApiErrorResult.Error(ErrorCodes.InternalError, "Error al obtener las ventas por zona", 500);
         }
     }
 
@@ -1142,7 +1143,7 @@ public class SalesReportsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting betting pool by draw");
-            return StatusCode(500, new { message = "Error al obtener las ventas por banca y sorteo" });
+            return ApiErrorResult.Error(ErrorCodes.InternalError, "Error al obtener las ventas por banca y sorteo", 500);
         }
     }
 
@@ -1269,7 +1270,7 @@ public class SalesReportsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting prize categories");
-            return StatusCode(500, new { message = "Error al obtener las categorías de premios" });
+            return ApiErrorResult.Error(ErrorCodes.InternalError, "Error al obtener las categorías de premios", 500);
         }
     }
 
@@ -1322,7 +1323,7 @@ public class SalesReportsController : ControllerBase
             };
             if (gameTypeCodes.Length == 0)
             {
-                return BadRequest(new { message = "Categoría no soportada. Use 'quiniela' o 'pale'." });
+                return ApiErrorResult.BadRequest(ErrorCodes.CategoryNotSupported, "Categoría no soportada. Use 'quiniela' o 'pale'.");
             }
 
             var gameTypeIds = await _context.GameTypes
@@ -1490,7 +1491,7 @@ public class SalesReportsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting prize categories by payout");
-            return StatusCode(500, new { message = "Error al obtener las categorías de premios por pago" });
+            return ApiErrorResult.Error(ErrorCodes.InternalError, "Error al obtener las categorías de premios por pago", 500);
         }
     }
 
@@ -1542,7 +1543,7 @@ public class SalesReportsController : ControllerBase
             };
             if (gameTypeCodes.Length == 0)
             {
-                return BadRequest(new { message = "Categoría no soportada. Use 'quiniela' o 'pale'." });
+                return ApiErrorResult.BadRequest(ErrorCodes.CategoryNotSupported, "Categoría no soportada. Use 'quiniela' o 'pale'.");
             }
 
             var gameTypeIds = await _context.GameTypes
@@ -1705,7 +1706,7 @@ public class SalesReportsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting bancas for prize-category payout");
-            return StatusCode(500, new { message = "Error al obtener las bancas del grupo" });
+            return ApiErrorResult.Error(ErrorCodes.InternalError, "Error al obtener las bancas del grupo", 500);
         }
     }
 
@@ -1732,7 +1733,7 @@ public class SalesReportsController : ControllerBase
         {
             if (string.IsNullOrWhiteSpace(gameTypeCodes))
             {
-                return BadRequest(new { message = "gameTypeCodes es requerido" });
+                return ApiErrorResult.BadRequest(ErrorCodes.GameTypeCodesRequired, "gameTypeCodes es requerido");
             }
 
             if (startDate > endDate) (startDate, endDate) = (endDate, startDate);
@@ -1840,7 +1841,7 @@ public class SalesReportsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting prizes by banca and game type");
-            return StatusCode(500, new { message = "Error al obtener premios por tipo de jugada" });
+            return ApiErrorResult.Error(ErrorCodes.InternalError, "Error al obtener premios por tipo de jugada", 500);
         }
     }
 
@@ -2015,7 +2016,7 @@ public class SalesReportsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting combinations");
-            return StatusCode(500, new { message = "Error al obtener las combinaciones" });
+            return ApiErrorResult.Error(ErrorCodes.InternalError, "Error al obtener las combinaciones", 500);
         }
     }
 }

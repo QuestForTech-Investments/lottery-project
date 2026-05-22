@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using LotteryApi.DTOs;
+using LotteryApi.Exceptions;
 using LotteryApi.Helpers;
 using LotteryApi.Models;
 using LotteryApi.Repositories;
@@ -266,7 +267,7 @@ public class UsersController : ControllerBase
 
         if (user == null)
         {
-            return NotFound(new { message = $"User with ID {id} not found" });
+            return ApiErrorResult.NotFound(ErrorCodes.UserNotFound, $"User with ID {id} not found");
         }
 
         // Get user permissions
@@ -343,7 +344,7 @@ public class UsersController : ControllerBase
         var user = await _userRepository.GetByIdAsync(userId);
         if (user == null)
         {
-            return NotFound(new { message = $"User with ID {userId} not found" });
+            return ApiErrorResult.NotFound(ErrorCodes.UserNotFound, $"User with ID {userId} not found");
         }
 
         var permissions = await _userRepository.GetUserPermissionsAsync(userId);
@@ -523,7 +524,7 @@ public class UsersController : ControllerBase
         var existingUser = await _userRepository.GetByUsernameAsync(dto.Username);
         if (existingUser != null)
         {
-            return BadRequest(new { message = $"Username '{dto.Username}' already exists" });
+            return ApiErrorResult.BadRequest(ErrorCodes.UserAlreadyExists, $"Username '{dto.Username}' already exists");
         }
 
         // Determine if the user is a banca (POS) user based on the role
@@ -669,7 +670,7 @@ public class UsersController : ControllerBase
         var user = await _userRepository.GetByIdAsync(id);
         if (user == null)
         {
-            return NotFound(new { message = $"User with ID {id} not found" });
+            return ApiErrorResult.NotFound(ErrorCodes.UserNotFound, $"User with ID {id} not found");
         }
 
         // Update only provided fields
@@ -701,7 +702,7 @@ public class UsersController : ControllerBase
         var user = await _userRepository.GetByIdAsync(userId);
         if (user == null)
         {
-            return NotFound(new { message = $"User with ID {userId} not found" });
+            return ApiErrorResult.NotFound(ErrorCodes.UserNotFound, $"User with ID {userId} not found");
         }
 
         // Remove all existing user permissions
@@ -741,7 +742,7 @@ public class UsersController : ControllerBase
         var user = await _userRepository.GetByIdAsync(userId);
         if (user == null)
         {
-            return NotFound(new { message = $"User with ID {userId} not found" });
+            return ApiErrorResult.NotFound(ErrorCodes.UserNotFound, $"User with ID {userId} not found");
         }
 
         // Zone scope — different rule by role:
@@ -883,13 +884,13 @@ public class UsersController : ControllerBase
             .FirstOrDefaultAsync(u => u.UserId == userId);
         if (user == null)
         {
-            return NotFound(new { message = $"User with ID {userId} not found" });
+            return ApiErrorResult.NotFound(ErrorCodes.UserNotFound, $"User with ID {userId} not found");
         }
 
         // Verify current password
         if (!BCrypt.Net.BCrypt.Verify(dto.CurrentPassword, user.PasswordHash))
         {
-            return BadRequest(new { message = "La contraseña actual es incorrecta" });
+            return ApiErrorResult.BadRequest(ErrorCodes.OldPasswordIncorrect, "La contraseña actual es incorrecta");
         }
 
         var isPosUser = string.Equals(user.Role?.RoleName, "POS", StringComparison.OrdinalIgnoreCase);
@@ -898,13 +899,13 @@ public class UsersController : ControllerBase
             : PasswordHelper.ValidateAdminPassword(dto.NewPassword);
         if (!ok)
         {
-            return BadRequest(new { message = error });
+            return ApiErrorResult.BadRequest(ErrorCodes.PasswordTooWeak, error ?? "La contraseña no cumple los requisitos mínimos");
         }
 
         // Reject re-using the same password they just had
         if (BCrypt.Net.BCrypt.Verify(dto.NewPassword, user.PasswordHash))
         {
-            return BadRequest(new { message = "La nueva contraseña no puede ser igual a la actual" });
+            return ApiErrorResult.BadRequest(ErrorCodes.PasswordSameAsOld, "La nueva contraseña no puede ser igual a la actual");
         }
 
         user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
@@ -932,7 +933,7 @@ public class UsersController : ControllerBase
             .FirstOrDefaultAsync(u => u.UserId == userId);
         if (user == null)
         {
-            return NotFound(new { message = $"User with ID {userId} not found" });
+            return ApiErrorResult.NotFound(ErrorCodes.UserNotFound, $"User with ID {userId} not found");
         }
 
         var isPosUser = string.Equals(user.Role?.RoleName, "POS", StringComparison.OrdinalIgnoreCase);
@@ -964,6 +965,42 @@ public class UsersController : ControllerBase
     /// Set or change the 4-digit PIN for the current admin user.
     /// Clears must_set_pin on success.
     /// </summary>
+    public class SetLanguageDto
+    {
+        /// <summary>BCP-47 language tag: "es" | "en" | "fr" | "ht".</summary>
+        public string Language { get; set; } = string.Empty;
+    }
+
+    /// <summary>
+    /// Set the current user's preferred UI language. Stored on the user row so
+    /// it persists across devices. Allowed: es | en | fr | ht.
+    /// </summary>
+    [HttpPut("me/preferred-language")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> SetMyPreferredLanguage([FromBody] SetLanguageDto dto)
+    {
+        var userId = GetCurrentUserId();
+        if (userId == null) return Unauthorized();
+
+        var allowed = new[] { "es", "en", "fr", "ht" };
+        var lang = dto.Language?.Trim().ToLowerInvariant();
+        if (string.IsNullOrEmpty(lang) || Array.IndexOf(allowed, lang) < 0)
+        {
+            return ApiErrorResult.BadRequest(ErrorCodes.LanguageInvalid, "Idioma inválido. Use es, en, fr o ht.");
+        }
+
+        var user = await _userRepository.GetByIdAsync(userId.Value);
+        if (user == null) return ApiErrorResult.NotFound(ErrorCodes.UserNotFound, $"User with ID {userId.Value} not found");
+
+        user.PreferredLanguage = lang;
+        user.UpdatedAt = DateTime.UtcNow;
+        await _userRepository.UpdateAsync(user);
+        await _context.SaveChangesAsync();
+
+        return NoContent();
+    }
+
     [HttpPut("me/pin")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -973,10 +1010,10 @@ public class UsersController : ControllerBase
         if (userId == null) return Unauthorized();
 
         var (ok, error) = PasswordHelper.ValidatePin(dto.Pin);
-        if (!ok) return BadRequest(new { message = error });
+        if (!ok) return ApiErrorResult.BadRequest(ErrorCodes.InvalidPin, error ?? "PIN inválido");
 
         var user = await _userRepository.GetByIdAsync(userId.Value);
-        if (user == null) return NotFound();
+        if (user == null) return ApiErrorResult.NotFound(ErrorCodes.UserNotFound, $"User with ID {userId.Value} not found");
 
         user.PinHash = BCrypt.Net.BCrypt.HashPassword(dto.Pin);
         user.MustSetPin = false;
@@ -1071,7 +1108,7 @@ public class UsersController : ControllerBase
             .FirstOrDefaultAsync(u => u.UserId == userId);
         if (user == null)
         {
-            return NotFound(new { message = $"User with ID {userId} not found" });
+            return ApiErrorResult.NotFound(ErrorCodes.UserNotFound, $"User with ID {userId} not found");
         }
 
         var isPosUser = string.Equals(user.Role?.RoleName, "POS", StringComparison.OrdinalIgnoreCase);
@@ -1081,7 +1118,7 @@ public class UsersController : ControllerBase
         // Validate new password
         if (string.IsNullOrWhiteSpace(dto.NewPassword) || dto.NewPassword.Length < 6)
         {
-            return BadRequest(new { message = "New password must be at least 6 characters long" });
+            return ApiErrorResult.BadRequest(ErrorCodes.PasswordTooShort, "New password must be at least 6 characters long");
         }
 
         // Update password (no current password verification needed for admin reset)
@@ -1108,7 +1145,7 @@ public class UsersController : ControllerBase
         var user = await _userRepository.GetByIdAsync(id);
         if (user == null)
         {
-            return NotFound(new { message = $"User with ID {id} not found" });
+            return ApiErrorResult.NotFound(ErrorCodes.UserNotFound, $"User with ID {id} not found");
         }
 
         // Zone scope — different rule by role:

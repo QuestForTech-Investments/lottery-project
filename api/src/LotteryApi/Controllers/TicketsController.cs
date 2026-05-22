@@ -1,6 +1,7 @@
 using Azure.Core.Serialization;
 using LotteryApi.Data;
 using LotteryApi.DTOs;
+using LotteryApi.Exceptions;
 using LotteryApi.Helpers;
 using LotteryApi.Models;
 using LotteryApi.Services;
@@ -365,7 +366,7 @@ public class TicketsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting ticket creation parameters");
-            return StatusCode(500, new { message = "Error al obtener parámetros de creación de ticket" });
+            return ApiErrorResult.Error(ErrorCodes.InternalError, "Error al obtener parámetros de creación de ticket", 500);
         }
     }
 
@@ -465,7 +466,7 @@ public class TicketsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting ticket monitor parameters");
-            return StatusCode(500, new { message = "Error al obtener parámetros de monitor de tickets" });
+            return ApiErrorResult.Error(ErrorCodes.InternalError, "Error al obtener parámetros de monitor de tickets", 500);
         }
     }
 
@@ -496,7 +497,7 @@ public class TicketsController : ControllerBase
 
             if (bettingPool == null)
             {
-                return NotFound(new { message = "La banca especificada no existe" });
+                return ApiErrorResult.NotFound(ErrorCodes.BettingPoolNotFound, "La banca especificada no existe");
             }
 
             if (!bettingPool.IsActive)
@@ -521,7 +522,7 @@ public class TicketsController : ControllerBase
 
                 if (!canSellAsAnyBanca)
                 {
-                    return StatusCode(403, new { message = "No tiene permiso para vender en esta banca" });
+                    return ApiErrorResult.Error(ErrorCodes.TicketSellBancaDenied, "No tiene permiso para vender en esta banca", 403);
                 }
             }
 
@@ -542,7 +543,7 @@ public class TicketsController : ControllerBase
                     var yesterday = todayBusiness.AddDays(-1);
                     if (!dto.AllowPastDate || ticketDate < yesterday)
                     {
-                        return BadRequest(new { message = "No se puede crear tickets para fechas pasadas" });
+                        return ApiErrorResult.BadRequest(ErrorCodes.TicketDatePastForbidden, "No se puede crear tickets para fechas pasadas");
                     }
 
                     // Server-side permission check for previous-day sales
@@ -553,7 +554,7 @@ public class TicketsController : ControllerBase
 
                     if (!hasPastDatePermission)
                     {
-                        return StatusCode(403, new { message = "No tiene permiso para ventas de dia anterior" });
+                        return ApiErrorResult.Error(ErrorCodes.TicketPreviousDayDenied, "No tiene permiso para ventas de dia anterior", 403);
                     }
                 }
 
@@ -567,7 +568,7 @@ public class TicketsController : ControllerBase
 
                     if (!hasFutureDatePermission)
                     {
-                        return StatusCode(403, new { message = "No tiene permiso para ventas futuras" });
+                        return ApiErrorResult.Error(ErrorCodes.TicketDateFutureForbidden, "No tiene permiso para ventas futuras", 403);
                     }
 
                     var futureSalesMode = bpConfig?.FutureSalesMode ?? "OFF";
@@ -576,7 +577,7 @@ public class TicketsController : ControllerBase
                     switch (futureSalesMode)
                     {
                         case "OFF":
-                            return BadRequest(new { message = "Esta banca no permite ventas futuras" });
+                            return ApiErrorResult.BadRequest(ErrorCodes.TicketFutureSalesDisabled, "Esta banca no permite ventas futuras");
 
                         case "WEEK":
                             // Calculate next Sunday (end of current week)
@@ -585,19 +586,19 @@ public class TicketsController : ControllerBase
                             var nextSunday = todayBusiness.AddDays(daysUntilSunday);
                             if (ticketDate > nextSunday)
                             {
-                                return BadRequest(new { message = "Solo se permite vender tickets hasta el domingo de esta semana" });
+                                return ApiErrorResult.BadRequest(ErrorCodes.TicketFutureWeekLimit, "Solo se permite vender tickets hasta el domingo de esta semana");
                             }
                             break;
 
                         case "DAYS":
                             if (ticketDate > todayBusiness.AddDays(maxFutureDays))
                             {
-                                return BadRequest(new { message = $"No se puede crear tickets para más de {maxFutureDays} días en el futuro" });
+                                return ApiErrorResult.BadRequest(ErrorCodes.TicketFutureDaysLimit, $"No se puede crear tickets para más de {maxFutureDays} días en el futuro");
                             }
                             break;
 
                         default:
-                            return BadRequest(new { message = "Esta banca no permite ventas futuras" });
+                            return ApiErrorResult.BadRequest(ErrorCodes.TicketFutureSalesDisabled, "Esta banca no permite ventas futuras");
                     }
                 }
             }
@@ -657,7 +658,7 @@ public class TicketsController : ControllerBase
             var user = await _context.Users.FirstOrDefaultAsync(u => u.UserId == dto.UserId);
             if (user == null)
             {
-                return NotFound(new { message = "El usuario especificado no existe" });
+                return ApiErrorResult.NotFound(ErrorCodes.UserNotFound, "El usuario especificado no existe");
             }
 
             if (!user.IsActive)
@@ -979,10 +980,19 @@ public class TicketsController : ControllerBase
                 }
             }
 
-            if (invalidBets.Count > 0) return BadRequest(new {
-                code = "ticket/invalid-bets-exceed-limits",
-                invalidBets = invalidBets.ToArray(),
-            });
+            if (invalidBets.Count > 0)
+            {
+                var problem = new Microsoft.AspNetCore.Mvc.ProblemDetails
+                {
+                    Status = 400,
+                    Title = "Bad Request",
+                    Detail = "Algunas jugadas exceden los límites permitidos"
+                };
+                problem.Extensions["errorCode"] = ErrorCodes.TicketInvalidBetsExceedLimits;
+                problem.Extensions["code"] = "ticket/invalid-bets-exceed-limits";
+                problem.Extensions["invalidBets"] = invalidBets.ToArray();
+                return new ObjectResult(problem) { StatusCode = 400 };
+            }
 
             // 9. Calculate discount on the ticket total bet amount
             // Floor-based: floor(totalBetAmount / perEvery) * discountAmount
@@ -1282,7 +1292,7 @@ public class TicketsController : ControllerBase
         {
             await transaction.RollbackAsync();
             _logger.LogError(ex, "Error creating ticket for bettingPool {BettingPoolId}", dto.BettingPoolId);
-            return StatusCode(500, new { message = "Error al crear el ticket", error = ex.Message });
+            return ApiErrorResult.Error(ErrorCodes.InternalError, $"Error al crear el ticket: {ex.Message}", 500);
         }
     }
 
@@ -1503,7 +1513,7 @@ public class TicketsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error filtering tickets");
-            return StatusCode(500, new { message = "Error al filtrar tickets", error = ex.Message });
+            return ApiErrorResult.Error(ErrorCodes.InternalError, $"Error al filtrar tickets: {ex.Message}", 500);
         }
     }
 
@@ -1523,13 +1533,13 @@ public class TicketsController : ControllerBase
             var ticket = await GetTicketById(id);
             if (ticket == null)
             {
-                return NotFound(new { message = "Ticket no encontrado" });
+                return ApiErrorResult.NotFound(ErrorCodes.TicketNotFound, "Ticket no encontrado");
             }
 
             // Zone scope.
             if (!await _zoneScope.IsBettingPoolAllowedAsync(ticket.BettingPoolId))
             {
-                return NotFound(new { message = "Ticket no encontrado" });
+                return ApiErrorResult.NotFound(ErrorCodes.TicketNotFound, "Ticket no encontrado");
             }
 
             return Ok(ticket);
@@ -1537,7 +1547,7 @@ public class TicketsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting ticket {TicketId}", id);
-            return StatusCode(500, new { message = "Error al obtener el ticket", error = ex.Message });
+            return ApiErrorResult.Error(ErrorCodes.InternalError, $"Error al obtener el ticket: {ex.Message}", 500);
         }
     }
 
@@ -1562,13 +1572,13 @@ public class TicketsController : ControllerBase
 
             if (ticketRef == null)
             {
-                return NotFound(new { message = "Ticket no encontrado con ese código de barras" });
+                return ApiErrorResult.NotFound(ErrorCodes.TicketNotFound, "Ticket no encontrado con ese código de barras");
             }
 
             // Zone scope — hide cross-zone tickets from scoped admins.
             if (!await _zoneScope.IsBettingPoolAllowedAsync(ticketRef.BettingPoolId))
             {
-                return NotFound(new { message = "Ticket no encontrado con ese código de barras" });
+                return ApiErrorResult.NotFound(ErrorCodes.TicketNotFound, "Ticket no encontrado con ese código de barras");
             }
 
             var ticket = await GetTicketById(ticketRef.TicketId);
@@ -1577,7 +1587,7 @@ public class TicketsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error searching ticket by barcode {Barcode}", barcode);
-            return StatusCode(500, new { message = "Error al buscar el ticket", error = ex.Message });
+            return ApiErrorResult.Error(ErrorCodes.InternalError, $"Error al buscar el ticket: {ex.Message}", 500);
         }
     }
 
@@ -1599,7 +1609,7 @@ public class TicketsController : ControllerBase
                 .Where(t => t.TicketId == id)
                 .Select(t => (int?)t.BettingPoolId)
                 .FirstOrDefaultAsync();
-            if (ticketBancaId == null) return NotFound(new { message = "Ticket no encontrado" });
+            if (ticketBancaId == null) return ApiErrorResult.NotFound(ErrorCodes.TicketNotFound, "Ticket no encontrado");
             if (!await IsAssignedToBettingPoolAsync(ticketBancaId.Value)) return Forbid();
         }
 
@@ -1614,7 +1624,7 @@ public class TicketsController : ControllerBase
 
             if (ticket == null)
             {
-                return NotFound(new { code = "TICKET_NOT_FOUND" });
+                return ApiErrorResult.NotFound(ErrorCodes.TicketNotFound, "Ticket no encontrado");
             }
 
             // Zone scope — admin cannot cancel tickets of bancas outside their zones.
@@ -1704,7 +1714,7 @@ public class TicketsController : ControllerBase
             var user = await _context.Users.FindAsync(dto.CancelledBy);
             if (user == null)
             {
-                return NotFound(new { code = "USER_NOT_FOUND" });
+                return ApiErrorResult.NotFound(ErrorCodes.UserNotFound, "Usuario no encontrado");
             }
 
             // 6. Check if cancellation is out of time (admin override)
@@ -1868,7 +1878,7 @@ public class TicketsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error canceling ticket {TicketId}", id);
-            return StatusCode(500, new { message = "Error al cancelar el ticket", error = ex.Message });
+            return ApiErrorResult.Error(ErrorCodes.InternalError, $"Error al cancelar el ticket: {ex.Message}", 500);
         }
     }
 
@@ -1895,7 +1905,7 @@ public class TicketsController : ControllerBase
 
             if (ticket == null)
             {
-                return NotFound(new { message = "Ticket no encontrado" });
+                return ApiErrorResult.NotFound(ErrorCodes.TicketNotFound, "Ticket no encontrado");
             }
 
             // Zone scope — admin cannot pay tickets of bancas outside their zones.
@@ -1926,7 +1936,7 @@ public class TicketsController : ControllerBase
             var user = await _context.Users.FindAsync(dto.PaidBy);
             if (user == null)
             {
-                return NotFound(new { message = "El usuario que paga no existe" });
+                return ApiErrorResult.NotFound(ErrorCodes.UserNotFound, "El usuario que paga no existe");
             }
 
             // 6. Mark ticket as paid
@@ -1965,7 +1975,7 @@ public class TicketsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error paying ticket {TicketId}", id);
-            return StatusCode(500, new { message = "Error al pagar el ticket", error = ex.Message });
+            return ApiErrorResult.Error(ErrorCodes.InternalError, $"Error al pagar el ticket: {ex.Message}", 500);
         }
     }
 
@@ -2295,7 +2305,7 @@ public class TicketsController : ControllerBase
             var draw = await _context.Draws.FindAsync(drawId);
             if (draw == null)
             {
-                return NotFound(new { message = "Sorteo no encontrado" });
+                return ApiErrorResult.NotFound(ErrorCodes.DrawNotFound, "Sorteo no encontrado");
             }
 
             // Build query for ticket lines
@@ -2371,7 +2381,7 @@ public class TicketsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting plays summary");
-            return StatusCode(500, new { message = "Error al obtener el resumen de jugadas" });
+            return ApiErrorResult.Error(ErrorCodes.InternalError, "Error al obtener el resumen de jugadas", 500);
         }
     }
 
@@ -2406,7 +2416,7 @@ public class TicketsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error resetting commissions");
-            return StatusCode(500, new { message = "Error al resetear las comisiones" });
+            return ApiErrorResult.Error(ErrorCodes.InternalError, "Error al resetear las comisiones", 500);
         }
     }
 

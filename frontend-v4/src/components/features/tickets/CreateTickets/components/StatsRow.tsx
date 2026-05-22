@@ -1,4 +1,5 @@
 import React, { memo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Box, Typography, TextField, Switch } from '@mui/material';
 
 interface StatsRowProps {
@@ -24,10 +25,12 @@ const StatsRow: React.FC<StatsRowProps> = memo(({
   multiLotteryMode,
   onDiscountChange,
   onMultiLotteryChange,
-}) => (
+}) => {
+  const { t } = useTranslation();
+  return (
   <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2, flexWrap: 'wrap' }}>
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-      <Typography sx={{ fontSize: '14px', color: '#666', fontWeight: 500 }}>Jugadas del dia</Typography>
+      <Typography sx={{ fontSize: '14px', color: '#666', fontWeight: 500 }}>{t('tickets.create.playsToday')}</Typography>
       <TextField
         size="medium"
         value={dailyBets}
@@ -45,7 +48,7 @@ const StatsRow: React.FC<StatsRowProps> = memo(({
       />
     </Box>
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-      <Typography sx={{ fontSize: '14px', color: '#666', fontWeight: 500 }}>Vendido global</Typography>
+      <Typography sx={{ fontSize: '14px', color: '#666', fontWeight: 500 }}>{t('tickets.create.globalSales')}</Typography>
       <TextField
         size="medium"
         value={soldInGroup}
@@ -62,7 +65,7 @@ const StatsRow: React.FC<StatsRowProps> = memo(({
       />
     </Box>
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-      <Typography sx={{ fontSize: '14px', color: '#666', fontWeight: 500 }}>Vendido en banca</Typography>
+      <Typography sx={{ fontSize: '14px', color: '#666', fontWeight: 500 }}>{t('tickets.create.bettingPoolSales')}</Typography>
       <TextField
         size="medium"
         value={soldInPool}
@@ -79,7 +82,7 @@ const StatsRow: React.FC<StatsRowProps> = memo(({
       />
     </Box>
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-      <Typography sx={{ fontSize: '14px', color: '#666', fontWeight: 500 }}>Desc.</Typography>
+      <Typography sx={{ fontSize: '14px', color: '#666', fontWeight: 500 }}>{t('tickets.create.discount')}</Typography>
       <Switch
         checked={discountActive}
         onChange={(e) => onDiscountChange(e.target.checked)}
@@ -91,7 +94,7 @@ const StatsRow: React.FC<StatsRowProps> = memo(({
       />
     </Box>
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-      <Typography sx={{ fontSize: '14px', color: '#666', fontWeight: 500 }}>Mult. lot</Typography>
+      <Typography sx={{ fontSize: '14px', color: '#666', fontWeight: 500 }}>{t('tickets.create.lotteryMultiplier')}</Typography>
       <Switch
         checked={multiLotteryMode}
         onChange={(e) => onMultiLotteryChange(e.target.checked)}
@@ -103,7 +106,8 @@ const StatsRow: React.FC<StatsRowProps> = memo(({
       />
     </Box>
   </Box>
-));
+  );
+});
 
 StatsRow.displayName = 'StatsRow';
 

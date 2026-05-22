@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, memo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Card,
@@ -77,6 +78,7 @@ interface ModalData {
 type OrderDirection = 'asc' | 'desc';
 
 const BettingPoolAccess: React.FC = () => {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState<boolean>(true);
   const [bettingPools, setBettingPools] = useState<BettingPool[]>([]);
   const [zones, setZones] = useState<Zone[]>([]);
@@ -168,12 +170,12 @@ const BettingPoolAccess: React.FC = () => {
         dailySaleLimit: parseFloat(modalData.dailySaleLimit) || 0,
         dailyBalanceLimit: parseFloat(modalData.dailyBalanceLimit) || 0
       });
-      alert('Configuración actualizada exitosamente');
+      alert(t('bettingPoolsAdmin.configUpdateSuccess'));
       handleCloseModal();
       handleRefresh();
     } catch (error) {
       console.error('Error saving:', error);
-      alert('Error al actualizar la configuration');
+      alert(t('bettingPoolsAdmin.configUpdateError'));
     } finally {
       setSaving(false);
     }
@@ -251,20 +253,20 @@ const BettingPoolAccess: React.FC = () => {
       <Card>
         <CardContent>
           <Typography variant="h5" component="h1" gutterBottom>
-            Lista de bancas
+            {t('bettingPoolsAdmin.accessListTitle')}
           </Typography>
 
           {/* Filters Section */}
           <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap', alignItems: 'center' }}>
             {/* Zone Multi-Select */}
             <FormControl sx={{ minWidth: 200, maxWidth: 400 }}>
-              <InputLabel>Zonas</InputLabel>
+              <InputLabel>{t('common.zones')}</InputLabel>
               <Select
                 multiple
                 value={selectedZones}
                 onChange={handleZoneChange}
-                input={<OutlinedInput label="Zonas" />}
-                renderValue={(selected) => `${selected.length} seleccionadas`}
+                input={<OutlinedInput label={t('common.zones')} />}
+                renderValue={(selected) => t('bettingPoolsAdmin.selectedCount', { count: selected.length })}
               >
                 {zones.map((zone) => (
                   <MenuItem key={zone.zoneId || zone.id} value={zone.zoneId || zone.id || 0}>
@@ -280,12 +282,12 @@ const BettingPoolAccess: React.FC = () => {
               startIcon={<RefreshIcon />}
               onClick={handleRefresh}
             >
-              Refrescar
+              {t('bettingPoolsAdmin.refreshButton')}
             </Button>
 
             {/* Quick Filter */}
             <TextField
-              placeholder="Filtrado rápido"
+              placeholder={t('bettingPoolsAdmin.quickFilter')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               size="small"
@@ -311,17 +313,17 @@ const BettingPoolAccess: React.FC = () => {
                       direction={orderBy === 'number' ? order : 'asc'}
                       onClick={() => handleSort('number')}
                     >
-                      Número
+                      {t('bettingPoolsAdmin.tableNumber')}
                     </TableSortLabel>
                   </TableCell>
-                  <TableCell>Usuarios</TableCell>
+                  <TableCell>{t('bettingPoolsAdmin.tableUsers')}</TableCell>
                   <TableCell>
                     <TableSortLabel
                       active={orderBy === 'name'}
                       direction={orderBy === 'name' ? order : 'asc'}
                       onClick={() => handleSort('name')}
                     >
-                      Nombre
+                      {t('bettingPoolsAdmin.tableName')}
                     </TableSortLabel>
                   </TableCell>
                   <TableCell>
@@ -330,7 +332,7 @@ const BettingPoolAccess: React.FC = () => {
                       direction={orderBy === 'reference' ? order : 'asc'}
                       onClick={() => handleSort('reference')}
                     >
-                      Referencia
+                      {t('bettingPoolsAdmin.tableReference')}
                     </TableSortLabel>
                   </TableCell>
                   <TableCell>
@@ -339,11 +341,11 @@ const BettingPoolAccess: React.FC = () => {
                       direction={orderBy === 'zone' ? order : 'asc'}
                       onClick={() => handleSort('zone')}
                     >
-                      Zona
+                      {t('bettingPoolsAdmin.tableZone')}
                     </TableSortLabel>
                   </TableCell>
-                  <TableCell>Activa</TableCell>
-                  <TableCell>Configuraciones</TableCell>
+                  <TableCell>{t('bettingPoolsAdmin.tableActive')}</TableCell>
+                  <TableCell>{t('bettingPoolsAdmin.tableConfigurations')}</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -380,7 +382,7 @@ const BettingPoolAccess: React.FC = () => {
 
           {/* Entry Count */}
           <Typography variant="body2" sx={{ mt: 2, color: 'text.secondary' }}>
-            Mostrando {filteredAndSortedData.length} de {bettingPools.length} entradas
+            {t('common.showingEntries', { shown: filteredAndSortedData.length, total: bettingPools.length })}
           </Typography>
         </CardContent>
       </Card>
@@ -388,43 +390,43 @@ const BettingPoolAccess: React.FC = () => {
       {/* Configuration Modal */}
       <Dialog open={modalOpen} onClose={handleCloseModal} maxWidth="sm" fullWidth>
         <DialogTitle>
-          Actualizar banca
+          {t('bettingPoolsAdmin.updateBettingPoolTitle')}
         </DialogTitle>
         <DialogContent>
           <Tabs value={0} sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
-            <Tab label="Configuraciones" icon={<SettingsIcon />} iconPosition="start" />
+            <Tab label={t('bettingPoolsAdmin.configurationsTab')} icon={<SettingsIcon />} iconPosition="start" />
           </Tabs>
 
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
             <TextField
-              label="Nombre"
+              label={t('common.name')}
               value={selectedPool?.bettingPoolName || selectedPool?.name || ''}
               disabled
               fullWidth
             />
             <TextField
-              label="Porcentaje de caída"
+              label={t('bettingPoolsAdmin.fallPercentage')}
               type="number"
               value={modalData.fallPercentage}
               onChange={(e) => handleModalInputChange('fallPercentage', e.target.value)}
               fullWidth
             />
             <TextField
-              label="Balance de desactivación"
+              label={t('bettingPoolsAdmin.deactivationBalance')}
               type="number"
               value={modalData.deactivationBalance}
               onChange={(e) => handleModalInputChange('deactivationBalance', e.target.value)}
               fullWidth
             />
             <TextField
-              label="Límite de venta diaria"
+              label={t('bettingPoolsAdmin.dailySaleLimit')}
               type="number"
               value={modalData.dailySaleLimit}
               onChange={(e) => handleModalInputChange('dailySaleLimit', e.target.value)}
               fullWidth
             />
             <TextField
-              label="Balance límite al día"
+              label={t('bettingPoolsAdmin.dailyBalanceLimit')}
               type="number"
               value={modalData.dailyBalanceLimit}
               onChange={(e) => handleModalInputChange('dailyBalanceLimit', e.target.value)}
@@ -433,13 +435,13 @@ const BettingPoolAccess: React.FC = () => {
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseModal}>Cancelar</Button>
+          <Button onClick={handleCloseModal}>{t('common.cancel')}</Button>
           <Button
             variant="contained"
             onClick={handleSaveModal}
             disabled={saving}
           >
-            {saving ? 'Actualizando...' : 'Actualizar'}
+            {saving ? t('bettingPoolsAdmin.updating') : t('common.update')}
           </Button>
         </DialogActions>
       </Dialog>

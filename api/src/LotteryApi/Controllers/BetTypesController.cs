@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using LotteryApi.Data;
 using LotteryApi.DTOs;
+using LotteryApi.Exceptions;
+using LotteryApi.Helpers;
 using LotteryApi.Services;
 
 namespace LotteryApi.Controllers;
@@ -157,7 +159,7 @@ public class BetTypesController : ControllerBase
 
             if (betType == null)
             {
-                return NotFound(new { message = "Tipo de apuesta no encontrado" });
+                return ApiErrorResult.NotFound(ErrorCodes.BetTypeNotFound, "Tipo de apuesta no encontrado");
             }
 
             var result = new BetTypeWithFieldsDto

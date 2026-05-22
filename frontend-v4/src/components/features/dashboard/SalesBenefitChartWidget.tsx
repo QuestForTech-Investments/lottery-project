@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Paper, Typography, Box, CircularProgress } from '@mui/material';
 import { BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { getSalesBenefitChart, type SalesBenefitItem } from '@/services/dashboardService';
@@ -8,24 +9,28 @@ const ACCENT = '#6366f1';
 const SUCCESS = '#2e7d32';
 const DANGER = '#c62828';
 
-const CustomLegend: React.FC = () => (
-  <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mt: 1, fontSize: 12 }}>
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-      <Box sx={{ width: 12, height: 12, bgcolor: ACCENT, borderRadius: '2px' }} />
-      <span>Ventas</span>
+const CustomLegend: React.FC = () => {
+  const { t } = useTranslation();
+  return (
+    <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mt: 1, fontSize: 12 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+        <Box sx={{ width: 12, height: 12, bgcolor: ACCENT, borderRadius: '2px' }} />
+        <span>{t('dashboard.salesBenefit.sales')}</span>
+      </Box>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+        <Box sx={{ width: 12, height: 12, bgcolor: SUCCESS, borderRadius: '2px' }} />
+        <span>{t('dashboard.salesBenefit.profit')}</span>
+      </Box>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+        <Box sx={{ width: 12, height: 12, bgcolor: DANGER, borderRadius: '2px' }} />
+        <span>{t('dashboard.salesBenefit.loss')}</span>
+      </Box>
     </Box>
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-      <Box sx={{ width: 12, height: 12, bgcolor: SUCCESS, borderRadius: '2px' }} />
-      <span>Beneficio</span>
-    </Box>
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-      <Box sx={{ width: 12, height: 12, bgcolor: DANGER, borderRadius: '2px' }} />
-      <span>Pérdida</span>
-    </Box>
-  </Box>
-);
+  );
+};
 
 const SalesBenefitChartWidget: React.FC = () => {
+  const { t } = useTranslation();
   const [data, setData] = useState<SalesBenefitItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -47,7 +52,7 @@ const SalesBenefitChartWidget: React.FC = () => {
   return (
     <Paper elevation={3} sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
       <Typography variant="subtitle1" fontWeight="bold" align="center" sx={{ mb: 1 }}>
-        Ventas y Beneficio - Últimos 7 días
+        {t('dashboard.salesBenefit.title')}
       </Typography>
       {loading ? (
         <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -55,7 +60,7 @@ const SalesBenefitChartWidget: React.FC = () => {
         </Box>
       ) : data.length === 0 ? (
         <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <Typography variant="body2" color="text.secondary">Sin datos</Typography>
+          <Typography variant="body2" color="text.secondary">{t('dashboard.noData')}</Typography>
         </Box>
       ) : (
         <Box sx={{ flex: 1, minHeight: 260, display: 'flex', flexDirection: 'column' }}>
@@ -66,8 +71,8 @@ const SalesBenefitChartWidget: React.FC = () => {
                 <XAxis dataKey="label" tick={{ fontSize: 11 }} />
                 <YAxis tick={{ fontSize: 10 }} />
                 <Tooltip formatter={(value: number) => formatCurrency(value)} />
-                <Bar dataKey="ventas" name="Ventas" fill={ACCENT} radius={[4, 4, 0, 0]} />
-                <Bar dataKey="beneficio" name="Beneficio" radius={[4, 4, 0, 0]}>
+                <Bar dataKey="ventas" name={t('dashboard.salesBenefit.sales')} fill={ACCENT} radius={[4, 4, 0, 0]} />
+                <Bar dataKey="beneficio" name={t('dashboard.salesBenefit.profit')} radius={[4, 4, 0, 0]}>
                   {data.map((entry, i) => (
                     <Cell key={`cell-${i}`} fill={entry.beneficio < 0 ? DANGER : SUCCESS} />
                   ))}

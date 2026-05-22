@@ -19,6 +19,8 @@ interface AuthResponse {
   bettingPoolName?: string
   mustChangePassword?: boolean
   mustSetPin?: boolean
+  /** BCP-47: "es" | "en" | "fr" | "ht". Set i18n.language to this on login. */
+  preferredLanguage?: string
   user?: Record<string, unknown>
 }
 
@@ -64,6 +66,20 @@ export const login = async (username: string, password: string): Promise<AuthRes
       logger.success('AUTH_LOGIN_SUCCESS', `Token stored for user: ${username}`, {
         expiresAt: response.expiresAt
       })
+    }
+
+    // Apply the user's preferred language right after login so the UI swaps
+    // before any feature page is mounted. `i18next-browser-languagedetector`
+    // also persists it to localStorage automatically.
+    if (response.preferredLanguage) {
+      try {
+        const i18n = (await import('../i18n/config')).default
+        if (i18n.language !== response.preferredLanguage) {
+          await i18n.changeLanguage(response.preferredLanguage)
+        }
+      } catch (err) {
+        logger.warn('I18N_APPLY_ERROR', 'Could not apply preferred language', { err: String(err) })
+      }
     }
 
     return response

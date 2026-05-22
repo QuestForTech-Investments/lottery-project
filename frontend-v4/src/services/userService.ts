@@ -322,6 +322,14 @@ export const updateUserComplete = async (userId: number | string, userData: User
   }
 }
 
+/**
+ * Persist the current user's preferred UI language. Accepts "es" | "en" | "fr" | "ht".
+ * Best-effort: if it fails, the local i18n change still stuck via localStorage.
+ */
+export const updateMyPreferredLanguage = async (language: 'es' | 'en' | 'fr' | 'ht'): Promise<void> => {
+  await api.put('/users/me/preferred-language', { language })
+}
+
 export default {
   getAllUsers,
   getUserById,

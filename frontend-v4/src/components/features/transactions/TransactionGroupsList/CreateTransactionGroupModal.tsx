@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Dialog,
   DialogTitle,
@@ -88,25 +89,27 @@ interface CreateTransactionGroupModalProps {
   allowedTypes?: TransactionTypeName[];
 }
 
-// Type-based configuration for entity labels and sources
+// Type-based configuration for entity labels (i18n keys) and behavioral flags.
+// Labels are resolved with t() at render so they swap with the active locale.
 const getTypeConfig = (type: string) => {
   switch (type) {
     case 'Cobro':
-      return { entity1Label: 'Entidad #1', entity2Label: 'Banco', debitDisabled: true, debitHidden: false, creditDisabled: false, showExpenseCategory: false, entity2IsText: false, entity2Optional: false, hideEntity2Balance: false };
+      return { entity1LabelKey: 'transactions.entity1', entity2LabelKey: 'common.bank', debitDisabled: true, debitHidden: false, creditDisabled: false, showExpenseCategory: false, entity2IsText: false, entity2Optional: false, hideEntity2Balance: false };
     case 'Pago':
-      return { entity1Label: 'Entidad #1', entity2Label: 'Banco', debitDisabled: false, debitHidden: false, creditDisabled: true, showExpenseCategory: false, entity2IsText: false, entity2Optional: false, hideEntity2Balance: false };
+      return { entity1LabelKey: 'transactions.entity1', entity2LabelKey: 'common.bank', debitDisabled: false, debitHidden: false, creditDisabled: true, showExpenseCategory: false, entity2IsText: false, entity2Optional: false, hideEntity2Balance: false };
     case 'Ajuste':
-      return { entity1Label: 'Entidad #1', entity2Label: 'Entidad #2', debitDisabled: false, debitHidden: false, creditDisabled: false, showExpenseCategory: false, entity2IsText: false, entity2Optional: false, hideEntity2Balance: false };
+      return { entity1LabelKey: 'transactions.entity1', entity2LabelKey: 'transactions.entity2', debitDisabled: false, debitHidden: false, creditDisabled: false, showExpenseCategory: false, entity2IsText: false, entity2Optional: false, hideEntity2Balance: false };
     case 'Retiro':
-      return { entity1Label: 'Banco', entity2Label: 'Otros', debitDisabled: true, debitHidden: false, creditDisabled: false, showExpenseCategory: false, entity2IsText: false, entity2Optional: false, hideEntity2Balance: false };
+      return { entity1LabelKey: 'common.bank', entity2LabelKey: 'transactions.other', debitDisabled: true, debitHidden: false, creditDisabled: false, showExpenseCategory: false, entity2IsText: false, entity2Optional: false, hideEntity2Balance: false };
     case 'Gasto':
-      return { entity1Label: 'Banca/Banco', entity2Label: 'Consumidor', debitDisabled: true, debitHidden: true, creditDisabled: false, showExpenseCategory: true, entity2IsText: true, entity2Optional: true, hideEntity2Balance: true };
+      return { entity1LabelKey: 'transactions.bettingPoolOrBank', entity2LabelKey: 'transactions.consumer', debitDisabled: true, debitHidden: true, creditDisabled: false, showExpenseCategory: true, entity2IsText: true, entity2Optional: true, hideEntity2Balance: true };
     default:
-      return { entity1Label: 'Entidad #1', entity2Label: 'Entidad #2', debitDisabled: true, debitHidden: false, creditDisabled: true, showExpenseCategory: false, entity2IsText: false, entity2Optional: false, hideEntity2Balance: false };
+      return { entity1LabelKey: 'transactions.entity1', entity2LabelKey: 'transactions.entity2', debitDisabled: true, debitHidden: false, creditDisabled: true, showExpenseCategory: false, entity2IsText: false, entity2Optional: false, hideEntity2Balance: false };
   }
 };
 
 const CreateTransactionGroupModal = ({ open, onClose, onCreated, allowedTypes }: CreateTransactionGroupModalProps): React.ReactElement => {
+  const { t } = useTranslation();
   // Use the subset when provided; fall back to the full set.
   const transactionTypes = useMemo<readonly string[]>(
     () => (allowedTypes && allowedTypes.length > 0 ? allowedTypes : ALL_TRANSACTION_TYPES),
@@ -443,16 +446,16 @@ const CreateTransactionGroupModal = ({ open, onClose, onCreated, allowedTypes }:
       };
 
       await api.post('/transaction-groups', payload);
-      setSnackbar({ open: true, message: 'Grupo de transacciones creado exitosamente', severity: 'success' });
+      setSnackbar({ open: true, message: t('transactions.create.createSuccess'), severity: 'success' });
       handleClose();
       onCreated?.();
     } catch (err) {
       console.error('Error creating transaction group:', err);
-      setSnackbar({ open: true, message: 'Error al crear grupo de transacciones', severity: 'error' });
+      setSnackbar({ open: true, message: t('transactions.create.createError'), severity: 'error' });
     } finally {
       setCreating(false);
     }
-  }, [lines, zoneId, groupNotes, handleClose, onCreated]);
+  }, [lines, zoneId, groupNotes, handleClose, onCreated, t]);
 
   const attemptCreate = useCallback(() => {
     if (lines.length === 0 || creating) return;
@@ -467,7 +470,7 @@ const CreateTransactionGroupModal = ({ open, onClose, onCreated, allowedTypes }:
     <>
     <Dialog open={open} onClose={handleClose} maxWidth="xl" fullWidth>
       <DialogTitle sx={{ fontWeight: 600, color: '#2c2c2c', fontFamily: 'Montserrat, sans-serif' }}>
-        Crear grupo de transacciones
+        {t('transactions.create.title')}
       </DialogTitle>
       <DialogContent dividers>
         <Grid container spacing={3}>
@@ -475,14 +478,14 @@ const CreateTransactionGroupModal = ({ open, onClose, onCreated, allowedTypes }:
           <Grid item xs={12} md={5}>
             {/* Zona */}
             <FormControl fullWidth size="small" sx={{ mb: 2 }}>
-              <InputLabel>Zona</InputLabel>
+              <InputLabel>{t('common.zone')}</InputLabel>
               <Select
                 value={zoneId}
                 onChange={(e: SelectChangeEvent) => setZoneId(e.target.value)}
-                label="Zona"
+                label={t('common.zone')}
               >
                 <MenuItem value="">
-                  <em>Todas</em>
+                  <em>{t('common.all')}</em>
                 </MenuItem>
                 {zones.map(z => (
                   <MenuItem key={z.id} value={String(z.id)}>{z.name}</MenuItem>
@@ -492,14 +495,14 @@ const CreateTransactionGroupModal = ({ open, onClose, onCreated, allowedTypes }:
 
             {/* Tipo */}
             <FormControl fullWidth size="small" sx={{ mb: 2 }} required>
-              <InputLabel>Tipo</InputLabel>
+              <InputLabel>{t('common.type')}</InputLabel>
               <Select
                 value={transactionType}
                 onChange={(e: SelectChangeEvent) => handleTypeChange(e.target.value)}
-                label="Tipo"
+                label={t('common.type')}
               >
-                {transactionTypes.map(t => (
-                  <MenuItem key={t} value={t}>{t}</MenuItem>
+                {transactionTypes.map(typ => (
+                  <MenuItem key={typ} value={typ}>{typ}</MenuItem>
                 ))}
               </Select>
             </FormControl>
@@ -507,11 +510,11 @@ const CreateTransactionGroupModal = ({ open, onClose, onCreated, allowedTypes }:
             {/* Expense Category (Gasto only) */}
             {typeConfig.showExpenseCategory && (
               <FormControl fullWidth size="small" sx={{ mb: 2 }}>
-                <InputLabel>Categoría de gastos</InputLabel>
+                <InputLabel>{t('transactions.expenseCategory')}</InputLabel>
                 <Select
                   value={expenseCategory}
                   onChange={(e: SelectChangeEvent) => setExpenseCategory(e.target.value)}
-                  label="Categoría de gastos"
+                  label={t('transactions.expenseCategory')}
                 >
                   {(() => {
                     const parents = expenseCategories.filter(c => c.parentCategoryId === null);
@@ -550,7 +553,7 @@ const CreateTransactionGroupModal = ({ open, onClose, onCreated, allowedTypes }:
 
             {/* Entity 1 */}
             <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block', fontWeight: 600 }}>
-              {typeConfig.entity1Label}
+              {t(typeConfig.entity1LabelKey)}
             </Typography>
             <Autocomplete
               size="small"
@@ -559,7 +562,7 @@ const CreateTransactionGroupModal = ({ open, onClose, onCreated, allowedTypes }:
               value={entity1}
               onChange={(_e, val) => setEntity1(val)}
               disabled={isFormDisabled}
-              renderInput={(params) => <TextField {...params} placeholder="Seleccione" />}
+              renderInput={(params) => <TextField {...params} placeholder={t('common.select')} />}
               sx={{ mb: 1 }}
             />
             <Autocomplete
@@ -586,17 +589,17 @@ const CreateTransactionGroupModal = ({ open, onClose, onCreated, allowedTypes }:
                 }
               }}
               disabled={isFormDisabled}
-              renderInput={(params) => <TextField {...params} inputRef={entity1CodeRef} label="Código" placeholder="Seleccione" />}
+              renderInput={(params) => <TextField {...params} inputRef={entity1CodeRef} label={t('common.code')} placeholder={t('common.select')} />}
               sx={{ mb: 2 }}
             />
 
             {/* Entity 2 */}
             <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block', fontWeight: 600 }}>
-              {typeConfig.entity2Label}
+              {t(typeConfig.entity2LabelKey)}
             </Typography>
             {typeConfig.entity2IsText ? (
               <TextField
-                fullWidth size="small" placeholder="Seleccione"
+                fullWidth size="small" placeholder={t('common.select')}
                 value={entity2Text}
                 onChange={(e) => setEntity2Text(e.target.value)}
                 disabled={isFormDisabled}
@@ -617,7 +620,7 @@ const CreateTransactionGroupModal = ({ open, onClose, onCreated, allowedTypes }:
                     }
                   }}
                   disabled={isFormDisabled}
-                  renderInput={(params) => <TextField {...params} placeholder="Seleccione" />}
+                  renderInput={(params) => <TextField {...params} placeholder={t('common.select')} />}
                   sx={{ mb: 1 }}
                 />
                 <Autocomplete
@@ -641,7 +644,7 @@ const CreateTransactionGroupModal = ({ open, onClose, onCreated, allowedTypes }:
                     }
                   }}
                   disabled={isFormDisabled}
-                  renderInput={(params) => <TextField {...params} inputRef={entity2CodeRef} label="Código" placeholder="Seleccione" error={!!entity2Error} helperText={entity2Error} />}
+                  renderInput={(params) => <TextField {...params} inputRef={entity2CodeRef} label={t('common.code')} placeholder={t('common.select')} error={!!entity2Error} helperText={entity2Error} />}
                   sx={{ mb: 2 }}
                 />
               </>
@@ -649,18 +652,18 @@ const CreateTransactionGroupModal = ({ open, onClose, onCreated, allowedTypes }:
 
             {sameEntitySelected && (
               <Alert severity="error" sx={{ mb: 2 }}>
-                No se puede realizar una transacción con la misma entidad en ambos campos.
+                {t('transactions.create.sameEntityError')}
               </Alert>
             )}
             {entity1AlreadyInLines && (
               <Alert severity="warning" sx={{ mb: 2 }}>
-                Ya existe una transacción para esta banca en la tabla.
+                {t('transactions.create.alreadyInTable')}
               </Alert>
             )}
 
             {/* Notas */}
             <TextField
-              fullWidth size="small" label="Notas" value={lineNotes}
+              fullWidth size="small" label={t('common.notes')} value={lineNotes}
               onChange={(e) => setLineNotes(e.target.value)}
               disabled={isFormDisabled}
               sx={{ mb: 1 }}
@@ -668,11 +671,11 @@ const CreateTransactionGroupModal = ({ open, onClose, onCreated, allowedTypes }:
             <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
               <FormControlLabel
                 control={<Checkbox size="small" checked={remember} onChange={(e) => setRemember(e.target.checked)} />}
-                label={<Typography variant="body2">Recordar</Typography>}
+                label={<Typography variant="body2">{t('transactions.create.remember')}</Typography>}
               />
               <FormControlLabel
                 control={<Checkbox size="small" checked={showInBanca} onChange={(e) => setShowInBanca(e.target.checked)} />}
-                label={<Typography variant="body2">Mostrar en banca</Typography>}
+                label={<Typography variant="body2">{t('transactions.create.showInBanca')}</Typography>}
               />
             </Box>
           </Grid>
@@ -680,7 +683,7 @@ const CreateTransactionGroupModal = ({ open, onClose, onCreated, allowedTypes }:
           {/* Right column - Balances */}
           <Grid item xs={12} md={4}>
             <TextField
-              fullWidth size="small" label={`Balance inicial: ${typeConfig.entity1Label}`}
+              fullWidth size="small" label={`${t('common.initialBalance')}: ${t(typeConfig.entity1LabelKey)}`}
               value={entity1 ? formatCurrency(initialBalance1) : 'N/A'}
               disabled sx={{ mb: 2 }}
               InputProps={{ sx: { bgcolor: '#f0f0f0' } }}
@@ -688,7 +691,7 @@ const CreateTransactionGroupModal = ({ open, onClose, onCreated, allowedTypes }:
             {!typeConfig.hideEntity2Balance && (
               <TextField
                 fullWidth size="small"
-                label={`Balance inicial: ${typeConfig.entity2Label}`}
+                label={`${t('common.initialBalance')}: ${t(typeConfig.entity2LabelKey)}`}
                 value={entity2 ? formatCurrency(initialBalance2) : 'N/A'}
                 disabled sx={{ mb: 2 }}
                 InputProps={{ sx: { bgcolor: '#f0f0f0' } }}
@@ -696,7 +699,7 @@ const CreateTransactionGroupModal = ({ open, onClose, onCreated, allowedTypes }:
             )}
             {!typeConfig.debitHidden && (
               <TextField
-                fullWidth size="small" label="Débito" type="number"
+                fullWidth size="small" label={t('transactions.debit')} type="number"
                 inputRef={debitRef}
                 value={debit}
                 onChange={(e) => setDebit(e.target.value)}
@@ -704,7 +707,7 @@ const CreateTransactionGroupModal = ({ open, onClose, onCreated, allowedTypes }:
                   if (e.key === 'Enter') {
                     e.preventDefault();
                     if (!entity2 && !typeConfig.hideEntity2Balance) {
-                      setEntity2Error('Debe seleccionar un banco');
+                      setEntity2Error(t('transactions.create.mustSelectBank'));
                       entity2CodeRef.current?.focus();
                       return;
                     }
@@ -713,12 +716,12 @@ const CreateTransactionGroupModal = ({ open, onClose, onCreated, allowedTypes }:
                 }}
                 disabled={isFormDisabled || typeConfig.debitDisabled}
                 color={debitWarning ? 'warning' : undefined}
-                helperText={debitWarning ? 'Monto superior a $10,000' : undefined}
+                helperText={debitWarning ? t('transactions.create.amountOver10k') : undefined}
                 sx={{ mb: 2, ...(debitWarning && { '& .MuiOutlinedInput-root': { bgcolor: '#fff3e0' } }) }}
               />
             )}
             <TextField
-              fullWidth size="small" label="Crédito" type="number"
+              fullWidth size="small" label={t('transactions.credit')} type="number"
               inputRef={creditRef}
               value={credit}
               onChange={(e) => setCredit(e.target.value)}
@@ -726,7 +729,7 @@ const CreateTransactionGroupModal = ({ open, onClose, onCreated, allowedTypes }:
                 if (e.key === 'Enter') {
                   e.preventDefault();
                   if (!entity2 && !typeConfig.hideEntity2Balance) {
-                    setEntity2Error('Debe seleccionar un banco');
+                    setEntity2Error(t('transactions.create.mustSelectBank'));
                     entity2CodeRef.current?.focus();
                     return;
                   }
@@ -735,11 +738,11 @@ const CreateTransactionGroupModal = ({ open, onClose, onCreated, allowedTypes }:
               }}
               disabled={isFormDisabled || typeConfig.creditDisabled}
               color={creditWarning ? 'warning' : undefined}
-              helperText={creditWarning ? 'Monto superior a $10,000' : undefined}
+              helperText={creditWarning ? t('transactions.create.amountOver10k') : undefined}
               sx={{ mb: 2, ...(creditWarning && { '& .MuiOutlinedInput-root': { bgcolor: '#fff3e0' } }) }}
             />
             <TextField
-              fullWidth size="small" label={`Balance final: ${typeConfig.entity1Label}`}
+              fullWidth size="small" label={`${t('common.finalBalance')}: ${t(typeConfig.entity1LabelKey)}`}
               value={entity1 ? formatCurrency(finalBalance1) : 'N/A'}
               disabled sx={{ mb: 2 }}
               InputProps={{ sx: { bgcolor: '#f0f0f0' } }}
@@ -747,7 +750,7 @@ const CreateTransactionGroupModal = ({ open, onClose, onCreated, allowedTypes }:
             {typeConfig.hideEntity2Balance ? (
               <TextField
                 fullWidth size="small"
-                label="Balance final: #Sistema"
+                label={`${t('common.finalBalance')}: ${t('transactions.system')}`}
                 value="N/A"
                 disabled
                 InputProps={{ sx: { bgcolor: '#f0f0f0' } }}
@@ -755,7 +758,7 @@ const CreateTransactionGroupModal = ({ open, onClose, onCreated, allowedTypes }:
             ) : (
               <TextField
                 fullWidth size="small"
-                label={`Balance final: ${typeConfig.entity2Label}`}
+                label={`${t('common.finalBalance')}: ${t(typeConfig.entity2LabelKey)}`}
                 value={entity2 ? formatCurrency(finalBalance2) : 'N/A'}
                 disabled
                 InputProps={{ sx: { bgcolor: '#f0f0f0' } }}
@@ -771,7 +774,7 @@ const CreateTransactionGroupModal = ({ open, onClose, onCreated, allowedTypes }:
               disabled={!canAddLine}
               sx={{ bgcolor: '#51cbce', '&:hover': { bgcolor: '#45b8bb' }, fontWeight: 600, textTransform: 'none' }}
             >
-              Agregar línea
+              {t('transactions.create.addLine')}
             </Button>
           </Grid>
         </Grid>
@@ -781,19 +784,19 @@ const CreateTransactionGroupModal = ({ open, onClose, onCreated, allowedTypes }:
           <Table size="small">
             <TableHead sx={{ bgcolor: '#f8f9fa' }}>
               <TableRow>
-                <TableCell sx={{ fontWeight: 600, fontSize: '12px' }}>Tipo</TableCell>
-                <TableCell sx={{ fontWeight: 600, fontSize: '12px' }}>Entidad #1</TableCell>
-                <TableCell sx={{ fontWeight: 600, fontSize: '12px' }}>Código</TableCell>
-                <TableCell sx={{ fontWeight: 600, fontSize: '12px' }}>Entidad #2</TableCell>
-                <TableCell sx={{ fontWeight: 600, fontSize: '12px' }}>Código</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600, fontSize: '12px' }}>Saldo inicial #1</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600, fontSize: '12px' }}>Saldo inicial #2</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600, fontSize: '12px' }}>Débito</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600, fontSize: '12px' }}>Crédito</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600, fontSize: '12px' }}>Saldo final #1</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600, fontSize: '12px' }}>Saldo final #2</TableCell>
-                <TableCell sx={{ fontWeight: 600, fontSize: '12px' }}>Notas</TableCell>
-                <TableCell sx={{ fontWeight: 600, fontSize: '12px' }}>Borrar</TableCell>
+                <TableCell sx={{ fontWeight: 600, fontSize: '12px' }}>{t('common.type')}</TableCell>
+                <TableCell sx={{ fontWeight: 600, fontSize: '12px' }}>{t('transactions.entity1')}</TableCell>
+                <TableCell sx={{ fontWeight: 600, fontSize: '12px' }}>{t('common.code')}</TableCell>
+                <TableCell sx={{ fontWeight: 600, fontSize: '12px' }}>{t('transactions.entity2')}</TableCell>
+                <TableCell sx={{ fontWeight: 600, fontSize: '12px' }}>{t('common.code')}</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600, fontSize: '12px' }}>{t('common.initialBalance')} #1</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600, fontSize: '12px' }}>{t('common.initialBalance')} #2</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600, fontSize: '12px' }}>{t('transactions.debit')}</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600, fontSize: '12px' }}>{t('transactions.credit')}</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600, fontSize: '12px' }}>{t('common.finalBalance')} #1</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600, fontSize: '12px' }}>{t('common.finalBalance')} #2</TableCell>
+                <TableCell sx={{ fontWeight: 600, fontSize: '12px' }}>{t('common.notes')}</TableCell>
+                <TableCell sx={{ fontWeight: 600, fontSize: '12px' }}>{t('common.delete')}</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -801,7 +804,7 @@ const CreateTransactionGroupModal = ({ open, onClose, onCreated, allowedTypes }:
                 <TableRow>
                   <TableCell colSpan={13}>
                     <Alert severity="info" sx={{ justifyContent: 'center' }}>
-                      No hay registros para mostrar
+                      {t('common.noEntries')}
                     </Alert>
                   </TableCell>
                 </TableRow>
@@ -837,8 +840,8 @@ const CreateTransactionGroupModal = ({ open, onClose, onCreated, allowedTypes }:
               </TableRow>
               <TableRow>
                 <TableCell colSpan={7} />
-                <TableCell sx={{ fontWeight: 700, fontSize: '12px' }}>Total débito</TableCell>
-                <TableCell sx={{ fontWeight: 700, fontSize: '12px' }}>Total crédito</TableCell>
+                <TableCell sx={{ fontWeight: 700, fontSize: '12px' }}>{t('transactions.totalDebit')}</TableCell>
+                <TableCell sx={{ fontWeight: 700, fontSize: '12px' }}>{t('transactions.totalCredit')}</TableCell>
                 <TableCell colSpan={4} />
               </TableRow>
             </TableBody>
@@ -847,7 +850,7 @@ const CreateTransactionGroupModal = ({ open, onClose, onCreated, allowedTypes }:
 
         {/* Group notes */}
         <TextField
-          fullWidth size="small" label="Notas para el grupo de transacciones"
+          fullWidth size="small" label={t('transactions.create.groupNotes')}
           value={groupNotes}
           onChange={(e) => setGroupNotes(e.target.value)}
           multiline rows={2}
@@ -856,7 +859,7 @@ const CreateTransactionGroupModal = ({ open, onClose, onCreated, allowedTypes }:
       </DialogContent>
       <DialogActions sx={{ p: 2, gap: 1 }}>
         <Button onClick={handleClose} variant="outlined" sx={{ textTransform: 'none' }}>
-          Cancelar
+          {t('common.cancel')}
         </Button>
         <Button
           onClick={attemptCreate}
@@ -864,7 +867,7 @@ const CreateTransactionGroupModal = ({ open, onClose, onCreated, allowedTypes }:
           disabled={lines.length === 0 || creating}
           sx={{ bgcolor: '#8b5cf6', '&:hover': { bgcolor: '#7c3aed' }, textTransform: 'none', fontWeight: 600 }}
         >
-          Crear
+          {t('common.create')}
         </Button>
       </DialogActions>
     </Dialog>
@@ -886,8 +889,11 @@ const CreateTransactionGroupModal = ({ open, onClose, onCreated, allowedTypes }:
 
     <ConfirmPinModal
       isOpen={pinOpen}
-      title="Confirmar transacción"
-      description={`Esta transacción supera ${formatCurrency(HIGH_AMOUNT_PIN_THRESHOLD)} (total ${formatCurrency(totalAmount)}). Confirma con tu PIN para continuar.`}
+      title={t('transactions.create.confirmTitle')}
+      description={t('transactions.create.confirmDescription', {
+        threshold: formatCurrency(HIGH_AMOUNT_PIN_THRESHOLD),
+        total: formatCurrency(totalAmount),
+      })}
       onConfirmed={() => {
         setPinOpen(false);
         submitCreate();

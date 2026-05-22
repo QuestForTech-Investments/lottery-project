@@ -1,4 +1,5 @@
 import React, { useState, useCallback, type SyntheticEvent, type ChangeEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Card,
@@ -64,6 +65,7 @@ interface CreateForm {
 }
 
 const DebtCollectors = (): React.ReactElement => {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<number>(0);
   const [quickFilter, setQuickFilter] = useState<string>('');
   const [transactionDate, setTransactionDate] = useState<string>('');
@@ -129,7 +131,7 @@ const DebtCollectors = (): React.ReactElement => {
   }, []);
 
   const handleAgregar = useCallback(() => {
-    alert('Transacción agregada (mockup)');
+    alert(t('collectorsAdmin.list.msgAddedMock'));
     // Reset form
     setCreateForm({
       tipo: '',
@@ -139,7 +141,8 @@ const DebtCollectors = (): React.ReactElement => {
       monto: '',
       notas: ''
     });
-  }, [createForm]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [createForm, t]);
 
   const handleTabChange = useCallback((_event: SyntheticEvent, newValue: number) => {
     setActiveTab(newValue);
@@ -182,7 +185,7 @@ const DebtCollectors = (): React.ReactElement => {
             textTransform: 'none'
           }}
         >
-          REFRESCAR
+          {t('collectorsAdmin.list.refreshButton')}
         </Button>
       </Box>
 
@@ -200,9 +203,9 @@ const DebtCollectors = (): React.ReactElement => {
           }}
           TabIndicatorProps={{ style: { backgroundColor: '#6366f1' } }}
         >
-          <Tab label="Balances" />
-          <Tab label="Transacciones" />
-          <Tab label="Crear" />
+          <Tab label={t('collectorsAdmin.list.tabBalances')} />
+          <Tab label={t('collectorsAdmin.list.tabTransactions')} />
+          <Tab label={t('collectorsAdmin.list.tabCreate')} />
         </Tabs>
 
         <CardContent sx={{ p: 3 }}>
@@ -212,7 +215,7 @@ const DebtCollectors = (): React.ReactElement => {
               {/* Quick Filter */}
               <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
                 <TextField
-                  placeholder="Filtrado rápido"
+                  placeholder={t('collectorsAdmin.list.quickFilterPlaceholder')}
                   value={quickFilter}
                   onChange={handleQuickFilterChange}
                   size="small"
@@ -233,11 +236,11 @@ const DebtCollectors = (): React.ReactElement => {
                 <Table>
                   <TableHead>
                     <TableRow sx={{ bgcolor: '#e3e3e3' }}>
-                      <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878' }}>#</TableCell>
-                      <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878' }}>Banca</TableCell>
-                      <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878' }}>Inicio</TableCell>
-                      <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878' }}>Actual</TableCell>
-                      <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878', textAlign: 'center' }}>Actions</TableCell>
+                      <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878' }}>{t('collectorsAdmin.list.headerNumber')}</TableCell>
+                      <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878' }}>{t('collectorsAdmin.list.headerBettingPool')}</TableCell>
+                      <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878' }}>{t('collectorsAdmin.list.headerStart')}</TableCell>
+                      <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878' }}>{t('collectorsAdmin.list.headerCurrent')}</TableCell>
+                      <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878', textAlign: 'center' }}>{t('collectorsAdmin.list.headerActions')}</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -258,7 +261,7 @@ const DebtCollectors = (): React.ReactElement => {
                     ) : (
                       <TableRow>
                         <TableCell colSpan={5} sx={{ textAlign: 'center', color: '#999', py: 3 }}>
-                          No hay entradas disponibles
+                          {t('collectorsAdmin.list.noEntries')}
                         </TableCell>
                       </TableRow>
                     )}
@@ -268,7 +271,7 @@ const DebtCollectors = (): React.ReactElement => {
 
               {/* Footer */}
               <Typography sx={{ textAlign: 'center', fontSize: '12px', color: '#999', mt: 2 }}>
-                Mostrando {filteredBalances.length} de {balances.length} entradas
+                {t('collectorsAdmin.list.showingEntries', { shown: filteredBalances.length, total: balances.length })}
               </Typography>
             </Box>
           )}
@@ -280,7 +283,7 @@ const DebtCollectors = (): React.ReactElement => {
               <Box sx={{ mb: 2 }}>
                 <TextField
                   type="date"
-                  label="Fecha"
+                  label={t('collectorsAdmin.list.dateLabel')}
                   value={transactionDate}
                   onChange={handleTransactionDateChange}
                   size="small"
@@ -301,7 +304,7 @@ const DebtCollectors = (): React.ReactElement => {
                       sx={{ '&.Mui-checked': { color: '#6366f1' } }}
                     />
                   }
-                  label={<Typography sx={{ fontSize: '14px' }}>Aprobada</Typography>}
+                  label={<Typography sx={{ fontSize: '14px' }}>{t('collectorsAdmin.list.statusApproved')}</Typography>}
                 />
                 <FormControlLabel
                   control={
@@ -311,7 +314,7 @@ const DebtCollectors = (): React.ReactElement => {
                       sx={{ '&.Mui-checked': { color: '#6366f1' } }}
                     />
                   }
-                  label={<Typography sx={{ fontSize: '14px' }}>Pendiente</Typography>}
+                  label={<Typography sx={{ fontSize: '14px' }}>{t('collectorsAdmin.list.statusPending')}</Typography>}
                 />
                 <FormControlLabel
                   control={
@@ -321,7 +324,7 @@ const DebtCollectors = (): React.ReactElement => {
                       sx={{ '&.Mui-checked': { color: '#6366f1' } }}
                     />
                   }
-                  label={<Typography sx={{ fontSize: '14px' }}>Rechazada</Typography>}
+                  label={<Typography sx={{ fontSize: '14px' }}>{t('collectorsAdmin.list.statusRejected')}</Typography>}
                 />
               </Box>
 
@@ -330,15 +333,15 @@ const DebtCollectors = (): React.ReactElement => {
                 <Table>
                   <TableHead>
                     <TableRow sx={{ bgcolor: '#e3e3e3' }}>
-                      <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878' }}>Tipo</TableCell>
-                      <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878' }}>Fecha</TableCell>
-                      <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878' }}>#</TableCell>
-                      <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878' }}>Banca</TableCell>
-                      <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878' }}>Banco</TableCell>
-                      <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878' }}>Crédito</TableCell>
-                      <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878' }}>Débito</TableCell>
-                      <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878' }}>Msg.</TableCell>
-                      <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878' }}>Cancel</TableCell>
+                      <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878' }}>{t('collectorsAdmin.list.headerType')}</TableCell>
+                      <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878' }}>{t('collectorsAdmin.list.headerDate')}</TableCell>
+                      <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878' }}>{t('collectorsAdmin.list.headerNumber')}</TableCell>
+                      <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878' }}>{t('collectorsAdmin.list.headerBettingPool')}</TableCell>
+                      <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878' }}>{t('collectorsAdmin.list.headerBank')}</TableCell>
+                      <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878' }}>{t('collectorsAdmin.list.headerCredit')}</TableCell>
+                      <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878' }}>{t('collectorsAdmin.list.headerDebit')}</TableCell>
+                      <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878' }}>{t('collectorsAdmin.list.headerMessage')}</TableCell>
+                      <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878' }}>{t('collectorsAdmin.list.headerCancel')}</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -363,7 +366,7 @@ const DebtCollectors = (): React.ReactElement => {
                     ) : (
                       <TableRow>
                         <TableCell colSpan={9} sx={{ textAlign: 'center', color: '#999', py: 3 }}>
-                          No hay entradas disponibles
+                          {t('collectorsAdmin.list.noEntries')}
                         </TableCell>
                       </TableRow>
                     )}
@@ -373,7 +376,7 @@ const DebtCollectors = (): React.ReactElement => {
 
               {/* Footer */}
               <Typography sx={{ textAlign: 'center', fontSize: '12px', color: '#999', mt: 2 }}>
-                Mostrando {filteredTransactions.length} de {transactions.length} entradas
+                {t('collectorsAdmin.list.showingEntries', { shown: filteredTransactions.length, total: transactions.length })}
               </Typography>
             </Box>
           )}
@@ -383,7 +386,7 @@ const DebtCollectors = (): React.ReactElement => {
             <Box>
               {/* Alert */}
               <Alert severity="warning" sx={{ mb: 3 }}>
-                <strong>Atención!</strong> Usted no tiene bancos asignados. Por favor contacte a su administrador.
+                <strong>{t('collectorsAdmin.list.alertAttention')}</strong> {t('collectorsAdmin.list.alertNoBanks')}
               </Alert>
 
               <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
@@ -391,30 +394,30 @@ const DebtCollectors = (): React.ReactElement => {
                 <Box>
                   {/* Tipo */}
                   <FormControl fullWidth sx={{ mb: 2 }}>
-                    <InputLabel sx={{ fontSize: '12px' }}>Tipo</InputLabel>
+                    <InputLabel sx={{ fontSize: '12px' }}>{t('collectorsAdmin.list.typeLabel')}</InputLabel>
                     <Select
                       value={createForm.tipo}
                       onChange={handleTipoChange}
-                      label="Tipo"
+                      label={t('collectorsAdmin.list.typeLabel')}
                       sx={{ fontSize: '14px' }}
                     >
-                      <MenuItem value=""><em>Seleccione uno...</em></MenuItem>
-                      <MenuItem value="cobro" sx={{ fontSize: '14px' }}>Cobro</MenuItem>
-                      <MenuItem value="pago" sx={{ fontSize: '14px' }}>Pago</MenuItem>
+                      <MenuItem value=""><em>{t('collectorsAdmin.list.typePlaceholder')}</em></MenuItem>
+                      <MenuItem value="cobro" sx={{ fontSize: '14px' }}>{t('collectorsAdmin.list.typeCollection')}</MenuItem>
+                      <MenuItem value="pago" sx={{ fontSize: '14px' }}>{t('collectorsAdmin.list.typePayment')}</MenuItem>
                     </Select>
                   </FormControl>
 
                   {/* BANCA Section */}
                   <Typography variant="h6" sx={{ fontSize: '14px', fontWeight: 600, mb: 1, mt: 2 }}>
-                    BANCA
+                    {t('collectorsAdmin.list.sectionBettingPool')}
                   </Typography>
 
                   <TextField
                     fullWidth
-                    label="Nombre"
+                    label={t('collectorsAdmin.list.nameLabel')}
                     value={createForm.bancaNombre}
                     onChange={handleTextFieldChange('bancaNombre')}
-                    placeholder="Buscar banca..."
+                    placeholder={t('collectorsAdmin.list.namePlaceholder')}
                     InputLabelProps={{ sx: { fontSize: '12px' } }}
                     InputProps={{ sx: { fontSize: '14px' } }}
                     sx={{ mb: 2 }}
@@ -422,10 +425,10 @@ const DebtCollectors = (): React.ReactElement => {
 
                   <TextField
                     fullWidth
-                    label="Código"
+                    label={t('collectorsAdmin.list.codeLabel')}
                     value={createForm.bancaCodigo}
                     onChange={handleTextFieldChange('bancaCodigo')}
-                    placeholder="Código de banca..."
+                    placeholder={t('collectorsAdmin.list.codePlaceholder')}
                     InputLabelProps={{ sx: { fontSize: '12px' } }}
                     InputProps={{ sx: { fontSize: '14px' } }}
                     sx={{ mb: 2 }}
@@ -433,14 +436,14 @@ const DebtCollectors = (): React.ReactElement => {
 
                   {/* Banco */}
                   <FormControl fullWidth sx={{ mb: 2 }}>
-                    <InputLabel sx={{ fontSize: '12px' }}>Banco</InputLabel>
+                    <InputLabel sx={{ fontSize: '12px' }}>{t('collectorsAdmin.list.bankLabel')}</InputLabel>
                     <Select
                       value={createForm.banco}
                       onChange={handleBancoChange}
-                      label="Banco"
+                      label={t('collectorsAdmin.list.bankLabel')}
                       sx={{ fontSize: '14px' }}
                     >
-                      <MenuItem value=""><em>Seleccione uno...</em></MenuItem>
+                      <MenuItem value=""><em>{t('collectorsAdmin.list.bankPlaceholder')}</em></MenuItem>
                       <MenuItem value="banco_popular" sx={{ fontSize: '14px' }}>BANCO POPULAR</MenuItem>
                       <MenuItem value="banco_bhd" sx={{ fontSize: '14px' }}>BANCO BHD</MenuItem>
                       <MenuItem value="banco_central" sx={{ fontSize: '14px' }}>BANCO LA CENTRAL</MenuItem>
@@ -454,10 +457,10 @@ const DebtCollectors = (): React.ReactElement => {
                   <TextField
                     fullWidth
                     type="number"
-                    label="Monto"
+                    label={t('collectorsAdmin.list.amountLabel')}
                     value={createForm.monto}
                     onChange={handleTextFieldChange('monto')}
-                    placeholder="0.00"
+                    placeholder={t('collectorsAdmin.list.amountPlaceholder')}
                     InputLabelProps={{ sx: { fontSize: '12px' } }}
                     InputProps={{ sx: { fontSize: '14px' } }}
                     sx={{ mb: 2 }}
@@ -468,10 +471,10 @@ const DebtCollectors = (): React.ReactElement => {
                     fullWidth
                     multiline
                     rows={5}
-                    label="Notas de la transacción"
+                    label={t('collectorsAdmin.list.notesLabel')}
                     value={createForm.notas}
                     onChange={handleTextFieldChange('notas')}
-                    placeholder="Notas adicionales..."
+                    placeholder={t('collectorsAdmin.list.notesPlaceholder')}
                     InputLabelProps={{ sx: { fontSize: '12px' } }}
                     InputProps={{ sx: { fontSize: '14px' } }}
                   />
@@ -493,7 +496,7 @@ const DebtCollectors = (): React.ReactElement => {
                     textTransform: 'none'
                   }}
                 >
-                  AGREGAR
+                  {t('collectorsAdmin.list.addButton')}
                 </Button>
               </Box>
             </Box>

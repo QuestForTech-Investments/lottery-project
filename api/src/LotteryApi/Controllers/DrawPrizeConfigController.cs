@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using LotteryApi.Data;
 using LotteryApi.DTOs;
+using LotteryApi.Exceptions;
+using LotteryApi.Helpers;
 using LotteryApi.Models;
 using LotteryApi.Services;
 
@@ -78,7 +80,7 @@ public class DrawPrizeConfigController : ControllerBase
             if (!bettingPoolExists)
             {
                 _logger.LogWarning("Betting pool {BettingPoolId} not found", bettingPoolId);
-                return NotFound(new { message = $"Banca con ID {bettingPoolId} no encontrada" });
+                return ApiErrorResult.NotFound(ErrorCodes.BettingPoolNotFound, $"Banca con ID {bettingPoolId} no encontrada");
             }
 
             // Validar que el sorteo existe y obtener su nombre
@@ -88,14 +90,14 @@ public class DrawPrizeConfigController : ControllerBase
             if (draw == null)
             {
                 _logger.LogWarning("Draw {DrawId} not found", drawId);
-                return NotFound(new { message = $"Sorteo con ID {drawId} no encontrado" });
+                return ApiErrorResult.NotFound(ErrorCodes.DrawNotFound, $"Sorteo con ID {drawId} no encontrado");
             }
 
             if (request.PrizeConfigs == null || !request.PrizeConfigs.Any())
             {
                 _logger.LogWarning("Empty prize configs received for betting pool {BettingPoolId}, draw {DrawId}",
                     bettingPoolId, drawId);
-                return BadRequest(new { message = "Debe proporcionar al menos una configuración de premio" });
+                return ApiErrorResult.BadRequest(ErrorCodes.PrizeConfigEmpty, "Debe proporcionar al menos una configuración de premio");
             }
 
             int savedCount = 0;
@@ -225,7 +227,7 @@ public class DrawPrizeConfigController : ControllerBase
     public async Task<ActionResult<List<DrawPrizeConfigDto>>> GetDrawPrizeConfig(int bettingPoolId, int drawId)
     {
         if (!await HasPermissionAsync("CHANGE_GAME_PRIZES")) return Forbid();
-        if (!await _zoneScope.IsBettingPoolAllowedAsync(bettingPoolId)) return NotFound(new { message = "Banca no encontrada" });
+        if (!await _zoneScope.IsBettingPoolAllowedAsync(bettingPoolId)) return ApiErrorResult.NotFound(ErrorCodes.BettingPoolNotFound, "Banca no encontrada");
         try
         {
             // Validar que la banca existe
@@ -235,7 +237,7 @@ public class DrawPrizeConfigController : ControllerBase
             if (!bettingPoolExists)
             {
                 _logger.LogWarning("Betting pool {BettingPoolId} not found", bettingPoolId);
-                return NotFound(new { message = $"Banca con ID {bettingPoolId} no encontrada" });
+                return ApiErrorResult.NotFound(ErrorCodes.BettingPoolNotFound, $"Banca con ID {bettingPoolId} no encontrada");
             }
 
             // Validar que el sorteo existe y obtener su nombre
@@ -245,7 +247,7 @@ public class DrawPrizeConfigController : ControllerBase
             if (draw == null)
             {
                 _logger.LogWarning("Draw {DrawId} not found", drawId);
-                return NotFound(new { message = $"Sorteo con ID {drawId} no encontrado" });
+                return ApiErrorResult.NotFound(ErrorCodes.DrawNotFound, $"Sorteo con ID {drawId} no encontrado");
             }
 
             // Obtener configuraciones con información del prize field
@@ -296,7 +298,7 @@ public class DrawPrizeConfigController : ControllerBase
     public async Task<ActionResult<List<DrawPrizeConfigDto>>> GetResolvedDrawPrizeConfig(int bettingPoolId, int drawId)
     {
         if (!await HasPermissionAsync("CHANGE_GAME_PRIZES")) return Forbid();
-        if (!await _zoneScope.IsBettingPoolAllowedAsync(bettingPoolId)) return NotFound(new { message = "Banca no encontrada" });
+        if (!await _zoneScope.IsBettingPoolAllowedAsync(bettingPoolId)) return ApiErrorResult.NotFound(ErrorCodes.BettingPoolNotFound, "Banca no encontrada");
         try
         {
             // Validar que la banca existe
@@ -306,7 +308,7 @@ public class DrawPrizeConfigController : ControllerBase
             if (!bettingPoolExists)
             {
                 _logger.LogWarning("Betting pool {BettingPoolId} not found", bettingPoolId);
-                return NotFound(new { message = $"Banca con ID {bettingPoolId} no encontrada" });
+                return ApiErrorResult.NotFound(ErrorCodes.BettingPoolNotFound, $"Banca con ID {bettingPoolId} no encontrada");
             }
 
             // Validar que el sorteo existe y obtener lottery_id
@@ -317,7 +319,7 @@ public class DrawPrizeConfigController : ControllerBase
             if (draw == null)
             {
                 _logger.LogWarning("Draw {DrawId} not found", drawId);
-                return NotFound(new { message = $"Sorteo con ID {drawId} no encontrado" });
+                return ApiErrorResult.NotFound(ErrorCodes.DrawNotFound, $"Sorteo con ID {drawId} no encontrado");
             }
 
             // Get all active prize types (filtering by lottery compatibility is done on frontend)
@@ -442,7 +444,7 @@ public class DrawPrizeConfigController : ControllerBase
 
             if (!bettingPoolExists)
             {
-                return NotFound(new { message = $"Banca con ID {bettingPoolId} no encontrada" });
+                return ApiErrorResult.NotFound(ErrorCodes.BettingPoolNotFound, $"Banca con ID {bettingPoolId} no encontrada");
             }
 
             if (request.DrawConfigs == null || !request.DrawConfigs.Any())
@@ -568,7 +570,7 @@ public class DrawPrizeConfigController : ControllerBase
     public async Task<ActionResult<List<DrawPrizeConfigDto>>> GetAllDrawPrizeConfigs(int bettingPoolId)
     {
         if (!await HasPermissionAsync("CHANGE_GAME_PRIZES")) return Forbid();
-        if (!await _zoneScope.IsBettingPoolAllowedAsync(bettingPoolId)) return NotFound(new { message = "Banca no encontrada" });
+        if (!await _zoneScope.IsBettingPoolAllowedAsync(bettingPoolId)) return ApiErrorResult.NotFound(ErrorCodes.BettingPoolNotFound, "Banca no encontrada");
         try
         {
             var bettingPoolExists = await _context.BettingPools
@@ -576,7 +578,7 @@ public class DrawPrizeConfigController : ControllerBase
 
             if (!bettingPoolExists)
             {
-                return NotFound(new { message = $"Banca con ID {bettingPoolId} no encontrada" });
+                return ApiErrorResult.NotFound(ErrorCodes.BettingPoolNotFound, $"Banca con ID {bettingPoolId} no encontrada");
             }
 
             var configs = await _context.DrawPrizeConfigs
@@ -635,7 +637,7 @@ public class DrawPrizeConfigController : ControllerBase
             if (!bettingPoolExists)
             {
                 _logger.LogWarning("Betting pool {BettingPoolId} not found", bettingPoolId);
-                return NotFound(new { message = $"Banca con ID {bettingPoolId} no encontrada" });
+                return ApiErrorResult.NotFound(ErrorCodes.BettingPoolNotFound, $"Banca con ID {bettingPoolId} no encontrada");
             }
 
             // Validar que el sorteo existe
@@ -645,7 +647,7 @@ public class DrawPrizeConfigController : ControllerBase
             if (!drawExists)
             {
                 _logger.LogWarning("Draw {DrawId} not found", drawId);
-                return NotFound(new { message = $"Sorteo con ID {drawId} no encontrado" });
+                return ApiErrorResult.NotFound(ErrorCodes.DrawNotFound, $"Sorteo con ID {drawId} no encontrado");
             }
 
             // Eliminar todas las configuraciones de este sorteo en esta banca

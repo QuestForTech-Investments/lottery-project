@@ -1,4 +1,5 @@
 import React, { useState, useCallback, type ChangeEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Card,
@@ -42,6 +43,7 @@ interface PlayData {
  * Permite filtrar jugadas por fecha, sorteo y número de jugada
  */
 const F8Monitor = (): React.ReactElement => {
+  const { t } = useTranslation();
   const [filters, setFilters] = useState<Filters>({
     fecha: getTodayDate(),
     sorteo: '',
@@ -67,8 +69,12 @@ const F8Monitor = (): React.ReactElement => {
   }, []);
 
   const handleRefresh = useCallback((): void => {
-    alert(`Refrescando datos (mockup)\nFecha: ${filters.fecha}\nSorteo: ${filters.sorteo || 'Todos'}\nJugada: ${filters.jugada || 'Todas'}`);
-  }, [filters]);
+    alert(t('f8Admin.msgRefreshMock', {
+      date: filters.fecha,
+      draw: filters.sorteo || t('f8Admin.filterAll'),
+      play: filters.jugada || t('f8Admin.filterAllPlays')
+    }));
+  }, [filters, t]);
 
   const handleSearchChange = useCallback((e: ChangeEvent<HTMLInputElement>): void => {
     setSearchTerm(e.target.value);
@@ -95,13 +101,13 @@ const F8Monitor = (): React.ReactElement => {
               color: '#2c2c2c'
             }}
           >
-            F8 - Monitoreo de jugadas por Banca
+            {t('f8Admin.title')}
           </Typography>
 
           {/* Filtros */}
           <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 2, mb: 3 }}>
             <TextField
-              label="Fecha"
+              label={t('f8Admin.dateLabel')}
               type="date"
               name="fecha"
               value={filters.fecha}
@@ -117,16 +123,16 @@ const F8Monitor = (): React.ReactElement => {
             />
             <FormControl size="small">
               <InputLabel sx={{ fontSize: '14px', fontFamily: 'Montserrat, sans-serif' }}>
-                Sorteos
+                {t('f8Admin.drawsLabel')}
               </InputLabel>
               <Select
                 name="sorteo"
                 value={filters.sorteo}
                 onChange={handleFilterChange}
-                label="Sorteos"
+                label={t('f8Admin.drawsLabel')}
                 sx={{ fontSize: '14px', fontFamily: 'Montserrat, sans-serif' }}
               >
-                <MenuItem value="">Seleccione</MenuItem>
+                <MenuItem value="">{t('f8Admin.drawsPlaceholder')}</MenuItem>
                 <MenuItem value="DIARIA 11AM">DIARIA 11AM</MenuItem>
                 <MenuItem value="LOTEDOM">LOTEDOM</MenuItem>
                 <MenuItem value="LA PRIMERA">LA PRIMERA</MenuItem>
@@ -134,11 +140,11 @@ const F8Monitor = (): React.ReactElement => {
               </Select>
             </FormControl>
             <TextField
-              label="Jugada"
+              label={t('f8Admin.playLabel')}
               name="jugada"
               value={filters.jugada}
               onChange={handleFilterChange}
-              placeholder="Número de jugada"
+              placeholder={t('f8Admin.playPlaceholder')}
               InputLabelProps={{
                 sx: { fontSize: '14px', fontFamily: 'Montserrat, sans-serif' }
               }}
@@ -160,7 +166,7 @@ const F8Monitor = (): React.ReactElement => {
                 fontWeight: 500
               }}
             >
-              REFRESCAR
+              {t('f8Admin.refreshButton')}
             </Button>
           </Box>
 
@@ -175,7 +181,7 @@ const F8Monitor = (): React.ReactElement => {
               color: '#2c2c2c'
             }}
           >
-            Total: ${total.toFixed(2)}
+            {t('f8Admin.totalLabel', { total: total.toFixed(2) })}
           </Typography>
 
           {/* Filtro rápido */}
@@ -183,7 +189,7 @@ const F8Monitor = (): React.ReactElement => {
             <TextField
               fullWidth
               size="small"
-              placeholder="Filtrado rápido"
+              placeholder={t('f8Admin.quickFilterPlaceholder')}
               value={searchTerm}
               onChange={handleSearchChange}
               InputProps={{
@@ -203,10 +209,10 @@ const F8Monitor = (): React.ReactElement => {
               <TableHead sx={{ bgcolor: '#f8f9fa' }}>
                 <TableRow>
                   <TableCell sx={{ fontSize: '14px', fontFamily: 'Montserrat, sans-serif', fontWeight: 600 }}>
-                    Bancas
+                    {t('f8Admin.headerBettingPools')}
                   </TableCell>
                   <TableCell align="right" sx={{ fontSize: '14px', fontFamily: 'Montserrat, sans-serif', fontWeight: 600 }}>
-                    Monto
+                    {t('f8Admin.headerAmount')}
                   </TableCell>
                 </TableRow>
               </TableHead>
@@ -214,7 +220,7 @@ const F8Monitor = (): React.ReactElement => {
                 {filteredData.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={2} align="center" sx={{ py: 5, color: '#999', fontSize: '14px', fontFamily: 'Montserrat, sans-serif' }}>
-                      No hay entradas disponibles
+                      {t('f8Admin.noEntries')}
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -244,7 +250,7 @@ const F8Monitor = (): React.ReactElement => {
               fontFamily: 'Montserrat, sans-serif'
             }}
           >
-            Mostrando {filteredData.length} de {playData.length} entradas
+            {t('f8Admin.showingEntries', { shown: filteredData.length, total: playData.length })}
           </Box>
         </CardContent>
       </Card>

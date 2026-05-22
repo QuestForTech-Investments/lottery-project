@@ -1,4 +1,6 @@
 using LotteryApi.Data;
+using LotteryApi.Exceptions;
+using LotteryApi.Helpers;
 using LotteryApi.Models;
 using LotteryApi.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -108,7 +110,7 @@ public class BlockedNumbersController : ControllerBase
         }
 
         if (dto.Items == null || dto.Items.Count == 0)
-            return BadRequest(new { message = "Debe enviar al menos un número" });
+            return ApiErrorResult.BadRequest(ErrorCodes.AtLeastOneNumberRequired, "Debe enviar al menos un número");
 
         var allowedZones = await _zoneScope.GetAllowedZoneIdsAsync();
         var userId = GetUserId();
@@ -171,7 +173,7 @@ public class BlockedNumbersController : ControllerBase
 
         var block = await _context.BlockedNumbers.FirstOrDefaultAsync(b => b.BlockedNumberId == id);
         if (block == null)
-            return NotFound(new { message = "Número bloqueado no encontrado" });
+            return ApiErrorResult.NotFound(ErrorCodes.BlockedNumberNotFound, "Número bloqueado no encontrado");
 
         var allowedZones = await _zoneScope.GetAllowedZoneIdsAsync();
         if (allowedZones != null)

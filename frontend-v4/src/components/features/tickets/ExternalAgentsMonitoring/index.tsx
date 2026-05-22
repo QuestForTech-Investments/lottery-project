@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, memo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { formatCurrency } from '@/utils/formatCurrency';
 import {
   Box, Paper, Typography, TextField, Grid, Autocomplete, Switch, FormControlLabel,
@@ -49,6 +50,7 @@ interface Counts {
 type FiltroEstado = 'todos' | 'ganadores' | 'pendientes' | 'perdedores' | 'cancelados';
 
 const ExternalAgentsMonitoring: React.FC = () => {
+  const { t } = useTranslation();
   const [fecha, setFecha] = useState<string>(getTodayDate());
   const [agente, setAgente] = useState<Agente | null>(null);
   const [loteria, setLoteria] = useState<Loteria | null>(null);
@@ -145,95 +147,100 @@ const ExternalAgentsMonitoring: React.FC = () => {
       <Paper elevation={3}>
         <Box sx={{ p: 3 }}>
           <Typography variant="h5" align="center" sx={{ color: '#1976d2', mb: 4, fontWeight: 400 }}>
-            Monitoreo de tickets de agentes externos
+            {t('tickets.externalAgents.title')}
           </Typography>
 
           <Grid container spacing={2} sx={{ mb: 2 }}>
             <Grid item xs={12} md={4}>
-              <TextField fullWidth type="date" label="Fecha" value={fecha} onChange={(e) => setFecha(e.target.value)}
+              <TextField fullWidth type="date" label={t('common.date')} value={fecha} onChange={(e) => setFecha(e.target.value)}
                 InputLabelProps={{ shrink: true }} size="small" />
             </Grid>
             <Grid item xs={12} md={4}>
               <Autocomplete options={agentesList} getOptionLabel={(o) => o.name || ''} value={agente}
-                onChange={(e, v) => setAgente(v)} renderInput={(params) => <TextField {...params} label="Agente" size="small" />} />
+                onChange={(e, v) => setAgente(v)} renderInput={(params) => <TextField {...params} label={t('tickets.externalAgents.agent')} size="small" />} />
             </Grid>
             <Grid item xs={12} md={4}>
               <Autocomplete options={loteriasList} getOptionLabel={(o) => o.name || ''} value={loteria}
-                onChange={(e, v) => setLoteria(v)} renderInput={(params) => <TextField {...params} label="Lotería" size="small" />} />
+                onChange={(e, v) => setLoteria(v)} renderInput={(params) => <TextField {...params} label={t('tickets.externalAgents.lottery')} size="small" />} />
             </Grid>
           </Grid>
 
           <Grid container spacing={2} sx={{ mb: 2 }}>
             <Grid item xs={12} md={4}>
               <Autocomplete options={tiposJugadaList} getOptionLabel={(o) => o.name || ''} value={tipoJugada}
-                onChange={(e, v) => setTipoJugada(v)} renderInput={(params) => <TextField {...params} label="Tipo de jugada" size="small" />} />
+                onChange={(e, v) => setTipoJugada(v)} renderInput={(params) => <TextField {...params} label={t('tickets.plays.playType')} size="small" />} />
             </Grid>
             <Grid item xs={12} md={4}>
-              <TextField fullWidth label="Número" value={numero} onChange={(e) => setNumero(e.target.value)} size="small" />
+              <TextField fullWidth label={t('common.number')} value={numero} onChange={(e) => setNumero(e.target.value)} size="small" />
             </Grid>
             <Grid item xs={12} md={4}>
               <FormControlLabel control={<Switch checked={soloGanadores} onChange={(e) => setSoloGanadores(e.target.checked)} />}
-                label={<Typography variant="caption">Sólo tickets ganadores</Typography>} />
+                label={<Typography variant="caption">{t('tickets.externalAgents.onlyWinners')}</Typography>} />
             </Grid>
           </Grid>
 
           <Box sx={{ textAlign: 'center', mb: 3 }}>
-            <Button variant="contained" sx={{ px: 6, py: 1, borderRadius: '30px', textTransform: 'uppercase' }}>Filtrar</Button>
+            <Button variant="contained" sx={{ px: 6, py: 1, borderRadius: '30px', textTransform: 'uppercase' }}>{t('common.filter')}</Button>
           </Box>
 
           <Box sx={{ mb: 2, display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-            <Typography variant="subtitle1" sx={{ color: 'text.secondary', mb: 1.5, fontWeight: 500 }}>Filtrar</Typography>
+            <Typography variant="subtitle1" sx={{ color: 'text.secondary', mb: 1.5, fontWeight: 500 }}>{t('common.filter')}</Typography>
             <ToggleButtonGroup exclusive value={filtroEstado} onChange={(e, v) => v && setFiltroEstado(v)} size="small">
-              <ToggleButton value="todos">TODOS ({counts.todos})</ToggleButton>
-              <ToggleButton value="ganadores">GANADORES ({counts.ganadores})</ToggleButton>
-              <ToggleButton value="pendientes">PENDIENTES ({counts.pendientes})</ToggleButton>
-              <ToggleButton value="perdedores">PERDEDORES ({counts.perdedores})</ToggleButton>
-              <ToggleButton value="cancelados">CANCELADO ({counts.cancelados})</ToggleButton>
+              <ToggleButton value="todos">{t('common.all')} ({counts.todos})</ToggleButton>
+              <ToggleButton value="ganadores">{t('ticketStatus.winner')} ({counts.ganadores})</ToggleButton>
+              <ToggleButton value="pendientes">{t('ticketStatus.pending')} ({counts.pendientes})</ToggleButton>
+              <ToggleButton value="perdedores">{t('ticketStatus.loser')} ({counts.perdedores})</ToggleButton>
+              <ToggleButton value="cancelados">{t('ticketStatus.cancelled')} ({counts.cancelados})</ToggleButton>
             </ToggleButtonGroup>
           </Box>
 
           <Paper sx={{ p: 2, mb: 3, backgroundColor: '#f5f5f5', textAlign: 'center' }}>
-            <Typography variant="h6" sx={{ color: '#1976d2' }}>Monto total: {formatCurrency(totals.montoTotal)}</Typography>
-            <Typography variant="h6" sx={{ color: '#1976d2' }}>Total de premios: {formatCurrency(totals.totalPremios)}</Typography>
+            <Typography variant="h6" sx={{ color: '#1976d2' }}>{t('tickets.monitoring.totalAmount')}: {formatCurrency(totals.montoTotal)}</Typography>
+            <Typography variant="h6" sx={{ color: '#1976d2' }}>{t('tickets.detail.totalPrizes')}: {formatCurrency(totals.totalPremios)}</Typography>
           </Paper>
 
-          <TextField fullWidth placeholder="Filtrado rápido" value={filtroRapido} onChange={(e) => setFiltroRapido(e.target.value)}
+          <TextField fullWidth placeholder={t('common.filterQuick')} value={filtroRapido} onChange={(e) => setFiltroRapido(e.target.value)}
             size="small" sx={{ mb: 2, maxWidth: 300 }} />
 
           <Table size="small">
             <TableHead>
               <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
                 {([
-                  { key: 'numero', label: 'Número' },
-                  { key: 'fecha', label: 'Fecha' },
-                  { key: 'usuario', label: 'Usuario' },
-                  { key: 'monto', label: 'Monto' },
-                  { key: 'premio', label: 'Premio' },
-                  { key: 'fechaCancelacion', label: 'Fecha de cancelación' },
-                  { key: 'estado', label: 'Estado' },
+                  { key: 'numero', label: t('common.number') },
+                  { key: 'fecha', label: t('common.date') },
+                  { key: 'usuario', label: t('common.user') },
+                  { key: 'monto', label: t('common.amount') },
+                  { key: 'premio', label: t('common.prize') },
+                  { key: 'fechaCancelacion', label: t('tickets.anomalies.cancellationDate') },
+                  { key: 'estado', label: t('common.status') },
                 ] as const).map((col) => (
                   <TableCell key={col.key} sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.75rem' }}>
                     <TableSortLabel {...getSortProps(col.key)}>{col.label}</TableSortLabel>
                   </TableCell>
                 ))}
-                <TableCell sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.75rem' }}>Acciones</TableCell>
+                <TableCell sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.75rem' }}>{t('common.actions')}</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {sortedTickets.length === 0 ? (
-                <TableRow><TableCell colSpan={8} align="center" sx={{ py: 3, color: 'text.secondary' }}>Mostrando 0 entradas</TableCell></TableRow>
-              ) : sortedTickets.map((t, i) => (
+                <TableRow><TableCell colSpan={8} align="center" sx={{ py: 3, color: 'text.secondary' }}>{t('common.showingEntries', { shown: 0, total: 0 })}</TableCell></TableRow>
+              ) : sortedTickets.map((row, i) => (
                 <TableRow key={i} sx={{ '&:hover': { backgroundColor: 'action.hover' } }}>
-                  <TableCell>{t.numero}</TableCell><TableCell>{t.fecha}</TableCell><TableCell>{t.usuario}</TableCell>
-                  <TableCell>{formatCurrency(t.monto)}</TableCell><TableCell>{formatCurrency(t.premio)}</TableCell>
-                  <TableCell>{t.fechaCancelacion || '-'}</TableCell>
-                  <TableCell sx={{ color: t.estado === 'Ganador' ? 'success.main' : t.estado === 'Cancelado' ? 'error.main' : 'inherit' }}>{t.estado}</TableCell>
+                  <TableCell>{row.numero}</TableCell><TableCell>{row.fecha}</TableCell><TableCell>{row.usuario}</TableCell>
+                  <TableCell>{formatCurrency(row.monto)}</TableCell><TableCell>{formatCurrency(row.premio)}</TableCell>
+                  <TableCell>{row.fechaCancelacion || '-'}</TableCell>
+                  <TableCell sx={{ color: row.estado === 'Ganador' ? 'success.main' : row.estado === 'Cancelado' ? 'error.main' : 'inherit' }}>
+                    {row.estado === 'Ganador' ? t('ticketStatus.winner') :
+                     row.estado === 'Cancelado' ? t('ticketStatus.cancelled') :
+                     row.estado === 'Pendiente' ? t('ticketStatus.pending') :
+                     row.estado === 'Perdedor' ? t('ticketStatus.loser') : row.estado}
+                  </TableCell>
                   <TableCell><IconButton size="small" color="primary"><Visibility /></IconButton></TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
-          <Typography variant="caption" sx={{ color: 'text.secondary' }}>Mostrando {filteredTickets.length} de {tickets.length} entradas</Typography>
+          <Typography variant="caption" sx={{ color: 'text.secondary' }}>{t('common.showingEntries', { shown: filteredTickets.length, total: tickets.length })}</Typography>
         </Box>
       </Paper>
     </Box>

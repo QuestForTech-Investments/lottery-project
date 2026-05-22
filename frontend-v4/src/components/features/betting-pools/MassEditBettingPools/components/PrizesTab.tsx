@@ -16,6 +16,7 @@ import {
   CircularProgress,
   Divider,
 } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import type { PrizesTabProps } from '../types';
 
 const PrizesTab: FC<PrizesTabProps> = memo(({
@@ -29,6 +30,7 @@ const PrizesTab: FC<PrizesTabProps> = memo(({
   onGeneralCommissionChange,
   onCommissionTypeChange,
 }) => {
+  const { t } = useTranslation();
   return (
     <Box>
       {/* Sub-tabs */}
@@ -37,14 +39,14 @@ const PrizesTab: FC<PrizesTabProps> = memo(({
         onChange={(_, newVal) => onSubTabChange(newVal)}
         sx={{ mb: 3, borderBottom: 1, borderColor: 'divider' }}
       >
-        <Tab label="Premios" />
-        <Tab label="Comisiones" />
+        <Tab label={t('massEditBettingPools.subTabs.prizes')} />
+        <Tab label={t('massEditBettingPools.subTabs.commissions')} />
       </Tabs>
 
       {loadingBetTypes ? (
         <Box display="flex" justifyContent="center" p={4}>
           <CircularProgress size={24} />
-          <Typography sx={{ ml: 2 }}>Cargando tipos de apuesta...</Typography>
+          <Typography sx={{ ml: 2 }}>{t('massEditBettingPools.loadingBetTypes')}</Typography>
         </Box>
       ) : (
         <>
@@ -84,7 +86,7 @@ const PrizesTab: FC<PrizesTabProps> = memo(({
                       })
                     ) : (
                       <Typography variant="body2" color="text.secondary" align="center" sx={{ py: 1 }}>
-                        Sin campos de premios configurados
+                        {t('massEditBettingPools.noPrizeFieldsConfigured')}
                       </Typography>
                     )}
                   </Paper>
@@ -99,7 +101,7 @@ const PrizesTab: FC<PrizesTabProps> = memo(({
               {/* General Commission */}
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                 <Typography variant="body2" sx={{ minWidth: 200, fontWeight: 500 }}>
-                  General
+                  {t('massEditBettingPools.general')}
                 </Typography>
                 <TextField
                   size="small"

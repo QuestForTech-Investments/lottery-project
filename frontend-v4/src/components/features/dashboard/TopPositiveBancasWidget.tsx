@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Paper, Typography, Box, CircularProgress, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from '@mui/material';
 import { getTopPositiveBancas, type BancaBalanceItem } from '@/services/dashboardService';
 import { formatCurrency } from '@/utils/formatCurrency';
@@ -7,6 +8,7 @@ const ACCENT = '#6366f1';
 const SUCCESS = '#2e7d32';
 
 const TopPositiveBancasWidget: React.FC = () => {
+  const { t } = useTranslation();
   const [data, setData] = useState<BancaBalanceItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -28,7 +30,7 @@ const TopPositiveBancasWidget: React.FC = () => {
   return (
     <Paper elevation={3} sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
       <Typography variant="subtitle1" fontWeight="bold" align="center" sx={{ mb: 1 }}>
-        Bancas con Balance Positivo
+        {t('dashboard.topPositive.title')}
       </Typography>
       {loading ? (
         <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -36,15 +38,15 @@ const TopPositiveBancasWidget: React.FC = () => {
         </Box>
       ) : data.length === 0 ? (
         <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <Typography variant="body2" color="text.secondary">Sin datos</Typography>
+          <Typography variant="body2" color="text.secondary">{t('dashboard.noData')}</Typography>
         </Box>
       ) : (
         <TableContainer sx={{ flex: 1 }}>
           <Table size="small" stickyHeader>
             <TableHead>
               <TableRow>
-                <TableCell sx={{ fontSize: 11, fontWeight: 600, bgcolor: '#f5f5f5' }}>Banca</TableCell>
-                <TableCell sx={{ fontSize: 11, fontWeight: 600, bgcolor: '#f5f5f5' }} align="right">Balance</TableCell>
+                <TableCell sx={{ fontSize: 11, fontWeight: 600, bgcolor: '#f5f5f5' }}>{t('common.bettingPool')}</TableCell>
+                <TableCell sx={{ fontSize: 11, fontWeight: 600, bgcolor: '#f5f5f5' }} align="right">{t('common.balance')}</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>

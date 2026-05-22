@@ -5,13 +5,27 @@
  */
 
 import { memo, useCallback, type FC } from 'react';
+import { useTranslation } from 'react-i18next';
 import { TableRow, TableCell, Box, IconButton, Tooltip } from '@mui/material';
 import { Print as PrintIcon, Cancel as CancelIcon, Send as SendIcon, Schedule as ScheduleIcon, ArrowBack as ArrowBackIcon, ArrowForward as ArrowForwardIcon, Visibility as VisibilityIcon } from '@mui/icons-material';
 import { formatCurrency } from '../../../../../utils/formatCurrency';
 import { getEstadoColor } from '../constants';
 import type { TicketRowProps } from '../types';
 
+// Backend returns Spanish status strings (legacy schema). Map to i18n keys for
+// display while keeping the raw value for filters and styling logic.
+const STATUS_I18N_KEY: Record<string, string> = {
+  'Activo': 'ticketStatus.active',
+  'Ganador': 'ticketStatus.winner',
+  'Cancelado': 'ticketStatus.cancelled',
+  'Pendiente': 'ticketStatus.pending',
+  'Pagado': 'ticketStatus.paid',
+  'Sin pagar': 'ticketStatus.unpaid',
+  'Bloqueado': 'ticketStatus.blocked',
+};
+
 const TicketRow: FC<TicketRowProps> = memo(({ ticket, isSelected, onRowClick, onPrint, onSend, onCancel }) => {
+  const { t } = useTranslation();
   const handleRowClick = useCallback(() => {
     onRowClick(ticket.id);
   }, [ticket.id, onRowClick]);
@@ -47,7 +61,7 @@ const TicketRow: FC<TicketRowProps> = memo(({ ticket, isSelected, onRowClick, on
       <TableCell sx={{ px: 0 }}>
         <Box sx={{ display: 'flex', justifyContent: 'center', gap: 0.25 }}>
           {ticket.isOutOfScheduleSale && ticket.estado === 'Ganador' && (
-            <Tooltip title="Ganador con jugadas fuera de horario" arrow>
+            <Tooltip title={t('tickets.monitoring.winnerOutOfSchedule')} arrow>
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
                 <ScheduleIcon sx={{ fontSize: 18, color: '#e53935' }} />
                 <VisibilityIcon sx={{ fontSize: 18, color: '#e53935' }} />
@@ -55,27 +69,27 @@ const TicketRow: FC<TicketRowProps> = memo(({ ticket, isSelected, onRowClick, on
             </Tooltip>
           )}
           {ticket.isOutOfScheduleSale && ticket.estado !== 'Cancelado' && ticket.estado !== 'Ganador' && (
-            <Tooltip title="Venta fuera de horario" arrow>
+            <Tooltip title={t('tickets.monitoring.saleOutOfSchedule')} arrow>
               <ScheduleIcon sx={{ fontSize: 18, color: '#e53935' }} />
             </Tooltip>
           )}
           {ticket.estado === 'Cancelado' && ticket.isOutOfScheduleSale && (
-            <Tooltip title="Cancelado con jugadas fuera de horario" arrow>
+            <Tooltip title={t('tickets.monitoring.cancelledOutOfSchedule')} arrow>
               <ScheduleIcon sx={{ fontSize: 18, color: '#9c27b0' }} />
             </Tooltip>
           )}
           {ticket.isCancelledOutOfTime && (
-            <Tooltip title="Cancelado fuera de tiempo" arrow>
+            <Tooltip title={t('tickets.monitoring.cancelledOutOfTime')} arrow>
               <CancelIcon sx={{ fontSize: 18, color: '#e65100' }} />
             </Tooltip>
           )}
           {ticket.isPreviousDay && (
-            <Tooltip title="Venta día anterior" arrow>
+            <Tooltip title={t('tickets.monitoring.previousDaySale')} arrow>
               <ArrowBackIcon sx={{ fontSize: 18, color: '#ff9800' }} />
             </Tooltip>
           )}
           {ticket.isFutureDay && (
-            <Tooltip title="Venta futura" arrow>
+            <Tooltip title={t('tickets.monitoring.futureDaySale')} arrow>
               <ArrowForwardIcon sx={{ fontSize: 18, color: '#2196f3' }} />
             </Tooltip>
           )}
@@ -91,15 +105,15 @@ const TicketRow: FC<TicketRowProps> = memo(({ ticket, isSelected, onRowClick, on
           : '-'}
       </TableCell>
       <TableCell sx={{ color: getEstadoColor(ticket.estado), textAlign: 'center', px: 0 }}>
-        {ticket.estado}
+        {STATUS_I18N_KEY[ticket.estado] ? t(STATUS_I18N_KEY[ticket.estado]) : ticket.estado}
       </TableCell>
       <TableCell sx={{ px: 0 }}>
         <Box sx={{ display: 'flex', gap: 0, justifyContent: 'center' }}>
-          <IconButton size="small" color="primary" onClick={handlePrintClick} title="Imprimir ticket" sx={{ p: 0.25 }}>
+          <IconButton size="small" color="primary" onClick={handlePrintClick} title={t('tickets.monitoring.printTicket')} sx={{ p: 0.25 }}>
             <PrintIcon sx={{ fontSize: 18 }} />
           </IconButton>
           {ticket.estado !== 'Cancelado' && (
-            <IconButton size="small" color="error" onClick={handleCancelClick} title="Cancelar ticket" sx={{ p: 0.25 }}>
+            <IconButton size="small" color="error" onClick={handleCancelClick} title={t('tickets.detail.cancel')} sx={{ p: 0.25 }}>
               <CancelIcon sx={{ fontSize: 18 }} />
             </IconButton>
           )}

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Typography,
@@ -59,6 +60,7 @@ const MenuProps = {
 };
 
 const ExcessesReport = (): React.ReactElement => {
+  const { t } = useTranslation();
   const [selectedDraws, setSelectedDraws] = useState<number[]>([]);
   const [selectedBetTypes, setSelectedBetTypes] = useState<number[]>([]);
   const [quickFilter, setQuickFilter] = useState<string>('');
@@ -180,7 +182,7 @@ const ExcessesReport = (): React.ReactElement => {
           fontFamily: 'Montserrat, sans-serif'
         }}
       >
-        Reporte de excedentes
+        {t('excessesAdmin.reportTitle')}
       </Typography>
 
       <Card>
@@ -189,13 +191,13 @@ const ExcessesReport = (): React.ReactElement => {
           <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, mb: 3 }}>
             {/* Multi-select Sorteo */}
             <FormControl fullWidth>
-              <InputLabel sx={{ fontSize: '14px' }}>Sorteo</InputLabel>
+              <InputLabel sx={{ fontSize: '14px' }}>{t('excessesAdmin.draw')}</InputLabel>
               <Select
                 multiple
                 value={selectedDraws}
                 onChange={handleDrawChange}
-                input={<OutlinedInput label="Sorteo" />}
-                renderValue={(selected) => `${selected.length} seleccionadas`}
+                input={<OutlinedInput label={t('excessesAdmin.draw')} />}
+                renderValue={(selected) => t('excessesAdmin.selectedCount', { count: selected.length })}
                 MenuProps={MenuProps}
                 size="small"
                 sx={{ fontSize: '14px' }}
@@ -210,13 +212,13 @@ const ExcessesReport = (): React.ReactElement => {
 
             {/* Multi-select Tipo de jugada */}
             <FormControl fullWidth>
-              <InputLabel sx={{ fontSize: '14px' }}>Tipo de jugada</InputLabel>
+              <InputLabel sx={{ fontSize: '14px' }}>{t('excessesAdmin.betType')}</InputLabel>
               <Select
                 multiple
                 value={selectedBetTypes}
                 onChange={handleBetTypeChange}
-                input={<OutlinedInput label="Tipo de jugada" />}
-                renderValue={(selected) => `${selected.length} seleccionadas`}
+                input={<OutlinedInput label={t('excessesAdmin.betType')} />}
+                renderValue={(selected) => t('excessesAdmin.selectedCount', { count: selected.length })}
                 MenuProps={MenuProps}
                 size="small"
                 sx={{ fontSize: '14px' }}
@@ -247,7 +249,7 @@ const ExcessesReport = (): React.ReactElement => {
                 py: 1.2
               }}
             >
-              REFRESCAR
+              {t('excessesAdmin.refresh')}
             </Button>
           </Box>
 
@@ -255,7 +257,7 @@ const ExcessesReport = (): React.ReactElement => {
           <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
             <TextField
               size="small"
-              placeholder="Filtrado rápido"
+              placeholder={t('common.filterQuick')}
               value={quickFilter}
               onChange={(e) => setQuickFilter(e.target.value)}
               sx={{ width: 300 }}
@@ -273,12 +275,12 @@ const ExcessesReport = (): React.ReactElement => {
                 <Table>
                   <TableHead>
                     <TableRow sx={{ bgcolor: '#f8f9fa' }}>
-                      <TableCell sx={{ fontSize: '12px', fontWeight: 600 }}>Sorteo</TableCell>
-                      <TableCell sx={{ fontSize: '12px', fontWeight: 600 }}>Tipo de jugada</TableCell>
-                      <TableCell align="right" sx={{ fontSize: '12px', fontWeight: 600 }}>Excedente</TableCell>
-                      <TableCell sx={{ fontSize: '12px', fontWeight: 600 }}>Fecha de creación</TableCell>
-                      <TableCell sx={{ fontSize: '12px', fontWeight: 600 }}>Usuario</TableCell>
-                      <TableCell align="center" sx={{ fontSize: '12px', fontWeight: 600 }}>Acciones</TableCell>
+                      <TableCell sx={{ fontSize: '12px', fontWeight: 600 }}>{t('excessesAdmin.draw')}</TableCell>
+                      <TableCell sx={{ fontSize: '12px', fontWeight: 600 }}>{t('excessesAdmin.betType')}</TableCell>
+                      <TableCell align="right" sx={{ fontSize: '12px', fontWeight: 600 }}>{t('excessesAdmin.excess')}</TableCell>
+                      <TableCell sx={{ fontSize: '12px', fontWeight: 600 }}>{t('excessesAdmin.creationDate')}</TableCell>
+                      <TableCell sx={{ fontSize: '12px', fontWeight: 600 }}>{t('common.user')}</TableCell>
+                      <TableCell align="center" sx={{ fontSize: '12px', fontWeight: 600 }}>{t('common.actions')}</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -317,7 +319,7 @@ const ExcessesReport = (): React.ReactElement => {
                   textAlign: 'left'
                 }}
               >
-                Mostrando {filteredData.length} de {reportData.length} entradas
+                {t('excessesAdmin.showingOfTotal', { from: filteredData.length, total: reportData.length })}
               </Typography>
             </>
           ) : (
@@ -331,7 +333,7 @@ const ExcessesReport = (): React.ReactElement => {
                 borderRadius: 1
               }}
             >
-              No hay entradas disponibles
+              {t('common.noEntries')}
             </Box>
           )}
         </CardContent>

@@ -1,4 +1,5 @@
 import React, { useState, type MouseEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Grid,
   TextField,
@@ -52,17 +53,18 @@ interface SchedulesTabProps {
  * Now with custom TimePicker dropdown
  */
 const SchedulesTab: React.FC<SchedulesTabProps> = ({ formData, handleChange }) => {
+  const { t } = useTranslation();
   const [activeTimePicker, setActiveTimePicker] = useState<string | null>(null);
   const [timePickerAnchor, setTimePickerAnchor] = useState<HTMLElement | null>(null);
 
   const days: DayConfig[] = [
-    { key: 'domingo', label: 'Domingo' },
-    { key: 'lunes', label: 'Lunes' },
-    { key: 'martes', label: 'Martes' },
-    { key: 'miercoles', label: 'Miércoles' },
-    { key: 'jueves', label: 'Jueves' },
-    { key: 'viernes', label: 'Viernes' },
-    { key: 'sabado', label: 'Sábado' },
+    { key: 'domingo', label: t('createBettingPool.schedules.dayDomingo') },
+    { key: 'lunes', label: t('createBettingPool.schedules.dayLunes') },
+    { key: 'martes', label: t('createBettingPool.schedules.dayMartes') },
+    { key: 'miercoles', label: t('createBettingPool.schedules.dayMiercoles') },
+    { key: 'jueves', label: t('createBettingPool.schedules.dayJueves') },
+    { key: 'viernes', label: t('createBettingPool.schedules.dayViernes') },
+    { key: 'sabado', label: t('createBettingPool.schedules.daySabado') },
   ];
 
   const openTimePicker = (fieldName: string, event: MouseEvent<HTMLDivElement>): void => {
@@ -89,11 +91,11 @@ const SchedulesTab: React.FC<SchedulesTabProps> = ({ formData, handleChange }) =
   return (
     <Box sx={{ p: 3, position: 'relative' }}>
       <Typography variant="h6" gutterBottom>
-        Horarios de Sorteos
+        {t('createBettingPool.schedules.title')}
       </Typography>
 
       <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-        Configura los horarios de apertura y cierre para los sorteos de cada día de la semana
+        {t('createBettingPool.schedules.subtitle')}
       </Typography>
 
       <Grid container spacing={3}>
@@ -110,7 +112,7 @@ const SchedulesTab: React.FC<SchedulesTabProps> = ({ formData, handleChange }) =
             <Grid item xs={12} md={6}>
               <TextField
                 fullWidth
-                label="Hora de Inicio"
+                label={t('createBettingPool.schedules.startTime')}
                 name={`${day.key}Inicio`}
                 value={formData[`${day.key}Inicio`] || ''}
                 onClick={(e) => openTimePicker(`${day.key}Inicio`, e)}
@@ -132,7 +134,7 @@ const SchedulesTab: React.FC<SchedulesTabProps> = ({ formData, handleChange }) =
             <Grid item xs={12} md={6}>
               <TextField
                 fullWidth
-                label="Hora de Fin"
+                label={t('createBettingPool.schedules.endTime')}
                 name={`${day.key}Fin`}
                 value={formData[`${day.key}Fin`] || ''}
                 onClick={(e) => openTimePicker(`${day.key}Fin`, e)}

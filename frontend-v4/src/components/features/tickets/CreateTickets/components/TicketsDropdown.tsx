@@ -6,6 +6,7 @@
  */
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box, Typography, Popover, TextField, IconButton,
   CircularProgress, Snackbar, Alert,
@@ -43,6 +44,7 @@ const formatTime = (iso: string): string => {
 };
 
 const TicketsDropdown: React.FC<TicketsDropdownProps> = ({ selectedPool, cancelMinutes }) => {
+  const { t } = useTranslation();
   const anchorRef = useRef<HTMLButtonElement>(null);
   const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null);
   const [tickets, setTickets] = useState<TicketResponse[]>([]);
@@ -126,7 +128,7 @@ const TicketsDropdown: React.FC<TicketsDropdownProps> = ({ selectedPool, cancelM
 
   const formatCountdown = (ticket: TicketResponse): string => {
     const remaining = getRemainingMs(ticket);
-    if (remaining <= 0) return 'Expirado';
+    if (remaining <= 0) return t('tickets.create.expired');
     const totalSec = Math.floor(remaining / 1000);
     const min = Math.floor(totalSec / 60);
     const sec = totalSec % 60;
@@ -150,19 +152,19 @@ const TicketsDropdown: React.FC<TicketsDropdownProps> = ({ selectedPool, cancelM
     try {
       const user = getCurrentUser();
       const userId = parseInt(user?.id || '1', 10);
-      await cancelTicket(selectedTicket.ticketId, userId, 'Cancelado por usuario');
+      await cancelTicket(selectedTicket.ticketId, userId, t('tickets.create.cancelReason'));
       setTickets(prev => prev.filter(t => t.ticketId !== selectedTicket.ticketId));
       setSelectedTicketId(null);
-      setSnackbar({ open: true, message: `Ticket #${selectedTicket.ticketCode} cancelado`, severity: 'success' });
+      setSnackbar({ open: true, message: t('tickets.create.ticketCancelled', { code: selectedTicket.ticketCode }), severity: 'success' });
     } catch (err: unknown) {
-      let msg = 'Error al cancelar el ticket';
+      let msg = t('tickets.create.cancelError');
       if (err && typeof err === 'object' && 'response' in err) {
         const apiErr = err as { response?: { data?: { code?: string; message?: string } } };
         const code = apiErr.response?.data?.code;
         if (code === 'CANCELLATION_TIME_EXPIRED') {
-          msg = 'El tiempo de cancelación ha expirado';
+          msg = t('tickets.create.cancelTimeExpired');
         } else if (code === 'TICKET_ALREADY_CANCELLED') {
-          msg = 'Este ticket ya fue cancelado';
+          msg = t('tickets.create.alreadyCancelled');
         } else if (apiErr.response?.data?.message) {
           msg = apiErr.response.data.message;
         }
@@ -176,13 +178,13 @@ const TicketsDropdown: React.FC<TicketsDropdownProps> = ({ selectedPool, cancelM
 
   // Copy placeholder
   const handleCopy = () => {
-    setSnackbar({ open: true, message: 'Pendiente de implementar', severity: 'error' });
+    setSnackbar({ open: true, message: t('tickets.create.pendingImplementation'), severity: 'error' });
   };
 
   // Button label
   const buttonLabel = selectedTicket
     ? `#${selectedTicket.ticketCode} - $${selectedTicket.grandTotal.toFixed(2)}`
-    : `Tickets (${tickets.length})`;
+    : `${t('common.tickets')} (${tickets.length})`;
 
   const canCancel = selectedTicket && !isCancelExpired(selectedTicket);
 
@@ -227,7 +229,7 @@ const TicketsDropdown: React.FC<TicketsDropdownProps> = ({ selectedPool, cancelM
           <TextField
             size="small"
             fullWidth
-            placeholder="Buscar ticket..."
+            placeholder={t('tickets.create.searchTicket')}
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             autoFocus
@@ -247,7 +249,7 @@ const TicketsDropdown: React.FC<TicketsDropdownProps> = ({ selectedPool, cancelM
             </Box>
           ) : filtered.length === 0 ? (
             <Typography sx={{ p: 2, color: '#999', fontSize: '13px', textAlign: 'center' }}>
-              {tickets.length === 0 ? 'No hay tickets hoy' : 'Sin resultados'}
+              {tickets.length === 0 ? t('tickets.create.noTicketsToday') : t('common.noResults')}
             </Typography>
           ) : (
             filtered.map(ticket => {
@@ -300,10 +302,10 @@ const TicketsDropdown: React.FC<TicketsDropdownProps> = ({ selectedPool, cancelM
             sx={{ textTransform: 'none', fontSize: '12px', minWidth: 140 }}
           >
             {isCancelling
-              ? 'Cancelando...'
+              ? t('tickets.create.cancelling')
               : selectedTicket
-                ? `Cancelar ${formatCountdown(selectedTicket)}`
-                : 'Cancelar'}
+                ? `${t('common.cancel')} ${formatCountdown(selectedTicket)}`
+                : t('common.cancel')}
           </Button>
           <Button
             size="small"
@@ -316,25 +318,30 @@ const TicketsDropdown: React.FC<TicketsDropdownProps> = ({ selectedPool, cancelM
               bgcolor: '#607d8b', '&:hover': { bgcolor: '#455a64' },
             }}
           >
-            Copia
+            {t('tickets.create.copy')}
           </Button>
         </Box>
       </Popover>
 
       {/* Cancel confirmation dialog */}
       <Dialog open={showCancelConfirm} onClose={() => setShowCancelConfirm(false)}>
-        <DialogTitle>Confirmar cancelación</DialogTitle>
+        <DialogTitle>{t('tickets.create.confirmCancel')}</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            ¿Está seguro que desea cancelar el ticket <strong>#{selectedTicket?.ticketCode}</strong> por <strong>${selectedTicket?.grandTotal.toFixed(2)}</strong>?
+            <span dangerouslySetInnerHTML={{
+              __html: t('tickets.create.confirmCancelText', {
+                code: selectedTicket?.ticketCode ?? '',
+                amount: selectedTicket?.grandTotal?.toFixed(2) ?? '0.00',
+              }),
+            }} />
           </DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShowCancelConfirm(false)} disabled={isCancelling}>
-            No
+            {t('common.no')}
           </Button>
           <Button onClick={handleCancelConfirm} color="error" variant="contained" disabled={isCancelling}>
-            {isCancelling ? 'Cancelando...' : 'Sí, cancelar'}
+            {isCancelling ? t('tickets.create.cancelling') : t('tickets.create.yesCancel')}
           </Button>
         </DialogActions>
       </Dialog>

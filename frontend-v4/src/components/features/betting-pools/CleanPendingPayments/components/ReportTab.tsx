@@ -5,6 +5,7 @@
  */
 
 import { memo, type FC } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Typography,
@@ -66,16 +67,17 @@ const ReportTab: FC<ReportTabProps> = memo(({
   onSort,
   onSearch,
 }) => {
+  const { t } = useTranslation();
   return (
     <Box>
       <Typography variant="h5" component="h1" gutterBottom>
-        Tickets pagados y limpiados
+        {t('bettingPoolsAdmin.paidAndCleanedTickets')}
       </Typography>
 
       {/* Filters */}
       <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap', alignItems: 'center' }}>
         <TextField
-          label="Fecha inicial"
+          label={t('common.dateStart')}
           type="date"
           value={startDate}
           onChange={(e) => onStartDateChange(e.target.value)}
@@ -83,7 +85,7 @@ const ReportTab: FC<ReportTabProps> = memo(({
           InputLabelProps={{ shrink: true }}
         />
         <TextField
-          label="Fecha final"
+          label={t('common.dateEnd')}
           type="date"
           value={endDate}
           onChange={(e) => onEndDateChange(e.target.value)}
@@ -91,14 +93,14 @@ const ReportTab: FC<ReportTabProps> = memo(({
           InputLabelProps={{ shrink: true }}
         />
         <FormControl sx={{ minWidth: 250 }} size="small">
-          <InputLabel>Banca</InputLabel>
+          <InputLabel>{t('bettingPoolsAdmin.bancaSelectLabel')}</InputLabel>
           <Select
             value={bancaId}
-            label="Banca"
+            label={t('bettingPoolsAdmin.bancaSelectLabel')}
             onChange={(e) => onBancaIdChange(e.target.value)}
           >
             <MenuItem value="">
-              <em>Seleccione</em>
+              <em>{t('bettingPoolsAdmin.bancaSelectPlaceholder')}</em>
             </MenuItem>
             {bettingPools.map((pool) => (
               <MenuItem
@@ -116,14 +118,14 @@ const ReportTab: FC<ReportTabProps> = memo(({
           onClick={onSearch}
           disabled={loading}
         >
-          {loading ? 'Buscando...' : 'Buscar'}
+          {loading ? t('bettingPoolsAdmin.searching') : t('bettingPoolsAdmin.searchButton')}
         </Button>
       </Box>
 
       {/* Quick Filter */}
       <Box sx={{ mb: 3 }}>
         <TextField
-          placeholder="Filtrado rápido"
+          placeholder={t('bettingPoolsAdmin.quickFilter')}
           value={searchTerm}
           onChange={(e) => onSearchTermChange(e.target.value)}
           size="small"
@@ -149,7 +151,7 @@ const ReportTab: FC<ReportTabProps> = memo(({
                   direction={orderBy === 'fecha' ? order : 'asc'}
                   onClick={() => onSort('fecha')}
                 >
-                  Fecha
+                  {t('bettingPoolsAdmin.reportColDate')}
                 </TableSortLabel>
               </TableCell>
               <TableCell>
@@ -158,7 +160,7 @@ const ReportTab: FC<ReportTabProps> = memo(({
                   direction={orderBy === 'ticketNumber' ? order : 'asc'}
                   onClick={() => onSort('ticketNumber')}
                 >
-                  Ticket #
+                  {t('bettingPoolsAdmin.reportColTicketNumber')}
                 </TableSortLabel>
               </TableCell>
               <TableCell>
@@ -167,7 +169,7 @@ const ReportTab: FC<ReportTabProps> = memo(({
                   direction={orderBy === 'monto' ? order : 'asc'}
                   onClick={() => onSort('monto')}
                 >
-                  Monto
+                  {t('bettingPoolsAdmin.reportColAmount')}
                 </TableSortLabel>
               </TableCell>
               <TableCell>
@@ -176,7 +178,7 @@ const ReportTab: FC<ReportTabProps> = memo(({
                   direction={orderBy === 'premios' ? order : 'asc'}
                   onClick={() => onSort('premios')}
                 >
-                  Premios
+                  {t('bettingPoolsAdmin.reportColPrizes')}
                 </TableSortLabel>
               </TableCell>
               <TableCell>
@@ -185,7 +187,7 @@ const ReportTab: FC<ReportTabProps> = memo(({
                   direction={orderBy === 'fechaPago' ? order : 'asc'}
                   onClick={() => onSort('fechaPago')}
                 >
-                  Fecha de pago
+                  {t('bettingPoolsAdmin.reportColPaymentDate')}
                 </TableSortLabel>
               </TableCell>
               <TableCell>
@@ -194,7 +196,7 @@ const ReportTab: FC<ReportTabProps> = memo(({
                   direction={orderBy === 'usuario' ? order : 'asc'}
                   onClick={() => onSort('usuario')}
                 >
-                  Usuario
+                  {t('bettingPoolsAdmin.reportColUser')}
                 </TableSortLabel>
               </TableCell>
             </TableRow>
@@ -203,7 +205,7 @@ const ReportTab: FC<ReportTabProps> = memo(({
             {filteredData.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} align="center">
-                  No hay entradas disponibles
+                  {t('bettingPoolsAdmin.noEntriesAvailable')}
                 </TableCell>
               </TableRow>
             ) : (
@@ -220,7 +222,7 @@ const ReportTab: FC<ReportTabProps> = memo(({
             )}
             {/* Totals Row */}
             <TableRow sx={{ backgroundColor: 'grey.100' }}>
-              <TableCell><strong>Totales</strong></TableCell>
+              <TableCell><strong>{t('bettingPoolsAdmin.totalsLabel')}</strong></TableCell>
               <TableCell><strong>-</strong></TableCell>
               <TableCell><strong>${totals.monto.toFixed(2)}</strong></TableCell>
               <TableCell><strong>${totals.premios.toFixed(2)}</strong></TableCell>
@@ -232,7 +234,7 @@ const ReportTab: FC<ReportTabProps> = memo(({
       </TableContainer>
 
       <Typography variant="body2" sx={{ mt: 2, color: 'text.secondary' }}>
-        Mostrando {filteredData.length} de {totalCount} entradas
+        {t('common.showingEntries', { shown: filteredData.length, total: totalCount })}
       </Typography>
     </Box>
   );

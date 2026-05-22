@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Paper, Typography, Box, CircularProgress, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip } from '@mui/material';
 import { getBancasWithoutSales, type BancaDaysWithoutSalesItem } from '@/services/dashboardService';
 import { formatCurrency } from '@/utils/formatCurrency';
@@ -9,6 +10,7 @@ const SUCCESS = '#2e7d32';
 const DANGER = '#c62828';
 
 const BancasWithoutSalesWidget: React.FC = () => {
+  const { t } = useTranslation();
   const [data, setData] = useState<BancaDaysWithoutSalesItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -36,7 +38,7 @@ const BancasWithoutSalesWidget: React.FC = () => {
   return (
     <Paper elevation={3} sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
       <Typography variant="subtitle1" fontWeight="bold" align="center" sx={{ mb: 1 }}>
-        Bancas sin Venta
+        {t('dashboard.withoutSales.title')}
       </Typography>
       {loading ? (
         <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -44,16 +46,16 @@ const BancasWithoutSalesWidget: React.FC = () => {
         </Box>
       ) : data.length === 0 ? (
         <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <Typography variant="body2" color="text.secondary">Todas las bancas han vendido</Typography>
+          <Typography variant="body2" color="text.secondary">{t('dashboard.withoutSales.allSold')}</Typography>
         </Box>
       ) : (
         <TableContainer sx={{ flex: 1 }}>
           <Table size="small" stickyHeader>
             <TableHead>
               <TableRow>
-                <TableCell sx={{ fontSize: 11, fontWeight: 600, bgcolor: '#f5f5f5' }}>Banca</TableCell>
-                <TableCell sx={{ fontSize: 11, fontWeight: 600, bgcolor: '#f5f5f5' }} align="center">Días</TableCell>
-                <TableCell sx={{ fontSize: 11, fontWeight: 600, bgcolor: '#f5f5f5' }} align="right">Balance</TableCell>
+                <TableCell sx={{ fontSize: 11, fontWeight: 600, bgcolor: '#f5f5f5' }}>{t('common.bettingPool')}</TableCell>
+                <TableCell sx={{ fontSize: 11, fontWeight: 600, bgcolor: '#f5f5f5' }} align="center">{t('dashboard.withoutSales.days')}</TableCell>
+                <TableCell sx={{ fontSize: 11, fontWeight: 600, bgcolor: '#f5f5f5' }} align="right">{t('common.balance')}</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>

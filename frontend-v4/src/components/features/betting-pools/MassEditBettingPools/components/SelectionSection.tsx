@@ -14,6 +14,7 @@ import {
   FormControlLabel,
   Switch,
 } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import type { SelectionSectionProps } from '../types';
 
 const SelectionSection: FC<SelectionSectionProps> = memo(({
@@ -29,12 +30,13 @@ const SelectionSection: FC<SelectionSectionProps> = memo(({
   onZoneToggle,
   onUpdateGeneralValuesChange,
 }) => {
+  const { t } = useTranslation();
   return (
     <>
       {/* Sorteos */}
       <Box sx={{ mb: 3 }}>
         <Typography variant="subtitle1" gutterBottom fontWeight="bold">
-          Sorteos
+          {t('massEditBettingPools.draws')}
         </Typography>
         <Paper variant="outlined" sx={{ p: 2, maxHeight: 200, overflowY: 'auto' }}>
           <Stack direction="row" flexWrap="wrap" gap={0.5}>
@@ -60,7 +62,7 @@ const SelectionSection: FC<SelectionSectionProps> = memo(({
       {/* Bancas */}
       <Box sx={{ mb: 3 }}>
         <Typography variant="subtitle1" gutterBottom fontWeight="bold">
-          Bancas
+          {t('massEditBettingPools.bettingPools')}
         </Typography>
         <Paper variant="outlined" sx={{ p: 2, maxHeight: 150, overflowY: 'auto' }}>
           <Stack direction="row" flexWrap="wrap" gap={0.5}>
@@ -70,7 +72,7 @@ const SelectionSection: FC<SelectionSectionProps> = memo(({
               return (
                 <Chip
                   key={id}
-                  label={pool.bettingPoolName || pool.name || `Pool ${id}`}
+                  label={pool.bettingPoolName || pool.name || t('massEditBettingPools.poolFallback', { id })}
                   onClick={() => onPoolToggle(id)}
                   variant={isSelected ? 'filled' : 'outlined'}
                   color={isSelected ? 'primary' : 'default'}
@@ -86,7 +88,7 @@ const SelectionSection: FC<SelectionSectionProps> = memo(({
       {/* Zonas */}
       <Box sx={{ mb: 3 }}>
         <Typography variant="subtitle1" gutterBottom fontWeight="bold">
-          Zonas
+          {t('massEditBettingPools.zones')}
         </Typography>
         <Paper variant="outlined" sx={{ p: 2, maxHeight: 150, overflowY: 'auto' }}>
           <Stack direction="row" flexWrap="wrap" gap={0.5}>
@@ -118,7 +120,7 @@ const SelectionSection: FC<SelectionSectionProps> = memo(({
               onChange={(e) => onUpdateGeneralValuesChange(e.target.checked)}
             />
           }
-          label="Actualizar valores generales"
+          label={t('massEditBettingPools.updateGeneralValues')}
         />
       </Box>
     </>

@@ -5,6 +5,7 @@
  */
 
 import { memo, useRef, type FC, type ChangeEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Paper,
@@ -42,6 +43,7 @@ const ResultEntryForm: FC<ResultEntryFormProps> = memo(({
   onFormChange,
   onPublish,
 }) => {
+  const { t } = useTranslation();
   const individualFormRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
 
   const selectedDraw = drawResults.find((d) => d.drawId === individualForm.selectedDrawId);
@@ -49,17 +51,17 @@ const ResultEntryForm: FC<ResultEntryFormProps> = memo(({
 
   // Define all possible fields with their configuration
   const allFields = [
-    { field: 'num1' as const, label: '1ra', maxLen: 2, enabled: enabledFields.num1 },
-    { field: 'num2' as const, label: '2da', maxLen: 2, enabled: enabledFields.num2 },
-    { field: 'num3' as const, label: '3ra', maxLen: 2, enabled: enabledFields.num3 },
-    { field: 'cash3' as const, label: 'Pick 3', maxLen: 3, enabled: enabledFields.cash3 },
-    { field: 'pickFour' as const, label: 'Pick 4', maxLen: 4, enabled: enabledFields.play4 },
-    { field: 'pickFive' as const, label: 'Pick 5', maxLen: 5, enabled: enabledFields.pick5 },
-    { field: 'bolita1' as const, label: 'Bolita 1', maxLen: 2, enabled: enabledFields.bolita1 },
-    { field: 'bolita2' as const, label: 'Bolita 2', maxLen: 2, enabled: enabledFields.bolita2 },
-    { field: 'singulaccion1' as const, label: 'Sing. 1', maxLen: 1, enabled: enabledFields.singulaccion1 },
-    { field: 'singulaccion2' as const, label: 'Sing. 2', maxLen: 1, enabled: enabledFields.singulaccion2 },
-    { field: 'singulaccion3' as const, label: 'Sing. 3', maxLen: 1, enabled: enabledFields.singulaccion3 },
+    { field: 'num1' as const, label: t('resultsAdmin.labels.first'), maxLen: 2, enabled: enabledFields.num1 },
+    { field: 'num2' as const, label: t('resultsAdmin.labels.second'), maxLen: 2, enabled: enabledFields.num2 },
+    { field: 'num3' as const, label: t('resultsAdmin.labels.third'), maxLen: 2, enabled: enabledFields.num3 },
+    { field: 'cash3' as const, label: t('resultsAdmin.labels.pick3'), maxLen: 3, enabled: enabledFields.cash3 },
+    { field: 'pickFour' as const, label: t('resultsAdmin.labels.pick4'), maxLen: 4, enabled: enabledFields.play4 },
+    { field: 'pickFive' as const, label: t('resultsAdmin.labels.pick5'), maxLen: 5, enabled: enabledFields.pick5 },
+    { field: 'bolita1' as const, label: t('resultsAdmin.labels.bolita1'), maxLen: 2, enabled: enabledFields.bolita1 },
+    { field: 'bolita2' as const, label: t('resultsAdmin.labels.bolita2'), maxLen: 2, enabled: enabledFields.bolita2 },
+    { field: 'singulaccion1' as const, label: t('resultsAdmin.labels.singShort1'), maxLen: 1, enabled: enabledFields.singulaccion1 },
+    { field: 'singulaccion2' as const, label: t('resultsAdmin.labels.singShort2'), maxLen: 1, enabled: enabledFields.singulaccion2 },
+    { field: 'singulaccion3' as const, label: t('resultsAdmin.labels.singShort3'), maxLen: 1, enabled: enabledFields.singulaccion3 },
   ];
 
   // Check if this is a USA draw
@@ -81,7 +83,7 @@ const ResultEntryForm: FC<ResultEntryFormProps> = memo(({
       <Box sx={{ display: 'flex', gap: 2, mb: 2, flexWrap: 'wrap', alignItems: 'flex-start' }}>
         <Box>
           <Typography variant="body2" sx={{ mb: 0.5, color: '#666', fontSize: '12px' }}>
-            Fecha
+            {t('resultsAdmin.form.dateLabel')}
           </Typography>
           <TextField
             type="date"
@@ -93,7 +95,7 @@ const ResultEntryForm: FC<ResultEntryFormProps> = memo(({
         </Box>
         <Box sx={{ flex: 1 }}>
           <Typography variant="body2" sx={{ mb: 0.5, color: '#666', fontSize: '12px' }}>
-            Sorteo
+            {t('resultsAdmin.form.drawLabel')}
           </Typography>
           <FormControl fullWidth size="small">
             <Select
@@ -213,7 +215,7 @@ const ResultEntryForm: FC<ResultEntryFormProps> = memo(({
           {savingIndividual ? (
             <CircularProgress size={20} color="inherit" />
           ) : (
-            'PUBLICAR RESULTADO'
+            t('resultsAdmin.form.publishButton')
           )}
         </Button>
       </Box>

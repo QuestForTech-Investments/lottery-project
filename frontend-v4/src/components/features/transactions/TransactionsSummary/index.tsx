@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, type ChangeEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Card,
@@ -61,6 +62,7 @@ const getNetColor = (val: number): string => {
 };
 
 const TransactionsSummary = (): React.ReactElement => {
+  const { t } = useTranslation();
   const today = new Date().toLocaleDateString('en-CA');
   const [startDate, setStartDate] = useState<string>(today);
   const [endDate, setEndDate] = useState<string>(today);
@@ -198,7 +200,7 @@ const TransactionsSummary = (): React.ReactElement => {
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h4" sx={{ mb: 3, textAlign: 'center', fontWeight: 600, color: '#2c2c2c' }}>
-        Resumen de transacciones
+        {t('transactions.summary.title')}
       </Typography>
 
       <Card elevation={1} sx={{ mb: 3 }}>
@@ -206,7 +208,7 @@ const TransactionsSummary = (): React.ReactElement => {
           <Grid container spacing={2} sx={{ mb: 2 }}>
             <Grid item xs={12} md={3}>
               <TextField
-                fullWidth size="small" label="Fecha inicial" type="date"
+                fullWidth size="small" label={t('common.dateStart')} type="date"
                 value={startDate} onChange={(e: ChangeEvent<HTMLInputElement>) => setStartDate(e.target.value)}
                 InputLabelProps={{ shrink: true }}
                 InputProps={{ startAdornment: <InputAdornment position="start"><CalendarIcon fontSize="small" /></InputAdornment> }}
@@ -214,7 +216,7 @@ const TransactionsSummary = (): React.ReactElement => {
             </Grid>
             <Grid item xs={12} md={3}>
               <TextField
-                fullWidth size="small" label="Fecha final" type="date"
+                fullWidth size="small" label={t('common.dateEnd')} type="date"
                 value={endDate} onChange={(e: ChangeEvent<HTMLInputElement>) => setEndDate(e.target.value)}
                 InputLabelProps={{ shrink: true }}
                 InputProps={{ startAdornment: <InputAdornment position="start"><CalendarIcon fontSize="small" /></InputAdornment> }}
@@ -222,19 +224,19 @@ const TransactionsSummary = (): React.ReactElement => {
             </Grid>
             <Grid item xs={12} md={4}>
               <FormControl fullWidth size="small">
-                <InputLabel>Zonas</InputLabel>
+                <InputLabel>{t('common.zones')}</InputLabel>
                 <Select
                   multiple
                   value={selectedZoneIds}
                   onChange={handleZoneChange}
-                  input={<OutlinedInput label="Zonas" />}
+                  input={<OutlinedInput label={t('common.zones')} />}
                   renderValue={(selected) => {
-                    if (selected.length === zones.length && zones.length > 0) return 'Todas';
-                    return `${selected.length} seleccionada${selected.length !== 1 ? 's' : ''}`;
+                    if (selected.length === zones.length && zones.length > 0) return t('common.all');
+                    return t('balances.selectedCount', { count: selected.length });
                   }}
                 >
                   <MenuItem value={-1}>
-                    <em>{selectedZoneIds.length === zones.length ? 'Deseleccionar todas' : 'Seleccionar todas'}</em>
+                    <em>{selectedZoneIds.length === zones.length ? t('common.deselectAll') : t('common.selectAll')}</em>
                   </MenuItem>
                   {zones.map((zone) => (
                     <MenuItem key={zone.zoneId} value={zone.zoneId}>{zone.zoneName}</MenuItem>
@@ -248,13 +250,13 @@ const TransactionsSummary = (): React.ReactElement => {
                 disabled={selectedZoneIds.length === 0}
                 sx={{ bgcolor: '#8b5cf6', '&:hover': { bgcolor: '#45b5b8' }, fontWeight: 600, textTransform: 'uppercase' }}
               >
-                Filtrar
+                {t('common.filter')}
               </Button>
             </Grid>
           </Grid>
 
           <TextField
-            fullWidth size="small" placeholder="Filtro rápido"
+            fullWidth size="small" placeholder={t('common.filterQuick')}
             value={quickFilter} onChange={(e: ChangeEvent<HTMLInputElement>) => setQuickFilter(e.target.value)}
             InputProps={{ endAdornment: <InputAdornment position="end"><IconButton size="small"><SearchIcon fontSize="small" /></IconButton></InputAdornment> }}
           />
@@ -271,20 +273,20 @@ const TransactionsSummary = (): React.ReactElement => {
             <Table size="small">
               <TableHead>
                 <TableRow sx={{ bgcolor: '#f5f5f5' }}>
-                  <TableCell rowSpan={2} sx={{ fontWeight: 600, verticalAlign: 'middle', borderRight: '1px solid #e0e0e0' }}>Código</TableCell>
-                  <TableCell rowSpan={2} sx={{ fontWeight: 600, verticalAlign: 'middle', borderRight: '1px solid #e0e0e0' }}>Banca</TableCell>
-                  <TableCell rowSpan={2} sx={{ fontWeight: 600, verticalAlign: 'middle', borderRight: '1px solid #e0e0e0' }}>Zona</TableCell>
-                  <TableCell colSpan={3} align="center" sx={{ fontWeight: 600, borderBottom: '2px solid #51cbce', borderRight: '1px solid #e0e0e0' }}>Flujo de caja</TableCell>
-                  <TableCell colSpan={3} align="center" sx={{ fontWeight: 600, borderBottom: '2px solid #51cbce', borderRight: '1px solid #e0e0e0' }}>Resultados de Sorteo</TableCell>
-                  <TableCell rowSpan={2} sx={{ fontWeight: 600, verticalAlign: 'middle' }}>Caída</TableCell>
+                  <TableCell rowSpan={2} sx={{ fontWeight: 600, verticalAlign: 'middle', borderRight: '1px solid #e0e0e0' }}>{t('common.code')}</TableCell>
+                  <TableCell rowSpan={2} sx={{ fontWeight: 600, verticalAlign: 'middle', borderRight: '1px solid #e0e0e0' }}>{t('common.bettingPool')}</TableCell>
+                  <TableCell rowSpan={2} sx={{ fontWeight: 600, verticalAlign: 'middle', borderRight: '1px solid #e0e0e0' }}>{t('common.zone')}</TableCell>
+                  <TableCell colSpan={3} align="center" sx={{ fontWeight: 600, borderBottom: '2px solid #51cbce', borderRight: '1px solid #e0e0e0' }}>{t('transactions.cashFlow')}</TableCell>
+                  <TableCell colSpan={3} align="center" sx={{ fontWeight: 600, borderBottom: '2px solid #51cbce', borderRight: '1px solid #e0e0e0' }}>{t('transactions.drawResults')}</TableCell>
+                  <TableCell rowSpan={2} sx={{ fontWeight: 600, verticalAlign: 'middle' }}>{t('transactions.fall')}</TableCell>
                 </TableRow>
                 <TableRow sx={{ bgcolor: '#f5f5f5' }}>
-                  {renderSortHeader('collections', 'Cobros', 'right')}
-                  {renderSortHeader('payments', 'Pagos', 'right')}
-                  {renderSortHeader('cashFlowNet', 'Neto', 'right', { borderRight: '1px solid #e0e0e0', bgcolor: '#e8f5e9' })}
-                  {renderSortHeader('drawDebit', 'Débito', 'right')}
-                  {renderSortHeader('drawCredit', 'Crédito', 'right')}
-                  {renderSortHeader('drawNet', 'Neto', 'right', { borderRight: '1px solid #e0e0e0', bgcolor: '#e8f5e9' })}
+                  {renderSortHeader('collections', t('transactions.collections'), 'right')}
+                  {renderSortHeader('payments', t('transactions.payments'), 'right')}
+                  {renderSortHeader('cashFlowNet', t('transactions.net'), 'right', { borderRight: '1px solid #e0e0e0', bgcolor: '#e8f5e9' })}
+                  {renderSortHeader('drawDebit', t('transactions.debit'), 'right')}
+                  {renderSortHeader('drawCredit', t('transactions.credit'), 'right')}
+                  {renderSortHeader('drawNet', t('transactions.net'), 'right', { borderRight: '1px solid #e0e0e0', bgcolor: '#e8f5e9' })}
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -292,7 +294,7 @@ const TransactionsSummary = (): React.ReactElement => {
                   <TableRow>
                     <TableCell colSpan={10} align="center" sx={{ py: 3 }}>
                       <Typography variant="body2" color="text.secondary">
-                        {items.length === 0 ? 'Seleccione zonas y haga clic en Filtrar' : 'No hay datos que coincidan con el filtro'}
+                        {items.length === 0 ? t('transactions.selectZonesPrompt') : t('transactions.noFilterMatch')}
                       </Typography>
                     </TableCell>
                   </TableRow>
@@ -317,7 +319,7 @@ const TransactionsSummary = (): React.ReactElement => {
                       </TableRow>
                     ))}
                     <TableRow sx={{ bgcolor: '#f8f9fa' }}>
-                      <TableCell sx={{ fontWeight: 700 }}>Totales</TableCell>
+                      <TableCell sx={{ fontWeight: 700 }}>{t('balances.totals')}</TableCell>
                       <TableCell>-</TableCell>
                       <TableCell sx={{ borderRight: '1px solid #e0e0e0' }}>-</TableCell>
                       <TableCell align="right" sx={{ fontWeight: 700 }}>{formatCurrency(totals.collections)}</TableCell>
@@ -339,23 +341,23 @@ const TransactionsSummary = (): React.ReactElement => {
           </TableContainer>
 
           <Typography variant="body2" color="text.secondary" sx={{ mb: 4 }}>
-            Mostrando {filteredAndSortedData.length} de {items.length} entradas
+            {t('common.showingEntries', { shown: filteredAndSortedData.length, total: items.length })}
           </Typography>
 
           {/* Other transactions summary */}
           <Typography variant="h5" sx={{ mb: 2, textAlign: 'center', fontWeight: 600, color: '#2c2c2c' }}>
-            Resumen otras transacciones
+            {t('transactions.otherSummary')}
           </Typography>
           <TableContainer component={Paper} variant="outlined">
             <Table size="small">
               <TableHead>
                 <TableRow sx={{ bgcolor: '#f5f5f5' }}>
-                  <TableCell colSpan={3} align="center" sx={{ fontWeight: 600, borderBottom: '2px solid #51cbce' }}>Ajustes</TableCell>
+                  <TableCell colSpan={3} align="center" sx={{ fontWeight: 600, borderBottom: '2px solid #51cbce' }}>{t('transactions.adjustments')}</TableCell>
                 </TableRow>
                 <TableRow sx={{ bgcolor: '#f5f5f5' }}>
-                  <TableCell align="center" sx={{ fontWeight: 600 }}>Retiros de efectivo</TableCell>
-                  <TableCell align="center" sx={{ fontWeight: 600 }}>Débito</TableCell>
-                  <TableCell align="center" sx={{ fontWeight: 600 }}>Crédito</TableCell>
+                  <TableCell align="center" sx={{ fontWeight: 600 }}>{t('transactions.cashWithdrawals')}</TableCell>
+                  <TableCell align="center" sx={{ fontWeight: 600 }}>{t('transactions.debit')}</TableCell>
+                  <TableCell align="center" sx={{ fontWeight: 600 }}>{t('transactions.credit')}</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>

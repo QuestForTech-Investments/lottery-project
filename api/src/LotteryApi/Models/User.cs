@@ -101,6 +101,11 @@ public class User
     [Column("pin_locked_ip")]
     public string? PinLockedIp { get; set; }
 
+    /// <summary>BCP-47 language tag ("es" | "en" | "fr" | "ht"). Null = use default (es).</summary>
+    [MaxLength(5)]
+    [Column("preferred_language")]
+    public string? PreferredLanguage { get; set; }
+
     // Navigation properties
     [ForeignKey("RoleId")]
     public virtual Role? Role { get; set; }

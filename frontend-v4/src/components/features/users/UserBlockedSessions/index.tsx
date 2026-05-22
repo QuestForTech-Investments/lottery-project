@@ -1,4 +1,5 @@
 import { memo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Paper,
@@ -30,6 +31,7 @@ import useUserBlockedSessions from './hooks/useUserBlockedSessions';
  * Modern Material-UI version of UserBlockedSessions
  */
 const UserBlockedSessionsMUI = () => {
+  const { t } = useTranslation();
   const {
     currentTabData,
     totalRecords,
@@ -57,23 +59,23 @@ const UserBlockedSessionsMUI = () => {
             variant="h6"
             component="div"
           >
-            Sesiones Bloqueadas
+            {t('usersAdmin.blockedSessionsTitle')}
           </Typography>
         </Toolbar>
 
         {/* Tabs */}
         <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
           <Tabs value={activeTab} onChange={handleTabChange}>
-            <Tab label="Por Contraseña" value="contrasena" />
-            <Tab label="Por Pin" value="pin" />
-            <Tab label="Direcciones IP" value="ip" />
+            <Tab label={t('usersAdmin.tabByPassword')} value="contrasena" />
+            <Tab label={t('usersAdmin.tabByPin')} value="pin" />
+            <Tab label={t('usersAdmin.tabIpAddresses')} value="ip" />
           </Tabs>
         </Box>
 
         {/* Search Filter */}
         <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
           <TextField
-            placeholder="Filtrado rápido..."
+            placeholder={t('common.filterQuick')}
             value={searchText}
             onChange={handleSearchChange}
             sx={{ minWidth: 300 }}
@@ -100,18 +102,18 @@ const UserBlockedSessionsMUI = () => {
             <TableHead>
               <TableRow>
                 <TableCell>
-                  <strong>{isIPTab ? 'Dirección IP' : 'Usuario'}</strong>
+                  <strong>{isIPTab ? t('usersAdmin.ipAddress') : t('usersAdmin.user')}</strong>
                 </TableCell>
                 <TableCell>
-                  <strong>Bloqueado en</strong>
+                  <strong>{t('usersAdmin.blockedAt')}</strong>
                 </TableCell>
                 <TableCell>
                   <strong>
-                    {isIPTab ? 'Usuario durante el bloqueo' : 'IP durante el bloqueo'}
+                    {isIPTab ? t('usersAdmin.userDuringBlock') : t('usersAdmin.ipDuringBlock')}
                   </strong>
                 </TableCell>
                 <TableCell align="center">
-                  <strong>Desbloquear</strong>
+                  <strong>{t('usersAdmin.unblockColumn')}</strong>
                 </TableCell>
               </TableRow>
             </TableHead>
@@ -120,7 +122,7 @@ const UserBlockedSessionsMUI = () => {
                 <TableRow>
                   <TableCell colSpan={4} align="center">
                     <Typography variant="body2" color="text.secondary" sx={{ py: 3 }}>
-                      No hay entradas disponibles
+                      {t('common.noEntries')}
                     </Typography>
                   </TableCell>
                 </TableRow>
@@ -148,7 +150,7 @@ const UserBlockedSessionsMUI = () => {
                         startIcon={<LockOpenIcon />}
                         onClick={() => handleUnlock(item)}
                       >
-                        Desbloquear
+                        {t('usersAdmin.unblock')}
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -168,9 +170,11 @@ const UserBlockedSessionsMUI = () => {
             page={page}
             onPageChange={handleChangePage}
             onRowsPerPageChange={handleChangeRowsPerPage}
-            labelRowsPerPage="Entradas por página:"
+            labelRowsPerPage={t('usersAdmin.entriesPerPage')}
             labelDisplayedRows={({ from, to, count }) =>
-              `Mostrando ${from}-${to} de ${count !== -1 ? count : `más de ${to}`} entradas`
+              count !== -1
+                ? t('usersAdmin.showingFromToOfEntries', { from, to, count })
+                : t('usersAdmin.fromToMoreThan', { from, to })
             }
           />
         )}
@@ -179,7 +183,7 @@ const UserBlockedSessionsMUI = () => {
         {currentTabData.length === 0 && (
           <Box sx={{ p: 2, borderTop: 1, borderColor: 'divider' }}>
             <Typography variant="body2" color="text.secondary">
-              Mostrando 0 de 0 entradas
+              {t('usersAdmin.showingEmpty')}
             </Typography>
           </Box>
         )}

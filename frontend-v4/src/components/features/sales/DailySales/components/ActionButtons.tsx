@@ -5,6 +5,7 @@
  */
 
 import { memo, type FC } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Box, Button } from '@mui/material';
 import { BUTTON_PILL_STYLE } from '../constants';
 import type { ActionButtonsProps } from '../types';
@@ -31,6 +32,7 @@ const ActionButtons: FC<ActionButtonsProps> = memo(({
   onProcessTodayTickets,
   onProcessYesterdaySales,
 }) => {
+  const { t } = useTranslation();
   return (
     <Box sx={{
       display: 'flex',
@@ -46,7 +48,7 @@ const ActionButtons: FC<ActionButtonsProps> = memo(({
         size="small"
         sx={responsiveButtonStyle}
       >
-        Ver ventas
+        {t('transactions.viewSales')}
       </Button>
       <Button
         variant="contained"
@@ -70,7 +72,7 @@ const ActionButtons: FC<ActionButtonsProps> = memo(({
         size="small"
         sx={responsiveButtonStyle}
       >
-        Procesar tickets de hoy
+        {t('sales.processTodayTickets')}
       </Button>
       <Button
         variant="contained"
@@ -78,7 +80,7 @@ const ActionButtons: FC<ActionButtonsProps> = memo(({
         size="small"
         sx={responsiveButtonStyle}
       >
-        Procesar ventas de ayer
+        {t('sales.processYesterdaySales')}
       </Button>
     </Box>
   );

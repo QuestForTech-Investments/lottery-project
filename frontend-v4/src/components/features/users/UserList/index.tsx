@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -37,6 +38,7 @@ import * as userService from '@services/userService';
 import { handleApiError } from '@utils/index';
 import * as logger from '@/utils/logger';
 import type { UserSortField } from '@/types/user';
+import { getActiveLocale } from '@/utils/formatters';
 
 interface TableColumn {
   id: string;
@@ -50,6 +52,7 @@ interface TableColumn {
  * Modern Material-UI version of UserList with enhanced UX
  */
 const UserListMUI = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const {
     users,
@@ -95,12 +98,12 @@ const UserListMUI = () => {
       setTempDialog({ open: true, username: res.username, password: res.temporaryPassword });
       setConfirmTarget(null);
     } catch (err) {
-      alert(handleApiError(err) || 'No se pudo generar la clave temporal');
+      alert(handleApiError(err) || t('usersAdmin.tempPasswordError'));
       setConfirmTarget(null);
     } finally {
       setGeneratingFor(null);
     }
-  }, [confirmTarget]);
+  }, [confirmTarget, t]);
 
   const handleCloseTempDialog = useCallback(() => {
     setTempDialog({ open: false, username: '', password: '' });
@@ -115,12 +118,12 @@ const UserListMUI = () => {
       setDeleteTarget(null);
       handleRefresh();
     } catch (err) {
-      alert(handleApiError(err) || 'No se pudo eliminar el usuario');
+      alert(handleApiError(err) || t('usersAdmin.deleteUserError'));
       setDeleteTarget(null);
     } finally {
       setDeletingFor(null);
     }
-  }, [deleteTarget, handleRefresh]);
+  }, [deleteTarget, handleRefresh, t]);
 
   /**
    * Create sort handler for table columns
@@ -134,11 +137,11 @@ const UserListMUI = () => {
    * Table columns configuration
    */
   const columns: TableColumn[] = [
-    { id: 'userId', label: 'ID', sortable: true, align: 'left' },
-    { id: 'username', label: 'Usuario', sortable: true, align: 'left' },
-    { id: 'isActive', label: 'Estado', sortable: true, align: 'center' },
-    { id: 'createdAt', label: 'Fecha Creación', sortable: true, align: 'left' },
-    { id: 'actions', label: 'Acciones', sortable: false, align: 'center' },
+    { id: 'userId', label: t('usersAdmin.userId'), sortable: true, align: 'left' },
+    { id: 'username', label: t('usersAdmin.user'), sortable: true, align: 'left' },
+    { id: 'isActive', label: t('usersAdmin.status'), sortable: true, align: 'center' },
+    { id: 'createdAt', label: t('usersAdmin.createdAt'), sortable: true, align: 'left' },
+    { id: 'actions', label: t('usersAdmin.actions'), sortable: false, align: 'center' },
   ];
 
   return (
@@ -147,7 +150,7 @@ const UserListMUI = () => {
         {/* Header */}
         <Box sx={{ p: 3, borderBottom: 1, borderColor: 'divider' }}>
           <Typography variant="h5" component="h1" gutterBottom align="center">
-            Lista de Usuarios
+            {t('usersAdmin.listTitleFull')}
           </Typography>
         </Box>
 
@@ -163,7 +166,7 @@ const UserListMUI = () => {
                   onClick={handleRefresh}
                   startIcon={<RefreshIcon />}
                 >
-                  Reintentar
+                  {t('sales.retry')}
                 </Button>
               }
             >
@@ -175,7 +178,7 @@ const UserListMUI = () => {
         {/* Toolbar with search and actions */}
         <Toolbar sx={{ justifyContent: 'space-between', gap: 2, flexWrap: 'wrap' }}>
           <TextField
-            placeholder="Buscar por usuario, nombre o email..."
+            placeholder={t('usersAdmin.searchPlaceholder')}
             value={searchText}
             onChange={handleSearchChange}
             variant="outlined"
@@ -204,10 +207,10 @@ const UserListMUI = () => {
           <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
             {!loading && (
               <Typography variant="body2" color="text.secondary">
-                {totalUsers} de {allUsersCount} usuarios
+                {t('usersAdmin.countOfTotal', { shown: totalUsers, total: allUsersCount })}
               </Typography>
             )}
-            <Tooltip title="Actualizar lista">
+            <Tooltip title={t('usersAdmin.refreshTooltip')}>
               <span>
                 <IconButton
                   onClick={handleRefresh}
@@ -227,7 +230,7 @@ const UserListMUI = () => {
             <Box sx={{ textAlign: 'center' }}>
               <CircularProgress />
               <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-                Cargando usuarios desde la API...
+                {t('usersAdmin.loadingUsers')}
               </Typography>
             </Box>
           </Box>
@@ -266,7 +269,7 @@ const UserListMUI = () => {
                     <TableRow>
                       <TableCell colSpan={columns.length} align="center" sx={{ py: 6 }}>
                         <Typography variant="body1" color="text.secondary">
-                          {searchText ? 'No se encontraron usuarios que coincidan con la búsqueda' : 'No hay usuarios disponibles'}
+                          {searchText ? t('usersAdmin.noUsersFound') : t('usersAdmin.noUsersAvailable')}
                         </Typography>
                       </TableCell>
                     </TableRow>
@@ -290,14 +293,14 @@ const UserListMUI = () => {
                         </TableCell>
                         <TableCell align="center">
                           <Chip
-                            label={user.isActive ? 'Activo' : 'Inactivo'}
+                            label={user.isActive ? t('usersAdmin.active') : t('usersAdmin.inactive')}
                             color={user.isActive ? 'success' : 'default'}
                             size="small"
                           />
                         </TableCell>
                         <TableCell>
                           {user.createdAt
-                            ? new Date(user.createdAt).toLocaleDateString('es-ES', {
+                            ? new Date(user.createdAt).toLocaleDateString(getActiveLocale(), {
                                 year: 'numeric',
                                 month: 'short',
                                 day: 'numeric',
@@ -306,7 +309,7 @@ const UserListMUI = () => {
                         </TableCell>
                         <TableCell align="center">
                           <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1 }}>
-                            <Tooltip title="Generar clave temporal">
+                            <Tooltip title={t('usersAdmin.generateTempPassword')}>
                               <span>
                                 <IconButton
                                   size="small"
@@ -318,7 +321,7 @@ const UserListMUI = () => {
                                 </IconButton>
                               </span>
                             </Tooltip>
-                            <Tooltip title="Editar usuario">
+                            <Tooltip title={t('usersAdmin.editUser')}>
                               <IconButton
                                 size="small"
                                 color="primary"
@@ -327,7 +330,7 @@ const UserListMUI = () => {
                                 <EditIcon fontSize="small" />
                               </IconButton>
                             </Tooltip>
-                            <Tooltip title="Eliminar usuario">
+                            <Tooltip title={t('usersAdmin.deleteUser')}>
                               <span>
                                 <IconButton
                                   size="small"
@@ -358,10 +361,11 @@ const UserListMUI = () => {
                 rowsPerPage={rowsPerPage}
                 onRowsPerPageChange={handleChangeRowsPerPage}
                 rowsPerPageOptions={[5, 10, 25, 50, 100]}
-                labelRowsPerPage="Filas por página:"
-                labelDisplayedRows={({ from, to, count }) =>
-                  `${from}-${to} de ${count !== -1 ? count : `más de ${to}`}`
-                }
+                labelRowsPerPage={t('usersAdmin.rowsPerPage')}
+                labelDisplayedRows={({ from, to, count }) => {
+                  const total = count !== -1 ? String(count) : t('zonesAdmin.moreThan', { count: to });
+                  return t('usersAdmin.fromTo', { from, to, total });
+                }}
               />
             )}
           </>
@@ -370,9 +374,9 @@ const UserListMUI = () => {
 
       <ConfirmActionDialog
         isOpen={!!confirmTarget}
-        title="Generar clave temporal"
-        message={`Se generará una nueva clave para "${confirmTarget?.username}". El usuario deberá cambiarla al iniciar sesión y la actual dejará de funcionar.`}
-        confirmLabel="Generar"
+        title={t('usersAdmin.tempPasswordTitle')}
+        message={t('usersAdmin.tempPasswordMessage', { username: confirmTarget?.username ?? '' })}
+        confirmLabel={t('usersAdmin.generate')}
         severity="warning"
         loading={generatingFor !== null}
         onConfirm={handleConfirmGenerate}
@@ -381,9 +385,9 @@ const UserListMUI = () => {
 
       <ConfirmActionDialog
         isOpen={!!deleteTarget}
-        title="Eliminar usuario"
-        message={`¿Eliminar al usuario "${deleteTarget?.username}"? El usuario será desactivado y no podrá acceder al sistema.`}
-        confirmLabel="Eliminar"
+        title={t('usersAdmin.deleteUser')}
+        message={t('usersAdmin.deleteUserMessage', { username: deleteTarget?.username ?? '' })}
+        confirmLabel={t('common.delete')}
         severity="danger"
         loading={deletingFor !== null}
         onConfirm={handleConfirmDelete}

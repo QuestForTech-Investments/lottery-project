@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, type ChangeEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Paper,
@@ -30,13 +31,14 @@ interface ColumnDefinition {
   align?: 'left' | 'center' | 'right';
 }
 
-const COLUMNS: ColumnDefinition[] = [
-  { key: 'nombre', label: 'Nombre', sortable: true },
-  { key: 'balance', label: 'Balance', sortable: true, format: 'currency', align: 'right' },
-  { key: 'loans', label: 'Préstamos', sortable: true, format: 'currency', align: 'right' },
-];
-
 const ZoneBalances = (): React.ReactElement => {
+  const { t } = useTranslation();
+  const COLUMNS: ColumnDefinition[] = useMemo(() => [
+    { key: 'nombre', label: t('common.name'), sortable: true },
+    { key: 'balance', label: t('common.balance'), sortable: true, format: 'currency', align: 'right' },
+    { key: 'loans', label: t('balances.loans'), sortable: true, format: 'currency', align: 'right' },
+  ], [t]);
+
   const [quickFilter, setQuickFilter] = useState<string>('');
   const [pageSize, setPageSize] = useState<number>(20);
   const [page, setPage] = useState<number>(0);
@@ -57,7 +59,7 @@ const ZoneBalances = (): React.ReactElement => {
           existing.balance += bp.balance;
           existing.loans += bp.prestamos;
         } else {
-          zoneMap.set(bp.zoneId, { name: bp.zona || 'Sin zona', balance: bp.balance, loans: bp.prestamos });
+          zoneMap.set(bp.zoneId, { name: bp.zona || t('balances.noZone'), balance: bp.balance, loans: bp.prestamos });
         }
       });
 
@@ -75,7 +77,7 @@ const ZoneBalances = (): React.ReactElement => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -123,13 +125,13 @@ const ZoneBalances = (): React.ReactElement => {
     <Box sx={{ p: 3 }}>
       <Paper sx={{ p: 3 }}>
         <Typography variant="h5" sx={{ mb: 3, textAlign: 'center', fontWeight: 600 }}>
-          Balances de zonas
+          {t('balances.zones.title')}
         </Typography>
 
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: 'wrap', gap: 2 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-              Entradas por página
+              {t('balances.entriesPerPage')}
             </Typography>
             <FormControl size="small">
               <Select
@@ -142,7 +144,7 @@ const ZoneBalances = (): React.ReactElement => {
                 <MenuItem value={20}>20</MenuItem>
                 <MenuItem value={50}>50</MenuItem>
                 <MenuItem value={100}>100</MenuItem>
-                <MenuItem value={1000}>Todos</MenuItem>
+                <MenuItem value={1000}>{t('common.all')}</MenuItem>
               </Select>
             </FormControl>
           </Box>
@@ -151,7 +153,7 @@ const ZoneBalances = (): React.ReactElement => {
             <QuickFilter
               value={quickFilter}
               onChange={handleQuickFilterChange}
-              placeholder="Filtrado rápido"
+              placeholder={t('common.filterQuick')}
             />
           </Box>
         </Box>
@@ -172,7 +174,7 @@ const ZoneBalances = (): React.ReactElement => {
           labelRowsPerPage=""
           rowsPerPageOptions={[]}
           labelDisplayedRows={({ from, to, count }) =>
-            `Mostrando ${from}-${to} de ${count} entradas`
+            t('balances.showingRange', { from, to, count })
           }
         />
       </Paper>

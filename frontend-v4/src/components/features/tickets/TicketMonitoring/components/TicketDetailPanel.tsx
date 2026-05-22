@@ -6,6 +6,7 @@
  */
 
 import { memo, useMemo, useState, useCallback, type FC } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Typography,
@@ -197,6 +198,7 @@ const PrizeEditModal: FC<PrizeEditModalProps> = memo(({
   onClose,
   onSave,
 }) => {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState<PrizeMultipliers>(multipliers);
 
   const handleChange = useCallback((field: keyof PrizeMultipliers) => (
@@ -214,7 +216,7 @@ const PrizeEditModal: FC<PrizeEditModalProps> = memo(({
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle sx={{ fontFamily: 'Montserrat, sans-serif', fontSize: '16px' }}>
-        Modificar premios de jugadas ({betNumber})
+        {t('tickets.detail.modifyPrizes', { number: betNumber })}
         <IconButton
           onClick={onClose}
           sx={{ position: 'absolute', right: 8, top: 8 }}
@@ -232,11 +234,11 @@ const PrizeEditModal: FC<PrizeEditModalProps> = memo(({
             '& .MuiAlert-icon': { color: '#fff' },
           }}
         >
-          IMPORTANTE: para hacer efectivos los cambios a los premios de jugadas deberá re-procesar las ventas.
+          {t('tickets.detail.prizeChangeWarning')}
         </Alert>
         <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
           <TextField
-            label="Primer Pago"
+            label={t('tickets.detail.firstPrize')}
             type="number"
             value={formData.firstPrize}
             onChange={handleChange('firstPrize')}
@@ -244,7 +246,7 @@ const PrizeEditModal: FC<PrizeEditModalProps> = memo(({
             fullWidth
           />
           <TextField
-            label="Segundo Pago"
+            label={t('tickets.detail.secondPrize')}
             type="number"
             value={formData.secondPrize}
             onChange={handleChange('secondPrize')}
@@ -252,7 +254,7 @@ const PrizeEditModal: FC<PrizeEditModalProps> = memo(({
             fullWidth
           />
           <TextField
-            label="Tercer Pago"
+            label={t('tickets.detail.thirdPrize')}
             type="number"
             value={formData.thirdPrize}
             onChange={handleChange('thirdPrize')}
@@ -260,7 +262,7 @@ const PrizeEditModal: FC<PrizeEditModalProps> = memo(({
             fullWidth
           />
           <TextField
-            label="Dobles"
+            label={t('tickets.detail.doubles')}
             type="number"
             value={formData.doubles}
             onChange={handleChange('doubles')}
@@ -279,7 +281,7 @@ const PrizeEditModal: FC<PrizeEditModalProps> = memo(({
             textTransform: 'uppercase',
           }}
         >
-          Cancelar
+          {t('common.cancel')}
         </Button>
         <Button
           onClick={handleSave}
@@ -290,7 +292,7 @@ const PrizeEditModal: FC<PrizeEditModalProps> = memo(({
             textTransform: 'uppercase',
           }}
         >
-          Actualizar jugada
+          {t('tickets.detail.updatePlay')}
         </Button>
       </DialogActions>
     </Dialog>
@@ -378,6 +380,7 @@ PlayRow.displayName = 'PlayRow';
 // ============================================================================
 
 const TicketDetailPanel: FC<TicketDetailPanelProps> = memo(({ ticket, onClose }) => {
+  const { t } = useTranslation();
   // Modal state for prize editing
   const [prizeModalOpen, setPrizeModalOpen] = useState(false);
   const [selectedBetNumber, setSelectedBetNumber] = useState('');
@@ -388,7 +391,7 @@ const TicketDetailPanel: FC<TicketDetailPanelProps> = memo(({ ticket, onClose })
 
     const grouped = new Map<string, MappedTicketLine[]>();
     for (const line of ticket.lines) {
-      const drawName = line.drawName || 'Sin Sorteo';
+      const drawName = line.drawName || t('tickets.detail.noDraw');
       const existing = grouped.get(drawName) || [];
       grouped.set(drawName, [...existing, line]);
     }
@@ -468,13 +471,13 @@ const TicketDetailPanel: FC<TicketDetailPanelProps> = memo(({ ticket, onClose })
       {/* Info section */}
       <Box sx={PANEL_STYLES.infoSection}>
         <Typography sx={PANEL_STYLES.infoText}>
-          (Número Mágico: {ticket.numero.replace(/-/g, '').toUpperCase()})
+          ({t('tickets.detail.magicNumber')}: {ticket.numero.replace(/-/g, '').toUpperCase()})
         </Typography>
         <Typography sx={PANEL_STYLES.infoText}>
-          Fecha de primera jugada: {ticket.fecha}
+          {t('tickets.detail.firstPlayDate')}: {ticket.fecha}
         </Typography>
         <Typography sx={PANEL_STYLES.infoText}>
-          Fecha de impresión: {ticket.fecha}
+          {t('tickets.detail.printDate')}: {ticket.fecha}
         </Typography>
       </Box>
 
@@ -484,30 +487,30 @@ const TicketDetailPanel: FC<TicketDetailPanelProps> = memo(({ ticket, onClose })
           <CancelIcon sx={{ fontSize: 16, color: '#e65100' }} />
           <ScheduleIcon sx={{ fontSize: 16, color: '#e65100' }} />
           <Typography sx={{ fontSize: '12px', color: '#e65100', fontWeight: 'bold' }}>
-            Cancelado fuera de tiempo
+            {t('tickets.monitoring.cancelledOutOfTime')}
           </Typography>
         </Box>
       )}
 
       {/* Legend */}
       <Box sx={{ padding: '2px 15px' }}>
-        <Typography sx={PANEL_STYLES.legendTitle}>Leyenda</Typography>
+        <Typography sx={PANEL_STYLES.legendTitle}>{t('tickets.detail.legend')}</Typography>
         <Box sx={PANEL_STYLES.legendContainer}>
           <Box sx={{ ...PANEL_STYLES.legendItem, backgroundColor: LEGEND_COLORS.ganadora }}>
-            Ganadora
+            {t('tickets.detail.winningPlay')}
           </Box>
           <Box sx={{ ...PANEL_STYLES.legendItem, backgroundColor: LEGEND_COLORS.perdedora }}>
-            Perdedora
+            {t('tickets.detail.losingPlay')}
           </Box>
           <Box sx={{ ...PANEL_STYLES.legendItem, backgroundColor: LEGEND_COLORS.pendiente }}>
-            Pendiente
+            {t('ticketStatus.pending')}
           </Box>
         </Box>
       </Box>
 
       {/* Totals line */}
       <Typography sx={PANEL_STYLES.totalsLine}>
-        Jugadas (Monto: {formatCurrency(totalMonto)}) (Pendientes de pago: {formatCurrency(totalPendiente)}) (Total de premios: {formatCurrency(totalPremios)}){ticket.descuento > 0 && ` (Descuento: ${formatCurrency(ticket.descuento)})`}
+        {t('common.plays')} ({t('common.amount')}: {formatCurrency(totalMonto)}) ({t('tickets.detail.pendingPayment')}: {formatCurrency(totalPendiente)}) ({t('tickets.detail.totalPrizes')}: {formatCurrency(totalPremios)}){ticket.descuento > 0 && ` (${t('tickets.detail.discount')}: ${formatCurrency(ticket.descuento)})`}
       </Typography>
 
       {/* Plays grouped by lottery/draw */}
@@ -520,11 +523,11 @@ const TicketDetailPanel: FC<TicketDetailPanelProps> = memo(({ ticket, onClose })
             {/* Table header - only show for first lottery */}
             {Array.from(linesByDraw.keys())[0] === drawName && (
               <Box sx={PANEL_STYLES.tableHeader}>
-                <Typography sx={PANEL_STYLES.tableHeaderCell}>Jugada</Typography>
-                <Typography sx={PANEL_STYLES.tableHeaderCell}>Tipo de jugada</Typography>
-                <Typography sx={PANEL_STYLES.tableHeaderCell}>Monto</Typography>
-                <Typography sx={PANEL_STYLES.tableHeaderCell}>Premio</Typography>
-                <Typography sx={PANEL_STYLES.tableHeaderCell}>Pagado</Typography>
+                <Typography sx={PANEL_STYLES.tableHeaderCell}>{t('common.play')}</Typography>
+                <Typography sx={PANEL_STYLES.tableHeaderCell}>{t('tickets.plays.playType')}</Typography>
+                <Typography sx={PANEL_STYLES.tableHeaderCell}>{t('common.amount')}</Typography>
+                <Typography sx={PANEL_STYLES.tableHeaderCell}>{t('common.prize')}</Typography>
+                <Typography sx={PANEL_STYLES.tableHeaderCell}>{t('ticketStatus.paid')}</Typography>
               </Box>
             )}
 
@@ -549,15 +552,15 @@ const TicketDetailPanel: FC<TicketDetailPanelProps> = memo(({ ticket, onClose })
         // Fallback when no lines data - show ticket info
         <Box sx={{ padding: '20px 15px', textAlign: 'center' }}>
           <Typography sx={{ fontSize: '14px', color: 'rgb(102, 97, 91)', mb: 2 }}>
-            Información del Ticket
+            {t('tickets.detail.ticketInfo')}
           </Typography>
           <Box sx={{ display: 'flex', justifyContent: 'space-around', mb: 2 }}>
             <Box>
-              <Typography sx={{ fontSize: '12px', color: 'rgb(102, 97, 91)' }}>Usuario</Typography>
+              <Typography sx={{ fontSize: '12px', color: 'rgb(102, 97, 91)' }}>{t('common.user')}</Typography>
               <Typography sx={{ fontSize: '14px', fontWeight: 500 }}>{ticket.usuario}</Typography>
             </Box>
             <Box>
-              <Typography sx={{ fontSize: '12px', color: 'rgb(102, 97, 91)' }}>Estado</Typography>
+              <Typography sx={{ fontSize: '12px', color: 'rgb(102, 97, 91)' }}>{t('common.status')}</Typography>
               <Typography
                 sx={{
                   fontSize: '14px',
@@ -568,19 +571,23 @@ const TicketDetailPanel: FC<TicketDetailPanelProps> = memo(({ ticket, onClose })
                     ticket.estado === 'Perdedor' ? 'rgb(255, 152, 146)' : 'inherit',
                 }}
               >
-                {ticket.estado}
+                {ticket.estado === 'Ganador' ? t('ticketStatus.winner') :
+                 ticket.estado === 'Cancelado' ? t('ticketStatus.cancelled') :
+                 ticket.estado === 'Perdedor' ? t('ticketStatus.loser') :
+                 ticket.estado === 'Pendiente' ? t('ticketStatus.pending') :
+                 ticket.estado === 'Pagado' ? t('ticketStatus.paid') : ticket.estado}
               </Typography>
             </Box>
           </Box>
           <Box sx={{ display: 'flex', justifyContent: 'space-around' }}>
             <Box>
-              <Typography sx={{ fontSize: '12px', color: 'rgb(102, 97, 91)' }}>Monto</Typography>
+              <Typography sx={{ fontSize: '12px', color: 'rgb(102, 97, 91)' }}>{t('common.amount')}</Typography>
               <Typography sx={{ fontSize: '14px', fontWeight: 500, color: 'primary.main' }}>
                 {formatCurrency(ticket.monto)}
               </Typography>
             </Box>
             <Box>
-              <Typography sx={{ fontSize: '12px', color: 'rgb(102, 97, 91)' }}>Premio</Typography>
+              <Typography sx={{ fontSize: '12px', color: 'rgb(102, 97, 91)' }}>{t('common.prize')}</Typography>
               <Typography
                 sx={{
                   fontSize: '14px',
@@ -595,7 +602,7 @@ const TicketDetailPanel: FC<TicketDetailPanelProps> = memo(({ ticket, onClose })
           {ticket.fechaCancelacion && (
             <Box sx={{ mt: 2 }}>
               <Typography sx={{ fontSize: '12px', color: 'rgb(102, 97, 91)' }}>
-                Fecha de Cancelación
+                {t('tickets.anomalies.cancellationDate')}
               </Typography>
               <Typography sx={{ fontSize: '14px', color: 'error.main' }}>
                 {ticket.fechaCancelacion}

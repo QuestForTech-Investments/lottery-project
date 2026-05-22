@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using LotteryApi.DTOs;
+using LotteryApi.Exceptions;
+using LotteryApi.Helpers;
 using LotteryApi.Models;
 using LotteryApi.Repositories;
 using LotteryApi.Services;
@@ -76,7 +78,7 @@ public class PermissionsController : ControllerBase
 
         if (permission == null)
         {
-            return NotFound(new { message = $"Permission with ID {id} not found" });
+            return ApiErrorResult.NotFound(ErrorCodes.NotFound, $"Permission with ID {id} not found");
         }
 
         var dto = new PermissionDto
@@ -106,7 +108,7 @@ public class PermissionsController : ControllerBase
 
         if (permission == null)
         {
-            return NotFound(new { message = $"Permission with code '{permissionCode}' not found" });
+            return ApiErrorResult.NotFound(ErrorCodes.NotFound, $"Permission with code '{permissionCode}' not found");
         }
 
         var dto = new PermissionDto
@@ -239,7 +241,7 @@ public class PermissionsController : ControllerBase
         // Check if permission code already exists
         if (await _permissionRepository.PermissionCodeExistsAsync(dto.PermissionCode))
         {
-            return BadRequest(new { message = $"Permission code '{dto.PermissionCode}' already exists" });
+            return ApiErrorResult.BadRequest(ErrorCodes.PermissionCodeExists, $"Permission code '{dto.PermissionCode}' already exists");
         }
 
         var permission = new Permission
@@ -284,13 +286,13 @@ public class PermissionsController : ControllerBase
 
         if (permission == null)
         {
-            return NotFound(new { message = $"Permission with ID {id} not found" });
+            return ApiErrorResult.NotFound(ErrorCodes.NotFound, $"Permission with ID {id} not found");
         }
 
         // Check if permission code already exists (excluding current permission)
         if (await _permissionRepository.PermissionCodeExistsAsync(dto.PermissionCode, id))
         {
-            return BadRequest(new { message = $"Permission code '{dto.PermissionCode}' already exists" });
+            return ApiErrorResult.BadRequest(ErrorCodes.PermissionCodeExists, $"Permission code '{dto.PermissionCode}' already exists");
         }
 
         permission.PermissionCode = dto.PermissionCode;
@@ -318,7 +320,7 @@ public class PermissionsController : ControllerBase
 
         if (permission == null)
         {
-            return NotFound(new { message = $"Permission with ID {id} not found" });
+            return ApiErrorResult.NotFound(ErrorCodes.NotFound, $"Permission with ID {id} not found");
         }
 
         // Soft delete by setting IsActive to false
@@ -342,7 +344,7 @@ public class PermissionsController : ControllerBase
 
         if (permission == null)
         {
-            return NotFound(new { message = $"Permission with ID {id} not found" });
+            return ApiErrorResult.NotFound(ErrorCodes.NotFound, $"Permission with ID {id} not found");
         }
 
         await _permissionRepository.DeleteAsync(permission);

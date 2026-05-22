@@ -108,10 +108,9 @@ function Sidebar({ collapsed, hovered, onHoverChange, isMobile = false, mobileOp
   }, [location.pathname]);
 
   const getMenuLabel = useCallback((item: MenuItem): string => {
-    if (item.id === 'inicio') {
-      return t('menu.inicio');
-    }
-    return item.label;
+    // `label` is an i18n key; t() returns the key itself if missing so the menu
+    // never goes blank. Older items not yet migrated should still render.
+    return t(item.label, { defaultValue: item.label });
   }, [t]);
 
   // Handlesr hover del sidebar
@@ -322,7 +321,7 @@ function Sidebar({ collapsed, hovered, onHoverChange, isMobile = false, mobileOp
                                 </Typography>
                               )}
                               <ListItemText
-                                primary={subitem.label}
+                                primary={t(subitem.label, { defaultValue: subitem.label })}
                                 sx={{
                                   '& .MuiListItemText-primary': {
                                     fontSize: '10.5px',
@@ -612,7 +611,7 @@ function Sidebar({ collapsed, hovered, onHoverChange, isMobile = false, mobileOp
                               </Typography>
                             )}
                             <ListItemText
-                              primary={subitem.label}
+                              primary={t(subitem.label, { defaultValue: subitem.label })}
                               sx={{
                                 '& .MuiListItemText-primary': {
                                   fontSize: '10.5px',
@@ -650,7 +649,7 @@ function Sidebar({ collapsed, hovered, onHoverChange, isMobile = false, mobileOp
                     const subActive = isSubActive(subitem);
                     const isSubHovered = hoveredItem === subitem.id;
                     return (
-                      <Tooltip key={subitem.id} title={subitem.label} placement="right">
+                      <Tooltip key={subitem.id} title={t(subitem.label, { defaultValue: subitem.label })} placement="right">
                         <IconButton
                           onClick={() => handleSubmenuClick(subitem)}
                           onMouseEnter={() => handleItemHover(subitem.id)}
@@ -671,7 +670,7 @@ function Sidebar({ collapsed, hovered, onHoverChange, isMobile = false, mobileOp
                             }
                           }}
                         >
-                          {subitem.shortcut || subitem.label.charAt(0).toUpperCase()}
+                          {subitem.shortcut || t(subitem.label, { defaultValue: subitem.label }).charAt(0).toUpperCase()}
                         </IconButton>
                       </Tooltip>
                     );

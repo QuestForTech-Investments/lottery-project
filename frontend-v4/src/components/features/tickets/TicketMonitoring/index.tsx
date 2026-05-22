@@ -6,6 +6,7 @@
  */
 
 import { useMemo, type FC } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Paper,
@@ -24,8 +25,6 @@ import {
   CircularProgress,
   Alert,
 } from '@mui/material';
-
-import { TICKET_TABLE_HEADERS } from '@constants/index';
 import { useTicketMonitoring } from './hooks/useTicketMonitoring';
 import { STYLES, COLUMN_WIDTHS, COMPACT_INPUT_STYLE, IOSSwitch } from './constants';
 import { TicketRow, TicketDetailPanel, StatusToggle, TotalsPanel } from './components';
@@ -38,28 +37,28 @@ import type { MappedTicket } from '@services/ticketService';
 // Constants
 // ============================================================================
 
-const TABLE_HEADERS = TICKET_TABLE_HEADERS;
-
-// Map header label → sort key (on MappedTicket). "" (the icons column) and "Acciones"
-// have no sort. "Fecha" sorts by raw timestamp so the user gets chronological order
+// Each table column: an i18n key + the sort field on MappedTicket. `null` sort
+// means the column isn't sortable (the icons column and "Acciones").
+// "Fecha" sorts by raw timestamp so the user gets chronological order
 // instead of alphabetical formatted strings.
-const HEADER_SORT_KEY: Record<string, keyof MappedTicket | 'rawCreatedAt' | null> = {
-  'Número': 'numero',
-  '': null,
-  'Fecha': 'rawCreatedAt',
-  'Usuario': 'usuario',
-  'Monto': 'monto',
-  'Premio': 'premio',
-  'Fecha de cancelación': 'fechaCancelacion',
-  'Estado': 'estado',
-  'Acciones': null,
-};
+const TABLE_COLUMNS: Array<{ key: string; sortKey: keyof MappedTicket | 'rawCreatedAt' | null }> = [
+  { key: 'common.number', sortKey: 'numero' },
+  { key: '', sortKey: null },
+  { key: 'common.date', sortKey: 'rawCreatedAt' },
+  { key: 'common.user', sortKey: 'usuario' },
+  { key: 'common.amount', sortKey: 'monto' },
+  { key: 'common.prize', sortKey: 'premio' },
+  { key: 'tickets.anomalies.cancellationDate', sortKey: 'fechaCancelacion' },
+  { key: 'common.status', sortKey: 'estado' },
+  { key: 'common.actions', sortKey: null },
+];
 
 // ============================================================================
 // Main Component
 // ============================================================================
 
 const TicketMonitoring: FC = () => {
+  const { t } = useTranslation();
   const {
     fecha,
     banca,
@@ -117,7 +116,7 @@ const TicketMonitoring: FC = () => {
           <TableCell colSpan={8} align="center" sx={STYLES.loadingCell}>
             <CircularProgress size={40} />
             <Typography variant="body2" sx={{ mt: 2, color: 'text.secondary' }}>
-              Cargando tickets...
+              {t('common.loading')}
             </Typography>
           </TableCell>
         </TableRow>
@@ -128,7 +127,7 @@ const TicketMonitoring: FC = () => {
       return (
         <TableRow>
           <TableCell colSpan={8} align="center" sx={STYLES.emptyCell}>
-            Mostrando 0 entradas
+            {t('common.showingEntries', { shown: 0, total: 0 })}
           </TableCell>
         </TableRow>
       );
@@ -145,13 +144,13 @@ const TicketMonitoring: FC = () => {
         onCancel={handleCancelTicket}
       />
     ));
-  }, [isLoading, sortedTickets, selectedTicket?.id, handleRowClick, handlePrintTicket, handleSendTicket, handleCancelTicket]);
+  }, [isLoading, sortedTickets, selectedTicket?.id, handleRowClick, handlePrintTicket, handleSendTicket, handleCancelTicket, t]);
 
   return (
     <Paper elevation={3} sx={{ minHeight: 'calc(100vh - 96px)' }}>
       <Box sx={{ p: 2 }}>
         <Typography variant="h5" align="center" sx={STYLES.title}>
-          Monitor de tickets
+          {t('tickets.monitoring.title')}
         </Typography>
 
         {error && (
@@ -164,7 +163,7 @@ const TicketMonitoring: FC = () => {
         <Box sx={STYLES.filtersRow}>
           <Box>
             <Typography variant="caption" sx={STYLES.filterLabel}>
-              Fecha
+              {t('common.date')}
             </Typography>
             <TextField
               type="date"
@@ -177,7 +176,7 @@ const TicketMonitoring: FC = () => {
           </Box>
           <Box>
             <Typography variant="caption" sx={STYLES.filterLabel}>
-              Banca
+              {t('common.bettingPool')}
             </Typography>
             <Autocomplete
               options={bancas}
@@ -193,7 +192,7 @@ const TicketMonitoring: FC = () => {
           </Box>
           <Box>
             <Typography variant="caption" sx={STYLES.filterLabel}>
-              Sorteo
+              {t('common.draw')}
             </Typography>
             <Autocomplete
               options={loterias}
@@ -211,7 +210,7 @@ const TicketMonitoring: FC = () => {
             <>
               <Box>
                 <Typography variant="caption" sx={STYLES.filterLabel}>
-                  Tipo jugada
+                  {t('tickets.plays.playType')}
                 </Typography>
                 <Autocomplete
                   options={tiposJugada}
@@ -227,7 +226,7 @@ const TicketMonitoring: FC = () => {
               </Box>
               <Box>
                 <Typography variant="caption" sx={STYLES.filterLabel}>
-                  Número
+                  {t('common.number')}
                 </Typography>
                 <TextField
                   value={numero}
@@ -245,11 +244,11 @@ const TicketMonitoring: FC = () => {
         <Box sx={{ ...STYLES.filtersRow, mb: 1, alignItems: 'center' }}>
           <Box sx={{ width: 220 }}>
             <Typography variant="caption" sx={STYLES.filterLabel}>
-              Zonas
+              {t('common.zones')}
             </Typography>
             <MultiSelectSearch
               label=""
-              selectAllLabel="Todas"
+              selectAllLabel={t('common.all')}
               options={zonasList.map((z) => ({ id: z.id, label: z.name }))}
               selectedIds={zonas}
               onChange={handleZonasChange}
@@ -263,18 +262,18 @@ const TicketMonitoring: FC = () => {
               disabled={isLoading || isInitialLoad}
               sx={{ ...STYLES.filterButton, py: 0.6, fontSize: '0.8rem' }}
             >
-              {isLoading ? 'Cargando...' : 'Filtrar'}
+              {isLoading ? t('common.loading') : t('common.filter')}
             </Button>
           </Box>
           <Box sx={{ display: 'flex', alignItems: 'center', ml: '42px', pt: 2.5 }}>
             <FormControlLabel
               control={<IOSSwitch checked={pendientesPago} onChange={handlePendientesPagoChange} />}
-              label={<Typography variant="body2" sx={{ ml: 1 }}>Pend. pago</Typography>}
+              label={<Typography variant="body2" sx={{ ml: 1 }}>{t('tickets.monitoring.pendingPayment')}</Typography>}
               sx={{ mr: 1 }}
             />
             <FormControlLabel
               control={<IOSSwitch checked={soloGanadores} onChange={handleSoloGanadoresChange} />}
-              label={<Typography variant="body2" sx={{ ml: 1 }}>Ganadores</Typography>}
+              label={<Typography variant="body2" sx={{ ml: 1 }}>{t('ticketStatus.winner')}</Typography>}
               sx={{ ml: '5px' }}
             />
           </Box>
@@ -297,7 +296,7 @@ const TicketMonitoring: FC = () => {
           <Box sx={{ flexShrink: 0 }}>
             {/* Quick Search */}
             <TextField
-              placeholder="Filtro rapido"
+              placeholder={t('common.filterQuick')}
               value={filtroRapido}
               onChange={handleFiltroRapidoChange}
               size="small"
@@ -310,23 +309,24 @@ const TicketMonitoring: FC = () => {
                 <Table size="small" stickyHeader sx={{ tableLayout: 'fixed', width: '100%' }}>
                   <TableHead sx={STYLES.tableHeader}>
                     <TableRow>
-                      {TABLE_HEADERS.map((h) => {
-                        const sortKey = HEADER_SORT_KEY[h];
+                      {TABLE_COLUMNS.map((col, idx) => {
+                        const label = col.key ? t(col.key) : '';
+                        const isActions = col.key === 'common.actions';
                         return (
                           <TableCell
-                            key={h}
-                            align={h === 'Acciones' ? 'center' : 'left'}
+                            key={col.key || `col-${idx}`}
+                            align={isActions ? 'center' : 'left'}
                             sx={{
                               ...STYLES.tableHeaderCell,
-                              width: COLUMN_WIDTHS[h] || 'auto',
+                              width: COLUMN_WIDTHS[col.key] || 'auto',
                             }}
                           >
-                            {sortKey ? (
-                              <TableSortLabel {...getSortProps(sortKey as string)}>
-                                {h}
+                            {col.sortKey ? (
+                              <TableSortLabel {...getSortProps(col.sortKey as string)}>
+                                {label}
                               </TableSortLabel>
                             ) : (
-                              h
+                              label
                             )}
                           </TableCell>
                         );

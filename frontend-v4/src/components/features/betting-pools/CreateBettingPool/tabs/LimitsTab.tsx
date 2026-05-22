@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   IconButton, Button, CircularProgress, Alert, Snackbar, Dialog, DialogTitle,
@@ -8,6 +9,7 @@ import {
 import DeleteIcon from '@mui/icons-material/Delete';
 import limitService, { handleLimitError } from '@/services/limitService';
 import { LimitRule, LimitType, LimitTypeLabels, LimitAmountItem } from '@/types/limits';
+import { getActiveLocale } from '@/utils/formatters';
 
 // Format raw bet number (no dashes) back to display format based on game type
 const formatBetNumberDisplay = (pattern: string | undefined, gameTypeName: string | undefined): string => {
@@ -29,10 +31,19 @@ interface LimitsTabProps {
 }
 
 const ACCENT = '#6366f1';
-const DAY_LABELS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 const DAY_BITMASKS = [1, 2, 4, 8, 16, 32, 64];
 
 const LimitsTab: React.FC<LimitsTabProps> = ({ bettingPoolId, bettingPoolName }) => {
+  const { t } = useTranslation();
+  const DAY_LABELS = [
+    t('createBettingPool.limits.dayLunes'),
+    t('createBettingPool.limits.dayMartes'),
+    t('createBettingPool.limits.dayMiercoles'),
+    t('createBettingPool.limits.dayJueves'),
+    t('createBettingPool.limits.dayViernes'),
+    t('createBettingPool.limits.daySabado'),
+    t('createBettingPool.limits.dayDomingo'),
+  ];
   const [limits, setLimits] = useState<LimitRule[]>([]);
   const [byNumberLimits, setByNumberLimits] = useState<LimitRule[]>([]);
   const [loading, setLoading] = useState(true);
@@ -100,26 +111,26 @@ const LimitsTab: React.FC<LimitsTabProps> = ({ bettingPoolId, bettingPoolName })
       } else {
         await limitService.deleteLimit(deleteDialog.ruleId);
       }
-      setSnackbar({ open: true, message: 'Eliminado correctamente', severity: 'success' });
+      setSnackbar({ open: true, message: t('createBettingPool.limits.deletedSuccessfully'), severity: 'success' });
       loadLimits();
     } catch (err) {
       setSnackbar({ open: true, message: handleLimitError(err, 'eliminar'), severity: 'error' });
     } finally {
       setDeleteDialog({ open: false });
     }
-  }, [deleteDialog, loadLimits]);
+  }, [deleteDialog, loadLimits, t]);
 
   const handleDeleteAllForDraw = useCallback(async (drawId: number) => {
     try {
       const lt = currentType === 'banca' ? LimitType.GeneralForBettingPool : LimitType.LocalForBettingPool;
       await limitService.deleteByDraw(drawId, lt, undefined, bettingPoolId);
       setLimits(prev => prev.filter(l => l.drawId !== drawId));
-      setSnackbar({ open: true, message: 'Límites del sorteo eliminados', severity: 'success' });
+      setSnackbar({ open: true, message: t('createBettingPool.limits.drawLimitsDeleted'), severity: 'success' });
       loadLimits();
     } catch (err) {
       setSnackbar({ open: true, message: handleLimitError(err, 'eliminar'), severity: 'error' });
     }
-  }, [currentType, bettingPoolId, loadLimits]);
+  }, [currentType, bettingPoolId, loadLimits, t]);
 
   const handleUpdateAmount = useCallback(async (ruleId: number, gameTypeId: number, newAmount: number) => {
     const key = `${ruleId}-${gameTypeId}`;
@@ -130,11 +141,11 @@ const LimitsTab: React.FC<LimitsTabProps> = ({ bettingPoolId, bettingPoolName })
         l.limitRuleId !== ruleId ? l : { ...l, amounts: l.amounts?.map(a => a.gameTypeId === gameTypeId ? { ...a, amount: newAmount } : a) };
       setLimits(prev => prev.map(updateRule));
       setByNumberLimits(prev => prev.map(updateRule));
-      setSnackbar({ open: true, message: 'Monto actualizado', severity: 'success' });
+      setSnackbar({ open: true, message: t('createBettingPool.limits.amountUpdated'), severity: 'success' });
     } catch (err) {
       setSnackbar({ open: true, message: handleLimitError(err, 'actualizar'), severity: 'error' });
     } finally { setUpdatingAmount(null); }
-  }, []);
+  }, [t]);
 
   const handleSwitchType = useCallback(async (newType: 'banca' | 'local') => {
     if (limits.length > 0) {
@@ -145,18 +156,18 @@ const LimitsTab: React.FC<LimitsTabProps> = ({ bettingPoolId, bettingPoolName })
         }
         setLimits([]);
         setCurrentType(newType);
-        setSnackbar({ open: true, message: `Cambiado a ${newType === 'banca' ? 'Limite Banca' : 'Limite Local Banca'}. Cree los nuevos límites.`, severity: 'success' });
+        setSnackbar({ open: true, message: t('createBettingPool.limits.switchedTypeSuccess', { type: newType === 'banca' ? t('createBettingPool.limits.bettingPoolLimit') : t('createBettingPool.limits.localBettingPoolLimit') }), severity: 'success' });
       } catch (err) {
         setSnackbar({ open: true, message: handleLimitError(err, 'cambiar tipo'), severity: 'error' });
       }
     } else {
       setCurrentType(newType);
     }
-  }, [limits]);
+  }, [limits, t]);
 
   const formatDate = (d?: string): string => {
     if (!d) return '';
-    try { return new Date(d).toLocaleDateString('es-DO', { day: '2-digit', month: '2-digit', year: 'numeric' }); }
+    try { return new Date(d).toLocaleDateString(getActiveLocale(), { day: '2-digit', month: '2-digit', year: 'numeric' }); }
     catch { return d; }
   };
 
@@ -171,12 +182,12 @@ const LimitsTab: React.FC<LimitsTabProps> = ({ bettingPoolId, bettingPoolName })
   return (
     <Box sx={{ p: 2 }}>
       <Typography variant="h6" sx={{ mb: 2, textAlign: 'center', color: '#2c2c2c' }}>
-        Límites de {bettingPoolName || `Banca #${bettingPoolId}`}
+        {t('createBettingPool.limits.titleWithPool', { name: bettingPoolName || t('createBettingPool.limits.fallbackPoolName', { id: bettingPoolId }) })}
       </Typography>
 
       {/* Limit type selector */}
       <Box sx={{ mb: 2, p: 2, bgcolor: '#f8f9fa', borderRadius: 1 }}>
-        <Typography variant="subtitle2" sx={{ mb: 1, color: '#666' }}>Tipo de límite asignado</Typography>
+        <Typography variant="subtitle2" sx={{ mb: 1, color: '#666' }}>{t('createBettingPool.limits.assignedTypeLabel')}</Typography>
         <RadioGroup
           row
           value={currentType === 'none' ? '' : currentType}
@@ -189,26 +200,26 @@ const LimitsTab: React.FC<LimitsTabProps> = ({ bettingPoolId, bettingPoolName })
             }
           }}
         >
-          <FormControlLabel value="banca" control={<Radio size="small" sx={{ '&.Mui-checked': { color: ACCENT } }} />} label="Limite Banca" />
-          <FormControlLabel value="local" control={<Radio size="small" sx={{ '&.Mui-checked': { color: ACCENT } }} />} label="Limite Local Banca" />
+          <FormControlLabel value="banca" control={<Radio size="small" sx={{ '&.Mui-checked': { color: ACCENT } }} />} label={t('createBettingPool.limits.bettingPoolLimit')} />
+          <FormControlLabel value="local" control={<Radio size="small" sx={{ '&.Mui-checked': { color: ACCENT } }} />} label={t('createBettingPool.limits.localBettingPoolLimit')} />
         </RadioGroup>
       </Box>
 
       {currentType === 'none' && (
         <Alert severity="info" sx={{ mb: 2 }}>
-          Seleccione un tipo de límite para esta banca. No puede tener ambos tipos.
+          {t('createBettingPool.limits.selectTypeInfo')}
         </Alert>
       )}
 
       {limits.length === 0 && byNumberLimits.length === 0 && currentType !== 'none' && (
         <Alert severity="info">
-          No hay límites configurados. Cree límites desde la sección de Límites.
+          {t('createBettingPool.limits.noLimitsConfigured')}
         </Alert>
       )}
 
       {limits.length > 0 && draws.length === 0 && (
         <Box sx={{ bgcolor: 'white', borderRadius: '0 0 8px 8px', border: '1px solid #eee', p: 3, textAlign: 'center' }}>
-          <Typography sx={{ color: '#999' }}>No hay límites para este día</Typography>
+          <Typography sx={{ color: '#999' }}>{t('createBettingPool.limits.noLimitsForDay')}</Typography>
         </Box>
       )}
 
@@ -247,7 +258,7 @@ const LimitsTab: React.FC<LimitsTabProps> = ({ bettingPoolId, bettingPoolName })
               <Box sx={{ textAlign: 'right', px: 2, pt: 1 }}>
                 <Button size="small" onClick={() => handleDeleteAllForDraw(selectedDraw.id)}
                   sx={{ color: '#ef8157', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase' }}>
-                  Borrar todos
+                  {t('createBettingPool.limits.deleteAll')}
                 </Button>
               </Box>
 
@@ -255,9 +266,9 @@ const LimitsTab: React.FC<LimitsTabProps> = ({ bettingPoolId, bettingPoolName })
                 <Table size="small">
                   <TableHead>
                     <TableRow sx={{ '& th': { fontSize: '12px', fontWeight: 600, color: '#787878', bgcolor: '#f5f5f5' } }}>
-                      <TableCell>Tipo de jugada</TableCell>
-                      <TableCell>Monto</TableCell>
-                      <TableCell>Expiración</TableCell>
+                      <TableCell>{t('createBettingPool.limits.playType')}</TableCell>
+                      <TableCell>{t('createBettingPool.limits.amount')}</TableCell>
+                      <TableCell>{t('createBettingPool.limits.expiration')}</TableCell>
                       <TableCell align="right" width={50}></TableCell>
                     </TableRow>
                   </TableHead>
@@ -301,17 +312,17 @@ const LimitsTab: React.FC<LimitsTabProps> = ({ bettingPoolId, bettingPoolName })
               <Divider sx={{ my: 1 }} />
               <Box sx={{ px: 2, py: 1 }}>
                 <Typography variant="subtitle2" sx={{ color: ACCENT, fontWeight: 600, fontSize: '13px' }}>
-                  Límites por Número
+                  {t('createBettingPool.limits.byNumberLimitsTitle')}
                 </Typography>
               </Box>
               <TableContainer>
                 <Table size="small">
                   <TableHead>
                     <TableRow sx={{ '& th': { fontSize: '12px', fontWeight: 600, color: '#787878', bgcolor: '#f5f5f5' } }}>
-                      <TableCell>Tipo de jugada</TableCell>
-                      <TableCell>Numero</TableCell>
-                      <TableCell>Monto</TableCell>
-                      <TableCell>Expiración</TableCell>
+                      <TableCell>{t('createBettingPool.limits.playType')}</TableCell>
+                      <TableCell>{t('createBettingPool.limits.betNumber')}</TableCell>
+                      <TableCell>{t('createBettingPool.limits.amount')}</TableCell>
+                      <TableCell>{t('createBettingPool.limits.expiration')}</TableCell>
                       <TableCell align="right" width={50}></TableCell>
                     </TableRow>
                   </TableHead>
@@ -356,27 +367,27 @@ const LimitsTab: React.FC<LimitsTabProps> = ({ bettingPoolId, bettingPoolName })
 
       {/* Delete dialog */}
       <Dialog open={deleteDialog.open} onClose={() => setDeleteDialog({ open: false })}>
-        <DialogTitle>Confirmar eliminación</DialogTitle>
-        <DialogContent><DialogContentText>¿Está seguro de que desea eliminar este límite?</DialogContentText></DialogContent>
+        <DialogTitle>{t('createBettingPool.limits.confirmDeleteTitle')}</DialogTitle>
+        <DialogContent><DialogContentText>{t('createBettingPool.limits.confirmDeleteMessage')}</DialogContentText></DialogContent>
         <DialogActions>
-          <Button onClick={() => setDeleteDialog({ open: false })} sx={{ color: '#666' }}>Cancelar</Button>
-          <Button onClick={handleDeleteAmount} sx={{ bgcolor: '#ef8157', color: 'white', '&:hover': { bgcolor: '#e06a3f' } }}>Eliminar</Button>
+          <Button onClick={() => setDeleteDialog({ open: false })} sx={{ color: '#666' }}>{t('createBettingPool.cancel')}</Button>
+          <Button onClick={handleDeleteAmount} sx={{ bgcolor: '#ef8157', color: 'white', '&:hover': { bgcolor: '#e06a3f' } }}>{t('createBettingPool.limits.delete')}</Button>
         </DialogActions>
       </Dialog>
 
       {/* Switch type confirmation dialog */}
       <Dialog open={switchDialog.open} onClose={() => setSwitchDialog({ open: false, targetType: 'banca' })}>
-        <DialogTitle>Cambiar tipo de límite</DialogTitle>
+        <DialogTitle>{t('createBettingPool.limits.switchTypeTitle')}</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            ¿Cambiar a {switchDialog.targetType === 'banca' ? 'Limite Banca' : 'Limite Local Banca'}? Se eliminarán todos los límites actuales de esta banca.
+            {t('createBettingPool.limits.switchTypeMessage', { type: switchDialog.targetType === 'banca' ? t('createBettingPool.limits.bettingPoolLimit') : t('createBettingPool.limits.localBettingPoolLimit') })}
           </DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setSwitchDialog({ open: false, targetType: 'banca' })} sx={{ color: '#666' }}>Cancelar</Button>
+          <Button onClick={() => setSwitchDialog({ open: false, targetType: 'banca' })} sx={{ color: '#666' }}>{t('createBettingPool.cancel')}</Button>
           <Button onClick={() => { handleSwitchType(switchDialog.targetType); setSwitchDialog({ open: false, targetType: 'banca' }); }}
             sx={{ bgcolor: ACCENT, color: 'white', '&:hover': { bgcolor: '#5558e6' } }}>
-            Confirmar
+            {t('createBettingPool.limits.confirm')}
           </Button>
         </DialogActions>
       </Dialog>

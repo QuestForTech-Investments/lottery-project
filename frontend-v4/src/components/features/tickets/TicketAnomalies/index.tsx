@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, memo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { formatCurrency } from '@/utils/formatCurrency';
 import { Box, Paper, Typography, TextField, Table, TableHead, TableBody, TableRow, TableCell, TableSortLabel, IconButton } from '@mui/material';
 import { Search } from '@mui/icons-material';
@@ -25,6 +26,7 @@ interface ResultChange {
 }
 
 const TicketAnomalies: React.FC = () => {
+  const { t } = useTranslation();
   const [fecha, setFecha] = useState<string>(getTodayDate());
   const [filtroTickets, setFiltroTickets] = useState<string>('');
   const [filtroCambios, setFiltroCambios] = useState<string>('');
@@ -90,18 +92,18 @@ const TicketAnomalies: React.FC = () => {
       <Paper elevation={3}>
         <Box sx={{ p: 3 }}>
           <Typography variant="h5" align="center" sx={{ color: '#1976d2', mb: 4, fontWeight: 400 }}>
-            Anomalías
+            {t('tickets.anomalies.title')}
           </Typography>
 
           <Box sx={{ mb: 4, maxWidth: 400 }}>
-            <TextField fullWidth type="date" label="Fecha" value={fecha} onChange={(e) => setFecha(e.target.value)}
+            <TextField fullWidth type="date" label={t('common.date')} value={fecha} onChange={(e) => setFecha(e.target.value)}
               InputLabelProps={{ shrink: true }} size="small" />
           </Box>
 
           {/* Tickets Section */}
-          <Typography variant="h6" align="center" sx={{ mb: 2 }}>Tickets</Typography>
+          <Typography variant="h6" align="center" sx={{ mb: 2 }}>{t('tickets.anomalies.ticketsSection')}</Typography>
           <Box sx={{ mb: 2, textAlign: 'right' }}>
-            <TextField placeholder="Filtrado rápido" value={filtroTickets} onChange={(e) => setFiltroTickets(e.target.value)}
+            <TextField placeholder={t('common.filterQuick')} value={filtroTickets} onChange={(e) => setFiltroTickets(e.target.value)}
               size="small" sx={{ maxWidth: 300 }} />
             <IconButton disabled color="primary"><Search /></IconButton>
           </Box>
@@ -109,13 +111,13 @@ const TicketAnomalies: React.FC = () => {
             <TableHead>
               <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
                 {([
-                  { key: 'numero', label: 'Número' },
-                  { key: 'fecha', label: 'Fecha' },
-                  { key: 'usuario', label: 'Usuario' },
-                  { key: 'monto', label: 'Monto' },
-                  { key: 'premio', label: 'Premio' },
-                  { key: 'fechaCancelacion', label: 'Fecha de cancelación' },
-                  { key: 'estado', label: 'Estado' },
+                  { key: 'numero', label: t('common.number') },
+                  { key: 'fecha', label: t('common.date') },
+                  { key: 'usuario', label: t('common.user') },
+                  { key: 'monto', label: t('common.amount') },
+                  { key: 'premio', label: t('common.prize') },
+                  { key: 'fechaCancelacion', label: t('tickets.anomalies.cancellationDate') },
+                  { key: 'estado', label: t('common.status') },
                 ] as const).map((col) => (
                   <TableCell key={col.key} sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.75rem' }}>
                     <TableSortLabel {...ticketsSortProps(col.key)}>{col.label}</TableSortLabel>
@@ -125,24 +127,26 @@ const TicketAnomalies: React.FC = () => {
             </TableHead>
             <TableBody>
               {sortedTickets.length === 0 ? (
-                <TableRow><TableCell colSpan={7} align="center" sx={{ py: 3, color: 'text.secondary' }}>Mostrando 0 entradas</TableCell></TableRow>
-              ) : sortedTickets.map((t, i) => (
+                <TableRow><TableCell colSpan={7} align="center" sx={{ py: 3, color: 'text.secondary' }}>{t('common.showingEntries', { shown: 0, total: 0 })}</TableCell></TableRow>
+              ) : sortedTickets.map((row, i) => (
                 <TableRow key={i} sx={{ '&:hover': { backgroundColor: 'action.hover' } }}>
-                  <TableCell>{t.numero}</TableCell><TableCell>{t.fecha}</TableCell><TableCell>{t.usuario}</TableCell>
-                  <TableCell>{t.monto}</TableCell><TableCell>{t.premio}</TableCell><TableCell>{t.fechaCancelacion}</TableCell>
-                  <TableCell sx={{ color: t.estado === 'Ganador' ? 'success.main' : t.estado === 'Cancelado' ? 'error.main' : 'inherit' }}>{t.estado}</TableCell>
+                  <TableCell>{row.numero}</TableCell><TableCell>{row.fecha}</TableCell><TableCell>{row.usuario}</TableCell>
+                  <TableCell>{row.monto}</TableCell><TableCell>{row.premio}</TableCell><TableCell>{row.fechaCancelacion}</TableCell>
+                  <TableCell sx={{ color: row.estado === 'Ganador' ? 'success.main' : row.estado === 'Cancelado' ? 'error.main' : 'inherit' }}>
+                    {row.estado === 'Ganador' ? t('ticketStatus.winner') : row.estado === 'Cancelado' ? t('ticketStatus.cancelled') : row.estado}
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
           <Typography variant="caption" sx={{ color: 'text.secondary', mb: 4, display: 'block' }}>
-            Mostrando {filteredTickets.length} de {ticketsData.length} entradas
+            {t('common.showingEntries', { shown: filteredTickets.length, total: ticketsData.length })}
           </Typography>
 
           {/* Cambios de resultados Section */}
-          <Typography variant="h6" align="center" sx={{ mb: 2, mt: 4 }}>Cambios de resultados</Typography>
+          <Typography variant="h6" align="center" sx={{ mb: 2, mt: 4 }}>{t('tickets.anomalies.resultsSection')}</Typography>
           <Box sx={{ mb: 2, textAlign: 'right' }}>
-            <TextField placeholder="Filtrado rápido" value={filtroCambios} onChange={(e) => setFiltroCambios(e.target.value)}
+            <TextField placeholder={t('common.filterQuick')} value={filtroCambios} onChange={(e) => setFiltroCambios(e.target.value)}
               size="small" sx={{ maxWidth: 300 }} />
             <IconButton disabled color="primary"><Search /></IconButton>
           </Box>
@@ -150,12 +154,12 @@ const TicketAnomalies: React.FC = () => {
             <TableHead>
               <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
                 {([
-                  { key: 'grupos', label: 'Grupos' },
-                  { key: 'sorteo', label: 'Sorteo' },
-                  { key: 'fecha', label: 'Fecha' },
-                  { key: 'cambios', label: 'Cambios' },
-                  { key: 'usuario', label: 'Usuario' },
-                  { key: 'ultimaActualizacion', label: 'Última actualización' },
+                  { key: 'grupos', label: t('tickets.anomalies.groups') },
+                  { key: 'sorteo', label: t('common.draw') },
+                  { key: 'fecha', label: t('common.date') },
+                  { key: 'cambios', label: t('tickets.anomalies.changes') },
+                  { key: 'usuario', label: t('common.user') },
+                  { key: 'ultimaActualizacion', label: t('tickets.anomalies.lastUpdate') },
                 ] as const).map((col) => (
                   <TableCell key={col.key} sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.75rem' }}>
                     <TableSortLabel {...cambiosSortProps(col.key)}>{col.label}</TableSortLabel>
@@ -165,7 +169,7 @@ const TicketAnomalies: React.FC = () => {
             </TableHead>
             <TableBody>
               {sortedCambios.length === 0 ? (
-                <TableRow><TableCell colSpan={6} align="center" sx={{ py: 3, color: 'text.secondary' }}>Mostrando 0 entradas</TableCell></TableRow>
+                <TableRow><TableCell colSpan={6} align="center" sx={{ py: 3, color: 'text.secondary' }}>{t('common.showingEntries', { shown: 0, total: 0 })}</TableCell></TableRow>
               ) : sortedCambios.map((c, i) => (
                 <TableRow key={i} sx={{ '&:hover': { backgroundColor: 'action.hover' } }}>
                   <TableCell>{c.grupos}</TableCell><TableCell>{c.sorteo}</TableCell><TableCell>{c.fecha}</TableCell>
@@ -176,7 +180,7 @@ const TicketAnomalies: React.FC = () => {
             </TableBody>
           </Table>
           <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-            Mostrando {filteredCambios.length} de {cambiosData.length} entradas
+            {t('common.showingEntries', { shown: filteredCambios.length, total: cambiosData.length })}
           </Typography>
         </Box>
       </Paper>

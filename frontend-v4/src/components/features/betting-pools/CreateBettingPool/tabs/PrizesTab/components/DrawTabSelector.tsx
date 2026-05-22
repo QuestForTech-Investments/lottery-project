@@ -1,4 +1,5 @@
 import React, { memo, useRef, useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Box, Chip, IconButton, TextField, InputAdornment, Typography } from '@mui/material';
 import { ChevronLeft, ChevronRight, Search, Clear } from '@mui/icons-material';
 import type { Draw } from '../types';
@@ -16,6 +17,7 @@ const DrawTabSelector: React.FC<DrawTabSelectorProps> = memo(({
   loadingDraws,
   onDrawSelect,
 }) => {
+  const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
   const [search, setSearch] = useState('');
 
@@ -44,7 +46,7 @@ const DrawTabSelector: React.FC<DrawTabSelectorProps> = memo(({
         {/* Search */}
         <TextField
           size="small"
-          placeholder="Buscar..."
+          placeholder={t('createBettingPool.prizes.searchPlaceholder')}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           sx={{
@@ -107,10 +109,10 @@ const DrawTabSelector: React.FC<DrawTabSelectorProps> = memo(({
           }}
         >
           {loadingDraws ? (
-            <Chip label="Cargando sorteos..." variant="outlined" size="small" />
+            <Chip label={t('createBettingPool.prizes.loadingDraws')} variant="outlined" size="small" />
           ) : filteredDraws.length === 0 ? (
             <Typography variant="body2" color="text.secondary" sx={{ py: 0.5, px: 1 }}>
-              Sin resultados
+              {t('createBettingPool.prizes.noResults')}
             </Typography>
           ) : (
             filteredDraws.map((draw) => (

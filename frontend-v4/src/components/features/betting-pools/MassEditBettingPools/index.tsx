@@ -17,6 +17,7 @@ import {
   Divider,
 } from '@mui/material';
 import { Save as SaveIcon } from '@mui/icons-material';
+import { useTranslation } from 'react-i18next';
 import api from '@services/api';
 
 // Local imports
@@ -35,6 +36,7 @@ import {
 // ============================================================================
 
 const MassEditBettingPools: React.FC = () => {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState<boolean>(false);
   const [saving, setSaving] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<number>(0);
@@ -155,7 +157,7 @@ const MassEditBettingPools: React.FC = () => {
     e.preventDefault();
 
     if (selectedBettingPools.length === 0) {
-      alert('Debe seleccionar al menos una banca');
+      alert(t('massEditBettingPools.alertSelectOnePool'));
       return;
     }
 
@@ -169,14 +171,14 @@ const MassEditBettingPools: React.FC = () => {
       };
 
       await api.patch('/betting-pools/mass-update', payload);
-      alert('Bancas actualizadas exitosamente');
+      alert(t('massEditBettingPools.successUpdated'));
     } catch (error) {
       console.error('Error updating:', error);
-      alert('Error al actualizar las bancas');
+      alert(t('massEditBettingPools.errorUpdating'));
     } finally {
       setSaving(false);
     }
-  }, [selectedBettingPools, selectedDraws, selectedZones, formData]);
+  }, [selectedBettingPools, selectedDraws, selectedZones, formData, t]);
 
   if (loading) {
     return (
@@ -191,7 +193,7 @@ const MassEditBettingPools: React.FC = () => {
       <Card>
         <CardContent>
           <Typography variant="h5" component="h1" gutterBottom>
-            Actualizar banca
+            {t('massEditBettingPools.title')}
           </Typography>
 
           <form onSubmit={handleSubmit}>
@@ -201,10 +203,10 @@ const MassEditBettingPools: React.FC = () => {
               onChange={handleTabChange}
               sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}
             >
-              <Tab label="Configuración" />
-              <Tab label="Pies de página" />
-              <Tab label="Premios & Comisiones" />
-              <Tab label="Sorteos" />
+              <Tab label={t('massEditBettingPools.tabs.configuration')} />
+              <Tab label={t('massEditBettingPools.tabs.footers')} />
+              <Tab label={t('massEditBettingPools.tabs.prizesCommissions')} />
+              <Tab label={t('massEditBettingPools.tabs.draws')} />
             </Tabs>
 
             {/* Tab Content */}
@@ -273,7 +275,7 @@ const MassEditBettingPools: React.FC = () => {
                 startIcon={saving ? <CircularProgress size={20} /> : <SaveIcon sx={{ fontSize: 20 }} />}
                 sx={{ minWidth: 200 }}
               >
-                {saving ? 'ACTUALIZANDO...' : 'ACTUALIZAR'}
+                {saving ? t('massEditBettingPools.updating') : t('massEditBettingPools.update')}
               </Button>
             </Box>
           </form>

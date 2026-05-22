@@ -12,6 +12,7 @@ import {
   IconButton,
 } from '@mui/material'
 import { Close, Schedule } from '@mui/icons-material'
+import { useTranslation } from 'react-i18next'
 import { useTimezone, getAllTimezones } from '@hooks/useTimezone'
 
 interface TimezoneModalProps {
@@ -20,6 +21,7 @@ interface TimezoneModalProps {
 }
 
 export default function TimezoneModal({ isOpen, onClose }: TimezoneModalProps) {
+  const { t } = useTranslation()
   const { timezone, setTimezone, getCurrentTime } = useTimezone()
   const [selectedTimezone, setSelectedTimezone] = useState(timezone)
   const [currentTimePreview, setCurrentTimePreview] = useState('')
@@ -95,7 +97,7 @@ export default function TimezoneModal({ isOpen, onClose }: TimezoneModalProps) {
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <Schedule sx={{ color: 'primary.main' }} />
           <Typography variant="h6" component="span">
-            Zona Horaria
+            {t('modals.timezone.title')}
           </Typography>
         </Box>
         <IconButton onClick={handleCancel} size="small" sx={{ color: 'text.secondary' }}>
@@ -105,7 +107,7 @@ export default function TimezoneModal({ isOpen, onClose }: TimezoneModalProps) {
 
       <DialogContent sx={{ pt: 3 }}>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-          Selecciona tu zona horaria para visualizar las fechas y horas correctamente.
+          {t('modals.timezone.description')}
         </Typography>
 
         <Autocomplete
@@ -129,8 +131,8 @@ export default function TimezoneModal({ isOpen, onClose }: TimezoneModalProps) {
           renderInput={(params) => (
             <TextField
               {...params}
-              label="Zona horaria"
-              placeholder="Buscar zona horaria..."
+              label={t('modals.timezone.label')}
+              placeholder={t('modals.timezone.searchPlaceholder')}
               variant="outlined"
               fullWidth
             />
@@ -162,7 +164,7 @@ export default function TimezoneModal({ isOpen, onClose }: TimezoneModalProps) {
           }}
         >
           <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-            Hora actual en {selectedTimezone.split('/').pop()?.replace(/_/g, ' ')}:
+            {t('modals.timezone.currentTimeIn', { place: selectedTimezone.split('/').pop()?.replace(/_/g, ' ') })}
           </Typography>
           <Typography variant="h4" sx={{ fontWeight: 600, color: 'text.primary', fontFamily: 'monospace' }}>
             {currentTimePreview}
@@ -182,7 +184,7 @@ export default function TimezoneModal({ isOpen, onClose }: TimezoneModalProps) {
             },
           }}
         >
-          Cancelar
+          {t('common.cancel')}
         </Button>
         <Button
           onClick={handleSave}
@@ -197,7 +199,7 @@ export default function TimezoneModal({ isOpen, onClose }: TimezoneModalProps) {
             },
           }}
         >
-          Guardar
+          {t('common.save')}
         </Button>
       </DialogActions>
     </Dialog>

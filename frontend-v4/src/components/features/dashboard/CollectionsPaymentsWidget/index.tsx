@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, type FormEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Card,
   CardContent,
@@ -40,6 +41,7 @@ type TransactionType = 'collection' | 'payment';
  * Replicated to match exact styling from original app
  */
 const CollectionsPaymentsWidget = (): React.ReactElement => {
+  const { t } = useTranslation();
   // State
   const [type, setType] = useState<TransactionType>('collection');
   const [bettingPoolCode, setBettingPoolCode] = useState<string>('');
@@ -66,7 +68,7 @@ const CollectionsPaymentsWidget = (): React.ReactElement => {
       setBettingPools(pools as BettingPool[]);
     } catch (err) {
       console.error('Error loading betting pools:', err);
-      setError('Error al cargar las bancas');
+      setError(t('dashboard.collectionsPayments.errorLoadPools'));
     }
   };
 
@@ -87,12 +89,12 @@ const CollectionsPaymentsWidget = (): React.ReactElement => {
 
     // Validation
     if (!bettingPoolCode || !amount) {
-      setError('Por favor complete los campos requeridos');
+      setError(t('dashboard.collectionsPayments.errorRequired'));
       return;
     }
 
     if (parseFloat(amount) <= 0) {
-      setError('El monto debe ser mayor a 0');
+      setError(t('dashboard.collectionsPayments.errorAmountPositive'));
       return;
     }
 
@@ -109,7 +111,9 @@ const CollectionsPaymentsWidget = (): React.ReactElement => {
         amount: parseFloat(amount)
       });
 
-      setSuccess(`${type === 'collection' ? 'Cobro' : 'Pago'} creado exitosamente`);
+      setSuccess(type === 'collection'
+        ? t('dashboard.collectionsPayments.collectionCreated')
+        : t('dashboard.collectionsPayments.paymentCreated'));
 
       // Reset form
       setBettingPoolCode('');
@@ -120,7 +124,7 @@ const CollectionsPaymentsWidget = (): React.ReactElement => {
       setTimeout(() => setSuccess(null), 5000);
     } catch (err: unknown) {
       console.error('Error creating transaction:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Error al crear la transacción';
+      const errorMessage = err instanceof Error ? err.message : t('dashboard.collectionsPayments.errorCreate');
       setError(errorMessage);
     } finally {
       setLoading(false);
@@ -147,7 +151,7 @@ const CollectionsPaymentsWidget = (): React.ReactElement => {
             mb: 2
           }}
         >
-          Cobros & pagos
+          {t('dashboard.collectionsPayments.title')}
         </Typography>
 
         {/* Type selector - matching original style */}
@@ -171,7 +175,7 @@ const CollectionsPaymentsWidget = (): React.ReactElement => {
               }
             }}
           >
-            COBRO
+            {t('dashboard.collectionsPayments.collection')}
           </Button>
           <Button
             onClick={() => handleTypeChange('payment')}
@@ -194,7 +198,7 @@ const CollectionsPaymentsWidget = (): React.ReactElement => {
               }
             }}
           >
-            PAGO
+            {t('dashboard.collectionsPayments.payment')}
           </Button>
         </ButtonGroup>
 
@@ -210,7 +214,7 @@ const CollectionsPaymentsWidget = (): React.ReactElement => {
                 mr: 2
               }}
             >
-              Código de banca
+              {t('dashboard.collectionsPayments.poolCode')}
             </Typography>
             <FormControl fullWidth size="small">
               <Select
@@ -227,7 +231,7 @@ const CollectionsPaymentsWidget = (): React.ReactElement => {
                 }}
               >
                 <MenuItem value="">
-                  <em>Seleccione</em>
+                  <em>{t('common.select')}</em>
                 </MenuItem>
                 {bettingPools.map((pool) => (
                   <MenuItem
@@ -252,7 +256,7 @@ const CollectionsPaymentsWidget = (): React.ReactElement => {
                 mr: 2
               }}
             >
-              Banco
+              {t('dashboard.collectionsPayments.bank')}
             </Typography>
             <Box sx={{ width: '100%' }}>
               <FormControl fullWidth size="small">
@@ -269,7 +273,7 @@ const CollectionsPaymentsWidget = (): React.ReactElement => {
                   }}
                 >
                   <MenuItem value="">
-                    <em>Seleccione</em>
+                    <em>{t('common.select')}</em>
                   </MenuItem>
                   {banks.map((bank) => (
                     <MenuItem
@@ -284,7 +288,7 @@ const CollectionsPaymentsWidget = (): React.ReactElement => {
               </FormControl>
               {banks.length === 0 && (
                 <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
-                  No hay bancos disponibles
+                  {t('dashboard.collectionsPayments.noBanks')}
                 </Typography>
               )}
             </Box>
@@ -300,7 +304,7 @@ const CollectionsPaymentsWidget = (): React.ReactElement => {
                 mr: 2
               }}
             >
-              Monto
+              {t('common.amount')}
             </Typography>
             <TextField
               fullWidth
@@ -366,7 +370,7 @@ const CollectionsPaymentsWidget = (): React.ReactElement => {
                 }
               }}
             >
-              {loading ? 'Creando...' : 'Crear'}
+              {loading ? t('dashboard.collectionsPayments.creating') : t('common.create')}
             </Button>
           </Box>
         </Box>

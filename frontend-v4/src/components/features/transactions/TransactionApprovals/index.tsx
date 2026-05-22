@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, type ChangeEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Card,
@@ -40,6 +41,7 @@ import {
   type TransactionGroupAPI
 } from '@services/transactionGroupService';
 import { useUserPermissions } from '@hooks/useUserPermissions';
+import { getActiveLocale } from '@/utils/formatters';
 
 type SortDirection = 'asc' | 'desc';
 type SortKey = 'groupNumber' | 'createdAt' | 'createdByName' | 'status' | 'entities' | null;
@@ -50,6 +52,7 @@ interface SortConfig {
 }
 
 const TransactionApprovals = (): React.ReactElement => {
+  const { t } = useTranslation();
   const { hasPermission } = useUserPermissions();
   const canApprove = hasPermission('TRANSACTION_APPROVE');
 
@@ -108,17 +111,17 @@ const TransactionApprovals = (): React.ReactElement => {
 
   const formatDate = (dateStr: string | null): string => {
     if (!dateStr) return '';
-    return parseUtc(dateStr).toLocaleDateString('es-DO', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    return parseUtc(dateStr).toLocaleDateString(getActiveLocale(), { day: '2-digit', month: '2-digit', year: 'numeric' });
   };
 
   const formatTime = (dateStr: string | null): string => {
     if (!dateStr) return '';
-    return parseUtc(dateStr).toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    return parseUtc(dateStr).toLocaleTimeString(getActiveLocale(), { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   };
 
   const getPendingAction = (status: string): string => {
-    if (status === 'PendienteAprobacion') return 'Creación';
-    if (status === 'PendienteEliminacion') return 'Eliminación';
+    if (status === 'PendienteAprobacion') return t('transactions.approvals.creation');
+    if (status === 'PendienteEliminacion') return t('transactions.approvals.deletion');
     return status;
   };
 
@@ -177,15 +180,15 @@ const TransactionApprovals = (): React.ReactElement => {
     try {
       setActionLoading(id);
       await approveTransactionGroup(id);
-      setSnackbar({ open: true, message: 'Transacción aprobada exitosamente', severity: 'success' });
+      setSnackbar({ open: true, message: t('transactions.approvals.approveSuccess'), severity: 'success' });
       await loadGroups(startDate, endDate);
     } catch (err) {
       console.error('Error approving group:', err);
-      setSnackbar({ open: true, message: 'Error al aprobar la transacción', severity: 'error' });
+      setSnackbar({ open: true, message: t('transactions.approvals.approveError'), severity: 'error' });
     } finally {
       setActionLoading(null);
     }
-  }, [loadGroups, startDate, endDate]);
+  }, [loadGroups, startDate, endDate, t]);
 
   const openRejectDialog = useCallback((id: number) => {
     setRejectGroupId(id);
@@ -199,22 +202,22 @@ const TransactionApprovals = (): React.ReactElement => {
       setActionLoading(rejectGroupId);
       setRejectDialogOpen(false);
       await rejectTransactionGroup(rejectGroupId, rejectReason.trim());
-      setSnackbar({ open: true, message: 'Transacción rechazada exitosamente', severity: 'success' });
+      setSnackbar({ open: true, message: t('transactions.approvals.rejectSuccess'), severity: 'success' });
       await loadGroups(startDate, endDate);
     } catch (err) {
       console.error('Error rejecting group:', err);
-      setSnackbar({ open: true, message: 'Error al rechazar la transacción', severity: 'error' });
+      setSnackbar({ open: true, message: t('transactions.approvals.rejectError'), severity: 'error' });
     } finally {
       setActionLoading(null);
       setRejectGroupId(null);
       setRejectReason('');
     }
-  }, [rejectGroupId, rejectReason, loadGroups, startDate, endDate]);
+  }, [rejectGroupId, rejectReason, loadGroups, startDate, endDate, t]);
 
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h4" sx={{ mb: 3, textAlign: 'center', fontWeight: 600, color: '#2c2c2c' }}>
-        Aprobaciones de transacciones
+        {t('transactions.approvals.title')}
       </Typography>
 
       <Card elevation={1}>
@@ -222,7 +225,7 @@ const TransactionApprovals = (): React.ReactElement => {
           <Grid container spacing={3} sx={{ mb: 3 }}>
             <Grid item xs={12} md={4}>
               <TextField
-                fullWidth size="small" label="Fecha inicial" type="date"
+                fullWidth size="small" label={t('common.dateStart')} type="date"
                 value={startDate} onChange={(e: ChangeEvent<HTMLInputElement>) => setStartDate(e.target.value)}
                 InputLabelProps={{ shrink: true }}
                 InputProps={{ startAdornment: <InputAdornment position="start"><CalendarIcon fontSize="small" /></InputAdornment> }}
@@ -230,7 +233,7 @@ const TransactionApprovals = (): React.ReactElement => {
             </Grid>
             <Grid item xs={12} md={4}>
               <TextField
-                fullWidth size="small" label="Fecha final" type="date"
+                fullWidth size="small" label={t('common.dateEnd')} type="date"
                 value={endDate} onChange={(e: ChangeEvent<HTMLInputElement>) => setEndDate(e.target.value)}
                 InputLabelProps={{ shrink: true }}
                 InputProps={{ startAdornment: <InputAdornment position="start"><CalendarIcon fontSize="small" /></InputAdornment> }}
@@ -238,13 +241,13 @@ const TransactionApprovals = (): React.ReactElement => {
             </Grid>
             <Grid item xs={12} md={4} sx={{ display: 'flex', alignItems: 'flex-end' }}>
               <Button fullWidth variant="contained" onClick={handleFilter} sx={{ bgcolor: '#8b5cf6', '&:hover': { bgcolor: '#45b5b8' }, fontWeight: 600, textTransform: 'uppercase' }}>
-                Filtrar
+                {t('common.filter')}
               </Button>
             </Grid>
           </Grid>
 
           <TextField
-            fullWidth size="small" placeholder="Filtro rápido"
+            fullWidth size="small" placeholder={t('common.filterQuick')}
             value={quickFilter} onChange={(e: ChangeEvent<HTMLInputElement>) => setQuickFilter(e.target.value)}
             sx={{ mb: 2 }}
             InputProps={{ endAdornment: <InputAdornment position="end"><IconButton size="small"><SearchIcon fontSize="small" /></IconButton></InputAdornment> }}
@@ -259,23 +262,23 @@ const TransactionApprovals = (): React.ReactElement => {
               <Table size="small">
                 <TableHead sx={{ bgcolor: '#f8f9fa' }}>
                   <TableRow>
-                    <TableCell><TableSortLabel active={sortConfig.key === 'groupNumber'} direction={sortConfig.key === 'groupNumber' ? sortConfig.direction : 'asc'} onClick={() => handleSort('groupNumber')} sx={{ fontWeight: 600 }}>Número</TableSortLabel></TableCell>
-                    <TableCell><TableSortLabel active={sortConfig.key === 'status'} direction={sortConfig.key === 'status' ? sortConfig.direction : 'asc'} onClick={() => handleSort('status')} sx={{ fontWeight: 600 }}>Tipo</TableSortLabel></TableCell>
-                    <TableCell><TableSortLabel active={sortConfig.key === 'createdAt'} direction={sortConfig.key === 'createdAt' ? sortConfig.direction : 'asc'} onClick={() => handleSort('createdAt')} sx={{ fontWeight: 600 }}>Fecha</TableSortLabel></TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Hora</TableCell>
-                    <TableCell><TableSortLabel active={sortConfig.key === 'createdByName'} direction={sortConfig.key === 'createdByName' ? sortConfig.direction : 'asc'} onClick={() => handleSort('createdByName')} sx={{ fontWeight: 600 }}>Creado por</TableSortLabel></TableCell>
-                    <TableCell><TableSortLabel active={sortConfig.key === 'entities'} direction={sortConfig.key === 'entities' ? sortConfig.direction : 'asc'} onClick={() => handleSort('entities')} sx={{ fontWeight: 600 }}>Entidades</TableSortLabel></TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 600 }}>Total Débito</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 600 }}>Total Crédito</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Notas</TableCell>
-                    <TableCell align="center" sx={{ fontWeight: 600, width: '120px' }}>Acciones</TableCell>
+                    <TableCell><TableSortLabel active={sortConfig.key === 'groupNumber'} direction={sortConfig.key === 'groupNumber' ? sortConfig.direction : 'asc'} onClick={() => handleSort('groupNumber')} sx={{ fontWeight: 600 }}>{t('common.number')}</TableSortLabel></TableCell>
+                    <TableCell><TableSortLabel active={sortConfig.key === 'status'} direction={sortConfig.key === 'status' ? sortConfig.direction : 'asc'} onClick={() => handleSort('status')} sx={{ fontWeight: 600 }}>{t('common.type')}</TableSortLabel></TableCell>
+                    <TableCell><TableSortLabel active={sortConfig.key === 'createdAt'} direction={sortConfig.key === 'createdAt' ? sortConfig.direction : 'asc'} onClick={() => handleSort('createdAt')} sx={{ fontWeight: 600 }}>{t('common.date')}</TableSortLabel></TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>{t('common.time')}</TableCell>
+                    <TableCell><TableSortLabel active={sortConfig.key === 'createdByName'} direction={sortConfig.key === 'createdByName' ? sortConfig.direction : 'asc'} onClick={() => handleSort('createdByName')} sx={{ fontWeight: 600 }}>{t('common.createdBy')}</TableSortLabel></TableCell>
+                    <TableCell><TableSortLabel active={sortConfig.key === 'entities'} direction={sortConfig.key === 'entities' ? sortConfig.direction : 'asc'} onClick={() => handleSort('entities')} sx={{ fontWeight: 600 }}>{t('transactions.entities')}</TableSortLabel></TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 600 }}>{t('transactions.totalDebit')}</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 600 }}>{t('transactions.totalCredit')}</TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>{t('common.notes')}</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 600, width: '120px' }}>{t('common.actions')}</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {filteredAndSortedData.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={10} align="center" sx={{ py: 3 }}>
-                        <Typography variant="body2" color="text.secondary">No hay aprobaciones pendientes</Typography>
+                        <Typography variant="body2" color="text.secondary">{t('transactions.approvals.noPending')}</Typography>
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -322,17 +325,17 @@ const TransactionApprovals = (): React.ReactElement => {
                         <TableCell>{item.notes ?? ''}</TableCell>
                         <TableCell align="center">
                           {!canApprove ? (
-                            <Typography variant="caption" color="text.secondary">Sin permiso</Typography>
+                            <Typography variant="caption" color="text.secondary">{t('transactions.approvals.noPermission')}</Typography>
                           ) : actionLoading === item.groupId ? (
                             <CircularProgress size={20} />
                           ) : (
                             <Box sx={{ display: 'flex', justifyContent: 'center', gap: 0.5 }}>
-                              <Tooltip title="Aprobar" arrow>
+                              <Tooltip title={t('transactions.approvals.approve')} arrow>
                                 <IconButton size="small" onClick={() => handleApprove(item.groupId)} sx={{ color: '#28a745' }}>
                                   <CheckIcon fontSize="small" />
                                 </IconButton>
                               </Tooltip>
-                              <Tooltip title="Rechazar" arrow>
+                              <Tooltip title={t('transactions.approvals.reject')} arrow>
                                 <IconButton size="small" onClick={() => openRejectDialog(item.groupId)} sx={{ color: '#dc3545' }}>
                                   <CloseIcon fontSize="small" />
                                 </IconButton>
@@ -349,7 +352,7 @@ const TransactionApprovals = (): React.ReactElement => {
           )}
 
           <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-            Mostrando {filteredAndSortedData.length} entradas pendientes
+            {t('transactions.approvals.showingPending', { count: filteredAndSortedData.length })}
           </Typography>
         </CardContent>
       </Card>
@@ -371,28 +374,28 @@ const TransactionApprovals = (): React.ReactElement => {
 
       {/* Reject reason dialog */}
       <Dialog open={rejectDialogOpen} onClose={() => setRejectDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Rechazar transacción</DialogTitle>
+        <DialogTitle>{t('transactions.approvals.rejectTitle')}</DialogTitle>
         <DialogContent>
           <TextField
             autoFocus
             fullWidth
             multiline
             rows={3}
-            label="Razón del rechazo"
+            label={t('transactions.detail.rejectionReason')}
             value={rejectReason}
             onChange={(e) => setRejectReason(e.target.value)}
             sx={{ mt: 1 }}
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setRejectDialogOpen(false)}>Cancelar</Button>
+          <Button onClick={() => setRejectDialogOpen(false)}>{t('common.cancel')}</Button>
           <Button
             onClick={handleRejectConfirm}
             variant="contained"
             color="error"
             disabled={!rejectReason.trim()}
           >
-            Rechazar
+            {t('transactions.approvals.reject')}
           </Button>
         </DialogActions>
       </Dialog>

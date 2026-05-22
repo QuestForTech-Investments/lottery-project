@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using LotteryApi.Data;
 using LotteryApi.DTOs;
+using LotteryApi.Exceptions;
+using LotteryApi.Helpers;
 using LotteryApi.Models;
 using LotteryApi.Services;
 
@@ -128,7 +130,7 @@ public class AccountableEntitiesController : ControllerBase
                 .FirstOrDefaultAsync();
 
             if (entity == null)
-                return NotFound(new { message = "Entidad no encontrada" });
+                return ApiErrorResult.NotFound(ErrorCodes.EntityNotFound, "Entidad no encontrada");
 
             return Ok(entity);
         }
@@ -151,7 +153,7 @@ public class AccountableEntitiesController : ControllerBase
             var exists = await _context.AccountableEntities
                 .AnyAsync(e => e.EntityCode == dto.EntityCode);
             if (exists)
-                return BadRequest(new { message = "Ya existe una entidad con ese código" });
+                return ApiErrorResult.BadRequest(ErrorCodes.EntityCodeExists, "Ya existe una entidad con ese código");
 
             var entity = new AccountableEntity
             {
@@ -196,7 +198,7 @@ public class AccountableEntitiesController : ControllerBase
         {
             var entity = await _context.AccountableEntities.FindAsync(id);
             if (entity == null)
-                return NotFound(new { message = "Entidad no encontrada" });
+                return ApiErrorResult.NotFound(ErrorCodes.EntityNotFound, "Entidad no encontrada");
 
             // Zone scope — both the entity's current zone and any new zone must be in scope.
             if (entity.ZoneId.HasValue && !await _zoneScope.IsZoneAllowedAsync(entity.ZoneId.Value)) return Forbid();
@@ -208,7 +210,7 @@ public class AccountableEntitiesController : ControllerBase
                 var codeExists = await _context.AccountableEntities
                     .AnyAsync(e => e.EntityCode == dto.EntityCode && e.EntityId != id);
                 if (codeExists)
-                    return BadRequest(new { message = "Ya existe una entidad con ese código" });
+                    return ApiErrorResult.BadRequest(ErrorCodes.EntityCodeExists, "Ya existe una entidad con ese código");
                 entity.EntityCode = dto.EntityCode;
             }
             if (dto.EntityType != null) entity.EntityType = dto.EntityType;
@@ -245,7 +247,7 @@ public class AccountableEntitiesController : ControllerBase
         {
             var entity = await _context.AccountableEntities.FindAsync(id);
             if (entity == null)
-                return NotFound(new { message = "Entidad no encontrada" });
+                return ApiErrorResult.NotFound(ErrorCodes.EntityNotFound, "Entidad no encontrada");
 
             if (entity.ZoneId.HasValue && !await _zoneScope.IsZoneAllowedAsync(entity.ZoneId.Value)) return Forbid();
 

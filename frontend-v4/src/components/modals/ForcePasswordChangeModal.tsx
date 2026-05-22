@@ -20,6 +20,7 @@ import {
   Clear as ClearIcon,
   LockReset,
 } from '@mui/icons-material'
+import { useTranslation } from 'react-i18next'
 import * as userService from '@services/userService'
 import * as authService from '@services/authService'
 import { handleApiError } from '@utils/index'
@@ -35,6 +36,7 @@ interface Props {
  * Blocking: no close button, no escape, no click-outside.
  */
 export default function ForcePasswordChangeModal({ isOpen, isPos, onCompleted }: Props) {
+  const { t } = useTranslation()
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -44,15 +46,15 @@ export default function ForcePasswordChangeModal({ isOpen, isPos, onCompleted }:
   const validation = useMemo(() => {
     if (isPos) {
       return {
-        minLength: { ok: newPassword.length >= 6, label: 'Mínimo 6 caracteres' },
+        minLength: { ok: newPassword.length >= 6, label: t('modals.forcePassword.minLength6') },
       }
     }
     return {
-      minLength: { ok: newPassword.length >= 7, label: 'Mínimo 7 caracteres' },
-      hasLetter: { ok: /[a-zA-Z]/.test(newPassword), label: 'Al menos una letra' },
-      hasNumber: { ok: /\d/.test(newPassword), label: 'Al menos un número' },
+      minLength: { ok: newPassword.length >= 7, label: t('modals.forcePassword.minLength7') },
+      hasLetter: { ok: /[a-zA-Z]/.test(newPassword), label: t('modals.forcePassword.atLeastOneLetter') },
+      hasNumber: { ok: /\d/.test(newPassword), label: t('modals.forcePassword.atLeastOneNumber') },
     }
-  }, [newPassword, isPos])
+  }, [newPassword, isPos, t])
 
   const isValid = Object.values(validation).every((r) => r.ok)
   const matches = newPassword === confirmPassword && confirmPassword.length > 0
@@ -61,7 +63,7 @@ export default function ForcePasswordChangeModal({ isOpen, isPos, onCompleted }:
   const handleSubmit = async () => {
     const me = authService.getCurrentUser()
     if (!me?.id) {
-      setError('Sesión inválida. Vuelva a iniciar sesión.')
+      setError(t('modals.forcePassword.invalidSession'))
       return
     }
     setLoading(true)
@@ -71,7 +73,7 @@ export default function ForcePasswordChangeModal({ isOpen, isPos, onCompleted }:
       onCompleted()
     } catch (err) {
       const msg = handleApiError(err)
-      setError(msg || 'No se pudo cambiar la contraseña')
+      setError(msg || t('modals.forcePassword.couldNotChange'))
     } finally {
       setLoading(false)
     }
@@ -88,17 +90,17 @@ export default function ForcePasswordChangeModal({ isOpen, isPos, onCompleted }:
       <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, bgcolor: '#fff3e0', color: '#e65100' }}>
         <LockReset />
         <Typography component="span" sx={{ fontWeight: 600, fontFamily: 'Montserrat, sans-serif' }}>
-          Cambio de contraseña obligatorio
+          {t('modals.forcePassword.title')}
         </Typography>
       </DialogTitle>
 
       <DialogContent>
         <Alert severity="info" sx={{ mb: 2, mt: 1 }}>
-          Tu contraseña es temporal. Por seguridad, debes establecer una nueva antes de continuar.
+          {t('modals.forcePassword.info')}
         </Alert>
 
         <TextField
-          label="Contraseña actual (temporal)"
+          label={t('modals.forcePassword.currentPasswordLabel')}
           type="password"
           value={currentPassword}
           onChange={(e) => setCurrentPassword(e.target.value)}
@@ -107,7 +109,7 @@ export default function ForcePasswordChangeModal({ isOpen, isPos, onCompleted }:
           autoFocus
         />
         <TextField
-          label="Nueva contraseña"
+          label={t('usersAdmin.newPassword')}
           type="password"
           value={newPassword}
           onChange={(e) => setNewPassword(e.target.value)}
@@ -115,19 +117,19 @@ export default function ForcePasswordChangeModal({ isOpen, isPos, onCompleted }:
           margin="dense"
         />
         <TextField
-          label="Confirmar nueva contraseña"
+          label={t('usersAdmin.confirmPassword')}
           type="password"
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
           fullWidth
           margin="dense"
           error={confirmPassword.length > 0 && !matches}
-          helperText={confirmPassword.length > 0 && !matches ? 'Las contraseñas no coinciden' : ''}
+          helperText={confirmPassword.length > 0 && !matches ? t('usersAdmin.passwordMustMatch') : ''}
         />
 
         <Box sx={{ mt: 1.5 }}>
           <Typography variant="body2" sx={{ mb: 0.5, color: '#666' }}>
-            Requisitos:
+            {t('modals.forcePassword.requirements')}
           </Typography>
           <List dense disablePadding>
             {Object.values(validation).map((rule, i) => (
@@ -164,7 +166,7 @@ export default function ForcePasswordChangeModal({ isOpen, isPos, onCompleted }:
             py: 1.2,
           }}
         >
-          {loading ? <CircularProgress size={22} sx={{ color: 'white' }} /> : 'Cambiar contraseña'}
+          {loading ? <CircularProgress size={22} sx={{ color: 'white' }} /> : t('modals.forcePassword.changePassword')}
         </Button>
       </DialogActions>
     </Dialog>

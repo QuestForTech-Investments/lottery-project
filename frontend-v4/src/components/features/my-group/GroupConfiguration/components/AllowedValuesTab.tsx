@@ -8,6 +8,7 @@
 import { memo, useState, type FC, type ChangeEvent, type KeyboardEvent } from 'react';
 import { Box, Typography, Chip, TextField, IconButton, Grid } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
+import { useTranslation } from 'react-i18next';
 import { PRIZE_FIELDS_CONFIG } from '../constants';
 
 export type AllowedValuesMap = Record<string, Record<string, number[]>>;
@@ -25,6 +26,7 @@ interface FieldEditorProps {
 }
 
 const FieldEditor = memo<FieldEditorProps>(({ label, values, onAdd, onRemove }) => {
+  const { t } = useTranslation();
   const [input, setInput] = useState('');
 
   const handleAdd = (): void => {
@@ -54,7 +56,7 @@ const FieldEditor = memo<FieldEditorProps>(({ label, values, onAdd, onRemove }) 
           value={input}
           onChange={(e: ChangeEvent<HTMLInputElement>) => setInput(e.target.value)}
           onKeyDown={handleKey}
-          placeholder="Nuevo valor"
+          placeholder={t('myGroupAdmin.allowedValues.newValuePlaceholder')}
           sx={{ width: '140px', '& input': { textAlign: 'right' } }}
         />
         <IconButton size="small" onClick={handleAdd} disabled={!input.trim()} sx={{ color: '#6366f1' }}>
@@ -79,6 +81,7 @@ const FieldEditor = memo<FieldEditorProps>(({ label, values, onAdd, onRemove }) 
 FieldEditor.displayName = 'FieldEditor';
 
 const AllowedValuesTab: FC<AllowedValuesTabProps> = memo(({ allowedValues, onChange }) => {
+  const { t } = useTranslation();
   const getValues = (gt: string, fk: string): number[] =>
     allowedValues[gt]?.[fk] ?? [];
 
@@ -95,7 +98,7 @@ const AllowedValuesTab: FC<AllowedValuesTabProps> = memo(({ allowedValues, onCha
   return (
     <Box>
       <Typography variant="h5" sx={{ textAlign: 'center', mb: 3, fontSize: '18px', fontWeight: 600 }}>
-        Valores permitidos
+        {t('myGroupAdmin.sections.allowedValues')}
       </Typography>
 
       <Grid container spacing={3}>

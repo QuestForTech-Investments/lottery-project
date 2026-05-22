@@ -19,6 +19,8 @@ public class LoginResponseDto
     public DateTime ExpiresAt { get; set; }
     public bool MustChangePassword { get; set; }
     public bool MustSetPin { get; set; }
+    /// <summary>BCP-47 tag — frontend uses to set i18n.language on login. Null = es default.</summary>
+    public string? PreferredLanguage { get; set; }
 }
 
 public class RegisterDto

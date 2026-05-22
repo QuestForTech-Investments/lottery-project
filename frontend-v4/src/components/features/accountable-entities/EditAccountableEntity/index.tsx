@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect, type ChangeEvent, type FormEvent } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Card,
@@ -41,6 +42,7 @@ interface ZoneOption {
 const EditAccountableEntity = (): React.ReactElement => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const entityId = Number(id);
 
   const [formData, setFormData] = useState<FormData>({
@@ -80,13 +82,13 @@ const EditAccountableEntity = (): React.ReactElement => {
         });
       } catch (err) {
         console.error('Error loading entity:', err);
-        setError('Error al cargar la entidad contable');
+        setError(t('entitiesAdmin.edit.errLoad'));
       } finally {
         setLoadingEntity(false);
       }
     };
     loadData();
-  }, [entityId]);
+  }, [entityId, t]);
 
   const handleTextChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -113,14 +115,14 @@ const EditAccountableEntity = (): React.ReactElement => {
         isActive: formData.isActive
       });
 
-      setSuccess('Entidad contable actualizada exitosamente');
+      setSuccess(t('entitiesAdmin.edit.msgSuccess'));
     } catch (err) {
       console.error('Error updating entity:', err);
-      setError('Error al actualizar la entidad contable. Verifique que el código no esté duplicado.');
+      setError(t('entitiesAdmin.edit.errUpdate'));
     } finally {
       setSaving(false);
     }
-  }, [entityId, formData]);
+  }, [entityId, formData, t]);
 
   const handleDelete = useCallback(async () => {
     setDeleteDialogOpen(false);
@@ -133,11 +135,11 @@ const EditAccountableEntity = (): React.ReactElement => {
       navigate('/entities/list');
     } catch (err) {
       console.error('Error deleting entity:', err);
-      setError('Error al eliminar la entidad contable');
+      setError(t('entitiesAdmin.edit.errDelete'));
     } finally {
       setDeleting(false);
     }
-  }, [entityId, navigate]);
+  }, [entityId, navigate, t]);
 
   if (loadingEntity) {
     return (
@@ -161,7 +163,7 @@ const EditAccountableEntity = (): React.ReactElement => {
               color: '#2c2c2c'
             }}
           >
-            Editar entidad contable
+            {t('entitiesAdmin.edit.title')}
           </Typography>
 
           {success && (
@@ -179,12 +181,12 @@ const EditAccountableEntity = (): React.ReactElement => {
           <form onSubmit={handleSubmit}>
             <TextField
               fullWidth
-              label="Nombre"
+              label={t('entitiesAdmin.edit.nameLabel')}
               name="entityName"
               value={formData.entityName}
               onChange={handleTextChange}
               required
-              placeholder="Nombre"
+              placeholder={t('entitiesAdmin.edit.namePlaceholder')}
               sx={{ mb: 3 }}
               InputLabelProps={{ sx: { fontSize: '14px', color: '#787878' } }}
               InputProps={{ sx: { fontSize: '14px' } }}
@@ -192,42 +194,42 @@ const EditAccountableEntity = (): React.ReactElement => {
 
             <TextField
               fullWidth
-              label="Código"
+              label={t('entitiesAdmin.edit.codeLabel')}
               name="entityCode"
               value={formData.entityCode}
               onChange={handleTextChange}
               required
-              placeholder="Código"
+              placeholder={t('entitiesAdmin.edit.codePlaceholder')}
               sx={{ mb: 3 }}
               InputLabelProps={{ sx: { fontSize: '14px', color: '#787878' } }}
               InputProps={{ sx: { fontSize: '14px' } }}
             />
 
             <FormControl fullWidth required sx={{ mb: 3 }}>
-              <InputLabel sx={{ fontSize: '14px', color: '#787878' }}>Tipo de entidad</InputLabel>
+              <InputLabel sx={{ fontSize: '14px', color: '#787878' }}>{t('entitiesAdmin.edit.typeLabel')}</InputLabel>
               <Select
                 name="entityType"
                 value={formData.entityType}
                 onChange={handleSelectChange}
-                label="Tipo de entidad"
+                label={t('entitiesAdmin.edit.typeLabel')}
                 sx={{ fontSize: '14px' }}
               >
-                <MenuItem value="Banco" sx={{ fontSize: '14px' }}>Banco</MenuItem>
-                <MenuItem value="Otro" sx={{ fontSize: '14px' }}>Otro</MenuItem>
+                <MenuItem value="Banco" sx={{ fontSize: '14px' }}>{t('entitiesAdmin.edit.typeBank')}</MenuItem>
+                <MenuItem value="Otro" sx={{ fontSize: '14px' }}>{t('entitiesAdmin.edit.typeOther')}</MenuItem>
               </Select>
             </FormControl>
 
             <FormControl fullWidth sx={{ mb: 3 }}>
-              <InputLabel sx={{ fontSize: '14px', color: '#787878' }}>Zona</InputLabel>
+              <InputLabel sx={{ fontSize: '14px', color: '#787878' }}>{t('entitiesAdmin.edit.zoneLabel')}</InputLabel>
               <Select
                 name="zoneId"
                 value={formData.zoneId}
                 onChange={handleSelectChange}
-                label="Zona"
+                label={t('entitiesAdmin.edit.zoneLabel')}
                 sx={{ fontSize: '14px' }}
               >
                 <MenuItem value="">
-                  <em>Sin zona</em>
+                  <em>{t('entitiesAdmin.edit.zoneNone')}</em>
                 </MenuItem>
                 {zones.map(zone => (
                   <MenuItem key={zone.id} value={String(zone.id)} sx={{ fontSize: '14px' }}>
@@ -244,7 +246,7 @@ const EditAccountableEntity = (): React.ReactElement => {
                   onChange={(e) => setFormData(prev => ({ ...prev, isActive: e.target.checked }))}
                 />
               }
-              label="Activo"
+              label={t('entitiesAdmin.edit.activeLabel')}
               sx={{ mb: 3, display: 'block' }}
             />
 
@@ -260,7 +262,7 @@ const EditAccountableEntity = (): React.ReactElement => {
                   textTransform: 'uppercase'
                 }}
               >
-                VOLVER
+                {t('entitiesAdmin.edit.backButton')}
               </Button>
               <Button
                 type="submit"
@@ -277,7 +279,7 @@ const EditAccountableEntity = (): React.ReactElement => {
                   textTransform: 'uppercase'
                 }}
               >
-                {saving ? <CircularProgress size={24} color="inherit" /> : 'GUARDAR'}
+                {saving ? <CircularProgress size={24} color="inherit" /> : t('entitiesAdmin.edit.saveButton')}
               </Button>
             </Box>
           </form>
@@ -297,7 +299,7 @@ const EditAccountableEntity = (): React.ReactElement => {
                   textTransform: 'uppercase'
                 }}
               >
-                {deleting ? <CircularProgress size={24} color="inherit" /> : 'ELIMINAR'}
+                {deleting ? <CircularProgress size={24} color="inherit" /> : t('entitiesAdmin.edit.deleteButton')}
               </Button>
             </Box>
           )}
@@ -305,15 +307,15 @@ const EditAccountableEntity = (): React.ReactElement => {
       </Card>
 
       <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
-        <DialogTitle>Confirmar eliminación</DialogTitle>
+        <DialogTitle>{t('entitiesAdmin.edit.deleteDialogTitle')}</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            ¿Está seguro que desea eliminar esta entidad contable? Esta acción no se puede deshacer.
+            {t('entitiesAdmin.edit.deleteConfirm')}
           </DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)}>Cancelar</Button>
-          <Button onClick={handleDelete} color="error" variant="contained">Eliminar</Button>
+          <Button onClick={() => setDeleteDialogOpen(false)}>{t('entitiesAdmin.edit.cancel')}</Button>
+          <Button onClick={handleDelete} color="error" variant="contained">{t('entitiesAdmin.edit.deleteConfirmButton')}</Button>
         </DialogActions>
       </Dialog>
     </Box>

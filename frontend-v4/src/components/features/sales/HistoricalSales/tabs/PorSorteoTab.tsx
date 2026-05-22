@@ -1,4 +1,5 @@
 import { memo, type FC, useMemo, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Box, Typography, Button, CircularProgress } from '@mui/material';
 import { formatCurrency } from '@/utils/formatCurrency';
 
@@ -74,6 +75,7 @@ export const PorSorteoTab: FC<PorSorteoTabProps> = memo(({
   setFiltroRapido,
   onSearch,
 }) => {
+  const { t } = useTranslation();
   // Calculate totals
   const totals = useMemo(() => {
     return sorteoData.reduce(
@@ -97,19 +99,19 @@ export const PorSorteoTab: FC<PorSorteoTabProps> = memo(({
   // Table columns
   const columns: Column<SorteoData>[] = useMemo(
     () => [
-      { id: 'sorteo', label: 'Sorteo', format: renderSorteoCell },
-      { id: 'venta', label: 'Total Vendido', align: 'right', format: (v) => formatCurrency(v as number) },
-      { id: 'premios', label: 'Total premios', align: 'right', format: (v) => formatCurrency(v as number) },
-      { id: 'comisiones', label: 'Total comisiones', align: 'right', format: (v) => formatCurrency(v as number) },
-      { id: 'neto', label: 'Total neto', align: 'right', format: coloredCurrency },
+      { id: 'sorteo', label: t('common.draw'), format: renderSorteoCell },
+      { id: 'venta', label: t('sales.totalSold'), align: 'right', format: (v) => formatCurrency(v as number) },
+      { id: 'premios', label: t('sales.totalPrizes'), align: 'right', format: (v) => formatCurrency(v as number) },
+      { id: 'comisiones', label: t('sales.totalCommissions'), align: 'right', format: (v) => formatCurrency(v as number) },
+      { id: 'neto', label: t('sales.totalNet'), align: 'right', format: coloredCurrency },
     ],
-    []
+    [t]
   );
 
   return (
     <>
       <Typography variant="h4" align="center" gutterBottom sx={{ fontWeight: 400, mb: 4, fontSize: '1.75rem' }}>
-        Ventas por sorteo
+        {t('sales.salesByDraw')}
       </Typography>
 
       {/* Filters */}
@@ -144,13 +146,13 @@ export const PorSorteoTab: FC<PorSorteoTabProps> = memo(({
             fontWeight: 500,
           }}
         >
-          {loading ? <CircularProgress size={16} color="inherit" /> : 'Ver ventas'}
+          {loading ? <CircularProgress size={16} color="inherit" /> : t('transactions.viewSales')}
         </Button>
       </Box>
 
       {/* Total display */}
       <Typography variant="h5" align="center" gutterBottom sx={{ fontWeight: 400, mb: 3, fontSize: '1.7rem' }}>
-        Total neto:{' '}
+        {t('sales.totalNet')}:{' '}
         <Box
           component="span"
           sx={{
@@ -167,13 +169,13 @@ export const PorSorteoTab: FC<PorSorteoTabProps> = memo(({
 
       {sorteoData.length === 0 && (
         <Typography variant="h6" align="center" sx={{ color: 'text.secondary', mb: 4, fontSize: '1.25rem' }}>
-          No hay entradas para la fecha elegida
+          {t('sales.noEntriesForDate')}
         </Typography>
       )}
 
       {/* Search */}
       <Box sx={{ mb: 2 }}>
-        <SearchInput value={filtroRapido} onChange={setFiltroRapido} placeholder="Filtrado rápido" />
+        <SearchInput value={filtroRapido} onChange={setFiltroRapido} placeholder={t('common.filterQuick')} />
       </Box>
 
       {/* Data table */}
@@ -181,11 +183,11 @@ export const PorSorteoTab: FC<PorSorteoTabProps> = memo(({
         columns={columns}
         data={filteredData}
         totals={totals}
-        emptyMessage="No hay entradas disponibles"
+        emptyMessage={t('common.noEntries')}
       />
 
       <Typography variant="body2" sx={{ mt: 2 }}>
-        Mostrando {filteredData.length} de {sorteoData.length} entradas
+        {t('common.showingEntries', { shown: filteredData.length, total: sorteoData.length })}
       </Typography>
     </>
   );

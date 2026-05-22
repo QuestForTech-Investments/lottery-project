@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Table,
   TableBody,
@@ -46,6 +47,7 @@ const BalanceTable = React.memo(({
   totals = {},
   loading: _loading = false
 }: BalanceTableProps): React.ReactElement => {
+  const { t } = useTranslation();
   const [orderBy, setOrderBy] = useState<string>('');
   const [order, setOrder] = useState<SortOrder>('asc');
 
@@ -147,7 +149,7 @@ const BalanceTable = React.memo(({
                   align="center"
                   sx={{ py: 4, color: 'text.secondary' }}
                 >
-                  No hay entradas disponibles
+                  {t('common.noEntries')}
                 </TableCell>
               </TableRow>
             ) : (
@@ -179,7 +181,7 @@ const BalanceTable = React.memo(({
                     sx={{ fontWeight: 700 }}
                   >
                     {idx === 0 ? (
-                      'Totales'
+                      t('balances.totals')
                     ) : totals[column.key] !== undefined ? (
                       formatValue(totals[column.key], column.format)
                     ) : (
@@ -197,7 +199,7 @@ const BalanceTable = React.memo(({
         variant="body2"
         sx={{ mt: 1, color: 'text.secondary' }}
       >
-        Mostrando {sortedData.length} entradas
+        {t('balances.showingCount', { count: sortedData.length })}
       </Typography>
     </Box>
   );

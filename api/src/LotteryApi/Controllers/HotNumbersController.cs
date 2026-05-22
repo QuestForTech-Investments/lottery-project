@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using LotteryApi.Data;
+using LotteryApi.Exceptions;
+using LotteryApi.Helpers;
 using LotteryApi.Models;
 using LotteryApi.DTOs.HotNumbers;
 using LotteryApi.Services;
@@ -220,7 +222,7 @@ public class HotNumbersController : ControllerBase
             var limit = await _context.HotNumberLimits.FindAsync(id);
             if (limit == null || !limit.IsActive)
             {
-                return NotFound(new { message = "Limite de numero caliente no encontrado" });
+                return ApiErrorResult.NotFound(ErrorCodes.HotNumberLimitNotFound, "Limite de numero caliente no encontrado");
             }
 
             return Ok(new HotNumberLimitDto
@@ -259,7 +261,7 @@ public class HotNumbersController : ControllerBase
             // Validate draw IDs exist
             if (dto.DrawIds == null || dto.DrawIds.Count == 0)
             {
-                return BadRequest(new { message = "Debe seleccionar al menos un sorteo" });
+                return ApiErrorResult.BadRequest(ErrorCodes.AtLeastOneNumberRequired, "Debe seleccionar al menos un sorteo");
             }
 
             var validDrawIds = await _context.Draws
@@ -269,7 +271,7 @@ public class HotNumbersController : ControllerBase
 
             if (validDrawIds.Count != dto.DrawIds.Count)
             {
-                return BadRequest(new { message = "Uno o mas sorteos especificados no existen" });
+                return ApiErrorResult.BadRequest(ErrorCodes.HotNumberDrawsInvalid, "Uno o mas sorteos especificados no existen");
             }
 
             // Check for duplicate draw IDs (existing limit with same draws)
@@ -283,7 +285,7 @@ public class HotNumbersController : ControllerBase
                 if (dto.DrawIds.All(id => existingDrawIds.Contains(id)) &&
                     existingDrawIds.All(id => dto.DrawIds.Contains(id)))
                 {
-                    return Conflict(new { message = "Ya existe un limite con la misma configuracion de sorteos" });
+                    return ApiErrorResult.Conflict(ErrorCodes.HotNumberLimitDuplicate, "Ya existe un limite con la misma configuracion de sorteos");
                 }
             }
 
@@ -345,7 +347,7 @@ public class HotNumbersController : ControllerBase
             var limit = await _context.HotNumberLimits.FindAsync(id);
             if (limit == null || !limit.IsActive)
             {
-                return NotFound(new { message = "Limite de numero caliente no encontrado" });
+                return ApiErrorResult.NotFound(ErrorCodes.HotNumberLimitNotFound, "Limite de numero caliente no encontrado");
             }
 
             // Validate and update draw IDs if provided
@@ -358,7 +360,7 @@ public class HotNumbersController : ControllerBase
 
                 if (validDrawIds.Count != dto.DrawIds.Count)
                 {
-                    return BadRequest(new { message = "Uno o mas sorteos especificados no existen" });
+                    return ApiErrorResult.BadRequest(ErrorCodes.HotNumberDrawsInvalid, "Uno o mas sorteos especificados no existen");
                 }
 
                 limit.DrawIdList = dto.DrawIds;
@@ -425,7 +427,7 @@ public class HotNumbersController : ControllerBase
             var limit = await _context.HotNumberLimits.FindAsync(id);
             if (limit == null)
             {
-                return NotFound(new { message = "Limite de numero caliente no encontrado" });
+                return ApiErrorResult.NotFound(ErrorCodes.HotNumberLimitNotFound, "Limite de numero caliente no encontrado");
             }
 
             // Soft delete - deactivate instead of removing

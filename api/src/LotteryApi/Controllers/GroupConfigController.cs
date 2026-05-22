@@ -1,4 +1,6 @@
 using LotteryApi.Data;
+using LotteryApi.Exceptions;
+using LotteryApi.Helpers;
 using LotteryApi.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -85,11 +87,11 @@ public class GroupConfigController : ControllerBase
     public async Task<ActionResult> SaveDefaults([FromBody] SaveDefaultsRequest request)
     {
         if (!await CurrentUserCanManageGroup())
-            return StatusCode(403, new { message = "No tiene permiso para manejar el grupo" });
+            return ApiErrorResult.Forbidden(ErrorCodes.GroupManagePermissionDenied, "No tiene permiso para manejar el grupo");
 
         if (request?.Configs == null || request.Configs.Count == 0)
         {
-            return BadRequest(new { message = "No hay configuraciones para guardar" });
+            return ApiErrorResult.BadRequest(ErrorCodes.GroupConfigEmpty, "No hay configuraciones para guardar");
         }
 
         var userIdClaim = User.FindFirst("userId")?.Value ?? User.FindFirst("sub")?.Value;
@@ -191,11 +193,11 @@ public class GroupConfigController : ControllerBase
     public async Task<ActionResult> SaveAllowedValues([FromBody] SaveAllowedValuesRequest request)
     {
         if (!await CurrentUserCanManageGroup())
-            return StatusCode(403, new { message = "No tiene permiso para manejar el grupo" });
+            return ApiErrorResult.Forbidden(ErrorCodes.GroupManagePermissionDenied, "No tiene permiso para manejar el grupo");
 
         if (request?.Groups == null)
         {
-            return BadRequest(new { message = "No hay datos para guardar" });
+            return ApiErrorResult.BadRequest(ErrorCodes.GroupConfigEmpty, "No hay datos para guardar");
         }
 
         var userIdClaim = User.FindFirst("userId")?.Value ?? User.FindFirst("sub")?.Value;
@@ -268,11 +270,11 @@ public class GroupConfigController : ControllerBase
     public async Task<ActionResult> SaveFooterDefaults([FromBody] SaveFooterRequest request)
     {
         if (!await CurrentUserCanManageGroup())
-            return StatusCode(403, new { message = "No tiene permiso para manejar el grupo" });
+            return ApiErrorResult.Forbidden(ErrorCodes.GroupManagePermissionDenied, "No tiene permiso para manejar el grupo");
 
         if (request?.Lines == null)
         {
-            return BadRequest(new { message = "No hay datos para guardar" });
+            return ApiErrorResult.BadRequest(ErrorCodes.GroupConfigEmpty, "No hay datos para guardar");
         }
 
         var userIdClaim = User.FindFirst("userId")?.Value ?? User.FindFirst("sub")?.Value;
@@ -339,11 +341,11 @@ public class GroupConfigController : ControllerBase
     public async Task<ActionResult> SaveBpDefaults([FromBody] SaveBpDefaultsRequest request)
     {
         if (!await CurrentUserCanManageGroup())
-            return StatusCode(403, new { message = "No tiene permiso para manejar el grupo" });
+            return ApiErrorResult.Forbidden(ErrorCodes.GroupManagePermissionDenied, "No tiene permiso para manejar el grupo");
 
         if (request?.Values == null)
         {
-            return BadRequest(new { message = "No hay datos para guardar" });
+            return ApiErrorResult.BadRequest(ErrorCodes.GroupConfigEmpty, "No hay datos para guardar");
         }
 
         var userIdClaim = User.FindFirst("userId")?.Value ?? User.FindFirst("sub")?.Value;

@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using LotteryApi.Data;
 using LotteryApi.DTOs;
+using LotteryApi.Exceptions;
+using LotteryApi.Helpers;
 using LotteryApi.Models;
 using LotteryApi.Services;
 
@@ -108,7 +110,7 @@ public class ExpenseCategoriesController : ControllerBase
                 .FirstOrDefaultAsync();
 
             if (category == null)
-                return NotFound(new { message = "Categoría no encontrada" });
+                return ApiErrorResult.NotFound(ErrorCodes.ExpenseCategoryNotFound, "Categoría no encontrada");
 
             return Ok(category);
         }
@@ -131,14 +133,14 @@ public class ExpenseCategoriesController : ControllerBase
                 var parentExists = await _context.ExpenseCategories
                     .AnyAsync(c => c.CategoryId == dto.ParentCategoryId.Value && c.ParentCategoryId == null);
                 if (!parentExists)
-                    return BadRequest(new { message = "La categoría padre no existe o no es una categoría padre válida" });
+                    return ApiErrorResult.BadRequest(ErrorCodes.ExpenseParentInvalid, "La categoría padre no existe o no es una categoría padre válida");
             }
 
             // Check for duplicate name within same level
             var nameExists = await _context.ExpenseCategories
                 .AnyAsync(c => c.CategoryName == dto.CategoryName && c.ParentCategoryId == dto.ParentCategoryId && c.IsActive);
             if (nameExists)
-                return BadRequest(new { message = "Ya existe una categoría con ese nombre" });
+                return ApiErrorResult.BadRequest(ErrorCodes.ExpenseCategoryNameExists, "Ya existe una categoría con ese nombre");
 
             var category = new ExpenseCategory
             {
@@ -177,7 +179,7 @@ public class ExpenseCategoriesController : ControllerBase
         {
             var category = await _context.ExpenseCategories.FindAsync(id);
             if (category == null)
-                return NotFound(new { message = "Categoría no encontrada" });
+                return ApiErrorResult.NotFound(ErrorCodes.ExpenseCategoryNotFound, "Categoría no encontrada");
 
             if (dto.CategoryName != null)
             {
@@ -186,7 +188,7 @@ public class ExpenseCategoriesController : ControllerBase
                 var nameExists = await _context.ExpenseCategories
                     .AnyAsync(c => c.CategoryName == dto.CategoryName && c.ParentCategoryId == parentId && c.CategoryId != id && c.IsActive);
                 if (nameExists)
-                    return BadRequest(new { message = "Ya existe una categoría con ese nombre" });
+                    return ApiErrorResult.BadRequest(ErrorCodes.ExpenseCategoryNameExists, "Ya existe una categoría con ese nombre");
 
                 category.CategoryName = dto.CategoryName;
             }
@@ -196,7 +198,7 @@ public class ExpenseCategoriesController : ControllerBase
                 var parentExists = await _context.ExpenseCategories
                     .AnyAsync(c => c.CategoryId == dto.ParentCategoryId.Value && c.ParentCategoryId == null);
                 if (!parentExists)
-                    return BadRequest(new { message = "La categoría padre no existe o no es válida" });
+                    return ApiErrorResult.BadRequest(ErrorCodes.ExpenseParentInvalid, "La categoría padre no existe o no es válida");
 
                 category.ParentCategoryId = dto.ParentCategoryId;
             }
@@ -230,7 +232,7 @@ public class ExpenseCategoriesController : ControllerBase
         {
             var category = await _context.ExpenseCategories.FindAsync(id);
             if (category == null)
-                return NotFound(new { message = "Categoría no encontrada" });
+                return ApiErrorResult.NotFound(ErrorCodes.ExpenseCategoryNotFound, "Categoría no encontrada");
 
             // If parent category, also deactivate children
             if (category.ParentCategoryId == null)

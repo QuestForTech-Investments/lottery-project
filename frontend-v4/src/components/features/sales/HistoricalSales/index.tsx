@@ -8,6 +8,7 @@
  */
 
 import React, { memo, useCallback, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box, Paper, Typography, TextField, Grid, Autocomplete, Button, Stack,
   Tabs, Tab, InputAdornment,
@@ -20,6 +21,7 @@ import { exportToCsv, exportToPdf, type ExportColumn } from '@/utils/exportTable
 import { formatCurrency } from '@/utils/formatCurrency';
 
 const HistoricalSales: React.FC = () => {
+  const { t } = useTranslation();
   const {
     mainTab,
     setMainTab,
@@ -53,33 +55,33 @@ const HistoricalSales: React.FC = () => {
   const exportColumns = useMemo<ExportColumn<Record<string, unknown>>[]>(() => {
     const moneyKeys = new Set(['venta', 'comisiones', 'descuentos', 'premios', 'neto', 'caida', 'gastos', 'final']);
     return [
-      { key: 'ref', label: 'Ref.', align: 'left' as const },
-      { key: 'codigo', label: 'Código', align: 'left' as const },
-      { key: 'tickets', label: 'Tickets', align: 'right' as const },
-      { key: 'venta', label: 'Venta', align: 'right' as const },
-      { key: 'comisiones', label: 'Comisiones', align: 'right' as const },
-      { key: 'descuentos', label: 'Descuentos', align: 'right' as const },
-      { key: 'premios', label: 'Premios', align: 'right' as const },
-      { key: 'neto', label: 'Neto', align: 'right' as const },
-      { key: 'caida', label: 'Caída', align: 'right' as const },
-      { key: 'gastos', label: 'Gastos', align: 'right' as const },
-      { key: 'final', label: 'Final', align: 'right' as const },
+      { key: 'ref', label: t('sales.ref'), align: 'left' as const },
+      { key: 'codigo', label: t('common.code'), align: 'left' as const },
+      { key: 'tickets', label: t('common.tickets'), align: 'right' as const },
+      { key: 'venta', label: t('sales.venta'), align: 'right' as const },
+      { key: 'comisiones', label: t('sales.comisiones'), align: 'right' as const },
+      { key: 'descuentos', label: t('sales.descuentos'), align: 'right' as const },
+      { key: 'premios', label: t('sales.premios'), align: 'right' as const },
+      { key: 'neto', label: t('sales.neto'), align: 'right' as const },
+      { key: 'caida', label: t('sales.caida'), align: 'right' as const },
+      { key: 'gastos', label: t('sales.gastos'), align: 'right' as const },
+      { key: 'final', label: t('sales.final'), align: 'right' as const },
     ].map(c => ({
       ...c,
       getValue: moneyKeys.has(c.key)
         ? (row: Record<string, unknown>) => formatCurrency(Number(row[c.key] ?? 0))
         : undefined,
     }));
-  }, []);
+  }, [t]);
 
   const totalsAsRow = useMemo<Record<string, unknown>>(
-    () => ({ ref: 'Totales', codigo: '', ...totals }),
-    [totals],
+    () => ({ ref: t('balances.totals'), codigo: '', ...totals }),
+    [totals, t],
   );
 
   const handleExportCsv = useCallback(() => {
     if (bancasData.length === 0) {
-      alert('No hay datos para exportar.');
+      alert(t('sales.noDataToExport'));
       return;
     }
     exportToCsv(
@@ -88,20 +90,20 @@ const HistoricalSales: React.FC = () => {
       `historico-ventas-${fechaInicial}_${fechaFinal}`,
       totalsAsRow,
     );
-  }, [bancasData, exportColumns, fechaInicial, fechaFinal, totalsAsRow]);
+  }, [bancasData, exportColumns, fechaInicial, fechaFinal, totalsAsRow, t]);
 
   const handleExportPdf = useCallback(() => {
     if (bancasData.length === 0) {
-      alert('No hay datos para exportar.');
+      alert(t('sales.noDataToExport'));
       return;
     }
     exportToPdf(
       bancasData as unknown as Record<string, unknown>[],
       exportColumns,
-      `Histórico de Ventas — ${fechaInicial} al ${fechaFinal}`,
+      t('sales.historyExportTitle', { start: fechaInicial, end: fechaFinal }),
       totalsAsRow,
     );
-  }, [bancasData, exportColumns, fechaInicial, fechaFinal, totalsAsRow]);
+  }, [bancasData, exportColumns, fechaInicial, fechaFinal, totalsAsRow, t]);
 
   // Render content based on selected tab
   const renderTabContent = () => {
@@ -220,10 +222,10 @@ const HistoricalSales: React.FC = () => {
       <Paper elevation={3}>
         <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
           <Tabs value={mainTab} onChange={(_, v) => setMainTab(v)}>
-            <Tab label="General" />
-            <Tab label="Por sorteo" />
-            <Tab label="Combinaciones" />
-            <Tab label="Por zona" />
+            <Tab label={t('sales.tabs.general')} />
+            <Tab label={t('sales.tabs.porSorteo')} />
+            <Tab label={t('sales.tabs.combinaciones')} />
+            <Tab label={t('sales.tabs.porZona')} />
           </Tabs>
         </Box>
 
@@ -278,6 +280,7 @@ const GeneralTabHeader = memo<GeneralTabHeaderProps>(({
   onExportCsv,
   onExportPdf,
 }) => {
+  const { t } = useTranslation();
   const buttonStyles = {
     borderRadius: '20px',
     px: 2.5,
@@ -290,7 +293,7 @@ const GeneralTabHeader = memo<GeneralTabHeaderProps>(({
   return (
     <>
       <Typography variant="h5" align="center" sx={{ color: '#1976d2', mb: 2, fontWeight: 400 }}>
-        Reportes
+        {t('sales.reports')}
       </Typography>
 
       <Grid container spacing={2} sx={{ mb: 1 }}>
@@ -298,7 +301,7 @@ const GeneralTabHeader = memo<GeneralTabHeaderProps>(({
           <TextField
             fullWidth
             type="date"
-            label="Fecha inicial"
+            label={t('common.dateStart')}
             value={fechaInicial}
             onChange={(e) => onFechaInicialChange(e.target.value)}
             InputLabelProps={{ shrink: true }}
@@ -309,7 +312,7 @@ const GeneralTabHeader = memo<GeneralTabHeaderProps>(({
           <TextField
             fullWidth
             type="date"
-            label="Fecha final"
+            label={t('common.dateEnd')}
             value={fechaFinal}
             onChange={(e) => onFechaFinalChange(e.target.value)}
             InputLabelProps={{ shrink: true }}
@@ -320,7 +323,7 @@ const GeneralTabHeader = memo<GeneralTabHeaderProps>(({
           <Autocomplete
             multiple
             // Prepend a synthetic "Todas" entry — clicking it toggles all zones.
-            options={[{ id: -1, name: 'Todas' } as Zona, ...zonasList]}
+            options={[{ id: -1, name: t('common.all') } as Zona, ...zonasList]}
             getOptionLabel={(o) => o.name || ''}
             value={zonas}
             onChange={(_, v) => {
@@ -334,21 +337,21 @@ const GeneralTabHeader = memo<GeneralTabHeaderProps>(({
             renderInput={(params) => (
               <TextField
                 {...params}
-                label="Zonas"
+                label={t('common.zones')}
                 size="small"
                 InputProps={{
                   ...params.InputProps,
                   startAdornment: zonas.length > 0 ? (
                     <InputAdornment position="start" sx={{ ml: 1 }}>
                       {zonas.length === zonasList.length && zonasList.length > 0
-                        ? 'Todas'
+                        ? t('common.all')
                         : zonas.length === 1
                           ? zonas[0].name
-                          : `${zonas.length} seleccionadas`}
+                          : t('balances.selectedCount', { count: zonas.length })}
                     </InputAdornment>
                   ) : null
                 }}
-                placeholder={zonas.length === 0 ? 'Seleccione' : ''}
+                placeholder={zonas.length === 0 ? t('common.select') : ''}
               />
             )}
           />
@@ -364,7 +367,7 @@ const GeneralTabHeader = memo<GeneralTabHeaderProps>(({
           size="small"
           sx={buttonStyles}
         >
-          Ver ventas
+          {t('transactions.viewSales')}
         </Button>
         <Button variant="contained" onClick={onExportCsv} size="small" sx={buttonStyles}>
           CSV

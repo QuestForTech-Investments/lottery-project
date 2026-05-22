@@ -5,15 +5,17 @@
  */
 
 import { memo, type FC } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Box, Typography, ToggleButtonGroup, ToggleButton } from '@mui/material';
 import { FILTER_OPTIONS } from '../constants';
 import type { FilterTogglesProps } from '../types';
 
 const FilterToggles: FC<FilterTogglesProps> = memo(({ filterType, onFilterChange }) => {
+  const { t } = useTranslation();
   return (
     <Box sx={{ mb: 2, display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
       <Typography variant="subtitle1" sx={{ color: 'text.secondary', mb: 1.5, fontWeight: 500 }}>
-        Filtros
+        {t('common.filter')}
       </Typography>
       <ToggleButtonGroup
         value={filterType}
@@ -54,7 +56,7 @@ const FilterToggles: FC<FilterTogglesProps> = memo(({ filterType, onFilterChange
       >
         {FILTER_OPTIONS.map(option => (
           <ToggleButton key={option.value} value={option.value}>
-            {option.label}
+            {t(option.label)}
           </ToggleButton>
         ))}
       </ToggleButtonGroup>
@@ -100,7 +102,7 @@ const FilterToggles: FC<FilterTogglesProps> = memo(({ filterType, onFilterChange
       >
         {FILTER_OPTIONS.map(option => (
           <ToggleButton key={option.value} value={option.value}>
-            {option.label}
+            {t(option.label)}
           </ToggleButton>
         ))}
       </ToggleButtonGroup>

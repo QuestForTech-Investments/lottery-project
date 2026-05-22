@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using LotteryApi.Data;
+using LotteryApi.Exceptions;
 using LotteryApi.Helpers;
 using LotteryApi.Models;
 using LotteryApi.DTOs;
@@ -43,7 +44,7 @@ public class BettingPoolDrawsController : ControllerBase
         {
             if (!await _zoneScope.IsBettingPoolAllowedAsync(bettingPoolId))
             {
-                return NotFound(new { message = "Banca no encontrada" });
+                return ApiErrorResult.NotFound(ErrorCodes.BettingPoolNotFound, "Banca no encontrada");
             }
 
             // Verify betting pool exists
@@ -52,7 +53,7 @@ public class BettingPoolDrawsController : ControllerBase
 
             if (!bettingPoolExists)
             {
-                return NotFound(new { message = "Banca no encontrada" });
+                return ApiErrorResult.NotFound(ErrorCodes.BettingPoolNotFound, "Banca no encontrada");
             }
 
             // Load all betting pool draws with related data (only active draws)
@@ -224,7 +225,7 @@ public class BettingPoolDrawsController : ControllerBase
         {
             if (!await _zoneScope.IsBettingPoolAllowedAsync(bettingPoolId))
             {
-                return NotFound(new { message = "Banca no encontrada" });
+                return ApiErrorResult.NotFound(ErrorCodes.BettingPoolNotFound, "Banca no encontrada");
             }
 
             var bettingPoolDraw = await _context.BettingPoolDraws
@@ -238,7 +239,7 @@ public class BettingPoolDrawsController : ControllerBase
 
             if (bettingPoolDraw == null)
             {
-                return NotFound(new { message = "Configuración de sorteo no encontrada" });
+                return ApiErrorResult.NotFound(ErrorCodes.DrawNotFound, "Configuración de sorteo no encontrada");
             }
 
             // Load available game types
@@ -327,7 +328,7 @@ public class BettingPoolDrawsController : ControllerBase
 
             if (!bettingPoolExists)
             {
-                return NotFound(new { message = "Banca no encontrada" });
+                return ApiErrorResult.NotFound(ErrorCodes.BettingPoolNotFound, "Banca no encontrada");
             }
 
             var results = new List<BettingPoolDrawDto>();
@@ -466,7 +467,7 @@ public class BettingPoolDrawsController : ControllerBase
 
             if (!bettingPoolExists)
             {
-                return NotFound(new { message = "Banca no encontrada" });
+                return ApiErrorResult.NotFound(ErrorCodes.BettingPoolNotFound, "Banca no encontrada");
             }
 
             // Verify draw exists
@@ -475,7 +476,7 @@ public class BettingPoolDrawsController : ControllerBase
 
             if (!drawExists)
             {
-                return BadRequest(new { message = "Sorteo no encontrado" });
+                return ApiErrorResult.BadRequest(ErrorCodes.DrawNotFound, "Sorteo no encontrado");
             }
 
             // Check if already exists
@@ -485,7 +486,7 @@ public class BettingPoolDrawsController : ControllerBase
 
             if (exists)
             {
-                return BadRequest(new { message = "Este sorteo ya está configurado para esta banca" });
+                return ApiErrorResult.BadRequest(ErrorCodes.DrawAlreadyConfigured, "Este sorteo ya está configurado para esta banca");
             }
 
             // Create betting pool draw
@@ -552,7 +553,7 @@ public class BettingPoolDrawsController : ControllerBase
 
             if (bettingPoolDraw == null)
             {
-                return NotFound(new { message = "Configuración de sorteo no encontrada" });
+                return ApiErrorResult.NotFound(ErrorCodes.DrawNotFound, "Configuración de sorteo no encontrada");
             }
 
             // Update fields
@@ -625,7 +626,7 @@ public class BettingPoolDrawsController : ControllerBase
 
             if (bettingPoolDraw == null)
             {
-                return NotFound(new { message = "Configuración de sorteo no encontrada" });
+                return ApiErrorResult.NotFound(ErrorCodes.DrawNotFound, "Configuración de sorteo no encontrada");
             }
 
             // Remove enabled game types first
@@ -668,7 +669,7 @@ public class BettingPoolDrawsController : ControllerBase
         {
             if (!await _zoneScope.IsBettingPoolAllowedAsync(bettingPoolId))
             {
-                return NotFound(new { message = "Banca no encontrada" });
+                return ApiErrorResult.NotFound(ErrorCodes.BettingPoolNotFound, "Banca no encontrada");
             }
 
             var bettingPoolExists = await _context.BettingPools
@@ -676,7 +677,7 @@ public class BettingPoolDrawsController : ControllerBase
 
             if (!bettingPoolExists)
             {
-                return NotFound(new { message = "Banca no encontrada" });
+                return ApiErrorResult.NotFound(ErrorCodes.BettingPoolNotFound, "Banca no encontrada");
             }
 
             // Query betting_pool_draws instead of betting_pool_sortitions

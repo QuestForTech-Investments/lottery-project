@@ -1,21 +1,38 @@
 /**
  * Formatting Utilities
- * Common data formatting functions
+ * Common data formatting functions. Date/time/percent formatters honor the
+ * active i18n language; pass an explicit `locale` to override.
  */
 
-/**
- * Format date to locale string
- * @param {string|Date} date - Date to format
- * @param {string} locale - Locale (default: 'es-ES')
- * @returns {string} - Formatted date
- */
+import i18n from '../i18n/config'
+
 type DateInput = string | number | Date | null | undefined
 
-export const formatDate = (date: DateInput, locale = 'es-ES'): string => {
+// Map our i18n language codes to BCP-47 locale tags. `ht` (Haitian Creole)
+// has limited Intl support across browsers — fall back to `fr-FR` which is
+// the closest language for date/number formatting.
+const LOCALE_MAP: Record<string, string> = {
+  es: 'es-DO',
+  en: 'en-US',
+  fr: 'fr-FR',
+  ht: 'fr-FR',
+}
+
+/** Resolve the active locale from i18n unless caller provided one. */
+const resolveLocale = (override?: string): string => {
+  if (override) return override
+  const lang = (i18n.language || 'es').split('-')[0]
+  return LOCALE_MAP[lang] || 'es-DO'
+}
+
+/** Public helper: get the BCP-47 locale for the active i18n language. */
+export const getActiveLocale = (): string => resolveLocale()
+
+export const formatDate = (date: DateInput, locale?: string): string => {
   if (!date) return '-'
-  
+
   try {
-    return new Date(date).toLocaleDateString(locale, {
+    return new Date(date).toLocaleDateString(resolveLocale(locale), {
       year: 'numeric',
       month: 'long',
       day: 'numeric'
@@ -26,17 +43,11 @@ export const formatDate = (date: DateInput, locale = 'es-ES'): string => {
   }
 }
 
-/**
- * Format date and time to locale string
- * @param {string|Date} date - Date to format
- * @param {string} locale - Locale (default: 'es-ES')
- * @returns {string} - Formatted date and time
- */
-export const formatDateTime = (date: DateInput, locale = 'es-ES'): string => {
+export const formatDateTime = (date: DateInput, locale?: string): string => {
   if (!date) return '-'
-  
+
   try {
-    return new Date(date).toLocaleString(locale, {
+    return new Date(date).toLocaleString(resolveLocale(locale), {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
@@ -50,15 +61,41 @@ export const formatDateTime = (date: DateInput, locale = 'es-ES'): string => {
 }
 
 /**
- * Format currency
- * @param {number} amount - Amount to format
- * @param {string} currency - Currency code (default: 'USD')
- * @param {string} locale - Locale (default: 'en-US')
- * @returns {string} - Formatted currency
+ * Short numeric date, e.g. "20/05/2026". Useful in table cells where the
+ * long form takes too much space.
+ */
+export const formatDateShort = (date: DateInput, locale?: string): string => {
+  if (!date) return '-'
+  try {
+    return new Date(date).toLocaleDateString(resolveLocale(locale))
+  } catch {
+    return '-'
+  }
+}
+
+/**
+ * Time-of-day formatter, e.g. "14:30" or "2:30 PM" depending on locale.
+ */
+export const formatTime = (date: DateInput, locale?: string, withSeconds = false): string => {
+  if (!date) return '-'
+  try {
+    return new Date(date).toLocaleTimeString(resolveLocale(locale), {
+      hour: '2-digit',
+      minute: '2-digit',
+      ...(withSeconds && { second: '2-digit' }),
+    })
+  } catch {
+    return '-'
+  }
+}
+
+/**
+ * Currency stays in `en-US` by default because USD formatting is the canonical
+ * representation users expect; pass a locale to override for display tweaks.
  */
 export const formatCurrency = (amount: number | null | undefined, currency = 'USD', locale = 'en-US'): string => {
   if (amount === null || amount === undefined) return '-'
-  
+
   try {
     return new Intl.NumberFormat(locale, {
       style: 'currency',
@@ -180,6 +217,8 @@ export const getTodayDate = (): string => {
 export default {
   formatDate,
   formatDateTime,
+  formatDateShort,
+  formatTime,
   formatCurrency,
   formatPercentage,
   formatPhone,

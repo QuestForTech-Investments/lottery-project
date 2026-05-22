@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Paper,
@@ -43,6 +44,7 @@ import useUserSessions from './hooks/useUserSessions';
  * Modern Material-UI version of UserSessions
  */
 const UserSessionsMUI = () => {
+  const { t } = useTranslation();
   const {
     zones,
     currentTabData,
@@ -79,7 +81,7 @@ const UserSessionsMUI = () => {
             variant="h6"
             component="div"
           >
-            Inicios de Sesión
+            {t('usersAdmin.loginSessionsTitle')}
           </Typography>
         </Toolbar>
 
@@ -90,11 +92,11 @@ const UserSessionsMUI = () => {
               <TextField
                 fullWidth
                 type="date"
-                label="Fecha"
+                label={t('common.date')}
                 value={selectedDate}
                 onChange={handleDateChange}
                 error={!!dateError}
-                helperText={dateError || 'Seleccione la fecha a consultar'}
+                helperText={dateError || t('usersAdmin.dateSelectHint')}
                 InputLabelProps={{
                   shrink: true,
                 }}
@@ -106,14 +108,14 @@ const UserSessionsMUI = () => {
 
             <Grid item xs={12} md={4}>
               <FormControl fullWidth>
-                <InputLabel id="zone-select-label">Zonas</InputLabel>
+                <InputLabel id="zone-select-label">{t('common.zones')}</InputLabel>
                 <Select
                   labelId="zone-select-label"
                   multiple
                   value={selectedZones}
                   onChange={handleZoneChange}
                   disabled={zonesLoading}
-                  input={<OutlinedInput label="Zonas" />}
+                  input={<OutlinedInput label={t('common.zones')} />}
                   renderValue={(selected) => (
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                       {selected.map((value) => {
@@ -132,10 +134,10 @@ const UserSessionsMUI = () => {
                   {zonesLoading ? (
                     <MenuItem disabled>
                       <CircularProgress size={20} sx={{ mr: 1 }} />
-                      Cargando zonas...
+                      {t('usersAdmin.loadingZones')}
                     </MenuItem>
                   ) : zones.length === 0 ? (
-                    <MenuItem disabled>No hay zonas disponibles</MenuItem>
+                    <MenuItem disabled>{t('usersAdmin.noZonesAvailable')}</MenuItem>
                   ) : (
                     [
                       <MenuItem key="__all__" value={-1} sx={{ fontWeight: 600 }}>
@@ -144,7 +146,7 @@ const UserSessionsMUI = () => {
                           checked={selectedZones.length === zones.length && zones.length > 0}
                           indeterminate={selectedZones.length > 0 && selectedZones.length < zones.length}
                         />
-                        <ListItemText primary="TODAS" />
+                        <ListItemText primary={t('usersAdmin.allCaps')} />
                       </MenuItem>,
                       <Divider key="__divider__" />,
                       ...zones.map((zone) => (
@@ -168,7 +170,7 @@ const UserSessionsMUI = () => {
                 disabled={loading}
                 sx={{ height: '56px' }}
               >
-                {loading ? 'Cargando...' : 'Filtrar'}
+                {loading ? t('usersAdmin.loadingShort') : t('usersAdmin.filterAction')}
               </Button>
             </Grid>
           </Grid>
@@ -189,15 +191,15 @@ const UserSessionsMUI = () => {
             {/* Tabs */}
             <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
               <Tabs value={activeTab} onChange={handleTabChange}>
-                <Tab label="Bancas" value="bancas" />
-                <Tab label="Colisión de IPs" value="colision" />
+                <Tab label={t('common.bettingPools')} value="bancas" />
+                <Tab label={t('usersAdmin.tabIpCollision')} value="colision" />
               </Tabs>
             </Box>
 
             {/* Search Filter */}
             <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
               <TextField
-                placeholder="Búsqueda rápida por banca o usuario..."
+                placeholder={t('usersAdmin.searchByBettingPoolOrUser')}
                 value={searchText}
                 onChange={handleSearchChange}
                 sx={{ minWidth: 300 }}
@@ -224,28 +226,28 @@ const UserSessionsMUI = () => {
                 <TableHead>
                   <TableRow sx={{ bgcolor: 'grey.100' }}>
                     <TableCell sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>
-                      Banca
+                      {t('common.bettingPool')}
                     </TableCell>
                     <TableCell sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>
-                      Usuario
+                      {t('usersAdmin.user')}
                     </TableCell>
                     <TableCell align="center" sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>
-                      Primera sesión (Web)
+                      {t('usersAdmin.firstSessionWeb')}
                     </TableCell>
                     <TableCell align="center" sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>
-                      Última sesión (Web)
+                      {t('usersAdmin.lastSessionWeb')}
                     </TableCell>
                     <TableCell align="center" sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>
-                      Primera sesión (Celular)
+                      {t('usersAdmin.firstSessionMobile')}
                     </TableCell>
                     <TableCell align="center" sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>
-                      Última sesión (Celular)
+                      {t('usersAdmin.lastSessionMobile')}
                     </TableCell>
                     <TableCell align="center" sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>
-                      Primera sesión (App)
+                      {t('usersAdmin.firstSessionApp')}
                     </TableCell>
                     <TableCell align="center" sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>
-                      Última sesión (App)
+                      {t('usersAdmin.lastSessionApp')}
                     </TableCell>
                   </TableRow>
                 </TableHead>
@@ -265,7 +267,7 @@ const UserSessionsMUI = () => {
                     <TableRow>
                       <TableCell colSpan={8} align="center">
                         <Typography variant="body2" color="text.secondary" sx={{ py: 3 }}>
-                          No hay entradas disponibles
+                          {t('common.noEntries')}
                         </Typography>
                       </TableCell>
                     </TableRow>
@@ -308,7 +310,7 @@ const UserSessionsMUI = () => {
             {/* Entry count and Pagination */}
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', px: 2, py: 1, borderTop: 1, borderColor: 'divider' }}>
               <Typography variant="body2" color="text.secondary">
-                Mostrando {currentTabData.length} de {totalRecords} entradas
+                {t('usersAdmin.showingOfEntries', { shown: currentTabData.length, total: totalRecords })}
               </Typography>
               {totalRecords > rowsPerPage && (
                 <TablePagination
@@ -319,9 +321,11 @@ const UserSessionsMUI = () => {
                   page={page}
                   onPageChange={handleChangePage}
                   onRowsPerPageChange={handleChangeRowsPerPage}
-                  labelRowsPerPage="Por página:"
+                  labelRowsPerPage={t('usersAdmin.perPage')}
                   labelDisplayedRows={({ from, to, count }) =>
-                    `${from}-${to} de ${count !== -1 ? count : `más de ${to}`}`
+                    count !== -1
+                      ? t('usersAdmin.fromTo', { from, to, total: count })
+                      : t('usersAdmin.fromToMoreThan', { from, to })
                   }
                   sx={{ '& .MuiTablePagination-toolbar': { minHeight: 40 } }}
                 />
@@ -335,7 +339,7 @@ const UserSessionsMUI = () => {
           <Box sx={{ p: 4, textAlign: 'center' }}>
             <CircularProgress size={40} />
             <Typography variant="body1" color="text.secondary" sx={{ mt: 2 }}>
-              Cargando sesiones del día...
+              {t('usersAdmin.loadingTodaySessions')}
             </Typography>
           </Box>
         )}

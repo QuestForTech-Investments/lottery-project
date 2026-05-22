@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using LotteryApi.Data;
+using LotteryApi.Exceptions;
+using LotteryApi.Helpers;
 using LotteryApi.Models;
 using LotteryApi.DTOs;
 using LotteryApi.Services;
@@ -49,7 +51,7 @@ public class BettingPoolPrizesCommissionsController : ControllerBase
     public async Task<ActionResult<List<BettingPoolPrizesCommissionDto>>> GetPrizesCommissions(int bettingPoolId)
     {
         if (!await HasPermissionAsync("CHANGE_GAME_PRIZES")) return Forbid();
-        if (!await _zoneScope.IsBettingPoolAllowedAsync(bettingPoolId)) return NotFound(new { message = "Banca no encontrada" });
+        if (!await _zoneScope.IsBettingPoolAllowedAsync(bettingPoolId)) return ApiErrorResult.NotFound(ErrorCodes.BettingPoolNotFound, "Banca no encontrada");
         try
         {
             var bettingPoolExists = await _context.BettingPools
@@ -57,7 +59,7 @@ public class BettingPoolPrizesCommissionsController : ControllerBase
 
             if (!bettingPoolExists)
             {
-                return NotFound(new { message = "Banca no encontrada" });
+                return ApiErrorResult.NotFound(ErrorCodes.BettingPoolNotFound, "Banca no encontrada");
             }
 
             var prizesCommissions = await _context.BettingPoolPrizesCommissions
@@ -105,7 +107,7 @@ public class BettingPoolPrizesCommissionsController : ControllerBase
         int prizeCommissionId)
     {
         if (!await HasPermissionAsync("CHANGE_GAME_PRIZES")) return Forbid();
-        if (!await _zoneScope.IsBettingPoolAllowedAsync(bettingPoolId)) return NotFound(new { message = "Banca no encontrada" });
+        if (!await _zoneScope.IsBettingPoolAllowedAsync(bettingPoolId)) return ApiErrorResult.NotFound(ErrorCodes.BettingPoolNotFound, "Banca no encontrada");
         try
         {
             var prizeCommission = await _context.BettingPoolPrizesCommissions
@@ -136,7 +138,7 @@ public class BettingPoolPrizesCommissionsController : ControllerBase
 
             if (prizeCommission == null)
             {
-                return NotFound(new { message = "Premio/comisión no encontrado" });
+                return ApiErrorResult.NotFound(ErrorCodes.PrizeCommissionNotFound, "Premio/comisión no encontrado");
             }
 
             return Ok(prizeCommission);
@@ -165,7 +167,7 @@ public class BettingPoolPrizesCommissionsController : ControllerBase
 
             if (!bettingPoolExists)
             {
-                return NotFound(new { message = "Banca no encontrada" });
+                return ApiErrorResult.NotFound(ErrorCodes.BettingPoolNotFound, "Banca no encontrada");
             }
 
             // Validate lottery only if provided
@@ -176,7 +178,7 @@ public class BettingPoolPrizesCommissionsController : ControllerBase
 
                 if (!lotteryExists)
                 {
-                    return BadRequest(new { message = "Lotería no encontrada" });
+                    return ApiErrorResult.BadRequest(ErrorCodes.LotteryNotFound, "Lotería no encontrada");
                 }
             }
 
@@ -187,7 +189,7 @@ public class BettingPoolPrizesCommissionsController : ControllerBase
 
             if (exists)
             {
-                return BadRequest(new { message = "Ya existe una configuración de premios para esta lotería y tipo de juego" });
+                return ApiErrorResult.BadRequest(ErrorCodes.PrizeCommissionExists, "Ya existe una configuración de premios para esta lotería y tipo de juego");
             }
 
             var prizeCommission = new BettingPoolPrizesCommission
@@ -269,7 +271,7 @@ public class BettingPoolPrizesCommissionsController : ControllerBase
 
             if (prizeCommission == null)
             {
-                return NotFound(new { message = "Premio/comisión no encontrado" });
+                return ApiErrorResult.NotFound(ErrorCodes.PrizeCommissionNotFound, "Premio/comisión no encontrado");
             }
 
             if (dto.LotteryId.HasValue)
@@ -279,7 +281,7 @@ public class BettingPoolPrizesCommissionsController : ControllerBase
 
                 if (!lotteryExists)
                 {
-                    return BadRequest(new { message = "Lotería no encontrada" });
+                    return ApiErrorResult.BadRequest(ErrorCodes.LotteryNotFound, "Lotería no encontrada");
                 }
 
                 prizeCommission.LotteryId = dto.LotteryId.Value;
@@ -373,7 +375,7 @@ public class BettingPoolPrizesCommissionsController : ControllerBase
 
             if (prizeCommission == null)
             {
-                return NotFound(new { message = "Premio/comisión no encontrado" });
+                return ApiErrorResult.NotFound(ErrorCodes.PrizeCommissionNotFound, "Premio/comisión no encontrado");
             }
 
             _context.BettingPoolPrizesCommissions.Remove(prizeCommission);
@@ -395,7 +397,7 @@ public class BettingPoolPrizesCommissionsController : ControllerBase
     public async Task<ActionResult<FlatPrizesConfigDto>> GetPrizesCommissionsBulk(int bettingPoolId)
     {
         if (!await HasPermissionAsync("CHANGE_GAME_PRIZES")) return Forbid();
-        if (!await _zoneScope.IsBettingPoolAllowedAsync(bettingPoolId)) return NotFound(new { message = "Banca no encontrada" });
+        if (!await _zoneScope.IsBettingPoolAllowedAsync(bettingPoolId)) return ApiErrorResult.NotFound(ErrorCodes.BettingPoolNotFound, "Banca no encontrada");
         try
         {
             var bettingPoolExists = await _context.BettingPools
@@ -403,7 +405,7 @@ public class BettingPoolPrizesCommissionsController : ControllerBase
 
             if (!bettingPoolExists)
             {
-                return NotFound(new { message = "Banca no encontrada" });
+                return ApiErrorResult.NotFound(ErrorCodes.BettingPoolNotFound, "Banca no encontrada");
             }
 
             var records = await _context.BettingPoolPrizesCommissions
@@ -438,7 +440,7 @@ public class BettingPoolPrizesCommissionsController : ControllerBase
 
             if (!bettingPoolExists)
             {
-                return NotFound(new { message = "Banca no encontrada" });
+                return ApiErrorResult.NotFound(ErrorCodes.BettingPoolNotFound, "Banca no encontrada");
             }
 
             // Delete existing records for this betting pool
@@ -599,7 +601,7 @@ public class BettingPoolPrizesCommissionsController : ControllerBase
 
             if (!bettingPoolExists)
             {
-                return NotFound(new { message = "Banca no encontrada" });
+                return ApiErrorResult.NotFound(ErrorCodes.BettingPoolNotFound, "Banca no encontrada");
             }
 
             if (dto.Items == null || dto.Items.Count == 0)

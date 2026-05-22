@@ -8,6 +8,7 @@
  */
 
 import React, { useState, useEffect, useRef, useMemo, type SyntheticEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Typography,
   Box,
@@ -55,6 +56,7 @@ const PrizesTab: React.FC<PrizesTabProps> = ({
   loadingDraws: propLoadingDraws = false,
   onSavePrizeConfig = null,
 }) => {
+  const { t } = useTranslation();
   // State
   const [localDraws, setLocalDraws] = useState<Draw[]>([]);
   const [localLoadingDraws, setLocalLoadingDraws] = useState<boolean>(false);
@@ -263,7 +265,7 @@ const PrizesTab: React.FC<PrizesTabProps> = ({
     } catch (err) {
       console.error('[ERROR] Error loading bet types:', err);
       const error = err as Error;
-      setError(error.message || 'Error al cargar tipos de premios');
+      setError(error.message || t('createBettingPool.prizes.errorLoad'));
       setBetTypes([]);
     } finally {
       setLoading(false);
@@ -291,7 +293,7 @@ const PrizesTab: React.FC<PrizesTabProps> = ({
    */
   const handleSave = async (): Promise<void> => {
     if (!onSavePrizeConfig || !bettingPoolId) {
-      setSaveError('No se puede guardar: falta configuration');
+      setSaveError(t('createBettingPool.prizes.saveErrorMissingConfig'));
       return;
     }
 
@@ -304,7 +306,7 @@ const PrizesTab: React.FC<PrizesTabProps> = ({
     } catch (err) {
       console.error(`[ERROR] Error saving prize config:`, err);
       const error = err as Error;
-      setSaveError(error.message || 'Error al guardar configuration de premios');
+      setSaveError(error.message || t('createBettingPool.prizes.saveError'));
     } finally {
       setSaving(false);
     }
@@ -317,8 +319,8 @@ const PrizesTab: React.FC<PrizesTabProps> = ({
         <CircularProgress size={60} />
         <Typography variant="body1" color="text.secondary">
           {activeDraw === 'general'
-            ? 'Cargando todos los tipos de premios...'
-            : `Cargando tipos de premios para ${draws.find(l => l.id === activeDraw)?.name}...`
+            ? t('createBettingPool.prizes.loadingAll')
+            : t('createBettingPool.prizes.loadingForDraw', { value: draws.find(l => l.id === activeDraw)?.name ?? '' })
           }
         </Typography>
       </Box>
@@ -331,7 +333,7 @@ const PrizesTab: React.FC<PrizesTabProps> = ({
       <Box sx={{ p: 3 }}>
         <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>
         <Typography variant="body2" color="text.secondary">
-          No se pudieron cargar los tipos de premios. Por favor, verifica que el backend esté corriendo y vuelve a intentar.
+          {t('createBettingPool.prizes.errorLoadDesc')}
         </Typography>
       </Box>
     );
@@ -341,7 +343,7 @@ const PrizesTab: React.FC<PrizesTabProps> = ({
   if (betTypes.length === 0) {
     return (
       <Box sx={{ p: 3 }}>
-        <Alert severity="info">No hay tipos de premios configurados en el sistema.</Alert>
+        <Alert severity="info">{t('createBettingPool.prizes.emptyConfigured')}</Alert>
       </Box>
     );
   }
@@ -349,11 +351,11 @@ const PrizesTab: React.FC<PrizesTabProps> = ({
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h6" gutterBottom>
-        Premios y Comisiones
+        {t('createBettingPool.prizes.title')}
       </Typography>
 
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        Configura los pagos de premios y comisiones para cada tipo de juego de lotería.
+        {t('createBettingPool.prizes.subtitle')}
       </Typography>
 
       {/* Level 2: Sub-tabs */}
@@ -366,8 +368,8 @@ const PrizesTab: React.FC<PrizesTabProps> = ({
             '& .MuiTab-root': { fontWeight: 'bold', fontSize: '0.95rem' }
           }}
         >
-          <Tab label="Premios" />
-          <Tab label="Comisiones" />
+          <Tab label={t('createBettingPool.prizes.subTabPrizes')} />
+          <Tab label={t('createBettingPool.prizes.subTabCommissions')} />
         </Tabs>
       </Box>
 
@@ -417,10 +419,7 @@ const PrizesTab: React.FC<PrizesTabProps> = ({
       <Box sx={{ mt: 3 }}>
         <Alert severity="info">
           <Typography variant="body2">
-            <strong>Nota:</strong> Los valores del tab "General" se propagan automáticamente a todos los sorteos.
-            Si deseas configurar un valor diferente para un sorteo específico, selecciona ese sorteo y haz clic
-            en "ACTUALIZAR" para guardar solo ese sorteo (esto creará un override que no se verá afectado por
-            cambios futuros en "General").
+            <strong>{t('createBettingPool.prizes.infoNoteBold')}</strong> {t('createBettingPool.prizes.infoNoteBody')}
           </Typography>
         </Alert>
       </Box>
@@ -433,7 +432,7 @@ const PrizesTab: React.FC<PrizesTabProps> = ({
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >
         <Alert onClose={() => setSaveSuccess(false)} severity="success" sx={{ width: '100%' }} icon={<CheckCircleIcon />}>
-          Configuración guardada exitosamente para {draws.find(l => l.id === activeDraw)?.name || activeDraw}
+          {t('createBettingPool.prizes.saveSuccess', { value: draws.find(l => l.id === activeDraw)?.name || activeDraw })}
         </Alert>
       </Snackbar>
 
@@ -445,7 +444,7 @@ const PrizesTab: React.FC<PrizesTabProps> = ({
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >
         <Alert onClose={() => setSaveError(null)} severity="error" sx={{ width: '100%' }}>
-          {saveError || 'Error al guardar configuration'}
+          {saveError || t('createBettingPool.prizes.saveErrorFallback')}
         </Alert>
       </Snackbar>
     </Box>

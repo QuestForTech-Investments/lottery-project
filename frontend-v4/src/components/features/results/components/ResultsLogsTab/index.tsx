@@ -1,4 +1,5 @@
 import { memo, useMemo, useState, type FC } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Typography,
@@ -23,24 +24,25 @@ interface ResultsLogsTabProps {
  * Render winning numbers with styled badges
  */
 const WinningNumbersBadges: FC<{ log: ResultLogDto }> = memo(({ log }) => {
+  const { t } = useTranslation();
   const labels: { label: string; value: string }[] = [];
 
   // Add main numbers (1ra, 2da, 3ra) if present
-  if (log.num1) labels.push({ label: '1ra', value: log.num1 });
-  if (log.num2) labels.push({ label: '2da', value: log.num2 });
-  if (log.num3) labels.push({ label: '3ra', value: log.num3 });
+  if (log.num1) labels.push({ label: t('resultsAdmin.labels.first'), value: log.num1 });
+  if (log.num2) labels.push({ label: t('resultsAdmin.labels.second'), value: log.num2 });
+  if (log.num3) labels.push({ label: t('resultsAdmin.labels.third'), value: log.num3 });
 
   // Add USA lottery bet types if present
-  if (log.cash3) labels.push({ label: 'Pick 3', value: log.cash3 });
-  if (log.play4) labels.push({ label: 'Pick 4', value: log.play4 });
-  if (log.pick5) labels.push({ label: 'Pick 5', value: log.pick5 });
+  if (log.cash3) labels.push({ label: t('resultsAdmin.labels.pick3'), value: log.cash3 });
+  if (log.play4) labels.push({ label: t('resultsAdmin.labels.pick4'), value: log.play4 });
+  if (log.pick5) labels.push({ label: t('resultsAdmin.labels.pick5'), value: log.pick5 });
 
   // Add derived bet types (Bolita and Singulaccion) if present
-  if (log.bolita1) labels.push({ label: 'Bolita 1', value: log.bolita1 });
-  if (log.bolita2) labels.push({ label: 'Bolita 2', value: log.bolita2 });
-  if (log.singulaccion1) labels.push({ label: 'Sing. 1', value: log.singulaccion1 });
-  if (log.singulaccion2) labels.push({ label: 'Sing. 2', value: log.singulaccion2 });
-  if (log.singulaccion3) labels.push({ label: 'Sing. 3', value: log.singulaccion3 });
+  if (log.bolita1) labels.push({ label: t('resultsAdmin.labels.bolita1'), value: log.bolita1 });
+  if (log.bolita2) labels.push({ label: t('resultsAdmin.labels.bolita2'), value: log.bolita2 });
+  if (log.singulaccion1) labels.push({ label: t('resultsAdmin.labels.singShort1'), value: log.singulaccion1 });
+  if (log.singulaccion2) labels.push({ label: t('resultsAdmin.labels.singShort2'), value: log.singulaccion2 });
+  if (log.singulaccion3) labels.push({ label: t('resultsAdmin.labels.singShort3'), value: log.singulaccion3 });
 
   if (labels.length === 0) {
     return <span>{log.winningNumbers || '-'}</span>;
@@ -86,6 +88,7 @@ export const ResultsLogsTab: FC<ResultsLogsTabProps> = memo(({
   logsFilterDate,
   onFilterDateChange,
 }) => {
+  const { t } = useTranslation();
   const [logsFilter, setLogsFilter] = useState<string>('');
 
   // Filtered logs
@@ -102,13 +105,13 @@ export const ResultsLogsTab: FC<ResultsLogsTabProps> = memo(({
   return (
     <>
       <Typography variant="h5" align="center" sx={{ mb: 3, fontWeight: 600 }}>
-        Logs de resultados
+        {t('resultsAdmin.logs.title')}
       </Typography>
 
       {/* Date Filter */}
       <Box sx={{ mb: 2 }}>
         <Typography variant="body2" sx={{ mb: 0.5, color: '#666', fontSize: '12px' }}>
-          Fecha
+          {t('resultsAdmin.logs.dateLabel')}
         </Typography>
         <TextField
           type="date"
@@ -123,7 +126,7 @@ export const ResultsLogsTab: FC<ResultsLogsTabProps> = memo(({
       <Box sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end' }}>
         <TextField
           size="small"
-          placeholder="Filtrado rápido"
+          placeholder={t('resultsAdmin.logs.filterPlaceholder')}
           value={logsFilter}
           onChange={(e) => setLogsFilter(e.target.value)}
           sx={{ width: 250, bgcolor: '#fff' }}
@@ -134,18 +137,18 @@ export const ResultsLogsTab: FC<ResultsLogsTabProps> = memo(({
         <Table size="small">
           <TableHead>
             <TableRow sx={{ bgcolor: '#f8f9fa' }}>
-              <TableCell sx={{ fontWeight: 600, color: '#555' }}>Sorteo</TableCell>
-              <TableCell sx={{ fontWeight: 600, color: '#555' }}>Usuario</TableCell>
-              <TableCell sx={{ fontWeight: 600, color: '#555' }}>Fecha de resultado</TableCell>
-              <TableCell sx={{ fontWeight: 600, color: '#555' }}>Fecha de registro</TableCell>
-              <TableCell sx={{ fontWeight: 600, color: '#555' }}>Números</TableCell>
+              <TableCell sx={{ fontWeight: 600, color: '#555' }}>{t('resultsAdmin.logs.headers.draw')}</TableCell>
+              <TableCell sx={{ fontWeight: 600, color: '#555' }}>{t('resultsAdmin.logs.headers.user')}</TableCell>
+              <TableCell sx={{ fontWeight: 600, color: '#555' }}>{t('resultsAdmin.logs.headers.resultDate')}</TableCell>
+              <TableCell sx={{ fontWeight: 600, color: '#555' }}>{t('resultsAdmin.logs.headers.createdAt')}</TableCell>
+              <TableCell sx={{ fontWeight: 600, color: '#555' }}>{t('resultsAdmin.logs.headers.numbers')}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {filteredLogs.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={5} align="center" sx={{ color: 'text.secondary', py: 3 }}>
-                  No hay entradas disponibles
+                  {t('common.noEntries')}
                 </TableCell>
               </TableRow>
             ) : (
@@ -180,7 +183,7 @@ export const ResultsLogsTab: FC<ResultsLogsTabProps> = memo(({
       </TableContainer>
 
       <Typography variant="body2" sx={{ mt: 2, color: 'text.secondary' }}>
-        Mostrando {filteredLogs.length} de {logsData.length} entradas
+        {t('resultsAdmin.logs.showing', { shown: filteredLogs.length, total: logsData.length })}
       </Typography>
     </>
   );

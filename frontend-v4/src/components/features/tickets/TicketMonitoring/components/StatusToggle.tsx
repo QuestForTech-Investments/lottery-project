@@ -5,17 +5,19 @@
  */
 
 import { memo, type FC } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Box, Typography, ToggleButtonGroup, ToggleButton } from '@mui/material';
 import type { StatusToggleProps } from '../types';
 
 const StatusToggle: FC<StatusToggleProps> = memo(({ filtroEstado, counts, onFilterChange }) => {
+  const { t } = useTranslation();
   return (
     <Box sx={{ mb: 2, display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
       <Typography
         variant="subtitle1"
         sx={{ color: 'text.secondary', mb: 1.5, fontWeight: 500 }}
       >
-        Filtrar
+        {t('common.filter')}
       </Typography>
       <ToggleButtonGroup
         exclusive
@@ -56,11 +58,11 @@ const StatusToggle: FC<StatusToggleProps> = memo(({ filtroEstado, counts, onFilt
           },
         }}
       >
-        <ToggleButton value="todos">TODOS ({counts.todos})</ToggleButton>
-        <ToggleButton value="ganadores">GANADORES ({counts.ganadores})</ToggleButton>
-        <ToggleButton value="pendientes">PENDIENTES ({counts.pendientes})</ToggleButton>
-        <ToggleButton value="perdedores">PERDEDORES ({counts.perdedores})</ToggleButton>
-        <ToggleButton value="cancelados">CANCELADO ({counts.cancelados})</ToggleButton>
+        <ToggleButton value="todos">{t('common.all')} ({counts.todos})</ToggleButton>
+        <ToggleButton value="ganadores">{t('ticketStatus.winner')} ({counts.ganadores})</ToggleButton>
+        <ToggleButton value="pendientes">{t('ticketStatus.pending')} ({counts.pendientes})</ToggleButton>
+        <ToggleButton value="perdedores">{t('ticketStatus.loser')} ({counts.perdedores})</ToggleButton>
+        <ToggleButton value="cancelados">{t('ticketStatus.cancelled')} ({counts.cancelados})</ToggleButton>
       </ToggleButtonGroup>
     </Box>
   );

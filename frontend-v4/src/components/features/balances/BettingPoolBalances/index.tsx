@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useMemo, useEffect, type SyntheticEvent, type ChangeEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Paper,
@@ -41,18 +42,20 @@ interface ColumnDefinition {
 
 type BalanceType = 'all' | 'positive' | 'negative';
 
-const COLUMNS: ColumnDefinition[] = [
-  { key: 'numero', label: 'Número', sortable: true },
-  { key: 'nombre', label: 'Nombre', sortable: true },
-  { key: 'usuarios', label: 'Usuarios', sortable: true },
-  { key: 'referencia', label: 'Referencia', sortable: true },
-  { key: 'zona', label: 'Zona', sortable: true },
-  { key: 'balance', label: 'Balance', sortable: true, format: 'currency', align: 'right' },
-  { key: 'caidaAcumulada', label: 'Caída Acum.', sortable: true, format: 'currency', align: 'right' },
-  { key: 'prestamos', label: 'Préstamos', sortable: true, format: 'currency', align: 'right' },
-];
-
 const BettingPoolBalances = (): React.ReactElement => {
+  const { t } = useTranslation();
+  // Translated columns rebuilt each render so language changes flow through.
+  const COLUMNS: ColumnDefinition[] = useMemo(() => [
+    { key: 'numero', label: t('common.number'), sortable: true },
+    { key: 'nombre', label: t('common.name'), sortable: true },
+    { key: 'usuarios', label: t('balances.users'), sortable: true },
+    { key: 'referencia', label: t('balances.reference'), sortable: true },
+    { key: 'zona', label: t('common.zone'), sortable: true },
+    { key: 'balance', label: t('common.balance'), sortable: true, format: 'currency', align: 'right' },
+    { key: 'caidaAcumulada', label: t('balances.accumulatedFall'), sortable: true, format: 'currency', align: 'right' },
+    { key: 'prestamos', label: t('balances.loans'), sortable: true, format: 'currency', align: 'right' },
+  ], [t]);
+
   // State — default to today (shows yesterday's end-of-day snapshot as starting balance)
   const [selectedDate, setSelectedDate] = useState<string>(getTodayDate());
   const [selectedZones, setSelectedZones] = useState<BalanceZone[]>([]);
@@ -78,11 +81,11 @@ const BettingPoolBalances = (): React.ReactElement => {
       setSelectedZones(prev => prev.length === 0 ? zones : prev);
     } catch (err) {
       console.error('[ERROR] [BALANCES] Error fetching betting pool balances:', err);
-      setError('Error al cargar los balances. Intente de nuevo.');
+      setError(t('balances.loadError'));
     } finally {
       setLoading(false);
     }
-  }, [selectedDate]);
+  }, [selectedDate, t]);
 
   useEffect(() => {
     fetchData();
@@ -159,7 +162,7 @@ const BettingPoolBalances = (): React.ReactElement => {
     <Box sx={{ p: 3 }}>
       <Paper sx={{ p: 3 }}>
         <Typography variant="h5" sx={{ mb: 3, textAlign: 'center', fontWeight: 600 }}>
-          Balances de bancas
+          {t('balances.bettingPools.title')}
         </Typography>
 
         {/* Filters Section */}
@@ -169,13 +172,13 @@ const BettingPoolBalances = (): React.ReactElement => {
             <DateFilter
               value={selectedDate}
               onChange={handleDateChange}
-              label="Fecha"
+              label={t('common.date')}
             />
 
             {/* Zones Multi-Select */}
             <Box sx={{ minWidth: 300 }}>
               <Typography variant="body2" sx={{ mb: 0.5, color: 'text.secondary', fontWeight: 500 }}>
-                Zonas
+                {t('common.zones')}
               </Typography>
               <Autocomplete
                 multiple
@@ -188,13 +191,13 @@ const BettingPoolBalances = (): React.ReactElement => {
                 renderInput={(params) => (
                   <TextField
                     {...params}
-                    placeholder="Seleccione"
+                    placeholder={t('common.select')}
                   />
                 )}
                 renderTags={(value) => (
                   <Chip
                     key="selected-count"
-                    label={`${value.length} seleccionadas`}
+                    label={t('balances.selectedCount', { count: value.length })}
                     size="small"
                   />
                 )}
@@ -211,7 +214,7 @@ const BettingPoolBalances = (): React.ReactElement => {
           {/* Balance Type Radio */}
           <Box sx={{ mb: 2 }}>
             <Typography variant="body2" sx={{ mb: 0.5, color: 'text.secondary', fontWeight: 500 }}>
-              Balances a incluir
+              {t('balances.balancesToInclude')}
             </Typography>
             <FormControl>
               <RadioGroup
@@ -222,7 +225,7 @@ const BettingPoolBalances = (): React.ReactElement => {
                 <FormControlLabel
                   value="all"
                   control={<Radio size="small" />}
-                  label="TODOS"
+                  label={t('common.all').toUpperCase()}
                   sx={{
                     '& .MuiFormControlLabel-label': {
                       fontSize: '0.875rem',
@@ -233,7 +236,7 @@ const BettingPoolBalances = (): React.ReactElement => {
                 <FormControlLabel
                   value="positive"
                   control={<Radio size="small" />}
-                  label="POSITIVOS"
+                  label={t('balances.positive').toUpperCase()}
                   sx={{
                     '& .MuiFormControlLabel-label': {
                       fontSize: '0.875rem',
@@ -244,7 +247,7 @@ const BettingPoolBalances = (): React.ReactElement => {
                 <FormControlLabel
                   value="negative"
                   control={<Radio size="small" />}
-                  label="NEGATIVOS"
+                  label={t('balances.negative').toUpperCase()}
                   sx={{
                     '& .MuiFormControlLabel-label': {
                       fontSize: '0.875rem',
@@ -271,7 +274,7 @@ const BettingPoolBalances = (): React.ReactElement => {
               fontWeight: 600
             }}
           >
-            Refrescar
+            {t('common.refresh')}
           </Button>
           <Button
             variant="contained"
@@ -284,7 +287,7 @@ const BettingPoolBalances = (): React.ReactElement => {
               fontWeight: 600
             }}
           >
-            Imprimir
+            {t('common.print')}
           </Button>
           <Button
             variant="contained"

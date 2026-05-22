@@ -1,4 +1,5 @@
 import { memo, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -28,6 +29,7 @@ import BettingPoolSelector from '@components/common/BettingPoolSelector';
  * Modern Material-UI version of EditUser
  */
 const EditUserMUI = () => {
+  const { t } = useTranslation();
   const { userId } = useParams();
   const navigate = useNavigate();
 
@@ -73,7 +75,7 @@ const EditUserMUI = () => {
         <Box sx={{ textAlign: 'center' }}>
           <CircularProgress size={60} />
           <Typography variant="body1" color="text.secondary" sx={{ mt: 2 }}>
-            Cargando datos del usuario...
+            {t('usersAdmin.loadingUserData')}
           </Typography>
         </Box>
       </Box>
@@ -97,18 +99,18 @@ const EditUserMUI = () => {
                 onClick={handleRetry}
                 startIcon={<RefreshIcon />}
               >
-                Reintentar
+                {t('sales.retry')}
               </Button>
             }
           >
             <Typography variant="h6" gutterBottom>
-              Error al cargar el formulario
+              {t('usersAdmin.formLoadError')}
             </Typography>
             <Typography variant="body2">
               {errors.submit}
             </Typography>
             <Typography variant="caption" display="block" sx={{ mt: 1 }}>
-              Verifica que la API esté corriendo en http://localhost:5000
+              {t('usersAdmin.apiRunningHint')}
             </Typography>
           </Alert>
 
@@ -118,7 +120,7 @@ const EditUserMUI = () => {
             onClick={() => navigate('/users/list')}
             fullWidth
           >
-            Volver a la lista
+            {t('usersAdmin.backToList')}
           </Button>
         </Paper>
       </Box>
@@ -133,10 +135,10 @@ const EditUserMUI = () => {
       <Box sx={{ p: 3, display: 'flex', justifyContent: 'center' }}>
         <Paper elevation={3} sx={{ p: 4, maxWidth: 600, width: '100%', textAlign: 'center' }}>
           <Typography variant="h5" color="success.main" gutterBottom>
-            ✅ Usuario actualizado exitosamente
+            ✅ {t('usersAdmin.updateSuccess')}
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-            Serás redirigido a la lista de usuarios en unos segundos...
+            {t('usersAdmin.redirectingToList')}
           </Typography>
           <CircularProgress size={40} />
         </Paper>
@@ -153,7 +155,7 @@ const EditUserMUI = () => {
         {/* Header */}
         <Box sx={{ p: 3, borderBottom: 1, borderColor: 'divider' }}>
           <Typography variant="h5" component="h1" align="center">
-            Actualizar Usuario
+            {t('usersAdmin.updateUser')}
           </Typography>
         </Box>
 
@@ -172,11 +174,11 @@ const EditUserMUI = () => {
               <Grid item xs={12} md={6}>
                 <TextField
                   fullWidth
-                  label="Usuario"
+                  label={t('usersAdmin.username')}
                   name="username"
                   value={formData.username}
                   disabled
-                  helperText="El nombre de usuario no se puede modificar"
+                  helperText={t('usersAdmin.usernameImmutableHint')}
                   sx={{
                     '& .MuiInputBase-input.Mui-disabled': {
                       backgroundColor: 'action.disabledBackground',
@@ -192,7 +194,7 @@ const EditUserMUI = () => {
               <Grid item xs={12}>
                 <Divider sx={{ my: 1 }} />
                 <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
-                  Zonas y Bancas
+                  {t('usersAdmin.zonesAndBettingPools')}
                 </Typography>
               </Grid>
 
@@ -200,12 +202,12 @@ const EditUserMUI = () => {
               <Grid item xs={12}>
                 <Box>
                   <Typography variant="body2" color="text.secondary" gutterBottom>
-                    Zonas
+                    {t('common.zones')}
                   </Typography>
                   <ReactMultiselect
                     value={formData.zoneIds}
                     onChange={handleZoneChangeWrapper}
-                    placeholder="Seleccionar zonas..."
+                    placeholder={t('usersAdmin.selectZonesPlaceholder')}
                     required={false}
                   />
                   {errors.zones && (
@@ -225,7 +227,7 @@ const EditUserMUI = () => {
                       onChange={(e) => handleAssignBancaChange(e.target.checked)}
                     />
                   }
-                  label="Asignar Banca"
+                  label={t('usersAdmin.assignBettingPool')}
                 />
               </Grid>
 
@@ -234,13 +236,13 @@ const EditUserMUI = () => {
                 <Grid item xs={12}>
                   <Box>
                     <Typography variant="body2" color="text.secondary" gutterBottom>
-                      Banca <span style={{ color: 'red' }}>*</span>
+                      {t('common.bettingPool')} <span style={{ color: 'red' }}>*</span>
                     </Typography>
                     <BettingPoolSelector
                       value={formData.bettingPoolId}
                       onChange={handleBranchChangeWrapper}
                       selectedZoneIds={formData.zoneIds}
-                      placeholder="Seleccionar banca..."
+                      placeholder={t('usersAdmin.selectBettingPoolPlaceholder')}
                       required={formData.assignBanca}
                     />
                     {errors.bettingPool && (
@@ -256,7 +258,7 @@ const EditUserMUI = () => {
               <Grid item xs={12}>
                 <Divider sx={{ my: 1 }} />
                 <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
-                  Privilegios <span style={{ color: 'red' }}>*</span>
+                  {t('usersAdmin.privileges')} <span style={{ color: 'red' }}>*</span>
                 </Typography>
               </Grid>
 
@@ -282,7 +284,7 @@ const EditUserMUI = () => {
                     onClick={() => navigate('/users/list')}
                     disabled={loading}
                   >
-                    Cancelar
+                    {t('common.cancel')}
                   </Button>
                   <Button
                     type="submit"
@@ -291,7 +293,7 @@ const EditUserMUI = () => {
                     disabled={loading}
                     sx={{ minWidth: 200 }}
                   >
-                    {loading ? 'Actualizando...' : 'Actualizar Usuario'}
+                    {loading ? t('usersAdmin.updating') : t('usersAdmin.updateUser')}
                   </Button>
                 </Box>
               </Grid>

@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Card,
@@ -92,6 +93,7 @@ interface CombinacionesTabProps {
 }
 
 const CombinacionesTab = ({ selectedDate, setSelectedDate, zones, selectedZones, handleZoneChange }: CombinacionesTabProps): React.ReactElement => {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<CombinationSalesDto[]>([]);
   const [summary, setSummary] = useState({ totalSold: 0, totalPrizes: 0, totalCommissions: 0, totalNet: 0 });
@@ -229,13 +231,13 @@ const CombinacionesTab = ({ selectedDate, setSelectedDate, zones, selectedZones,
     <Card>
       <CardContent>
         <Typography variant="h5" align="center" gutterBottom sx={{ fontWeight: 400, mb: 3 }}>
-          Combinaciones
+          {t('sales.tabs.combinaciones')}
         </Typography>
 
         <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap', alignItems: 'flex-end' }}>
           <Box>
             <Typography variant="caption" sx={{ color: 'text.secondary', mb: 0.5, display: 'block' }}>
-              Fecha
+              {t('common.date')}
             </Typography>
             <TextField
               type="date"
@@ -251,8 +253,8 @@ const CombinacionesTab = ({ selectedDate, setSelectedDate, zones, selectedZones,
           </Box>
 
           <MultiSelectSearch
-            label="Sorteos"
-            selectAllLabel="Todos"
+            label={t('common.draws')}
+            selectAllLabel={t('common.all')}
             options={draws.map((d) => ({
               id: d.drawId,
               label: d.drawName || d.lotteryName || `Draw ${d.drawId}`,
@@ -262,8 +264,8 @@ const CombinacionesTab = ({ selectedDate, setSelectedDate, zones, selectedZones,
           />
 
           <MultiSelectSearch
-            label="Zonas"
-            selectAllLabel="Todas"
+            label={t('common.zones')}
+            selectAllLabel={t('common.all')}
             options={zones.map((z) => ({ id: z.zoneId || z.id || 0, label: z.zoneName || z.name || '' }))}
             selectedIds={selectedZones}
             onChange={(ids) => {
@@ -272,8 +274,8 @@ const CombinacionesTab = ({ selectedDate, setSelectedDate, zones, selectedZones,
           />
 
           <MultiSelectSearch
-            label="Bancas"
-            selectAllLabel="Todas"
+            label={t('common.bettingPools')}
+            selectAllLabel={t('common.all')}
             options={bancas.map((b) => ({ id: b.id, label: `${b.code} - ${b.name}` }))}
             selectedIds={selectedBancas}
             onChange={setSelectedBancas}
@@ -295,14 +297,14 @@ const CombinacionesTab = ({ selectedDate, setSelectedDate, zones, selectedZones,
               fontWeight: 500
             }}
           >
-            {loading ? <CircularProgress size={16} color="inherit" /> : 'Ver ventas'}
+            {loading ? <CircularProgress size={16} color="inherit" /> : t('transactions.viewSales')}
           </Button>
         </Box>
 
         <Box sx={{ mb: 2 }}>
           <TextField
             size="small"
-            placeholder="Filtrado rápido"
+            placeholder={t('common.filterQuick')}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             InputProps={{
@@ -320,19 +322,19 @@ const CombinacionesTab = ({ selectedDate, setSelectedDate, zones, selectedZones,
           <Table size="small" stickyHeader>
             <TableHead sx={{ backgroundColor: '#e3e3e3' }}>
               <TableRow>
-                <TableCell sx={{ fontWeight: 600, backgroundColor: '#e3e3e3' }}><TableSortLabel {...getSortProps('betTypeName')}>Combinación</TableSortLabel></TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600, backgroundColor: '#e3e3e3' }}><TableSortLabel {...getSortProps('totalSold')}>Total Vendido</TableSortLabel></TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600, backgroundColor: '#e3e3e3' }}><TableSortLabel {...getSortProps('totalCommissions')}>Total comisiones</TableSortLabel></TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600, backgroundColor: '#e3e3e3' }}>Total comisiones 2</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600, backgroundColor: '#e3e3e3' }}><TableSortLabel {...getSortProps('totalPrizes')}>Total premios</TableSortLabel></TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600, backgroundColor: '#e3e3e3' }}><TableSortLabel {...getSortProps('balance')}>Balances</TableSortLabel></TableCell>
+                <TableCell sx={{ fontWeight: 600, backgroundColor: '#e3e3e3' }}><TableSortLabel {...getSortProps('betTypeName')}>{t('sales.combination')}</TableSortLabel></TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600, backgroundColor: '#e3e3e3' }}><TableSortLabel {...getSortProps('totalSold')}>{t('sales.totalSold')}</TableSortLabel></TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600, backgroundColor: '#e3e3e3' }}><TableSortLabel {...getSortProps('totalCommissions')}>{t('sales.totalCommissions')}</TableSortLabel></TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600, backgroundColor: '#e3e3e3' }}>{t('sales.totalCommissions2')}</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600, backgroundColor: '#e3e3e3' }}><TableSortLabel {...getSortProps('totalPrizes')}>{t('sales.totalPrizes')}</TableSortLabel></TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600, backgroundColor: '#e3e3e3' }}><TableSortLabel {...getSortProps('balance')}>{t('sales.balances')}</TableSortLabel></TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {sortedData.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} align="center" sx={{ py: 3, color: 'text.secondary' }}>
-                    {loading ? 'Cargando...' : 'No hay entradas para el sorteo y la fecha elegidos'}
+                    {loading ? t('common.loading') : t('sales.noEntriesForDrawDate')}
                   </TableCell>
                 </TableRow>
               ) : (
@@ -354,7 +356,7 @@ const CombinacionesTab = ({ selectedDate, setSelectedDate, zones, selectedZones,
                     </TableRow>
                   ))}
                   <TableRow sx={{ backgroundColor: '#f5f7fa', '& td': { fontWeight: 600 } }}>
-                    <TableCell>Totales</TableCell>
+                    <TableCell>{t('balances.totals')}</TableCell>
                     <TableCell align="right">{formatCurrency(totals.totalSold)}</TableCell>
                     <TableCell align="right">{formatCurrency(totals.totalCommissions)}</TableCell>
                     <TableCell align="right">{formatCurrency(0)}</TableCell>
@@ -368,8 +370,8 @@ const CombinacionesTab = ({ selectedDate, setSelectedDate, zones, selectedZones,
         </TableContainer>
 
         <Typography variant="body2" sx={{ mt: 2 }}>
-          Mostrando {groupedData.length} tipo{groupedData.length === 1 ? '' : 's'} de jugada
-          {' '}({filteredData.length} de {data.length} combinaciones)
+          {t('sales.showingPlayTypes', { count: groupedData.length })}
+          {' '}({t('sales.combinationsCount', { filtered: filteredData.length, total: data.length })})
         </Typography>
       </CardContent>
     </Card>

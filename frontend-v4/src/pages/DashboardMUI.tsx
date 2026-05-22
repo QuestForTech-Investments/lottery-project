@@ -1,4 +1,5 @@
 import { memo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Box, Paper, Grid, Typography } from '@mui/material';
 import useDashboard from './hooks/useDashboard';
 import SalesBenefitChartWidget from '@components/features/dashboard/SalesBenefitChartWidget';
@@ -12,6 +13,7 @@ import QuickBlockWidget from '@components/features/dashboard/QuickBlockWidget';
 const ACCENT = '#6366f1';
 
 const DashboardMUI = () => {
+  const { t } = useTranslation();
   const { bancasVendiendo } = useDashboard();
 
   return (
@@ -20,7 +22,7 @@ const DashboardMUI = () => {
         {/* Row 1: Bancas vendiendo */}
         <Paper elevation={3} sx={{ p: 2, mb: 3 }}>
           <Typography variant="body1" align="center" sx={{ fontWeight: 500 }}>
-            Bancas vendiendo:{' '}
+            {t('dashboard.poolsSelling')}:{' '}
             {bancasVendiendo.length > 0 ? (
               bancasVendiendo.map((day, index) => (
                 <span key={day.dayName}>
@@ -29,7 +31,7 @@ const DashboardMUI = () => {
                 </span>
               ))
             ) : (
-              <Box component="span" sx={{ color: '#94a3b8' }}>Cargando...</Box>
+              <Box component="span" sx={{ color: '#94a3b8' }}>{t('common.loading')}</Box>
             )}
           </Typography>
         </Paper>

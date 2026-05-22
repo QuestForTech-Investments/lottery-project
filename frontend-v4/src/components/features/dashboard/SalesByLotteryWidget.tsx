@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { Paper, Typography, Box, CircularProgress, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TableSortLabel, Link } from '@mui/material';
 import { getSalesByDraw, type SalesByDrawItem } from '@/services/dashboardService';
@@ -10,6 +11,7 @@ type SortKey = 'name' | 'tickets' | 'ventas' | 'premios' | 'comision' | 'descuen
 type SortDir = 'asc' | 'desc';
 
 const SalesByDrawWidget: React.FC = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [data, setData] = useState<SalesByDrawItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -78,7 +80,7 @@ const SalesByDrawWidget: React.FC = () => {
   return (
     <Paper elevation={3} sx={{ p: 2, display: 'flex', flexDirection: 'column' }}>
       <Typography variant="subtitle1" fontWeight="bold" align="center" sx={{ mb: 1 }}>
-        Ventas por Sorteo del Día
+        {t('dashboard.salesByDraw.title')}
       </Typography>
       {loading ? (
         <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -86,20 +88,20 @@ const SalesByDrawWidget: React.FC = () => {
         </Box>
       ) : data.length === 0 ? (
         <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <Typography variant="body2" color="text.secondary">Sin ventas del día</Typography>
+          <Typography variant="body2" color="text.secondary">{t('dashboard.salesByDraw.noSales')}</Typography>
         </Box>
       ) : (
         <TableContainer>
           <Table size="small" stickyHeader>
             <TableHead>
               <TableRow>
-                {headerCell('name', 'Lotería')}
-                {headerCell('tickets', 'Tickets', 'right')}
-                {headerCell('ventas', 'Venta', 'right')}
-                {headerCell('comision', 'Comisión', 'right')}
-                {headerCell('descuento', 'Descuento', 'right')}
-                {headerCell('premios', 'Premio', 'right')}
-                {headerCell('neto', 'Neto', 'right')}
+                {headerCell('name', t('dashboard.salesByDraw.lottery'))}
+                {headerCell('tickets', t('dashboard.salesByDraw.tickets'), 'right')}
+                {headerCell('ventas', t('dashboard.salesByDraw.sale'), 'right')}
+                {headerCell('comision', t('dashboard.salesByDraw.commission'), 'right')}
+                {headerCell('descuento', t('dashboard.salesByDraw.discount'), 'right')}
+                {headerCell('premios', t('dashboard.salesByDraw.prize'), 'right')}
+                {headerCell('neto', t('dashboard.salesByDraw.net'), 'right')}
               </TableRow>
             </TableHead>
             <TableBody>
@@ -137,7 +139,7 @@ const SalesByDrawWidget: React.FC = () => {
                 </TableRow>
               ))}
               <TableRow sx={{ bgcolor: '#fafafa' }}>
-                <TableCell sx={{ fontSize: 13, fontWeight: 700 }}>Totales</TableCell>
+                <TableCell sx={{ fontSize: 13, fontWeight: 700 }}>{t('balances.totals')}</TableCell>
                 <TableCell align="right" sx={{ fontSize: 13, fontWeight: 700 }}>{totals.tickets}</TableCell>
                 <TableCell align="right" sx={{ fontSize: 13, fontWeight: 700 }}>{formatCurrency(totals.ventas)}</TableCell>
                 <TableCell align="right" sx={{ fontSize: 13, fontWeight: 700 }}>{formatCurrency(totals.comision)}</TableCell>

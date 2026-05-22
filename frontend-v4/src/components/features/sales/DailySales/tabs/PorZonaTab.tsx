@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Card,
@@ -87,6 +88,7 @@ const FILTER_OPTIONS: FilterOption[] = [
 ];
 
 const PorZonaTab = ({ selectedDate, setSelectedDate, zones, selectedZones, handleZoneChange }: PorZonaTabProps): React.ReactElement => {
+  const { t } = useTranslation();
   const [filterType, setFilterType] = useState<string>('all');
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<ZoneSalesDto[]>([]);
@@ -179,13 +181,13 @@ const PorZonaTab = ({ selectedDate, setSelectedDate, zones, selectedZones, handl
     <Card>
       <CardContent>
         <Typography variant="h5" align="center" gutterBottom sx={{ fontWeight: 400, mb: 3 }}>
-          Zonas
+          {t('common.zones')}
         </Typography>
 
         <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap', alignItems: 'flex-end' }}>
           <Box>
             <Typography variant="caption" sx={{ color: 'text.secondary', mb: 0.5, display: 'block' }}>
-              Fecha
+              {t('common.date')}
             </Typography>
             <TextField
               type="date"
@@ -201,8 +203,8 @@ const PorZonaTab = ({ selectedDate, setSelectedDate, zones, selectedZones, handl
           </Box>
 
           <MultiSelectSearch
-            label="Zonas"
-            selectAllLabel="Todas"
+            label={t('common.zones')}
+            selectAllLabel={t('common.all')}
             options={zones.map((z) => ({ id: z.zoneId || z.id || 0, label: z.zoneName || z.name || '' }))}
             selectedIds={selectedZones}
             onChange={(ids) => {
@@ -226,7 +228,7 @@ const PorZonaTab = ({ selectedDate, setSelectedDate, zones, selectedZones, handl
               fontWeight: 500
             }}
           >
-            {loading ? <CircularProgress size={16} color="inherit" /> : 'Ver ventas'}
+            {loading ? <CircularProgress size={16} color="inherit" /> : t('transactions.viewSales')}
           </Button>
           <Button
             variant="contained"
@@ -245,7 +247,7 @@ const PorZonaTab = ({ selectedDate, setSelectedDate, zones, selectedZones, handl
         </Box>
 
         <Typography variant="h5" align="center" gutterBottom sx={{ fontWeight: 400, mb: 3, fontSize: '1.7rem' }}>
-          Total: <Box component="span" sx={{
+          {t('common.total')}: <Box component="span" sx={{
             backgroundColor: '#ede9fe',
             px: 2,
             py: 0.5,
@@ -308,7 +310,7 @@ const PorZonaTab = ({ selectedDate, setSelectedDate, zones, selectedZones, handl
 
           <TextField
             size="small"
-            placeholder="Filtrado rápido"
+            placeholder={t('common.filterQuick')}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             InputProps={{
@@ -326,26 +328,26 @@ const PorZonaTab = ({ selectedDate, setSelectedDate, zones, selectedZones, handl
           <Table size="small">
             <TableHead sx={{ backgroundColor: '#e3e3e3' }}>
               <TableRow>
-                <TableCell sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('zoneName')}>Nombre</TableSortLabel></TableCell>
+                <TableCell sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('zoneName')}>{t('common.name')}</TableSortLabel></TableCell>
                 <TableCell align="center" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('pendingCount')}>P</TableSortLabel></TableCell>
                 <TableCell align="center" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('loserCount')}>L</TableSortLabel></TableCell>
                 <TableCell align="center" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('winnerCount')}>W</TableSortLabel></TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('lineCount')}>Total</TableSortLabel></TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('totalSold')}>Venta</TableSortLabel></TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('totalCommissions')}>Comisiones</TableSortLabel></TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('totalDiscounts')}>Descuentos</TableSortLabel></TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('totalPrizes')}>Premios</TableSortLabel></TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('totalNet')}>Neto</TableSortLabel></TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('fall')}>Caída</TableSortLabel></TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('final')}>Final</TableSortLabel></TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('balance')}>Balance</TableSortLabel></TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('lineCount')}>{t('common.total')}</TableSortLabel></TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('totalSold')}>{t('sales.venta')}</TableSortLabel></TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('totalCommissions')}>{t('sales.comisiones')}</TableSortLabel></TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('totalDiscounts')}>{t('sales.descuentos')}</TableSortLabel></TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('totalPrizes')}>{t('sales.premios')}</TableSortLabel></TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('totalNet')}>{t('sales.neto')}</TableSortLabel></TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('fall')}>{t('sales.caida')}</TableSortLabel></TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('final')}>{t('sales.final')}</TableSortLabel></TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('balance')}>{t('common.balance')}</TableSortLabel></TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {sortedData.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={13} align="center" sx={{ py: 3, color: 'text.secondary' }}>
-                    {loading ? 'Cargando...' : 'No hay entradas para el sorteo y la fecha elegidos'}
+                    {loading ? t('common.loading') : t('sales.noEntriesForDrawDate')}
                   </TableCell>
                 </TableRow>
               ) : (
@@ -372,7 +374,7 @@ const PorZonaTab = ({ selectedDate, setSelectedDate, zones, selectedZones, handl
                     </TableRow>
                   ))}
                   <TableRow sx={{ backgroundColor: '#f5f7fa', '& td': { fontWeight: 600 } }}>
-                    <TableCell>Totales</TableCell>
+                    <TableCell>{t('balances.totals')}</TableCell>
                     <TableCell align="center">{totals.pendingCount}</TableCell>
                     <TableCell align="center">{totals.loserCount}</TableCell>
                     <TableCell align="center">{totals.winnerCount}</TableCell>
@@ -393,7 +395,7 @@ const PorZonaTab = ({ selectedDate, setSelectedDate, zones, selectedZones, handl
         </TableContainer>
 
         <Typography variant="body2" sx={{ mt: 2 }}>
-          Mostrando {filteredData.length} de {data.length} entradas
+          {t('common.showingEntries', { shown: filteredData.length, total: data.length })}
         </Typography>
       </CardContent>
     </Card>

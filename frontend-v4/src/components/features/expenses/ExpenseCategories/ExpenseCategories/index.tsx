@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, type SyntheticEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Card,
@@ -52,6 +53,7 @@ interface SortConfig {
 }
 
 const ExpenseCategories = (): React.ReactElement => {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<number>(0);
   const [quickFilter, setQuickFilter] = useState<string>('');
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: null, direction: 'asc' });
@@ -85,11 +87,11 @@ const ExpenseCategories = (): React.ReactElement => {
       setCategories(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Error loading categories:', err);
-      setSnackbar({ open: true, message: 'Error al cargar categorías', severity: 'error' });
+      setSnackbar({ open: true, message: t('expensesAdmin.errLoad'), severity: 'error' });
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     loadCategories();
@@ -147,23 +149,23 @@ const ExpenseCategories = (): React.ReactElement => {
           categoryName: dialogName.trim(),
           parentCategoryId: dialogParentId !== '' ? Number(dialogParentId) : null
         });
-        setSnackbar({ open: true, message: 'Categoría creada exitosamente', severity: 'success' });
+        setSnackbar({ open: true, message: t('expensesAdmin.msgCreated'), severity: 'success' });
       } else if (editingCategory) {
         await updateExpenseCategory(editingCategory.categoryId, {
           categoryName: dialogName.trim(),
           parentCategoryId: dialogParentId !== '' ? Number(dialogParentId) : null
         });
-        setSnackbar({ open: true, message: 'Categoría actualizada exitosamente', severity: 'success' });
+        setSnackbar({ open: true, message: t('expensesAdmin.msgUpdated'), severity: 'success' });
       }
       setDialogOpen(false);
       await loadCategories();
     } catch (err) {
       console.error('Error saving category:', err);
-      setSnackbar({ open: true, message: 'Error al guardar categoría', severity: 'error' });
+      setSnackbar({ open: true, message: t('expensesAdmin.errSave'), severity: 'error' });
     } finally {
       setDialogSaving(false);
     }
-  }, [dialogMode, dialogName, dialogParentId, editingCategory, loadCategories]);
+  }, [dialogMode, dialogName, dialogParentId, editingCategory, loadCategories, t]);
 
   // Delete
   const openDeleteDialog = useCallback((category: ExpenseCategoryAPI) => {
@@ -177,16 +179,16 @@ const ExpenseCategories = (): React.ReactElement => {
     setDeleteLoading(true);
     try {
       await deleteExpenseCategory(deletingCategory.categoryId);
-      setSnackbar({ open: true, message: 'Categoría eliminada exitosamente', severity: 'success' });
+      setSnackbar({ open: true, message: t('expensesAdmin.msgDeleted'), severity: 'success' });
       setDeleteDialogOpen(false);
       await loadCategories();
     } catch (err) {
       console.error('Error deleting category:', err);
-      setSnackbar({ open: true, message: 'Error al eliminar categoría', severity: 'error' });
+      setSnackbar({ open: true, message: t('expensesAdmin.errDelete'), severity: 'error' });
     } finally {
       setDeleteLoading(false);
     }
-  }, [deletingCategory, loadCategories]);
+  }, [deletingCategory, loadCategories, t]);
 
   const filteredAndSortedData = useMemo(() => {
     let filtered = currentData;
@@ -223,7 +225,7 @@ const ExpenseCategories = (): React.ReactElement => {
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h4" sx={{ mb: 3, textAlign: 'center', fontWeight: 500 }}>
-        Lista de Categorías de gastos
+        {t('expensesAdmin.title')}
       </Typography>
 
       <Card>
@@ -241,15 +243,15 @@ const ExpenseCategories = (): React.ReactElement => {
               '& .MuiTabs-indicator': { backgroundColor: '#8b5cf6' }
             }}
           >
-            <Tab label="Categorias padre" />
-            <Tab label="Categorias hijo" />
+            <Tab label={t('expensesAdmin.tabParent')} />
+            <Tab label={t('expensesAdmin.tabChild')} />
           </Tabs>
 
           {/* Quick Filter */}
           <Box sx={{ mb: 2 }}>
             <TextField
               size="small"
-              placeholder="Filtrado rápido"
+              placeholder={t('expensesAdmin.quickFilterPlaceholder')}
               value={quickFilter}
               onChange={(e) => setQuickFilter(e.target.value)}
               InputProps={{
@@ -274,7 +276,7 @@ const ExpenseCategories = (): React.ReactElement => {
                       direction={sortConfig.key === 'categoryName' ? sortConfig.direction : 'asc'}
                       onClick={() => handleSort('categoryName')}
                     >
-                      Nombre
+                      {t('expensesAdmin.headerName')}
                     </TableSortLabel>
                   </TableCell>
                   {activeTab === 1 && (
@@ -284,12 +286,12 @@ const ExpenseCategories = (): React.ReactElement => {
                         direction={sortConfig.key === 'parentCategoryName' ? sortConfig.direction : 'asc'}
                         onClick={() => handleSort('parentCategoryName')}
                       >
-                        Categoría padre
+                        {t('expensesAdmin.headerParentCategory')}
                       </TableSortLabel>
                     </TableCell>
                   )}
                   <TableCell align="center" sx={{ width: '120px' }}>
-                    Acciones
+                    {t('expensesAdmin.headerActions')}
                   </TableCell>
                 </TableRow>
               </TableHead>
@@ -297,7 +299,7 @@ const ExpenseCategories = (): React.ReactElement => {
                 {filteredAndSortedData.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={activeTab === 1 ? 3 : 2} align="center" sx={{ py: 3 }}>
-                      No hay entradas disponibles
+                      {t('expensesAdmin.noEntries')}
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -312,7 +314,7 @@ const ExpenseCategories = (): React.ReactElement => {
                           size="small"
                           onClick={() => openEditDialog(category)}
                           sx={{ color: '#8b5cf6', mr: 1 }}
-                          title="Editar"
+                          title={t('expensesAdmin.tooltipEdit')}
                         >
                           <EditIcon fontSize="small" />
                         </IconButton>
@@ -324,7 +326,7 @@ const ExpenseCategories = (): React.ReactElement => {
                           onClick={() => openDeleteDialog(category)}
                           sx={{ fontSize: '11px', textTransform: 'none' }}
                         >
-                          Eliminar
+                          {t('expensesAdmin.deleteButton')}
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -349,13 +351,13 @@ const ExpenseCategories = (): React.ReactElement => {
                 fontWeight: 500
               }}
             >
-              CREAR CATEGORÍA
+              {t('expensesAdmin.createButtonUpper')}
             </Button>
           </Box>
 
           {/* Footer */}
           <Typography variant="body2" sx={{ mt: 2, color: 'text.secondary' }}>
-            Mostrando {filteredAndSortedData.length} de {currentData.length} entradas
+            {t('expensesAdmin.showingEntries', { shown: filteredAndSortedData.length, total: currentData.length })}
           </Typography>
         </CardContent>
       </Card>
@@ -363,13 +365,13 @@ const ExpenseCategories = (): React.ReactElement => {
       {/* Create/Edit Dialog */}
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>
-          {dialogMode === 'create' ? 'Crear Categoría' : 'Editar Categoría'}
+          {dialogMode === 'create' ? t('expensesAdmin.dialogCreateTitle') : t('expensesAdmin.dialogEditTitle')}
         </DialogTitle>
         <DialogContent>
           <TextField
             autoFocus
             fullWidth
-            label="Nombre"
+            label={t('expensesAdmin.dialogNameLabel')}
             value={dialogName}
             onChange={(e) => setDialogName(e.target.value)}
             sx={{ mt: 1 }}
@@ -379,10 +381,10 @@ const ExpenseCategories = (): React.ReactElement => {
           />
           {(activeTab === 1 || (dialogMode === 'edit' && editingCategory?.parentCategoryId)) && (
             <FormControl fullWidth sx={{ mt: 2 }}>
-              <InputLabel>Categoría padre</InputLabel>
+              <InputLabel>{t('expensesAdmin.dialogParentLabel')}</InputLabel>
               <Select
                 value={dialogParentId}
-                label="Categoría padre"
+                label={t('expensesAdmin.dialogParentLabel')}
                 onChange={(e) => setDialogParentId(e.target.value as number | '')}
               >
                 {parentCategories.map(p => (
@@ -396,7 +398,7 @@ const ExpenseCategories = (): React.ReactElement => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDialogOpen(false)} disabled={dialogSaving}>
-            Cancelar
+            {t('expensesAdmin.cancel')}
           </Button>
           <Button
             onClick={handleDialogSave}
@@ -404,27 +406,27 @@ const ExpenseCategories = (): React.ReactElement => {
             disabled={!dialogName.trim() || dialogSaving}
             sx={{ bgcolor: '#8b5cf6', '&:hover': { bgcolor: '#45b5b8' } }}
           >
-            {dialogSaving ? <CircularProgress size={20} /> : 'Guardar'}
+            {dialogSaving ? <CircularProgress size={20} /> : t('expensesAdmin.save')}
           </Button>
         </DialogActions>
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
-        <DialogTitle>Confirmar eliminación</DialogTitle>
+        <DialogTitle>{t('expensesAdmin.deleteDialogTitle')}</DialogTitle>
         <DialogContent>
           <Typography>
-            ¿Está seguro que desea eliminar la categoría "{deletingCategory?.categoryName}"?
+            {t('expensesAdmin.deleteConfirm', { name: deletingCategory?.categoryName ?? '' })}
           </Typography>
           {deletingCategory && !deletingCategory.parentCategoryId && (
             <Alert severity="warning" sx={{ mt: 2 }}>
-              Al eliminar una categoría padre, todas sus categorías hijo también serán desactivadas.
+              {t('expensesAdmin.deleteWarning')}
             </Alert>
           )}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDeleteDialogOpen(false)} disabled={deleteLoading}>
-            Cancelar
+            {t('expensesAdmin.cancel')}
           </Button>
           <Button
             onClick={handleDelete}
@@ -432,7 +434,7 @@ const ExpenseCategories = (): React.ReactElement => {
             variant="contained"
             disabled={deleteLoading}
           >
-            {deleteLoading ? <CircularProgress size={20} /> : 'Eliminar'}
+            {deleteLoading ? <CircularProgress size={20} /> : t('expensesAdmin.deleteButton')}
           </Button>
         </DialogActions>
       </Dialog>

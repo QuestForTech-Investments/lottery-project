@@ -1,4 +1,5 @@
 import React, { useCallback, type ChangeEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import { TextField, InputAdornment } from '@mui/material';
 import { Search as SearchIcon, Clear as ClearIcon } from '@mui/icons-material';
 import IconButton from '@mui/material/IconButton';
@@ -15,8 +16,10 @@ interface QuickFilterProps {
 const QuickFilter = React.memo(({
   value = '',
   onChange,
-  placeholder = 'Filtro rápido'
+  placeholder,
 }: QuickFilterProps): React.ReactElement => {
+  const { t } = useTranslation();
+  const resolvedPlaceholder = placeholder ?? t('common.filterQuick');
   const handleClear = useCallback(() => {
     onChange('');
   }, [onChange]);
@@ -28,7 +31,7 @@ const QuickFilter = React.memo(({
   return (
     <TextField
       size="small"
-      placeholder={placeholder}
+      placeholder={resolvedPlaceholder}
       value={value}
       onChange={handleChange}
       InputProps={{

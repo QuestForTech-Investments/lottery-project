@@ -1,5 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Paper,
@@ -44,6 +45,7 @@ import AutoExpensesTab from './tabs/AutoExpensesTab';
  * Modern Material-UI version of CreateBanca with ALL 168 fields
  */
 const CreateBettingPoolMUI: React.FC = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [templateSectionOpen, setTemplateSectionOpen] = React.useState(true);
 
@@ -97,7 +99,7 @@ const CreateBettingPoolMUI: React.FC = () => {
         {/* Header */}
         <Box sx={{ p: 3, borderBottom: 1, borderColor: 'divider' }}>
           <Typography variant="h5" component="h1" align="center">
-            Crear Nueva Banca
+            {t('createBettingPool.headerTitle')}
           </Typography>
         </Box>
 
@@ -105,7 +107,7 @@ const CreateBettingPoolMUI: React.FC = () => {
         {success && (
           <Box sx={{ p: 2 }}>
             <Alert severity="success">
-              Banca creada exitosamente. El formulario ha sido reseteado para una nueva entrada.
+              {t('createBettingPool.createdSuccessfully')}
             </Alert>
           </Box>
         )}
@@ -129,14 +131,14 @@ const CreateBettingPoolMUI: React.FC = () => {
               variant="scrollable"
               scrollButtons="auto"
             >
-              <Tab label="General" />
-              <Tab label="Configuración" />
-              <Tab label="Pies de Página" />
-              <Tab label="Premios & Comisiones" />
-              <Tab label="Horarios" />
-              <Tab label="Sorteos" />
-              <Tab label="Estilos" />
-              <Tab label="Gastos Automáticos" />
+              <Tab label={t('createBettingPool.tabGeneral')} />
+              <Tab label={t('createBettingPool.tabConfiguration')} />
+              <Tab label={t('createBettingPool.tabFooters')} />
+              <Tab label={t('createBettingPool.tabPrizes')} />
+              <Tab label={t('createBettingPool.tabSchedules')} />
+              <Tab label={t('createBettingPool.tabDraws')} />
+              <Tab label={t('createBettingPool.tabStyles')} />
+              <Tab label={t('createBettingPool.tabAutoExpenses')} />
             </Tabs>
           </Box>
 
@@ -216,7 +218,7 @@ const CreateBettingPoolMUI: React.FC = () => {
             >
               <ContentCopyIcon sx={{ mr: 1, color: '#667eea' }} />
               <Typography variant="subtitle1" fontWeight="bold" sx={{ flexGrow: 1 }}>
-                Copiar de banca plantilla
+                {t('createBettingPool.copyFromTemplate')}
               </Typography>
               {templateSectionOpen ? <ExpandLessIcon /> : <ExpandMoreIcon />}
             </Box>
@@ -226,19 +228,19 @@ const CreateBettingPoolMUI: React.FC = () => {
                 {/* Template Selection Dropdown */}
                 <Box sx={{ flex: 1, minWidth: 250 }}>
                   <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                    Banca
+                    {t('createBettingPool.templateBettingPoolLabel')}
                   </Typography>
                   <FormControl fullWidth size="small">
-                    <InputLabel id="template-select-label">Seleccione</InputLabel>
+                    <InputLabel id="template-select-label">{t('createBettingPool.templateSelectPlaceholder')}</InputLabel>
                     <Select
                       labelId="template-select-label"
                       value={selectedTemplateId || ''}
                       onChange={(e) => handleTemplateSelect(e.target.value ? Number(e.target.value) : null)}
-                      label="Seleccione"
+                      label={t('createBettingPool.templateSelectPlaceholder')}
                       disabled={loadingTemplates}
                     >
                       <MenuItem value="">
-                        <em>Seleccione</em>
+                        <em>{t('createBettingPool.templateSelectPlaceholder')}</em>
                       </MenuItem>
                       {templateBettingPools.map((pool) => (
                         <MenuItem key={pool.bettingPoolId} value={pool.bettingPoolId}>
@@ -249,7 +251,7 @@ const CreateBettingPoolMUI: React.FC = () => {
                   </FormControl>
                   {loadingTemplates && (
                     <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
-                      Cargando bancas...
+                      {t('createBettingPool.loadingTemplates')}
                     </Typography>
                   )}
                 </Box>
@@ -257,7 +259,7 @@ const CreateBettingPoolMUI: React.FC = () => {
                 {/* Template Fields Checkboxes */}
                 <Box sx={{ flex: 2 }}>
                   <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                    Campos de plantilla
+                    {t('createBettingPool.templateFieldsLabel')}
                   </Typography>
                   <FormGroup row sx={{ flexWrap: 'wrap', gap: 0 }}>
                     <FormControlLabel
@@ -269,7 +271,7 @@ const CreateBettingPoolMUI: React.FC = () => {
                           sx={{ color: '#667eea', '&.Mui-checked': { color: '#667eea' } }}
                         />
                       }
-                      label={<Typography variant="body2">CONFIGURACIÓN</Typography>}
+                      label={<Typography variant="body2">{t('createBettingPool.templateConfiguration')}</Typography>}
                       sx={{ minWidth: 150 }}
                     />
                     <FormControlLabel
@@ -281,7 +283,7 @@ const CreateBettingPoolMUI: React.FC = () => {
                           sx={{ color: '#667eea', '&.Mui-checked': { color: '#667eea' } }}
                         />
                       }
-                      label={<Typography variant="body2">PIES DE PÁGINA</Typography>}
+                      label={<Typography variant="body2">{t('createBettingPool.templateFooters')}</Typography>}
                       sx={{ minWidth: 150 }}
                     />
                     <FormControlLabel
@@ -293,7 +295,7 @@ const CreateBettingPoolMUI: React.FC = () => {
                           sx={{ color: '#667eea', '&.Mui-checked': { color: '#667eea' } }}
                         />
                       }
-                      label={<Typography variant="body2">PREMIOS & COMISIONES</Typography>}
+                      label={<Typography variant="body2">{t('createBettingPool.templatePrizes')}</Typography>}
                       sx={{ minWidth: 180 }}
                     />
                     <FormControlLabel
@@ -305,7 +307,7 @@ const CreateBettingPoolMUI: React.FC = () => {
                           sx={{ color: '#667eea', '&.Mui-checked': { color: '#667eea' } }}
                         />
                       }
-                      label={<Typography variant="body2">HORARIOS DE SORTEOS</Typography>}
+                      label={<Typography variant="body2">{t('createBettingPool.templateSchedules')}</Typography>}
                       sx={{ minWidth: 180 }}
                     />
                     <FormControlLabel
@@ -317,7 +319,7 @@ const CreateBettingPoolMUI: React.FC = () => {
                           sx={{ color: '#667eea', '&.Mui-checked': { color: '#667eea' } }}
                         />
                       }
-                      label={<Typography variant="body2">SORTEOS</Typography>}
+                      label={<Typography variant="body2">{t('createBettingPool.templateDraws')}</Typography>}
                       sx={{ minWidth: 120 }}
                     />
                     <FormControlLabel
@@ -329,7 +331,7 @@ const CreateBettingPoolMUI: React.FC = () => {
                           sx={{ color: '#667eea', '&.Mui-checked': { color: '#667eea' } }}
                         />
                       }
-                      label={<Typography variant="body2">ESTILOS</Typography>}
+                      label={<Typography variant="body2">{t('createBettingPool.templateStyles')}</Typography>}
                       sx={{ minWidth: 120 }}
                     />
                     <FormControlLabel
@@ -341,7 +343,7 @@ const CreateBettingPoolMUI: React.FC = () => {
                           sx={{ color: '#667eea', '&.Mui-checked': { color: '#667eea' } }}
                         />
                       }
-                      label={<Typography variant="body2">REGLAS</Typography>}
+                      label={<Typography variant="body2">{t('createBettingPool.templateRules')}</Typography>}
                       sx={{ minWidth: 120 }}
                     />
                   </FormGroup>
@@ -361,7 +363,7 @@ const CreateBettingPoolMUI: React.FC = () => {
                       whiteSpace: 'nowrap',
                     }}
                   >
-                    {loadingTemplateData ? 'Copiando...' : 'Copiar'}
+                    {loadingTemplateData ? t('createBettingPool.copying') : t('createBettingPool.copy')}
                   </Button>
                 </Box>
               </Box>
@@ -376,7 +378,7 @@ const CreateBettingPoolMUI: React.FC = () => {
               onClick={() => navigate('/betting-pools/list')}
               disabled={loading}
             >
-              Cancelar
+              {t('createBettingPool.cancel')}
             </Button>
             <Button
               type="button"
@@ -391,7 +393,7 @@ const CreateBettingPoolMUI: React.FC = () => {
                 }
               }}
             >
-              {loading ? 'Creando...' : 'Crear Banca'}
+              {loading ? t('createBettingPool.creating') : t('createBettingPool.createButton')}
             </Button>
           </Box>
         </form>
@@ -401,9 +403,7 @@ const CreateBettingPoolMUI: React.FC = () => {
       <Box sx={{ mt: 2 }}>
         <Alert severity="info">
           <Typography variant="body2">
-            <strong>Nota:</strong> Este formulario incluye todos los campos de configuración de la banca.
-            Completa al menos los campos requeridos en la pestaña "General" para crear la banca.
-            Las demás configuraciones son opcionales y pueden ajustarse después de la creación.
+            <strong>{t('createBettingPool.infoNoteTitle')}</strong> {t('createBettingPool.infoNoteBody')}
           </Typography>
         </Alert>
       </Box>

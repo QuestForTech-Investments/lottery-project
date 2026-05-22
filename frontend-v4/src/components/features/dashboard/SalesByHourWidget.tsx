@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Paper, Typography, Box, CircularProgress } from '@mui/material';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, ComposedChart, Bar } from 'recharts';
 import { getSalesByHour, type SalesByHourItem } from '@/services/dashboardService';
@@ -8,6 +9,7 @@ const ACCENT = '#6366f1';
 const SECONDARY = '#f59e0b';
 
 const SalesByHourWidget: React.FC = () => {
+  const { t } = useTranslation();
   const [data, setData] = useState<SalesByHourItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -31,7 +33,7 @@ const SalesByHourWidget: React.FC = () => {
   return (
     <Paper elevation={3} sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
       <Typography variant="subtitle1" fontWeight="bold" align="center" sx={{ mb: 1 }}>
-        Ventas por Hora del Día
+        {t('dashboard.salesByHour.title')}
       </Typography>
       {loading ? (
         <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -39,7 +41,7 @@ const SalesByHourWidget: React.FC = () => {
         </Box>
       ) : !hasData ? (
         <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <Typography variant="body2" color="text.secondary">Sin ventas hoy</Typography>
+          <Typography variant="body2" color="text.secondary">{t('dashboard.salesByHour.noSalesToday')}</Typography>
         </Box>
       ) : (
         <Box sx={{ flex: 1, minHeight: 260 }}>
@@ -51,12 +53,12 @@ const SalesByHourWidget: React.FC = () => {
               <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10 }} />
               <Tooltip
                 formatter={(value: number, name: string) =>
-                  name === 'Ventas' ? formatCurrency(value) : value
+                  name === t('dashboard.salesByHour.sales') ? formatCurrency(value) : value
                 }
               />
               <Legend wrapperStyle={{ fontSize: '12px' }} />
-              <Bar yAxisId="right" dataKey="tickets" name="Tickets" fill={SECONDARY} radius={[4, 4, 0, 0]} opacity={0.7} />
-              <Line yAxisId="left" type="monotone" dataKey="ventas" name="Ventas" stroke={ACCENT} strokeWidth={2} dot={{ r: 3 }} />
+              <Bar yAxisId="right" dataKey="tickets" name={t('dashboard.salesByHour.tickets')} fill={SECONDARY} radius={[4, 4, 0, 0]} opacity={0.7} />
+              <Line yAxisId="left" type="monotone" dataKey="ventas" name={t('dashboard.salesByHour.sales')} stroke={ACCENT} strokeWidth={2} dot={{ r: 3 }} />
             </ComposedChart>
           </ResponsiveContainer>
         </Box>

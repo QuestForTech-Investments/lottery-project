@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Typography,
@@ -142,6 +143,7 @@ const styles = {
 };
 
 const HotNumbers = (): React.ReactElement => {
+  const { t } = useTranslation();
   // Tab state
   const [activeTab, setActiveTab] = useState<number>(0);
 
@@ -200,7 +202,7 @@ const HotNumbers = (): React.ReactElement => {
         console.error('Error loading hot numbers:', err);
         setSnackbar({
           open: true,
-          message: handleHotNumberError(err, 'cargar datos'),
+          message: handleHotNumberError(err, t('limitsAdmin.hot.errLoadData')),
           severity: 'error'
         });
       } finally {
@@ -209,7 +211,7 @@ const HotNumbers = (): React.ReactElement => {
     };
 
     loadData();
-  }, []);
+  }, [t]);
 
   // Check if numbers have changed
   const hasNumbersChanged = useCallback(() => {
@@ -236,14 +238,14 @@ const HotNumbers = (): React.ReactElement => {
       setInitialNumbers(selectedNumbers);
       setSnackbar({
         open: true,
-        message: 'Numeros calientes guardados exitosamente',
+        message: t('limitsAdmin.hot.msgNumbersSaved'),
         severity: 'success'
       });
     } catch (err) {
       console.error('Error saving hot numbers:', err);
       setSnackbar({
         open: true,
-        message: handleHotNumberError(err, 'guardar numeros'),
+        message: handleHotNumberError(err, t('limitsAdmin.hot.errSaveNumbers')),
         severity: 'error'
       });
     } finally {
@@ -264,7 +266,7 @@ const HotNumbers = (): React.ReactElement => {
     if (newLimit.drawIds.length === 0) {
       setSnackbar({
         open: true,
-        message: 'Debe seleccionar al menos un sorteo',
+        message: t('limitsAdmin.hot.msgSelectDraw'),
         severity: 'warning'
       });
       return;
@@ -285,14 +287,14 @@ const HotNumbers = (): React.ReactElement => {
       });
       setSnackbar({
         open: true,
-        message: 'Limite guardado exitosamente',
+        message: t('limitsAdmin.hot.msgLimitSaved'),
         severity: 'success'
       });
     } catch (err) {
       console.error('Error saving limit:', err);
       setSnackbar({
         open: true,
-        message: handleHotNumberError(err, 'guardar limite'),
+        message: handleHotNumberError(err, t('limitsAdmin.hot.errSaveLimit')),
         severity: 'error'
       });
     } finally {
@@ -302,7 +304,7 @@ const HotNumbers = (): React.ReactElement => {
 
   // Delete limit
   const handleDeleteLimit = async (id: number) => {
-    if (!window.confirm('Eliminar este limite?')) return;
+    if (!window.confirm(t('limitsAdmin.hot.confirmDelete'))) return;
 
     setDeletingLimitId(id);
     try {
@@ -310,14 +312,14 @@ const HotNumbers = (): React.ReactElement => {
       setHotNumberLimits(prev => prev.filter(l => l.id !== id));
       setSnackbar({
         open: true,
-        message: 'Limite eliminado exitosamente',
+        message: t('limitsAdmin.hot.msgLimitDeleted'),
         severity: 'success'
       });
     } catch (err) {
       console.error('Error deleting limit:', err);
       setSnackbar({
         open: true,
-        message: handleHotNumberError(err, 'eliminar limite'),
+        message: handleHotNumberError(err, t('limitsAdmin.hot.errDeleteLimit')),
         severity: 'error'
       });
     } finally {
@@ -355,8 +357,8 @@ const HotNumbers = (): React.ReactElement => {
           onChange={(_, newValue) => setActiveTab(newValue)}
           sx={styles.tabs}
         >
-          <Tab label="Numeros calientes" />
-          <Tab label="Limites" />
+          <Tab label={t('limitsAdmin.hot.tabNumbers')} />
+          <Tab label={t('limitsAdmin.hot.tabLimits')} />
         </Tabs>
 
         <Box sx={{ p: 3 }}>
@@ -398,7 +400,7 @@ const HotNumbers = (): React.ReactElement => {
                   disableElevation
                   sx={styles.saveButton}
                 >
-                  {savingNumbers ? 'Guardando...' : 'Guardar'}
+                  {savingNumbers ? t('limitsAdmin.hot.saving') : t('limitsAdmin.hot.save')}
                 </Button>
               </Box>
             </Box>
@@ -422,12 +424,12 @@ const HotNumbers = (): React.ReactElement => {
               >
                 {/* Draw selector */}
                 <FormControl size="small" sx={{ gridColumn: 'span 2' }}>
-                  <InputLabel>Sorteos</InputLabel>
+                  <InputLabel>{t('limitsAdmin.hot.draws')}</InputLabel>
                   <Select
                     multiple
                     value={newLimit.drawIds}
                     onChange={e => handleLimitFieldChange('drawIds', e.target.value as number[])}
-                    input={<OutlinedInput label="Sorteos" />}
+                    input={<OutlinedInput label={t('limitsAdmin.hot.draws')} />}
                     renderValue={selected => (
                       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                         {(selected as number[]).map(id => {
@@ -454,7 +456,7 @@ const HotNumbers = (): React.ReactElement => {
 
                 {/* Amount fields */}
                 <TextField
-                  label="Directo"
+                  label={t('limitsAdmin.hot.directo')}
                   type="number"
                   size="small"
                   value={newLimit.directo}
@@ -462,7 +464,7 @@ const HotNumbers = (): React.ReactElement => {
                   inputProps={{ min: 0 }}
                 />
                 <TextField
-                  label="Pale 1 Caliente"
+                  label={t('limitsAdmin.hot.pale1Hot')}
                   type="number"
                   size="small"
                   value={newLimit.pale1Caliente}
@@ -470,7 +472,7 @@ const HotNumbers = (): React.ReactElement => {
                   inputProps={{ min: 0 }}
                 />
                 <TextField
-                  label="Pale 2 Caliente"
+                  label={t('limitsAdmin.hot.pale2Hot')}
                   type="number"
                   size="small"
                   value={newLimit.pale2Caliente}
@@ -478,7 +480,7 @@ const HotNumbers = (): React.ReactElement => {
                   inputProps={{ min: 0 }}
                 />
                 <TextField
-                  label="Tripleta 1 Caliente"
+                  label={t('limitsAdmin.hot.tripleta1Hot')}
                   type="number"
                   size="small"
                   value={newLimit.tripleta1Caliente}
@@ -486,7 +488,7 @@ const HotNumbers = (): React.ReactElement => {
                   inputProps={{ min: 0 }}
                 />
                 <TextField
-                  label="Tripleta 2 Caliente"
+                  label={t('limitsAdmin.hot.tripleta2Hot')}
                   type="number"
                   size="small"
                   value={newLimit.tripleta2Caliente}
@@ -494,7 +496,7 @@ const HotNumbers = (): React.ReactElement => {
                   inputProps={{ min: 0 }}
                 />
                 <TextField
-                  label="Tripleta 3 Caliente"
+                  label={t('limitsAdmin.hot.tripleta3Hot')}
                   type="number"
                   size="small"
                   value={newLimit.tripleta3Caliente}
@@ -516,7 +518,7 @@ const HotNumbers = (): React.ReactElement => {
                       whiteSpace: 'nowrap'
                     }}
                   >
-                    Agregar
+                    {t('limitsAdmin.hot.add')}
                   </Button>
                 </Box>
               </Box>
@@ -525,21 +527,21 @@ const HotNumbers = (): React.ReactElement => {
               <Table sx={{ mb: 3 }}>
                 <TableHead>
                   <TableRow sx={{ bgcolor: '#e3e3e3' }}>
-                    <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878' }}>Sorteos</TableCell>
-                    <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878' }} align="right">Directo</TableCell>
-                    <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878' }} align="right">Pale 1 caliente</TableCell>
-                    <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878' }} align="right">Pale 2 caliente</TableCell>
-                    <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878' }} align="right">Tripleta 1</TableCell>
-                    <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878' }} align="right">Tripleta 2</TableCell>
-                    <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878' }} align="right">Tripleta 3</TableCell>
-                    <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878' }} align="center">Acciones</TableCell>
+                    <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878' }}>{t('limitsAdmin.hot.draws')}</TableCell>
+                    <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878' }} align="right">{t('limitsAdmin.hot.directo')}</TableCell>
+                    <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878' }} align="right">{t('limitsAdmin.hot.headerPale1')}</TableCell>
+                    <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878' }} align="right">{t('limitsAdmin.hot.headerPale2')}</TableCell>
+                    <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878' }} align="right">{t('limitsAdmin.hot.headerTripleta1')}</TableCell>
+                    <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878' }} align="right">{t('limitsAdmin.hot.headerTripleta2')}</TableCell>
+                    <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878' }} align="right">{t('limitsAdmin.hot.headerTripleta3')}</TableCell>
+                    <TableCell sx={{ fontSize: '12px', fontWeight: 600, color: '#787878' }} align="center">{t('limitsAdmin.hot.headerActions')}</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {hotNumberLimits.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={8} sx={{ textAlign: 'center', fontSize: '13px', color: '#999', py: 3 }}>
-                        No hay limites configurados
+                        {t('limitsAdmin.hot.noLimits')}
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -577,7 +579,7 @@ const HotNumbers = (): React.ReactElement => {
                           {limit.tripleta3Caliente.toLocaleString()}
                         </TableCell>
                         <TableCell align="center">
-                          <Tooltip title="Eliminar limite">
+                          <Tooltip title={t('limitsAdmin.hot.deleteTooltip')}>
                             <IconButton
                               size="small"
                               onClick={() => limit.id && handleDeleteLimit(limit.id)}

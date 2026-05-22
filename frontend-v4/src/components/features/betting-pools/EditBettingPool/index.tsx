@@ -1,5 +1,6 @@
 import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Paper,
@@ -54,6 +55,7 @@ import LimitsTab from '@components/features/betting-pools/CreateBettingPool/tabs
  * Modern Material-UI version of EditBanca with ALL 168 fields
  */
 const EditBettingPoolMUI: React.FC = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { id } = useParams(); // Get bettingPoolId from URL
   const [templateSectionOpen, setTemplateSectionOpen] = React.useState(true);
@@ -110,10 +112,10 @@ const EditBettingPoolMUI: React.FC = () => {
         <Box sx={{ textAlign: 'center' }}>
           <CircularProgress size={60} />
           <Typography variant="h6" sx={{ mt: 2 }}>
-            Cargando datos de la banca...
+            {t('editBettingPool.loadingPoolData')}
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-            Solo un momento...
+            {t('editBettingPool.loadingMoment')}
           </Typography>
         </Box>
       </Box>
@@ -129,7 +131,7 @@ const EditBettingPoolMUI: React.FC = () => {
         {/* Header */}
         <Box sx={{ p: 3, borderBottom: 1, borderColor: 'divider' }}>
           <Typography variant="h5" component="h1" align="center">
-            Editar Banca
+            {t('editBettingPool.title')}
           </Typography>
           <Typography variant="body2" color="text.secondary" align="center" sx={{ mt: 1 }}>
             {formData.bettingPoolName} ({formData.branchCode})
@@ -146,13 +148,13 @@ const EditBettingPoolMUI: React.FC = () => {
               variant="scrollable"
               scrollButtons="auto"
             >
-              <Tab label="General" />
-              <Tab label="Configuración" />
-              <Tab label="Pies de Página" />
+              <Tab label={t('editBettingPool.tabs.general')} />
+              <Tab label={t('editBettingPool.tabs.configuration')} />
+              <Tab label={t('editBettingPool.tabs.footers')} />
               <Tab
                 label={
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    Premios & Comisiones
+                    {t('editBettingPool.tabs.prizesCommissions')}
                     {/* ⚡ PROGRESSIVE LOADING: Show loading indicator on tab */}
                     {loadingPrizes && (
                       <CircularProgress size={16} thickness={4} />
@@ -160,12 +162,12 @@ const EditBettingPoolMUI: React.FC = () => {
                   </Box>
                 }
               />
-              <Tab label="Límites" />
-              <Tab label="Horarios" />
-              <Tab label="Sorteos" />
-              <Tab label="Usuarios" />
-              <Tab label="Estilos" />
-              <Tab label="Gastos Automáticos" />
+              <Tab label={t('editBettingPool.tabs.limits')} />
+              <Tab label={t('editBettingPool.tabs.schedules')} />
+              <Tab label={t('editBettingPool.tabs.draws')} />
+              <Tab label={t('editBettingPool.tabs.users')} />
+              <Tab label={t('editBettingPool.tabs.styles')} />
+              <Tab label={t('editBettingPool.tabs.autoExpenses')} />
             </Tabs>
           </Box>
 
@@ -189,7 +191,7 @@ const EditBettingPoolMUI: React.FC = () => {
                     variant="outlined"
                     size="small"
                     onClick={async () => {
-                      if (!window.confirm('Esto sobrescribirá la configuración de esta banca con los valores predeterminados del grupo. ¿Continuar?')) return;
+                      if (!window.confirm(t('editBettingPool.confirmGroupDefaults'))) return;
                       try {
                         const updates = await buildPrefillFromGroupDefaults();
                         // Only keep BP config keys (skip prize/footer keys)
@@ -206,7 +208,7 @@ const EditBettingPoolMUI: React.FC = () => {
                       }
                     }}
                   >
-                    Aplicar defaults del grupo
+                    {t('editBettingPool.applyGroupDefaults')}
                   </Button>
                 </Box>
                 <ConfigurationTab
@@ -224,7 +226,7 @@ const EditBettingPoolMUI: React.FC = () => {
                     variant="outlined"
                     size="small"
                     onClick={async () => {
-                      if (!window.confirm('Esto sobrescribirá el pie de página de esta banca con el predeterminado del grupo. ¿Continuar?')) return;
+                      if (!window.confirm(t('editBettingPool.confirmGroupFooter'))) return;
                       try {
                         const updates = await buildPrefillFromGroupDefaults();
                         const footerUpdates: Record<string, string | number | boolean> = {};
@@ -239,7 +241,7 @@ const EditBettingPoolMUI: React.FC = () => {
                       }
                     }}
                   >
-                    Aplicar pie de página del grupo
+                    {t('editBettingPool.applyGroupFooter')}
                   </Button>
                 </Box>
                 <FootersTab
@@ -256,7 +258,7 @@ const EditBettingPoolMUI: React.FC = () => {
                   <Box sx={{ p: 2, mb: 2 }}>
                     <Alert severity="info" icon={<CircularProgress size={20} />}>
                       <Typography variant="body2">
-                        Cargando datos de premios y comisiones en segundo plano...
+                        {t('editBettingPool.loadingPrizesBackground')}
                       </Typography>
                     </Alert>
                   </Box>
@@ -266,7 +268,7 @@ const EditBettingPoolMUI: React.FC = () => {
                     variant="outlined"
                     size="small"
                     onClick={async () => {
-                      if (!window.confirm('Esto sobrescribirá los valores de premios y comisiones con los defaults del grupo. ¿Continuar?')) return;
+                      if (!window.confirm(t('editBettingPool.confirmGroupPrizes'))) return;
                       try {
                         const updates = await buildPrefillFromGroupDefaults();
                         if (Object.keys(updates).length > 0) {
@@ -277,7 +279,7 @@ const EditBettingPoolMUI: React.FC = () => {
                       }
                     }}
                   >
-                    Aplicar defaults del grupo
+                    {t('editBettingPool.applyGroupDefaults')}
                   </Button>
                 </Box>
                 <PrizesTab
@@ -351,7 +353,7 @@ const EditBettingPoolMUI: React.FC = () => {
             >
               <ContentCopyIcon sx={{ mr: 1, color: '#667eea' }} />
               <Typography variant="subtitle1" fontWeight="bold" sx={{ flexGrow: 1 }}>
-                Copiar de banca plantilla
+                {t('editBettingPool.copyFromTemplate')}
               </Typography>
               {templateSectionOpen ? <ExpandLessIcon /> : <ExpandMoreIcon />}
             </Box>
@@ -361,19 +363,19 @@ const EditBettingPoolMUI: React.FC = () => {
                 {/* Template Selection Dropdown */}
                 <Box sx={{ flex: 1, minWidth: 250 }}>
                   <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                    Banca
+                    {t('editBettingPool.bettingPoolLabel')}
                   </Typography>
                   <FormControl fullWidth size="small">
-                    <InputLabel id="template-select-label">Seleccione</InputLabel>
+                    <InputLabel id="template-select-label">{t('editBettingPool.select')}</InputLabel>
                     <Select
                       labelId="template-select-label"
                       value={selectedTemplateId || ''}
                       onChange={(e) => handleTemplateSelect(e.target.value ? Number(e.target.value) : null)}
-                      label="Seleccione"
+                      label={t('editBettingPool.select')}
                       disabled={loadingTemplates}
                     >
                       <MenuItem value="">
-                        <em>Seleccione</em>
+                        <em>{t('editBettingPool.select')}</em>
                       </MenuItem>
                       {templateBettingPools.map((pool) => (
                         <MenuItem key={pool.bettingPoolId} value={pool.bettingPoolId}>
@@ -384,7 +386,7 @@ const EditBettingPoolMUI: React.FC = () => {
                   </FormControl>
                   {loadingTemplates && (
                     <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
-                      Cargando bancas...
+                      {t('editBettingPool.loadingPools')}
                     </Typography>
                   )}
                 </Box>
@@ -392,7 +394,7 @@ const EditBettingPoolMUI: React.FC = () => {
                 {/* Template Fields Checkboxes */}
                 <Box sx={{ flex: 2 }}>
                   <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                    Campos de plantilla
+                    {t('editBettingPool.templateFields')}
                   </Typography>
                   <FormGroup row sx={{ flexWrap: 'wrap', gap: 0 }}>
                     <FormControlLabel
@@ -404,7 +406,7 @@ const EditBettingPoolMUI: React.FC = () => {
                           sx={{ color: '#667eea', '&.Mui-checked': { color: '#667eea' } }}
                         />
                       }
-                      label={<Typography variant="body2">CONFIGURACIÓN</Typography>}
+                      label={<Typography variant="body2">{t('editBettingPool.field.configuration')}</Typography>}
                       sx={{ minWidth: 150 }}
                     />
                     <FormControlLabel
@@ -416,7 +418,7 @@ const EditBettingPoolMUI: React.FC = () => {
                           sx={{ color: '#667eea', '&.Mui-checked': { color: '#667eea' } }}
                         />
                       }
-                      label={<Typography variant="body2">PIES DE PÁGINA</Typography>}
+                      label={<Typography variant="body2">{t('editBettingPool.field.footers')}</Typography>}
                       sx={{ minWidth: 150 }}
                     />
                     <FormControlLabel
@@ -428,7 +430,7 @@ const EditBettingPoolMUI: React.FC = () => {
                           sx={{ color: '#667eea', '&.Mui-checked': { color: '#667eea' } }}
                         />
                       }
-                      label={<Typography variant="body2">PREMIOS & COMISIONES</Typography>}
+                      label={<Typography variant="body2">{t('editBettingPool.field.prizesCommissions')}</Typography>}
                       sx={{ minWidth: 180 }}
                     />
                     <FormControlLabel
@@ -440,7 +442,7 @@ const EditBettingPoolMUI: React.FC = () => {
                           sx={{ color: '#667eea', '&.Mui-checked': { color: '#667eea' } }}
                         />
                       }
-                      label={<Typography variant="body2">HORARIOS DE SORTEOS</Typography>}
+                      label={<Typography variant="body2">{t('editBettingPool.field.drawSchedules')}</Typography>}
                       sx={{ minWidth: 180 }}
                     />
                     <FormControlLabel
@@ -452,7 +454,7 @@ const EditBettingPoolMUI: React.FC = () => {
                           sx={{ color: '#667eea', '&.Mui-checked': { color: '#667eea' } }}
                         />
                       }
-                      label={<Typography variant="body2">SORTEOS</Typography>}
+                      label={<Typography variant="body2">{t('editBettingPool.field.draws')}</Typography>}
                       sx={{ minWidth: 120 }}
                     />
                     <FormControlLabel
@@ -464,7 +466,7 @@ const EditBettingPoolMUI: React.FC = () => {
                           sx={{ color: '#667eea', '&.Mui-checked': { color: '#667eea' } }}
                         />
                       }
-                      label={<Typography variant="body2">ESTILOS</Typography>}
+                      label={<Typography variant="body2">{t('editBettingPool.field.styles')}</Typography>}
                       sx={{ minWidth: 120 }}
                     />
                     <FormControlLabel
@@ -476,7 +478,7 @@ const EditBettingPoolMUI: React.FC = () => {
                           sx={{ color: '#667eea', '&.Mui-checked': { color: '#667eea' } }}
                         />
                       }
-                      label={<Typography variant="body2">REGLAS</Typography>}
+                      label={<Typography variant="body2">{t('editBettingPool.field.rules')}</Typography>}
                       sx={{ minWidth: 120 }}
                     />
                   </FormGroup>
@@ -496,7 +498,7 @@ const EditBettingPoolMUI: React.FC = () => {
                       whiteSpace: 'nowrap',
                     }}
                   >
-                    {loadingTemplateData ? 'Copiando...' : 'Aplicar plantilla'}
+                    {loadingTemplateData ? t('editBettingPool.copying') : t('editBettingPool.applyTemplate')}
                   </Button>
                 </Box>
               </Box>
@@ -512,7 +514,7 @@ const EditBettingPoolMUI: React.FC = () => {
                 onClick={() => navigate('/betting-pools/list')}
                 disabled={loading}
               >
-                Cancelar
+                {t('common.cancel')}
               </Button>
               <Button
                 type="submit"
@@ -521,7 +523,7 @@ const EditBettingPoolMUI: React.FC = () => {
                 disabled={loading}
                 sx={{ minWidth: 200 }}
               >
-                {loading ? 'Guardando...' : 'Guardar Cambios'}
+                {loading ? t('editBettingPool.saving') : t('editBettingPool.saveChanges')}
               </Button>
             </Box>
           )}
@@ -532,8 +534,7 @@ const EditBettingPoolMUI: React.FC = () => {
       <Box sx={{ mt: 2 }}>
         <Alert severity="info">
           <Typography variant="body2">
-            <strong>Nota:</strong> Los cambios se aplicarán inmediatamente después de guardar.
-            Asegúrate de revisar todos los campos antes de actualizar la banca.
+            <strong>{t('editBettingPool.noteLabel')}</strong> {t('editBettingPool.noteText')}
           </Typography>
         </Alert>
       </Box>

@@ -97,7 +97,8 @@ public class AuthService : IAuthService
                 BettingPoolName = userBettingPool?.BettingPool?.BettingPoolName,
                 ExpiresAt = DateTime.UtcNow.AddHours(12),
                 MustChangePassword = user.MustChangePassword,
-                MustSetPin = user.MustSetPin
+                MustSetPin = user.MustSetPin,
+                PreferredLanguage = user.PreferredLanguage
             }
         };
     }

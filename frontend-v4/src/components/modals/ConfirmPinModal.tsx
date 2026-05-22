@@ -11,6 +11,7 @@ import {
   CircularProgress,
 } from '@mui/material'
 import { Lock as LockIcon, Pin as PinIcon } from '@mui/icons-material'
+import { useTranslation } from 'react-i18next'
 import * as userService from '@services/userService'
 import * as authService from '@services/authService'
 import { handleApiError } from '@utils/index'
@@ -33,11 +34,14 @@ type Mode = 'verify' | 'setup'
  */
 export default function ConfirmPinModal({
   isOpen,
-  title = 'Confirma con tu PIN',
-  description = 'Esta acción requiere confirmación con tu PIN de 4 dígitos.',
+  title,
+  description,
   onConfirmed,
   onCancel,
 }: Props) {
+  const { t } = useTranslation()
+  const resolvedTitle = title ?? t('confirmPin.title')
+  const resolvedDescription = description ?? t('confirmPin.description')
   const initialMode: Mode = authService.getCurrentUser()?.mustSetPin ? 'setup' : 'verify'
   const [mode, setMode] = useState<Mode>(initialMode)
   const [pin, setPin] = useState('')
@@ -74,10 +78,10 @@ export default function ConfirmPinModal({
         setConfirmPin('')
         setError(null)
       } else {
-        setError('PIN incorrecto')
+        setError(t('confirmPin.invalidPin'))
       }
     } catch (err) {
-      setError(handleApiError(err) || 'Error verificando el PIN')
+      setError(handleApiError(err) || t('confirmPin.verifyError'))
     } finally {
       setLoading(false)
     }
@@ -91,7 +95,7 @@ export default function ConfirmPinModal({
       await userService.setMyPin(pin)
       onConfirmed()
     } catch (err) {
-      setError(handleApiError(err) || 'No se pudo establecer el PIN')
+      setError(handleApiError(err) || t('confirmPin.setupError'))
     } finally {
       setLoading(false)
     }
@@ -105,19 +109,19 @@ export default function ConfirmPinModal({
       <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
         {mode === 'setup' ? <PinIcon sx={{ color: '#6366f1' }} /> : <LockIcon sx={{ color: '#6366f1' }} />}
         <Typography component="span" sx={{ fontWeight: 600, fontFamily: 'Montserrat, sans-serif' }}>
-          {mode === 'setup' ? 'Establece tu PIN de seguridad' : title}
+          {mode === 'setup' ? t('confirmPin.setupTitle') : resolvedTitle}
         </Typography>
       </DialogTitle>
 
       <DialogContent>
         <Typography variant="body2" sx={{ mb: 2, color: '#666' }}>
           {mode === 'setup'
-            ? 'Aún no tienes un PIN configurado. Defínelo ahora para continuar con esta acción.'
-            : description}
+            ? t('confirmPin.setupDescription')
+            : resolvedDescription}
         </Typography>
 
         <TextField
-          label={mode === 'setup' ? 'Nuevo PIN (4 dígitos)' : 'PIN'}
+          label={mode === 'setup' ? t('confirmPin.newPinLabel') : t('confirmPin.pinLabel')}
           type="password"
           value={pin}
           onChange={(e) => setPin(onlyDigits(e.target.value))}
@@ -131,7 +135,7 @@ export default function ConfirmPinModal({
 
         {mode === 'setup' && (
           <TextField
-            label="Confirmar PIN"
+            label={t('confirmPin.confirmPinLabel')}
             type="password"
             value={confirmPin}
             onChange={(e) => setConfirmPin(onlyDigits(e.target.value))}
@@ -139,7 +143,7 @@ export default function ConfirmPinModal({
             margin="dense"
             inputProps={{ inputMode: 'numeric', maxLength: 4, pattern: '\\d{4}' }}
             error={confirmPin.length > 0 && !matches}
-            helperText={confirmPin.length > 0 && !matches ? 'Los PIN no coinciden' : ''}
+            helperText={confirmPin.length > 0 && !matches ? t('confirmPin.pinsDontMatch') : ''}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && canSubmit) handleSubmit()
             }}
@@ -152,7 +156,7 @@ export default function ConfirmPinModal({
 
       <DialogActions sx={{ px: 3, pb: 2, gap: 1 }}>
         <Button onClick={onCancel} sx={{ textTransform: 'none' }} disabled={loading}>
-          Cancelar
+          {t('common.cancel')}
         </Button>
         <Button
           variant="contained"
@@ -166,7 +170,7 @@ export default function ConfirmPinModal({
         >
           {loading
             ? <CircularProgress size={20} sx={{ color: 'white' }} />
-            : mode === 'setup' ? 'Establecer y continuar' : 'Confirmar'}
+            : mode === 'setup' ? t('confirmPin.setupAndContinue') : t('confirmPin.confirm')}
         </Button>
       </DialogActions>
     </Dialog>

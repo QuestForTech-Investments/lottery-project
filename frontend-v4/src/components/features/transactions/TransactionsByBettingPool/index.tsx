@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, type ChangeEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Card,
@@ -71,6 +72,7 @@ const SummaryRow = ({ label, value, highlighted, color, bgColor }: SummaryRowPro
 );
 
 const TransactionsByBettingPool = (): React.ReactElement => {
+  const { t } = useTranslation();
   const today = new Date().toLocaleDateString('en-CA');
   const [startDate, setStartDate] = useState<string>(today);
   const [endDate, setEndDate] = useState<string>(today);
@@ -119,7 +121,7 @@ const TransactionsByBettingPool = (): React.ReactElement => {
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h4" sx={{ mb: 3, textAlign: 'center', fontWeight: 600, color: '#2c2c2c' }}>
-        Resumen por banca
+        {t('transactions.byBettingPool.title')}
       </Typography>
 
       <Card elevation={1} sx={{ mb: 3 }}>
@@ -127,7 +129,7 @@ const TransactionsByBettingPool = (): React.ReactElement => {
           <Grid container spacing={2} alignItems="flex-end">
             <Grid item xs={12} md={3}>
               <TextField
-                fullWidth size="small" type="date" label="Fecha inicial"
+                fullWidth size="small" type="date" label={t('common.dateStart')}
                 value={startDate} onChange={(e: ChangeEvent<HTMLInputElement>) => setStartDate(e.target.value)}
                 InputLabelProps={{ shrink: true }}
                 InputProps={{ startAdornment: <InputAdornment position="start"><CalendarIcon fontSize="small" /></InputAdornment> }}
@@ -135,7 +137,7 @@ const TransactionsByBettingPool = (): React.ReactElement => {
             </Grid>
             <Grid item xs={12} md={3}>
               <TextField
-                fullWidth size="small" type="date" label="Fecha final"
+                fullWidth size="small" type="date" label={t('common.dateEnd')}
                 value={endDate} onChange={(e: ChangeEvent<HTMLInputElement>) => setEndDate(e.target.value)}
                 InputLabelProps={{ shrink: true }}
                 InputProps={{ startAdornment: <InputAdornment position="start"><CalendarIcon fontSize="small" /></InputAdornment> }}
@@ -158,7 +160,7 @@ const TransactionsByBettingPool = (): React.ReactElement => {
                   );
                 }}
                 renderInput={(params) => (
-                  <TextField {...params} label="Banca" placeholder="Buscar banca..." />
+                  <TextField {...params} label={t('common.bettingPool')} placeholder={t('tickets.create.searchBettingPool')} />
                 )}
                 isOptionEqualToValue={(opt, val) => opt.bettingPoolId === val.bettingPoolId}
               />
@@ -169,7 +171,7 @@ const TransactionsByBettingPool = (): React.ReactElement => {
                 disabled={!selectedPool || loading}
                 sx={{ bgcolor: '#8b5cf6', '&:hover': { bgcolor: '#45b5b8' }, fontWeight: 600, textTransform: 'uppercase' }}
               >
-                Ver ventas
+                {t('transactions.viewSales')}
               </Button>
             </Grid>
           </Grid>
@@ -185,28 +187,28 @@ const TransactionsByBettingPool = (): React.ReactElement => {
           <CardContent sx={{ p: 0 }}>
             <Box sx={{ bgcolor: '#f5f5f5', py: 2, px: 2, borderBottom: '2px solid #51cbce' }}>
               <Typography variant="h6" sx={{ fontWeight: 600, textAlign: 'center', color: '#2c2c2c' }}>
-                Resumen de transacciones
+                {t('transactions.summary.title')}
               </Typography>
             </Box>
 
             {!summaryData ? (
               <Box sx={{ py: 4, textAlign: 'center' }}>
-                <Typography variant="body2" color="text.secondary">No se encontraron datos para esta banca en el período seleccionado</Typography>
+                <Typography variant="body2" color="text.secondary">{t('transactions.noBettingPoolData')}</Typography>
               </Box>
             ) : (
               <Box>
-                <SummaryRow label="Banca" value={summaryData.bettingPoolName} />
-                <SummaryRow label="Código" value={summaryData.code} />
+                <SummaryRow label={t('common.bettingPool')} value={summaryData.bettingPoolName} />
+                <SummaryRow label={t('common.code')} value={summaryData.code} />
 
                 <Box sx={{ bgcolor: '#fafafa', py: 0.5, px: 2, borderTop: '1px solid #e0e0e0' }}>
                   <Typography variant="caption" sx={{ fontWeight: 600, color: '#888', textTransform: 'uppercase', letterSpacing: 1 }}>
-                    Flujo de caja
+                    {t('transactions.cashFlow')}
                   </Typography>
                 </Box>
-                <SummaryRow label="Cobros" value={formatCurrency(summaryData.collections)} />
-                <SummaryRow label="Pagos" value={formatCurrency(summaryData.payments)} />
+                <SummaryRow label={t('transactions.collections')} value={formatCurrency(summaryData.collections)} />
+                <SummaryRow label={t('transactions.payments')} value={formatCurrency(summaryData.payments)} />
                 <SummaryRow
-                  label="Flujo de caja neto"
+                  label={t('transactions.netCashFlow')}
                   value={formatCurrency(summaryData.cashFlowNet)}
                   highlighted
                   color={getNetColor(summaryData.cashFlowNet)}
@@ -215,20 +217,20 @@ const TransactionsByBettingPool = (): React.ReactElement => {
 
                 <Box sx={{ bgcolor: '#fafafa', py: 0.5, px: 2, borderTop: '1px solid #e0e0e0' }}>
                   <Typography variant="caption" sx={{ fontWeight: 600, color: '#888', textTransform: 'uppercase', letterSpacing: 1 }}>
-                    Resultados de sorteo
+                    {t('transactions.drawResults')}
                   </Typography>
                 </Box>
-                <SummaryRow label="Débito" value={formatCurrency(summaryData.drawDebit)} />
-                <SummaryRow label="Crédito" value={formatCurrency(summaryData.drawCredit)} />
+                <SummaryRow label={t('transactions.debit')} value={formatCurrency(summaryData.drawDebit)} />
+                <SummaryRow label={t('transactions.credit')} value={formatCurrency(summaryData.drawCredit)} />
                 <SummaryRow
-                  label="Resultado de sorteos neto"
+                  label={t('transactions.netDrawResult')}
                   value={formatCurrency(summaryData.drawNet)}
                   highlighted
                   color={getNetColor(summaryData.drawNet)}
                   bgColor={getNetBgColor(summaryData.drawNet)}
                 />
 
-                <SummaryRow label="Caída" value={formatCurrency(summaryData.fall)} />
+                <SummaryRow label={t('transactions.fall')} value={formatCurrency(summaryData.fall)} />
               </Box>
             )}
           </CardContent>

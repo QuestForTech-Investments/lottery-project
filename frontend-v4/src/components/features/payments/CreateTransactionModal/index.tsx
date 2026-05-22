@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Dialog,
   DialogTitle,
@@ -51,6 +52,7 @@ interface Totals {
  * Material-UI Dialog implementation
  */
 const CreateTransactionModal = ({ open, onClose }: CreateTransactionModalProps): React.ReactElement => {
+  const { t } = useTranslation();
   const [type, setType] = useState<string>('');
   const [bettingPoolName, setBettingPoolName] = useState<string>('');
   const [bettingPoolCode, setBettingPoolCode] = useState<string>('');
@@ -90,7 +92,7 @@ const CreateTransactionModal = ({ open, onClose }: CreateTransactionModalProps):
       {/* Header */}
       <DialogTitle sx={{ borderBottom: '1px solid #dee2e6', display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 2 }}>
         <Typography variant="h6" sx={{ fontSize: '18px', fontWeight: 500 }}>
-          Crear Transacciones
+          {t('payments.createTitle')}
         </Typography>
         <IconButton onClick={onClose} size="small">
           <CloseIcon />
@@ -105,30 +107,30 @@ const CreateTransactionModal = ({ open, onClose }: CreateTransactionModalProps):
           <Box sx={{ flex: 1 }}>
             {/* Type */}
             <FormControl fullWidth size="small" sx={{ mb: 2 }}>
-              <InputLabel sx={{ fontSize: '13px' }}>Tipo</InputLabel>
+              <InputLabel sx={{ fontSize: '13px' }}>{t('common.type')}</InputLabel>
               <Select
                 value={type}
                 onChange={(e) => setType(e.target.value)}
-                label="Tipo"
+                label={t('common.type')}
                 sx={{ fontSize: '13px' }}
               >
                 <MenuItem value="" sx={{ fontSize: '13px' }}>
-                  <em>Selecione uno...</em>
+                  <em>{t('common.selectOne')}</em>
                 </MenuItem>
-                <MenuItem value="cobro" sx={{ fontSize: '13px' }}>Cobro</MenuItem>
-                <MenuItem value="pago" sx={{ fontSize: '13px' }}>Pago</MenuItem>
+                <MenuItem value="cobro" sx={{ fontSize: '13px' }}>{t('common.collection')}</MenuItem>
+                <MenuItem value="pago" sx={{ fontSize: '13px' }}>{t('common.payment')}</MenuItem>
               </Select>
             </FormControl>
 
             {/* Banca section */}
             <Typography variant="h6" sx={{ fontSize: '14px', fontWeight: 600, mt: 2, mb: 2 }}>
-              BANCA
+              {t('common.bettingPool').toUpperCase()}
             </Typography>
 
             <TextField
               fullWidth
               size="small"
-              label="Nombre"
+              label={t('common.name')}
               value={bettingPoolName}
               onChange={(e) => setBettingPoolName(e.target.value)}
               sx={{ mb: 2, '& .MuiInputLabel-root': { fontSize: '13px' }, '& .MuiInputBase-input': { fontSize: '13px' } }}
@@ -137,7 +139,7 @@ const CreateTransactionModal = ({ open, onClose }: CreateTransactionModalProps):
             <TextField
               fullWidth
               size="small"
-              label="Código"
+              label={t('common.code')}
               value={bettingPoolCode}
               onChange={(e) => setBettingPoolCode(e.target.value)}
               sx={{ mb: 2, '& .MuiInputLabel-root': { fontSize: '13px' }, '& .MuiInputBase-input': { fontSize: '13px' } }}
@@ -147,7 +149,7 @@ const CreateTransactionModal = ({ open, onClose }: CreateTransactionModalProps):
               fullWidth
               size="small"
               type="number"
-              label="Monto"
+              label={t('common.amount')}
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               inputProps={{ step: '0.01' }}
@@ -159,12 +161,12 @@ const CreateTransactionModal = ({ open, onClose }: CreateTransactionModalProps):
           <Box sx={{ flex: 1 }}>
             {/* Entidad fuente */}
             <Typography variant="h6" sx={{ fontSize: '13px', fontWeight: 600, mb: 1, color: '#999', textTransform: 'uppercase' }}>
-              Entidad fuente
+              {t('payments.entityFuente')}
             </Typography>
             <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
               <TextField
                 size="small"
-                label="Balance inicial"
+                label={t('common.initialBalance')}
                 value={sourceInitialBalance}
                 disabled
                 sx={{
@@ -175,7 +177,7 @@ const CreateTransactionModal = ({ open, onClose }: CreateTransactionModalProps):
               />
               <TextField
                 size="small"
-                label="Balance final"
+                label={t('common.finalBalance')}
                 value={sourceFinalBalance}
                 disabled
                 sx={{
@@ -190,12 +192,12 @@ const CreateTransactionModal = ({ open, onClose }: CreateTransactionModalProps):
 
             {/* Entidad destino */}
             <Typography variant="h6" sx={{ fontSize: '13px', fontWeight: 600, mb: 1, color: '#999', textTransform: 'uppercase' }}>
-              Entidad destino
+              {t('payments.entityDestino')}
             </Typography>
             <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
               <TextField
                 size="small"
-                label="Balance inicial"
+                label={t('common.initialBalance')}
                 value={destInitialBalance}
                 disabled
                 sx={{
@@ -206,7 +208,7 @@ const CreateTransactionModal = ({ open, onClose }: CreateTransactionModalProps):
               />
               <TextField
                 size="small"
-                label="Balance final"
+                label={t('common.finalBalance')}
                 value={destFinalBalance}
                 disabled
                 sx={{
@@ -220,7 +222,7 @@ const CreateTransactionModal = ({ open, onClose }: CreateTransactionModalProps):
             <TextField
               fullWidth
               size="small"
-              label="Notas de la transacción"
+              label={t('payments.transactionNotes')}
               value={transactionNotes}
               onChange={(e) => setTransactionNotes(e.target.value)}
               multiline
@@ -235,13 +237,13 @@ const CreateTransactionModal = ({ open, onClose }: CreateTransactionModalProps):
           <Table size="small">
             <TableHead sx={{ bgcolor: '#e3e3e3' }}>
               <TableRow>
-                <TableCell sx={{ fontSize: '13px', fontWeight: 600 }}>Tipo</TableCell>
-                <TableCell sx={{ fontSize: '13px', fontWeight: 600 }}>Entidad</TableCell>
-                <TableCell sx={{ fontSize: '13px', fontWeight: 600 }}>Débito</TableCell>
-                <TableCell sx={{ fontSize: '13px', fontWeight: 600 }}>Crédito</TableCell>
-                <TableCell sx={{ fontSize: '13px', fontWeight: 600 }}>Balance inicial</TableCell>
-                <TableCell sx={{ fontSize: '13px', fontWeight: 600 }}>Balance final</TableCell>
-                <TableCell sx={{ fontSize: '13px', fontWeight: 600 }}>Notas</TableCell>
+                <TableCell sx={{ fontSize: '13px', fontWeight: 600 }}>{t('common.type')}</TableCell>
+                <TableCell sx={{ fontSize: '13px', fontWeight: 600 }}>{t('transactions.entity')}</TableCell>
+                <TableCell sx={{ fontSize: '13px', fontWeight: 600 }}>{t('transactions.debit')}</TableCell>
+                <TableCell sx={{ fontSize: '13px', fontWeight: 600 }}>{t('transactions.credit')}</TableCell>
+                <TableCell sx={{ fontSize: '13px', fontWeight: 600 }}>{t('common.initialBalance')}</TableCell>
+                <TableCell sx={{ fontSize: '13px', fontWeight: 600 }}>{t('common.finalBalance')}</TableCell>
+                <TableCell sx={{ fontSize: '13px', fontWeight: 600 }}>{t('common.notes')}</TableCell>
                 <TableCell sx={{ fontSize: '13px', fontWeight: 600, textAlign: 'center' }}>
                   <SettingsIcon sx={{ fontSize: '18px' }} />
                 </TableCell>
@@ -262,7 +264,7 @@ const CreateTransactionModal = ({ open, onClose }: CreateTransactionModalProps):
                         }
                       }}
                     >
-                      No hay información disponible
+                      {t('common.noInfo')}
                     </Alert>
                   </TableCell>
                 </TableRow>
@@ -286,7 +288,7 @@ const CreateTransactionModal = ({ open, onClose }: CreateTransactionModalProps):
               )}
               {/* Totals row */}
               <TableRow sx={{ bgcolor: '#f9f9f9' }}>
-                <TableCell sx={{ fontSize: '13px', fontWeight: 600 }}>Totales</TableCell>
+                <TableCell sx={{ fontSize: '13px', fontWeight: 600 }}>{t('balances.totals')}</TableCell>
                 <TableCell></TableCell>
                 <TableCell sx={{ fontSize: '13px', fontWeight: 600 }}>${totals.debit.toFixed(2)}</TableCell>
                 <TableCell sx={{ fontSize: '13px', fontWeight: 600 }}>${totals.credit.toFixed(2)}</TableCell>
@@ -303,7 +305,7 @@ const CreateTransactionModal = ({ open, onClose }: CreateTransactionModalProps):
         <TextField
           fullWidth
           size="small"
-          label="Notas"
+          label={t('common.notes')}
           value={generalNotes}
           onChange={(e) => setGeneralNotes(e.target.value)}
           multiline
@@ -323,7 +325,7 @@ const CreateTransactionModal = ({ open, onClose }: CreateTransactionModalProps):
             px: 3
           }}
         >
-          Cancelar
+          {t('common.cancel')}
         </Button>
         <Button
           onClick={handleSubmit}
@@ -336,7 +338,7 @@ const CreateTransactionModal = ({ open, onClose }: CreateTransactionModalProps):
             px: 3
           }}
         >
-          Registrar
+          {t('common.register')}
         </Button>
       </DialogActions>
     </Dialog>
