@@ -2173,6 +2173,38 @@
       "unblock": "Debloke",
       "msgUnblocked": "Nimewo debloke",
       "msgUnblockError": "Erè pandan debloke"
+    },
+    "days": {
+      "mon": "Lendi",
+      "tue": "Madi",
+      "wed": "Mèkredi",
+      "thu": "Jedi",
+      "fri": "Vandredi",
+      "sat": "Samdi",
+      "sun": "Dimanch"
+    },
+    "limitTypeLabels": {
+      "1": "Limit Global",
+      "2": "Pa nimewo pou gwoup",
+      "3": "Limit Bankaj",
+      "4": "Pa nimewo pou bankaj (Liy)",
+      "5": "Limit Lokal Bankaj",
+      "6": "Limit Zòn",
+      "7": "Pa nimewo pou zòn",
+      "8": "Jeneral pou gwoup ekstèn",
+      "9": "Pa nimewo pou gwoup ekstèn",
+      "10": "Absoli"
+    },
+    "createLimitTypeLabels": {
+      "1": "Limit Global",
+      "3": "Limit Bankaj",
+      "5": "Limit Lokal Bankaj",
+      "6": "Limit Zòn"
+    },
+    "createByNumberLimitTypeLabels": {
+      "2": "Limit Global pa Nimewo",
+      "4": "Limit Bankaj pa Nimewo",
+      "7": "Limit Zòn pa Nimewo"
     }
   },
   "collectorsAdmin": {
@@ -2460,6 +2492,16 @@
       "low": "BA",
       "medium": "MWAYÈN",
       "high": "WO"
+    },
+    "messages": {
+      "TICKET_CREATED_LATE_one": "Tikè {{ticketCode}} kreye an reta ({{count}} tiraj fèmen)",
+      "TICKET_CREATED_LATE_other": "Tikè {{ticketCode}} kreye an reta ({{count}} tiraj fèmen)",
+      "TICKET_CANCELLED_LATE": "Tikè {{ticketCode}} anile an reta",
+      "TICKET_CANCELLED_AFTER_DRAW": "Tikè {{ticketCode}} anile apre lè tiraj la",
+      "TICKET_WINNER_CANCELLED": "Tikè ki genyen {{ticketCode}} te anile (pri: ${{totalPrize}})",
+      "TICKET_BYPASS_VALIDATION": "Tikè {{ticketCode}} kreye san validasyon ({{reasons}})",
+      "RESULT_CHANGED_AFTER_PRIZES": "Rezilta tiraj {{drawName}} modifye",
+      "RESULT_PUBLICATION_LATE": "Tiraj {{drawName}} pa pibliye (lè programe: {{scheduledTimeLabel}})"
     }
   },
   "emailReceiversAdmin": {
@@ -2521,6 +2563,26 @@
     },
     "footer": {
       "lineLabel": "Liy {{num}}"
+    },
+    "prizeFields": {
+      "primerPago": "Premye Peman",
+      "segundoPago": "Dezyèm Peman",
+      "tercerPago": "Twazyèm Peman",
+      "dobles": "Doub",
+      "todosSecuencia": "Tout an sekans",
+      "triples": "Trip",
+      "threeWay": "3-Way: 2 idantik",
+      "sixWay": "6-Way: 3 inik",
+      "twentyFourWay": "24-Way: 4 inik",
+      "twelveWay": "12-Way: 2 idantik",
+      "sixWayPlay4": "6-Way: 2 idantik",
+      "fourWay": "4-Way: 3 idantik",
+      "fiveWay": "5-Way",
+      "tenWay": "10-Way",
+      "twentyWay": "20-Way",
+      "thirtyWay": "30-Way",
+      "sixtyWay": "60-Way",
+      "oneTwentyWay": "120-Way"
     }
   },
   "modals": {

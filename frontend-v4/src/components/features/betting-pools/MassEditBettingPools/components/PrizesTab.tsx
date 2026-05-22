@@ -18,6 +18,7 @@ import {
 } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import type { PrizesTabProps } from '../types';
+import { translatePrizeFieldLabel } from '@/utils/prizeFieldLabel';
 
 const PrizesTab: FC<PrizesTabProps> = memo(({
   betTypes,
@@ -65,7 +66,7 @@ const PrizesTab: FC<PrizesTabProps> = memo(({
                         return (
                           <Box key={field.prizeTypeId} sx={{ mb: 1.5 }}>
                             <Typography variant="caption" color="text.secondary">
-                              {field.fieldName}
+                              {translatePrizeFieldLabel(field.fieldCode, field.fieldName, t)}
                             </Typography>
                             <TextField
                               fullWidth

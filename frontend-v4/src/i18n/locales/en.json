@@ -2173,6 +2173,38 @@
       "unblock": "Unblock",
       "msgUnblocked": "Number unblocked",
       "msgUnblockError": "Error unblocking"
+    },
+    "days": {
+      "mon": "Monday",
+      "tue": "Tuesday",
+      "wed": "Wednesday",
+      "thu": "Thursday",
+      "fri": "Friday",
+      "sat": "Saturday",
+      "sun": "Sunday"
+    },
+    "limitTypeLabels": {
+      "1": "Global Limit",
+      "2": "Per-number for group",
+      "3": "Betting Pool Limit",
+      "4": "Per-number for betting pool (Line)",
+      "5": "Local Betting Pool Limit",
+      "6": "Zone Limit",
+      "7": "Per-number for zone",
+      "8": "General for external group",
+      "9": "Per-number for external group",
+      "10": "Absolute"
+    },
+    "createLimitTypeLabels": {
+      "1": "Global Limit",
+      "3": "Betting Pool Limit",
+      "5": "Local Betting Pool Limit",
+      "6": "Zone Limit"
+    },
+    "createByNumberLimitTypeLabels": {
+      "2": "Global Per-Number Limit",
+      "4": "Betting Pool Per-Number Limit",
+      "7": "Zone Per-Number Limit"
     }
   },
   "collectorsAdmin": {
@@ -2455,6 +2487,26 @@
     },
     "footer": {
       "lineLabel": "Line {{num}}"
+    },
+    "prizeFields": {
+      "primerPago": "First Payout",
+      "segundoPago": "Second Payout",
+      "tercerPago": "Third Payout",
+      "dobles": "Doubles",
+      "todosSecuencia": "All in sequence",
+      "triples": "Triples",
+      "threeWay": "3-Way: 2 identical",
+      "sixWay": "6-Way: 3 unique",
+      "twentyFourWay": "24-Way: 4 unique",
+      "twelveWay": "12-Way: 2 identical",
+      "sixWayPlay4": "6-Way: 2 identical",
+      "fourWay": "4-Way: 3 identical",
+      "fiveWay": "5-Way",
+      "tenWay": "10-Way",
+      "twentyWay": "20-Way",
+      "thirtyWay": "30-Way",
+      "sixtyWay": "60-Way",
+      "oneTwentyWay": "120-Way"
     }
   },
   "modals": {
@@ -2700,6 +2752,16 @@
       "low": "LOW",
       "medium": "MEDIUM",
       "high": "HIGH"
+    },
+    "messages": {
+      "TICKET_CREATED_LATE_one": "Ticket {{ticketCode}} created late ({{count}} closed draw)",
+      "TICKET_CREATED_LATE_other": "Ticket {{ticketCode}} created late ({{count}} closed draws)",
+      "TICKET_CANCELLED_LATE": "Ticket {{ticketCode}} cancelled late",
+      "TICKET_CANCELLED_AFTER_DRAW": "Ticket {{ticketCode}} cancelled after the draw time",
+      "TICKET_WINNER_CANCELLED": "Winning ticket {{ticketCode}} was cancelled (prize: ${{totalPrize}})",
+      "TICKET_BYPASS_VALIDATION": "Ticket {{ticketCode}} created bypassing validations ({{reasons}})",
+      "RESULT_CHANGED_AFTER_PRIZES": "Result for draw {{drawName}} was modified",
+      "RESULT_PUBLICATION_LATE": "Draw {{drawName}} has not been published (scheduled time: {{scheduledTimeLabel}})"
     }
   },
   "apiErrors": {

@@ -482,21 +482,21 @@ const CreateLimit = (): React.ReactElement => {
                 sx={styles.select}
               >
                 <MenuItem value=""><em style={{ color: '#9a9a9a' }}>{t('limitsAdmin.create.select')}</em></MenuItem>
-                {Object.entries(CreateLimitTypeLabels).map(([value, label]) => {
+                {Object.keys(CreateLimitTypeLabels).map((value) => {
                   const isGlobal = value === String(LimitType.GeneralForGroup);
                   const disabled = !hasGlobalLimits && !isGlobal;
                   return (
                     <MenuItem key={value} value={value} disabled={disabled}>
-                      {label}{disabled ? t('limitsAdmin.create.requiresGlobal') : ''}
+                      {t(`limitsAdmin.createLimitTypeLabels.${value}`)}{disabled ? t('limitsAdmin.create.requiresGlobal') : ''}
                     </MenuItem>
                   );
                 })}
                 <Divider />
-                {Object.entries(CreateByNumberLimitTypeLabels).map(([value, label]) => {
+                {Object.keys(CreateByNumberLimitTypeLabels).map((value) => {
                   const disabled = !hasGlobalLimits;
                   return (
                     <MenuItem key={value} value={value} disabled={disabled}>
-                      {label}{disabled ? t('limitsAdmin.create.requiresGlobal') : ''}
+                      {t(`limitsAdmin.createByNumberLimitTypeLabels.${value}`)}{disabled ? t('limitsAdmin.create.requiresGlobal') : ''}
                     </MenuItem>
                   );
                 })}
@@ -744,15 +744,20 @@ const CreateLimit = (): React.ReactElement => {
             <Box sx={{ mb: 2 }}>
               <Typography component="label" sx={styles.label}>{t('limitsAdmin.create.dayOfWeekLabel')}</Typography>
               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 1 }}>
-                {DaysOfWeek.map(day => (
-                  <Box
-                    key={day.value}
-                    onClick={() => handleDayToggle(day.value)}
-                    sx={selectedDays.includes(day.value) ? styles.dayChipSelected : styles.dayChip}
-                  >
-                    {day.label}
-                  </Box>
-                ))}
+                {DaysOfWeek.map((day, idx) => {
+                  // DaysOfWeek bitmasks are ordered Mon..Sun, so we can map by
+                  // index to the matching translation key.
+                  const dayKey = (['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const)[idx];
+                  return (
+                    <Box
+                      key={day.value}
+                      onClick={() => handleDayToggle(day.value)}
+                      sx={selectedDays.includes(day.value) ? styles.dayChipSelected : styles.dayChip}
+                    >
+                      {t(`limitsAdmin.days.${dayKey}`)}
+                    </Box>
+                  );
+                })}
               </Box>
               <Button variant="outlined" onClick={handleSelectAllDays} sx={styles.selectAllButton}>
                 {selectedDays.length === DaysOfWeek.length ? t('limitsAdmin.create.deselectAll') : t('limitsAdmin.create.selectAll')}

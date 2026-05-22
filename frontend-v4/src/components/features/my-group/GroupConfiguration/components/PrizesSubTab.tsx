@@ -5,11 +5,13 @@
  */
 
 import { memo, useCallback, type FC, type ChangeEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Box, Typography, TextField, Grid } from '@mui/material';
 import type { PrizesSubTabProps, PrizesData } from '../types';
 import { PRIZE_FIELDS_CONFIG } from '../constants';
 
 const PrizesSubTab: FC<PrizesSubTabProps> = memo(({ prizesData, onPrizeChange }) => {
+  const { t } = useTranslation();
   const renderPrizesFields = useCallback(
     (title: string, gameType: keyof PrizesData, fields: Record<string, string>) => {
       const prizeData = prizesData[gameType] as Record<string, string>;
@@ -19,11 +21,11 @@ const PrizesSubTab: FC<PrizesSubTabProps> = memo(({ prizesData, onPrizeChange })
             {title}
           </Typography>
           <Grid container spacing={1.5}>
-            {Object.entries(fields).map(([fieldKey, fieldLabel]) => (
+            {Object.entries(fields).map(([fieldKey, labelKey]) => (
               <Grid item xs={12} sm={6} md={4} key={fieldKey}>
                 <TextField
                   fullWidth
-                  label={fieldLabel}
+                  label={t(`myGroupAdmin.prizeFields.${labelKey}`)}
                   value={prizeData?.[fieldKey] || ''}
                   onChange={(e: ChangeEvent<HTMLInputElement>) => onPrizeChange(gameType, fieldKey, e.target.value)}
                   placeholder="0"
@@ -41,7 +43,7 @@ const PrizesSubTab: FC<PrizesSubTabProps> = memo(({ prizesData, onPrizeChange })
         </Box>
       );
     },
-    [prizesData, onPrizeChange]
+    [prizesData, onPrizeChange, t]
   );
 
   return (

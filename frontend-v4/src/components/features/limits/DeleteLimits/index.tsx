@@ -241,10 +241,10 @@ const DeleteLimits = (): React.ReactElement => {
     setSnackbar(prev => ({ ...prev, open: false }));
   };
 
-  // Get limit type options from LimitTypeLabels
-  const limitTypeOptions = Object.entries(LimitTypeLabels).map(([value, label]) => ({
+  // Limit type options translated per-locale; IDs (1-10) match the LimitType enum.
+  const limitTypeOptions = Object.keys(LimitTypeLabels).map((value) => ({
     value,
-    label
+    label: t(`limitsAdmin.limitTypeLabels.${value}`),
   }));
 
   // Get draws from params or use empty array
@@ -384,24 +384,27 @@ const DeleteLimits = (): React.ReactElement => {
             variant="h6"
             sx={{ fontSize: '16px', fontWeight: 600, mt: 3, mb: 2 }}
           >
-            DIA DE SEMANA
+            {t('limitsAdmin.batchDelete.sectionDayOfWeek')}
           </Typography>
           <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 3 }}>
-            {DaysOfWeek.map((day: DayOfWeekOption) => (
-              <FormControlLabel
-                key={day.value}
-                control={
-                  <Checkbox
-                    checked={selectedDays.includes(day.value)}
-                    onChange={() => handleDayToggle(day.value)}
-                    sx={{
-                      '&.Mui-checked': { color: '#51cbce' }
-                    }}
-                  />
-                }
-                label={day.label}
-              />
-            ))}
+            {DaysOfWeek.map((day: DayOfWeekOption, idx: number) => {
+              const dayKey = (['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const)[idx];
+              return (
+                <FormControlLabel
+                  key={day.value}
+                  control={
+                    <Checkbox
+                      checked={selectedDays.includes(day.value)}
+                      onChange={() => handleDayToggle(day.value)}
+                      sx={{
+                        '&.Mui-checked': { color: '#51cbce' }
+                      }}
+                    />
+                  }
+                  label={t(`limitsAdmin.days.${dayKey}`)}
+                />
+              );
+            })}
           </Box>
 
           {/* Preview Alert */}

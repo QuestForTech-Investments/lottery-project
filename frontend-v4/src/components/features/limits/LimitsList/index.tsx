@@ -37,7 +37,6 @@ import {
   LimitRule,
   LimitFilter,
   LimitType,
-  LimitTypeLabels,
   CreateLimitTypeLabels,
   CreateByNumberLimitTypeLabels,
   LimitParams,
@@ -45,7 +44,7 @@ import {
 } from '@/types/limits';
 import { getActiveLocale } from '@/utils/formatters';
 
-const DAY_LABELS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+const DAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const;
 const DAY_BITMASKS = [1, 2, 4, 8, 16, 32, 64];
 
 const LIMIT_TYPE_ORDER = [
@@ -302,9 +301,17 @@ const LimitsList = (): React.ReactElement => {
     catch { return d; }
   };
 
+  // Build limit-type filter options from translation keys so labels follow the
+  // active locale. The IDs (keys of CreateLimitTypeLabels) are stable.
   const limitTypeOptions = [
-    ...Object.entries(CreateLimitTypeLabels).map(([v, l]) => ({ value: v, label: l as string })),
-    ...Object.entries(CreateByNumberLimitTypeLabels).map(([v, l]) => ({ value: v, label: l as string }))
+    ...Object.keys(CreateLimitTypeLabels).map((v) => ({
+      value: v,
+      label: t(`limitsAdmin.createLimitTypeLabels.${v}`),
+    })),
+    ...Object.keys(CreateByNumberLimitTypeLabels).map((v) => ({
+      value: v,
+      label: t(`limitsAdmin.createByNumberLimitTypeLabels.${v}`),
+    })),
   ];
 
   const renderAmountsTable = (entityGroup: EntityGroup) => {
@@ -500,7 +507,7 @@ const LimitsList = (): React.ReactElement => {
       <Box sx={styles.card}>
         <Tabs value={selectedDayIdx} onChange={(_, v) => setSelectedDayIdx(v)} variant="fullWidth"
           TabIndicatorProps={{ sx: { bgcolor: ACCENT, height: 3 } }}>
-          {DAY_LABELS.map((label, idx) => <Tab key={idx} label={label} sx={styles.dayTab} />)}
+          {DAY_KEYS.map((dk, idx) => <Tab key={idx} label={t(`limitsAdmin.days.${dk}`)} sx={styles.dayTab} />)}
         </Tabs>
       </Box>
 
@@ -526,7 +533,7 @@ const LimitsList = (): React.ReactElement => {
                   transition: 'all 0.2s', '&:hover': { color: ACCENT }
                 }}
               >
-                {LimitTypeLabels[lt as LimitType]}
+                {t(`limitsAdmin.limitTypeLabels.${lt}`)}
               </Box>
             ))}
           </Box>

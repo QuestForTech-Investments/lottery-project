@@ -116,6 +116,42 @@ const parseResultChangeMeta = (metadataJson?: string | null): ResultChangeMeta =
   }
 };
 
+/**
+ * Translate a warning into the active UI language.
+ *
+ * The backend writes warnings into the DB at audit time in Spanish, so the
+ * stored `message` is the canonical fallback. When the warning carries a
+ * known `warningType` + structured metadata, we re-render it from
+ * `warningsAdmin.messages.<TYPE>` using the metadata for interpolation.
+ *
+ * Unknown types (or warnings without metadata) fall through to the stored
+ * Spanish `message`, which preserves backwards compatibility for warnings
+ * written before this feature shipped.
+ */
+const renderWarningMessage = (
+  w: Warning,
+  t: (key: string, opts?: Record<string, unknown>) => string,
+): string => {
+  if (!w.warningType) return w.message || '-';
+  let meta: Record<string, unknown> = {};
+  if (w.metadataJson) {
+    try { meta = JSON.parse(w.metadataJson) as Record<string, unknown>; } catch { meta = {}; }
+  }
+  // Interpolation params per warning type — only the fields the matching i18n
+  // key references need to be present; extras are harmless.
+  const params: Record<string, unknown> = { ...meta };
+  if (w.warningType === 'TICKET_CREATED_LATE') {
+    const ids = Array.isArray(meta.closedDrawIds) ? meta.closedDrawIds : [];
+    params.count = ids.length;
+  } else if (w.warningType === 'TICKET_BYPASS_VALIDATION') {
+    const reasons = meta.bypassReasons;
+    params.reasons = Array.isArray(reasons) ? reasons.join(', ') : (reasons ?? '');
+  }
+  const key = `warningsAdmin.messages.${w.warningType}`;
+  const translated = t(key, { ...params, defaultValue: w.message || '-' });
+  return typeof translated === 'string' ? translated : (w.message || '-');
+};
+
 /** Split the main winning number into 2-digit positions (Quiniela 1ra/2da/3ra style). */
 const splitWinning = (s?: string): string[] => {
   if (!s) return [];
@@ -351,8 +387,11 @@ const WarningsList: React.FC = () => {
   const matchesFilter = (w: Warning): boolean => {
     if (!filter) return true;
     const term = filter.toLowerCase();
+    // Match both the stored Spanish `message` and the rendered translation so
+    // users can search in whichever language is active.
     return (
       (w.message || '').toLowerCase().includes(term) ||
+      renderWarningMessage(w, t).toLowerCase().includes(term) ||
       (w.bettingPoolName || '').toLowerCase().includes(term) ||
       (w.bettingPoolCode || '').toLowerCase().includes(term) ||
       (w.username || '').toLowerCase().includes(term) ||
@@ -548,7 +587,7 @@ const WarningsList: React.FC = () => {
                             ? formatCurrency(w.ticketPrize)
                             : '-'}
                         </TableCell>
-                        <TableCell>{w.message || '-'}</TableCell>
+                        <TableCell>{renderWarningMessage(w, t)}</TableCell>
                         <TableCell>{formatDateTime(w.createdAt)}</TableCell>
                       </TableRow>
                     ))
@@ -614,7 +653,7 @@ const WarningsList: React.FC = () => {
                   resultLateWarnings.map((w) => (
                     <TableRow key={w.warningId} hover>
                       <TableCell>{renderChip(w)}</TableCell>
-                      <TableCell>{w.message || '-'}</TableCell>
+                      <TableCell>{renderWarningMessage(w, t)}</TableCell>
                       <TableCell>{formatDateTime(w.createdAt)}</TableCell>
                     </TableRow>
                   ))
@@ -664,7 +703,7 @@ const WarningsList: React.FC = () => {
                     historyWarnings.map((w) => (
                       <TableRow key={w.warningId} hover>
                         <TableCell>{renderChip(w)}</TableCell>
-                        <TableCell>{w.message || '-'}</TableCell>
+                        <TableCell>{renderWarningMessage(w, t)}</TableCell>
                         <TableCell>{formatDateTime(w.createdAt)}</TableCell>
                       </TableRow>
                     ))

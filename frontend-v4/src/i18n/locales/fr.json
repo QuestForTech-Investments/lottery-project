@@ -2173,6 +2173,38 @@
       "unblock": "Débloquer",
       "msgUnblocked": "Numéro débloqué",
       "msgUnblockError": "Erreur lors du déblocage"
+    },
+    "days": {
+      "mon": "Lundi",
+      "tue": "Mardi",
+      "wed": "Mercredi",
+      "thu": "Jeudi",
+      "fri": "Vendredi",
+      "sat": "Samedi",
+      "sun": "Dimanche"
+    },
+    "limitTypeLabels": {
+      "1": "Limite globale",
+      "2": "Par numéro pour groupe",
+      "3": "Limite point de vente",
+      "4": "Par numéro pour point de vente (Ligne)",
+      "5": "Limite locale point de vente",
+      "6": "Limite zone",
+      "7": "Par numéro pour zone",
+      "8": "Général pour groupe externe",
+      "9": "Par numéro pour groupe externe",
+      "10": "Absolu"
+    },
+    "createLimitTypeLabels": {
+      "1": "Limite globale",
+      "3": "Limite point de vente",
+      "5": "Limite locale point de vente",
+      "6": "Limite zone"
+    },
+    "createByNumberLimitTypeLabels": {
+      "2": "Limite globale par numéro",
+      "4": "Limite point de vente par numéro",
+      "7": "Limite zone par numéro"
     }
   },
   "collectorsAdmin": {
@@ -2460,6 +2492,16 @@
       "low": "BASSE",
       "medium": "MOYENNE",
       "high": "HAUTE"
+    },
+    "messages": {
+      "TICKET_CREATED_LATE_one": "Ticket {{ticketCode}} créé en retard ({{count}} tirage fermé)",
+      "TICKET_CREATED_LATE_other": "Ticket {{ticketCode}} créé en retard ({{count}} tirages fermés)",
+      "TICKET_CANCELLED_LATE": "Ticket {{ticketCode}} annulé en retard",
+      "TICKET_CANCELLED_AFTER_DRAW": "Ticket {{ticketCode}} annulé après l'heure du tirage",
+      "TICKET_WINNER_CANCELLED": "Le ticket gagnant {{ticketCode}} a été annulé (prix : ${{totalPrize}})",
+      "TICKET_BYPASS_VALIDATION": "Ticket {{ticketCode}} créé en contournant les validations ({{reasons}})",
+      "RESULT_CHANGED_AFTER_PRIZES": "Le résultat du tirage {{drawName}} a été modifié",
+      "RESULT_PUBLICATION_LATE": "Le tirage {{drawName}} n'a pas été publié (heure prévue : {{scheduledTimeLabel}})"
     }
   },
   "emailReceiversAdmin": {
@@ -2521,6 +2563,26 @@
     },
     "footer": {
       "lineLabel": "Ligne {{num}}"
+    },
+    "prizeFields": {
+      "primerPago": "Premier paiement",
+      "segundoPago": "Deuxième paiement",
+      "tercerPago": "Troisième paiement",
+      "dobles": "Doubles",
+      "todosSecuencia": "Tout en séquence",
+      "triples": "Triples",
+      "threeWay": "3-Way : 2 identiques",
+      "sixWay": "6-Way : 3 uniques",
+      "twentyFourWay": "24-Way : 4 uniques",
+      "twelveWay": "12-Way : 2 identiques",
+      "sixWayPlay4": "6-Way : 2 identiques",
+      "fourWay": "4-Way : 3 identiques",
+      "fiveWay": "5-Way",
+      "tenWay": "10-Way",
+      "twentyWay": "20-Way",
+      "thirtyWay": "30-Way",
+      "sixtyWay": "60-Way",
+      "oneTwentyWay": "120-Way"
     }
   },
   "modals": {

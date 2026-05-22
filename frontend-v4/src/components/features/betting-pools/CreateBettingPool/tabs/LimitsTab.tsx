@@ -8,7 +8,7 @@ import {
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import limitService, { handleLimitError } from '@/services/limitService';
-import { LimitRule, LimitType, LimitTypeLabels, LimitAmountItem } from '@/types/limits';
+import { LimitRule, LimitType, LimitAmountItem } from '@/types/limits';
 import { getActiveLocale } from '@/utils/formatters';
 
 // Format raw bet number (no dashes) back to display format based on game type

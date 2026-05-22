@@ -123,31 +123,36 @@ export const INITIAL_FOOTER_DATA: FooterData = {
   line8: ''
 };
 
-// Prize fields configuration for each game type
+// Prize fields configuration for each game type.
+//
+// The `fields` values are i18n key SUFFIXES — the renderer resolves them via
+// `t(`myGroupAdmin.prizeFields.${suffix}`)`. Most game variants share keys
+// (e.g. `primerPago`, `sixWay`); Play4 Box's `sixWay` carries a different
+// label so it uses `sixWayPlay4` to disambiguate.
 export const PRIZE_FIELDS_CONFIG: PrizeFieldConfig[] = [
-  { title: 'Directo', gameType: 'directo', fields: { primerPago: 'Primer Pago', segundoPago: 'Segundo Pago', tercerPago: 'Tercer Pago', dobles: 'Dobles' } },
-  { title: 'Pale', gameType: 'pale', fields: { todosSecuencia: 'Todos en secuencia', primerPago: 'Primer Pago', segundoPago: 'Segundo Pago', tercerPago: 'Tercer Pago' } },
-  { title: 'Tripleta', gameType: 'tripleta', fields: { primerPago: 'Primer Pago', segundoPago: 'Segundo Pago' } },
-  { title: 'Super Pale', gameType: 'superPale', fields: { primerPago: 'Primer Pago' } },
-  { title: 'Cash3 Straight', gameType: 'cash3Straight', fields: { todosSecuencia: 'Todos en secuencia', triples: 'Triples' } },
-  { title: 'Cash3 Box', gameType: 'cash3Box', fields: { threeWay: '3-Way: 2 identicos', sixWay: '6-Way: 3 unicos' } },
-  { title: 'Cash3 Front Straight', gameType: 'cash3FrontStraight', fields: { todosSecuencia: 'Todos en secuencia', triples: 'Triples' } },
-  { title: 'Cash3 Front Box', gameType: 'cash3FrontBox', fields: { threeWay: '3-Way: 2 identicos', sixWay: '6-Way: 3 unicos' } },
-  { title: 'Cash3 Back Straight', gameType: 'cash3BackStraight', fields: { todosSecuencia: 'Todos en secuencia', triples: 'Triples' } },
-  { title: 'Cash3 Back Box', gameType: 'cash3BackBox', fields: { threeWay: '3-Way: 2 identicos', sixWay: '6-Way: 3 unicos' } },
-  { title: 'Play4 Straight', gameType: 'play4Straight', fields: { todosSecuencia: 'Todos en secuencia', dobles: 'Dobles' } },
-  { title: 'Play4 Box', gameType: 'play4Box', fields: { twentyFourWay: '24-Way: 4 unicos', twelveWay: '12-Way: 2 identicos', sixWay: '6-Way: 2 identicos', fourWay: '4-Way: 3 identicos' } },
-  { title: 'Pick Two', gameType: 'pickTwo', fields: { primerPago: 'Primer Pago', dobles: 'Dobles' } },
-  { title: 'Pick Two Front', gameType: 'pickTwoFront', fields: { primerPago: 'Primer Pago', dobles: 'Dobles' } },
-  { title: 'Pick Two Back', gameType: 'pickTwoBack', fields: { primerPago: 'Primer Pago', dobles: 'Dobles' } },
-  { title: 'Pick Two Middle', gameType: 'pickTwoMiddle', fields: { primerPago: 'Primer Pago', dobles: 'Dobles' } },
-  { title: 'Pick5 Straight', gameType: 'pick5Straight', fields: { todosSecuencia: 'Todos en secuencia', dobles: 'Dobles' } },
-  { title: 'Pick5 Box', gameType: 'pick5Box', fields: { fiveWay: '5-Way', tenWay: '10-Way', twentyWay: '20-Way', thirtyWay: '30-Way', sixtyWay: '60-Way', oneTwentyWay: '120-Way' } },
-  { title: 'Bolita 1', gameType: 'bolita1', fields: { primerPago: 'Primer Pago' } },
-  { title: 'Bolita 2', gameType: 'bolita2', fields: { primerPago: 'Primer Pago' } },
-  { title: 'Singulacion 1', gameType: 'singulacion1', fields: { primerPago: 'Primer Pago' } },
-  { title: 'Singulacion 2', gameType: 'singulacion2', fields: { primerPago: 'Primer Pago' } },
-  { title: 'Singulacion 3', gameType: 'singulacion3', fields: { primerPago: 'Primer Pago' } }
+  { title: 'Directo', gameType: 'directo', fields: { primerPago: 'primerPago', segundoPago: 'segundoPago', tercerPago: 'tercerPago', dobles: 'dobles' } },
+  { title: 'Pale', gameType: 'pale', fields: { todosSecuencia: 'todosSecuencia', primerPago: 'primerPago', segundoPago: 'segundoPago', tercerPago: 'tercerPago' } },
+  { title: 'Tripleta', gameType: 'tripleta', fields: { primerPago: 'primerPago', segundoPago: 'segundoPago' } },
+  { title: 'Super Pale', gameType: 'superPale', fields: { primerPago: 'primerPago' } },
+  { title: 'Cash3 Straight', gameType: 'cash3Straight', fields: { todosSecuencia: 'todosSecuencia', triples: 'triples' } },
+  { title: 'Cash3 Box', gameType: 'cash3Box', fields: { threeWay: 'threeWay', sixWay: 'sixWay' } },
+  { title: 'Cash3 Front Straight', gameType: 'cash3FrontStraight', fields: { todosSecuencia: 'todosSecuencia', triples: 'triples' } },
+  { title: 'Cash3 Front Box', gameType: 'cash3FrontBox', fields: { threeWay: 'threeWay', sixWay: 'sixWay' } },
+  { title: 'Cash3 Back Straight', gameType: 'cash3BackStraight', fields: { todosSecuencia: 'todosSecuencia', triples: 'triples' } },
+  { title: 'Cash3 Back Box', gameType: 'cash3BackBox', fields: { threeWay: 'threeWay', sixWay: 'sixWay' } },
+  { title: 'Play4 Straight', gameType: 'play4Straight', fields: { todosSecuencia: 'todosSecuencia', dobles: 'dobles' } },
+  { title: 'Play4 Box', gameType: 'play4Box', fields: { twentyFourWay: 'twentyFourWay', twelveWay: 'twelveWay', sixWay: 'sixWayPlay4', fourWay: 'fourWay' } },
+  { title: 'Pick Two', gameType: 'pickTwo', fields: { primerPago: 'primerPago', dobles: 'dobles' } },
+  { title: 'Pick Two Front', gameType: 'pickTwoFront', fields: { primerPago: 'primerPago', dobles: 'dobles' } },
+  { title: 'Pick Two Back', gameType: 'pickTwoBack', fields: { primerPago: 'primerPago', dobles: 'dobles' } },
+  { title: 'Pick Two Middle', gameType: 'pickTwoMiddle', fields: { primerPago: 'primerPago', dobles: 'dobles' } },
+  { title: 'Pick5 Straight', gameType: 'pick5Straight', fields: { todosSecuencia: 'todosSecuencia', dobles: 'dobles' } },
+  { title: 'Pick5 Box', gameType: 'pick5Box', fields: { fiveWay: 'fiveWay', tenWay: 'tenWay', twentyWay: 'twentyWay', thirtyWay: 'thirtyWay', sixtyWay: 'sixtyWay', oneTwentyWay: 'oneTwentyWay' } },
+  { title: 'Bolita 1', gameType: 'bolita1', fields: { primerPago: 'primerPago' } },
+  { title: 'Bolita 2', gameType: 'bolita2', fields: { primerPago: 'primerPago' } },
+  { title: 'Singulacion 1', gameType: 'singulacion1', fields: { primerPago: 'primerPago' } },
+  { title: 'Singulacion 2', gameType: 'singulacion2', fields: { primerPago: 'primerPago' } },
+  { title: 'Singulacion 3', gameType: 'singulacion3', fields: { primerPago: 'primerPago' } }
 ];
 
 // Commission fields configuration

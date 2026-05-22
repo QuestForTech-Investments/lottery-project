@@ -13,6 +13,7 @@ import {
 import { Save as SaveIcon } from '@mui/icons-material';
 import type { BetType, PrizeField, PrizesFormData, GeneralValues, CommissionField } from '../types';
 import { COMMISSION_FIELDS, COMMISSION_2_FIELDS } from '../constants';
+import { translatePrizeFieldLabel } from '@/utils/prizeFieldLabel';
 
 interface Draw {
   id: string;
@@ -264,7 +265,7 @@ const BetTypeFieldGrid: React.FC<BetTypeFieldGridProps> = memo(({
                             color="text.secondary"
                             sx={{ display: 'block', mb: 0.5, fontSize: '0.75rem' }}
                           >
-                            {fieldName.includes(' - ') ? fieldName.split(' - ').slice(1).join(' - ') : fieldName}
+                            {translatePrizeFieldLabel(fieldCode, fieldName, t)}
                           </Typography>
                           {useRestricted ? (
                             <Autocomplete

@@ -108,10 +108,10 @@ const AllowedValuesTab: FC<AllowedValuesTabProps> = memo(({ allowedValues, onCha
               <Typography sx={{ fontSize: '14px', fontWeight: 700, mb: 1.5, textAlign: 'center', textTransform: 'uppercase', color: '#2c2c2c' }}>
                 {cfg.title}
               </Typography>
-              {Object.entries(cfg.fields).map(([fk, label]) => (
+              {Object.entries(cfg.fields).map(([fk, labelKey]) => (
                 <FieldEditor
                   key={fk}
-                  label={label as string}
+                  label={t(`myGroupAdmin.prizeFields.${labelKey as string}`)}
                   values={getValues(cfg.gameType, fk)}
                   onAdd={(v) => addValue(cfg.gameType, fk, v)}
                   onRemove={(v) => removeValue(cfg.gameType, fk, v)}
