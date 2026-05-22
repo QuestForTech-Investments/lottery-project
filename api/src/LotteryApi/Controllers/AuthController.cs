@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using LotteryApi.DTOs;
+using LotteryApi.Exceptions;
+using LotteryApi.Helpers;
 using LotteryApi.Models;
 using LotteryApi.Services;
 
@@ -41,9 +43,9 @@ public class AuthController : ControllerBase
             // Distinguish lockout from bad credentials so the UI can show the right message.
             return result.Reason switch
             {
-                "locked" => Unauthorized(new { message = "Usuario bloqueado. Contacte al administrador.", reason = "locked" }),
-                "ip_blocked" => Unauthorized(new { message = "Dirección IP bloqueada. Contacte al administrador.", reason = "ip_blocked" }),
-                _ => Unauthorized(new { message = "Invalid username or password", reason = "invalid" })
+                "locked" => ApiErrorResult.Unauthorized(ErrorCodes.AccountBlocked, "Usuario bloqueado. Contacte al administrador."),
+                "ip_blocked" => ApiErrorResult.Unauthorized(ErrorCodes.AccountBlocked, "Dirección IP bloqueada. Contacte al administrador."),
+                _ => ApiErrorResult.Unauthorized(ErrorCodes.InvalidCredentials, "Invalid username or password")
             };
         }
 
@@ -115,7 +117,7 @@ public class AuthController : ControllerBase
 
         if (result == null)
         {
-            return BadRequest(new { message = "Username already exists" });
+            return ApiErrorResult.BadRequest(ErrorCodes.UserAlreadyExists, "Username already exists");
         }
 
         return CreatedAtAction(nameof(Register), result);

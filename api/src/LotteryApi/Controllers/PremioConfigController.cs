@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.Data.SqlClient;
 using Dapper;
 using LotteryApi.DTOs;
+using LotteryApi.Exceptions;
+using LotteryApi.Helpers;
 
 namespace LotteryApi.Controllers;
 
@@ -51,7 +53,7 @@ public class PremioConfigController : ControllerBase
         }
         catch (Exception ex)
         {
-            return StatusCode(500, new { message = "Error fetching premio config", error = ex.Message });
+            return ApiErrorResult.Error(ErrorCodes.InternalError, $"Error fetching premio config: {ex.Message}", 500);
         }
     }
 
@@ -112,7 +114,7 @@ public class PremioConfigController : ControllerBase
         }
         catch (Exception ex)
         {
-            return StatusCode(500, new { message = "Error updating premio config", error = ex.Message });
+            return ApiErrorResult.Error(ErrorCodes.InternalError, $"Error updating premio config: {ex.Message}", 500);
         }
     }
 
@@ -138,13 +140,13 @@ public class PremioConfigController : ControllerBase
                 new { BancaId = bancaId, SorteoId = sorteoId, CampoPremioId = campoPremioId });
 
             if (rowsAffected == 0)
-                return NotFound(new { message = "Sorteo override not found" });
+                return ApiErrorResult.NotFound(ErrorCodes.SorteoOverrideNotFound, "Sorteo override not found");
 
             return Ok(new { message = "Sorteo override deleted successfully" });
         }
         catch (Exception ex)
         {
-            return StatusCode(500, new { message = "Error deleting sorteo override", error = ex.Message });
+            return ApiErrorResult.Error(ErrorCodes.InternalError, $"Error deleting sorteo override: {ex.Message}", 500);
         }
     }
 }

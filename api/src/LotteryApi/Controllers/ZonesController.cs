@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using LotteryApi.Data;
 using LotteryApi.DTOs;
+using LotteryApi.Exceptions;
+using LotteryApi.Helpers;
 using LotteryApi.Models;
 using LotteryApi.Models.Enums;
 using LotteryApi.Services;
@@ -122,7 +124,7 @@ public class ZonesController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting zones");
-            return StatusCode(500, new { message = "Error retrieving zones" });
+            return ApiErrorResult.Error(ErrorCodes.InternalError, "Error retrieving zones", 500);
         }
     }
 
@@ -133,7 +135,7 @@ public class ZonesController : ControllerBase
     public async Task<ActionResult<ZoneDto>> GetZone(int id)
     {
         // No permission gate on read — zones are lookup data. Zone scope still applies.
-        if (!await _zoneScope.IsZoneAllowedAsync(id)) return NotFound(new { message = "Zona no encontrada" });
+        if (!await _zoneScope.IsZoneAllowedAsync(id)) return ApiErrorResult.NotFound(ErrorCodes.ZoneNotFound, "Zona no encontrada");
         try
         {
             var zone = await _context.Zones
@@ -155,7 +157,7 @@ public class ZonesController : ControllerBase
 
             if (zone == null)
             {
-                return NotFound(new { message = $"Zone with ID {id} not found" });
+                return ApiErrorResult.NotFound(ErrorCodes.ZoneNotFound, $"Zone with ID {id} not found");
             }
 
             return Ok(zone);
@@ -163,7 +165,7 @@ public class ZonesController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting zone {ZoneId}", id);
-            return StatusCode(500, new { message = "Error retrieving zone" });
+            return ApiErrorResult.Error(ErrorCodes.InternalError, "Error retrieving zone", 500);
         }
     }
 
@@ -185,7 +187,7 @@ public class ZonesController : ControllerBase
                 var countryExists = await _context.Countries.AnyAsync(c => c.CountryId == createDto.CountryId.Value);
                 if (!countryExists)
                 {
-                    return BadRequest(new { message = $"Country with ID {createDto.CountryId} not found" });
+                    return ApiErrorResult.BadRequest(ErrorCodes.CountryNotFound, $"Country with ID {createDto.CountryId} not found");
                 }
             }
 
@@ -235,7 +237,7 @@ public class ZonesController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error creating zone");
-            return StatusCode(500, new { message = "Error creating zone" });
+            return ApiErrorResult.Error(ErrorCodes.InternalError, "Error creating zone", 500);
         }
     }
 
@@ -252,7 +254,7 @@ public class ZonesController : ControllerBase
             var zone = await _context.Zones.FindAsync(id);
             if (zone == null)
             {
-                return NotFound(new { message = $"Zone with ID {id} not found" });
+                return ApiErrorResult.NotFound(ErrorCodes.ZoneNotFound, $"Zone with ID {id} not found");
             }
 
             // Update only provided fields
@@ -267,7 +269,7 @@ public class ZonesController : ControllerBase
                 var countryExists = await _context.Countries.AnyAsync(c => c.CountryId == updateDto.CountryId.Value);
                 if (!countryExists)
                 {
-                    return BadRequest(new { message = $"Country with ID {updateDto.CountryId} not found" });
+                    return ApiErrorResult.BadRequest(ErrorCodes.CountryNotFound, $"Country with ID {updateDto.CountryId} not found");
                 }
                 zone.CountryId = updateDto.CountryId.Value;
             }
@@ -306,7 +308,7 @@ public class ZonesController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error updating zone {ZoneId}", id);
-            return StatusCode(500, new { message = "Error updating zone" });
+            return ApiErrorResult.Error(ErrorCodes.InternalError, "Error updating zone", 500);
         }
     }
 
@@ -323,7 +325,7 @@ public class ZonesController : ControllerBase
             var zone = await _context.Zones.FindAsync(id);
             if (zone == null)
             {
-                return NotFound(new { message = $"Zone with ID {id} not found" });
+                return ApiErrorResult.NotFound(ErrorCodes.ZoneNotFound, $"Zone with ID {id} not found");
             }
 
             // Soft delete: just deactivate
@@ -340,7 +342,7 @@ public class ZonesController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error deleting zone {ZoneId}", id);
-            return StatusCode(500, new { message = "Error deleting zone" });
+            return ApiErrorResult.Error(ErrorCodes.InternalError, "Error deleting zone", 500);
         }
     }
 
@@ -360,7 +362,7 @@ public class ZonesController : ControllerBase
 
             if (zone == null)
             {
-                return NotFound(new { message = $"Zone with ID {id} not found" });
+                return ApiErrorResult.NotFound(ErrorCodes.ZoneNotFound, $"Zone with ID {id} not found");
             }
 
             var users = await _context.UserZones
@@ -391,7 +393,7 @@ public class ZonesController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting users for zone {ZoneId}", id);
-            return StatusCode(500, new { message = "Error retrieving zone users" });
+            return ApiErrorResult.Error(ErrorCodes.InternalError, "Error retrieving zone users", 500);
         }
     }
 
@@ -408,7 +410,7 @@ public class ZonesController : ControllerBase
             var zone = await _context.Zones.FindAsync(id);
             if (zone == null)
             {
-                return NotFound(new { message = $"Zone with ID {id} not found" });
+                return ApiErrorResult.NotFound(ErrorCodes.ZoneNotFound, $"Zone with ID {id} not found");
             }
 
             // Verify all users exist
@@ -420,7 +422,7 @@ public class ZonesController : ControllerBase
             var missingUserIds = assignDto.UserIds.Except(existingUserIds).ToList();
             if (missingUserIds.Any())
             {
-                return BadRequest(new { message = $"Users not found: {string.Join(", ", missingUserIds)}" });
+                return ApiErrorResult.BadRequest(ErrorCodes.UsersNotFound, $"Users not found: {string.Join(", ", missingUserIds)}");
             }
 
             // Get or create user-zone relationships
@@ -466,7 +468,7 @@ public class ZonesController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error assigning users to zone {ZoneId}", id);
-            return StatusCode(500, new { message = "Error assigning users to zone" });
+            return ApiErrorResult.Error(ErrorCodes.InternalError, "Error assigning users to zone", 500);
         }
     }
 
@@ -485,7 +487,7 @@ public class ZonesController : ControllerBase
 
             if (assignment == null)
             {
-                return NotFound(new { message = $"User {userId} is not assigned to zone {id}" });
+                return ApiErrorResult.NotFound(ErrorCodes.UserNotInZone, $"User {userId} is not assigned to zone {id}");
             }
 
             // Soft delete: deactivate the relationship
@@ -499,7 +501,7 @@ public class ZonesController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error removing user {UserId} from zone {ZoneId}", userId, id);
-            return StatusCode(500, new { message = "Error removing user from zone" });
+            return ApiErrorResult.Error(ErrorCodes.InternalError, "Error removing user from zone", 500);
         }
     }
 

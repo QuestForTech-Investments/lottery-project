@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using LotteryApi.DTOs;
+using LotteryApi.Exceptions;
+using LotteryApi.Helpers;
 using LotteryApi.Models;
 using LotteryApi.Repositories;
 using LotteryApi.Data;
@@ -92,7 +94,7 @@ public class LotteriesController : ControllerBase
 
         if (dto == null)
         {
-            return NotFound();
+            return ApiErrorResult.NotFound(ErrorCodes.LotteryNotFound, $"Lottery with ID {id} not found");
         }
 
         await _cache.SetAsync(cacheKey, dto, CacheKeys.LotteryExpiration);
@@ -199,7 +201,7 @@ public class LotteriesController : ControllerBase
 
         if (lottery == null)
         {
-            return NotFound();
+            return ApiErrorResult.NotFound(ErrorCodes.LotteryNotFound, $"Lottery with ID {id} not found");
         }
 
         lottery.LotteryName = dto.LotteryName;
@@ -237,7 +239,7 @@ public class LotteriesController : ControllerBase
 
             if (lottery == null)
             {
-                return NotFound(new { message = $"Lottery with ID {id} not found" });
+                return ApiErrorResult.NotFound(ErrorCodes.LotteryNotFound, $"Lottery with ID {id} not found");
             }
 
             // Get bet types for this lottery through lottery_bet_type_compatibility
@@ -281,7 +283,7 @@ public class LotteriesController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error fetching bet types for lottery {LotteryId}", id);
-            return StatusCode(500, new { message = $"Error fetching bet types: {ex.Message}" });
+            return ApiErrorResult.Error(ErrorCodes.InternalError, $"Error fetching bet types: {ex.Message}", 500);
         }
     }
 
@@ -298,7 +300,7 @@ public class LotteriesController : ControllerBase
 
         if (lottery == null)
         {
-            return NotFound();
+            return ApiErrorResult.NotFound(ErrorCodes.LotteryNotFound, $"Lottery with ID {id} not found");
         }
 
         await _lotteryRepository.DeleteAsync(lottery);

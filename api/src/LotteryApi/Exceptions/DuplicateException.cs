@@ -6,12 +6,17 @@ namespace LotteryApi.Exceptions;
 public class DuplicateException : BusinessException
 {
     public DuplicateException(string resource, string field, object value)
-        : base($"{resource} con {field} '{value}' ya existe", 409, new { field, value })
+        : base("DUPLICATE_RESOURCE", $"{resource} con {field} '{value}' ya existe", 409, new { resource, field, value })
     {
     }
 
     public DuplicateException(string message)
         : base(message, 409)
+    {
+    }
+
+    public DuplicateException(string errorCode, string message)
+        : base(errorCode, message, 409)
     {
     }
 }

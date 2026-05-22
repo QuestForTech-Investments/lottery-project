@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using LotteryApi.Data;
+using LotteryApi.Exceptions;
+using LotteryApi.Helpers;
 using LotteryApi.Models;
 using LotteryApi.Models.Enums;
 using LotteryApi.DTOs;
@@ -285,7 +287,7 @@ public class LimitsController : ControllerBase
 
             if (limitRule == null)
             {
-                return NotFound(new { message = "Límite no encontrado" });
+                return ApiErrorResult.NotFound(ErrorCodes.LimitNotFound, "Límite no encontrado");
             }
 
             await PopulateAmountsAsync(limitRule);
@@ -311,7 +313,7 @@ public class LimitsController : ControllerBase
             // Validate limit type
             if (!Enum.IsDefined(typeof(LimitType), dto.LimitType))
             {
-                return BadRequest(new { message = "Tipo de límite inválido" });
+                return ApiErrorResult.BadRequest(ErrorCodes.LimitTypeInvalid, "Tipo de límite inválido");
             }
 
             // Zone scope — admin cannot create rules targeting zones / bancas outside their assigned set.
@@ -333,7 +335,7 @@ public class LimitsController : ControllerBase
                 var lotteryExists = await _context.Lotteries.AnyAsync(l => l.LotteryId == dto.LotteryId.Value);
                 if (!lotteryExists)
                 {
-                    return BadRequest(new { message = "La lotería especificada no existe" });
+                    return ApiErrorResult.BadRequest(ErrorCodes.LimitLotteryInvalid, "La lotería especificada no existe");
                 }
             }
 
@@ -348,7 +350,7 @@ public class LimitsController : ControllerBase
 
                 if (validDrawIds.Count != dto.DrawIds.Count)
                 {
-                    return BadRequest(new { message = "Uno o más sorteos especificados no existen" });
+                    return ApiErrorResult.BadRequest(ErrorCodes.LimitDrawInvalid, "Uno o más sorteos especificados no existen");
                 }
             }
 
@@ -358,7 +360,7 @@ public class LimitsController : ControllerBase
                 var gameTypeExists = await _context.GameTypes.AnyAsync(gt => gt.GameTypeId == dto.GameTypeId.Value);
                 if (!gameTypeExists)
                 {
-                    return BadRequest(new { message = "El tipo de juego especificado no existe" });
+                    return ApiErrorResult.BadRequest(ErrorCodes.LimitGameTypeInvalid, "El tipo de juego especificado no existe");
                 }
             }
 
@@ -368,7 +370,7 @@ public class LimitsController : ControllerBase
                 var zoneExists = await _context.Zones.AnyAsync(z => z.ZoneId == dto.ZoneId.Value);
                 if (!zoneExists)
                 {
-                    return BadRequest(new { message = "La zona especificada no existe" });
+                    return ApiErrorResult.BadRequest(ErrorCodes.LimitZoneInvalid, "La zona especificada no existe");
                 }
             }
 
@@ -378,7 +380,7 @@ public class LimitsController : ControllerBase
                 var bettingPoolExists = await _context.BettingPools.AnyAsync(bp => bp.BettingPoolId == dto.BettingPoolId.Value);
                 if (!bettingPoolExists)
                 {
-                    return BadRequest(new { message = "La banca especificada no existe" });
+                    return ApiErrorResult.BadRequest(ErrorCodes.LimitBettingPoolInvalid, "La banca especificada no existe");
                 }
             }
 
@@ -402,7 +404,7 @@ public class LimitsController : ControllerBase
                 || !string.IsNullOrWhiteSpace(dto.BetNumberPattern);
             if (isByNumberType && !hasPatterns)
             {
-                return BadRequest(new { message = "El número es requerido para límites por número" });
+                return ApiErrorResult.BadRequest(ErrorCodes.LimitMissingNumber, "El número es requerido para límites por número");
             }
 
             // Require Global limits to exist before creating any other type
@@ -412,7 +414,7 @@ public class LimitsController : ControllerBase
                     .AnyAsync(r => r.LimitType == LimitType.GeneralForGroup && r.IsActive);
                 if (!hasGlobal)
                 {
-                    return BadRequest(new { message = "Debe crear primero un Límite Global antes de crear otros tipos de límites" });
+                    return ApiErrorResult.BadRequest(ErrorCodes.LimitGlobalRequiredFirst, "Debe crear primero un Límite Global antes de crear otros tipos de límites");
                 }
             }
 
@@ -441,7 +443,7 @@ public class LimitsController : ControllerBase
                         if (!hasZonaLimit)
                         {
                             var zoneName = await _context.Zones.Where(z => z.ZoneId == zId).Select(z => z.ZoneName).FirstOrDefaultAsync();
-                            return BadRequest(new { message = $"Debe crear primero un Límite Zona para '{zoneName ?? $"Zona {zId}"}' antes de crear Límite Banca" });
+                            return ApiErrorResult.BadRequest(ErrorCodes.LimitZoneRequiredFirst, $"Debe crear primero un Límite Zona para '{zoneName ?? $"Zona {zId}"}' antes de crear Límite Banca");
                         }
                     }
                 }
@@ -456,11 +458,11 @@ public class LimitsController : ControllerBase
                 var parentViolations = await ValidateParentAmounts(limitType, validDrawIds, targetEntities, dto.Amounts);
                 if (parentViolations.Count > 0)
                 {
-                    return BadRequest(new
-                    {
-                        message = "Los montos exceden los límites del nivel superior",
-                        violations = parentViolations
-                    });
+                    throw new BusinessException(
+                        ErrorCodes.LimitParentViolation,
+                        "Los montos exceden los límites del nivel superior",
+                        400,
+                        new { violations = parentViolations });
                 }
             }
 
@@ -487,10 +489,9 @@ public class LimitsController : ControllerBase
 
                     if (conflicting.Count > 0)
                     {
-                        return BadRequest(new
-                        {
-                            message = $"Las siguientes bancas ya tienen {conflictTypeName} y no pueden tener ambos tipos: {string.Join(", ", conflicting)}"
-                        });
+                        return ApiErrorResult.BadRequest(
+                            ErrorCodes.LimitBancaLocalConflict,
+                            $"Las siguientes bancas ya tienen {conflictTypeName} y no pueden tener ambos tipos: {string.Join(", ", conflicting)}");
                     }
                 }
             }
@@ -773,7 +774,7 @@ public class LimitsController : ControllerBase
             var limitRule = await _context.LimitRules.FindAsync(id);
             if (limitRule == null)
             {
-                return NotFound(new { message = "Límite no encontrado" });
+                return ApiErrorResult.NotFound(ErrorCodes.LimitNotFound, "Límite no encontrado");
             }
 
             // Zone scope: cannot touch a rule outside admin's zones, nor move it out.
@@ -790,7 +791,7 @@ public class LimitsController : ControllerBase
             {
                 if (!Enum.IsDefined(typeof(LimitType), dto.LimitType.Value))
                 {
-                    return BadRequest(new { message = "Tipo de límite inválido" });
+                    return ApiErrorResult.BadRequest(ErrorCodes.LimitTypeInvalid, "Tipo de límite inválido");
                 }
                 limitRule.LimitType = (LimitType)dto.LimitType.Value;
             }
@@ -800,7 +801,7 @@ public class LimitsController : ControllerBase
                 var lotteryExists = await _context.Lotteries.AnyAsync(l => l.LotteryId == dto.LotteryId.Value);
                 if (!lotteryExists)
                 {
-                    return BadRequest(new { message = "La lotería especificada no existe" });
+                    return ApiErrorResult.BadRequest(ErrorCodes.LimitLotteryInvalid, "La lotería especificada no existe");
                 }
                 limitRule.LotteryId = dto.LotteryId.Value;
             }
@@ -810,7 +811,7 @@ public class LimitsController : ControllerBase
                 var drawExists = await _context.Draws.AnyAsync(d => d.DrawId == dto.DrawId.Value);
                 if (!drawExists)
                 {
-                    return BadRequest(new { message = "El sorteo especificado no existe" });
+                    return ApiErrorResult.BadRequest(ErrorCodes.LimitDrawInvalid, "El sorteo especificado no existe");
                 }
                 limitRule.DrawId = dto.DrawId.Value;
             }
@@ -820,7 +821,7 @@ public class LimitsController : ControllerBase
                 var gameTypeExists = await _context.GameTypes.AnyAsync(gt => gt.GameTypeId == dto.GameTypeId.Value);
                 if (!gameTypeExists)
                 {
-                    return BadRequest(new { message = "El tipo de juego especificado no existe" });
+                    return ApiErrorResult.BadRequest(ErrorCodes.LimitGameTypeInvalid, "El tipo de juego especificado no existe");
                 }
                 limitRule.GameTypeId = dto.GameTypeId.Value;
             }
@@ -830,7 +831,7 @@ public class LimitsController : ControllerBase
                 var zoneExists = await _context.Zones.AnyAsync(z => z.ZoneId == dto.ZoneId.Value);
                 if (!zoneExists)
                 {
-                    return BadRequest(new { message = "La zona especificada no existe" });
+                    return ApiErrorResult.BadRequest(ErrorCodes.LimitZoneInvalid, "La zona especificada no existe");
                 }
                 limitRule.ZoneId = dto.ZoneId.Value;
             }
@@ -840,7 +841,7 @@ public class LimitsController : ControllerBase
                 var bettingPoolExists = await _context.BettingPools.AnyAsync(bp => bp.BettingPoolId == dto.BettingPoolId.Value);
                 if (!bettingPoolExists)
                 {
-                    return BadRequest(new { message = "La banca especificada no existe" });
+                    return ApiErrorResult.BadRequest(ErrorCodes.LimitBettingPoolInvalid, "La banca especificada no existe");
                 }
                 limitRule.BettingPoolId = dto.BettingPoolId.Value;
             }
@@ -927,7 +928,7 @@ public class LimitsController : ControllerBase
             var limitRule = await _context.LimitRules.FindAsync(id);
             if (limitRule == null)
             {
-                return NotFound(new { message = "Límite no encontrado" });
+                return ApiErrorResult.NotFound(ErrorCodes.LimitNotFound, "Límite no encontrado");
             }
 
             // Zone scope.
@@ -1256,7 +1257,7 @@ public class LimitsController : ControllerBase
             var amount = await _context.LimitRuleAmounts
                 .FirstOrDefaultAsync(a => a.LimitRuleId == id && a.GameTypeId == gameTypeId);
             if (amount == null)
-                return NotFound(new { message = "Monto no encontrado" });
+                return ApiErrorResult.NotFound(ErrorCodes.LimitAmountNotFound, "Monto no encontrado");
 
             var rule = await _context.LimitRules.FindAsync(id);
             if (rule != null && !await IsRuleScopeAllowedAsync(rule.ZoneId, rule.BettingPoolId))
@@ -1296,7 +1297,7 @@ public class LimitsController : ControllerBase
             var amount = await _context.LimitRuleAmounts
                 .FirstOrDefaultAsync(a => a.LimitRuleId == id && a.GameTypeId == gameTypeId);
             if (amount == null)
-                return NotFound(new { message = "Monto no encontrado" });
+                return ApiErrorResult.NotFound(ErrorCodes.LimitAmountNotFound, "Monto no encontrado");
 
             var rule = await _context.LimitRules.FindAsync(id);
             if (rule != null && !await IsRuleScopeAllowedAsync(rule.ZoneId, rule.BettingPoolId))
@@ -1355,7 +1356,7 @@ public class LimitsController : ControllerBase
             }
 
             if (rules.Count == 0)
-                return NotFound(new { message = "No se encontraron límites" });
+                return ApiErrorResult.NotFound(ErrorCodes.LimitNoResults, "No se encontraron límites");
 
             _context.LimitRules.RemoveRange(rules);
             await _context.SaveChangesAsync();
@@ -1381,7 +1382,7 @@ public class LimitsController : ControllerBase
             var limitRule = await _context.LimitRules.FindAsync(id);
             if (limitRule == null)
             {
-                return NotFound(new { message = "Límite no encontrado" });
+                return ApiErrorResult.NotFound(ErrorCodes.LimitNotFound, "Límite no encontrado");
             }
 
             if (!await IsRuleScopeAllowedAsync(limitRule.ZoneId, limitRule.BettingPoolId)) return Forbid();

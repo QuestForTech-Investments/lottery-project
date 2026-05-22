@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using LotteryApi.Data;
+using LotteryApi.Exceptions;
+using LotteryApi.Helpers;
 using LotteryApi.Models;
 using LotteryApi.DTOs;
 using LotteryApi.Services;
@@ -170,7 +172,7 @@ public class BettingPoolsController : ControllerBase
             // Scope check — admin cannot read a banca outside their assigned zones.
             if (!await _zoneScope.IsBettingPoolAllowedAsync(id))
             {
-                return NotFound(new { message = "Banca no encontrada" });
+                return ApiErrorResult.NotFound(ErrorCodes.BettingPoolNotFound, "Banca no encontrada");
             }
 
             // Direct projection - no Include needed, single optimized SQL query
@@ -199,7 +201,7 @@ public class BettingPoolsController : ControllerBase
 
             if (bettingPool == null)
             {
-                return NotFound(new { message = "Banca no encontrada" });
+                return ApiErrorResult.NotFound(ErrorCodes.BettingPoolNotFound, "Banca no encontrada");
             }
 
             var dto = new BettingPoolDetailDto
@@ -287,7 +289,7 @@ public class BettingPoolsController : ControllerBase
             var zoneExists = await _context.Zones.AnyAsync(z => z.ZoneId == dto.ZoneId);
             if (!zoneExists)
             {
-                return BadRequest(new { message = "La zona especificada no existe" });
+                return ApiErrorResult.BadRequest(ErrorCodes.ZoneNotFound, "La zona especificada no existe");
             }
 
             // Zone scope: admin can only create bancas in their assigned zones.
@@ -302,7 +304,7 @@ public class BettingPoolsController : ControllerBase
                 var bankExists = await _context.Banks.AnyAsync(b => b.BankId == dto.BankId.Value);
                 if (!bankExists)
                 {
-                    return BadRequest(new { message = "El banco especificado no existe" });
+                    return ApiErrorResult.BadRequest(ErrorCodes.BankNotFound, "El banco especificado no existe");
                 }
             }
 
@@ -311,18 +313,18 @@ public class BettingPoolsController : ControllerBase
                 .AnyAsync(bp => bp.BettingPoolCode == dto.BettingPoolCode);
             if (codeExists)
             {
-                return Conflict(new { message = "El código de banca ya existe" });
+                return ApiErrorResult.Conflict(ErrorCodes.BettingPoolCodeExists, "El código de banca ya existe");
             }
 
             // Validate username and password are required
             if (string.IsNullOrWhiteSpace(dto.Username))
             {
-                return BadRequest(new { message = "El nombre de usuario es requerido" });
+                return ApiErrorResult.BadRequest(ErrorCodes.UsernameRequired, "El nombre de usuario es requerido");
             }
 
             if (string.IsNullOrWhiteSpace(dto.Password))
             {
-                return BadRequest(new { message = "La contraseña es requerida" });
+                return ApiErrorResult.BadRequest(ErrorCodes.PasswordRequired, "La contraseña es requerida");
             }
 
             // Check if username already exists
@@ -330,7 +332,7 @@ public class BettingPoolsController : ControllerBase
                 .AnyAsync(u => u.Username.ToLower() == dto.Username.ToLower());
             if (userExists)
             {
-                return Conflict(new { message = "Ya existe un usuario con ese nombre" });
+                return ApiErrorResult.Conflict(ErrorCodes.UserAlreadyExists, "Ya existe un usuario con ese nombre");
             }
 
             // Hash password
@@ -469,7 +471,7 @@ public class BettingPoolsController : ControllerBase
             var bettingPool = await _context.BettingPools.FindAsync(id);
             if (bettingPool == null)
             {
-                return NotFound(new { message = "Banca no encontrada" });
+                return ApiErrorResult.NotFound(ErrorCodes.BettingPoolNotFound, "Banca no encontrada");
             }
 
             // Zone scope: admin cannot edit a banca outside their assigned zones.
@@ -484,7 +486,7 @@ public class BettingPoolsController : ControllerBase
                 var zoneExists = await _context.Zones.AnyAsync(z => z.ZoneId == dto.ZoneId.Value);
                 if (!zoneExists)
                 {
-                    return BadRequest(new { message = "La zona especificada no existe" });
+                    return ApiErrorResult.BadRequest(ErrorCodes.ZoneNotFound, "La zona especificada no existe");
                 }
                 // Block moving a banca to a zone the admin doesn't manage.
                 if (!await _zoneScope.IsZoneAllowedAsync(dto.ZoneId.Value))
@@ -500,7 +502,7 @@ public class BettingPoolsController : ControllerBase
                 var bankExists = await _context.Banks.AnyAsync(b => b.BankId == dto.BankId.Value);
                 if (!bankExists)
                 {
-                    return BadRequest(new { message = "El banco especificado no existe" });
+                    return ApiErrorResult.BadRequest(ErrorCodes.BankNotFound, "El banco especificado no existe");
                 }
                 bettingPool.BankId = dto.BankId;
             }
@@ -620,7 +622,7 @@ public class BettingPoolsController : ControllerBase
             var bettingPool = await _context.BettingPools.FindAsync(id);
             if (bettingPool == null)
             {
-                return NotFound(new { message = "Banca no encontrada" });
+                return ApiErrorResult.NotFound(ErrorCodes.BettingPoolNotFound, "Banca no encontrada");
             }
 
             // Zone scope: admin cannot delete a banca outside their assigned zones.
@@ -634,7 +636,7 @@ public class BettingPoolsController : ControllerBase
                 .AnyAsync(ubp => ubp.BettingPoolId == id);
             if (hasUsers)
             {
-                return BadRequest(new { message = "No se puede eliminar la banca porque tiene usuarios asociados" });
+                return ApiErrorResult.BadRequest(ErrorCodes.BettingPoolHasUsers, "No se puede eliminar la banca porque tiene usuarios asociados");
             }
 
             // Soft delete
@@ -661,13 +663,13 @@ public class BettingPoolsController : ControllerBase
         {
             if (!await _zoneScope.IsBettingPoolAllowedAsync(id))
             {
-                return NotFound(new { message = "Banca no encontrada" });
+                return ApiErrorResult.NotFound(ErrorCodes.BettingPoolNotFound, "Banca no encontrada");
             }
 
             var bettingPoolExists = await _context.BettingPools.AnyAsync(bp => bp.BettingPoolId == id);
             if (!bettingPoolExists)
             {
-                return NotFound(new { message = "Banca no encontrada" });
+                return ApiErrorResult.NotFound(ErrorCodes.BettingPoolNotFound, "Banca no encontrada");
             }
 
             var users = await _context.UserBettingPools
@@ -876,7 +878,7 @@ public class BettingPoolsController : ControllerBase
         {
             if (!await _zoneScope.IsBettingPoolAllowedAsync(id))
             {
-                return NotFound(new { message = "Banca no encontrada" });
+                return ApiErrorResult.NotFound(ErrorCodes.BettingPoolNotFound, "Banca no encontrada");
             }
 
             var bettingPool = await _context.BettingPools
@@ -891,7 +893,7 @@ public class BettingPoolsController : ControllerBase
 
             if (bettingPool == null)
             {
-                return NotFound(new { message = "Banca no encontrada" });
+                return ApiErrorResult.NotFound(ErrorCodes.BettingPoolNotFound, "Banca no encontrada");
             }
 
             var result = new BettingPoolDetailWithConfigDto
@@ -1005,7 +1007,7 @@ public class BettingPoolsController : ControllerBase
 
             if (bettingPool == null)
             {
-                return NotFound(new { message = "Banca no encontrada" });
+                return ApiErrorResult.NotFound(ErrorCodes.BettingPoolNotFound, "Banca no encontrada");
             }
 
             // Update or create main configuration
@@ -1142,7 +1144,7 @@ public class BettingPoolsController : ControllerBase
             var zoneExists = await _context.Zones.AnyAsync(z => z.ZoneId == dto.ZoneId);
             if (!zoneExists)
             {
-                return BadRequest(new { message = "La zona especificada no existe" });
+                return ApiErrorResult.BadRequest(ErrorCodes.ZoneNotFound, "La zona especificada no existe");
             }
 
             // Validate bank if provided
@@ -1151,7 +1153,7 @@ public class BettingPoolsController : ControllerBase
                 var bankExists = await _context.Banks.AnyAsync(b => b.BankId == dto.BankId.Value);
                 if (!bankExists)
                 {
-                    return BadRequest(new { message = "El banco especificado no existe" });
+                    return ApiErrorResult.BadRequest(ErrorCodes.BankNotFound, "El banco especificado no existe");
                 }
             }
 
@@ -1160,18 +1162,18 @@ public class BettingPoolsController : ControllerBase
                 .AnyAsync(bp => bp.BettingPoolCode == dto.BettingPoolCode);
             if (codeExists)
             {
-                return Conflict(new { message = "El código de banca ya existe" });
+                return ApiErrorResult.Conflict(ErrorCodes.BettingPoolCodeExists, "El código de banca ya existe");
             }
 
             // Validate username and password are required
             if (string.IsNullOrWhiteSpace(dto.Username))
             {
-                return BadRequest(new { message = "El nombre de usuario es requerido" });
+                return ApiErrorResult.BadRequest(ErrorCodes.UsernameRequired, "El nombre de usuario es requerido");
             }
 
             if (string.IsNullOrWhiteSpace(dto.Password))
             {
-                return BadRequest(new { message = "La contraseña es requerida" });
+                return ApiErrorResult.BadRequest(ErrorCodes.PasswordRequired, "La contraseña es requerida");
             }
 
             // Check if username already exists
@@ -1179,7 +1181,7 @@ public class BettingPoolsController : ControllerBase
                 .AnyAsync(u => u.Username.ToLower() == dto.Username.ToLower());
             if (userExists)
             {
-                return Conflict(new { message = "Ya existe un usuario con ese nombre" });
+                return ApiErrorResult.Conflict(ErrorCodes.UserAlreadyExists, "Ya existe un usuario con ese nombre");
             }
 
             // Hash password
@@ -1368,7 +1370,7 @@ public class BettingPoolsController : ControllerBase
         {
             if (!await _zoneScope.IsBettingPoolAllowedAsync(bettingPoolId))
             {
-                return NotFound(new { message = "Banca no encontrada" });
+                return ApiErrorResult.NotFound(ErrorCodes.BettingPoolNotFound, "Banca no encontrada");
             }
 
             var bettingPool = await _context.BettingPools
@@ -1377,7 +1379,7 @@ public class BettingPoolsController : ControllerBase
 
             if (bettingPool == null)
             {
-                return NotFound(new { message = "Banca no encontrada" });
+                return ApiErrorResult.NotFound(ErrorCodes.BettingPoolNotFound, "Banca no encontrada");
             }
 
             var scheduleDtos = bettingPool.Schedules
@@ -1427,7 +1429,7 @@ public class BettingPoolsController : ControllerBase
 
             if (bettingPool == null)
             {
-                return NotFound(new { message = "Banca no encontrada" });
+                return ApiErrorResult.NotFound(ErrorCodes.BettingPoolNotFound, "Banca no encontrada");
             }
 
             // Delete existing schedules
@@ -1487,7 +1489,7 @@ public class BettingPoolsController : ControllerBase
         {
             if (!await _zoneScope.IsBettingPoolAllowedAsync(bettingPoolId))
             {
-                return NotFound(new { message = "Banca no encontrada" });
+                return ApiErrorResult.NotFound(ErrorCodes.BettingPoolNotFound, "Banca no encontrada");
             }
 
             var expenses = await _context.BettingPoolAutomaticExpenses
@@ -1530,7 +1532,7 @@ public class BettingPoolsController : ControllerBase
 
             var bettingPool = await _context.BettingPools.FindAsync(bettingPoolId);
             if (bettingPool == null)
-                return NotFound(new { message = "Banca no encontrada" });
+                return ApiErrorResult.NotFound(ErrorCodes.BettingPoolNotFound, "Banca no encontrada");
 
             // Delete existing
             var existing = await _context.BettingPoolAutomaticExpenses

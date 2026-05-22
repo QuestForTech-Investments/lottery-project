@@ -1,4 +1,5 @@
 using LotteryApi.Data;
+using LotteryApi.Exceptions;
 using LotteryApi.Helpers;
 using LotteryApi.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -179,7 +180,7 @@ public class BlackboardController : ControllerBase
 
         if (string.IsNullOrWhiteSpace(betTypeCode) || string.IsNullOrWhiteSpace(betNumber))
         {
-            return BadRequest(new { message = "betTypeCode and betNumber are required" });
+            return ApiErrorResult.BadRequest(ErrorCodes.BadRequest, "betTypeCode and betNumber are required");
         }
 
         var targetDate = date.Date;

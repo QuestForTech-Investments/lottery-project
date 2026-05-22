@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using LotteryApi.Data;
 using LotteryApi.DTOs;
+using LotteryApi.Exceptions;
+using LotteryApi.Helpers;
 using LotteryApi.Models;
 using LotteryApi.Services;
 
@@ -111,7 +113,7 @@ public class ContactsController : ControllerBase
 
             if (!bettingPoolExists)
             {
-                return BadRequest(new { message = $"La banca con ID {createDto.BettingPoolId} no existe" });
+                return ApiErrorResult.BadRequest(ErrorCodes.BettingPoolNotFound, $"La banca con ID {createDto.BettingPoolId} no existe");
             }
 
             var contact = new Contact
@@ -157,7 +159,7 @@ public class ContactsController : ControllerBase
             var contact = await _context.Contacts.FindAsync(id);
             if (contact == null)
             {
-                return NotFound(new { message = $"Contacto con ID {id} no encontrado" });
+                return ApiErrorResult.NotFound(ErrorCodes.ContactNotFound, $"Contacto con ID {id} no encontrado");
             }
 
             if (!await _zoneScope.IsBettingPoolAllowedAsync(contact.BettingPoolId)) return Forbid();
@@ -242,7 +244,7 @@ public class ContactsController : ControllerBase
             var contact = await _context.Contacts.FindAsync(id);
             if (contact == null)
             {
-                return NotFound(new { message = $"Contacto con ID {id} no encontrado" });
+                return ApiErrorResult.NotFound(ErrorCodes.ContactNotFound, $"Contacto con ID {id} no encontrado");
             }
 
             if (!await _zoneScope.IsBettingPoolAllowedAsync(contact.BettingPoolId)) return Forbid();

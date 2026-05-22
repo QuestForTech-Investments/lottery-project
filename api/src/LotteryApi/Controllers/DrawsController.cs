@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using LotteryApi.Data;
 using LotteryApi.DTOs;
+using LotteryApi.Exceptions;
+using LotteryApi.Helpers;
 using LotteryApi.Models;
 using LotteryApi.Repositories;
 using LotteryApi.Services;
@@ -179,7 +181,7 @@ public class DrawsController : ControllerBase
                 var draw = await _context.Draws.FindAsync(schedule.DrawId);
                 if (draw == null)
                 {
-                    return BadRequest(new { message = $"Draw {schedule.DrawId} not found" });
+                    return ApiErrorResult.BadRequest(ErrorCodes.DrawNotFound, $"Draw {schedule.DrawId} not found");
                 }
 
                 // Update flag
@@ -238,7 +240,7 @@ public class DrawsController : ControllerBase
 
         if (dto == null)
         {
-            return NotFound();
+            return ApiErrorResult.NotFound(ErrorCodes.DrawNotFound, "Sorteo no encontrado");
         }
 
         await _cache.SetAsync(cacheKey, dto, CacheKeys.DrawExpiration);
@@ -366,7 +368,7 @@ public class DrawsController : ControllerBase
 
         if (draw == null)
         {
-            return NotFound();
+            return ApiErrorResult.NotFound(ErrorCodes.DrawNotFound, "Sorteo no encontrado");
         }
 
         draw.DrawName = dto.DrawName;
@@ -401,7 +403,7 @@ public class DrawsController : ControllerBase
     {
         if (!await IsSuperAdminAsync()) return Forbid();
         if (items == null || items.Count == 0)
-            return BadRequest("No items provided");
+            return ApiErrorResult.BadRequest(ErrorCodes.BadRequest, "No items provided");
 
         var drawIds = items.Select(i => i.DrawId).ToList();
         var draws = await _context.Draws
@@ -451,7 +453,7 @@ public class DrawsController : ControllerBase
 
         if (draw == null)
         {
-            return NotFound();
+            return ApiErrorResult.NotFound(ErrorCodes.DrawNotFound, "Sorteo no encontrado");
         }
 
         await _drawRepository.DeleteAsync(draw);

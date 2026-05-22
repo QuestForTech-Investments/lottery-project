@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using LotteryApi.Data;
 using LotteryApi.DTOs;
+using LotteryApi.Exceptions;
+using LotteryApi.Helpers;
 using LotteryApi.Models;
 using LotteryApi.Services;
 using LotteryApi.Services.Caida;
@@ -134,7 +136,7 @@ public class TransactionGroupsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting transaction groups");
-            return StatusCode(500, new { error = "Error al obtener grupos de transacciones" });
+            return ApiErrorResult.Error(ErrorCodes.InternalError, "Error al obtener grupos de transacciones", 500);
         }
     }
 
@@ -217,7 +219,7 @@ public class TransactionGroupsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting pending approvals");
-            return StatusCode(500, new { error = "Error al obtener aprobaciones pendientes" });
+            return ApiErrorResult.Error(ErrorCodes.InternalError, "Error al obtener aprobaciones pendientes", 500);
         }
     }
 
@@ -276,14 +278,14 @@ public class TransactionGroupsController : ControllerBase
                 .FirstOrDefaultAsync();
 
             if (group == null)
-                return NotFound(new { message = "Grupo de transacciones no encontrado" });
+                return ApiErrorResult.NotFound(ErrorCodes.TransactionGroupNotFound, "Grupo de transacciones no encontrado");
 
             return Ok(group);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting transaction group {Id}", id);
-            return StatusCode(500, new { error = "Error al obtener grupo de transacciones" });
+            return ApiErrorResult.Error(ErrorCodes.InternalError, "Error al obtener grupo de transacciones", 500);
         }
     }
 
@@ -320,7 +322,7 @@ public class TransactionGroupsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting filter options");
-            return StatusCode(500, new { error = "Error al obtener opciones de filtro" });
+            return ApiErrorResult.Error(ErrorCodes.InternalError, "Error al obtener opciones de filtro", 500);
         }
     }
 
@@ -376,7 +378,7 @@ public class TransactionGroupsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting entities by type");
-            return StatusCode(500, new { error = "Error al obtener entidades" });
+            return ApiErrorResult.Error(ErrorCodes.InternalError, "Error al obtener entidades", 500);
         }
     }
 
@@ -480,7 +482,7 @@ public class TransactionGroupsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting transaction lines report");
-            return StatusCode(500, new { error = "Error al obtener reporte de transacciones" });
+            return ApiErrorResult.Error(ErrorCodes.InternalError, "Error al obtener reporte de transacciones", 500);
         }
     }
 
@@ -501,7 +503,7 @@ public class TransactionGroupsController : ControllerBase
         {
             if (bettingPoolId <= 0)
             {
-                return BadRequest(new { error = "bettingPoolId es requerido" });
+                return ApiErrorResult.BadRequest(ErrorCodes.TransactionBettingPoolRequired, "bettingPoolId es requerido");
             }
 
             var targetDate = (date ?? Helpers.DateTimeHelper.TodayInBusinessTimezone()).Date;
@@ -546,7 +548,7 @@ public class TransactionGroupsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting transactions by betting pool");
-            return StatusCode(500, new { error = "Error al obtener transacciones por banca" });
+            return ApiErrorResult.Error(ErrorCodes.InternalError, "Error al obtener transacciones por banca", 500);
         }
     }
 
@@ -762,7 +764,7 @@ public class TransactionGroupsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting transaction summary");
-            return StatusCode(500, new { error = "Error al obtener resumen de transacciones" });
+            return ApiErrorResult.Error(ErrorCodes.InternalError, "Error al obtener resumen de transacciones", 500);
         }
     }
 
@@ -890,7 +892,7 @@ public class TransactionGroupsController : ControllerBase
         {
             await transaction.RollbackAsync();
             _logger.LogError(ex, "Error creating transaction group");
-            return StatusCode(500, new { error = "Error al crear grupo de transacciones" });
+            return ApiErrorResult.Error(ErrorCodes.InternalError, "Error al crear grupo de transacciones", 500);
         }
     }
 
@@ -907,12 +909,12 @@ public class TransactionGroupsController : ControllerBase
                 .FirstOrDefaultAsync(g => g.GroupId == id);
 
             if (group == null)
-                return NotFound(new { message = "Grupo no encontrado" });
+                return ApiErrorResult.NotFound(ErrorCodes.TransactionGroupNotFound, "Grupo no encontrado");
 
             if (group.ZoneId.HasValue && !await _zoneScope.IsZoneAllowedAsync(group.ZoneId.Value)) return Forbid();
 
             if (group.Status == "Eliminado" || group.Status == "PendienteEliminacion" || group.Status == "Rechazado")
-                return BadRequest(new { message = "No se puede eliminar un grupo con estado " + group.Status });
+                return ApiErrorResult.BadRequest(ErrorCodes.TransactionGroupInvalidStateDelete, "No se puede eliminar un grupo con estado " + group.Status);
 
             // Get current user
             var userId = GetCurrentUserId();
@@ -965,7 +967,7 @@ public class TransactionGroupsController : ControllerBase
         {
             await transaction.RollbackAsync();
             _logger.LogError(ex, "Error deleting transaction group {Id}", id);
-            return StatusCode(500, new { error = "Error al eliminar grupo de transacciones" });
+            return ApiErrorResult.Error(ErrorCodes.InternalError, "Error al eliminar grupo de transacciones", 500);
         }
     }
 
@@ -977,14 +979,14 @@ public class TransactionGroupsController : ControllerBase
         {
             var userId = GetCurrentUserId();
             if (!userId.HasValue || !await HasPermission(userId.Value, "TRANSACTION_APPROVE"))
-                return StatusCode(403, new { message = "No tiene permiso para aprobar transacciones" });
+                return ApiErrorResult.Error(ErrorCodes.TransactionApprovePermissionDenied, "No tiene permiso para aprobar transacciones", 403);
 
             var group = await _context.TransactionGroups
                 .Include(g => g.Lines)
                 .FirstOrDefaultAsync(g => g.GroupId == id);
 
             if (group == null)
-                return NotFound(new { message = "Grupo no encontrado" });
+                return ApiErrorResult.NotFound(ErrorCodes.TransactionGroupNotFound, "Grupo no encontrado");
 
             if (group.ZoneId.HasValue && !await _zoneScope.IsZoneAllowedAsync(group.ZoneId.Value)) return Forbid();
 
@@ -1050,14 +1052,14 @@ public class TransactionGroupsController : ControllerBase
             }
             else
             {
-                return BadRequest(new { message = $"No se puede aprobar un grupo con estado '{group.Status}'" });
+                return ApiErrorResult.BadRequest(ErrorCodes.TransactionGroupInvalidStateApprove, $"No se puede aprobar un grupo con estado '{group.Status}'");
             }
         }
         catch (Exception ex)
         {
             await transaction.RollbackAsync();
             _logger.LogError(ex, "Error approving transaction group {Id}", id);
-            return StatusCode(500, new { error = "Error al aprobar grupo de transacciones" });
+            return ApiErrorResult.Error(ErrorCodes.InternalError, "Error al aprobar grupo de transacciones", 500);
         }
     }
 
@@ -1068,13 +1070,13 @@ public class TransactionGroupsController : ControllerBase
         {
             var userId = GetCurrentUserId();
             if (!userId.HasValue || !await HasPermission(userId.Value, "TRANSACTION_APPROVE"))
-                return StatusCode(403, new { message = "No tiene permiso para rechazar transacciones" });
+                return ApiErrorResult.Error(ErrorCodes.TransactionRejectPermissionDenied, "No tiene permiso para rechazar transacciones", 403);
 
             var group = await _context.TransactionGroups
                 .FirstOrDefaultAsync(g => g.GroupId == id);
 
             if (group == null)
-                return NotFound(new { message = "Grupo no encontrado" });
+                return ApiErrorResult.NotFound(ErrorCodes.TransactionGroupNotFound, "Grupo no encontrado");
 
             if (group.ZoneId.HasValue && !await _zoneScope.IsZoneAllowedAsync(group.ZoneId.Value)) return Forbid();
 
@@ -1102,13 +1104,13 @@ public class TransactionGroupsController : ControllerBase
             }
             else
             {
-                return BadRequest(new { message = $"No se puede rechazar un grupo con estado '{group.Status}'" });
+                return ApiErrorResult.BadRequest(ErrorCodes.TransactionGroupInvalidStateReject, $"No se puede rechazar un grupo con estado '{group.Status}'");
             }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error rejecting transaction group {Id}", id);
-            return StatusCode(500, new { error = "Error al rechazar grupo de transacciones" });
+            return ApiErrorResult.Error(ErrorCodes.InternalError, "Error al rechazar grupo de transacciones", 500);
         }
     }
 

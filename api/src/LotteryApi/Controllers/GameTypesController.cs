@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using LotteryApi.Data;
 using LotteryApi.DTOs;
+using LotteryApi.Exceptions;
+using LotteryApi.Helpers;
 
 namespace LotteryApi.Controllers;
 
@@ -66,7 +68,7 @@ public class GameTypesController : ControllerBase
 
             if (!lotteryExists)
             {
-                return NotFound(new { message = "Lotería no encontrada" });
+                return ApiErrorResult.NotFound(ErrorCodes.LotteryNotFound, "Lotería no encontrada");
             }
 
             var gameTypes = await _context.LotteryGameCompatibilities
@@ -120,7 +122,7 @@ public class GameTypesController : ControllerBase
 
             if (gameType == null)
             {
-                return NotFound(new { message = "Tipo de apuesta no encontrado" });
+                return ApiErrorResult.NotFound(ErrorCodes.GameTypeNotFound, "Tipo de apuesta no encontrado");
             }
 
             return Ok(gameType);

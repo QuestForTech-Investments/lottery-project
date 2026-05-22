@@ -1,4 +1,6 @@
 using LotteryApi.Data;
+using LotteryApi.Exceptions;
+using LotteryApi.Helpers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -105,7 +107,7 @@ public class BlockedSessionsController : ControllerBase
                 return Ok(rows);
             }
             default:
-                return BadRequest(new { message = "type must be password, pin or ip" });
+                return ApiErrorResult.BadRequest(ErrorCodes.BadRequest, "type must be password, pin or ip");
         }
     }
 
@@ -126,13 +128,13 @@ public class BlockedSessionsController : ControllerBase
 
         if (req == null || string.IsNullOrWhiteSpace(req.Id))
         {
-            return BadRequest(new { message = "id required" });
+            return ApiErrorResult.BadRequest(ErrorCodes.BadRequest, "id required");
         }
 
         if (req.Id.StartsWith("u:") && int.TryParse(req.Id.Substring(2), out var userId))
         {
             var user = await _context.Users.FirstOrDefaultAsync(u => u.UserId == userId);
-            if (user == null) return NotFound(new { message = "User not found" });
+            if (user == null) return ApiErrorResult.NotFound(ErrorCodes.UserNotFound, "User not found");
 
             if (req.Type == "pin")
             {
@@ -156,13 +158,13 @@ public class BlockedSessionsController : ControllerBase
         {
             var ip = req.Id.Substring(3);
             var row = await _context.BlockedIps.FirstOrDefaultAsync(b => b.IpAddress == ip);
-            if (row == null) return NotFound(new { message = "IP not found" });
+            if (row == null) return ApiErrorResult.NotFound(ErrorCodes.IpNotFound, "IP not found");
             _context.BlockedIps.Remove(row);
             await _context.SaveChangesAsync();
             _logger.LogInformation("Unblocked IP {Ip}", ip);
             return Ok(new { success = true });
         }
 
-        return BadRequest(new { message = "Invalid id format" });
+        return ApiErrorResult.BadRequest(ErrorCodes.BadRequest, "Invalid id format");
     }
 }

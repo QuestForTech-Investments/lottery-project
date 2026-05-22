@@ -4,6 +4,38 @@
  */
 
 import * as logger from '../utils/logger'
+import i18n from '@/i18n/config'
+
+/**
+ * Pull a localized message from an API error payload.
+ *
+ * Order of preference:
+ *   1. `apiErrors.<errorCode>` translation (per locale)
+ *   2. backend's Spanish `detail` field (ProblemDetails)
+ *   3. legacy `message` / `error` fields (kept for endpoints not yet migrated)
+ *   4. generic fallback
+ *
+ * This is intentionally lenient: a missing translation degrades to the
+ * Spanish fallback rather than swallowing the error.
+ */
+export const resolveApiErrorMessage = (errorData: Record<string, unknown>, fallbackStatus?: number): string => {
+  const code = typeof errorData.errorCode === 'string' ? errorData.errorCode : undefined
+  if (code) {
+    const fallback =
+      (typeof errorData.detail === 'string' && errorData.detail) ||
+      (typeof errorData.message === 'string' && errorData.message) ||
+      (typeof errorData.error === 'string' && errorData.error) ||
+      undefined
+    const translated = i18n.t(`apiErrors.${code}`, { defaultValue: fallback ?? code })
+    return typeof translated === 'string' ? translated : (fallback ?? code)
+  }
+  return (
+    (typeof errorData.detail === 'string' && errorData.detail) ||
+    (typeof errorData.message === 'string' && errorData.message) ||
+    (typeof errorData.error === 'string' && errorData.error) ||
+    `HTTP error! status: ${fallbackStatus ?? 'unknown'}`
+  )
+}
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
 
@@ -83,7 +115,8 @@ const apiFetch = async <T = unknown>(endpoint: string, options: ApiFetchOptions 
         }
       }
 
-      const error = new ApiError(errorData.message as string || `HTTP error! status: ${response.status}`)
+      const error = new ApiError(resolveApiErrorMessage(errorData, response.status))
+      error.code = typeof errorData.errorCode === 'string' ? errorData.errorCode : undefined
       error.response = {
         status: response.status,
         data: errorData,

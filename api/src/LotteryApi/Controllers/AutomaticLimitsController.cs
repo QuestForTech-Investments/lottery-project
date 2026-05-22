@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using LotteryApi.Data;
+using LotteryApi.Exceptions;
+using LotteryApi.Helpers;
 using LotteryApi.Models;
 using LotteryApi.DTOs.Limits;
 using LotteryApi.Services;
@@ -275,12 +277,12 @@ public class AutomaticLimitsController : ControllerBase
         {
             if (dto.DrawIds == null || dto.DrawIds.Count == 0)
             {
-                return BadRequest(new { message = "Debe seleccionar al menos un sorteo" });
+                return ApiErrorResult.BadRequest(ErrorCodes.BadRequest, "Debe seleccionar al menos un sorteo");
             }
 
             if (dto.PalesToBlock <= 0)
             {
-                return BadRequest(new { message = "El numero de pales a bloquear debe ser mayor a 0" });
+                return ApiErrorResult.BadRequest(ErrorCodes.BadRequest, "El numero de pales a bloquear debe ser mayor a 0");
             }
 
             // Generate random pale numbers to block
