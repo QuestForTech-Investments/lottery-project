@@ -144,7 +144,7 @@ const LoginMUI = () => {
           }}
         />
 
-        {/* Welcome Text - Hidden on mobile like original app */}
+        {/* Welcome Text */}
         <Typography
           variant="h6"
           sx={{
@@ -153,7 +153,6 @@ const LoginMUI = () => {
             mb: 0.5,
             fontSize: { xs: '1.1rem', sm: '1.25rem' },
             letterSpacing: '-0.02em',
-            display: { xs: 'none', sm: 'block' },
           }}
         >
           {t('login.welcome')}
@@ -164,7 +163,6 @@ const LoginMUI = () => {
             color: '#64748b',
             mb: { xs: 2, sm: 3 },
             fontSize: { xs: '0.85rem', sm: '0.9rem' },
-            display: { xs: 'none', sm: 'block' },
           }}
         >
           {t('login.subtitle')}
@@ -237,7 +235,9 @@ const LoginMUI = () => {
                 },
                 '& input': {
                   py: { xs: 1.2, sm: 1.5 },
-                  fontSize: { xs: '0.9rem', sm: '0.95rem' },
+                  // iOS auto-zooms on focus when font-size < 16px. Use 1rem
+                  // (16px) on xs to prevent the page from zooming in.
+                  fontSize: { xs: '1rem', sm: '0.95rem' },
                 },
                 '& input::placeholder': {
                   color: '#94a3b8',
@@ -326,7 +326,9 @@ const LoginMUI = () => {
                 },
                 '& input': {
                   py: { xs: 1.2, sm: 1.5 },
-                  fontSize: { xs: '0.9rem', sm: '0.95rem' },
+                  // iOS auto-zooms on focus when font-size < 16px. Use 1rem
+                  // (16px) on xs to prevent the page from zooming in.
+                  fontSize: { xs: '1rem', sm: '0.95rem' },
                 },
                 '& input::placeholder': {
                   color: '#94a3b8',

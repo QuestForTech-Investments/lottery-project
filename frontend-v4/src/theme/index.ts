@@ -116,6 +116,20 @@ export const theme = createTheme({
     '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
   ],
   components: {
+    MuiCssBaseline: {
+      styleOverrides: {
+        // iOS Safari auto-zooms into form fields when their font-size is
+        // below 16px, which shifts the layout sideways. Force a 16px floor
+        // on all native form elements at the xs breakpoint to suppress it.
+        // The visual size on larger screens stays whatever each component
+        // chose, since this only applies under 600px.
+        '@media (max-width: 599.95px)': {
+          'input, textarea, select, .MuiInputBase-input': {
+            fontSize: '16px !important',
+          },
+        },
+      },
+    },
     MuiButton: {
       styleOverrides: {
         root: {
