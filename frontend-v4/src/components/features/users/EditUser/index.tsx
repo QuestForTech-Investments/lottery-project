@@ -87,23 +87,28 @@ const EditUserMUI = () => {
    */
   if (errors.submit && formData.username === '') {
     return (
-      <Box sx={{ p: 3, display: 'flex', justifyContent: 'center' }}>
-        <Paper elevation={3} sx={{ p: 4, maxWidth: 600, width: '100%' }}>
+      <Box sx={{ p: { xs: 1, sm: 3 }, display: 'flex', justifyContent: 'center' }}>
+        <Paper elevation={3} sx={{ p: { xs: 1.5, sm: 4 }, maxWidth: 600, width: '100%' }}>
           <Alert
             severity="error"
-            sx={{ mb: 3 }}
+            sx={{
+              mb: 3,
+              '& .MuiAlert-message': { wordBreak: 'break-word', minWidth: 0, flex: 1 },
+              '& .MuiAlert-action': { flexShrink: 0, alignItems: 'flex-start', pt: 0 },
+            }}
             action={
               <Button
                 color="inherit"
                 size="small"
                 onClick={handleRetry}
                 startIcon={<RefreshIcon />}
+                sx={{ whiteSpace: 'nowrap' }}
               >
                 {t('sales.retry')}
               </Button>
             }
           >
-            <Typography variant="h6" gutterBottom>
+            <Typography variant="h6" gutterBottom sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}>
               {t('usersAdmin.formLoadError')}
             </Typography>
             <Typography variant="body2">
@@ -150,17 +155,17 @@ const EditUserMUI = () => {
    * Render main form
    */
   return (
-    <Box sx={{ p: 3 }}>
+    <Box sx={{ p: { xs: 1, sm: 3 } }}>
       <Paper elevation={3}>
         {/* Header */}
-        <Box sx={{ p: 3, borderBottom: 1, borderColor: 'divider' }}>
-          <Typography variant="h5" component="h1" align="center">
+        <Box sx={{ p: { xs: 1.5, sm: 3 }, borderBottom: 1, borderColor: 'divider' }}>
+          <Typography variant="h5" component="h1" align="center" sx={{ fontSize: { xs: '1.1rem', sm: '1.5rem' } }}>
             {t('usersAdmin.updateUser')}
           </Typography>
         </Box>
 
         {/* Form */}
-        <Box sx={{ p: 3 }}>
+        <Box sx={{ p: { xs: 1.5, sm: 3 } }}>
           {/* Submit Error Alert */}
           {errors.submit && (
             <Alert severity="error" sx={{ mb: 3 }} onClose={() => {}}>

@@ -147,9 +147,9 @@ const CollectionsPaymentsList = (): React.ReactElement => {
   );
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Paper sx={{ p: 3 }}>
-        <Typography variant="h5" sx={{ textAlign: 'center', fontWeight: 400, mb: 3 }}>
+    <Box sx={{ p: { xs: 1, sm: 3 } }}>
+      <Paper sx={{ p: { xs: 1.5, sm: 3 } }}>
+        <Typography variant="h5" sx={{ textAlign: 'center', fontWeight: 400, mb: { xs: 2, sm: 3 }, fontSize: { xs: '1.15rem', sm: '1.5rem' } }}>
           {t('payments.title')}
         </Typography>
 
@@ -185,8 +185,8 @@ const CollectionsPaymentsList = (): React.ReactElement => {
           <QuickFilter value={quickFilter} onChange={setQuickFilter} placeholder={t('common.filterQuick')} />
         </Box>
 
-        <TableContainer component={Paper} variant="outlined">
-          <Table size="small">
+        <TableContainer component={Paper} variant="outlined" sx={{ overflowX: 'auto' }}>
+          <Table size="small" sx={{ minWidth: { xs: 700, sm: 'auto' } }}>
             <TableHead sx={{ bgcolor: '#e3e3e3' }}>
               <TableRow>
                 <TableCell sx={{ fontSize: '13px', fontWeight: 600, py: 1.5 }}>

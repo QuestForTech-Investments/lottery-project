@@ -132,10 +132,10 @@ const CreateZoneMUI = (): React.ReactElement => {
   }, [navigate])
 
   return (
-    <Box className="create-zone-container" sx={{ p: 3 }}>
+    <Box className="create-zone-container" sx={{ p: { xs: 1, sm: 3 } }}>
       <Paper elevation={3}>
-        <Box sx={{ p: 3, borderBottom: 1, borderColor: 'divider' }}>
-          <Typography variant="h5" component="h1">{t('zonesAdmin.createTitle')}</Typography>
+        <Box sx={{ p: { xs: 1.5, sm: 3 }, borderBottom: 1, borderColor: 'divider' }}>
+          <Typography variant="h5" component="h1" sx={{ fontSize: { xs: '1.1rem', sm: '1.5rem' } }}>{t('zonesAdmin.createTitle')}</Typography>
         </Box>
 
         <form onSubmit={handleSubmit}>
@@ -146,11 +146,11 @@ const CreateZoneMUI = (): React.ReactElement => {
             </Tabs>
           </Box>
 
-          <Box sx={{ p: 3 }}>
+          <Box sx={{ p: { xs: 1.5, sm: 3 } }}>
             {activeTab === 0 && (
               <Box className="form-zone">
-                <Box sx={{ display: 'flex', alignItems: 'center', mt: 3, maxWidth: 800, mx: 'auto' }}>
-                  <Typography component="label" htmlFor="name" sx={{ width: '150px', fontFamily: 'Montserrat, "Helvetica Neue", Arial, sans-serif', fontWeight: 400 }}>
+                <Box sx={{ display: 'flex', alignItems: { xs: 'stretch', sm: 'center' }, flexDirection: { xs: 'column', sm: 'row' }, gap: { xs: 1, sm: 0 }, mt: 3, maxWidth: 800, mx: 'auto' }}>
+                  <Typography component="label" htmlFor="name" sx={{ width: { xs: 'auto', sm: '150px' }, fontFamily: 'Montserrat, "Helvetica Neue", Arial, sans-serif', fontWeight: 400 }}>
                     {t('zonesAdmin.name')}
                   </Typography>
                   <TextField
@@ -188,7 +188,7 @@ const CreateZoneMUI = (): React.ReactElement => {
 
                   {showContactForm && (
                     <Box sx={{ mb: 3, p: 2, border: '1px solid #e0e0e0', borderRadius: '4px' }}>
-                      <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+                      <Box sx={{ display: 'flex', gap: 2, mb: 2, flexDirection: { xs: 'column', sm: 'row' } }}>
                         <TextField label={t('zonesAdmin.name')} value={contactName} onChange={(e: ChangeEvent<HTMLInputElement>) => setContactName(e.target.value)} fullWidth size="small" />
                         <TextField label={t('zonesAdmin.phone')} value={contactPhone} onChange={(e: ChangeEvent<HTMLInputElement>) => setContactPhone(e.target.value)} fullWidth size="small" />
                       </Box>

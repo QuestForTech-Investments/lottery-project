@@ -159,15 +159,15 @@ const BettingPoolBalances = (): React.ReactElement => {
   }, [filteredData]);
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Paper sx={{ p: 3 }}>
-        <Typography variant="h5" sx={{ mb: 3, textAlign: 'center', fontWeight: 600 }}>
+    <Box sx={{ p: { xs: 1, sm: 3 } }}>
+      <Paper sx={{ p: { xs: 1.5, sm: 3 } }}>
+        <Typography variant="h5" sx={{ mb: { xs: 2, sm: 3 }, textAlign: 'center', fontWeight: 600, fontSize: { xs: '1.15rem', sm: '1.5rem' } }}>
           {t('balances.bettingPools.title')}
         </Typography>
 
         {/* Filters Section */}
         <Box sx={{ mb: 3 }}>
-          <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap', mb: 2 }}>
+          <Box sx={{ display: 'flex', gap: { xs: 1.5, sm: 3 }, flexWrap: 'wrap', mb: 2 }}>
             {/* Date Filter */}
             <DateFilter
               value={selectedDate}
@@ -176,7 +176,7 @@ const BettingPoolBalances = (): React.ReactElement => {
             />
 
             {/* Zones Multi-Select */}
-            <Box sx={{ minWidth: 300 }}>
+            <Box sx={{ minWidth: { xs: '100%', sm: 300 }, flex: { xs: '1 1 100%', sm: '0 0 auto' } }}>
               <Typography variant="body2" sx={{ mb: 0.5, color: 'text.secondary', fontWeight: 500 }}>
                 {t('common.zones')}
               </Typography>
@@ -261,7 +261,7 @@ const BettingPoolBalances = (): React.ReactElement => {
         </Box>
 
         {/* Action Buttons */}
-        <Box sx={{ display: 'flex', gap: 1, mb: 3 }}>
+        <Box sx={{ display: 'flex', gap: 1, mb: 3, flexWrap: 'wrap' }}>
           <Button
             variant="contained"
             startIcon={<RefreshIcon />}
@@ -269,9 +269,10 @@ const BettingPoolBalances = (): React.ReactElement => {
             disabled={loading}
             sx={{
               backgroundColor: '#8b5cf6',
-              '&:hover': { backgroundColor: '#3fb5b8' },
+              '&:hover': { backgroundColor: '#7c3aed' },
               textTransform: 'uppercase',
-              fontWeight: 600
+              fontWeight: 600,
+              flex: { xs: '1 1 100%', sm: '0 0 auto' },
             }}
           >
             {t('common.refresh')}
@@ -282,9 +283,10 @@ const BettingPoolBalances = (): React.ReactElement => {
             onClick={handlePrint}
             sx={{
               backgroundColor: '#8b5cf6',
-              '&:hover': { backgroundColor: '#3fb5b8' },
+              '&:hover': { backgroundColor: '#7c3aed' },
               textTransform: 'uppercase',
-              fontWeight: 600
+              fontWeight: 600,
+              flex: { xs: '1 1 calc(50% - 4px)', sm: '0 0 auto' },
             }}
           >
             {t('common.print')}
@@ -295,9 +297,10 @@ const BettingPoolBalances = (): React.ReactElement => {
             onClick={handleExportPdf}
             sx={{
               backgroundColor: '#8b5cf6',
-              '&:hover': { backgroundColor: '#3fb5b8' },
+              '&:hover': { backgroundColor: '#7c3aed' },
               textTransform: 'uppercase',
-              fontWeight: 600
+              fontWeight: 600,
+              flex: { xs: '1 1 calc(50% - 4px)', sm: '0 0 auto' },
             }}
           >
             PDF

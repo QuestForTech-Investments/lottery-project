@@ -32,9 +32,11 @@ export const TABS_STYLE = {
   borderColor: 'divider',
   mb: 2,
   '& .MuiTab-root': {
-    fontSize: '14px',
+    fontSize: { xs: '12px', sm: '14px' },
     textTransform: 'none',
-    fontFamily: 'Montserrat, sans-serif'
+    fontFamily: 'Montserrat, sans-serif',
+    minWidth: { xs: 'auto', sm: 90 },
+    px: { xs: 1.25, sm: 2 },
   },
   '& .Mui-selected': {
     color: '#6366f1'

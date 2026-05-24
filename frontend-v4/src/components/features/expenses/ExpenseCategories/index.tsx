@@ -223,17 +223,20 @@ const ExpenseCategories = (): React.ReactElement => {
   }
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h4" sx={{ mb: 3, textAlign: 'center', fontWeight: 600, color: '#2c2c2c' }}>
+    <Box sx={{ p: { xs: 1, sm: 3 } }}>
+      <Typography variant="h4" sx={{ mb: { xs: 2, sm: 3 }, textAlign: 'center', fontWeight: 600, color: '#2c2c2c', fontSize: { xs: '1.15rem', sm: '2.125rem' } }}>
         {t('expensesAdmin.title')}
       </Typography>
 
       <Card elevation={1}>
-        <CardContent sx={{ p: 3 }}>
+        <CardContent sx={{ p: { xs: 1.5, sm: 3 } }}>
           {/* Tabs */}
           <Tabs
             value={activeTab}
             onChange={handleTabChange}
+            variant="scrollable"
+            scrollButtons="auto"
+            allowScrollButtonsMobile
             sx={{
               mb: 3,
               borderBottom: 1,
@@ -241,7 +244,9 @@ const ExpenseCategories = (): React.ReactElement => {
               '& .MuiTab-root': {
                 fontSize: '14px',
                 textTransform: 'none',
-                fontWeight: 500
+                fontWeight: 500,
+                minWidth: { xs: 'auto', sm: 90 },
+                px: { xs: 1.25, sm: 2 },
               },
               '& .Mui-selected': {
                 color: '#8b5cf6',
@@ -276,8 +281,8 @@ const ExpenseCategories = (): React.ReactElement => {
           />
 
           {/* Table */}
-          <TableContainer component={Paper} variant="outlined">
-            <Table size="small">
+          <TableContainer component={Paper} variant="outlined" sx={{ overflowX: 'auto' }}>
+            <Table size="small" sx={{ minWidth: { xs: 400, sm: 'auto' } }}>
               <TableHead sx={{ bgcolor: '#f8f9fa' }}>
                 <TableRow>
                   <TableCell>

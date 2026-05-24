@@ -277,17 +277,20 @@ const GroupConfiguration = (): React.ReactElement => {
   }
 
   return (
-    <Box sx={{ bgcolor: '#f5f5f5', minHeight: '100vh', p: 3 }}>
-      <Typography variant="h4" sx={{ textAlign: 'center', mb: 3, fontFamily: 'Montserrat, sans-serif', fontWeight: 600 }}>
+    <Box sx={{ bgcolor: '#f5f5f5', minHeight: '100vh', p: { xs: 1, sm: 3 } }}>
+      <Typography variant="h4" sx={{ textAlign: 'center', mb: { xs: 2, sm: 3 }, fontFamily: 'Montserrat, sans-serif', fontWeight: 600, fontSize: { xs: '1.2rem', sm: '2.125rem' } }}>
         {t('myGroupAdmin.title')}
       </Typography>
 
       <Card sx={{ boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-        <CardContent>
+        <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
           {/* Main Tabs */}
           <Tabs
             value={activeMainTab}
             onChange={handleMainTabChange}
+            variant="scrollable"
+            scrollButtons="auto"
+            allowScrollButtonsMobile
             sx={TABS_STYLE}
             TabIndicatorProps={TAB_INDICATOR_PROPS}
           >
@@ -309,6 +312,9 @@ const GroupConfiguration = (): React.ReactElement => {
                 <Tabs
                   value={activeSubTab}
                   onChange={handleSubTabChange}
+                  variant="scrollable"
+                  scrollButtons="auto"
+                  allowScrollButtonsMobile
                   sx={TABS_STYLE}
                   TabIndicatorProps={TAB_INDICATOR_PROPS}
                 >

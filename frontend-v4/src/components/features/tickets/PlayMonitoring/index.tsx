@@ -664,17 +664,17 @@ const PlayMonitoring: React.FC = () => {
 
   return (
     <HoverCtx.Provider value={hoverCtxValue}>
-      <Box sx={{ p: 2 }}>
-        <Paper elevation={3} sx={{ p: 3 }}>
+      <Box sx={{ p: { xs: 1, sm: 2 } }}>
+        <Paper elevation={3} sx={{ p: { xs: 1.5, sm: 3 } }}>
           <Typography
             variant="h5"
             align="center"
-            sx={{ color: '#2c2c2c', mb: 3, fontWeight: 500, fontFamily: 'Montserrat, sans-serif' }}
+            sx={{ color: '#2c2c2c', mb: { xs: 2, sm: 3 }, fontWeight: 500, fontFamily: 'Montserrat, sans-serif', fontSize: { xs: '1.2rem', sm: '1.5rem' } }}
           >
             {t('tickets.plays.title')}
           </Typography>
 
-          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 2, mb: 2 }}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' }, gap: 2, mb: 2 }}>
             <TextField
               type="date"
               label={t('common.date')}

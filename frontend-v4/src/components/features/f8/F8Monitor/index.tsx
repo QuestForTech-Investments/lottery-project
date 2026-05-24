@@ -87,25 +87,26 @@ const F8Monitor = (): React.ReactElement => {
   const total: number = filteredData.reduce((sum, item) => sum + item.monto, 0);
 
   return (
-    <Box sx={{ p: 3, backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
+    <Box sx={{ p: { xs: 1, sm: 3 }, backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
       <Card sx={{ maxWidth: 1200, mx: 'auto' }}>
-        <CardContent sx={{ p: 4 }}>
+        <CardContent sx={{ p: { xs: 1.5, sm: 4 } }}>
           {/* Título */}
           <Typography
             variant="h5"
             sx={{
               textAlign: 'center',
-              mb: 4,
+              mb: { xs: 2, sm: 4 },
               fontFamily: 'Montserrat, sans-serif',
               fontWeight: 600,
-              color: '#2c2c2c'
+              color: '#2c2c2c',
+              fontSize: { xs: '1.1rem', sm: '1.5rem' },
             }}
           >
             {t('f8Admin.title')}
           </Typography>
 
           {/* Filtros */}
-          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 2, mb: 3 }}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' }, gap: 2, mb: 3 }}>
             <TextField
               label={t('f8Admin.dateLabel')}
               type="date"
@@ -185,7 +186,7 @@ const F8Monitor = (): React.ReactElement => {
           </Typography>
 
           {/* Filtro rápido */}
-          <Box sx={{ mb: 3, maxWidth: 400 }}>
+          <Box sx={{ mb: 3, maxWidth: { xs: '100%', sm: 400 } }}>
             <TextField
               fullWidth
               size="small"
@@ -204,8 +205,8 @@ const F8Monitor = (): React.ReactElement => {
           </Box>
 
           {/* Tabla */}
-          <TableContainer component={Paper} variant="outlined">
-            <Table>
+          <TableContainer component={Paper} variant="outlined" sx={{ overflowX: 'auto' }}>
+            <Table sx={{ minWidth: { xs: 400, sm: 'auto' } }}>
               <TableHead sx={{ bgcolor: '#f8f9fa' }}>
                 <TableRow>
                   <TableCell sx={{ fontSize: '14px', fontFamily: 'Montserrat, sans-serif', fontWeight: 600 }}>

@@ -133,12 +133,12 @@ const ZonesListMUI = (): React.ReactElement => {
   ];
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box sx={{ p: { xs: 1, sm: 3 } }}>
       <Paper elevation={3}>
-        <Box sx={{ p: 3, borderBottom: 1, borderColor: 'divider' }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Typography variant="h5" component="h1">{t('zonesAdmin.listTitle')}</Typography>
-            <Button variant="contained" startIcon={<AddIcon />} onClick={handleCreateNew}>{t('zonesAdmin.newZone')}</Button>
+        <Box sx={{ p: { xs: 1.5, sm: 3 }, borderBottom: 1, borderColor: 'divider' }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+            <Typography variant="h5" component="h1" sx={{ fontSize: { xs: '1.1rem', sm: '1.5rem' } }}>{t('zonesAdmin.listTitle')}</Typography>
+            <Button variant="contained" startIcon={<AddIcon />} onClick={handleCreateNew} sx={{ whiteSpace: 'nowrap' }}>{t('zonesAdmin.newZone')}</Button>
           </Box>
         </Box>
 
@@ -150,7 +150,7 @@ const ZonesListMUI = (): React.ReactElement => {
           </Box>
         )}
 
-        <Toolbar sx={{ justifyContent: 'space-between', gap: 2, flexWrap: 'wrap' }}>
+        <Toolbar sx={{ justifyContent: 'space-between', gap: 2, flexWrap: 'wrap', px: { xs: 1.5, sm: 3 } }}>
           <FormControlLabel control={<Switch checked={showActiveOnly} onChange={handleActiveFilterToggle} size="small" />} label={t('zonesAdmin.activeOnly')} />
           <TextField
             placeholder={t('zonesAdmin.searchPlaceholder')}
@@ -158,7 +158,7 @@ const ZonesListMUI = (): React.ReactElement => {
             onChange={handleSearchChange}
             variant="outlined"
             size="small"
-            sx={{ minWidth: 300, flexGrow: 1, maxWidth: 500 }}
+            sx={{ minWidth: { xs: '100%', sm: 300 }, flexGrow: 1, maxWidth: 500 }}
             InputProps={{
               startAdornment: <InputAdornment position="start"><SearchIcon /></InputAdornment>,
               endAdornment: searchText && <InputAdornment position="end"><IconButton size="small" onClick={handleClearSearch} edge="end"><ClearIcon /></IconButton></InputAdornment>,
@@ -181,8 +181,8 @@ const ZonesListMUI = (): React.ReactElement => {
 
         {!loading && (
           <>
-            <TableContainer>
-              <Table size="small">
+            <TableContainer sx={{ overflowX: 'auto' }}>
+              <Table size="small" sx={{ minWidth: { xs: 500, sm: 'auto' } }}>
                 <TableHead>
                   <TableRow>
                     {columns.map((column) => (

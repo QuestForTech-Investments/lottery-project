@@ -145,8 +145,8 @@ const DrawTotalsTable = ({ rows }: { rows: DrawSalesDto[] }) => {
     return <Typography variant="body2" sx={{ color: 'text.secondary' }}>{t('sales.noSalesOnDate')}</Typography>;
   }
   return (
-    <TableContainer component={Paper} variant="outlined">
-      <Table size="small">
+    <TableContainer component={Paper} variant="outlined" sx={{ overflowX: 'auto' }}>
+      <Table size="small" sx={{ minWidth: 700 }}>
         <TableHead sx={{ backgroundColor: '#e3e3e3' }}>
           <TableRow>
             <TableCell sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('drawName')}>{t('common.draw')}</TableSortLabel></TableCell>
@@ -202,8 +202,8 @@ const BancasTable = ({ rows }: { rows: BancaSalesDto[] }) => {
     return <Typography variant="body2" sx={{ color: 'text.secondary' }}>{t('sales.noBancasInZone')}</Typography>;
   }
   return (
-    <TableContainer component={Paper} variant="outlined" sx={{ maxHeight: 460 }}>
-      <Table size="small" stickyHeader>
+    <TableContainer component={Paper} variant="outlined" sx={{ maxHeight: 460, overflowX: 'auto' }}>
+      <Table size="small" stickyHeader sx={{ minWidth: 900 }}>
         <TableHead>
           <TableRow sx={{ backgroundColor: '#e3e3e3', '& th': { backgroundColor: '#e3e3e3' } }}>
             <TableCell sx={{ fontWeight: 600 }}><TableSortLabel {...getSortProps('bettingPoolCode')}>{t('common.code')}</TableSortLabel></TableCell>
@@ -306,10 +306,10 @@ const ZoneSales = (): React.ReactElement => {
   const totalTickets = summary ? summary.pendingCount + summary.loserCount + summary.winnerCount : 0;
 
   return (
-    <Box sx={{ p: 2 }}>
+    <Box sx={{ p: { xs: 1, sm: 2 } }}>
       <Paper elevation={3}>
-        <Box sx={{ p: 3 }}>
-          <Typography variant="h5" align="center" sx={{ mb: 3, fontWeight: 400 }}>
+        <Box sx={{ p: { xs: 1.5, sm: 3 } }}>
+          <Typography variant="h5" align="center" sx={{ mb: { xs: 2, sm: 3 }, fontWeight: 400, fontSize: { xs: '1.15rem', sm: '1.5rem' } }}>
             {t('sales.zoneReport')}
           </Typography>
 

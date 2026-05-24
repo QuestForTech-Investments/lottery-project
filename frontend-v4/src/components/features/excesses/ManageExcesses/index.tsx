@@ -205,17 +205,17 @@ const ManageExcesses = (): React.ReactElement => {
   const fieldKeys = Object.keys(excessValues) as FieldKey[];
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box sx={{ p: { xs: 1, sm: 3 } }}>
       {/* Título */}
       <Typography
         variant="h4"
         component="h3"
         sx={{
           textAlign: 'center',
-          mb: 3,
+          mb: { xs: 2, sm: 3 },
           color: '#2c2c2c',
           fontWeight: 600,
-          fontSize: '24px',
+          fontSize: { xs: '18px', sm: '24px' },
           fontFamily: 'Montserrat, sans-serif'
         }}
       >
@@ -223,11 +223,11 @@ const ManageExcesses = (): React.ReactElement => {
       </Typography>
 
       <Card>
-        <CardContent sx={{ p: 4 }}>
+        <CardContent sx={{ p: { xs: 1.5, sm: 4 } }}>
           {/* Filtro de Sorteo y Botón Borrar Todo */}
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: { xs: 'stretch', sm: 'center' }, flexDirection: { xs: 'column', sm: 'row' }, mb: 3, gap: 1.5 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1 }}>
-              <FormControl sx={{ minWidth: 300 }}>
+              <FormControl sx={{ minWidth: { xs: '100%', sm: 300 }, width: { xs: '100%', sm: 'auto' } }}>
                 <InputLabel sx={{ fontSize: '14px' }}>{t('excessesAdmin.draw')}</InputLabel>
                 <Select
                   value={selectedDraw}
@@ -331,7 +331,7 @@ const ManageExcesses = (): React.ReactElement => {
 
           {/* Tabla de excedentes guardados */}
           {savedExcesses.length > 0 ? (
-            <TableContainer component={Paper} sx={{ mt: 2 }}>
+            <TableContainer component={Paper} sx={{ mt: 2, overflowX: 'auto' }}>
               <Table>
                 <TableHead>
                   <TableRow sx={{ bgcolor: '#f8f9fa' }}>

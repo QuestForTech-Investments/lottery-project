@@ -99,17 +99,17 @@ const CreateLoan = (): React.ReactElement => {
   const isValid = selectedPool && parseFloat(loanAmount) > 0 && parseFloat(installmentAmount) > 0;
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box sx={{ p: { xs: 1, sm: 3 } }}>
       <Card>
-        <CardContent>
-          <Typography variant="h5" sx={{ textAlign: 'center', mb: 4, color: '#2c2c2c', fontWeight: 600 }}>
+        <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
+          <Typography variant="h5" sx={{ textAlign: 'center', mb: { xs: 2, sm: 4 }, color: '#2c2c2c', fontWeight: 600, fontSize: { xs: '1.1rem', sm: '1.5rem' } }}>
             {t('loansAdmin.create.title')}
           </Typography>
 
           <Box sx={{ maxWidth: '800px', margin: '0 auto' }}>
             {/* Entity Type */}
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
-              <Typography sx={{ width: '280px', fontSize: '12px', color: 'rgb(120, 120, 120)' }}>
+            <Box sx={{ display: 'flex', alignItems: { xs: 'stretch', sm: 'center' }, flexDirection: { xs: 'column', sm: 'row' }, mb: 1.5 }}>
+              <Typography sx={{ width: { xs: 'auto', sm: '280px' }, fontSize: '12px', color: 'rgb(120, 120, 120)', mb: { xs: 0.5, sm: 0 } }}>
                 {t('loansAdmin.create.entityType')}
               </Typography>
               <FormControl fullWidth size="small">
@@ -120,8 +120,8 @@ const CreateLoan = (): React.ReactElement => {
             </Box>
 
             {/* Entity (Banca) */}
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
-              <Typography sx={{ width: '280px', fontSize: '12px', color: 'rgb(120, 120, 120)' }}>
+            <Box sx={{ display: 'flex', alignItems: { xs: 'stretch', sm: 'center' }, flexDirection: { xs: 'column', sm: 'row' }, mb: 1.5 }}>
+              <Typography sx={{ width: { xs: 'auto', sm: '280px' }, fontSize: '12px', color: 'rgb(120, 120, 120)', mb: { xs: 0.5, sm: 0 } }}>
                 {t('loansAdmin.create.entity')}
               </Typography>
               <Autocomplete
@@ -150,8 +150,8 @@ const CreateLoan = (): React.ReactElement => {
             </Box>
 
             {/* Loan Amount */}
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
-              <Typography sx={{ width: '280px', fontSize: '12px', color: 'rgb(120, 120, 120)' }}>
+            <Box sx={{ display: 'flex', alignItems: { xs: 'stretch', sm: 'center' }, flexDirection: { xs: 'column', sm: 'row' }, mb: 1.5 }}>
+              <Typography sx={{ width: { xs: 'auto', sm: '280px' }, fontSize: '12px', color: 'rgb(120, 120, 120)', mb: { xs: 0.5, sm: 0 } }}>
                 {t('loansAdmin.create.loanAmount')}
               </Typography>
               <TextField
@@ -171,8 +171,8 @@ const CreateLoan = (): React.ReactElement => {
             </Box>
 
             {/* Installment Amount */}
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
-              <Typography sx={{ width: '280px', fontSize: '12px', color: 'rgb(120, 120, 120)' }}>
+            <Box sx={{ display: 'flex', alignItems: { xs: 'stretch', sm: 'center' }, flexDirection: { xs: 'column', sm: 'row' }, mb: 1.5 }}>
+              <Typography sx={{ width: { xs: 'auto', sm: '280px' }, fontSize: '12px', color: 'rgb(120, 120, 120)', mb: { xs: 0.5, sm: 0 } }}>
                 {t('loansAdmin.create.installmentAmount')}
               </Typography>
               <TextField
@@ -192,8 +192,8 @@ const CreateLoan = (): React.ReactElement => {
             </Box>
 
             {/* Frequency */}
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
-              <Typography sx={{ width: '280px', fontSize: '12px', color: 'rgb(120, 120, 120)' }}>
+            <Box sx={{ display: 'flex', alignItems: { xs: 'stretch', sm: 'center' }, flexDirection: { xs: 'column', sm: 'row' }, mb: 1.5 }}>
+              <Typography sx={{ width: { xs: 'auto', sm: '280px' }, fontSize: '12px', color: 'rgb(120, 120, 120)', mb: { xs: 0.5, sm: 0 } }}>
                 {t('loansAdmin.create.paymentFrequency')}
               </Typography>
               <FormControl component="fieldset" fullWidth>
@@ -222,8 +222,8 @@ const CreateLoan = (): React.ReactElement => {
 
             {/* Day of Week (only for weekly) */}
             {frequency === 'weekly' && (
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
-                <Typography sx={{ width: '280px', fontSize: '12px', color: 'rgb(120, 120, 120)' }}>
+              <Box sx={{ display: 'flex', alignItems: { xs: 'stretch', sm: 'center' }, flexDirection: { xs: 'column', sm: 'row' }, mb: 1.5 }}>
+                <Typography sx={{ width: { xs: 'auto', sm: '280px' }, fontSize: '12px', color: 'rgb(120, 120, 120)', mb: { xs: 0.5, sm: 0 } }}>
                   {t('loansAdmin.create.paymentDay')}
                 </Typography>
                 <FormControl fullWidth size="small">
@@ -241,8 +241,8 @@ const CreateLoan = (): React.ReactElement => {
             )}
 
             {/* Start Date */}
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
-              <Typography sx={{ width: '280px', fontSize: '12px', color: 'rgb(120, 120, 120)' }}>
+            <Box sx={{ display: 'flex', alignItems: { xs: 'stretch', sm: 'center' }, flexDirection: { xs: 'column', sm: 'row' }, mb: 1.5 }}>
+              <Typography sx={{ width: { xs: 'auto', sm: '280px' }, fontSize: '12px', color: 'rgb(120, 120, 120)', mb: { xs: 0.5, sm: 0 } }}>
                 {t('loansAdmin.create.startDate')}
               </Typography>
               <TextField
@@ -258,8 +258,8 @@ const CreateLoan = (): React.ReactElement => {
             </Box>
 
             {/* Interest Rate */}
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
-              <Typography sx={{ width: '280px', fontSize: '12px', color: 'rgb(120, 120, 120)' }}>
+            <Box sx={{ display: 'flex', alignItems: { xs: 'stretch', sm: 'center' }, flexDirection: { xs: 'column', sm: 'row' }, mb: 1.5 }}>
+              <Typography sx={{ width: { xs: 'auto', sm: '280px' }, fontSize: '12px', color: 'rgb(120, 120, 120)', mb: { xs: 0.5, sm: 0 } }}>
                 {t('loansAdmin.create.interestRate')}
               </Typography>
               <TextField
@@ -278,8 +278,8 @@ const CreateLoan = (): React.ReactElement => {
             </Box>
 
             {/* Notes */}
-            <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 2.5 }}>
-              <Typography sx={{ width: '280px', fontSize: '12px', color: 'rgb(120, 120, 120)', pt: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: { xs: 'stretch', sm: 'flex-start' }, flexDirection: { xs: 'column', sm: 'row' }, mb: 2.5 }}>
+              <Typography sx={{ width: { xs: 'auto', sm: '280px' }, fontSize: '12px', color: 'rgb(120, 120, 120)', pt: 1, mb: { xs: 0.5, sm: 0 } }}>
                 {t('loansAdmin.create.notes')}
               </Typography>
               <TextField

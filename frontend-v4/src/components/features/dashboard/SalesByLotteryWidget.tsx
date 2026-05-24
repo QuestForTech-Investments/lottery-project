@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { Paper, Typography, Box, CircularProgress, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TableSortLabel, Link } from '@mui/material';
+import { Paper, Typography, Box, CircularProgress, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TableSortLabel, Link, useMediaQuery, useTheme } from '@mui/material';
 import { getSalesByDraw, type SalesByDrawItem } from '@/services/dashboardService';
 import { formatCurrency } from '@/utils/formatCurrency';
 
@@ -13,6 +13,10 @@ type SortDir = 'asc' | 'desc';
 const SalesByDrawWidget: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const theme = useTheme();
+  // On phones we want Lotería → Venta → Premio to show without scroll; the
+  // remaining columns slide in via horizontal scroll inside the TableContainer.
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [data, setData] = useState<SalesByDrawItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortKey, setSortKey] = useState<SortKey>('ventas');
@@ -61,10 +65,55 @@ const SalesByDrawWidget: React.FC = () => {
     else { setSortKey(key); setSortDir('desc'); }
   };
 
-  const headerCell = (key: SortKey, label: string, align: 'left' | 'right' = 'left') => (
+  // Column descriptors — order swaps on mobile so Venta/Premio appear before
+  // the secondary columns, which the user reaches via horizontal scroll.
+  const COLUMNS_DESKTOP: { key: SortKey; labelKey: string }[] = [
+    { key: 'name', labelKey: 'dashboard.salesByDraw.lottery' },
+    { key: 'tickets', labelKey: 'dashboard.salesByDraw.tickets' },
+    { key: 'ventas', labelKey: 'dashboard.salesByDraw.sale' },
+    { key: 'comision', labelKey: 'dashboard.salesByDraw.commission' },
+    { key: 'descuento', labelKey: 'dashboard.salesByDraw.discount' },
+    { key: 'premios', labelKey: 'dashboard.salesByDraw.prize' },
+    { key: 'neto', labelKey: 'dashboard.salesByDraw.net' },
+  ];
+  const COLUMNS_MOBILE: { key: SortKey; labelKey: string }[] = [
+    { key: 'name', labelKey: 'dashboard.salesByDraw.lottery' },
+    { key: 'ventas', labelKey: 'dashboard.salesByDraw.sale' },
+    { key: 'premios', labelKey: 'dashboard.salesByDraw.prize' },
+    { key: 'tickets', labelKey: 'dashboard.salesByDraw.tickets' },
+    { key: 'comision', labelKey: 'dashboard.salesByDraw.commission' },
+    { key: 'descuento', labelKey: 'dashboard.salesByDraw.discount' },
+    { key: 'neto', labelKey: 'dashboard.salesByDraw.net' },
+  ];
+  const orderedColumns = isMobile ? COLUMNS_MOBILE : COLUMNS_DESKTOP;
+
+  // Sticky-cell helpers. Lotería pins left on phones so it survives horizontal
+  // scroll; the Totales row pins bottom on every size so the grand totals are
+  // always visible. Z-indexes form a layering hierarchy:
+  //   header–name (top-left corner) > totals–name (bottom-left corner) >
+  //   totals (bottom row) > body–name (left col) > MUI stickyHeader (top row).
+  // Callers supply bgcolor — sticky cells must be opaque or content scrolls
+  // through them.
+  const bodyNameStickySx = isMobile
+    ? { position: 'sticky' as const, left: 0, zIndex: 2, boxShadow: '2px 0 4px -2px rgba(0,0,0,0.08)' }
+    : {};
+  const headerNameStickySx = isMobile
+    ? { position: 'sticky' as const, left: 0, zIndex: 5, boxShadow: '2px 0 4px -2px rgba(0,0,0,0.08)' }
+    : {};
+  const totalsRowStickySx = { position: 'sticky' as const, bottom: 0, zIndex: 3 };
+  const totalsNameStickySx = isMobile
+    ? { ...totalsRowStickySx, left: 0, zIndex: 4, boxShadow: '2px 0 4px -2px rgba(0,0,0,0.08)' }
+    : totalsRowStickySx;
+
+  const headerCell = (
+    key: SortKey,
+    label: string,
+    align: 'left' | 'right' = 'left',
+    extraSx: Record<string, unknown> = {},
+  ) => (
     <TableCell
       align={align}
-      sx={{ fontSize: 12, fontWeight: 600, bgcolor: '#f5f5f5', color: '#444' }}
+      sx={{ fontSize: 12, fontWeight: 600, bgcolor: '#f5f5f5', color: '#444', ...extraSx }}
       sortDirection={sortKey === key ? sortDir : false}
     >
       <TableSortLabel
@@ -91,61 +140,73 @@ const SalesByDrawWidget: React.FC = () => {
           <Typography variant="body2" color="text.secondary">{t('dashboard.salesByDraw.noSales')}</Typography>
         </Box>
       ) : (
-        <TableContainer>
+        <TableContainer sx={{ overflowX: 'auto', maxHeight: { xs: 380, sm: 460 } }}>
           <Table size="small" stickyHeader>
             <TableHead>
               <TableRow>
-                {headerCell('name', t('dashboard.salesByDraw.lottery'))}
-                {headerCell('tickets', t('dashboard.salesByDraw.tickets'), 'right')}
-                {headerCell('ventas', t('dashboard.salesByDraw.sale'), 'right')}
-                {headerCell('comision', t('dashboard.salesByDraw.commission'), 'right')}
-                {headerCell('descuento', t('dashboard.salesByDraw.discount'), 'right')}
-                {headerCell('premios', t('dashboard.salesByDraw.prize'), 'right')}
-                {headerCell('neto', t('dashboard.salesByDraw.net'), 'right')}
+                {orderedColumns.map((col) => (
+                  col.key === 'name'
+                    ? headerCell('name', t('dashboard.salesByDraw.lottery'), 'left', headerNameStickySx)
+                    : headerCell(col.key, t(col.labelKey), 'right')
+                ))}
               </TableRow>
             </TableHead>
             <TableBody>
               {sortedData.map(row => (
                 <TableRow key={row.drawId} hover>
-                  <TableCell sx={{ fontSize: 13, textTransform: 'uppercase' }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      {row.imageUrl ? (
-                        <Box
-                          component="img"
-                          src={row.imageUrl}
-                          alt={row.name}
-                          sx={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, bgcolor: '#f0f0f0' }}
-                        />
-                      ) : (
-                        <Box sx={{ width: 28, height: 28, borderRadius: '50%', bgcolor: '#e0e0e0', flexShrink: 0 }} />
-                      )}
-                      <Link
-                        component="button"
-                        type="button"
-                        underline="hover"
-                        onClick={() => navigate(`/sales/day?tab=1&drawId=${row.drawId}`)}
-                        sx={{ color: ACCENT, fontWeight: 600, textAlign: 'left', textTransform: 'uppercase', fontSize: 13 }}
-                      >
-                        {row.name}
-                      </Link>
-                    </Box>
-                  </TableCell>
-                  <TableCell align="right" sx={{ fontSize: 13 }}>{row.tickets}</TableCell>
-                  <TableCell align="right" sx={{ fontSize: 13 }}>{formatCurrency(row.ventas)}</TableCell>
-                  <TableCell align="right" sx={{ fontSize: 13 }}>{formatCurrency(row.comision)}</TableCell>
-                  <TableCell align="right" sx={{ fontSize: 13 }}>{formatCurrency(row.descuento)}</TableCell>
-                  <TableCell align="right" sx={{ fontSize: 13 }}>{formatCurrency(row.premios)}</TableCell>
-                  <TableCell align="right" sx={{ fontSize: 13 }}>{formatCurrency(row.neto)}</TableCell>
+                  {orderedColumns.map((col) => {
+                    if (col.key === 'name') {
+                      return (
+                        <TableCell key="name" sx={{ fontSize: 13, textTransform: 'uppercase', bgcolor: '#fff', ...bodyNameStickySx }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            {row.imageUrl ? (
+                              <Box
+                                component="img"
+                                src={row.imageUrl}
+                                alt={row.name}
+                                sx={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, bgcolor: '#f0f0f0' }}
+                              />
+                            ) : (
+                              <Box sx={{ width: 28, height: 28, borderRadius: '50%', bgcolor: '#e0e0e0', flexShrink: 0 }} />
+                            )}
+                            <Link
+                              component="button"
+                              type="button"
+                              underline="hover"
+                              onClick={() => navigate(`/sales/day?tab=1&drawId=${row.drawId}`)}
+                              sx={{ color: ACCENT, fontWeight: 600, textAlign: 'left', textTransform: 'uppercase', fontSize: 13 }}
+                            >
+                              {row.name}
+                            </Link>
+                          </Box>
+                        </TableCell>
+                      );
+                    }
+                    const raw = row[col.key as keyof SalesByDrawItem];
+                    return (
+                      <TableCell key={col.key} align="right" sx={{ fontSize: 13 }}>
+                        {col.key === 'tickets' ? (raw as number) : formatCurrency(raw as number)}
+                      </TableCell>
+                    );
+                  })}
                 </TableRow>
               ))}
-              <TableRow sx={{ bgcolor: '#fafafa' }}>
-                <TableCell sx={{ fontSize: 13, fontWeight: 700 }}>{t('balances.totals')}</TableCell>
-                <TableCell align="right" sx={{ fontSize: 13, fontWeight: 700 }}>{totals.tickets}</TableCell>
-                <TableCell align="right" sx={{ fontSize: 13, fontWeight: 700 }}>{formatCurrency(totals.ventas)}</TableCell>
-                <TableCell align="right" sx={{ fontSize: 13, fontWeight: 700 }}>{formatCurrency(totals.comision)}</TableCell>
-                <TableCell align="right" sx={{ fontSize: 13, fontWeight: 700 }}>{formatCurrency(totals.descuento)}</TableCell>
-                <TableCell align="right" sx={{ fontSize: 13, fontWeight: 700 }}>{formatCurrency(totals.premios)}</TableCell>
-                <TableCell align="right" sx={{ fontSize: 13, fontWeight: 700 }}>{formatCurrency(totals.neto)}</TableCell>
+              <TableRow>
+                {orderedColumns.map((col) => {
+                  if (col.key === 'name') {
+                    return (
+                      <TableCell key="name" sx={{ fontSize: 13, fontWeight: 700, bgcolor: '#fafafa', ...totalsNameStickySx }}>
+                        {t('balances.totals')}
+                      </TableCell>
+                    );
+                  }
+                  const value = totals[col.key as Exclude<SortKey, 'name'>];
+                  return (
+                    <TableCell key={col.key} align="right" sx={{ fontSize: 13, fontWeight: 700, bgcolor: '#fafafa', ...totalsRowStickySx }}>
+                      {col.key === 'tickets' ? value : formatCurrency(value)}
+                    </TableCell>
+                  );
+                })}
               </TableRow>
             </TableBody>
           </Table>

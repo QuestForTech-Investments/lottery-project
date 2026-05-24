@@ -159,13 +159,13 @@ const TransactionGroupsList = (): React.ReactElement => {
   }, [loadGroups, startDate, endDate]);
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h4" sx={{ mb: 3, textAlign: 'center', fontWeight: 600, color: '#2c2c2c' }}>
+    <Box sx={{ p: { xs: 1, sm: 3 } }}>
+      <Typography variant="h4" sx={{ mb: { xs: 2, sm: 3 }, textAlign: 'center', fontWeight: 600, color: '#2c2c2c', fontSize: { xs: '1.25rem', sm: '2.125rem' } }}>
         {t('transactions.groups.title')}
       </Typography>
 
       <Card elevation={1}>
-        <CardContent sx={{ p: 3 }}>
+        <CardContent sx={{ p: { xs: 1.5, sm: 3 } }}>
           <Grid container spacing={3} sx={{ mb: 3 }}>
             <Grid item xs={12} md={4}>
               <TextField
@@ -184,14 +184,14 @@ const TransactionGroupsList = (): React.ReactElement => {
               />
             </Grid>
             <Grid item xs={12} md={4} sx={{ display: 'flex', alignItems: 'flex-end' }}>
-              <Button fullWidth variant="contained" onClick={handleFilter} sx={{ bgcolor: '#8b5cf6', '&:hover': { bgcolor: '#45b5b8' }, fontWeight: 600, textTransform: 'uppercase' }}>
+              <Button fullWidth variant="contained" onClick={handleFilter} sx={{ bgcolor: '#8b5cf6', '&:hover': { bgcolor: '#7c3aed' }, fontWeight: 600, textTransform: 'uppercase' }}>
                 {t('common.filter')}
               </Button>
             </Grid>
           </Grid>
 
           <Box sx={{ textAlign: 'center', mb: 3 }}>
-            <Button variant="contained" onClick={() => setCreateModalOpen(true)} sx={{ bgcolor: '#8b5cf6', '&:hover': { bgcolor: '#45b5b8' }, fontWeight: 600, textTransform: 'uppercase', px: 4 }}>
+            <Button variant="contained" onClick={() => setCreateModalOpen(true)} sx={{ bgcolor: '#8b5cf6', '&:hover': { bgcolor: '#7c3aed' }, fontWeight: 600, textTransform: 'uppercase', px: 4 }}>
               {t('common.create')}
             </Button>
           </Box>
@@ -208,8 +208,8 @@ const TransactionGroupsList = (): React.ReactElement => {
               <CircularProgress />
             </Box>
           ) : (
-            <TableContainer component={Paper} variant="outlined">
-              <Table size="small">
+            <TableContainer component={Paper} variant="outlined" sx={{ overflowX: 'auto' }}>
+              <Table size="small" sx={{ minWidth: 900 }}>
                 <TableHead sx={{ bgcolor: '#f8f9fa' }}>
                   <TableRow>
                     <TableCell><TableSortLabel active={sortConfig.key === 'groupNumber'} direction={sortConfig.key === 'groupNumber' ? sortConfig.direction : 'asc'} onClick={() => handleSort('groupNumber')} sx={{ fontWeight: 600 }}>{t('common.number')}</TableSortLabel></TableCell>
@@ -292,7 +292,7 @@ const TransactionGroupsList = (): React.ReactElement => {
           </Typography>
 
           <Box sx={{ textAlign: 'center', mt: 3 }}>
-            <Button variant="contained" onClick={() => setCreateModalOpen(true)} sx={{ bgcolor: '#8b5cf6', '&:hover': { bgcolor: '#45b5b8' }, fontWeight: 600, textTransform: 'uppercase', px: 4 }}>
+            <Button variant="contained" onClick={() => setCreateModalOpen(true)} sx={{ bgcolor: '#8b5cf6', '&:hover': { bgcolor: '#7c3aed' }, fontWeight: 600, textTransform: 'uppercase', px: 4 }}>
               {t('common.create')}
             </Button>
           </Box>

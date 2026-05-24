@@ -119,13 +119,13 @@ const TransactionsByBettingPool = (): React.ReactElement => {
   }, [selectedPool, startDate, endDate]);
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h4" sx={{ mb: 3, textAlign: 'center', fontWeight: 600, color: '#2c2c2c' }}>
+    <Box sx={{ p: { xs: 1, sm: 3 } }}>
+      <Typography variant="h4" sx={{ mb: { xs: 2, sm: 3 }, textAlign: 'center', fontWeight: 600, color: '#2c2c2c', fontSize: { xs: '1.25rem', sm: '2.125rem' } }}>
         {t('transactions.byBettingPool.title')}
       </Typography>
 
       <Card elevation={1} sx={{ mb: 3 }}>
-        <CardContent sx={{ p: 3 }}>
+        <CardContent sx={{ p: { xs: 1.5, sm: 3 } }}>
           <Grid container spacing={2} alignItems="flex-end">
             <Grid item xs={12} md={3}>
               <TextField
@@ -169,7 +169,7 @@ const TransactionsByBettingPool = (): React.ReactElement => {
               <Button
                 fullWidth variant="contained" onClick={handleViewSales}
                 disabled={!selectedPool || loading}
-                sx={{ bgcolor: '#8b5cf6', '&:hover': { bgcolor: '#45b5b8' }, fontWeight: 600, textTransform: 'uppercase' }}
+                sx={{ bgcolor: '#8b5cf6', '&:hover': { bgcolor: '#7c3aed' }, fontWeight: 600, textTransform: 'uppercase' }}
               >
                 {t('transactions.viewSales')}
               </Button>

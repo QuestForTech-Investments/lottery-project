@@ -50,12 +50,12 @@ const UserBlockedSessionsMUI = () => {
   const isIPTab = activeTab === 'ip';
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box sx={{ p: { xs: 1, sm: 3 } }}>
       <Paper elevation={3}>
         {/* Header */}
-        <Toolbar sx={{ pl: { sm: 2 }, pr: { xs: 1, sm: 1 }, py: 2 }}>
+        <Toolbar sx={{ pl: { xs: 1.5, sm: 2 }, pr: { xs: 1, sm: 1 }, py: 2 }}>
           <Typography
-            sx={{ flex: '1 1 100%' }}
+            sx={{ flex: '1 1 100%', fontSize: { xs: '1rem', sm: '1.25rem' } }}
             variant="h6"
             component="div"
           >
@@ -65,7 +65,7 @@ const UserBlockedSessionsMUI = () => {
 
         {/* Tabs */}
         <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-          <Tabs value={activeTab} onChange={handleTabChange}>
+          <Tabs value={activeTab} onChange={handleTabChange} variant="scrollable" scrollButtons="auto" allowScrollButtonsMobile sx={{ '& .MuiTab-root': { minWidth: { xs: 'auto', sm: 90 }, px: { xs: 1.25, sm: 2 } } }}>
             <Tab label={t('usersAdmin.tabByPassword')} value="contrasena" />
             <Tab label={t('usersAdmin.tabByPin')} value="pin" />
             <Tab label={t('usersAdmin.tabIpAddresses')} value="ip" />
@@ -73,12 +73,13 @@ const UserBlockedSessionsMUI = () => {
         </Box>
 
         {/* Search Filter */}
-        <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
+        <Box sx={{ p: { xs: 1.5, sm: 2 }, borderBottom: 1, borderColor: 'divider' }}>
           <TextField
             placeholder={t('common.filterQuick')}
             value={searchText}
             onChange={handleSearchChange}
-            sx={{ minWidth: 300 }}
+            fullWidth
+            sx={{ minWidth: { xs: 0, sm: 300 }, maxWidth: { xs: '100%', sm: 400 } }}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
@@ -97,8 +98,8 @@ const UserBlockedSessionsMUI = () => {
         </Box>
 
         {/* Table */}
-        <TableContainer>
-          <Table>
+        <TableContainer sx={{ overflowX: 'auto' }}>
+          <Table sx={{ minWidth: { xs: 500, sm: 'auto' } }}>
             <TableHead>
               <TableRow>
                 <TableCell>

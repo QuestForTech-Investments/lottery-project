@@ -644,10 +644,10 @@ const Blackboard: React.FC = () => {
 
   return (
    <HoverCtx.Provider value={hoverCtxValue}>
-    <Box sx={{ p: 2 }}>
-      <Paper elevation={3} sx={{ p: 3 }}>
+    <Box sx={{ p: { xs: 1, sm: 2 } }}>
+      <Paper elevation={3} sx={{ p: { xs: 1.5, sm: 3 } }}>
         {/* Filters */}
-        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 2, mb: 2 }}>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' }, gap: 2, mb: 2 }}>
           <TextField
             type="date"
             label={t('common.date')}

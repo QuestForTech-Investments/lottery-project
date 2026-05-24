@@ -80,8 +80,8 @@ const CreateUserMUI = () => {
    */
   if (successMessage) {
     return (
-      <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
-        <Paper elevation={3} sx={{ p: 4 }}>
+      <Container maxWidth="md" sx={{ mt: { xs: 1, sm: 4 }, mb: 4, px: { xs: 1, sm: 3 } }}>
+        <Paper elevation={3} sx={{ p: { xs: 1.5, sm: 4 } }}>
           <Box sx={{ textAlign: 'center' }}>
             <CheckCircleIcon color="success" sx={{ fontSize: 64, mb: 2 }} />
 
@@ -123,11 +123,11 @@ const CreateUserMUI = () => {
    * Main form render
    */
   return (
-    <Container maxWidth="lg" sx={{ mt: 3, mb: 4 }}>
-      <Paper elevation={3} sx={{ p: 4 }}>
+    <Container maxWidth="lg" sx={{ mt: { xs: 1, sm: 3 }, mb: 4, px: { xs: 1, sm: 3 } }}>
+      <Paper elevation={3} sx={{ p: { xs: 1.5, sm: 4 } }}>
         {/* Header */}
-        <Box sx={{ mb: 4 }}>
-          <Typography variant="h4" gutterBottom>
+        <Box sx={{ mb: { xs: 2, sm: 4 } }}>
+          <Typography variant="h4" gutterBottom sx={{ fontSize: { xs: '1.25rem', sm: '2.125rem' } }}>
             {t('usersAdmin.createNewUser')}
           </Typography>
           <Typography variant="body2" color="text.secondary">

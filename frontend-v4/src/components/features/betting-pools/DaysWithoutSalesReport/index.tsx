@@ -253,10 +253,10 @@ const DaysWithoutSalesReport: React.FC = () => {
 
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box sx={{ p: { xs: 1, sm: 3 } }}>
       <Card>
-        <CardContent>
-          <Typography variant="h5" gutterBottom>
+        <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
+          <Typography variant="h5" gutterBottom sx={{ fontSize: { xs: '1.1rem', sm: '1.5rem' } }}>
             {t('bettingPoolsAdmin.daysWithoutSalesTitle')}
           </Typography>
 
@@ -268,11 +268,11 @@ const DaysWithoutSalesReport: React.FC = () => {
               size="small"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
-              sx={{ width: 180 }}
+              sx={{ width: { xs: '100%', sm: 180 } }}
               InputLabelProps={{ shrink: true }}
             />
 
-            <FormControl sx={{ minWidth: 200 }} size="small">
+            <FormControl sx={{ minWidth: { xs: '100%', sm: 200 } }} size="small">
               <InputLabel>{t('common.zones')}</InputLabel>
               <Select
                 multiple
@@ -314,13 +314,13 @@ const DaysWithoutSalesReport: React.FC = () => {
                   </InputAdornment>
                 ),
               }}
-              sx={{ width: 300 }}
+              sx={{ width: { xs: '100%', sm: 300 } }}
             />
           </Box>
 
           {/* Data Table */}
-          <TableContainer component={Paper} variant="outlined">
-            <Table size="small">
+          <TableContainer component={Paper} variant="outlined" sx={{ overflowX: 'auto' }}>
+            <Table size="small" sx={{ minWidth: { xs: 600, sm: 'auto' } }}>
               <TableHead>
                 <TableRow>
                   <TableCell>

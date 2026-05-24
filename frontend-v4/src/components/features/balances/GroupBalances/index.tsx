@@ -104,9 +104,9 @@ const GroupBalances = (): React.ReactElement => {
   }, [filteredData]);
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Paper sx={{ p: 3 }}>
-        <Typography variant="h5" sx={{ mb: 3, textAlign: 'center', fontWeight: 600 }}>
+    <Box sx={{ p: { xs: 1, sm: 3 } }}>
+      <Paper sx={{ p: { xs: 1.5, sm: 3 } }}>
+        <Typography variant="h5" sx={{ mb: { xs: 2, sm: 3 }, textAlign: 'center', fontWeight: 600, fontSize: { xs: '1.15rem', sm: '1.5rem' } }}>
           {t('balances.groups.title')}
         </Typography>
 
@@ -119,7 +119,7 @@ const GroupBalances = (): React.ReactElement => {
         </Box>
 
         {/* Filters Section */}
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: 'wrap', gap: 2 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: { xs: 'stretch', sm: 'center' }, flexDirection: { xs: 'column', sm: 'row' }, mb: 3, flexWrap: 'wrap', gap: 2 }}>
           {/* Entries per page */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <Typography variant="body2" sx={{ color: 'text.secondary' }}>
@@ -142,7 +142,7 @@ const GroupBalances = (): React.ReactElement => {
           </Box>
 
           {/* Quick Filter */}
-          <Box sx={{ minWidth: 250 }}>
+          <Box sx={{ minWidth: { xs: '100%', sm: 250 }, width: { xs: '100%', sm: 'auto' } }}>
             <QuickFilter
               value={quickFilter}
               onChange={handleQuickFilterChange}

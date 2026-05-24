@@ -211,11 +211,11 @@ const BancasListMUI: React.FC = () => {
   ];
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box sx={{ p: { xs: 1, sm: 3 } }}>
       <Paper elevation={3}>
         {/* Header */}
-        <Box sx={{ p: 3, borderBottom: 1, borderColor: 'divider' }}>
-          <Typography variant="h5" component="h1" gutterBottom align="center">
+        <Box sx={{ p: { xs: 1.5, sm: 3 }, borderBottom: 1, borderColor: 'divider' }}>
+          <Typography variant="h5" component="h1" gutterBottom align="center" sx={{ fontSize: { xs: '1.1rem', sm: '1.5rem' }, m: 0 }}>
             {t('bettingPoolsAdmin.listTitle')}
           </Typography>
         </Box>
@@ -242,9 +242,9 @@ const BancasListMUI: React.FC = () => {
         )}
 
         {/* Toolbar with filters and search */}
-        <Toolbar sx={{ justifyContent: 'space-between', gap: 2, flexWrap: 'wrap' }}>
+        <Toolbar sx={{ justifyContent: 'space-between', gap: 2, flexWrap: 'wrap', px: { xs: 1.5, sm: 3 } }}>
           {/* Zone Filter */}
-          <FormControl size="small" sx={{ minWidth: 200 }}>
+          <FormControl size="small" sx={{ minWidth: { xs: '100%', sm: 200 } }}>
             <InputLabel>{t('common.zones')}</InputLabel>
             <Select
               multiple
@@ -278,7 +278,7 @@ const BancasListMUI: React.FC = () => {
             onChange={handleSearchChange}
             variant="outlined"
             size="small"
-            sx={{ minWidth: 300, flexGrow: 1, maxWidth: 500 }}
+            sx={{ minWidth: { xs: '100%', sm: 300 }, flexGrow: 1, maxWidth: 500 }}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
@@ -334,8 +334,8 @@ const BancasListMUI: React.FC = () => {
         {/* Table */}
         {!loading && (
           <>
-            <TableContainer>
-              <Table size="small">
+            <TableContainer sx={{ overflowX: 'auto' }}>
+              <Table size="small" sx={{ minWidth: { xs: 600, sm: 'auto' } }}>
                 <TableHead>
                   <TableRow>
                     {columns.map((column) => (

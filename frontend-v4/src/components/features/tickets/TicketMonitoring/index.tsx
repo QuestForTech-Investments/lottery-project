@@ -148,8 +148,8 @@ const TicketMonitoring: FC = () => {
 
   return (
     <Paper elevation={3} sx={{ minHeight: 'calc(100vh - 96px)' }}>
-      <Box sx={{ p: 2 }}>
-        <Typography variant="h5" align="center" sx={STYLES.title}>
+      <Box sx={{ p: { xs: 1, sm: 2 } }}>
+        <Typography variant="h5" align="center" sx={{ ...STYLES.title, fontSize: { xs: '1.2rem', sm: '1.7rem' } }}>
           {t('tickets.monitoring.title')}
         </Typography>
 
@@ -171,10 +171,10 @@ const TicketMonitoring: FC = () => {
               onChange={handleFechaChange}
               InputLabelProps={{ shrink: true }}
               size="small"
-              sx={{ width: 200, ...COMPACT_INPUT_STYLE }}
+              sx={{ width: { xs: '100%', sm: 200 }, ...COMPACT_INPUT_STYLE }}
             />
           </Box>
-          <Box>
+          <Box sx={{ width: { xs: '100%', sm: 'auto' } }}>
             <Typography variant="caption" sx={STYLES.filterLabel}>
               {t('common.bettingPool')}
             </Typography>
@@ -187,10 +187,10 @@ const TicketMonitoring: FC = () => {
               renderInput={(params) => (
                 <TextField {...params} size="small" sx={COMPACT_INPUT_STYLE} />
               )}
-              sx={{ width: 280 }}
+              sx={{ width: { xs: '100%', sm: 280 } }}
             />
           </Box>
-          <Box>
+          <Box sx={{ width: { xs: '100%', sm: 'auto' } }}>
             <Typography variant="caption" sx={STYLES.filterLabel}>
               {t('common.draw')}
             </Typography>
@@ -203,12 +203,12 @@ const TicketMonitoring: FC = () => {
               renderInput={(params) => (
                 <TextField {...params} size="small" sx={COMPACT_INPUT_STYLE} />
               )}
-              sx={{ width: 220 }}
+              sx={{ width: { xs: '100%', sm: 220 } }}
             />
           </Box>
           {!isCompactView && (
             <>
-              <Box>
+              <Box sx={{ width: { xs: '100%', sm: 'auto' } }}>
                 <Typography variant="caption" sx={STYLES.filterLabel}>
                   {t('tickets.plays.playType')}
                 </Typography>
@@ -221,10 +221,10 @@ const TicketMonitoring: FC = () => {
                   renderInput={(params) => (
                     <TextField {...params} size="small" sx={COMPACT_INPUT_STYLE} />
                   )}
-                  sx={{ width: 200 }}
+                  sx={{ width: { xs: '100%', sm: 200 } }}
                 />
               </Box>
-              <Box>
+              <Box sx={{ width: { xs: '100%', sm: 'auto' } }}>
                 <Typography variant="caption" sx={STYLES.filterLabel}>
                   {t('common.number')}
                 </Typography>
@@ -233,7 +233,7 @@ const TicketMonitoring: FC = () => {
                   onChange={handleNumeroChange}
                   size="small"
                   placeholder={placeholderForBetType(tipoJugada?.code, tipoJugada?.numberLength)}
-                  sx={{ width: 200, ...COMPACT_INPUT_STYLE }}
+                  sx={{ width: { xs: '100%', sm: 200 }, ...COMPACT_INPUT_STYLE }}
                 />
               </Box>
             </>
@@ -242,7 +242,7 @@ const TicketMonitoring: FC = () => {
 
         {/* Row 2: Zonas, Filter button, and toggles */}
         <Box sx={{ ...STYLES.filtersRow, mb: 1, alignItems: 'center' }}>
-          <Box sx={{ width: 220 }}>
+          <Box sx={{ width: { xs: '100%', sm: 220 } }}>
             <Typography variant="caption" sx={STYLES.filterLabel}>
               {t('common.zones')}
             </Typography>
@@ -252,20 +252,20 @@ const TicketMonitoring: FC = () => {
               options={zonasList.map((z) => ({ id: z.id, label: z.name }))}
               selectedIds={zonas}
               onChange={handleZonasChange}
-              minWidth={220}
+              minWidth={0}
             />
           </Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', pt: 2.5 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', pt: { xs: 0, sm: 2.5 }, width: { xs: '100%', sm: 'auto' } }}>
             <Button
               variant="contained"
               onClick={handleFilterClick}
               disabled={isLoading || isInitialLoad}
-              sx={{ ...STYLES.filterButton, py: 0.6, fontSize: '0.8rem' }}
+              sx={{ ...STYLES.filterButton, py: 0.6, fontSize: '0.8rem', width: { xs: '100%', sm: 'auto' } }}
             >
               {isLoading ? t('common.loading') : t('common.filter')}
             </Button>
           </Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', ml: '42px', pt: 2.5 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', ml: { xs: 0, sm: '42px' }, pt: { xs: 0, sm: 2.5 }, flexWrap: 'wrap' }}>
             <FormControlLabel
               control={<IOSSwitch checked={pendientesPago} onChange={handlePendientesPagoChange} />}
               label={<Typography variant="body2" sx={{ ml: 1 }}>{t('tickets.monitoring.pendingPayment')}</Typography>}
@@ -274,7 +274,7 @@ const TicketMonitoring: FC = () => {
             <FormControlLabel
               control={<IOSSwitch checked={soloGanadores} onChange={handleSoloGanadoresChange} />}
               label={<Typography variant="body2" sx={{ ml: 1 }}>{t('ticketStatus.winner')}</Typography>}
-              sx={{ ml: '5px' }}
+              sx={{ ml: { xs: 0, sm: '5px' } }}
             />
           </Box>
         </Box>
@@ -290,23 +290,25 @@ const TicketMonitoring: FC = () => {
         {/* Totals Panel */}
         <TotalsPanel totals={totals} />
 
-        {/* Table and Detail Panel side by side */}
-        <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
-          {/* Left: Quick Search and Table */}
-          <Box sx={{ flexShrink: 0 }}>
+        {/* Table and Detail Panel — side-by-side on md+, stacked on mobile so
+            the detail panel shows BELOW the table instead of competing for
+            horizontal space at narrow widths. */}
+        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 2, alignItems: 'flex-start' }}>
+          {/* Left (top on mobile): Quick Search and Table */}
+          <Box sx={{ flexShrink: { xs: 1, md: 0 }, width: { xs: '100%', md: 'auto' }, minWidth: 0 }}>
             {/* Quick Search */}
             <TextField
               placeholder={t('common.filterQuick')}
               value={filtroRapido}
               onChange={handleFiltroRapidoChange}
               size="small"
-              sx={{ ...STYLES.quickSearch, mt: '-30px', mb: 1, position: 'relative', zIndex: 1 }}
+              sx={{ ...STYLES.quickSearch, mt: { xs: 0, sm: '-30px' }, mb: 1, position: 'relative', zIndex: 1, maxWidth: { xs: '100%', sm: 200 } }}
             />
 
             {/* Tickets Table */}
-            <Box sx={{ height: isCompactView ? 400 : 'calc(100vh - 380px)', mt: '-11px' }}>
-              <TableContainer component={Paper} variant="outlined" sx={{ ...STYLES.tableContainer, height: '100%', overflow: 'auto' }}>
-                <Table size="small" stickyHeader sx={{ tableLayout: 'fixed', width: '100%' }}>
+            <Box sx={{ height: { xs: 400, sm: isCompactView ? 400 : 'calc(100vh - 380px)' }, mt: { xs: 0, sm: '-11px' } }}>
+              <TableContainer component={Paper} variant="outlined" sx={{ ...STYLES.tableContainer, height: '100%', overflow: 'auto', maxWidth: { xs: '100%', sm: 920 } }}>
+                <Table size="small" stickyHeader sx={{ tableLayout: 'fixed', width: '100%', minWidth: { xs: 880, sm: '100%' } }}>
                   <TableHead sx={STYLES.tableHeader}>
                     <TableRow>
                       {TABLE_COLUMNS.map((col, idx) => {
@@ -339,9 +341,18 @@ const TicketMonitoring: FC = () => {
             </Box>
           </Box>
 
-          {/* Right: Ticket Detail Panel */}
+          {/* Right (below on mobile): Ticket Detail Panel.
+              `position: sticky` is desktop-only — on mobile the panel scrolls
+              naturally below the table. */}
           {selectedTicket && (
-            <Box sx={{ flexGrow: 1, minWidth: 350, position: 'sticky', top: 16, mt: '10px' }}>
+            <Box sx={{
+              flexGrow: 1,
+              width: { xs: '100%', md: 'auto' },
+              minWidth: { xs: 0, md: 350 },
+              position: { xs: 'static', md: 'sticky' },
+              top: { md: 16 },
+              mt: { xs: 1, md: '10px' },
+            }}>
               <TicketDetailPanel ticket={selectedTicket} onClose={handleCloseDetail} />
             </Box>
           )}

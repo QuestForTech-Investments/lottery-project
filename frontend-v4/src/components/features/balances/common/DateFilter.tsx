@@ -23,7 +23,7 @@ const DateFilter = React.memo(({
   }, [onChange]);
 
   return (
-    <Box>
+    <Box sx={{ width: { xs: '100%', sm: 'auto' } }}>
       <Typography
         variant="body2"
         sx={{
@@ -39,8 +39,9 @@ const DateFilter = React.memo(({
         size="small"
         value={value}
         onChange={handleChange}
+        fullWidth
         sx={{
-          minWidth: 200,
+          minWidth: { xs: 0, sm: 200 },
           '& .MuiOutlinedInput-root': {
             backgroundColor: '#fff',
           }

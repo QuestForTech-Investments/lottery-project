@@ -9,6 +9,7 @@ import {
   Button,
   Stack,
   Table,
+  TableContainer,
   TableHead,
   TableBody,
   TableRow,
@@ -251,13 +252,13 @@ const WinningPlays: React.FC = () => {
   }, [groupedData, startDate, endDate, selectedDraw, selectedZoneIds, zonesList.length, totalSales, totalPrizes, winningPlays.length, t]);
 
   return (
-    <Box sx={{ p: 2 }}>
+    <Box sx={{ p: { xs: 1, sm: 2 } }}>
       <Paper elevation={3}>
-        <Box sx={{ p: 3 }}>
+        <Box sx={{ p: { xs: 1.5, sm: 3 } }}>
           <Typography
             variant="h5"
             align="center"
-            sx={{ color: '#2c2c2c', mb: 4, fontWeight: 500, fontFamily: 'Montserrat, sans-serif' }}
+            sx={{ color: '#2c2c2c', mb: { xs: 2, sm: 4 }, fontWeight: 500, fontFamily: 'Montserrat, sans-serif', fontSize: { xs: '1.2rem', sm: '1.5rem' } }}
           >
             {t('tickets.winners.title')}
           </Typography>
@@ -362,8 +363,8 @@ const WinningPlays: React.FC = () => {
               )}
 
               {!loading && groupedData.length > 0 && (
-                <Paper variant="outlined">
-                  <Table size="small">
+                <TableContainer component={Paper} variant="outlined" sx={{ overflowX: 'auto' }}>
+                  <Table size="small" sx={{ minWidth: { xs: 500, sm: 'auto' } }}>
                     {groupedData.map((draw) => (
                       <React.Fragment key={draw.drawId}>
                         <TableHead>
@@ -425,7 +426,7 @@ const WinningPlays: React.FC = () => {
                       </TableRow>
                     </TableBody>
                   </Table>
-                </Paper>
+                </TableContainer>
               )}
             </>
           )}

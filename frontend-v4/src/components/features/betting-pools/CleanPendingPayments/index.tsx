@@ -95,13 +95,16 @@ const CleanPendingPayments: React.FC = () => {
   }
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box sx={{ p: { xs: 1, sm: 3 } }}>
       <Card>
-        <CardContent>
+        <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
           <Tabs
             value={activeTab}
             onChange={(_, newValue) => setActiveTab(newValue)}
-            sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}
+            variant="scrollable"
+            scrollButtons="auto"
+            allowScrollButtonsMobile
+            sx={{ borderBottom: 1, borderColor: 'divider', mb: 3, '& .MuiTab-root': { minWidth: { xs: 'auto', sm: 90 }, px: { xs: 1.5, sm: 2 } } }}
           >
             <Tab label={t('bettingPoolsAdmin.tabList')} />
             <Tab label={t('bettingPoolsAdmin.tabReport')} />

@@ -126,11 +126,11 @@ const EditBettingPoolMUI: React.FC = () => {
    * Render main form
    */
   return (
-    <Box sx={{ p: 3 }}>
+    <Box sx={{ p: { xs: 1, sm: 3 } }}>
       <Paper elevation={3}>
         {/* Header */}
-        <Box sx={{ p: 3, borderBottom: 1, borderColor: 'divider' }}>
-          <Typography variant="h5" component="h1" align="center">
+        <Box sx={{ p: { xs: 1.5, sm: 3 }, borderBottom: 1, borderColor: 'divider' }}>
+          <Typography variant="h5" component="h1" align="center" sx={{ fontSize: { xs: '1.1rem', sm: '1.5rem' } }}>
             {t('editBettingPool.title')}
           </Typography>
           <Typography variant="body2" color="text.secondary" align="center" sx={{ mt: 1 }}>

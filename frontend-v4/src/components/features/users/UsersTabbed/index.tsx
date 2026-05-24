@@ -65,11 +65,11 @@ const UsersTabbedMUI: React.FC = () => {
   }, []);
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box sx={{ p: { xs: 1, sm: 3 } }}>
       <Paper elevation={3}>
         {/* Header */}
-        <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
-          <Typography variant="h5" component="h1" align="center">
+        <Box sx={{ p: { xs: 1.5, sm: 2 }, borderBottom: 1, borderColor: 'divider' }}>
+          <Typography variant="h5" component="h1" align="center" sx={{ fontSize: { xs: '1.1rem', sm: '1.5rem' } }}>
             {t('usersAdmin.listTitle')}
           </Typography>
         </Box>
@@ -87,6 +87,9 @@ const UsersTabbedMUI: React.FC = () => {
                 textTransform: 'none',
                 fontWeight: 500,
                 py: 2,
+                minWidth: { xs: 'auto', sm: 90 },
+                px: { xs: 1.25, sm: 2 },
+                fontSize: { xs: '0.8125rem', sm: '0.875rem' },
               },
               '& .Mui-selected': {
                 color: '#8b5cf6',
