@@ -206,8 +206,8 @@ const AutomaticLimits = (): React.ReactElement => {
   const bettingPools = params?.bettingPools || [];
 
   return (
-    <Box sx={{ p: 3, bgcolor: '#f5f5f5', minHeight: '100vh' }}>
-      <Typography variant="h4" sx={{ textAlign: 'center', mb: 3, fontSize: '24px', fontWeight: 500, color: '#2c2c2c' }}>
+    <Box sx={{ p: { xs: 1, sm: 3 }, bgcolor: '#f5f5f5', minHeight: '100vh' }}>
+      <Typography variant="h4" sx={{ textAlign: 'center', mb: { xs: 2, sm: 3 }, fontSize: { xs: '18px', sm: '24px' }, fontWeight: 500, color: '#2c2c2c' }}>
         {t('limitsAdmin.automatic.title')}
       </Typography>
 
@@ -215,10 +215,13 @@ const AutomaticLimits = (): React.ReactElement => {
         <Tabs
           value={activeTab}
           onChange={(e, newValue) => setActiveTab(newValue)}
+          variant="scrollable"
+          scrollButtons="auto"
+          allowScrollButtonsMobile
           sx={{
             borderBottom: 2,
             borderColor: '#6366f1',
-            '& .MuiTab-root': { fontSize: '14px' },
+            '& .MuiTab-root': { fontSize: { xs: '12px', sm: '14px' }, minWidth: { xs: 'auto', sm: 90 }, px: { xs: 1.25, sm: 2 } },
             '& .Mui-selected': { color: '#6366f1' }
           }}
           TabIndicatorProps={{ style: { backgroundColor: '#6366f1' } }}
@@ -227,7 +230,7 @@ const AutomaticLimits = (): React.ReactElement => {
           <Tab label={t('limitsAdmin.automatic.tabRandomBlock')} />
         </Tabs>
 
-        <CardContent sx={{ p: 4 }}>
+        <CardContent sx={{ p: { xs: 1.5, sm: 4 } }}>
           {/* Tab General */}
           {activeTab === 0 && (
             <Box>
@@ -235,7 +238,7 @@ const AutomaticLimits = (): React.ReactElement => {
                 {t('limitsAdmin.automatic.sectionGeneralByNumber')}
               </Typography>
 
-              <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 3, mb: 4 }}>
+              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' }, gap: { xs: 2, sm: 3 }, mb: 4 }}>
                 <Box>
                   <FormControlLabel
                     control={
@@ -304,7 +307,7 @@ const AutomaticLimits = (): React.ReactElement => {
                 {t('limitsAdmin.automatic.sectionLinePools')}
               </Typography>
 
-              <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 3, mb: 4 }}>
+              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' }, gap: { xs: 2, sm: 3 }, mb: 4 }}>
                 <Box>
                   <FormControlLabel
                     control={
@@ -400,7 +403,7 @@ const AutomaticLimits = (): React.ReactElement => {
 
           {/* Tab Bloqueo Aleatorio */}
           {activeTab === 1 && (
-            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 3 }}>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: { xs: 2, sm: 3 } }}>
               <Box>
                 <Typography sx={{ fontSize: '12px', color: '#787878', mb: 1 }}>
                   {t('limitsAdmin.automatic.drawsRequired')}

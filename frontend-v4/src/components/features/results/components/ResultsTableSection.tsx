@@ -135,8 +135,8 @@ const ResultsTableSection: FC<ResultsTableSectionProps> = memo(({
           <CircularProgress />
         </Box>
       ) : (
-        <TableContainer component={Paper} variant="outlined">
-          <Table size="small" stickyHeader>
+        <TableContainer component={Paper} variant="outlined" sx={{ overflowX: 'auto' }}>
+          <Table size="small" stickyHeader sx={{ minWidth: { xs: 700, sm: 'auto' } }}>
             <TableHead>
               <TableRow>
                 <TableCell sx={{ fontWeight: 600, bgcolor: COLORS.headerBg, minWidth: 140, fontSize: '13px', color: '#555' }}>

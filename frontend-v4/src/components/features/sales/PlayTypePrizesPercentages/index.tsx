@@ -321,7 +321,13 @@ const PlayTypePrizesPercentages = (): React.ReactElement => {
             </Typography>
           ) : (
             <>
-              <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
+              <Stack
+                direction={{ xs: 'column', sm: 'row' }}
+                justifyContent="space-between"
+                alignItems={{ xs: 'stretch', sm: 'center' }}
+                spacing={1}
+                sx={{ mb: 1 }}
+              >
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Typography variant="caption" sx={{ color: 'text.secondary' }}>{t('balances.entriesPerPage')}</Typography>
                   <FormControl size="small">
@@ -339,7 +345,7 @@ const PlayTypePrizesPercentages = (): React.ReactElement => {
                   value={filtroRapido}
                   onChange={(e) => { setFiltroRapido(e.target.value); setPage(0); }}
                   InputProps={{ endAdornment: <InputAdornment position="end"><SearchIcon /></InputAdornment> }}
-                  sx={{ width: 280 }}
+                  sx={{ width: { xs: '100%', sm: 280 } }}
                 />
               </Stack>
 

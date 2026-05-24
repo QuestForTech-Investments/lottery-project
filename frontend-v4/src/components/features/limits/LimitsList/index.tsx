@@ -62,8 +62,8 @@ const ACCENT = '#6366f1';
 const ACCENT_HOVER = '#5558e6';
 
 const styles = {
-  container: { p: 3, bgcolor: '#f5f5f5', minHeight: '100vh' },
-  title: { textAlign: 'center', mb: 3, fontSize: '28px', fontWeight: 400, color: '#2c2c2c', fontFamily: 'Montserrat, "Helvetica Neue", Arial, sans-serif' },
+  container: { p: { xs: 1, sm: 3 }, bgcolor: '#f5f5f5', minHeight: '100vh' },
+  title: { textAlign: 'center', mb: { xs: 2, sm: 3 }, fontSize: { xs: '20px', sm: '28px' }, fontWeight: 400, color: '#2c2c2c', fontFamily: 'Montserrat, "Helvetica Neue", Arial, sans-serif' },
   card: { bgcolor: 'white', borderRadius: '12px', boxShadow: 'rgba(0, 0, 0, 0.15) 0px 6px 10px -4px', mb: 2 },
   label: { color: '#9a9a9a', fontSize: '12px', fontWeight: 400, mb: 0.5, display: 'block' },
   select: {
@@ -78,7 +78,11 @@ const styles = {
     boxShadow: 'none', '&:hover': { bgcolor: ACCENT_HOVER },
   },
   dayTab: {
-    textTransform: 'none' as const, fontSize: '14px', fontWeight: 500, minWidth: 0, flex: 1,
+    textTransform: 'none' as const, fontSize: '14px', fontWeight: 500,
+    // Each tab sizes to its label so scrollable variant can lay them out
+    // naturally; setting flex:1 here used to squash the labels on phones.
+    minWidth: 'auto',
+    px: 2,
     color: '#666', '&.Mui-selected': { color: ACCENT, fontWeight: 600 },
   },
   drawTab: {
@@ -355,8 +359,8 @@ const LimitsList = (): React.ReactElement => {
         )}
 
         {/* Table */}
-        <TableContainer>
-          <Table size="small">
+        <TableContainer sx={{ overflowX: 'auto' }}>
+          <Table size="small" sx={{ minWidth: { xs: 600, sm: 'auto' } }}>
             <TableHead>
               <TableRow sx={styles.tableHeader}>
                 <TableCell>{t('limitsAdmin.list.tableGameType')}</TableCell>
@@ -449,9 +453,9 @@ const LimitsList = (): React.ReactElement => {
 
       {/* Filters */}
       <Box sx={styles.card}>
-        <Box sx={{ p: 3 }}>
+        <Box sx={{ p: { xs: 1.5, sm: 3 } }}>
           <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap', justifyContent: 'center' }}>
-            <Box sx={{ minWidth: 180 }}>
+            <Box sx={{ minWidth: { xs: '100%', sm: 180 } }}>
               <Typography component="label" sx={styles.label}>{t('limitsAdmin.list.filterLimitType')}</Typography>
               <FormControl fullWidth size="small">
                 <Select value={filterLimitType} onChange={(e: SelectChangeEvent) => setFilterLimitType(e.target.value)} displayEmpty sx={styles.select}>
@@ -460,7 +464,7 @@ const LimitsList = (): React.ReactElement => {
                 </Select>
               </FormControl>
             </Box>
-            <Box sx={{ minWidth: 180 }}>
+            <Box sx={{ minWidth: { xs: '100%', sm: 180 } }}>
               <Typography component="label" sx={styles.label}>{t('limitsAdmin.list.filterDraws')}</Typography>
               <FormControl fullWidth size="small" disabled={paramsLoading}>
                 <Select value={filterDrawId} onChange={(e: SelectChangeEvent) => setFilterDrawId(e.target.value)} displayEmpty sx={styles.select}>
@@ -469,7 +473,7 @@ const LimitsList = (): React.ReactElement => {
                 </Select>
               </FormControl>
             </Box>
-            <Box sx={{ minWidth: 160 }}>
+            <Box sx={{ minWidth: { xs: '100%', sm: 160 } }}>
               <Typography component="label" sx={styles.label}>{t('limitsAdmin.list.filterDays')}</Typography>
               <FormControl fullWidth size="small">
                 <Select value={filterDay} onChange={(e: SelectChangeEvent) => setFilterDay(e.target.value)} displayEmpty sx={styles.select}>
@@ -478,7 +482,7 @@ const LimitsList = (): React.ReactElement => {
                 </Select>
               </FormControl>
             </Box>
-            <Box sx={{ minWidth: 160 }}>
+            <Box sx={{ minWidth: { xs: '100%', sm: 160 } }}>
               <Typography component="label" sx={styles.label}>{t('limitsAdmin.list.filterZones')}</Typography>
               <FormControl fullWidth size="small" disabled={paramsLoading}>
                 <Select value={filterZone} onChange={(e: SelectChangeEvent) => setFilterZone(e.target.value)} displayEmpty sx={styles.select}>
@@ -496,10 +500,17 @@ const LimitsList = (): React.ReactElement => {
         </Box>
       </Box>
 
-      {/* Day tabs */}
+      {/* Day tabs — scrollable so phone widths get horizontal scroll instead
+          of squished labels; on desktop all 7 fit and no buttons appear. */}
       <Box sx={styles.card}>
-        <Tabs value={selectedDayIdx} onChange={(_, v) => setSelectedDayIdx(v)} variant="fullWidth"
-          TabIndicatorProps={{ sx: { bgcolor: ACCENT, height: 3 } }}>
+        <Tabs
+          value={selectedDayIdx}
+          onChange={(_, v) => setSelectedDayIdx(v)}
+          variant="scrollable"
+          scrollButtons="auto"
+          allowScrollButtonsMobile
+          TabIndicatorProps={{ sx: { bgcolor: ACCENT, height: 3 } }}
+        >
           {DAY_LABELS.map((label, idx) => <Tab key={idx} label={label} sx={styles.dayTab} />)}
         </Tabs>
       </Box>

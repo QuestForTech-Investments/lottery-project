@@ -360,7 +360,8 @@ const LoginMUI = () => {
             }}
           />
 
-          {/* Submit Button - Teal on mobile like original, red on desktop */}
+          {/* Submit Button — red across all sizes (mobile used to flip teal to
+              mimic the original Vue app; user prefers the desktop red on phones too). */}
           <Button
             id="log-in"
             type="submit"
@@ -384,26 +385,13 @@ const LoginMUI = () => {
               fontWeight: 600,
               textTransform: 'uppercase',
               letterSpacing: '0.05em',
-              // Teal on mobile (like original), red on desktop
-              background: {
-                xs: 'linear-gradient(135deg, #319795 0%, #2c7a7b 100%)',
-                sm: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)'
-              },
+              background: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
               color: 'white',
-              boxShadow: {
-                xs: '0 4px 14px rgba(49, 151, 149, 0.4)',
-                sm: '0 4px 14px rgba(220, 38, 38, 0.4)'
-              },
+              boxShadow: '0 4px 14px rgba(220, 38, 38, 0.4)',
               transition: 'all 0.25s ease',
               '&:hover': {
-                background: {
-                  xs: 'linear-gradient(135deg, #38b2ac 0%, #319795 100%)',
-                  sm: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'
-                },
-                boxShadow: {
-                  xs: '0 6px 20px rgba(49, 151, 149, 0.5)',
-                  sm: '0 6px 20px rgba(220, 38, 38, 0.5)'
-                },
+                background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                boxShadow: '0 6px 20px rgba(220, 38, 38, 0.5)',
                 transform: 'translateY(-1px)',
               },
               '&:active': {

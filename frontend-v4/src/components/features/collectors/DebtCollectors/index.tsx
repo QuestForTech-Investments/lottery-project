@@ -169,7 +169,7 @@ const DebtCollectors = (): React.ReactElement => {
   }, [handleCreateFormChange]);
 
   return (
-    <Box sx={{ p: 3, bgcolor: '#f5f5f5', minHeight: '100vh' }}>
+    <Box sx={{ p: { xs: 1, sm: 3 }, bgcolor: '#f5f5f5', minHeight: '100vh' }}>
       {/* Botón Refrescar */}
       <Box sx={{ textAlign: 'center', mb: 3 }}>
         <Button
@@ -195,10 +195,13 @@ const DebtCollectors = (): React.ReactElement => {
         <Tabs
           value={activeTab}
           onChange={handleTabChange}
+          variant="scrollable"
+          scrollButtons="auto"
+          allowScrollButtonsMobile
           sx={{
             borderBottom: 2,
             borderColor: '#6366f1',
-            '& .MuiTab-root': { fontSize: '14px' },
+            '& .MuiTab-root': { fontSize: { xs: '12px', sm: '14px' }, minWidth: { xs: 'auto', sm: 90 }, px: { xs: 1.25, sm: 2 } },
             '& .Mui-selected': { color: '#6366f1' }
           }}
           TabIndicatorProps={{ style: { backgroundColor: '#6366f1' } }}
@@ -208,7 +211,7 @@ const DebtCollectors = (): React.ReactElement => {
           <Tab label={t('collectorsAdmin.list.tabCreate')} />
         </Tabs>
 
-        <CardContent sx={{ p: 3 }}>
+        <CardContent sx={{ p: { xs: 1.5, sm: 3 } }}>
           {/* Tab Balances */}
           {activeTab === 0 && (
             <Box>
@@ -219,7 +222,7 @@ const DebtCollectors = (): React.ReactElement => {
                   value={quickFilter}
                   onChange={handleQuickFilterChange}
                   size="small"
-                  sx={{ width: '300px' }}
+                  sx={{ width: { xs: '100%', sm: '300px' } }}
                   InputProps={{
                     endAdornment: (
                       <InputAdornment position="end">
@@ -232,7 +235,7 @@ const DebtCollectors = (): React.ReactElement => {
               </Box>
 
               {/* Table */}
-              <TableContainer component={Paper} variant="outlined">
+              <TableContainer component={Paper} variant="outlined" sx={{ overflowX: 'auto' }}>
                 <Table>
                   <TableHead>
                     <TableRow sx={{ bgcolor: '#e3e3e3' }}>
@@ -329,7 +332,7 @@ const DebtCollectors = (): React.ReactElement => {
               </Box>
 
               {/* Table */}
-              <TableContainer component={Paper} variant="outlined">
+              <TableContainer component={Paper} variant="outlined" sx={{ overflowX: 'auto' }}>
                 <Table>
                   <TableHead>
                     <TableRow sx={{ bgcolor: '#e3e3e3' }}>

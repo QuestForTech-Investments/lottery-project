@@ -363,7 +363,9 @@ const PrizesTab: React.FC<PrizesTabProps> = ({
         <Tabs
           value={activeSubTab}
           onChange={handleSubTabChange}
-          variant="fullWidth"
+          variant="scrollable"
+          scrollButtons="auto"
+          allowScrollButtonsMobile
           sx={{
             '& .MuiTab-root': { fontWeight: 'bold', fontSize: '0.95rem' }
           }}

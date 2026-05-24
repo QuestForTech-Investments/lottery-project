@@ -168,17 +168,17 @@ const ExcessesReport = (): React.ReactElement => {
   }, []);
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box sx={{ p: { xs: 1, sm: 3 } }}>
       {/* Título */}
       <Typography
         variant="h4"
         component="h3"
         sx={{
           textAlign: 'center',
-          mb: 3,
+          mb: { xs: 2, sm: 3 },
           color: '#2c2c2c',
           fontWeight: 600,
-          fontSize: '24px',
+          fontSize: { xs: '18px', sm: '24px' },
           fontFamily: 'Montserrat, sans-serif'
         }}
       >
@@ -186,9 +186,9 @@ const ExcessesReport = (): React.ReactElement => {
       </Typography>
 
       <Card>
-        <CardContent sx={{ p: 4 }}>
+        <CardContent sx={{ p: { xs: 1.5, sm: 4 } }}>
           {/* Filtros */}
-          <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, mb: 3 }}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2, mb: 3 }}>
             {/* Multi-select Sorteo */}
             <FormControl fullWidth>
               <InputLabel sx={{ fontSize: '14px' }}>{t('excessesAdmin.draw')}</InputLabel>
@@ -260,7 +260,7 @@ const ExcessesReport = (): React.ReactElement => {
               placeholder={t('common.filterQuick')}
               value={quickFilter}
               onChange={(e) => setQuickFilter(e.target.value)}
-              sx={{ width: 300 }}
+              sx={{ width: { xs: '100%', sm: 300 } }}
               InputProps={{
                 endAdornment: <SearchIcon sx={{ color: '#8b5cf6' }} />,
                 sx: { fontSize: '14px' }
@@ -271,8 +271,8 @@ const ExcessesReport = (): React.ReactElement => {
           {/* Tabla de reporte */}
           {filteredData.length > 0 ? (
             <>
-              <TableContainer component={Paper}>
-                <Table>
+              <TableContainer component={Paper} sx={{ overflowX: 'auto' }}>
+                <Table sx={{ minWidth: { xs: 600, sm: 'auto' } }}>
                   <TableHead>
                     <TableRow sx={{ bgcolor: '#f8f9fa' }}>
                       <TableCell sx={{ fontSize: '12px', fontWeight: 600 }}>{t('excessesAdmin.draw')}</TableCell>

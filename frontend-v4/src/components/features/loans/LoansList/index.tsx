@@ -269,11 +269,11 @@ const LoansList = (): React.ReactElement => {
   );
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box sx={{ p: { xs: 1, sm: 3 } }}>
       <Card>
-        <CardContent>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-            <Typography variant="h5" sx={{ color: '#2c2c2c', fontWeight: 600 }}>
+        <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, gap: 1, flexWrap: 'wrap' }}>
+            <Typography variant="h5" sx={{ color: '#2c2c2c', fontWeight: 600, fontSize: { xs: '1.1rem', sm: '1.5rem' } }}>
               {t('loansAdmin.listTitle')}
             </Typography>
             <Button
@@ -281,7 +281,7 @@ const LoansList = (): React.ReactElement => {
               to="/loans/new"
               variant="contained"
               startIcon={<AddIcon />}
-              sx={{ bgcolor: '#8b5cf6', '&:hover': { bgcolor: '#7c3aed' }, textTransform: 'none' }}
+              sx={{ bgcolor: '#8b5cf6', '&:hover': { bgcolor: '#7c3aed' }, textTransform: 'none', whiteSpace: 'nowrap' }}
             >
               {t('loansAdmin.createLoan')}
             </Button>
@@ -299,7 +299,7 @@ const LoansList = (): React.ReactElement => {
               placeholder={t('common.filterQuick')}
               value={quickFilter}
               onChange={(e: ChangeEvent<HTMLInputElement>) => setQuickFilter(e.target.value)}
-              sx={{ maxWidth: '300px' }}
+              sx={{ maxWidth: { xs: '100%', sm: '300px' }, width: { xs: '100%', sm: 'auto' } }}
               InputProps={{
                 startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment>
               }}
@@ -312,8 +312,8 @@ const LoansList = (): React.ReactElement => {
             </Box>
           ) : (
             <>
-              <TableContainer component={Paper} variant="outlined">
-                <Table size="small">
+              <TableContainer component={Paper} variant="outlined" sx={{ overflowX: 'auto' }}>
+                <Table size="small" sx={{ minWidth: { xs: 700, sm: 'auto' } }}>
                   <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
                     <TableRow>
                       {headerCell('loanNumber', t('loansAdmin.table.number'))}

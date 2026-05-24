@@ -112,8 +112,8 @@ const BalanceTable = React.memo(({
 
   return (
     <Box>
-      <TableContainer component={Paper} sx={{ maxHeight: 600 }}>
-        <Table stickyHeader size="small">
+      <TableContainer component={Paper} sx={{ maxHeight: 600, overflowX: 'auto' }}>
+        <Table stickyHeader size="small" sx={{ minWidth: { xs: 600, sm: 'auto' } }}>
           <TableHead>
             <TableRow>
               {columns.map((column) => (

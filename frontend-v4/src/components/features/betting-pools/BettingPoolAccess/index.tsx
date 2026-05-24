@@ -249,17 +249,17 @@ const BettingPoolAccess: React.FC = () => {
   }
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box sx={{ p: { xs: 1, sm: 3 } }}>
       <Card>
-        <CardContent>
-          <Typography variant="h5" component="h1" gutterBottom>
+        <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
+          <Typography variant="h5" component="h1" gutterBottom sx={{ fontSize: { xs: '1.1rem', sm: '1.5rem' } }}>
             {t('bettingPoolsAdmin.accessListTitle')}
           </Typography>
 
           {/* Filters Section */}
           <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap', alignItems: 'center' }}>
             {/* Zone Multi-Select */}
-            <FormControl sx={{ minWidth: 200, maxWidth: 400 }}>
+            <FormControl sx={{ minWidth: { xs: '100%', sm: 200 }, maxWidth: { xs: '100%', sm: 400 } }}>
               <InputLabel>{t('common.zones')}</InputLabel>
               <Select
                 multiple
@@ -291,7 +291,7 @@ const BettingPoolAccess: React.FC = () => {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               size="small"
-              sx={{ minWidth: 250 }}
+              sx={{ minWidth: { xs: '100%', sm: 250 }, flexGrow: 1 }}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
@@ -303,8 +303,8 @@ const BettingPoolAccess: React.FC = () => {
           </Box>
 
           {/* Table */}
-          <TableContainer component={Paper} variant="outlined">
-            <Table size="small">
+          <TableContainer component={Paper} variant="outlined" sx={{ overflowX: 'auto' }}>
+            <Table size="small" sx={{ minWidth: { xs: 500, sm: 'auto' } }}>
               <TableHead>
                 <TableRow>
                   <TableCell>

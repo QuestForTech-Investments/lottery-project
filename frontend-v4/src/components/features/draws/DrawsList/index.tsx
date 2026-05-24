@@ -352,16 +352,16 @@ const DrawsList = (): React.ReactElement => {
   }
 
   return (
-    <Box sx={{ p: 3, bgcolor: '#f5f5f5', minHeight: '100vh' }}>
+    <Box sx={{ p: { xs: 1, sm: 3 }, bgcolor: '#f5f5f5', minHeight: '100vh' }}>
       <Card>
-        <CardContent sx={{ p: 4 }}>
+        <CardContent sx={{ p: { xs: 1.5, sm: 4 } }}>
           {/* Título */}
           <Typography
             variant="h4"
             sx={{
               textAlign: 'center',
-              mb: 4,
-              fontSize: '24px',
+              mb: { xs: 2, sm: 4 },
+              fontSize: { xs: '18px', sm: '24px' },
               fontWeight: 500,
               color: '#2c2c2c'
             }}
@@ -383,7 +383,7 @@ const DrawsList = (): React.ReactElement => {
               value={quickFilter}
               onChange={handleFilterChange}
               size="small"
-              sx={{ width: '300px' }}
+              sx={{ width: { xs: '100%', sm: '300px' } }}
               InputProps={{
                 endAdornment: (
                   <InputAdornment position="end">
@@ -396,8 +396,8 @@ const DrawsList = (): React.ReactElement => {
           </Box>
 
           {/* Table */}
-          <TableContainer component={Paper} variant="outlined">
-            <Table>
+          <TableContainer component={Paper} variant="outlined" sx={{ overflowX: 'auto' }}>
+            <Table sx={{ minWidth: { xs: 500, sm: 'auto' } }}>
               <TableHead>
                 <TableRow sx={{ bgcolor: '#e3e3e3' }}>
                   <TableCell sx={{ fontSize: '14px', fontWeight: 600, color: '#787878', width: '70px', py: 2 }}>{t('drawsAdmin.list.index')}</TableCell>

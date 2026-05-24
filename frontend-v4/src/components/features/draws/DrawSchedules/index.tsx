@@ -659,17 +659,18 @@ const DrawSchedules = (): React.ReactElement => {
 
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
-      <Box sx={{ p: 3, bgcolor: '#f5f5f5', minHeight: '100vh' }}>
+      <Box sx={{ p: { xs: 1, sm: 3 }, bgcolor: '#f5f5f5', minHeight: '100vh' }}>
         <Card>
-          <CardContent sx={{ p: 4 }}>
+          <CardContent sx={{ p: { xs: 1.5, sm: 4 } }}>
             {/* Header */}
             <Typography
               variant="h5"
               sx={{
                 textAlign: 'center',
-                mb: 4,
+                mb: { xs: 2, sm: 4 },
                 fontWeight: 500,
-                color: '#2c2c2c'
+                color: '#2c2c2c',
+                fontSize: { xs: '1.1rem', sm: '1.5rem' },
               }}
             >
               {t('drawsAdmin.schedules.title')}
@@ -704,12 +705,12 @@ const DrawSchedules = (): React.ReactElement => {
 
                     {/* Expanded Section with Draw Cards */}
                     <Collapse in={isExpanded}>
-                      <Box sx={{ bgcolor: '#fafafa', p: 3, mt: 1, borderRadius: 1 }}>
-                        {/* Draw Cards Grid - 3 per row */}
+                      <Box sx={{ bgcolor: '#fafafa', p: { xs: 1.5, sm: 3 }, mt: 1, borderRadius: 1 }}>
+                        {/* Draw Cards Grid - responsive (1 col on xs, auto-fill 325px on sm+) */}
                         <Box sx={{
                           display: 'grid',
-                          gridTemplateColumns: 'repeat(auto-fill, minmax(325px, 1fr))',
-                          gap: 3
+                          gridTemplateColumns: { xs: '1fr', sm: 'repeat(auto-fill, minmax(325px, 1fr))' },
+                          gap: { xs: 2, sm: 3 }
                         }}>
                           {lottery.draws.map((draw) => {
                             const currentDraw = getDrawState(draw.drawId);

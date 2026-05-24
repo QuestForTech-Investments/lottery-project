@@ -128,25 +128,26 @@ const EmailReceiversList = (): React.ReactElement => {
   };
 
   return (
-    <Box sx={{ p: 3, backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
+    <Box sx={{ p: { xs: 1, sm: 3 }, backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
       <Card sx={{ maxWidth: 1400, mx: 'auto' }}>
-        <CardContent sx={{ p: 4 }}>
+        <CardContent sx={{ p: { xs: 1.5, sm: 4 } }}>
           {/* Título */}
           <Typography
             variant="h5"
             sx={{
               textAlign: 'center',
-              mb: 4,
+              mb: { xs: 2, sm: 4 },
               fontFamily: 'Montserrat, sans-serif',
               fontWeight: 600,
-              color: '#2c2c2c'
+              color: '#2c2c2c',
+              fontSize: { xs: '1.1rem', sm: '1.5rem' },
             }}
           >
             {t('emailReceiversAdmin.list.title')}
           </Typography>
 
           {/* Filtro rápido */}
-          <Box sx={{ mb: 3, maxWidth: 400 }}>
+          <Box sx={{ mb: 3, maxWidth: { xs: '100%', sm: 400 } }}>
             <TextField
               fullWidth
               size="small"
@@ -165,7 +166,7 @@ const EmailReceiversList = (): React.ReactElement => {
           </Box>
 
           {/* Tabla */}
-          <TableContainer component={Paper} variant="outlined">
+          <TableContainer component={Paper} variant="outlined" sx={{ overflowX: 'auto' }}>
             <Table sx={{ minWidth: 800 }}>
               <TableHead sx={{ bgcolor: '#f8f9fa' }}>
                 <TableRow>

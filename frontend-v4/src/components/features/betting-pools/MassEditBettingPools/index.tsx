@@ -189,10 +189,10 @@ const MassEditBettingPools: React.FC = () => {
   }
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box sx={{ p: { xs: 1, sm: 3 } }}>
       <Card>
-        <CardContent>
-          <Typography variant="h5" component="h1" gutterBottom>
+        <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
+          <Typography variant="h5" component="h1" gutterBottom sx={{ fontSize: { xs: '1.1rem', sm: '1.5rem' } }}>
             {t('massEditBettingPools.title')}
           </Typography>
 
@@ -201,7 +201,10 @@ const MassEditBettingPools: React.FC = () => {
             <Tabs
               value={activeTab}
               onChange={handleTabChange}
-              sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}
+              variant="scrollable"
+              scrollButtons="auto"
+              allowScrollButtonsMobile
+              sx={{ borderBottom: 1, borderColor: 'divider', mb: 3, '& .MuiTab-root': { minWidth: { xs: 'auto', sm: 90 }, px: { xs: 1.25, sm: 2 }, fontSize: { xs: '0.75rem', sm: '0.875rem' } } }}
             >
               <Tab label={t('massEditBettingPools.tabs.configuration')} />
               <Tab label={t('massEditBettingPools.tabs.footers')} />

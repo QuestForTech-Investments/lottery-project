@@ -25,7 +25,9 @@ interface MainLayoutProps {
 
 export default function MainLayout({ children }: MainLayoutProps) {
   const theme = useTheme()
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
+  // `md` (≤900px) catches phones in any orientation and small tablets in
+  // portrait — the sidebar collapses to a drawer below this width.
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
 
   // Session timeout: logout after 15 minutes of inactivity
   useSessionTimeout({ timeoutMs: 15 * 60 * 1000 })

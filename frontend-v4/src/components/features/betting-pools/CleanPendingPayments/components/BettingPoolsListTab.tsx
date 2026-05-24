@@ -74,8 +74,8 @@ const BettingPoolsListTab: FC<BettingPoolsListTabProps> = memo(({
       </Box>
 
       {/* Table */}
-      <TableContainer component={Paper} variant="outlined">
-        <Table size="small">
+      <TableContainer component={Paper} variant="outlined" sx={{ overflowX: 'auto' }}>
+        <Table size="small" sx={{ minWidth: { xs: 600, sm: 'auto' } }}>
           <TableHead>
             <TableRow>
               <TableCell>

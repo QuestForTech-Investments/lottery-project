@@ -233,13 +233,13 @@ const TransactionsList = (): React.ReactElement => {
   const totalCredit = filteredAndSortedData.reduce((sum, item) => sum + item.credit, 0);
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h4" sx={{ mb: 3, textAlign: 'center', fontWeight: 500 }}>
+    <Box sx={{ p: { xs: 1, sm: 3 } }}>
+      <Typography variant="h4" sx={{ mb: { xs: 2, sm: 3 }, textAlign: 'center', fontWeight: 500, fontSize: { xs: '1.25rem', sm: '2.125rem' } }}>
         {t('transactions.title')}
       </Typography>
 
       <Card>
-        <CardContent>
+        <CardContent sx={{ p: { xs: 1.5, sm: 2 }, '&:last-child': { pb: { xs: 1.5, sm: 2 } } }}>
           <Box sx={{ mb: 3 }}>
             <Grid container spacing={2} sx={{ mb: 2 }}>
               <Grid item xs={12} md={6}>
@@ -304,9 +304,9 @@ const TransactionsList = (): React.ReactElement => {
             </Box>
 
             <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-              <Button variant="contained" onClick={handleFilter} sx={{ backgroundColor: '#8b5cf6', '&:hover': { backgroundColor: '#45b5b8' } }}>{t('common.filter').toUpperCase()}</Button>
-              <Button variant="contained" startIcon={<FileDownloadIcon />} sx={{ backgroundColor: '#8b5cf6', '&:hover': { backgroundColor: '#45b5b8' } }}>CSV</Button>
-              <Button variant="contained" startIcon={<PdfIcon />} sx={{ backgroundColor: '#8b5cf6', '&:hover': { backgroundColor: '#45b5b8' } }}>PDF</Button>
+              <Button variant="contained" onClick={handleFilter} sx={{ backgroundColor: '#8b5cf6', '&:hover': { backgroundColor: '#7c3aed' } }}>{t('common.filter').toUpperCase()}</Button>
+              <Button variant="contained" startIcon={<FileDownloadIcon />} sx={{ backgroundColor: '#8b5cf6', '&:hover': { backgroundColor: '#7c3aed' } }}>CSV</Button>
+              <Button variant="contained" startIcon={<PdfIcon />} sx={{ backgroundColor: '#8b5cf6', '&:hover': { backgroundColor: '#7c3aed' } }}>PDF</Button>
             </Box>
           </Box>
 
@@ -319,8 +319,8 @@ const TransactionsList = (): React.ReactElement => {
               <CircularProgress />
             </Box>
           ) : (
-            <TableContainer component={Paper} variant="outlined">
-              <Table size="small">
+            <TableContainer component={Paper} variant="outlined" sx={{ overflowX: 'auto' }}>
+              <Table size="small" sx={{ minWidth: 1100 }}>
                 <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
                   <TableRow>
                     <TableCell><TableSortLabel active={sortConfig.key === 'transactionType'} direction={sortConfig.key === 'transactionType' ? sortConfig.direction : 'asc'} onClick={() => handleSort('transactionType')}>{t('transactions.concept')}</TableSortLabel></TableCell>
