@@ -281,29 +281,26 @@ const Header = ({ sidebarCollapsed, sidebarHovered, onToggleSidebar, isMobile = 
           minHeight: '64px !important',
           height: '64px !important',
           maxHeight: '64px !important',
-          padding: '0 24px',
+          padding: { xs: '0 12px', sm: '0 16px', md: '0 24px' },
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           width: '100%',
           boxSizing: 'border-box',
+          gap: { xs: 0.5, md: 1 },
         }}
       >
-        {/* Mobile-only menu toggle button */}
+        {/* Mobile-only menu toggle button — styled like the other header icons
+            (no gradient) so the palette stays consistent with desktop. */}
         {isMobile && (
           <IconButton
             onClick={onToggleSidebar}
             sx={{
-              background: 'linear-gradient(135deg, #319795 0%, #2c7a7b 100%)',
-              color: 'white',
-              marginLeft: '1px',
-              marginRight: 2,
-              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-              transition: 'all 0.3s ease',
+              color: 'text.primary',
+              transition: 'background-color 0.2s ease',
               '&:hover': {
-                background: 'linear-gradient(135deg, #38b2ac 0%, #319795 100%)',
-                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
-                transform: 'translateY(-2px)',
+                backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                color: 'primary.main',
               },
             }}
           >
@@ -326,7 +323,7 @@ const Header = ({ sidebarCollapsed, sidebarHovered, onToggleSidebar, isMobile = 
           sx={{
             display: 'flex',
             alignItems: 'center',
-            gap: 1.5,
+            gap: { xs: 0.5, sm: 1, md: 1.5 },
             animation: 'fadeInRight 0.5s ease-out 0.3s both',
             '@keyframes fadeInRight': {
               '0%': { opacity: 0, transform: 'translateX(20px)' },
@@ -334,14 +331,20 @@ const Header = ({ sidebarCollapsed, sidebarHovered, onToggleSidebar, isMobile = 
             },
           }}
         >
-          {/* Time */}
-          <Box sx={{ animation: 'fadeIn 0.3s ease-out 0.5s both', '@keyframes fadeIn': { '0%': { opacity: 0 }, '100%': { opacity: 1 } } }}>
+          {/* Time — hidden on very narrow phones to make room for the avatar */}
+          <Box
+            sx={{
+              display: { xs: 'none', sm: 'block' },
+              animation: 'fadeIn 0.3s ease-out 0.5s both',
+              '@keyframes fadeIn': { '0%': { opacity: 0 }, '100%': { opacity: 1 } },
+            }}
+          >
             <TimeDisplay />
           </Box>
 
           {/* Warnings bell — visible whenever the user can see warnings.
               Badge + red color only when there are unseen warnings. */}
-          {!isMobile && canSeeWarnings && (
+          {canSeeWarnings && (
             <Tooltip title={warningCount > 0 ? t('header.warningsNew', { count: warningCount }) : t('header.noWarnings')}>
               <IconButton
                 onClick={() => navigate('/warnings')}
@@ -387,16 +390,14 @@ const Header = ({ sidebarCollapsed, sidebarHovered, onToggleSidebar, isMobile = 
             </Tooltip>
           )}
 
-          {/* Language selector */}
-          {!isMobile && (
-            <LanguageSelector
-              isHovered={hoveredIcon === 'language'}
-              isActive={activeIcon === 'language'}
-              onMouseEnter={() => setHoveredIcon('language')}
-              onMouseLeave={() => setHoveredIcon(null)}
-              onActiveChange={(active) => setActiveIcon(active ? 'language' : null)}
-            />
-          )}
+          {/* Language selector — kept on mobile, just sits next to the avatar */}
+          <LanguageSelector
+            isHovered={hoveredIcon === 'language'}
+            isActive={activeIcon === 'language'}
+            onMouseEnter={() => setHoveredIcon('language')}
+            onMouseLeave={() => setHoveredIcon(null)}
+            onActiveChange={(active) => setActiveIcon(active ? 'language' : null)}
+          />
 
           {/* User menu */}
           <Tooltip title={t('header.account')}>
@@ -438,6 +439,7 @@ const Header = ({ sidebarCollapsed, sidebarHovered, onToggleSidebar, isMobile = 
               <Typography
                 variant="body2"
                 sx={{
+                  display: { xs: 'none', sm: 'block' },
                   color: hoveredIcon === 'user' || openSettings ? 'primary.main' : 'text.primary',
                   fontWeight: 600,
                   fontSize: '13px',

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { formatCurrency } from '@/utils/formatCurrency';
-import { Box, Paper, Typography, TextField, Table, TableHead, TableBody, TableRow, TableCell, TableSortLabel, IconButton } from '@mui/material';
+import { Box, Paper, Typography, TextField, Table, TableContainer, TableHead, TableBody, TableRow, TableCell, TableSortLabel, IconButton } from '@mui/material';
 import { Search } from '@mui/icons-material';
 import { getTodayDate } from '@/utils/formatters';
 import { useTableSort } from '@/utils/useTableSort';
@@ -88,26 +88,27 @@ const TicketAnomalies: React.FC = () => {
   );
 
   return (
-    <Box sx={{ p: 2 }}>
+    <Box sx={{ p: { xs: 1, sm: 2 } }}>
       <Paper elevation={3}>
-        <Box sx={{ p: 3 }}>
-          <Typography variant="h5" align="center" sx={{ color: '#1976d2', mb: 4, fontWeight: 400 }}>
+        <Box sx={{ p: { xs: 1.5, sm: 3 } }}>
+          <Typography variant="h5" align="center" sx={{ color: '#1976d2', mb: { xs: 2, sm: 4 }, fontWeight: 400, fontSize: { xs: '1.2rem', sm: '1.5rem' } }}>
             {t('tickets.anomalies.title')}
           </Typography>
 
-          <Box sx={{ mb: 4, maxWidth: 400 }}>
+          <Box sx={{ mb: { xs: 2, sm: 4 }, maxWidth: { xs: '100%', sm: 400 } }}>
             <TextField fullWidth type="date" label={t('common.date')} value={fecha} onChange={(e) => setFecha(e.target.value)}
               InputLabelProps={{ shrink: true }} size="small" />
           </Box>
 
           {/* Tickets Section */}
-          <Typography variant="h6" align="center" sx={{ mb: 2 }}>{t('tickets.anomalies.ticketsSection')}</Typography>
-          <Box sx={{ mb: 2, textAlign: 'right' }}>
+          <Typography variant="h6" align="center" sx={{ mb: 2, fontSize: { xs: '1rem', sm: '1.25rem' } }}>{t('tickets.anomalies.ticketsSection')}</Typography>
+          <Box sx={{ mb: 2, textAlign: 'right', display: 'flex', justifyContent: { xs: 'stretch', sm: 'flex-end' }, alignItems: 'center', gap: 1 }}>
             <TextField placeholder={t('common.filterQuick')} value={filtroTickets} onChange={(e) => setFiltroTickets(e.target.value)}
-              size="small" sx={{ maxWidth: 300 }} />
+              size="small" sx={{ maxWidth: { xs: '100%', sm: 300 }, width: { xs: '100%', sm: 'auto' } }} />
             <IconButton disabled color="primary"><Search /></IconButton>
           </Box>
-          <Table size="small" sx={{ mb: 1 }}>
+          <TableContainer sx={{ overflowX: 'auto', mb: 1 }}>
+          <Table size="small" sx={{ minWidth: { xs: 800, sm: 'auto' } }}>
             <TableHead>
               <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
                 {([
@@ -139,18 +140,20 @@ const TicketAnomalies: React.FC = () => {
               ))}
             </TableBody>
           </Table>
+          </TableContainer>
           <Typography variant="caption" sx={{ color: 'text.secondary', mb: 4, display: 'block' }}>
             {t('common.showingEntries', { shown: filteredTickets.length, total: ticketsData.length })}
           </Typography>
 
           {/* Cambios de resultados Section */}
-          <Typography variant="h6" align="center" sx={{ mb: 2, mt: 4 }}>{t('tickets.anomalies.resultsSection')}</Typography>
-          <Box sx={{ mb: 2, textAlign: 'right' }}>
+          <Typography variant="h6" align="center" sx={{ mb: 2, mt: 4, fontSize: { xs: '1rem', sm: '1.25rem' } }}>{t('tickets.anomalies.resultsSection')}</Typography>
+          <Box sx={{ mb: 2, textAlign: 'right', display: 'flex', justifyContent: { xs: 'stretch', sm: 'flex-end' }, alignItems: 'center', gap: 1 }}>
             <TextField placeholder={t('common.filterQuick')} value={filtroCambios} onChange={(e) => setFiltroCambios(e.target.value)}
-              size="small" sx={{ maxWidth: 300 }} />
+              size="small" sx={{ maxWidth: { xs: '100%', sm: 300 }, width: { xs: '100%', sm: 'auto' } }} />
             <IconButton disabled color="primary"><Search /></IconButton>
           </Box>
-          <Table size="small" sx={{ mb: 1 }}>
+          <TableContainer sx={{ overflowX: 'auto', mb: 1 }}>
+          <Table size="small" sx={{ minWidth: { xs: 700, sm: 'auto' } }}>
             <TableHead>
               <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
                 {([
@@ -179,6 +182,7 @@ const TicketAnomalies: React.FC = () => {
               ))}
             </TableBody>
           </Table>
+          </TableContainer>
           <Typography variant="caption" sx={{ color: 'text.secondary' }}>
             {t('common.showingEntries', { shown: filteredCambios.length, total: cambiosData.length })}
           </Typography>

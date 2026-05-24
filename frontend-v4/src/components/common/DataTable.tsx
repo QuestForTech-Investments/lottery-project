@@ -107,7 +107,15 @@ function DataTableInner<T extends object>({
   return (
     <TableContainer
       component={maxHeight ? Paper : 'div'}
-      sx={maxHeight ? { maxHeight } : undefined}
+      sx={{
+        overflowX: 'auto',
+        // Tighter cell padding on phones so more columns stay visible before
+        // horizontal scroll kicks in. Header cells get the same treatment.
+        '& .MuiTableCell-root': {
+          px: { xs: 1, sm: 1.5, md: 2 },
+        },
+        ...(maxHeight ? { maxHeight } : {}),
+      }}
     >
       <Table size={size} stickyHeader={stickyHeader}>
         <TableHead sx={{ backgroundColor: '#e3e3e3' }}>

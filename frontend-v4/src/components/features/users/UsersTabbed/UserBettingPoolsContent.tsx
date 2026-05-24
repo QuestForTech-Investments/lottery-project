@@ -120,14 +120,14 @@ const UserBettingPoolsContent: React.FC = () => {
       )}
 
       {/* Search Filters - Two fields like original */}
-      <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
-        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+      <Box sx={{ p: { xs: 1.5, sm: 2 }, borderBottom: 1, borderColor: 'divider' }}>
+        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexDirection: { xs: 'column', sm: 'row' } }}>
           <TextField
             placeholder={t('usersAdmin.filterByUser')}
             value={searchText}
             onChange={handleSearchChange}
             size="small"
-            sx={{ flex: 1 }}
+            sx={{ flex: 1, width: { xs: '100%', sm: 'auto' } }}
             InputProps={{
               endAdornment: searchText && (
                 <InputAdornment position="end">
@@ -143,7 +143,7 @@ const UserBettingPoolsContent: React.FC = () => {
             value={quickFilter}
             onChange={(e) => setQuickFilter(e.target.value)}
             size="small"
-            sx={{ flex: 1 }}
+            sx={{ flex: 1, width: { xs: '100%', sm: 'auto' } }}
             InputProps={{
               endAdornment: quickFilter && (
                 <InputAdornment position="end">
@@ -158,8 +158,8 @@ const UserBettingPoolsContent: React.FC = () => {
       </Box>
 
       {/* Table - Columns: Usuario, Banca, Número, Acciones */}
-      <TableContainer>
-        <Table>
+      <TableContainer sx={{ overflowX: 'auto' }}>
+        <Table sx={{ minWidth: { xs: 500, sm: 'auto' } }}>
           <TableHead>
             <TableRow sx={{ bgcolor: '#e3e3e3' }}>
               <TableCell>

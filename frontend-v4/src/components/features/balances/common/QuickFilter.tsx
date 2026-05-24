@@ -48,8 +48,10 @@ const QuickFilter = React.memo(({
           </InputAdornment>
         ),
       }}
+      fullWidth
       sx={{
-        minWidth: 250,
+        minWidth: { xs: 0, sm: 250 },
+        width: { xs: '100%', sm: 'auto' },
         '& .MuiOutlinedInput-root': {
           backgroundColor: '#fff',
         }

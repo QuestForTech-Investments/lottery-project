@@ -287,11 +287,11 @@ const ManageZonesMUI = (): React.ReactElement => {
   }
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box sx={{ p: { xs: 1, sm: 3 } }}>
       <Paper elevation={3}>
         {/* Header */}
-        <Box sx={{ p: 3, borderBottom: 1, borderColor: 'divider' }}>
-          <Typography variant="h5" component="h1">{t('zonesAdmin.manageZones')}</Typography>
+        <Box sx={{ p: { xs: 1.5, sm: 3 }, borderBottom: 1, borderColor: 'divider' }}>
+          <Typography variant="h5" component="h1" sx={{ fontSize: { xs: '1.1rem', sm: '1.5rem' } }}>{t('zonesAdmin.manageZones')}</Typography>
           <Typography variant="body2" color="text.secondary">
             {t('zonesAdmin.assignSubtitle')}
           </Typography>
@@ -340,7 +340,7 @@ const ManageZonesMUI = (): React.ReactElement => {
               </Button>
             </Box>
           ) : (
-            <Box sx={{ p: 3 }}>
+            <Box sx={{ p: { xs: 1.5, sm: 3 } }}>
               <SelectionSection
                 title={t('common.bettingPools')}
                 items={bettingPoolItems}

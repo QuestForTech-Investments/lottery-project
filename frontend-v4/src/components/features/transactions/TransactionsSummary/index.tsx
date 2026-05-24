@@ -198,13 +198,13 @@ const TransactionsSummary = (): React.ReactElement => {
   );
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h4" sx={{ mb: 3, textAlign: 'center', fontWeight: 600, color: '#2c2c2c' }}>
+    <Box sx={{ p: { xs: 1, sm: 3 } }}>
+      <Typography variant="h4" sx={{ mb: { xs: 2, sm: 3 }, textAlign: 'center', fontWeight: 600, color: '#2c2c2c', fontSize: { xs: '1.25rem', sm: '2.125rem' } }}>
         {t('transactions.summary.title')}
       </Typography>
 
       <Card elevation={1} sx={{ mb: 3 }}>
-        <CardContent sx={{ p: 3 }}>
+        <CardContent sx={{ p: { xs: 1.5, sm: 3 } }}>
           <Grid container spacing={2} sx={{ mb: 2 }}>
             <Grid item xs={12} md={3}>
               <TextField
@@ -248,7 +248,7 @@ const TransactionsSummary = (): React.ReactElement => {
               <Button
                 fullWidth variant="contained" onClick={handleFilter}
                 disabled={selectedZoneIds.length === 0}
-                sx={{ bgcolor: '#8b5cf6', '&:hover': { bgcolor: '#45b5b8' }, fontWeight: 600, textTransform: 'uppercase' }}
+                sx={{ bgcolor: '#8b5cf6', '&:hover': { bgcolor: '#7c3aed' }, fontWeight: 600, textTransform: 'uppercase' }}
               >
                 {t('common.filter')}
               </Button>
@@ -269,8 +269,8 @@ const TransactionsSummary = (): React.ReactElement => {
         </Box>
       ) : (
         <>
-          <TableContainer component={Paper} variant="outlined" sx={{ mb: 3 }}>
-            <Table size="small">
+          <TableContainer component={Paper} variant="outlined" sx={{ mb: 3, overflowX: 'auto' }}>
+            <Table size="small" sx={{ minWidth: 1100 }}>
               <TableHead>
                 <TableRow sx={{ bgcolor: '#f5f5f5' }}>
                   <TableCell rowSpan={2} sx={{ fontWeight: 600, verticalAlign: 'middle', borderRight: '1px solid #e0e0e0' }}>{t('common.code')}</TableCell>
@@ -345,11 +345,11 @@ const TransactionsSummary = (): React.ReactElement => {
           </Typography>
 
           {/* Other transactions summary */}
-          <Typography variant="h5" sx={{ mb: 2, textAlign: 'center', fontWeight: 600, color: '#2c2c2c' }}>
+          <Typography variant="h5" sx={{ mb: 2, textAlign: 'center', fontWeight: 600, color: '#2c2c2c', fontSize: { xs: '1.1rem', sm: '1.5rem' } }}>
             {t('transactions.otherSummary')}
           </Typography>
-          <TableContainer component={Paper} variant="outlined">
-            <Table size="small">
+          <TableContainer component={Paper} variant="outlined" sx={{ overflowX: 'auto' }}>
+            <Table size="small" sx={{ minWidth: 400 }}>
               <TableHead>
                 <TableRow sx={{ bgcolor: '#f5f5f5' }}>
                   <TableCell colSpan={3} align="center" sx={{ fontWeight: 600, borderBottom: '2px solid #51cbce' }}>{t('transactions.adjustments')}</TableCell>

@@ -56,13 +56,17 @@ export const FilterToggleGroup: FC<FilterToggleGroupProps> = memo(({
         onChange={handleChange}
         size={size}
         sx={{
-          border: '2px solid #8b5cf6',
+          // Single connected bar on desktop; on phones the buttons wrap so the
+          // group doesn't push past the viewport when labels are long.
+          border: { xs: 'none', sm: '2px solid #8b5cf6' },
           borderRadius: '6px',
-          overflow: 'hidden',
+          overflow: { xs: 'visible', sm: 'hidden' },
+          flexWrap: { xs: 'wrap', sm: 'nowrap' },
+          gap: { xs: 0.5, sm: 0 },
           '& .MuiToggleButton-root': {
-            border: 'none',
-            borderRight: '2px solid #8b5cf6',
-            borderRadius: 0,
+            border: { xs: '2px solid #8b5cf6', sm: 'none' },
+            borderRight: { xs: '2px solid #8b5cf6', sm: '2px solid #8b5cf6' },
+            borderRadius: { xs: '6px', sm: 0 },
             px: 2,
             py: 0.6,
             fontSize: '0.75rem',
@@ -72,7 +76,7 @@ export const FilterToggleGroup: FC<FilterToggleGroupProps> = memo(({
             backgroundColor: '#fff',
             transition: 'all 0.15s ease',
             '&:last-of-type': {
-              borderRight: 'none',
+              borderRight: { xs: '2px solid #8b5cf6', sm: 'none' },
             },
             '&:hover': {
               backgroundColor: '#f8f7ff',

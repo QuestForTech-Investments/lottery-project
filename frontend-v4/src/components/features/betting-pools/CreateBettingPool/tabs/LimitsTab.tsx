@@ -229,11 +229,13 @@ const LimitsTab: React.FC<LimitsTabProps> = ({ bettingPoolId, bettingPoolName })
           <Tabs
             value={selectedDayIdx}
             onChange={(_, v) => { setSelectedDayIdx(v); setSelectedDrawIdx(0); }}
-            variant="fullWidth"
+            variant="scrollable"
+            scrollButtons="auto"
+            allowScrollButtonsMobile
             TabIndicatorProps={{ sx: { bgcolor: ACCENT, height: 3 } }}
           >
             {DAY_LABELS.map((label, idx) => (
-              <Tab key={idx} label={label} sx={{ textTransform: 'none', fontSize: '13px', fontWeight: 500, minWidth: 0, flex: 1, color: '#666', '&.Mui-selected': { color: ACCENT, fontWeight: 600 } }} />
+              <Tab key={idx} label={label} sx={{ textTransform: 'none', fontSize: '13px', fontWeight: 500, minWidth: 0, color: '#666', '&.Mui-selected': { color: ACCENT, fontWeight: 600 } }} />
             ))}
           </Tabs>
         </Box>

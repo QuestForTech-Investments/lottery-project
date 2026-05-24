@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { formatCurrency } from '@/utils/formatCurrency';
 import {
   Box, Paper, Typography, TextField, Grid, Autocomplete, Switch, FormControlLabel,
-  Button, ToggleButtonGroup, ToggleButton, Table, TableHead, TableBody, TableRow, TableCell, TableSortLabel, IconButton
+  Button, ToggleButtonGroup, ToggleButton, Table, TableContainer, TableHead, TableBody, TableRow, TableCell, TableSortLabel, IconButton
 } from '@mui/material';
 import { Visibility } from '@mui/icons-material';
 import { getTodayDate } from '@/utils/formatters';
@@ -143,10 +143,10 @@ const ExternalAgentsMonitoring: React.FC = () => {
   );
 
   return (
-    <Box sx={{ p: 2 }}>
+    <Box sx={{ p: { xs: 1, sm: 2 } }}>
       <Paper elevation={3}>
-        <Box sx={{ p: 3 }}>
-          <Typography variant="h5" align="center" sx={{ color: '#1976d2', mb: 4, fontWeight: 400 }}>
+        <Box sx={{ p: { xs: 1.5, sm: 3 } }}>
+          <Typography variant="h5" align="center" sx={{ color: '#1976d2', mb: { xs: 2, sm: 4 }, fontWeight: 400, fontSize: { xs: '1.1rem', sm: '1.5rem' } }}>
             {t('tickets.externalAgents.title')}
           </Typography>
 
@@ -183,9 +183,9 @@ const ExternalAgentsMonitoring: React.FC = () => {
             <Button variant="contained" sx={{ px: 6, py: 1, borderRadius: '30px', textTransform: 'uppercase' }}>{t('common.filter')}</Button>
           </Box>
 
-          <Box sx={{ mb: 2, display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+          <Box sx={{ mb: 2, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', width: '100%', overflowX: 'auto' }}>
             <Typography variant="subtitle1" sx={{ color: 'text.secondary', mb: 1.5, fontWeight: 500 }}>{t('common.filter')}</Typography>
-            <ToggleButtonGroup exclusive value={filtroEstado} onChange={(e, v) => v && setFiltroEstado(v)} size="small">
+            <ToggleButtonGroup exclusive value={filtroEstado} onChange={(e, v) => v && setFiltroEstado(v)} size="small" sx={{ flexWrap: 'wrap', '& .MuiToggleButton-root': { fontSize: { xs: '0.65rem', sm: '0.8125rem' }, px: { xs: 0.75, sm: 1.5 } } }}>
               <ToggleButton value="todos">{t('common.all')} ({counts.todos})</ToggleButton>
               <ToggleButton value="ganadores">{t('ticketStatus.winner')} ({counts.ganadores})</ToggleButton>
               <ToggleButton value="pendientes">{t('ticketStatus.pending')} ({counts.pendientes})</ToggleButton>
@@ -200,9 +200,10 @@ const ExternalAgentsMonitoring: React.FC = () => {
           </Paper>
 
           <TextField fullWidth placeholder={t('common.filterQuick')} value={filtroRapido} onChange={(e) => setFiltroRapido(e.target.value)}
-            size="small" sx={{ mb: 2, maxWidth: 300 }} />
+            size="small" sx={{ mb: 2, maxWidth: { xs: '100%', sm: 300 } }} />
 
-          <Table size="small">
+          <TableContainer sx={{ overflowX: 'auto' }}>
+          <Table size="small" sx={{ minWidth: { xs: 800, sm: 'auto' } }}>
             <TableHead>
               <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
                 {([
@@ -240,6 +241,7 @@ const ExternalAgentsMonitoring: React.FC = () => {
               ))}
             </TableBody>
           </Table>
+          </TableContainer>
           <Typography variant="caption" sx={{ color: 'text.secondary' }}>{t('common.showingEntries', { shown: filteredTickets.length, total: tickets.length })}</Typography>
         </Box>
       </Paper>

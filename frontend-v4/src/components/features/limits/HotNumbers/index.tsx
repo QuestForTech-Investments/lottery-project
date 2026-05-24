@@ -44,7 +44,7 @@ interface SnackbarState {
 // Styles matching the original app exactly
 const styles = {
   container: {
-    p: 3,
+    p: { xs: 1, sm: 3 },
     bgcolor: '#f4f3ef',
     minHeight: '100vh'
   },
@@ -361,7 +361,7 @@ const HotNumbers = (): React.ReactElement => {
           <Tab label={t('limitsAdmin.hot.tabLimits')} />
         </Tabs>
 
-        <Box sx={{ p: 3 }}>
+        <Box sx={{ p: { xs: 1.5, sm: 3 } }}>
           {/* Tab 1: Hot Numbers Grid - exactly like original */}
           {activeTab === 0 && (
             <Box>

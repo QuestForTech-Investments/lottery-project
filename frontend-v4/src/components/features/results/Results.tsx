@@ -881,7 +881,7 @@ const Results = (): React.ReactElement => {
   // ---------------------------------------------------------------------------
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box sx={{ p: { xs: 1, sm: 3 } }}>
       {/* Snackbars */}
       <Snackbar
         open={!!error}
@@ -908,10 +908,13 @@ const Results = (): React.ReactElement => {
         <Tabs
           value={activeTab}
           onChange={handleTabChange}
+          variant="scrollable"
+          scrollButtons="auto"
+          allowScrollButtonsMobile
           sx={{
             borderBottom: 1,
             borderColor: 'divider',
-            '& .MuiTab-root': { color: COLORS.primary, textTransform: 'none', fontWeight: 500 },
+            '& .MuiTab-root': { color: COLORS.primary, textTransform: 'none', fontWeight: 500, minWidth: { xs: 'auto', sm: 90 }, px: { xs: 1.5, sm: 2 } },
             '& .Mui-selected': { color: COLORS.primary },
             '& .MuiTabs-indicator': { backgroundColor: COLORS.primary },
           }}
@@ -920,7 +923,7 @@ const Results = (): React.ReactElement => {
           <Tab label={t('resultsAdmin.tabs.logs')} />
         </Tabs>
 
-        <Box sx={{ p: 3 }}>
+        <Box sx={{ p: { xs: 1.5, sm: 3 } }}>
           {activeTab === 0 && (
             <>
               {/* Individual Result Entry Form */}

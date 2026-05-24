@@ -3,7 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { formatCurrency } from '@/utils/formatCurrency';
 import {
   Box, Paper, Typography, TextField, Grid, Autocomplete, Button, Stack,
-  Table, TableHead, TableBody, TableRow, TableCell, TableSortLabel, InputAdornment, CircularProgress,
+  Table, TableHead, TableBody, TableRow, TableCell, TableSortLabel, TableContainer,
+  InputAdornment, CircularProgress,
 } from '@mui/material';
 import { PictureAsPdf, Search } from '@mui/icons-material';
 import api from '@services/api';
@@ -354,10 +355,11 @@ const SalesByDate = (): React.ReactElement => {
                   </InputAdornment>
                 ),
               }}
-              sx={{ width: 300 }}
+              sx={{ width: { xs: '100%', sm: 300 } }}
             />
           </Box>
 
+          <TableContainer sx={{ overflowX: 'auto' }}>
           <Table size="small">
             <TableHead sx={{ backgroundColor: '#e3e3e3' }}>
               <TableRow>
@@ -403,6 +405,7 @@ const SalesByDate = (): React.ReactElement => {
               )}
             </TableBody>
           </Table>
+          </TableContainer>
           <Typography variant="caption" sx={{ color: 'text.secondary' }}>
             {t('common.showingEntries', { shown: filteredData.length, total: data.length })}
           </Typography>

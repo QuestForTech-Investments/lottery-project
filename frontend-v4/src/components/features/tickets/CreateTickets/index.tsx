@@ -107,11 +107,26 @@ const CreateTickets: React.FC = () => {
   const { hasPermission } = useUserPermissions();
 
   return (
-    <Box sx={{ bgcolor: bgColor, minHeight: '100vh', p: 2, transition: 'background-color 0.3s ease' }}>
-      {/* Header: Pool Selector + Draw Preview */}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, mb: 2 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Typography sx={{ color: '#666', fontSize: '14px' }}>{t('common.bettingPool')}</Typography>
+    <Box sx={{ bgcolor: bgColor, minHeight: '100vh', p: { xs: 1, md: 2 }, transition: 'background-color 0.3s ease' }}>
+      {/* Header: Pool Selector + Draw Preview — stacks vertically on phones */}
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: { xs: 'stretch', md: 'center' },
+          flexDirection: { xs: 'column', md: 'row' },
+          gap: { xs: 1.5, md: 3 },
+          mb: 2,
+        }}
+      >
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1,
+            width: { xs: '100%', md: 'auto' },
+          }}
+        >
+          <Typography sx={{ color: '#666', fontSize: '14px', flexShrink: 0 }}>{t('common.bettingPool')}</Typography>
           <Autocomplete
             size="small"
             options={pools}
@@ -131,7 +146,7 @@ const CreateTickets: React.FC = () => {
             }}
             value={selectedPool}
             onChange={(_, newValue) => setSelectedPool(newValue)}
-            sx={{ width: 280, bgcolor: 'white' }}
+            sx={{ width: { xs: '100%', md: 280 }, bgcolor: 'white' }}
             renderInput={(params) => <TextField {...params} variant="outlined" placeholder={t('tickets.create.searchBettingPool')} />}
           />
         </Box>
@@ -193,8 +208,16 @@ const CreateTickets: React.FC = () => {
         ticketsDropdown={<TicketsDropdown selectedPool={selectedPool} cancelMinutes={cancelMinutes} />}
       />
 
-      {/* Bet Columns */}
-      <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+      {/* Bet Columns — 2×2 on phones, 4-across from md up so each column gets
+          enough width to show "lot/num/$" without truncating. */}
+      <Box
+        sx={{
+          display: { xs: 'grid', md: 'flex' },
+          gridTemplateColumns: { xs: 'repeat(2, 1fr)' },
+          gap: 1,
+          mb: 2,
+        }}
+      >
         {visibleColumns.directo && (
           <BetCardColumn
             title={COLUMN_TITLES.directo}

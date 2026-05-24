@@ -72,12 +72,12 @@ const UserSessionsMUI = () => {
   } = useUserSessions();
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box sx={{ p: { xs: 1, sm: 3 } }}>
       <Paper elevation={3}>
         {/* Header */}
-        <Toolbar sx={{ pl: { sm: 2 }, pr: { xs: 1, sm: 1 }, py: 2 }}>
+        <Toolbar sx={{ pl: { xs: 1.5, sm: 2 }, pr: { xs: 1, sm: 1 }, py: 2 }}>
           <Typography
-            sx={{ flex: '1 1 100%' }}
+            sx={{ flex: '1 1 100%', fontSize: { xs: '1rem', sm: '1.25rem' } }}
             variant="h6"
             component="div"
           >
@@ -190,19 +190,20 @@ const UserSessionsMUI = () => {
           <>
             {/* Tabs */}
             <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-              <Tabs value={activeTab} onChange={handleTabChange}>
+              <Tabs value={activeTab} onChange={handleTabChange} variant="scrollable" scrollButtons="auto" allowScrollButtonsMobile sx={{ '& .MuiTab-root': { minWidth: { xs: 'auto', sm: 90 }, px: { xs: 1.25, sm: 2 } } }}>
                 <Tab label={t('common.bettingPools')} value="bancas" />
                 <Tab label={t('usersAdmin.tabIpCollision')} value="colision" />
               </Tabs>
             </Box>
 
             {/* Search Filter */}
-            <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
+            <Box sx={{ p: { xs: 1.5, sm: 2 }, borderBottom: 1, borderColor: 'divider' }}>
               <TextField
                 placeholder={t('usersAdmin.searchByBettingPoolOrUser')}
                 value={searchText}
                 onChange={handleSearchChange}
-                sx={{ minWidth: 300 }}
+                fullWidth
+                sx={{ minWidth: { xs: 0, sm: 300 }, maxWidth: { xs: '100%', sm: 500 } }}
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
@@ -221,8 +222,8 @@ const UserSessionsMUI = () => {
             </Box>
 
             {/* Table */}
-            <TableContainer>
-              <Table size="small">
+            <TableContainer sx={{ overflowX: 'auto' }}>
+              <Table size="small" sx={{ minWidth: { xs: 700, sm: 'auto' } }}>
                 <TableHead>
                   <TableRow sx={{ bgcolor: 'grey.100' }}>
                     <TableCell sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>

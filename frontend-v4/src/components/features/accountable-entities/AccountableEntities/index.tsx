@@ -247,15 +247,18 @@ const AccountableEntities = (): React.ReactElement => {
   const isCurrencyColumn = (col: ColumnKey) => ['balance', 'caida', 'prestamo'].includes(col);
 
   return (
-    <Box sx={{ p: 3, bgcolor: '#f5f5f5', minHeight: '100vh' }}>
+    <Box sx={{ p: { xs: 1, sm: 3 }, bgcolor: '#f5f5f5', minHeight: '100vh' }}>
       <Card>
-        <CardContent sx={{ p: 3 }}>
+        <CardContent sx={{ p: { xs: 1.5, sm: 3 } }}>
           {/* Tabs */}
           <Tabs
             value={activeTab}
             onChange={handleTabChange}
+            variant="scrollable"
+            scrollButtons="auto"
+            allowScrollButtonsMobile
             TabIndicatorProps={{ style: { backgroundColor: '#8b5cf6' } }}
-            sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}
+            sx={{ borderBottom: 1, borderColor: 'divider', mb: 3, '& .MuiTab-root': { minWidth: { xs: 'auto', sm: 90 }, px: { xs: 1.25, sm: 2 } } }}
           >
             <Tab label={t('entitiesAdmin.list.tabBettingPools')} sx={{ fontSize: '14px', color: activeTab === 0 ? '#8b5cf6' : '#999' }} />
             <Tab label={t('entitiesAdmin.list.tabEmployees')} sx={{ fontSize: '14px', color: activeTab === 1 ? '#8b5cf6' : '#999' }} />
@@ -270,8 +273,8 @@ const AccountableEntities = (): React.ReactElement => {
               variant="h4"
               sx={{
                 textAlign: 'center',
-                mb: 4,
-                fontSize: '24px',
+                mb: { xs: 2, sm: 4 },
+                fontSize: { xs: '18px', sm: '24px' },
                 fontWeight: 500,
                 color: '#2c2c2c'
               }}
@@ -286,7 +289,7 @@ const AccountableEntities = (): React.ReactElement => {
                 value={quickFilter}
                 onChange={handleFilterChange}
                 size="small"
-                sx={{ width: '300px' }}
+                sx={{ width: { xs: '100%', sm: '300px' } }}
                 InputProps={{
                   endAdornment: (
                     <InputAdornment position="end">
@@ -305,7 +308,7 @@ const AccountableEntities = (): React.ReactElement => {
             ) : (
               <>
                 {/* Table */}
-                <TableContainer component={Paper} variant="outlined">
+                <TableContainer component={Paper} variant="outlined" sx={{ overflowX: 'auto' }}>
                   <Table>
                     <TableHead>
                       <TableRow sx={{ bgcolor: '#f8f9fa' }}>
