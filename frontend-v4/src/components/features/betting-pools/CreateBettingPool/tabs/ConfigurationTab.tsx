@@ -243,16 +243,16 @@ const ConfigurationTab: React.FC<ConfigTabProps> = ({ formData, handleChange, be
               }
             >
               <MenuItem value="es">
-                <Box component="span" sx={{ mr: 1, display: 'inline-flex', alignItems: 'center' }}><FlagES size={18} /></Box> {t('createBettingPool.config.langSpanish')}
+                <Box component="span" sx={{ mr: 1, display: 'inline-flex', alignItems: 'center', lineHeight: 0 }}><FlagES size={18} /></Box> {t('createBettingPool.config.langSpanish')}
               </MenuItem>
               <MenuItem value="en">
-                <Box component="span" sx={{ mr: 1, display: 'inline-flex', alignItems: 'center' }}><FlagUS size={18} /></Box> {t('createBettingPool.config.langEnglish')}
+                <Box component="span" sx={{ mr: 1, display: 'inline-flex', alignItems: 'center', lineHeight: 0 }}><FlagUS size={18} /></Box> {t('createBettingPool.config.langEnglish')}
               </MenuItem>
               <MenuItem value="fr">
-                <Box component="span" sx={{ mr: 1, display: 'inline-flex', alignItems: 'center' }}><FlagFR size={18} /></Box> {t('createBettingPool.config.langFrench')}
+                <Box component="span" sx={{ mr: 1, display: 'inline-flex', alignItems: 'center', lineHeight: 0 }}><FlagFR size={18} /></Box> {t('createBettingPool.config.langFrench')}
               </MenuItem>
               <MenuItem value="ht">
-                <Box component="span" sx={{ mr: 1, display: 'inline-flex', alignItems: 'center' }}><FlagHT size={18} /></Box> {t('createBettingPool.config.langCreole')}
+                <Box component="span" sx={{ mr: 1, display: 'inline-flex', alignItems: 'center', lineHeight: 0 }}><FlagHT size={18} /></Box> {t('createBettingPool.config.langCreole')}
               </MenuItem>
             </Select>
           </FormControl>

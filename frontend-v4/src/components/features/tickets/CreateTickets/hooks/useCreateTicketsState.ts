@@ -176,7 +176,17 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
   const [limitChecking, setLimitChecking] = useState<boolean>(false);
   const [playStats, setPlayStats] = useState<{ playCount: number; soldInGroup: number; soldInPool: number } | null>(null);
   const recheckLimitRef = useRef<(() => void) | null>(null);
-  const { connected: signalRConnected, checkPlayLimit, getPlayStats, reservePlay, releaseReservation, onLimitAvailability, onPlayReserved, onPlayStats } = useSignalR();
+  // Mirrors `betNumber` so the SignalR callbacks (which capture a stale closure
+  // from the mount-time useEffect) can check whether an incoming response still
+  // applies to the input the user is looking at. Stops late responses from
+  // resurrecting cleared error/warning state.
+  const currentBetNumberRef = useRef<string>('');
+  // Token bumped on every change to betNumber. The latest pending-warning
+  // timeout captures it and only clears the warning if no newer change has
+  // happened — otherwise an old 5-second timer would clobber a freshly-set
+  // warning for a different number.
+  const betNumberTokenRef = useRef<number>(0);
+  const { connected: signalRConnected, checkPlayLimit, getCachedLimit, getPlayStats, reservePlay, releaseReservation, onLimitAvailability, onPlayReserved, onPlayStats } = useSignalR();
 
   // "Convert plays" modal — opens when user types "+" on an empty bet input.
   const [convertModalOpen, setConvertModalOpen] = useState<boolean>(false);
@@ -194,6 +204,11 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
   // Register SignalR callbacks
   useEffect(() => {
     onLimitAvailability((data: LimitAvailability) => {
+      // Drop late responses whose `betNumber` no longer matches the input.
+      // Without this, a slow round-trip for "12" can clobber state for the
+      // "13" the user is now editing.
+      if (data.betNumber !== currentBetNumberRef.current.trim()) return;
+
       // Response arrived — the add button can re-enable.
       setLimitChecking(false);
       setLimitAvailable(prev => {
@@ -203,7 +218,10 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
         return Math.min(prev, data.availableAmount);
       });
 
-      // Show blocked message with level info
+      // Show blocked message with level info. The 5-second auto-clear is
+      // tied to the current betNumber token: if the user changes the input
+      // before the timer fires, the old timer becomes a no-op so it can't
+      // wipe a warning that belongs to a newer number.
       if (data.isBlocked && data.blockedBy) {
         const labels: Record<string, string> = {
           global: 'Límite Global alcanzado',
@@ -213,7 +231,10 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
           no_limit: 'Banca no tiene límites configurados',
         };
         setBetWarning(labels[data.blockedBy] || 'Límite alcanzado');
-        setTimeout(() => setBetWarning(''), 5000);
+        const tokenAtSet = betNumberTokenRef.current;
+        setTimeout(() => {
+          if (betNumberTokenRef.current === tokenAtSet) setBetWarning('');
+        }, 5000);
       }
     });
 
@@ -1449,20 +1470,29 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
       return;
     }
 
-    // Reset and check each draw
-    setLimitAvailable(null);
+    // Show the last-seen availability immediately if we already have one for
+    // this (number, gameType, draw). The fresh check still fires below; once
+    // it lands, onLimitAvailability overwrites with the live value. This
+    // removes the brief blank state while the round-trip is in flight.
+    const firstDraw = drawsToCheck[0];
+    const cachedForFirst = getCachedLimit(betNumber.trim(), detection.gameTypeId, firstDraw.id);
+    setLimitAvailable(cachedForFirst?.availableAmount ?? null);
     setPlayStats(null);
     setLimitChecking(true);
-    const firstDraw = drawsToCheck[0];
     for (const draw of drawsToCheck) {
       checkPlayLimit(betNumber.trim(), detection.gameTypeId, draw.id, selectedPool.bettingPoolId);
     }
     // Get play stats for the first draw
     getPlayStats(betNumber.trim(), detection.gameTypeId, firstDraw.id, selectedPool.bettingPoolId);
-  }, [betNumber, selectedPool, multiLotteryMode, selectedDraws, selectedDraw, selectedBetType, drawGameTypes, determineBetType, detectCompoundPlay, checkPlayLimit, getPlayStats]);
+  }, [betNumber, selectedPool, multiLotteryMode, selectedDraws, selectedDraw, selectedBetType, drawGameTypes, determineBetType, detectCompoundPlay, checkPlayLimit, getCachedLimit, getPlayStats]);
 
-  // Clear warnings/errors and stale limit-check status when bet number changes
+  // Clear warnings/errors and stale limit-check status when bet number changes.
+  // Bumps `betNumberTokenRef` so any in-flight 5s-clear timers for the old
+  // number become no-ops, and updates `currentBetNumberRef` so SignalR
+  // callbacks can detect and discard late responses for the previous input.
   useEffect(() => {
+    currentBetNumberRef.current = betNumber;
+    betNumberTokenRef.current += 1;
     setBetWarning('');
     setBetError('');
     setLimitChecking(false);

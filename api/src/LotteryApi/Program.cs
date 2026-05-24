@@ -57,8 +57,16 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 // LoansController, TransactionGroupsController, the workers) use _context.Database.BeginTransactionAsync()
 // directly, which is incompatible with the retry execution strategy. If retries are wanted later,
 // each transactional block must be wrapped with Database.CreateExecutionStrategy().ExecuteAsync(...).
-builder.Services.AddDbContext<LotteryDbContext>(options =>
+// Pooled factory so SignalR Hub methods (and anything else that needs concurrent
+// queries) can create independent DbContexts cheaply. We also need the classic
+// scoped LotteryDbContext for the rest of the app — controllers, services, etc.
+// Registering both directly causes EF to complain about duplicate options, so
+// we register the factory only and resolve a scoped DbContext through it.
+builder.Services.AddPooledDbContextFactory<LotteryDbContext>(options =>
     options.UseSqlServer(connectionString));
+
+builder.Services.AddScoped<LotteryDbContext>(sp =>
+    sp.GetRequiredService<IDbContextFactory<LotteryDbContext>>().CreateDbContext());
 
 // Configure JWT Authentication
 var jwtKey = builder.Configuration["Jwt:Key"] ?? throw new InvalidOperationException("JWT Key is not configured");
@@ -148,7 +156,10 @@ builder.Services.AddWarningServices(builder.Configuration);
 // Register Memory Cache for performance
 builder.Services.AddMemoryCache();
 
-// Configure SignalR
+// Configure SignalR. We stayed with the default JSON protocol because
+// MessagePack-CSharp's resolvers serialize C# PascalCase as-is, which breaks
+// the camelCase contract the TypeScript client expects. The latency win from
+// MessagePack is small compared to the parallel-query refactor in LotteryHub.
 builder.Services.AddSignalR(options =>
 {
     options.EnableDetailedErrors = builder.Environment.IsDevelopment();
