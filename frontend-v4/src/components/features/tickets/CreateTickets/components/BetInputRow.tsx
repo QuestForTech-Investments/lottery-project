@@ -1,6 +1,7 @@
 import React, { memo, type RefObject, type KeyboardEvent, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Box, TextField, Typography, IconButton } from '@mui/material';
+import { Box, TextField, Typography, IconButton, Button, useMediaQuery, useTheme } from '@mui/material';
+import { CornerDownLeft } from 'lucide-react';
 import type { Draw } from '../types';
 
 interface BetInputRowProps {
@@ -58,6 +59,26 @@ const BetInputRow: React.FC<BetInputRowProps> = memo(({
   onOpenConvertModal,
 }) => {
   const { t } = useTranslation();
+  const theme = useTheme();
+  // Phones use the numeric keyboard on the play input — bet numbers are
+  // mostly digits and the on-screen letter keys aren't worth the screen real
+  // estate. We surface the letter/symbol modifiers (F, B, +, -) as buttons
+  // below the input row instead.
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+
+  const appendToBetNumber = (chunk: string) => {
+    const next = (betNumber + chunk).toUpperCase();
+    // Preserve the "+ on empty input" shortcut that opens the convert modal.
+    if (chunk === '+' && betNumber === '' && onOpenConvertModal) {
+      onOpenConvertModal();
+      return;
+    }
+    onBetNumberChange(next);
+    // Keep focus on the input so the next numeric tap continues building the
+    // play without an extra tap to re-focus.
+    setTimeout(() => betNumberInputRef.current?.focus(), 0);
+  };
+
   const handleAmountChange = (value: string) => {
     const pattern = allowSplitAmount
       ? /^\d*\.?\d*(\+\d*\.?\d*)?$/
@@ -145,7 +166,11 @@ const BetInputRow: React.FC<BetInputRowProps> = memo(({
         disabled={!selectedDraw}
         autoFocus={!!selectedDraw}
         inputRef={betNumberInputRef}
-        inputProps={{ tabIndex: 1 }}
+        // `inputMode: numeric` triggers the numeric keypad on mobile. Letters
+        // and symbols (F, B, +, -) are reachable through the helper buttons
+        // below the row. Desktop ignores `inputMode` so typing still works as
+        // before.
+        inputProps={{ tabIndex: 1, inputMode: isMobile ? 'numeric' : undefined }}
         sx={{
           flex: 1, bgcolor: 'white',
           '& input': { fontSize: '24px', fontWeight: 'bold', textAlign: 'center', py: 2, color: '#333', textTransform: 'uppercase' },
@@ -188,15 +213,56 @@ const BetInputRow: React.FC<BetInputRowProps> = memo(({
       />
     </Box>
 
+    {/* Mobile-only modifier keypad. Surfaces the letter/symbol characters
+        (F, B, +, -) that the numeric keyboard hides, so users can build the
+        full set of play codes (FS, FB, BS, BB, 12+34, etc.) by tapping. Each
+        modifier is meant to appear at most once in a play, so the button
+        disables itself once the char is already present in the input. */}
+    {isMobile && (
+      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 0.75, mb: 1.5 }}>
+        {(['F', 'B', '+', '-'] as const).map((ch) => {
+          const alreadyPresent = betNumber.toUpperCase().includes(ch);
+          return (
+            <Button
+              key={ch}
+              variant="outlined"
+              disabled={!selectedDraw || alreadyPresent}
+              onClick={() => appendToBetNumber(ch)}
+              sx={{
+                minWidth: 0,
+                py: 1,
+                fontSize: '18px',
+                fontWeight: 700,
+                color: '#8b5cf6',
+                borderColor: '#c4b5fd',
+                bgcolor: 'white',
+                '&:hover': { bgcolor: '#f5f3ff', borderColor: '#8b5cf6' },
+              }}
+            >
+              {ch}
+            </Button>
+          );
+        })}
+      </Box>
+    )}
+
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2, flexWrap: 'wrap' }}>
       {ticketsDropdown}
+      {/* "Bajar jugada" — adds the current row to the bets list. Uses an
+          enter/return icon on mobile so it's not confused with the "+" and
+          "-" modifier buttons above. */}
       <IconButton
         onClick={onAddBet}
         disabled={!betNumber || !amount || !selectedDraw || limitChecking}
-        sx={{ bgcolor: '#8b5cf6', color: 'white', '&:hover': { bgcolor: '#7c3aed' } }}
+        sx={{
+          bgcolor: '#8b5cf6',
+          color: 'white',
+          '&:hover': { bgcolor: '#7c3aed' },
+          px: isMobile ? 1.5 : undefined,
+        }}
         title={limitChecking ? t('tickets.create.waitingAvailability') : t('tickets.create.addPlayHint')}
       >
-        ➕
+        {isMobile ? <CornerDownLeft size={20} /> : '➕'}
       </IconButton>
       <Typography sx={{ fontSize: '14px', color: '#666' }}>
         <strong>{t('tickets.create.plays')}:</strong> {totalBets}
@@ -204,9 +270,11 @@ const BetInputRow: React.FC<BetInputRowProps> = memo(({
       <Typography sx={{ fontSize: '14px', color: '#666' }}>
         <strong>{t('tickets.create.totalLabel')}:</strong> ${grandTotal}
       </Typography>
-      <Typography sx={{ fontSize: '12px', color: '#888', fontStyle: 'italic', ml: 'auto' }}>
-        {t('tickets.create.tabHint')}
-      </Typography>
+      {!isMobile && (
+        <Typography sx={{ fontSize: '12px', color: '#888', fontStyle: 'italic', ml: 'auto' }}>
+          {t('tickets.create.tabHint')}
+        </Typography>
+      )}
     </Box>
   </>
   );

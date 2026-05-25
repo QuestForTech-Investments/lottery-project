@@ -8,8 +8,8 @@
 
 import React, { memo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Box, Paper, IconButton, Typography, Chip } from '@mui/material';
-import { Trash2 } from 'lucide-react';
+import { Box, Paper, IconButton, Typography, Chip, Button } from '@mui/material';
+import { Trash2, Shuffle } from 'lucide-react';
 import type { Bet, ColumnType } from '../types';
 import { COLUMN_COLORS } from '../constants';
 
@@ -52,6 +52,10 @@ interface UnifiedBetsTableProps {
   play4Total: string;
   onDeleteBet: (columnType: ColumnType, id: number) => void;
   onDeleteAll: (columnType: ColumnType) => void;
+  /** Opens the "Convertir jugadas" modal (Directo→Pale, etc.). On desktop the
+   *  modal is reachable by typing "+" in an empty input; on phones we surface
+   *  it explicitly as a button so the feature is discoverable. */
+  onOpenConvertModal?: () => void;
 }
 
 const UnifiedBetsTable: React.FC<UnifiedBetsTableProps> = memo(({
@@ -65,6 +69,7 @@ const UnifiedBetsTable: React.FC<UnifiedBetsTableProps> = memo(({
   play4Total,
   onDeleteBet,
   onDeleteAll,
+  onOpenConvertModal,
 }) => {
   const { t } = useTranslation();
 
@@ -95,9 +100,46 @@ const UnifiedBetsTable: React.FC<UnifiedBetsTableProps> = memo(({
 
   return (
     <Paper sx={{ overflow: 'hidden', mb: 2 }}>
-      {/* Title bar */}
-      <Box sx={{ bgcolor: '#8b5cf6', color: 'white', p: 1, textAlign: 'center', fontWeight: 'bold' }}>
-        {t('tickets.create.playsTitle', { defaultValue: 'Jugadas' })}
+      {/* Title bar with Convertir action */}
+      <Box
+        sx={{
+          bgcolor: '#8b5cf6',
+          color: 'white',
+          px: 1,
+          py: 0.5,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 1,
+        }}
+      >
+        {/* Spacer to keep the title visually centred */}
+        <Box sx={{ width: 90 }} />
+        <Typography sx={{ fontWeight: 'bold', flex: 1, textAlign: 'center' }}>
+          {t('tickets.create.playsTitle', { defaultValue: 'Jugadas' })}
+        </Typography>
+        {onOpenConvertModal ? (
+          <Button
+            size="small"
+            onClick={onOpenConvertModal}
+            startIcon={<Shuffle size={14} />}
+            sx={{
+              color: 'white',
+              bgcolor: 'rgba(255,255,255,0.18)',
+              textTransform: 'none',
+              fontSize: '11px',
+              fontWeight: 600,
+              px: 1,
+              py: 0.25,
+              minWidth: 90,
+              '&:hover': { bgcolor: 'rgba(255,255,255,0.28)' },
+            }}
+          >
+            {t('tickets.create.convertButton', { defaultValue: 'Convertir' })}
+          </Button>
+        ) : (
+          <Box sx={{ width: 90 }} />
+        )}
       </Box>
 
       {/* Column headers */}

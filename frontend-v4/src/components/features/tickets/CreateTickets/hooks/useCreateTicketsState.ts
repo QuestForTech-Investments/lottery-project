@@ -158,7 +158,7 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
   const [soldInPool] = useState<string>('');
 
   // Toggles
-  const [discountActive, setDiscountActive] = useState<boolean>(true);
+  const [discountActive, setDiscountActive] = useState<boolean>(false);
   const [multiLotteryMode, setMultiLotteryMode] = useState<boolean>(false);
 
   // Input fields

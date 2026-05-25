@@ -226,6 +226,7 @@ const CreateTickets: React.FC = () => {
           play4Total={play4Total}
           onDeleteBet={handleDeleteBet}
           onDeleteAll={handleDeleteAll}
+          onOpenConvertModal={() => setConvertModalOpen(true)}
         />
       ) : (
         <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
