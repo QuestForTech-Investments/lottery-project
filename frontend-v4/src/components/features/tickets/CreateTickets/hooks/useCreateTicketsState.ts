@@ -927,11 +927,18 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
     return null;
   }, []);
 
-  // True when the current input matches a compound-play pattern.
+  // True when the current input is a compound play. Two paths:
+  //  1) The bet number itself matches a compound-play pattern (e.g. "25.").
+  //  2) Multi-lot mode is on with 2+ lotteries selected — one input produces
+  //     one bet per lottery, so the limit check can't be a single value;
+  //     each generated bet is validated server-side. We surface this in the
+  //     UI by flipping `isCompoundPlay`, which makes the middle field show
+  //     'X' instead of an availability number.
   const isCompoundPlay = useMemo(() => {
+    if (multiLotteryMode && selectedDraws.length > 1) return true;
     const allowedGameTypes = selectedDraw ? (drawGameTypes.get(selectedDraw.id) || []) : [];
     return detectCompoundPlay(betNumber, allowedGameTypes) !== null;
-  }, [betNumber, selectedDraw, drawGameTypes, detectCompoundPlay]);
+  }, [betNumber, selectedDraw, drawGameTypes, detectCompoundPlay, multiLotteryMode, selectedDraws.length]);
 
   // The moment the input becomes a compound command (e.g. user just typed the
   // trailing "."), jump straight to the amount field. Skips having to Tab.
@@ -1444,8 +1451,12 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
 
     // Compound plays don't check limits — the backend validates each generated
     // bet individually at create time. The UI shows "X" in the middle field.
+    // Multi-lot with 2+ lotteries selected is also a compound case: one input
+    // expands to one bet per lottery, so a single availability number doesn't
+    // make sense here either.
     const allowedGameTypesEarly = selectedDraw ? (drawGameTypes.get(selectedDraw.id) || []) : [];
-    if (detectCompoundPlay(betNumber, allowedGameTypesEarly)) {
+    const isMultiLotCompound = multiLotteryMode && selectedDraws.length > 1;
+    if (isMultiLotCompound || detectCompoundPlay(betNumber, allowedGameTypesEarly)) {
       setLimitAvailable(null);
       setPlayStats(null);
       return;
