@@ -1,6 +1,15 @@
 import React, { memo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Box, Typography, CircularProgress } from '@mui/material';
+import {
+  Box,
+  Typography,
+  CircularProgress,
+  Autocomplete,
+  TextField,
+  Chip,
+  useMediaQuery,
+  useTheme,
+} from '@mui/material';
 import { Dices } from 'lucide-react';
 import type { Draw, BettingPool } from '../types';
 
@@ -33,12 +42,157 @@ const DrawsGrid: React.FC<DrawsGridProps> = memo(({
   onDrawClick,
 }) => {
   const { t } = useTranslation();
+  const theme = useTheme();
+  // Phones can't fit the full draws-as-chips grid — too many sorteos. Swap to
+  // a searchable Autocomplete that supports the same single/multi selection
+  // and disabled states as the desktop grid.
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   // Filter draws based on betting pool restrictions
   const filteredDraws = draws.filter((draw) => {
     if (!selectedPool) return true;
     if (allowedDrawIds.size === 0) return true;
     return allowedDrawIds.has(draw.id);
   });
+
+  if (isMobile) {
+    if (loadingDraws) {
+      return (
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1, p: 1.5, mb: 2, bgcolor: 'rgba(255,255,255,0.5)', borderRadius: 1, minHeight: 60 }}>
+          <CircularProgress size={20} sx={{ color: '#8b5cf6' }} />
+          <Typography sx={{ fontSize: '12px', color: '#666' }}>{t('tickets.create.loadingDraws')}</Typography>
+        </Box>
+      );
+    }
+    if (filteredDraws.length === 0) {
+      return (
+        <Box sx={{ p: 1.5, mb: 2, bgcolor: 'rgba(255,255,255,0.5)', borderRadius: 1 }}>
+          <Typography sx={{ fontSize: '12px', color: '#666' }}>{t('tickets.create.noDrawsAvailable')}</Typography>
+        </Box>
+      );
+    }
+
+    const isOptionDisabled = (draw: Draw): boolean => {
+      const noPool = !selectedPool;
+      return noPool || !!draw.disabled || loadingAllowedDraws;
+    };
+
+    if (multiLotteryMode) {
+      return (
+        <Box sx={{ mb: 2 }}>
+          <Autocomplete
+            multiple
+            options={filteredDraws}
+            value={selectedDraws}
+            getOptionLabel={(o) => o.name}
+            isOptionEqualToValue={(a, b) => a.id === b.id}
+            getOptionDisabled={isOptionDisabled}
+            disableCloseOnSelect
+            // We pipe each toggle through onDrawClick so the parent state and
+            // side effects stay identical to the desktop grid.
+            onChange={(_, newValue, _reason, details) => {
+              const target = details?.option;
+              if (target) onDrawClick(target);
+            }}
+            renderTags={(value, getTagProps) =>
+              value.map((option, index) => (
+                <Chip
+                  size="small"
+                  label={option.name}
+                  {...getTagProps({ index })}
+                  key={option.id}
+                  sx={{ bgcolor: option.color || '#8b5cf6', color: '#fff', fontWeight: 600, fontSize: '11px' }}
+                />
+              ))
+            }
+            renderOption={(props, option) => (
+              <Box component="li" {...props} key={option.id} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Box
+                  sx={{
+                    width: 22,
+                    height: 22,
+                    borderRadius: '3px',
+                    overflow: 'hidden',
+                    bgcolor: option.imageUrl ? 'transparent' : option.color || '#8b5cf6',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                  }}
+                >
+                  {option.imageUrl ? (
+                    <Box component="img" src={option.imageUrl} alt="" sx={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    <Dices size={14} color="white" />
+                  )}
+                </Box>
+                <Box sx={{ flex: 1, fontSize: '14px', textTransform: 'uppercase' }}>{option.name}</Box>
+                {option.isClosed && (
+                  <Typography component="span" sx={{ fontSize: '10px', color: '#888' }}>(Cerrado)</Typography>
+                )}
+              </Box>
+            )}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                size="small"
+                placeholder={t('tickets.create.searchDrawPlaceholder', { defaultValue: 'Buscar sorteo…' })}
+                sx={{ bgcolor: '#fff' }}
+              />
+            )}
+          />
+        </Box>
+      );
+    }
+
+    // Single-select mode
+    return (
+      <Box sx={{ mb: 2 }}>
+        <Autocomplete
+          options={filteredDraws}
+          value={selectedDraw}
+          getOptionLabel={(o) => o.name}
+          isOptionEqualToValue={(a, b) => a.id === b.id}
+          getOptionDisabled={isOptionDisabled}
+          onChange={(_, newValue) => { if (newValue) onDrawClick(newValue); }}
+          renderOption={(props, option) => (
+            <Box component="li" {...props} key={option.id} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Box
+                sx={{
+                  width: 22,
+                  height: 22,
+                  borderRadius: '3px',
+                  overflow: 'hidden',
+                  bgcolor: option.imageUrl ? 'transparent' : option.color || '#8b5cf6',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                {option.imageUrl ? (
+                  <Box component="img" src={option.imageUrl} alt="" sx={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  <Dices size={14} color="white" />
+                )}
+              </Box>
+              <Box sx={{ flex: 1, fontSize: '14px', textTransform: 'uppercase' }}>{option.name}</Box>
+              {option.isClosed && (
+                <Typography component="span" sx={{ fontSize: '10px', color: '#888' }}>(Cerrado)</Typography>
+              )}
+            </Box>
+          )}
+          renderInput={(params) => (
+            <TextField
+              {...params}
+              size="small"
+              placeholder={t('tickets.create.searchDrawPlaceholder', { defaultValue: 'Buscar sorteo…' })}
+              sx={{ bgcolor: '#fff' }}
+            />
+          )}
+        />
+      </Box>
+    );
+  }
 
   return (
     <Box

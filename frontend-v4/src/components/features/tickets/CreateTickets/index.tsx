@@ -12,7 +12,8 @@ import React, { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Box, TextField, Typography, Autocomplete, Chip,
-  Dialog, DialogContent, Snackbar, Alert
+  Dialog, DialogContent, Snackbar, Alert,
+  useMediaQuery, useTheme,
 } from '@mui/material';
 import { Dices } from 'lucide-react';
 import HelpModal from './HelpModal';
@@ -22,7 +23,7 @@ import TicketPrinter from '../TicketPrinter';
 import { useCreateTicketsState } from './hooks/useCreateTicketsState';
 import { useUserPermissions } from '@hooks/useUserPermissions';
 import { COLUMN_COLORS, COLUMN_TITLES } from './constants';
-import { BetCardColumn, DrawsGrid, StatsRow, BetInputRow, TicketsDropdown, ConvertPlaysModal } from './components';
+import { BetCardColumn, UnifiedBetsTable, DrawsGrid, StatsRow, BetInputRow, TicketsDropdown, ConvertPlaysModal } from './components';
 import type { TicketDateMode } from './types';
 
 /**
@@ -30,6 +31,9 @@ import type { TicketDateMode } from './types';
  */
 const CreateTickets: React.FC = () => {
   const { t } = useTranslation();
+  const theme = useTheme();
+  // Phones replace the 4-column bet grid with a single "Jugadas" table.
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const {
     betNumberInputRef,
     amountInputRef,
@@ -208,65 +212,73 @@ const CreateTickets: React.FC = () => {
         ticketsDropdown={<TicketsDropdown selectedPool={selectedPool} cancelMinutes={cancelMinutes} />}
       />
 
-      {/* Bet Columns — 2×2 on phones, 4-across from md up so each column gets
-          enough width to show "lot/num/$" without truncating. */}
-      <Box
-        sx={{
-          display: { xs: 'grid', md: 'flex' },
-          gridTemplateColumns: { xs: 'repeat(2, 1fr)' },
-          gap: 1,
-          mb: 2,
-        }}
-      >
-        {visibleColumns.directo && (
-          <BetCardColumn
-            title={COLUMN_TITLES.directo}
-            headerColor={COLUMN_COLORS.directo.headerColor}
-            headerBgColor={COLUMN_COLORS.directo.headerBgColor}
-            bets={directBets}
-            columnType="directo"
-            onDeleteBet={handleDeleteBet}
-            onDeleteAll={handleDeleteAll}
-            total={directTotal}
-          />
-        )}
-        {visibleColumns.pale && (
-          <BetCardColumn
-            title={COLUMN_TITLES.pale}
-            headerColor={COLUMN_COLORS.pale.headerColor}
-            headerBgColor={COLUMN_COLORS.pale.headerBgColor}
-            bets={paleBets}
-            columnType="pale"
-            onDeleteBet={handleDeleteBet}
-            onDeleteAll={handleDeleteAll}
-            total={paleTotal}
-          />
-        )}
-        {visibleColumns.cash3 && (
-          <BetCardColumn
-            title={COLUMN_TITLES.cash3}
-            headerColor={COLUMN_COLORS.cash3.headerColor}
-            headerBgColor={COLUMN_COLORS.cash3.headerBgColor}
-            bets={cash3Bets}
-            columnType="cash3"
-            onDeleteBet={handleDeleteBet}
-            onDeleteAll={handleDeleteAll}
-            total={cash3Total}
-          />
-        )}
-        {visibleColumns.play4 && (
-          <BetCardColumn
-            title={COLUMN_TITLES.play4}
-            headerColor={COLUMN_COLORS.play4.headerColor}
-            headerBgColor={COLUMN_COLORS.play4.headerBgColor}
-            bets={play4Bets}
-            columnType="play4"
-            onDeleteBet={handleDeleteBet}
-            onDeleteAll={handleDeleteAll}
-            total={play4Total}
-          />
-        )}
-      </Box>
+      {/* Bet display — phones get a single consolidated "Jugadas" table;
+          larger screens keep the 4-column grid (one column per bet type). */}
+      {isMobile ? (
+        <UnifiedBetsTable
+          directBets={directBets}
+          paleBets={paleBets}
+          cash3Bets={cash3Bets}
+          play4Bets={play4Bets}
+          directTotal={directTotal}
+          paleTotal={paleTotal}
+          cash3Total={cash3Total}
+          play4Total={play4Total}
+          onDeleteBet={handleDeleteBet}
+          onDeleteAll={handleDeleteAll}
+        />
+      ) : (
+        <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+          {visibleColumns.directo && (
+            <BetCardColumn
+              title={COLUMN_TITLES.directo}
+              headerColor={COLUMN_COLORS.directo.headerColor}
+              headerBgColor={COLUMN_COLORS.directo.headerBgColor}
+              bets={directBets}
+              columnType="directo"
+              onDeleteBet={handleDeleteBet}
+              onDeleteAll={handleDeleteAll}
+              total={directTotal}
+            />
+          )}
+          {visibleColumns.pale && (
+            <BetCardColumn
+              title={COLUMN_TITLES.pale}
+              headerColor={COLUMN_COLORS.pale.headerColor}
+              headerBgColor={COLUMN_COLORS.pale.headerBgColor}
+              bets={paleBets}
+              columnType="pale"
+              onDeleteBet={handleDeleteBet}
+              onDeleteAll={handleDeleteAll}
+              total={paleTotal}
+            />
+          )}
+          {visibleColumns.cash3 && (
+            <BetCardColumn
+              title={COLUMN_TITLES.cash3}
+              headerColor={COLUMN_COLORS.cash3.headerColor}
+              headerBgColor={COLUMN_COLORS.cash3.headerBgColor}
+              bets={cash3Bets}
+              columnType="cash3"
+              onDeleteBet={handleDeleteBet}
+              onDeleteAll={handleDeleteAll}
+              total={cash3Total}
+            />
+          )}
+          {visibleColumns.play4 && (
+            <BetCardColumn
+              title={COLUMN_TITLES.play4}
+              headerColor={COLUMN_COLORS.play4.headerColor}
+              headerBgColor={COLUMN_COLORS.play4.headerBgColor}
+              bets={play4Bets}
+              columnType="play4"
+              onDeleteBet={handleDeleteBet}
+              onDeleteAll={handleDeleteAll}
+              total={play4Total}
+            />
+          )}
+        </Box>
+      )}
 
       {/* Action Buttons */}
       <ActionButtonsRow

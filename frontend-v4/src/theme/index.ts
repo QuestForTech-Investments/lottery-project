@@ -197,15 +197,22 @@ export const theme = createTheme({
           '& .MuiOutlinedInput-root': {
             transition: 'all 0.3s ease',
             '&:hover': {
-              transform: 'translateY(-1px)',
+              // The hover lift animation looks busy on phones (where focus is
+              // tap-driven, not hover) and makes inputs feel like they jump
+              // out of their row. Disable it below the sm breakpoint.
+              '@media (min-width: 600px)': {
+                transform: 'translateY(-1px)',
+              },
               '& .MuiOutlinedInput-notchedOutline': {
                 borderColor: '#818cf8',
                 borderWidth: '2px'
               }
             },
             '&.Mui-focused': {
-              transform: 'translateY(-2px)',
-              boxShadow: '0 4px 6px -1px rgba(99, 102, 241, 0.1)',
+              '@media (min-width: 600px)': {
+                transform: 'translateY(-2px)',
+                boxShadow: '0 4px 6px -1px rgba(99, 102, 241, 0.1)',
+              },
               '& .MuiOutlinedInput-notchedOutline': {
                 borderColor: '#6366f1',
                 borderWidth: '2px'
