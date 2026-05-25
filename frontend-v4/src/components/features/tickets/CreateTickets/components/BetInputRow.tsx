@@ -166,11 +166,12 @@ const BetInputRow: React.FC<BetInputRowProps> = memo(({
         disabled={!selectedDraw}
         autoFocus={!!selectedDraw}
         inputRef={betNumberInputRef}
-        // `inputMode: numeric` triggers the numeric keypad on mobile. Letters
-        // and symbols (F, B, +, -) are reachable through the helper buttons
-        // below the row. Desktop ignores `inputMode` so typing still works as
-        // before.
-        inputProps={{ tabIndex: 1, inputMode: isMobile ? 'numeric' : undefined }}
+        // `inputMode: decimal` triggers the numeric keypad WITH a period on
+        // mobile (iOS/Android both surface "." on decimal). Letters and the
+        // remaining symbols (F, B, +, -) are reachable through the helper
+        // buttons below the row. Desktop ignores `inputMode` so typing still
+        // works as before.
+        inputProps={{ tabIndex: 1, inputMode: isMobile ? 'decimal' : undefined }}
         sx={{
           flex: 1, bgcolor: 'white',
           '& input': { fontSize: '24px', fontWeight: 'bold', textAlign: 'center', py: 2, color: '#333', textTransform: 'uppercase' },
@@ -248,22 +249,43 @@ const BetInputRow: React.FC<BetInputRowProps> = memo(({
 
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2, flexWrap: 'wrap' }}>
       {ticketsDropdown}
-      {/* "Bajar jugada" — adds the current row to the bets list. Uses an
-          enter/return icon on mobile so it's not confused with the "+" and
-          "-" modifier buttons above. */}
-      <IconButton
-        onClick={onAddBet}
-        disabled={!betNumber || !amount || !selectedDraw || limitChecking}
-        sx={{
-          bgcolor: '#8b5cf6',
-          color: 'white',
-          '&:hover': { bgcolor: '#7c3aed' },
-          px: isMobile ? 1.5 : undefined,
-        }}
-        title={limitChecking ? t('tickets.create.waitingAvailability') : t('tickets.create.addPlayHint')}
-      >
-        {isMobile ? <CornerDownLeft size={20} /> : '➕'}
-      </IconButton>
+      {/* "Bajar jugada" — adds the current row to the bets list. Mobile shows
+          a labelled "Enter" button (icon + word) so it's not confused with
+          the "+" and "-" modifier buttons above. */}
+      {isMobile ? (
+        <Button
+          onClick={onAddBet}
+          disabled={!betNumber || !amount || !selectedDraw || limitChecking}
+          variant="contained"
+          startIcon={<CornerDownLeft size={18} />}
+          sx={{
+            bgcolor: '#8b5cf6',
+            color: 'white',
+            textTransform: 'none',
+            fontWeight: 600,
+            fontSize: '14px',
+            px: 2,
+            py: 0.75,
+            '&:hover': { bgcolor: '#7c3aed' },
+          }}
+          title={limitChecking ? t('tickets.create.waitingAvailability') : t('tickets.create.addPlayHint')}
+        >
+          {t('tickets.create.enterButton', { defaultValue: 'Enter' })}
+        </Button>
+      ) : (
+        <IconButton
+          onClick={onAddBet}
+          disabled={!betNumber || !amount || !selectedDraw || limitChecking}
+          sx={{
+            bgcolor: '#8b5cf6',
+            color: 'white',
+            '&:hover': { bgcolor: '#7c3aed' },
+          }}
+          title={limitChecking ? t('tickets.create.waitingAvailability') : t('tickets.create.addPlayHint')}
+        >
+          ➕
+        </IconButton>
+      )}
       <Typography sx={{ fontSize: '14px', color: '#666' }}>
         <strong>{t('tickets.create.plays')}:</strong> {totalBets}
       </Typography>

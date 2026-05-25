@@ -209,7 +209,14 @@ const CreateTickets: React.FC = () => {
         compoundMode={isCompoundPlay}
         allowSplitAmount={allowSplitAmount}
         onOpenConvertModal={() => setConvertModalOpen(true)}
-        ticketsDropdown={<TicketsDropdown selectedPool={selectedPool} cancelMinutes={cancelMinutes} />}
+        // Tickets dropdown hidden per client request. Kept rendered but
+        // invisible (no DOM removal) so the feature can be reinstated by
+        // simply removing this `display: none` wrapper if needed.
+        ticketsDropdown={
+          <Box sx={{ display: 'none' }}>
+            <TicketsDropdown selectedPool={selectedPool} cancelMinutes={cancelMinutes} />
+          </Box>
+        }
       />
 
       {/* Bet display — phones get a single consolidated "Jugadas" table;
