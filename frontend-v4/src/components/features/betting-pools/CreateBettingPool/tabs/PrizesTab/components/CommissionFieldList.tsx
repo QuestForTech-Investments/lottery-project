@@ -210,14 +210,15 @@ const CommissionFieldList: React.FC<CommissionFieldListProps> = memo(({
         </FormControl>
       )}
 
-      {/* "General" field - own row, aligned with first grid column */}
+      {/* "General" field - own row, aligned with first grid column.
+          xs uses full width (1-column grid below); sm/lg track the grid. */}
       <Box sx={{
         display: 'flex',
         alignItems: 'center',
         gap: 0.5,
         mb: 1,
         width: {
-          xs: 'calc((100% - 12px) / 3)',
+          xs: '100%',
           sm: 'calc((100% - 18px) / 4)',
           lg: 'calc((100% - 30px) / 6)',
         },
@@ -225,7 +226,7 @@ const CommissionFieldList: React.FC<CommissionFieldListProps> = memo(({
         <Typography
           variant="body2"
           sx={{
-            textAlign: 'right',
+            textAlign: { xs: 'left', sm: 'right' },
             flex: 1,
             fontSize: '0.8rem',
             fontWeight: 'bold',
@@ -241,26 +242,32 @@ const CommissionFieldList: React.FC<CommissionFieldListProps> = memo(({
           onChange={handleGeneralFieldChange}
           placeholder="0"
           sx={{
-            width: 70,
-            minWidth: 70,
+            width: { xs: '100%', sm: 70 },
+            maxWidth: { xs: 140, sm: 70 },
+            minWidth: { xs: 0, sm: 70 },
+            flex: { xs: '0 0 50%', sm: 'initial' },
             '& .MuiOutlinedInput-root': { height: 31 },
-            '& .MuiOutlinedInput-input': { py: '4px', px: '8px', fontSize: '0.8rem' },
+            '& .MuiOutlinedInput-input': { py: '4px', px: '6px', fontSize: '0.8rem' },
           }}
         />
       </Box>
 
-      {/* Responsive grid matching original Bootstrap: col-4 / col-sm-3 / col-lg-3 / col-xl-2 */}
+      {/* Responsive grid. xs uses a single column so the longer bet-type
+          labels (Cash3 Front Straight, Singulación, etc.) get full row width
+          and don't overflow on phones. */}
       <Box sx={{
         display: 'grid',
         gridTemplateColumns: {
-          xs: 'repeat(3, 1fr)',
+          xs: '1fr',
           sm: 'repeat(4, 1fr)',
           lg: 'repeat(6, 1fr)',
         },
         gap: 0.75,
         rowGap: 1,
       }}>
-        {/* Individual bet type fields */}
+        {/* Individual bet type fields. On phones the label sits left-aligned
+            so the row reads like a form label, and the input fills the rest
+            of the row instead of leaving a big empty gap. */}
         {showPerPlayList && betTypes.map((betType) => (
           <Box
             key={betType.betTypeId}
@@ -269,7 +276,7 @@ const CommissionFieldList: React.FC<CommissionFieldListProps> = memo(({
             <Typography
               variant="body2"
               sx={{
-                textAlign: 'right',
+                textAlign: { xs: 'left', sm: 'right' },
                 flex: 1,
                 fontSize: '0.8rem',
                 color: 'text.secondary',
@@ -288,8 +295,10 @@ const CommissionFieldList: React.FC<CommissionFieldListProps> = memo(({
               onChange={handleInputChange(betType.betTypeCode)}
               placeholder="0"
               sx={{
-                width: 70,
-                minWidth: 70,
+                width: { xs: '100%', sm: 70 },
+                maxWidth: { xs: 140, sm: 70 },
+                minWidth: { xs: 0, sm: 70 },
+                flex: { xs: '0 0 50%', sm: 'initial' },
                 '& .MuiOutlinedInput-root': { height: 31 },
                 '& .MuiOutlinedInput-input': { py: '4px', px: '8px', fontSize: '0.8rem' },
               }}

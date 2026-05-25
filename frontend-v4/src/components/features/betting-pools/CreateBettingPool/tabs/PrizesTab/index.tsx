@@ -349,7 +349,7 @@ const PrizesTab: React.FC<PrizesTabProps> = ({
   }
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box sx={{ p: { xs: 1, sm: 3 } }}>
       <Typography variant="h6" gutterBottom>
         {t('createBettingPool.prizes.title')}
       </Typography>

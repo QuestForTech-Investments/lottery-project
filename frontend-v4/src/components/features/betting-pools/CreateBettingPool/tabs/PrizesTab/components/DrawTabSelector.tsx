@@ -1,6 +1,6 @@
 import React, { memo, useRef, useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Box, Chip, IconButton, TextField, InputAdornment, Typography } from '@mui/material';
+import { Box, Chip, IconButton, TextField, InputAdornment, Typography, useMediaQuery, useTheme } from '@mui/material';
 import { ChevronLeft, ChevronRight, Search, Clear } from '@mui/icons-material';
 import type { Draw } from '../types';
 
@@ -18,6 +18,11 @@ const DrawTabSelector: React.FC<DrawTabSelectorProps> = memo(({
   onDrawSelect,
 }) => {
   const { t } = useTranslation();
+  const theme = useTheme();
+  // On phones the search + chevrons + chip row + count crammed onto one line
+  // left so little space for the chips that even "General" was clipped to "G".
+  // Switch to a 2-row layout (search on top, chips row below) when isMobile.
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const containerRef = useRef<HTMLDivElement>(null);
   const [search, setSearch] = useState('');
 
@@ -41,22 +46,22 @@ const DrawTabSelector: React.FC<DrawTabSelectorProps> = memo(({
 
   return (
     <Box sx={{ mb: 2 }}>
-      {/* Search + Chips in one row */}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        {/* Search */}
+      {/* Mobile-only: search occupies its own row so the chip strip below
+          gets the full width to show full draw names. */}
+      {isMobile && (
         <TextField
           size="small"
+          fullWidth
           placeholder={t('createBettingPool.prizes.searchPlaceholder')}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           sx={{
-            minWidth: 160,
-            maxWidth: 180,
+            mb: 1,
             '& .MuiOutlinedInput-root': {
               borderRadius: 2,
               height: 36,
               fontSize: '0.85rem',
-            }
+            },
           }}
           InputProps={{
             startAdornment: (
@@ -73,6 +78,42 @@ const DrawTabSelector: React.FC<DrawTabSelectorProps> = memo(({
             ) : null,
           }}
         />
+      )}
+
+      {/* Search + Chips in one row */}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        {/* Desktop-only: search inline with the chip strip. */}
+        {!isMobile && (
+          <TextField
+            size="small"
+            placeholder={t('createBettingPool.prizes.searchPlaceholder')}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            sx={{
+              minWidth: 160,
+              maxWidth: 180,
+              '& .MuiOutlinedInput-root': {
+                borderRadius: 2,
+                height: 36,
+                fontSize: '0.85rem',
+              }
+            }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start" sx={{ mr: 0 }}>
+                  <Search sx={{ fontSize: 18, color: 'text.secondary' }} />
+                </InputAdornment>
+              ),
+              endAdornment: search ? (
+                <InputAdornment position="end" sx={{ ml: 0 }}>
+                  <IconButton size="small" onClick={() => setSearch('')} sx={{ p: 0.25 }}>
+                    <Clear sx={{ fontSize: 16 }} />
+                  </IconButton>
+                </InputAdornment>
+              ) : null,
+            }}
+          />
+        )}
 
         {/* Scroll Left */}
         <IconButton
