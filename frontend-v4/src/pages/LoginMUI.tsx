@@ -21,6 +21,7 @@ import {
   VisibilityOff as VisibilityOffIcon,
 } from '@mui/icons-material';
 import backgroundImage from '@/assets/images/login-background.jpg';
+import backgroundVideo from '@/assets/lotteryBalls.mp4';
 import logoImage from '@/assets/images/lottobook-logo.png';
 // Card background image from public folder
 const cardBackgroundImage = '/images/bannerlotto-02.jpg';
@@ -66,26 +67,58 @@ const LoginMUI = () => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
+        // Static jpg is the fallback for browsers that block autoplay or
+        // can't decode the mp4 — keeps the page from looking blank.
         backgroundImage: `url(${backgroundImage})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         position: 'relative',
+        overflow: 'hidden',
         p: { xs: 2, sm: 3 },
         boxSizing: 'border-box',
         '&::before': {
           content: '""',
           position: 'absolute',
           inset: 0,
+          // Sits between the video and the card so the lighting/contrast is
+          // consistent regardless of which frame of the loop is on screen.
           background: 'linear-gradient(135deg, rgba(15, 25, 35, 0.7) 0%, rgba(20, 40, 50, 0.5) 100%)',
-          zIndex: 0,
+          zIndex: 1,
+          pointerEvents: 'none',
         },
       }}
     >
+      {/* Looping lottery balls video. `muted` is required for autoplay on
+          iOS/Android Safari, and `playsInline` keeps it from going full
+          screen on iPhones. */}
+      <Box
+        component="video"
+        src={backgroundVideo}
+        autoPlay
+        loop
+        muted
+        playsInline
+        preload="auto"
+        // `disablePictureInPicture` and `controlsList` keep the browser from
+        // surfacing video chrome on long-press.
+        disablePictureInPicture
+        controlsList="nodownload nofullscreen noremoteplayback"
+        sx={{
+          position: 'absolute',
+          inset: 0,
+          width: '100%',
+          height: '100%',
+          objectFit: 'cover',
+          zIndex: 0,
+          pointerEvents: 'none',
+        }}
+      />
       <Paper
         elevation={0}
         sx={{
           position: 'relative',
-          zIndex: 1,
+          // Above the video (0) and the overlay (1) so the form is always on top.
+          zIndex: 2,
           // Mobile: white background with dark border like original
           // Desktop: image background
           backgroundImage: { xs: 'none', sm: `url(${cardBackgroundImage})` },
