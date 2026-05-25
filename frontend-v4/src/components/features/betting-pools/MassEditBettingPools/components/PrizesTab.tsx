@@ -99,8 +99,8 @@ const PrizesTab: FC<PrizesTabProps> = memo(({
           {prizesSubTab === 1 && (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               {/* General Commission */}
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Typography variant="body2" sx={{ minWidth: 200, fontWeight: 500 }}>
+              <Box sx={{ display: 'flex', alignItems: { xs: 'stretch', sm: 'center' }, flexDirection: { xs: 'column', sm: 'row' }, gap: { xs: 0.5, sm: 2 } }}>
+                <Typography variant="body2" sx={{ minWidth: { xs: 'auto', sm: 200 }, fontWeight: 500 }}>
                   {t('massEditBettingPools.general')}
                 </Typography>
                 <TextField
@@ -114,14 +114,14 @@ const PrizesTab: FC<PrizesTabProps> = memo(({
                     }
                   }}
                   placeholder="0"
-                  sx={{ maxWidth: 150 }}
+                  sx={{ maxWidth: { xs: '100%', sm: 150 }, width: { xs: '100%', sm: 'auto' } }}
                 />
               </Box>
               <Divider />
               {/* Per Bet Type Commissions */}
               {betTypes.map(betType => (
-                <Box key={betType.betTypeId} sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                  <Typography variant="body2" sx={{ minWidth: 200, fontWeight: 500 }}>
+                <Box key={betType.betTypeId} sx={{ display: 'flex', alignItems: { xs: 'stretch', sm: 'center' }, flexDirection: { xs: 'column', sm: 'row' }, gap: { xs: 0.5, sm: 2 } }}>
+                  <Typography variant="body2" sx={{ minWidth: { xs: 'auto', sm: 200 }, fontWeight: 500 }}>
                     {betType.betTypeName}
                   </Typography>
                   <TextField
@@ -135,7 +135,7 @@ const PrizesTab: FC<PrizesTabProps> = memo(({
                       }
                     }}
                     placeholder="0"
-                    sx={{ maxWidth: 150 }}
+                    sx={{ maxWidth: { xs: '100%', sm: 150 }, width: { xs: '100%', sm: 'auto' } }}
                   />
                 </Box>
               ))}

@@ -25,6 +25,27 @@ export const TABLE_COLUMNS: TableColumn[] = [
   { key: 'accumulatedFall', label: 'sales.accumulatedFall', align: 'right' }
 ];
 
+// Mobile column order — Venta surfaces right after Código so the user sees
+// the sales amount without scrolling. The remaining columns trail behind and
+// are reachable via horizontal scroll.
+export const TABLE_COLUMNS_MOBILE: TableColumn[] = [
+  { key: 'ref', label: 'sales.ref', align: 'left' },
+  { key: 'code', label: 'common.code', align: 'left' },
+  { key: 'sales', label: 'sales.venta', align: 'right' },
+  { key: 'p', label: 'sales.pendingShort', align: 'center' },
+  { key: 'l', label: 'sales.loserShort', align: 'center' },
+  { key: 'w', label: 'sales.winnerShort', align: 'center' },
+  { key: 'total', label: 'common.total', align: 'right' },
+  { key: 'commissions', label: 'sales.comisiones', align: 'right' },
+  { key: 'discounts', label: 'sales.descuentos', align: 'right' },
+  { key: 'prizes', label: 'sales.premios', align: 'right' },
+  { key: 'net', label: 'sales.neto', align: 'right' },
+  { key: 'fall', label: 'sales.caida', align: 'right' },
+  { key: 'final', label: 'sales.final', align: 'right' },
+  { key: 'balance', label: 'common.balance', align: 'right' },
+  { key: 'accumulatedFall', label: 'sales.accumulatedFall', align: 'right' }
+];
+
 export const MAIN_TABS = [
   'sales.tabs.general',
   'sales.tabs.bancaPorSorteo',

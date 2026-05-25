@@ -13,8 +13,8 @@ import type { FilterTogglesProps } from '../types';
 const FilterToggles: FC<FilterTogglesProps> = memo(({ filterType, onFilterChange }) => {
   const { t } = useTranslation();
   return (
-    <Box sx={{ mb: 2, display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-      <Typography variant="subtitle1" sx={{ color: 'text.secondary', mb: 1.5, fontWeight: 500 }}>
+    <Box sx={{ mb: 2, display: 'flex', flexDirection: 'column', alignItems: { xs: 'center', sm: 'flex-start' } }}>
+      <Typography variant="subtitle1" sx={{ color: 'text.secondary', mb: 1.5, fontWeight: 500, alignSelf: { xs: 'center', sm: 'flex-start' } }}>
         {t('common.filter')}
       </Typography>
       <ToggleButtonGroup
@@ -24,9 +24,11 @@ const FilterToggles: FC<FilterTogglesProps> = memo(({ filterType, onFilterChange
         size="small"
         orientation="vertical"
         sx={{
-          width: '100%',
+          width: { xs: 'auto', sm: '100%' },
+          minWidth: { xs: 240, sm: 'auto' },
           display: { xs: 'flex', sm: 'none' },
           flexDirection: 'column',
+          alignItems: 'stretch',
           '& .MuiToggleButton-root': {
             border: '2px solid #8b5cf6',
             borderRadius: '20px !important',

@@ -62,9 +62,9 @@ const DrawsTab: FC<DrawsTabProps> = memo(({ draws, formData, onInputChange }) =>
       </Box>
 
       {/* Aplicar cierre anticipado */}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-        <Typography sx={{ minWidth: 200 }}>{t('massEditBettingPools.applyEarlyClosingTo')}</Typography>
-        <FormControl sx={{ minWidth: 300 }} size="small">
+      <Box sx={{ display: 'flex', alignItems: { xs: 'stretch', sm: 'center' }, flexDirection: { xs: 'column', sm: 'row' }, gap: { xs: 0.5, sm: 2 } }}>
+        <Typography sx={{ minWidth: { xs: 'auto', sm: 200 } }}>{t('massEditBettingPools.applyEarlyClosingTo')}</Typography>
+        <FormControl sx={{ minWidth: { xs: '100%', sm: 300 } }} size="small">
           <Select
             value={formData.earlyClosingDrawId || ''}
             displayEmpty

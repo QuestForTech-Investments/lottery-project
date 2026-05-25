@@ -117,7 +117,20 @@ function DataTableInner<T extends object>({
         ...(maxHeight ? { maxHeight } : {}),
       }}
     >
-      <Table size={size} stickyHeader={stickyHeader}>
+      <Table
+        size={size}
+        stickyHeader={stickyHeader}
+        sx={{
+          // `width: auto` makes each column size to its natural content width
+          // instead of stretching to fill the container. Without this, on
+          // mobile the browser distributes leftover horizontal space across
+          // columns and produces visible gaps between cells with short values.
+          width: 'auto',
+          // Centre the table when it ends up narrower than the container so
+          // narrow tables don't sit flush-left with empty space on the right.
+          mx: 'auto',
+        }}
+      >
         <TableHead sx={{ backgroundColor: '#e3e3e3' }}>
           <TableRow>
             {columns.map((column) => {
@@ -146,6 +159,7 @@ function DataTableInner<T extends object>({
                       active={isActive}
                       direction={isActive ? sortOrder : 'asc'}
                       onClick={() => handleSort(id, isNumeric)}
+                      hideSortIcon
                     >
                       {column.label}
                     </TableSortLabel>

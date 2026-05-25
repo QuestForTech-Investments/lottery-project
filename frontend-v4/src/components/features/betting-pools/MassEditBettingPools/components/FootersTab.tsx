@@ -14,8 +14,8 @@ const FootersTab: FC<FootersTabProps> = memo(({ formData, onInputChange }) => {
   return (
     <Box sx={{ maxWidth: 600 }}>
       {/* Footer automático */}
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 3, gap: 2 }}>
-        <Typography sx={{ minWidth: 200 }}>{t('massEditBettingPools.autoFooter')}</Typography>
+      <Box sx={{ display: 'flex', alignItems: { xs: 'stretch', sm: 'center' }, flexDirection: { xs: 'column', sm: 'row' }, mb: 3, gap: { xs: 0.5, sm: 2 } }}>
+        <Typography sx={{ minWidth: { xs: 'auto', sm: 200 } }}>{t('massEditBettingPools.autoFooter')}</Typography>
         <Switch
           checked={formData.autoFooter}
           onChange={(e) => onInputChange('autoFooter', e.target.checked)}
@@ -23,8 +23,8 @@ const FootersTab: FC<FootersTabProps> = memo(({ formData, onInputChange }) => {
       </Box>
 
       {/* Primer pie de página */}
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 2 }}>
-        <Typography sx={{ minWidth: 200 }}>{t('massEditBettingPools.footer1')}</Typography>
+      <Box sx={{ display: 'flex', alignItems: { xs: 'stretch', sm: 'center' }, flexDirection: { xs: 'column', sm: 'row' }, mb: 2, gap: { xs: 0.5, sm: 2 } }}>
+        <Typography sx={{ minWidth: { xs: 'auto', sm: 200 } }}>{t('massEditBettingPools.footer1')}</Typography>
         <TextField
           value={formData.footer1}
           onChange={(e) => onInputChange('footer1', e.target.value)}
@@ -37,8 +37,8 @@ const FootersTab: FC<FootersTabProps> = memo(({ formData, onInputChange }) => {
       </Box>
 
       {/* Segundo pie de página */}
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 2 }}>
-        <Typography sx={{ minWidth: 200 }}>{t('massEditBettingPools.footer2')}</Typography>
+      <Box sx={{ display: 'flex', alignItems: { xs: 'stretch', sm: 'center' }, flexDirection: { xs: 'column', sm: 'row' }, mb: 2, gap: { xs: 0.5, sm: 2 } }}>
+        <Typography sx={{ minWidth: { xs: 'auto', sm: 200 } }}>{t('massEditBettingPools.footer2')}</Typography>
         <TextField
           value={formData.footer2}
           onChange={(e) => onInputChange('footer2', e.target.value)}
@@ -51,8 +51,8 @@ const FootersTab: FC<FootersTabProps> = memo(({ formData, onInputChange }) => {
       </Box>
 
       {/* Tercer pie de página */}
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 2 }}>
-        <Typography sx={{ minWidth: 200 }}>{t('massEditBettingPools.footer3')}</Typography>
+      <Box sx={{ display: 'flex', alignItems: { xs: 'stretch', sm: 'center' }, flexDirection: { xs: 'column', sm: 'row' }, mb: 2, gap: { xs: 0.5, sm: 2 } }}>
+        <Typography sx={{ minWidth: { xs: 'auto', sm: 200 } }}>{t('massEditBettingPools.footer3')}</Typography>
         <TextField
           value={formData.footer3}
           onChange={(e) => onInputChange('footer3', e.target.value)}
@@ -65,8 +65,8 @@ const FootersTab: FC<FootersTabProps> = memo(({ formData, onInputChange }) => {
       </Box>
 
       {/* Cuarto pie de página */}
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 2 }}>
-        <Typography sx={{ minWidth: 200 }}>{t('massEditBettingPools.footer4')}</Typography>
+      <Box sx={{ display: 'flex', alignItems: { xs: 'stretch', sm: 'center' }, flexDirection: { xs: 'column', sm: 'row' }, mb: 2, gap: { xs: 0.5, sm: 2 } }}>
+        <Typography sx={{ minWidth: { xs: 'auto', sm: 200 } }}>{t('massEditBettingPools.footer4')}</Typography>
         <TextField
           value={formData.footer4}
           onChange={(e) => onInputChange('footer4', e.target.value)}
@@ -79,8 +79,8 @@ const FootersTab: FC<FootersTabProps> = memo(({ formData, onInputChange }) => {
       </Box>
 
       {/* Quinto pie de página */}
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 2 }}>
-        <Typography sx={{ minWidth: 200 }}>{t('massEditBettingPools.footer5')}</Typography>
+      <Box sx={{ display: 'flex', alignItems: { xs: 'stretch', sm: 'center' }, flexDirection: { xs: 'column', sm: 'row' }, mb: 2, gap: { xs: 0.5, sm: 2 } }}>
+        <Typography sx={{ minWidth: { xs: 'auto', sm: 200 } }}>{t('massEditBettingPools.footer5')}</Typography>
         <TextField
           value={formData.footer5}
           onChange={(e) => onInputChange('footer5', e.target.value)}
@@ -93,8 +93,8 @@ const FootersTab: FC<FootersTabProps> = memo(({ formData, onInputChange }) => {
       </Box>
 
       {/* Sexto pie de página */}
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 2 }}>
-        <Typography sx={{ minWidth: 200 }}>{t('massEditBettingPools.footer6')}</Typography>
+      <Box sx={{ display: 'flex', alignItems: { xs: 'stretch', sm: 'center' }, flexDirection: { xs: 'column', sm: 'row' }, mb: 2, gap: { xs: 0.5, sm: 2 } }}>
+        <Typography sx={{ minWidth: { xs: 'auto', sm: 200 } }}>{t('massEditBettingPools.footer6')}</Typography>
         <TextField
           value={formData.footer6}
           onChange={(e) => onInputChange('footer6', e.target.value)}
@@ -107,8 +107,8 @@ const FootersTab: FC<FootersTabProps> = memo(({ formData, onInputChange }) => {
       </Box>
 
       {/* Séptimo pie de página */}
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 2 }}>
-        <Typography sx={{ minWidth: 200 }}>{t('massEditBettingPools.footer7')}</Typography>
+      <Box sx={{ display: 'flex', alignItems: { xs: 'stretch', sm: 'center' }, flexDirection: { xs: 'column', sm: 'row' }, mb: 2, gap: { xs: 0.5, sm: 2 } }}>
+        <Typography sx={{ minWidth: { xs: 'auto', sm: 200 } }}>{t('massEditBettingPools.footer7')}</Typography>
         <TextField
           value={formData.footer7}
           onChange={(e) => onInputChange('footer7', e.target.value)}
@@ -121,8 +121,8 @@ const FootersTab: FC<FootersTabProps> = memo(({ formData, onInputChange }) => {
       </Box>
 
       {/* Octavo pie de página */}
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 2 }}>
-        <Typography sx={{ minWidth: 200 }}>{t('massEditBettingPools.footer8')}</Typography>
+      <Box sx={{ display: 'flex', alignItems: { xs: 'stretch', sm: 'center' }, flexDirection: { xs: 'column', sm: 'row' }, mb: 2, gap: { xs: 0.5, sm: 2 } }}>
+        <Typography sx={{ minWidth: { xs: 'auto', sm: 200 } }}>{t('massEditBettingPools.footer8')}</Typography>
         <TextField
           value={formData.footer8}
           onChange={(e) => onInputChange('footer8', e.target.value)}

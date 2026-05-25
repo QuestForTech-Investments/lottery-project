@@ -15,6 +15,8 @@ import {
   ToggleButtonGroup,
   ToggleButton,
   Grid,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import TriStateToggle from './TriStateToggle';
@@ -22,14 +24,18 @@ import type { ConfigurationTabProps } from '../types';
 
 const ConfigurationTab: FC<ConfigurationTabProps> = memo(({ formData, zones, onInputChange }) => {
   const { t } = useTranslation();
+  const theme = useTheme();
+  // On phones the longer fall-type labels can't sit on one row with the
+  // shorter ones, so we render the whole group vertically instead of wrapping.
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   return (
     <Box>
       {/* SECTION 1: Full-width fields */}
       <Box sx={{ mb: 3 }}>
         {/* Zona */}
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 2 }}>
-          <Typography sx={{ minWidth: 200 }}>{t('massEditBettingPools.zone')}</Typography>
-          <FormControl sx={{ minWidth: 300 }} size="small">
+        <Box sx={{ display: 'flex', alignItems: { xs: 'stretch', sm: 'center' }, flexDirection: { xs: 'column', sm: 'row' }, mb: 2, gap: { xs: 0.5, sm: 2 } }}>
+          <Typography sx={{ minWidth: { xs: 'auto', sm: 200 } }}>{t('massEditBettingPools.zone')}</Typography>
+          <FormControl sx={{ minWidth: { xs: '100%', sm: 300 } }} size="small">
             <Select
               value={formData.zoneId}
               displayEmpty
@@ -48,14 +54,18 @@ const ConfigurationTab: FC<ConfigurationTabProps> = memo(({ formData, zones, onI
         </Box>
 
         {/* Tipo de caída */}
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 2 }}>
-          <Typography sx={{ minWidth: 200 }}>{t('massEditBettingPools.fallType')}</Typography>
+        <Box sx={{ display: 'flex', alignItems: { xs: 'stretch', sm: 'center' }, flexDirection: { xs: 'column', sm: 'row' }, mb: 2, gap: { xs: 0.5, sm: 2 } }}>
+          <Typography sx={{ minWidth: { xs: 'auto', sm: 200 } }}>{t('massEditBettingPools.fallType')}</Typography>
           <ToggleButtonGroup
             value={formData.fallType}
             exclusive
             onChange={(_, newVal) => onInputChange('fallType', newVal)}
             size="small"
-            sx={{ flexWrap: 'wrap' }}
+            orientation={isMobile ? 'vertical' : 'horizontal'}
+            sx={{
+              flexWrap: 'wrap',
+              width: { xs: '100%', sm: 'auto' },
+            }}
           >
             <ToggleButton value="OFF">{t('massEditBettingPools.fall.off')}</ToggleButton>
             <ToggleButton value="COBRO">{t('massEditBettingPools.fall.cobro')}</ToggleButton>
@@ -68,41 +78,41 @@ const ConfigurationTab: FC<ConfigurationTabProps> = memo(({ formData, zones, onI
 
         {/* Porcentaje de caída */}
         {formData.fallType && formData.fallType !== 'OFF' && (
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 2 }}>
-            <Typography sx={{ minWidth: 200 }}>{t('massEditBettingPools.fallPercentage')}</Typography>
+          <Box sx={{ display: 'flex', alignItems: { xs: 'stretch', sm: 'center' }, flexDirection: { xs: 'column', sm: 'row' }, mb: 2, gap: { xs: 0.5, sm: 2 } }}>
+            <Typography sx={{ minWidth: { xs: 'auto', sm: 200 } }}>{t('massEditBettingPools.fallPercentage')}</Typography>
             <TextField
               placeholder={t('massEditBettingPools.fallPercentage')}
               value={formData.fallPercentage ?? ''}
               onChange={(e) => onInputChange('fallPercentage', e.target.value)}
               type="number"
               size="small"
-              sx={{ width: 200 }}
+              sx={{ width: { xs: '100%', sm: 200 } }}
               inputProps={{ min: 0, max: 100, step: 0.01 }}
             />
           </Box>
         )}
 
         {/* Balance de desactivación */}
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 2 }}>
-          <Typography sx={{ minWidth: 200 }}>{t('massEditBettingPools.deactivationBalance')}</Typography>
+        <Box sx={{ display: 'flex', alignItems: { xs: 'stretch', sm: 'center' }, flexDirection: { xs: 'column', sm: 'row' }, mb: 2, gap: { xs: 0.5, sm: 2 } }}>
+          <Typography sx={{ minWidth: { xs: 'auto', sm: 200 } }}>{t('massEditBettingPools.deactivationBalance')}</Typography>
           <TextField
             placeholder={t('massEditBettingPools.deactivationBalance')}
             value={formData.deactivationBalance}
             onChange={(e) => onInputChange('deactivationBalance', e.target.value)}
             size="small"
-            sx={{ minWidth: 300 }}
+            sx={{ minWidth: { xs: '100%', sm: 300 } }}
           />
         </Box>
 
         {/* Límite de venta diaria */}
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 2 }}>
-          <Typography sx={{ minWidth: 200 }}>{t('massEditBettingPools.dailySaleLimit')}</Typography>
+        <Box sx={{ display: 'flex', alignItems: { xs: 'stretch', sm: 'center' }, flexDirection: { xs: 'column', sm: 'row' }, mb: 2, gap: { xs: 0.5, sm: 2 } }}>
+          <Typography sx={{ minWidth: { xs: 'auto', sm: 200 } }}>{t('massEditBettingPools.dailySaleLimit')}</Typography>
           <TextField
             placeholder={t('massEditBettingPools.dailySaleLimit')}
             value={formData.dailySaleLimit}
             onChange={(e) => onInputChange('dailySaleLimit', e.target.value)}
             size="small"
-            sx={{ minWidth: 300 }}
+            sx={{ minWidth: { xs: '100%', sm: 300 } }}
           />
         </Box>
       </Box>
@@ -111,72 +121,72 @@ const ConfigurationTab: FC<ConfigurationTabProps> = memo(({ formData, zones, onI
       <Grid container spacing={4} sx={{ mb: 3 }}>
         {/* Left Column */}
         <Grid item xs={12} md={6}>
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 2 }}>
-            <Typography sx={{ minWidth: 200 }}>{t('massEditBettingPools.printTicketCopy')}</Typography>
+          <Box sx={{ display: 'flex', alignItems: { xs: 'stretch', sm: 'center' }, flexDirection: { xs: 'column', sm: 'row' }, mb: 2, gap: { xs: 0.5, sm: 2 } }}>
+            <Typography sx={{ minWidth: { xs: 'auto', sm: 200 } }}>{t('massEditBettingPools.printTicketCopy')}</Typography>
             <TriStateToggle
               value={formData.printTicketCopy}
               onChange={(val) => onInputChange('printTicketCopy', val)}
             />
           </Box>
 
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 2 }}>
-            <Typography sx={{ minWidth: 200 }}>{t('massEditBettingPools.active')}</Typography>
+          <Box sx={{ display: 'flex', alignItems: { xs: 'stretch', sm: 'center' }, flexDirection: { xs: 'column', sm: 'row' }, mb: 2, gap: { xs: 0.5, sm: 2 } }}>
+            <Typography sx={{ minWidth: { xs: 'auto', sm: 200 } }}>{t('massEditBettingPools.active')}</Typography>
             <TriStateToggle
               value={formData.isActive}
               onChange={(val) => onInputChange('isActive', val)}
             />
           </Box>
 
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 2 }}>
-            <Typography sx={{ minWidth: 200 }}>{t('massEditBettingPools.winningTicketControl')}</Typography>
+          <Box sx={{ display: 'flex', alignItems: { xs: 'stretch', sm: 'center' }, flexDirection: { xs: 'column', sm: 'row' }, mb: 2, gap: { xs: 0.5, sm: 2 } }}>
+            <Typography sx={{ minWidth: { xs: 'auto', sm: 200 } }}>{t('massEditBettingPools.winningTicketControl')}</Typography>
             <TriStateToggle
               value={formData.winningTicketControl}
               onChange={(val) => onInputChange('winningTicketControl', val)}
             />
           </Box>
 
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 2 }}>
-            <Typography sx={{ minWidth: 200 }}>{t('massEditBettingPools.useNormalizedPrizes')}</Typography>
+          <Box sx={{ display: 'flex', alignItems: { xs: 'stretch', sm: 'center' }, flexDirection: { xs: 'column', sm: 'row' }, mb: 2, gap: { xs: 0.5, sm: 2 } }}>
+            <Typography sx={{ minWidth: { xs: 'auto', sm: 200 } }}>{t('massEditBettingPools.useNormalizedPrizes')}</Typography>
             <TriStateToggle
               value={formData.useNormalizedPrizes}
               onChange={(val) => onInputChange('useNormalizedPrizes', val)}
             />
           </Box>
 
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 2 }}>
-            <Typography sx={{ minWidth: 200 }}>{t('massEditBettingPools.allowPassingPlays')}</Typography>
+          <Box sx={{ display: 'flex', alignItems: { xs: 'stretch', sm: 'center' }, flexDirection: { xs: 'column', sm: 'row' }, mb: 2, gap: { xs: 0.5, sm: 2 } }}>
+            <Typography sx={{ minWidth: { xs: 'auto', sm: 200 } }}>{t('massEditBettingPools.allowPassingPlays')}</Typography>
             <TriStateToggle
               value={formData.allowPassingPlays}
               onChange={(val) => onInputChange('allowPassingPlays', val)}
             />
           </Box>
 
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 2 }}>
-            <Typography sx={{ minWidth: 200 }}>{t('massEditBettingPools.minutesToCancelTicket')}</Typography>
+          <Box sx={{ display: 'flex', alignItems: { xs: 'stretch', sm: 'center' }, flexDirection: { xs: 'column', sm: 'row' }, mb: 2, gap: { xs: 0.5, sm: 2 } }}>
+            <Typography sx={{ minWidth: { xs: 'auto', sm: 200 } }}>{t('massEditBettingPools.minutesToCancelTicket')}</Typography>
             <TextField
               value={formData.minutesToCancelTicket}
               onChange={(e) => onInputChange('minutesToCancelTicket', e.target.value)}
               size="small"
-              sx={{ width: 150 }}
+              sx={{ width: { xs: '100%', sm: 150 } }}
             />
           </Box>
 
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 2 }}>
-            <Typography sx={{ minWidth: 200 }}>{t('massEditBettingPools.ticketsToCancelPerDay')}</Typography>
+          <Box sx={{ display: 'flex', alignItems: { xs: 'stretch', sm: 'center' }, flexDirection: { xs: 'column', sm: 'row' }, mb: 2, gap: { xs: 0.5, sm: 2 } }}>
+            <Typography sx={{ minWidth: { xs: 'auto', sm: 200 } }}>{t('massEditBettingPools.ticketsToCancelPerDay')}</Typography>
             <TextField
               type="number"
               value={formData.ticketsToCancelPerDay}
               onChange={(e) => onInputChange('ticketsToCancelPerDay', e.target.value)}
               size="small"
-              sx={{ width: 150 }}
+              sx={{ width: { xs: '100%', sm: 150 } }}
             />
           </Box>
         </Grid>
 
         {/* Right Column */}
         <Grid item xs={12} md={6}>
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 2 }}>
-            <Typography sx={{ minWidth: 200 }}>{t('massEditBettingPools.language')}</Typography>
+          <Box sx={{ display: 'flex', alignItems: { xs: 'stretch', sm: 'center' }, flexDirection: { xs: 'column', sm: 'row' }, mb: 2, gap: { xs: 0.5, sm: 2 } }}>
+            <Typography sx={{ minWidth: { xs: 'auto', sm: 200 } }}>{t('massEditBettingPools.language')}</Typography>
             <ToggleButtonGroup
               value={formData.language}
               exclusive
@@ -188,8 +198,8 @@ const ConfigurationTab: FC<ConfigurationTabProps> = memo(({ formData, zones, onI
             </ToggleButtonGroup>
           </Box>
 
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 2 }}>
-            <Typography sx={{ minWidth: 200 }}>{t('massEditBettingPools.printMode')}</Typography>
+          <Box sx={{ display: 'flex', alignItems: { xs: 'stretch', sm: 'center' }, flexDirection: { xs: 'column', sm: 'row' }, mb: 2, gap: { xs: 0.5, sm: 2 } }}>
+            <Typography sx={{ minWidth: { xs: 'auto', sm: 200 } }}>{t('massEditBettingPools.printMode')}</Typography>
             <ToggleButtonGroup
               value={formData.printMode}
               exclusive
@@ -201,8 +211,8 @@ const ConfigurationTab: FC<ConfigurationTabProps> = memo(({ formData, zones, onI
             </ToggleButtonGroup>
           </Box>
 
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 2 }}>
-            <Typography sx={{ minWidth: 200 }}>{t('massEditBettingPools.discountMode')}</Typography>
+          <Box sx={{ display: 'flex', alignItems: { xs: 'stretch', sm: 'center' }, flexDirection: { xs: 'column', sm: 'row' }, mb: 2, gap: { xs: 0.5, sm: 2 } }}>
+            <Typography sx={{ minWidth: { xs: 'auto', sm: 200 } }}>{t('massEditBettingPools.discountMode')}</Typography>
             <ToggleButtonGroup
               value={formData.discountMode}
               exclusive
@@ -215,8 +225,8 @@ const ConfigurationTab: FC<ConfigurationTabProps> = memo(({ formData, zones, onI
             </ToggleButtonGroup>
           </Box>
 
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 2 }}>
-            <Typography sx={{ minWidth: 200 }}>{t('massEditBettingPools.canChangePassword')}</Typography>
+          <Box sx={{ display: 'flex', alignItems: { xs: 'stretch', sm: 'center' }, flexDirection: { xs: 'column', sm: 'row' }, mb: 2, gap: { xs: 0.5, sm: 2 } }}>
+            <Typography sx={{ minWidth: { xs: 'auto', sm: 200 } }}>{t('massEditBettingPools.canChangePassword')}</Typography>
             <TriStateToggle
               value={formData.canChangePassword}
               onChange={(val) => onInputChange('canChangePassword', val)}

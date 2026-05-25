@@ -4,7 +4,7 @@
  * Data table for displaying sales with totals row.
  */
 
-import { memo, useMemo, useState, type FC } from 'react';
+import React, { memo, useMemo, useState, type FC } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Table,
@@ -50,8 +50,8 @@ const SalesTable: FC<SalesTableProps> = memo(({ data, totals, columns, onCodeCli
   }, [data, sortBy, sortOrder]);
 
   return (
-    <TableContainer component={Paper} variant="outlined" sx={{ maxHeight: 600 }}>
-      <Table size="small" stickyHeader>
+    <TableContainer component={Paper} variant="outlined" sx={{ maxHeight: 600, overflowX: 'auto', mx: 'auto' }}>
+      <Table size="small" stickyHeader sx={{ width: '100%' }}>
         <TableHead sx={{ backgroundColor: '#e3e3e3' }}>
           <TableRow>
             {columns.map(col => {
@@ -68,6 +68,7 @@ const SalesTable: FC<SalesTableProps> = memo(({ data, totals, columns, onCodeCli
                     active={isActive}
                     direction={isActive ? sortOrder : 'asc'}
                     onClick={() => handleSort(key)}
+                    hideSortIcon
                   >
                     {t(col.label)}
                   </TableSortLabel>
@@ -79,70 +80,94 @@ const SalesTable: FC<SalesTableProps> = memo(({ data, totals, columns, onCodeCli
         <TableBody>
           {sortedData.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={15} align="center" sx={{ py: 3, color: 'text.secondary' }}>
+              <TableCell colSpan={columns.length} align="center" sx={{ py: 3, color: 'text.secondary' }}>
                 {t('sales.noEntriesForDrawDate')}
               </TableCell>
             </TableRow>
           ) : (
             <>
-              {sortedData.map((row) => (
-                <TableRow key={row.id} hover>
-                  <TableCell sx={{ whiteSpace: 'nowrap' }}>{row.ref}</TableCell>
-                  <TableCell sx={{ whiteSpace: 'nowrap' }}>
-                    <Link
-                      component="button"
-                      variant="body2"
-                      onClick={() => onCodeClick(row.id)}
-                      sx={{
-                        cursor: 'pointer',
-                        color: '#1976d2',
-                        textDecoration: 'none',
-                        '&:hover': {
-                          textDecoration: 'underline',
-                        },
-                      }}
-                    >
-                      {row.code}
-                    </Link>
-                  </TableCell>
-                  <TableCell align="center">{row.p}</TableCell>
-                  <TableCell align="center">{row.l}</TableCell>
-                  <TableCell align="center">{row.w}</TableCell>
-                  <TableCell align="right">{row.total}</TableCell>
-                  <TableCell align="right">{formatCurrency(row.sales)}</TableCell>
-                  <TableCell align="right">{formatCurrency(row.commissions)}</TableCell>
-                  <TableCell align="right">{formatCurrency(row.discounts)}</TableCell>
-                  <TableCell align="right">{formatCurrency(row.prizes)}</TableCell>
-                  <TableCell align="right" sx={{ color: row.net > 0 ? '#2e7d32' : row.net < 0 ? '#c62828' : '#1565c0', fontWeight: 600 }}>
-                    {formatCurrency(row.net)}
-                  </TableCell>
-                  <TableCell align="right" sx={{ color: row.fall > 0 ? '#2e7d32' : 'inherit' }}>{formatCurrency(row.fall)}</TableCell>
-                  <TableCell align="right" sx={{ color: row.final > 0 ? '#2e7d32' : row.final < 0 ? '#c62828' : '#1565c0', fontWeight: 600 }}>
-                    {formatCurrency(row.final)}
-                  </TableCell>
-                  <TableCell align="right" sx={{ color: row.balance > 0 ? '#2e7d32' : row.balance < 0 ? '#c62828' : '#1565c0', fontWeight: 600 }}>
-                    {formatCurrency(row.balance)}
-                  </TableCell>
-                  <TableCell align="right" sx={{ color: row.accumulatedFall >= 0 ? '#2e7d32' : '#c62828', fontWeight: 600 }}>{formatCurrency(row.accumulatedFall)}</TableCell>
-                </TableRow>
-              ))}
-              {/* Totals Row */}
+              {sortedData.map((row) => {
+                // Per-column data cell renderers, keyed by column.key. Rendered
+                // in whatever order `columns` provides — letting callers swap
+                // column ordering (e.g. surface Venta before P on mobile).
+                const cells: Record<string, React.ReactNode> = {
+                  ref: <TableCell key="ref" sx={{ whiteSpace: 'nowrap' }}>{row.ref}</TableCell>,
+                  code: (
+                    <TableCell key="code" sx={{ whiteSpace: 'nowrap' }}>
+                      <Link
+                        component="button"
+                        variant="body2"
+                        onClick={() => onCodeClick(row.id)}
+                        sx={{
+                          cursor: 'pointer',
+                          color: '#1976d2',
+                          textDecoration: 'none',
+                          '&:hover': { textDecoration: 'underline' },
+                        }}
+                      >
+                        {row.code}
+                      </Link>
+                    </TableCell>
+                  ),
+                  p: <TableCell key="p" align="center">{row.p}</TableCell>,
+                  l: <TableCell key="l" align="center">{row.l}</TableCell>,
+                  w: <TableCell key="w" align="center">{row.w}</TableCell>,
+                  total: <TableCell key="total" align="right">{row.total}</TableCell>,
+                  sales: <TableCell key="sales" align="right">{formatCurrency(row.sales)}</TableCell>,
+                  commissions: <TableCell key="commissions" align="right">{formatCurrency(row.commissions)}</TableCell>,
+                  discounts: <TableCell key="discounts" align="right">{formatCurrency(row.discounts)}</TableCell>,
+                  prizes: <TableCell key="prizes" align="right">{formatCurrency(row.prizes)}</TableCell>,
+                  net: (
+                    <TableCell key="net" align="right" sx={{ color: row.net > 0 ? '#2e7d32' : row.net < 0 ? '#c62828' : '#1565c0', fontWeight: 600 }}>
+                      {formatCurrency(row.net)}
+                    </TableCell>
+                  ),
+                  fall: <TableCell key="fall" align="right" sx={{ color: row.fall > 0 ? '#2e7d32' : 'inherit' }}>{formatCurrency(row.fall)}</TableCell>,
+                  final: (
+                    <TableCell key="final" align="right" sx={{ color: row.final > 0 ? '#2e7d32' : row.final < 0 ? '#c62828' : '#1565c0', fontWeight: 600 }}>
+                      {formatCurrency(row.final)}
+                    </TableCell>
+                  ),
+                  balance: (
+                    <TableCell key="balance" align="right" sx={{ color: row.balance > 0 ? '#2e7d32' : row.balance < 0 ? '#c62828' : '#1565c0', fontWeight: 600 }}>
+                      {formatCurrency(row.balance)}
+                    </TableCell>
+                  ),
+                  accumulatedFall: (
+                    <TableCell key="accumulatedFall" align="right" sx={{ color: row.accumulatedFall >= 0 ? '#2e7d32' : '#c62828', fontWeight: 600 }}>
+                      {formatCurrency(row.accumulatedFall)}
+                    </TableCell>
+                  ),
+                };
+                return (
+                  <TableRow key={row.id} hover>
+                    {columns.map(col => cells[col.key])}
+                  </TableRow>
+                );
+              })}
+              {/* Totals Row — same renderer pattern so the column order stays
+                  in sync with the data and header rows. */}
               <TableRow sx={{ backgroundColor: '#f5f7fa', '& td': { fontWeight: 600 } }}>
-                <TableCell>{t('balances.totals')}</TableCell>
-                <TableCell>-</TableCell>
-                <TableCell align="center">{totals.p}</TableCell>
-                <TableCell align="center">{totals.l}</TableCell>
-                <TableCell align="center">{totals.w}</TableCell>
-                <TableCell align="right">{totals.total}</TableCell>
-                <TableCell align="right">{formatCurrency(totals.sales)}</TableCell>
-                <TableCell align="right">{formatCurrency(totals.commissions)}</TableCell>
-                <TableCell align="right">{formatCurrency(totals.discounts)}</TableCell>
-                <TableCell align="right">{formatCurrency(totals.prizes)}</TableCell>
-                <TableCell align="right" sx={{ color: totals.net > 0 ? '#2e7d32' : totals.net < 0 ? '#c62828' : '#1565c0' }}>{formatCurrency(totals.net)}</TableCell>
-                <TableCell align="right" sx={{ color: totals.fall > 0 ? '#2e7d32' : 'inherit' }}>{formatCurrency(totals.fall)}</TableCell>
-                <TableCell align="right" sx={{ color: totals.final > 0 ? '#2e7d32' : totals.final < 0 ? '#c62828' : '#1565c0' }}>{formatCurrency(totals.final)}</TableCell>
-                <TableCell align="right" sx={{ color: totals.balance > 0 ? '#2e7d32' : totals.balance < 0 ? '#c62828' : '#1565c0' }}>{formatCurrency(totals.balance)}</TableCell>
-                <TableCell align="right" sx={{ color: totals.accumulatedFall >= 0 ? '#2e7d32' : '#c62828', fontWeight: 600 }}>{formatCurrency(totals.accumulatedFall)}</TableCell>
+                {(() => {
+                  const totalsCells: Record<string, React.ReactNode> = {
+                    ref: <TableCell key="ref">{t('balances.totals')}</TableCell>,
+                    code: <TableCell key="code">-</TableCell>,
+                    p: <TableCell key="p" align="center">{totals.p}</TableCell>,
+                    l: <TableCell key="l" align="center">{totals.l}</TableCell>,
+                    w: <TableCell key="w" align="center">{totals.w}</TableCell>,
+                    total: <TableCell key="total" align="right">{totals.total}</TableCell>,
+                    sales: <TableCell key="sales" align="right">{formatCurrency(totals.sales)}</TableCell>,
+                    commissions: <TableCell key="commissions" align="right">{formatCurrency(totals.commissions)}</TableCell>,
+                    discounts: <TableCell key="discounts" align="right">{formatCurrency(totals.discounts)}</TableCell>,
+                    prizes: <TableCell key="prizes" align="right">{formatCurrency(totals.prizes)}</TableCell>,
+                    net: <TableCell key="net" align="right" sx={{ color: totals.net > 0 ? '#2e7d32' : totals.net < 0 ? '#c62828' : '#1565c0' }}>{formatCurrency(totals.net)}</TableCell>,
+                    fall: <TableCell key="fall" align="right" sx={{ color: totals.fall > 0 ? '#2e7d32' : 'inherit' }}>{formatCurrency(totals.fall)}</TableCell>,
+                    final: <TableCell key="final" align="right" sx={{ color: totals.final > 0 ? '#2e7d32' : totals.final < 0 ? '#c62828' : '#1565c0' }}>{formatCurrency(totals.final)}</TableCell>,
+                    balance: <TableCell key="balance" align="right" sx={{ color: totals.balance > 0 ? '#2e7d32' : totals.balance < 0 ? '#c62828' : '#1565c0' }}>{formatCurrency(totals.balance)}</TableCell>,
+                    accumulatedFall: <TableCell key="accumulatedFall" align="right" sx={{ color: totals.accumulatedFall >= 0 ? '#2e7d32' : '#c62828', fontWeight: 600 }}>{formatCurrency(totals.accumulatedFall)}</TableCell>,
+                  };
+                  return columns.map(col => totalsCells[col.key]);
+                })()}
               </TableRow>
             </>
           )}

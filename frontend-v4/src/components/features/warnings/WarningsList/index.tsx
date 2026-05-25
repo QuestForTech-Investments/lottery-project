@@ -7,6 +7,7 @@ import {
   Typography,
   TextField,
   Table,
+  TableContainer,
   TableHead,
   TableBody,
   TableRow,
@@ -403,30 +404,31 @@ const WarningsList: React.FC = () => {
   );
 
   return (
-    <Box sx={{ p: 2 }}>
+    <Box sx={{ p: { xs: 1, sm: 2 } }}>
       <Paper elevation={3}>
-        <Box sx={{ p: 3 }}>
+        <Box sx={{ p: { xs: 1.5, sm: 3 } }}>
           <Typography
             variant="h5"
             align="center"
             sx={{
               color: '#2c2c2c',
-              mb: 3,
+              mb: { xs: 2, sm: 3 },
               fontWeight: 500,
               fontFamily: 'Montserrat, sans-serif',
+              fontSize: { xs: '1.15rem', sm: '1.5rem' },
             }}
           >
             {t('warningsAdmin.title')}
           </Typography>
 
-          <Box sx={{ display: 'flex', gap: 2, mb: 3, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+          <Box sx={{ display: 'flex', gap: 2, mb: 3, alignItems: { xs: 'stretch', sm: 'flex-end' }, flexDirection: { xs: 'column', sm: 'row' }, flexWrap: 'wrap' }}>
             <TextField
               type="date"
               label={t('common.date')}
               value={date}
               onChange={(e) => setDate(e.target.value)}
               size="small"
-              sx={{ minWidth: 180 }}
+              sx={{ minWidth: { xs: '100%', sm: 180 } }}
               InputLabelProps={{ shrink: true }}
             />
             <TextField
@@ -435,19 +437,22 @@ const WarningsList: React.FC = () => {
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
               size="small"
-              sx={{ minWidth: 280 }}
+              sx={{ minWidth: { xs: '100%', sm: 280 }, flexGrow: 1 }}
             />
-            {loading && <CircularProgress size={24} sx={{ color: '#6366f1' }} />}
+            {loading && <CircularProgress size={24} sx={{ color: '#6366f1', alignSelf: 'center' }} />}
           </Box>
 
           <Tabs
             value={activeTab}
             onChange={(_, v) => setActiveTab(v)}
+            variant="scrollable"
+            scrollButtons="auto"
+            allowScrollButtonsMobile
             sx={{
               borderBottom: 1,
               borderColor: 'divider',
               mb: 3,
-              '& .MuiTab-root': { fontFamily: 'Montserrat, sans-serif', textTransform: 'none' },
+              '& .MuiTab-root': { fontFamily: 'Montserrat, sans-serif', textTransform: 'none', minWidth: { xs: 'auto', sm: 90 }, px: { xs: 1.25, sm: 2 } },
               '& .Mui-selected': { color: '#6366f1' },
             }}
             TabIndicatorProps={{ style: { backgroundColor: '#6366f1' } }}
@@ -488,30 +493,31 @@ const WarningsList: React.FC = () => {
 
           {activeTab === 0 && (
             <>
-              {/* Tickets table */}
+              {/* Tickets section header. Empty state lives outside the table
+                  to avoid the wide colSpan cell pushing the message off-screen
+                  behind the horizontal-scroll min-width. */}
               <SectionHeader title={t('warningsAdmin.tabs.tickets')} count={totalTickets} />
-              <Table size="small" sx={{ mb: 4 }}>
-                <TableHead>
-                  <TableRow sx={{ bgcolor: '#f5f5f5' }}>
-                    <TableCell sx={{ fontWeight: 'bold' }}>{t('warningsAdmin.cols.type')}</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>{t('common.bettingPool')}</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>{t('common.user')}</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>{t('warningsAdmin.cols.ticket')}</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }} align="right">{t('common.amount')}</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }} align="right">{t('common.prize')}</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>{t('warningsAdmin.cols.message')}</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>{t('common.date')}</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {ticketWarnings.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={8} align="center" sx={{ py: 3, color: '#888' }}>
-                        {loading ? t('common.loading') : t('warningsAdmin.empty.tickets')}
-                      </TableCell>
+              {ticketWarnings.length === 0 ? (
+                <Box sx={{ py: 3, mb: 4, textAlign: 'center', color: '#888' }}>
+                  {loading ? t('common.loading') : t('warningsAdmin.empty.tickets')}
+                </Box>
+              ) : (
+                <TableContainer sx={{ overflowX: 'auto', mb: 4 }}>
+                <Table size="small" sx={{ minWidth: { xs: 900, sm: 'auto' } }}>
+                  <TableHead>
+                    <TableRow sx={{ bgcolor: '#f5f5f5' }}>
+                      <TableCell sx={{ fontWeight: 'bold' }}>{t('warningsAdmin.cols.type')}</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold' }}>{t('common.bettingPool')}</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold' }}>{t('common.user')}</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold' }}>{t('warningsAdmin.cols.ticket')}</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold' }} align="right">{t('common.amount')}</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold' }} align="right">{t('common.prize')}</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold' }}>{t('warningsAdmin.cols.message')}</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold' }}>{t('common.date')}</TableCell>
                     </TableRow>
-                  ) : (
-                    ticketWarnings.map((w) => (
+                  </TableHead>
+                  <TableBody>
+                  {ticketWarnings.map((w) => (
                       <TableRow key={w.warningId} hover>
                         <TableCell>{renderChip(w)}</TableCell>
                         <TableCell>{w.bettingPoolCode || w.bettingPoolName || '-'}</TableCell>
@@ -551,31 +557,32 @@ const WarningsList: React.FC = () => {
                         <TableCell>{w.message || '-'}</TableCell>
                         <TableCell>{formatDateTime(w.createdAt)}</TableCell>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
+                    ))}
+                  </TableBody>
+                </Table>
+                </TableContainer>
+              )}
 
-              {/* Cambio de resultados table */}
+              {/* Cambio de resultados — separate section since it lives inside
+                  the Tickets tab but represents a different kind of warning. */}
               <SectionHeader title={t('warningsAdmin.sections.resultChanges')} count={totalResultChanges} />
-              <Table size="small">
-                <TableHead>
-                  <TableRow sx={{ bgcolor: '#f5f5f5' }}>
-                    <TableCell sx={{ fontWeight: 'bold' }}>{t('common.draw')}</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>{t('common.user')}</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>{t('warningsAdmin.cols.changes')}</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>{t('common.date')}</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {resultChangeWarnings.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={4} align="center" sx={{ py: 3, color: '#888' }}>
-                        {loading ? t('common.loading') : t('warningsAdmin.empty.resultChanges')}
-                      </TableCell>
+              {resultChangeWarnings.length === 0 ? (
+                <Box sx={{ py: 3, textAlign: 'center', color: '#888' }}>
+                  {loading ? t('common.loading') : t('warningsAdmin.empty.resultChanges')}
+                </Box>
+              ) : (
+                <TableContainer sx={{ overflowX: 'auto' }}>
+                <Table size="small" sx={{ minWidth: { xs: 600, sm: 'auto' } }}>
+                  <TableHead>
+                    <TableRow sx={{ bgcolor: '#f5f5f5' }}>
+                      <TableCell sx={{ fontWeight: 'bold' }}>{t('common.draw')}</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold' }}>{t('common.user')}</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold' }}>{t('warningsAdmin.cols.changes')}</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold' }}>{t('common.date')}</TableCell>
                     </TableRow>
-                  ) : (
-                    resultChangeWarnings.map((w) => {
+                  </TableHead>
+                  <TableBody>
+                    {resultChangeWarnings.map((w) => {
                       const meta = parseResultChangeMeta(w.metadataJson);
                       return (
                         <TableRow key={w.warningId} hover>
@@ -587,45 +594,46 @@ const WarningsList: React.FC = () => {
                           <TableCell>{formatDateTime(w.createdAt)}</TableCell>
                         </TableRow>
                       );
-                    })
-                  )}
-                </TableBody>
-              </Table>
+                    })}
+                  </TableBody>
+                </Table>
+                </TableContainer>
+              )}
             </>
           )}
 
           {activeTab === 2 && (
-            <Table size="small">
-              <TableHead>
-                <TableRow sx={{ bgcolor: '#f5f5f5' }}>
-                  <TableCell sx={{ fontWeight: 'bold' }}>{t('warningsAdmin.cols.type')}</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold' }}>{t('warningsAdmin.cols.message')}</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold' }}>{t('common.date')}</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {resultLateWarnings.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={3} align="center" sx={{ py: 3, color: '#888' }}>
-                      {loading ? t('common.loading') : t('warningsAdmin.empty.unpublishedResults')}
-                    </TableCell>
+            resultLateWarnings.length === 0 ? (
+              <Box sx={{ py: 3, textAlign: 'center', color: '#888' }}>
+                {loading ? t('common.loading') : t('warningsAdmin.empty.unpublishedResults')}
+              </Box>
+            ) : (
+              <TableContainer sx={{ overflowX: 'auto' }}>
+              <Table size="small" sx={{ minWidth: { xs: 500, sm: 'auto' } }}>
+                <TableHead>
+                  <TableRow sx={{ bgcolor: '#f5f5f5' }}>
+                    <TableCell sx={{ fontWeight: 'bold' }}>{t('warningsAdmin.cols.type')}</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>{t('warningsAdmin.cols.message')}</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>{t('common.date')}</TableCell>
                   </TableRow>
-                ) : (
-                  resultLateWarnings.map((w) => (
+                </TableHead>
+                <TableBody>
+                  {resultLateWarnings.map((w) => (
                     <TableRow key={w.warningId} hover>
                       <TableCell>{renderChip(w)}</TableCell>
                       <TableCell>{w.message || '-'}</TableCell>
                       <TableCell>{formatDateTime(w.createdAt)}</TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+                  ))}
+                </TableBody>
+              </Table>
+              </TableContainer>
+            )
           )}
 
           {activeTab === 3 && (
             <>
-              <Box sx={{ display: 'flex', gap: 2, mb: 2, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+              <Box sx={{ display: 'flex', gap: 2, mb: 2, alignItems: { xs: 'stretch', sm: 'flex-end' }, flexDirection: { xs: 'column', sm: 'row' }, flexWrap: 'wrap' }}>
                 <TextField
                   type="number"
                   label={t('warningsAdmin.lastNDays')}
@@ -637,47 +645,53 @@ const WarningsList: React.FC = () => {
                     setHistoryDays(Math.max(1, Math.min(365, v)));
                   }}
                   inputProps={{ min: 1, max: 365 }}
-                  sx={{ width: 180 }}
+                  sx={{ width: { xs: '100%', sm: 180 } }}
                 />
-                {loadingHistory && <CircularProgress size={20} sx={{ color: '#6366f1' }} />}
+                {loadingHistory && <CircularProgress size={20} sx={{ color: '#6366f1', alignSelf: 'center' }} />}
               </Box>
 
               <SectionHeader title={t('warningsAdmin.sections.unpublishedResults')} count={historyWarnings.length} />
-              <Table size="small">
-                <TableHead>
-                  <TableRow sx={{ bgcolor: '#f5f5f5' }}>
-                    <TableCell sx={{ fontWeight: 'bold' }}>{t('warningsAdmin.cols.type')}</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>{t('warningsAdmin.cols.message')}</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>{t('common.date')}</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {historyWarnings.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={3} align="center" sx={{ py: 3, color: '#888' }}>
-                        {loadingHistory
-                          ? t('common.loading')
-                          : t('warningsAdmin.empty.unpublishedHistory', { total: historyDays })}
-                      </TableCell>
+              {historyWarnings.length === 0 ? (
+                <Box sx={{ py: 3, textAlign: 'center', color: '#888' }}>
+                  {loadingHistory
+                    ? t('common.loading')
+                    : t('warningsAdmin.empty.unpublishedHistory', { total: historyDays })}
+                </Box>
+              ) : (
+                <TableContainer sx={{ overflowX: 'auto' }}>
+                <Table size="small" sx={{ minWidth: { xs: 500, sm: 'auto' } }}>
+                  <TableHead>
+                    <TableRow sx={{ bgcolor: '#f5f5f5' }}>
+                      <TableCell sx={{ fontWeight: 'bold' }}>{t('warningsAdmin.cols.type')}</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold' }}>{t('warningsAdmin.cols.message')}</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold' }}>{t('common.date')}</TableCell>
                     </TableRow>
-                  ) : (
-                    historyWarnings.map((w) => (
+                  </TableHead>
+                  <TableBody>
+                    {historyWarnings.map((w) => (
                       <TableRow key={w.warningId} hover>
                         <TableCell>{renderChip(w)}</TableCell>
                         <TableCell>{w.message || '-'}</TableCell>
                         <TableCell>{formatDateTime(w.createdAt)}</TableCell>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
+                    ))}
+                  </TableBody>
+                </Table>
+                </TableContainer>
+              )}
             </>
           )}
 
           {activeTab === 1 && (
             <>
               <SectionHeader title={t('warningsAdmin.tabs.notifications')} count={totalNotifications} />
-              <Table size="small">
+              {notifications.length === 0 ? (
+              <Box sx={{ py: 3, textAlign: 'center', color: '#888' }}>
+                {loadingNotifs ? t('common.loading') : t('warningsAdmin.empty.notifications')}
+              </Box>
+            ) : (
+              <TableContainer sx={{ overflowX: 'auto' }}>
+              <Table size="small" sx={{ minWidth: { xs: 800, sm: 'auto' } }}>
                 <TableHead>
                   <TableRow sx={{ bgcolor: '#f5f5f5' }}>
                     <TableCell sx={{ fontWeight: 'bold' }}>{t('warningsAdmin.cols.priority')}</TableCell>
@@ -689,52 +703,46 @@ const WarningsList: React.FC = () => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {notifications.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={6} align="center" sx={{ py: 3, color: '#888' }}>
-                        {loadingNotifs ? t('common.loading') : t('warningsAdmin.empty.notifications')}
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    notifications.map((n) => {
-                      const p = PRIORITY_STYLE[n.priority] || PRIORITY_STYLE.medium;
-                      const priorityLabel = t(`warningsAdmin.priority.${n.priority}`);
-                      return (
-                        <TableRow
-                          key={n.notificationId}
-                          hover
-                          sx={{ backgroundColor: n.isRead ? 'transparent' : '#f0f7ff' }}
-                        >
-                          <TableCell>
-                            <Chip
-                              label={priorityLabel}
+                  {notifications.map((n) => {
+                    const p = PRIORITY_STYLE[n.priority] || PRIORITY_STYLE.medium;
+                    const priorityLabel = t(`warningsAdmin.priority.${n.priority}`);
+                    return (
+                      <TableRow
+                        key={n.notificationId}
+                        hover
+                        sx={{ backgroundColor: n.isRead ? 'transparent' : '#f0f7ff' }}
+                      >
+                        <TableCell>
+                          <Chip
+                            label={priorityLabel}
+                            size="small"
+                            sx={{ bgcolor: p.bg, color: p.text, fontWeight: 600 }}
+                          />
+                        </TableCell>
+                        <TableCell sx={{ fontWeight: n.isRead ? 400 : 600 }}>
+                          {n.message}
+                        </TableCell>
+                        <TableCell>{(n.createdByName || '-').toUpperCase()}</TableCell>
+                        <TableCell>{formatDateTime(n.createdAt)}</TableCell>
+                        <TableCell>{n.expiresAt ? formatDateTime(n.expiresAt) : '-'}</TableCell>
+                        <TableCell align="center">
+                          <Tooltip title={t('common.delete')}>
+                            <IconButton
                               size="small"
-                              sx={{ bgcolor: p.bg, color: p.text, fontWeight: 600 }}
-                            />
-                          </TableCell>
-                          <TableCell sx={{ fontWeight: n.isRead ? 400 : 600 }}>
-                            {n.message}
-                          </TableCell>
-                          <TableCell>{(n.createdByName || '-').toUpperCase()}</TableCell>
-                          <TableCell>{formatDateTime(n.createdAt)}</TableCell>
-                          <TableCell>{n.expiresAt ? formatDateTime(n.expiresAt) : '-'}</TableCell>
-                          <TableCell align="center">
-                            <Tooltip title={t('common.delete')}>
-                              <IconButton
-                                size="small"
-                                onClick={() => handleDeleteNotification(n.notificationId)}
-                                sx={{ color: '#c62828' }}
-                              >
-                                <DeleteOutline fontSize="small" />
-                              </IconButton>
-                            </Tooltip>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })
-                  )}
+                              onClick={() => handleDeleteNotification(n.notificationId)}
+                              sx={{ color: '#c62828' }}
+                            >
+                              <DeleteOutline fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
+              </TableContainer>
+            )}
             </>
           )}
         </Box>

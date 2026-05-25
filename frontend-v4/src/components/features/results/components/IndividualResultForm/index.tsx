@@ -9,6 +9,8 @@ import {
   Select,
   MenuItem,
   CircularProgress,
+  useMediaQuery,
+  useTheme,
   type SelectChangeEvent,
 } from '@mui/material';
 import type { DrawResultRow, IndividualResultForm as IndividualResultFormType, IndividualResultFormProps } from '../../types';
@@ -32,6 +34,11 @@ export const IndividualResultForm: FC<IndividualResultFormProps> = memo(({
   onPublish,
 }) => {
   const { t } = useTranslation();
+  const theme = useTheme();
+  // On phones the horizontal table-style grid (label header + input row) gets
+  // unusable: each input becomes too narrow to even show the digits being
+  // typed. We swap to a vertical stack — one label/input pair per row.
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   // Refs for input fields (for auto-advance)
   const inputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
 
@@ -136,54 +143,35 @@ export const IndividualResultForm: FC<IndividualResultFormProps> = memo(({
         </Box>
       </Box>
 
-      {/* Row 2: Dynamic Input Fields based on draw category */}
+      {/* Row 2: Dynamic Input Fields based on draw category.
+          Desktop uses the original horizontal table-style grid (one column per
+          field). Mobile uses a label-above-input stack so every digit input
+          gets the full row width. */}
       {form.selectedDrawId && (
-        <Box sx={{ border: '1px solid #ddd', borderRadius: 1, overflow: 'hidden' }}>
-          {/* Header row */}
-          <Box sx={{ display: 'flex', bgcolor: '#f5f5f5', borderBottom: '1px solid #ddd' }}>
-            <Box sx={{ width: 140, p: 1, borderRight: '1px solid #ddd' }}></Box>
-            {visibleFields.map((f, idx) => (
-              <Box
-                key={f.field}
-                sx={{
-                  flex: 1,
-                  p: 1,
-                  textAlign: 'center',
-                  borderRight: idx < visibleFields.length - 1 ? '1px solid #ddd' : 'none',
-                  fontSize: '12px',
-                  color: f.enabled ? '#333' : '#999',
-                  fontWeight: f.enabled ? 600 : 400,
-                }}
-              >
-                {f.label}
-              </Box>
-            ))}
-          </Box>
-          {/* Input row */}
-          <Box sx={{ display: 'flex', bgcolor: '#fff' }}>
-            <Box
-              sx={{
-                width: 140,
-                p: 1,
-                borderRight: '1px solid #ddd',
-                fontWeight: 600,
-                fontSize: '14px',
-                display: 'flex',
-                alignItems: 'center',
-              }}
-            >
+        isMobile ? (
+          <Box sx={{ border: '1px solid #ddd', borderRadius: 1, overflow: 'hidden' }}>
+            {/* Draw name header */}
+            <Box sx={{ p: 1, bgcolor: '#f5f5f5', borderBottom: '1px solid #ddd', fontWeight: 600, fontSize: '14px' }}>
               {selectedDraw?.drawName || selectedDraw?.abbreviation || ''}
             </Box>
-            {visibleFields.map((f, idx) => (
+            {/* One row per field */}
+            {visibleFields.map((f) => (
               <Box
                 key={f.field}
                 sx={{
-                  flex: 1,
-                  p: 0.5,
-                  borderRight: idx < visibleFields.length - 1 ? '1px solid #ddd' : 'none',
-                  bgcolor: f.enabled ? '#fff' : '#f5f5f5',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1.5,
+                  px: 1.5,
+                  py: 1,
+                  borderBottom: '1px solid #eee',
+                  bgcolor: f.enabled ? '#fff' : '#f9f9f9',
+                  '&:last-child': { borderBottom: 'none' },
                 }}
               >
+                <Box sx={{ flex: '0 0 40%', fontSize: '13px', color: f.enabled ? '#333' : '#999', fontWeight: f.enabled ? 600 : 400 }}>
+                  {f.label}
+                </Box>
                 <TextField
                   value={form[f.field]}
                   onChange={(e) => handleFieldInputChange(f.field, e.target.value)}
@@ -194,14 +182,17 @@ export const IndividualResultForm: FC<IndividualResultFormProps> = memo(({
                   size="small"
                   inputProps={{
                     maxLength: f.maxLen,
+                    inputMode: 'numeric',
                     style: {
                       textAlign: 'center',
                       padding: '8px',
                       color: f.enabled ? '#333' : '#666',
                       fontWeight: f.enabled ? 700 : 400,
+                      letterSpacing: '0.1em',
                     },
                   }}
                   sx={{
+                    flex: 1,
                     '& .MuiOutlinedInput-root': {
                       bgcolor: f.enabled ? '#fff' : '#f0f0f0',
                       '&.Mui-disabled': {
@@ -210,12 +201,90 @@ export const IndividualResultForm: FC<IndividualResultFormProps> = memo(({
                       },
                     },
                   }}
-                  fullWidth
                 />
               </Box>
             ))}
           </Box>
-        </Box>
+        ) : (
+          <Box sx={{ border: '1px solid #ddd', borderRadius: 1, overflow: 'hidden' }}>
+            {/* Header row */}
+            <Box sx={{ display: 'flex', bgcolor: '#f5f5f5', borderBottom: '1px solid #ddd' }}>
+              <Box sx={{ width: 140, p: 1, borderRight: '1px solid #ddd' }}></Box>
+              {visibleFields.map((f, idx) => (
+                <Box
+                  key={f.field}
+                  sx={{
+                    flex: 1,
+                    p: 1,
+                    textAlign: 'center',
+                    borderRight: idx < visibleFields.length - 1 ? '1px solid #ddd' : 'none',
+                    fontSize: '12px',
+                    color: f.enabled ? '#333' : '#999',
+                    fontWeight: f.enabled ? 600 : 400,
+                  }}
+                >
+                  {f.label}
+                </Box>
+              ))}
+            </Box>
+            {/* Input row */}
+            <Box sx={{ display: 'flex', bgcolor: '#fff' }}>
+              <Box
+                sx={{
+                  width: 140,
+                  p: 1,
+                  borderRight: '1px solid #ddd',
+                  fontWeight: 600,
+                  fontSize: '14px',
+                  display: 'flex',
+                  alignItems: 'center',
+                }}
+              >
+                {selectedDraw?.drawName || selectedDraw?.abbreviation || ''}
+              </Box>
+              {visibleFields.map((f, idx) => (
+                <Box
+                  key={f.field}
+                  sx={{
+                    flex: 1,
+                    p: 0.5,
+                    borderRight: idx < visibleFields.length - 1 ? '1px solid #ddd' : 'none',
+                    bgcolor: f.enabled ? '#fff' : '#f5f5f5',
+                  }}
+                >
+                  <TextField
+                    value={form[f.field]}
+                    onChange={(e) => handleFieldInputChange(f.field, e.target.value)}
+                    inputRef={(el) => {
+                      inputRefs.current[f.field] = el;
+                    }}
+                    disabled={!f.enabled}
+                    size="small"
+                    inputProps={{
+                      maxLength: f.maxLen,
+                      style: {
+                        textAlign: 'center',
+                        padding: '8px',
+                        color: f.enabled ? '#333' : '#666',
+                        fontWeight: f.enabled ? 700 : 400,
+                      },
+                    }}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        bgcolor: f.enabled ? '#fff' : '#f0f0f0',
+                        '&.Mui-disabled': {
+                          bgcolor: '#f5f5f5',
+                          '& fieldset': { border: '1px solid #ddd' },
+                        },
+                      },
+                    }}
+                    fullWidth
+                  />
+                </Box>
+              ))}
+            </Box>
+          </Box>
+        )
       )}
 
       {/* Publish Button */}

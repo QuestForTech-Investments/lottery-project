@@ -18,6 +18,8 @@ import {
   InputAdornment,
   Tabs,
   Tab,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material';
 import type { SelectChangeEvent } from '@mui/material/Select';
 import { Search as SearchIcon } from '@mui/icons-material';
@@ -40,7 +42,7 @@ import { FiltersSection, ActionButtons, FilterToggles, SalesTable } from './comp
 
 // Local types and constants
 import type { Zone, BettingPool, SalesRow, BettingPoolSalesDto, SalesTotals } from './types';
-import { TABLE_COLUMNS, MAIN_TABS, INITIAL_TOTALS } from './constants';
+import { TABLE_COLUMNS, TABLE_COLUMNS_MOBILE, MAIN_TABS, INITIAL_TOTALS } from './constants';
 
 // ============================================================================
 // Main Component
@@ -49,6 +51,10 @@ import { TABLE_COLUMNS, MAIN_TABS, INITIAL_TOTALS } from './constants';
 const DailySales = (): React.ReactElement => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const theme = useTheme();
+  // Mobile reorders the table so Venta appears right after Código.
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const tableColumns = isMobile ? TABLE_COLUMNS_MOBILE : TABLE_COLUMNS;
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [bettingPools, setBettingPools] = useState<BettingPool[]>([]);
@@ -353,8 +359,8 @@ const DailySales = (): React.ReactElement => {
                     }}>{formatCurrency(totals.final)}</Box>
                   </Typography>
 
-                  {/* Filter controls - single left-aligned container */}
-                  <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2, mb: 3 }}>
+                  {/* Filter controls - left-aligned on desktop, centered on mobile */}
+                  <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: { xs: 'center', sm: 'flex-start' }, gap: 2, mb: 3 }}>
                     <FilterToggles
                       filterType={filterType}
                       onFilterChange={setFilterType}
@@ -393,7 +399,7 @@ const DailySales = (): React.ReactElement => {
                 <SalesTable
                   data={filteredData}
                   totals={totals}
-                  columns={TABLE_COLUMNS}
+                  columns={tableColumns}
                   onCodeClick={handleCodeClick}
                 />
 
