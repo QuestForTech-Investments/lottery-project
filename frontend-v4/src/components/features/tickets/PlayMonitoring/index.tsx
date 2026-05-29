@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 import {
   Box,
   Paper,
@@ -354,11 +355,19 @@ const CombinationSection: React.FC<{
 
 const PlayMonitoring: React.FC = () => {
   const { t } = useTranslation();
-  const [date, setDate] = useState<string>(getTodayDate());
+  // Deep-link support: the "Ver en Lottobook" email button opens this page with
+  // ?drawId=&date= so it lands pre-filtered on the right lottery. Read once at
+  // mount; the user can change the filters afterward.
+  const [searchParams] = useSearchParams();
+  const [date, setDate] = useState<string>(() => searchParams.get('date') || getTodayDate());
   const [zones, setZones] = useState<Zone[]>([]);
   const [selectedZoneIds, setSelectedZoneIds] = useState<number[]>([]);
   const [draws, setDraws] = useState<Draw[]>([]);
-  const [selectedDrawId, setSelectedDrawId] = useState<number | null>(null);
+  const [selectedDrawId, setSelectedDrawId] = useState<number | null>(() => {
+    const raw = searchParams.get('drawId');
+    const parsed = raw ? Number(raw) : NaN;
+    return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+  });
   const [bancas, setBancas] = useState<BettingPool[]>([]);
   const [selectedBanca, setSelectedBanca] = useState<BettingPool | null>(null);
 

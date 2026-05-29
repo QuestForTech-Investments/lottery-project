@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import type { SelectChangeEvent } from '@mui/material';
 import api from '@services/api';
+import { getTodayDate } from '@/utils/formatters';
 
 // Types
 interface Jugada {
@@ -17,13 +18,28 @@ interface BlockedNumber {
 }
 
 interface DaySales {
-  dayName: string;
+  /** Santo-Domingo-local calendar date as YYYY-MM-DD. The component formats
+   *  the weekday from this using the active i18n locale — keeps day-of-week
+   *  translations out of the hook. */
+  dateStr: string;
+  /** True when this row represents the current day (so the card can render
+   *  the "Hoy" label and the highlight gradient). */
+  isToday: boolean;
+  /** Number of betting pools that had any sales that day. */
   count: number;
+  /** Aggregates summed across all pools on that day — used by the hover tooltip. */
+  totalSold: number;
+  totalPrizes: number;
+  totalCommissions: number;
+  totalNet: number;
 }
 
 interface BettingPoolSalesDto {
   bettingPoolId: number;
   totalSold: number;
+  totalPrizes?: number;
+  totalCommissions?: number;
+  totalNet?: number;
 }
 
 type ActiveMode = 'cobro' | 'pago';
@@ -61,34 +77,49 @@ const useDashboard = () => {
   // Statistics - Bancas vendiendo últimos 3 días
   const [bancasVendiendo, setBancasVendiendo] = useState<DaySales[]>([]);
 
-  // Helper to get Spanish day name
-  const getDayName = (date: Date): string => {
-    const days = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-    return days[date.getDay()];
-  };
-
   // Fetch bancas vendiendo for last 3 days
   useEffect(() => {
     const fetchBancasVendiendo = async () => {
       try {
-        const today = new Date();
+        // Anchor on the Santo Domingo calendar date (not UTC). Using
+        // `toISOString()` would push "Hoy" forward by a day after ~8pm DR time
+        // (DR is UTC-4 / UTC-5 with DST). Noon avoids any DST edge in setDate.
+        const todayStr = getTodayDate();
+        const [y, m, d] = todayStr.split('-').map(Number);
+        const anchor = new Date(y, m - 1, d, 12);
+
         const results: DaySales[] = [];
 
         for (let i = 2; i >= 0; i--) {
-          const date = new Date(today);
-          date.setDate(today.getDate() - i);
-          const dateStr = date.toISOString().split('T')[0];
-          const dayName = i === 0 ? 'Hoy' : getDayName(date);
+          const date = new Date(anchor);
+          date.setDate(anchor.getDate() - i);
+          const yy = date.getFullYear();
+          const mm = String(date.getMonth() + 1).padStart(2, '0');
+          const dd = String(date.getDate()).padStart(2, '0');
+          const dateStr = `${yy}-${mm}-${dd}`;
+          const isToday = i === 0;
 
           try {
             const response = await api.get<BettingPoolSalesDto[]>(
               `/reports/sales/by-betting-pool?startDate=${dateStr}&endDate=${dateStr}`
             );
-            // Count betting pools with sales > 0
-            const poolsWithSales = (response || []).filter(p => p.totalSold > 0).length;
-            results.push({ dayName, count: poolsWithSales });
+            const items = response || [];
+            // Aggregate per-pool figures into per-day totals so the card's
+            // hover tooltip can show $-level context without an extra request.
+            const poolsWithSales = items.filter(p => p.totalSold > 0).length;
+            const sum = (key: keyof BettingPoolSalesDto): number =>
+              items.reduce((s, p) => s + ((p[key] as number) || 0), 0);
+            results.push({
+              dateStr,
+              isToday,
+              count: poolsWithSales,
+              totalSold: sum('totalSold'),
+              totalPrizes: sum('totalPrizes'),
+              totalCommissions: sum('totalCommissions'),
+              totalNet: sum('totalNet'),
+            });
           } catch {
-            results.push({ dayName, count: 0 });
+            results.push({ dateStr, isToday, count: 0, totalSold: 0, totalPrizes: 0, totalCommissions: 0, totalNet: 0 });
           }
         }
 

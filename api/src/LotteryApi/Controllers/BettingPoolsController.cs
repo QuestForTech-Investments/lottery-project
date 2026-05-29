@@ -8,6 +8,7 @@ using LotteryApi.Models;
 using LotteryApi.DTOs;
 using LotteryApi.Services;
 using BCrypt.Net;
+using System.Text.Json;
 
 namespace LotteryApi.Controllers;
 
@@ -32,16 +33,89 @@ public class BettingPoolsController : ControllerBase
     /// </summary>
     private async Task<bool> HasPermissionAsync(string code)
     {
-        var raw = User.FindFirst("userId")?.Value
-               ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-        if (!int.TryParse(raw, out var userId)) return false;
+        var userId = CurrentUserId();
+        if (userId == null) return false;
 
         return await _context.UserPermissions.AsNoTracking()
-            .AnyAsync(up => up.UserId == userId
+            .AnyAsync(up => up.UserId == userId.Value
                 && up.IsActive
                 && up.Permission != null
                 && up.Permission.IsActive
                 && up.Permission.PermissionCode == code);
+    }
+
+    /// <summary>Resolve the current user id from JWT claims (null if missing).</summary>
+    private int? CurrentUserId()
+    {
+        var raw = User.FindFirst("userId")?.Value
+               ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        return int.TryParse(raw, out var id) ? id : (int?)null;
+    }
+
+    /// <summary>JSON options used by the audit log so the frontend can decode
+    /// the `details` payload with camelCase property names.</summary>
+    private static readonly JsonSerializerOptions AuditJsonOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+    };
+
+    /// <summary>Append a `{field, oldValue, newValue}` entry when values differ.
+    /// Stringifies both sides so the JSON stays stable regardless of CLR type.</summary>
+    private static void TrackChange(List<object> changes, string field, object? oldValue, object? newValue)
+    {
+        var oldStr = oldValue?.ToString();
+        var newStr = newValue?.ToString();
+        if (oldStr != newStr)
+        {
+            changes.Add(new { field, oldValue = oldStr, newValue = newStr });
+        }
+    }
+
+    /// <summary>
+    /// Pulls field-level changes from EF Core's change tracker for the given
+    /// entity. Returns one `{field, oldValue, newValue}` per actually-modified
+    /// property, skipping audit/FK columns. Must be called BEFORE
+    /// SaveChangesAsync — EF resets entries to Unchanged after persisting.
+    ///
+    /// Uses EF's equality (not string comparison) so values that stringify
+    /// differently but represent the same number (e.g. `5` vs `5.00m`) are
+    /// correctly treated as unchanged.
+    /// </summary>
+    private IEnumerable<object> ChangesFromTracker(object? entity, string section)
+    {
+        if (entity == null) yield break;
+        var entry = _context.Entry(entity);
+        var isNew = entry.State == Microsoft.EntityFrameworkCore.EntityState.Added;
+        var excluded = new HashSet<string> {
+            "CreatedAt", "UpdatedAt", "CreatedBy", "UpdatedBy",
+            "BettingPoolId", "BettingPoolConfigId", "BettingPoolDiscountConfigId",
+            "BettingPoolPrintConfigId", "BettingPoolFooterId",
+        };
+
+        foreach (var p in entry.Properties)
+        {
+            var name = p.Metadata.Name;
+            if (excluded.Contains(name)) continue;
+
+            // Existing rows: only walk properties EF flagged as modified.
+            // New rows: every non-default-value property counts as "new".
+            if (!isNew && !p.IsModified) continue;
+
+            var oldVal = isNew ? null : p.OriginalValue;
+            var newVal = p.CurrentValue;
+            // Belt-and-suspenders: EF sometimes flags a property modified even
+            // when the value is effectively unchanged (e.g. the same decimal
+            // assigned again). Equals catches that.
+            if (Equals(oldVal, newVal)) continue;
+
+            var camel = char.ToLowerInvariant(name[0]) + name[1..];
+            yield return new
+            {
+                field = section + "." + camel,
+                oldValue = oldVal?.ToString(),
+                newValue = newVal?.ToString(),
+            };
+        }
     }
 
     /// <summary>
@@ -480,6 +554,20 @@ public class BettingPoolsController : ControllerBase
                 return Forbid();
             }
 
+            // Snapshot mutable fields BEFORE any change so we can diff for the
+            // audit log after SaveChanges. Password is intentionally excluded —
+            // we only record that it changed, not the value.
+            var beforeName = bettingPool.BettingPoolName;
+            var beforeZoneId = bettingPool.ZoneId;
+            var beforeBankId = bettingPool.BankId;
+            var beforeAddress = bettingPool.Address;
+            var beforePhone = bettingPool.Phone;
+            var beforeLocation = bettingPool.Location;
+            var beforeReference = bettingPool.Reference;
+            var beforeComment = bettingPool.Comment;
+            var beforeUsername = bettingPool.Username;
+            var beforeIsActive = bettingPool.IsActive;
+
             // Validate zone if changed
             if (dto.ZoneId.HasValue)
             {
@@ -576,6 +664,39 @@ public class BettingPoolsController : ControllerBase
             bettingPool.UpdatedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
+
+            // Diff against the pre-mutation snapshot to record exactly which
+            // fields changed. Password gets a value-less "changed" entry so we
+            // never store the secret in the audit table.
+            var changes = new List<object>();
+            TrackChange(changes, "name", beforeName, bettingPool.BettingPoolName);
+            TrackChange(changes, "zoneId", beforeZoneId, bettingPool.ZoneId);
+            TrackChange(changes, "bankId", beforeBankId, bettingPool.BankId);
+            TrackChange(changes, "address", beforeAddress, bettingPool.Address);
+            TrackChange(changes, "phone", beforePhone, bettingPool.Phone);
+            TrackChange(changes, "location", beforeLocation, bettingPool.Location);
+            TrackChange(changes, "reference", beforeReference, bettingPool.Reference);
+            TrackChange(changes, "comment", beforeComment, bettingPool.Comment);
+            TrackChange(changes, "username", beforeUsername, bettingPool.Username);
+            TrackChange(changes, "isActive", beforeIsActive, bettingPool.IsActive);
+            if (!string.IsNullOrWhiteSpace(dto.Password))
+            {
+                changes.Add(new { field = "password", oldValue = (string?)null, newValue = (string?)null });
+            }
+
+            if (changes.Count > 0)
+            {
+                _context.BettingPoolAuditLogs.Add(new BettingPoolAuditLog
+                {
+                    BettingPoolId = id,
+                    UserId = CurrentUserId(),
+                    Action = "UPDATED",
+                    Details = JsonSerializer.Serialize(changes, AuditJsonOptions),
+                    IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
+                    CreatedAt = DateTime.UtcNow,
+                });
+                await _context.SaveChangesAsync();
+            }
 
             // Load relationships for response
             await _context.Entry(bettingPool).Reference(bp => bp.Zone).LoadAsync();
@@ -1119,7 +1240,31 @@ public class BettingPoolsController : ControllerBase
                 bettingPool.Footer.UpdatedAt = DateTime.UtcNow;
             }
 
+            // Collect actually-modified fields from EF's change tracker BEFORE
+            // SaveChanges — EF compares by value (so `5` vs `5.00m` decimals
+            // don't produce false-positive changes) and only flags properties
+            // that genuinely differ from the originals loaded from the DB.
+            var configChanges = new List<object>();
+            configChanges.AddRange(ChangesFromTracker(bettingPool.Config, "config"));
+            configChanges.AddRange(ChangesFromTracker(bettingPool.DiscountConfig, "discount"));
+            configChanges.AddRange(ChangesFromTracker(bettingPool.PrintConfig, "print"));
+            configChanges.AddRange(ChangesFromTracker(bettingPool.Footer, "footer"));
+
             await _context.SaveChangesAsync();
+
+            if (configChanges.Count > 0)
+            {
+                _context.BettingPoolAuditLogs.Add(new BettingPoolAuditLog
+                {
+                    BettingPoolId = id,
+                    UserId = CurrentUserId(),
+                    Action = "UPDATED",
+                    Details = JsonSerializer.Serialize(configChanges, AuditJsonOptions),
+                    IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
+                    CreatedAt = DateTime.UtcNow,
+                });
+                await _context.SaveChangesAsync();
+            }
 
             // Return updated configuration
             return await GetBettingPoolConfig(id);
@@ -2073,6 +2218,80 @@ public class BettingPoolsController : ControllerBase
         catch
         {
             return null;
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // Audit log — change history for a single banca. Gated by a dedicated
+    // permission (VIEW_BANCA_AUDIT_LOG) so view-only auditors can see history
+    // without needing MANAGE_BANKS edit rights.
+    // -----------------------------------------------------------------------
+
+    [HttpGet("{id:int}/audit-log")]
+    public async Task<ActionResult<List<BettingPoolAuditLogDto>>> GetAuditLog(int id)
+    {
+        if (!await HasPermissionAsync("VIEW_BANCA_AUDIT_LOG")) return Forbid();
+
+        var bettingPool = await _context.BettingPools.AsNoTracking()
+            .FirstOrDefaultAsync(bp => bp.BettingPoolId == id);
+        if (bettingPool == null)
+        {
+            return ApiErrorResult.NotFound(ErrorCodes.BettingPoolNotFound, "Banca no encontrada");
+        }
+
+        // Zone scope: same rule as the rest of the controller — admin can only
+        // see history for bancas in their assigned zones.
+        if (!await _zoneScope.IsZoneAllowedAsync(bettingPool.ZoneId))
+        {
+            return Forbid();
+        }
+
+        var rows = await _context.BettingPoolAuditLogs
+            .AsNoTracking()
+            .Where(a => a.BettingPoolId == id)
+            .OrderByDescending(a => a.CreatedAt)
+            .Select(a => new
+            {
+                a.AuditLogId,
+                a.BettingPoolId,
+                a.UserId,
+                UserName = a.User != null ? (a.User.FullName ?? a.User.Username) : null,
+                a.Action,
+                a.Details,
+                a.IpAddress,
+                a.CreatedAt,
+            })
+            .ToListAsync();
+
+        var result = rows.Select(r => new BettingPoolAuditLogDto
+        {
+            AuditLogId = r.AuditLogId,
+            BettingPoolId = r.BettingPoolId,
+            UserId = r.UserId,
+            UserName = r.UserName,
+            Action = r.Action,
+            IpAddress = r.IpAddress,
+            CreatedAt = r.CreatedAt,
+            // Pre-parse the JSON payload so the frontend doesn't have to.
+            // Malformed rows degrade to an empty change list rather than failing
+            // the whole response.
+            Changes = ParseAuditDetails(r.Details),
+        }).ToList();
+
+        return Ok(result);
+    }
+
+    private static List<BettingPoolAuditFieldChangeDto> ParseAuditDetails(string? details)
+    {
+        if (string.IsNullOrWhiteSpace(details)) return new();
+        try
+        {
+            return JsonSerializer.Deserialize<List<BettingPoolAuditFieldChangeDto>>(details, AuditJsonOptions)
+                ?? new();
+        }
+        catch
+        {
+            return new();
         }
     }
 }

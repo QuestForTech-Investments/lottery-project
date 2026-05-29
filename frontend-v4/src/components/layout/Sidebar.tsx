@@ -13,11 +13,15 @@ import {
   Typography,
   Box,
   IconButton,
-  Tooltip
+  Tooltip,
+  TextField,
+  InputAdornment,
 } from '@mui/material';
 import {
   ExpandLess,
   ExpandMore,
+  Search as SearchIcon,
+  Close as ClearIcon,
 } from '@mui/icons-material';
 import { MENU_ITEMS, type MenuItem } from '@constants/menuItems';
 import useUserPermissions from '@/hooks/useUserPermissions';
@@ -39,6 +43,14 @@ function Sidebar({ collapsed, hovered, onHoverChange, isMobile = false, mobileOp
   const { hasPermission } = useUserPermissions();
   const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({});
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
+  const [search, setSearch] = useState<string>('');
+
+  // Accent-insensitive + case-insensitive comparison so "loteria" matches
+  // "Lotería", "Préstamos" matches "prestamos", etc. Spanish menu labels rely on this.
+  const normalize = (s: string): string =>
+    s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  const searchTerm = normalize(search.trim());
+  const searchActive = searchTerm.length > 0;
 
   // Hide items whose required permission the user doesn't have.
   //   - Items without a `permission` field are visible by default.
@@ -67,6 +79,30 @@ function Sidebar({ collapsed, hovered, onHoverChange, isMobile = false, mobileOp
         : item),
     [isItemVisible]
   );
+
+  // Narrow the menu by the search box. A parent item is kept when its own label
+  // matches (then we show all its children) OR when any child matches (then we
+  // only show the matching children). Submenus auto-expand while search is on.
+  const filteredMenu = React.useMemo<MenuItem[]>(() => {
+    if (!searchActive) return visibleMenu;
+    const out: MenuItem[] = [];
+    for (const item of visibleMenu) {
+      const itemMatches = normalize(t(item.label, { defaultValue: item.label })).includes(searchTerm);
+      if (item.submenu && item.submenu.length > 0) {
+        if (itemMatches) {
+          out.push(item);
+        } else {
+          const subs = item.submenu.filter((sub) =>
+            normalize(t(sub.label, { defaultValue: sub.label })).includes(searchTerm),
+          );
+          if (subs.length > 0) out.push({ ...item, submenu: subs });
+        }
+      } else if (itemMatches) {
+        out.push(item);
+      }
+    }
+    return out;
+  }, [visibleMenu, searchActive, searchTerm, t]);
 
   const handleMenuClick = useCallback((item: MenuItem) => {
     if (item.submenu) {
@@ -213,12 +249,49 @@ function Sidebar({ collapsed, hovered, onHoverChange, isMobile = false, mobileOp
           </Box>
         </Box>
 
+        {/* Search */}
+        <Box sx={{ px: 2, pt: 1.5, pb: 0.5 }}>
+          <TextField
+            fullWidth
+            size="small"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={t('common.searchMenu', { defaultValue: 'Buscar...' })}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon sx={{ color: 'rgba(255,255,255,0.5)', fontSize: 18 }} />
+                </InputAdornment>
+              ),
+              endAdornment: search ? (
+                <InputAdornment position="end">
+                  <IconButton size="small" onClick={() => setSearch('')} sx={{ color: 'rgba(255,255,255,0.5)' }}>
+                    <ClearIcon sx={{ fontSize: 16 }} />
+                  </IconButton>
+                </InputAdornment>
+              ) : null,
+            }}
+            sx={{
+              '& .MuiInputBase-root': {
+                bgcolor: 'rgba(255,255,255,0.08)',
+                color: '#fff',
+                borderRadius: '10px',
+                fontSize: '13px',
+              },
+              '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.15)' },
+              '& .MuiInputBase-root:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.3)' },
+              '& .MuiInputBase-root.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#8b5cf6' },
+              '& input::placeholder': { color: 'rgba(255,255,255,0.5)', opacity: 1 },
+            }}
+          />
+        </Box>
+
         {/* Menu Items */}
-        <List sx={{ padding: 0, paddingTop: '20px' }}>
-          {visibleMenu.map((item) => {
+        <List sx={{ padding: 0, paddingTop: '12px' }}>
+          {filteredMenu.map((item) => {
             const Icon = item.icon;
             const active = isActive(item);
-            const isExpanded = expandedMenus[item.id];
+            const isExpanded = !!expandedMenus[item.id] || searchActive;
             const isHovered = hoveredItem === item.id;
 
             return (
@@ -461,12 +534,51 @@ function Sidebar({ collapsed, hovered, onHoverChange, isMobile = false, mobileOp
         )}
       </Box>
 
+      {/* Search — hidden in the narrow collapsed-no-hover state. */}
+      {showExpandedContent && (
+        <Box sx={{ px: 2, pt: 1.5, pb: 0.5 }}>
+          <TextField
+            fullWidth
+            size="small"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={t('common.searchMenu', { defaultValue: 'Buscar...' })}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon sx={{ color: 'rgba(255,255,255,0.5)', fontSize: 18 }} />
+                </InputAdornment>
+              ),
+              endAdornment: search ? (
+                <InputAdornment position="end">
+                  <IconButton size="small" onClick={() => setSearch('')} sx={{ color: 'rgba(255,255,255,0.5)' }}>
+                    <ClearIcon sx={{ fontSize: 16 }} />
+                  </IconButton>
+                </InputAdornment>
+              ) : null,
+            }}
+            sx={{
+              '& .MuiInputBase-root': {
+                bgcolor: 'rgba(255,255,255,0.08)',
+                color: '#fff',
+                borderRadius: '10px',
+                fontSize: '13px',
+              },
+              '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.15)' },
+              '& .MuiInputBase-root:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.3)' },
+              '& .MuiInputBase-root.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#8b5cf6' },
+              '& input::placeholder': { color: 'rgba(255,255,255,0.5)', opacity: 1 },
+            }}
+          />
+        </Box>
+      )}
+
       {/* Menu Items */}
-      <List sx={{ padding: 0, paddingTop: '20px' }}>
-        {visibleMenu.map((item) => {
+      <List sx={{ padding: 0, paddingTop: showExpandedContent ? '12px' : '20px' }}>
+        {filteredMenu.map((item) => {
           const Icon = item.icon;
           const active = isActive(item);
-          const isExpanded = expandedMenus[item.id];
+          const isExpanded = !!expandedMenus[item.id] || searchActive;
           const isHovered = hoveredItem === item.id;
 
           return (

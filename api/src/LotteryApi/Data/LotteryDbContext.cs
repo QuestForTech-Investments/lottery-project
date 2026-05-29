@@ -29,6 +29,7 @@ public class LotteryDbContext : DbContext
     // Results
     public DbSet<Result> Results { get; set; }
     public DbSet<ResultLog> ResultLogs { get; set; }
+    public DbSet<BettingPoolAuditLog> BettingPoolAuditLogs { get; set; }
 
     // User and Permissions
     public DbSet<Role> Roles { get; set; }
@@ -62,6 +63,10 @@ public class LotteryDbContext : DbContext
 
     // Expense Categories
     public DbSet<ExpenseCategory> ExpenseCategories { get; set; }
+
+    // Email Receivers (automated report subscriptions)
+    public DbSet<EmailReceiver> EmailReceivers { get; set; }
+    public DbSet<EmailReceiverZone> EmailReceiverZones { get; set; }
 
     // Transaction Groups
     public DbSet<TransactionGroup> TransactionGroups { get; set; }
@@ -489,6 +494,25 @@ public class LotteryDbContext : DbContext
             .WithMany(ec => ec.ChildCategories)
             .HasForeignKey(ec => ec.ParentCategoryId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        // EmailReceiverZone -> EmailReceiver (cascade delete: removing a
+        // receiver should drop its zone subscriptions automatically).
+        modelBuilder.Entity<EmailReceiverZone>()
+            .HasOne(z => z.EmailReceiver)
+            .WithMany(r => r.Zones)
+            .HasForeignKey(z => z.EmailReceiverId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<EmailReceiverZone>()
+            .HasOne(z => z.Zone)
+            .WithMany()
+            .HasForeignKey(z => z.ZoneId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // Prevent duplicate (receiver, zone) rows.
+        modelBuilder.Entity<EmailReceiverZone>()
+            .HasIndex(z => new { z.EmailReceiverId, z.ZoneId })
+            .IsUnique();
 
         // TransactionGroupLine -> TransactionGroup
         modelBuilder.Entity<TransactionGroupLine>()

@@ -5,7 +5,7 @@
  */
 
 import { ReactNode } from 'react'
-import { Navigate } from 'react-router-dom'
+import { Navigate, useLocation } from 'react-router-dom'
 import * as authService from '@services/authService'
 import * as logger from '@utils/logger'
 
@@ -14,6 +14,8 @@ interface PrivateRouteProps {
 }
 
 const PrivateRoute = ({ children }: PrivateRouteProps) => {
+  const location = useLocation()
+
   // Check if user is authenticated
   const isAuthenticated = authService.isAuthenticated()
 
@@ -29,8 +31,15 @@ const PrivateRoute = ({ children }: PrivateRouteProps) => {
       logger.warn('PRIVATE_ROUTE', 'User not authenticated, redirecting to login')
     }
 
-    // Redirect to login
-    return <Navigate to="/login" replace />
+    // Preserve where the user was headed (e.g. an email deep link to
+    // /tickets/plays?drawId=&date=) so login can send them back there.
+    const intended = location.pathname + location.search
+    const isLoginPath = location.pathname === '/login' || location.pathname === '/'
+    const loginUrl = isLoginPath
+      ? '/login'
+      : `/login?redirect=${encodeURIComponent(intended)}`
+
+    return <Navigate to={loginUrl} replace />
   }
 
   // User is authenticated, render children

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Box,
   Card,
@@ -14,25 +14,36 @@ import {
   Paper,
   IconButton,
   Chip,
-  InputAdornment
+  InputAdornment,
+  Button,
+  CircularProgress,
+  Alert,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
+  Tooltip,
 } from '@mui/material';
 import {
   Search as SearchIcon,
-  Info as InfoIcon,
   Edit as EditIcon,
-  Delete as DeleteIcon
+  Delete as DeleteIcon,
+  Add as AddIcon,
+  Refresh as RefreshIcon,
+  Visibility as VisibilityIcon,
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
+import { Link as RouterLink } from 'react-router-dom';
+import {
+  getEmailReceivers,
+  deleteEmailReceiver,
+  EMAIL_NOTIFICATION_TYPES,
+  type EmailReceiver,
+} from '@services/emailReceiverService';
+import PreviewDialog from '../PreviewDialog';
 
-interface _Receiver {
-  id: number;
-  nombre: string;
-  email: string;
-  tipoNotificacion: string;
-  activo: boolean;
-}
-
-type SortKey = 'id' | 'nombre' | 'email' | 'tipoNotificacion' | 'activo' | null;
+type SortKey = 'emailReceiverId' | 'name' | 'email' | 'notificationType' | 'isActive' | null;
 type SortDirection = 'asc' | 'desc';
 
 interface SortConfig {
@@ -40,65 +51,95 @@ interface SortConfig {
   direction: SortDirection;
 }
 
+// Single source of truth for the human-readable label of every notification
+// type. Add new types here as the backend grows.
+const NOTIFICATION_TYPE_LABELS: Record<string, string> = {
+  [EMAIL_NOTIFICATION_TYPES.MONITOREO_JUGADAS]: 'Monitoreo de Jugadas',
+};
+
+const labelForType = (type: string): string =>
+  NOTIFICATION_TYPE_LABELS[type] ?? type;
+
 /**
- * EmailReceiversList Component (Material-UI V2)
+ * EmailReceiversList — admin CRUD for the recipients of automated emails.
  *
- * Lista de receptores de correo con funcionalidad CRUD
+ * Data flows through the real `/api/email-receivers` endpoint; deletes are
+ * soft (sets is_active=false) so the configured recipient can be restored
+ * later without re-entering the zone list.
  */
 const EmailReceiversList = (): React.ReactElement => {
   const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState<string>('');
-  const [sortConfig, setSortConfig] = useState<SortConfig>({ key: null, direction: 'asc' });
+  const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'name', direction: 'asc' });
+  const [receivers, setReceivers] = useState<EmailReceiver[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [toDelete, setToDelete] = useState<EmailReceiver | null>(null);
+  const [deleting, setDeleting] = useState<boolean>(false);
+  const [previewOpen, setPreviewOpen] = useState<boolean>(false);
+  // null = preview across all zones; otherwise preview using the receiver's zones.
+  const [previewReceiver, setPreviewReceiver] = useState<EmailReceiver | null>(null);
 
-  // Mockup data - 10 receptores de correo
-  const [receivers] = useState([
-    { id: 1, nombre: 'Juan Pérez', email: 'juan.perez@empresa.com', tipoNotificacion: 'Reportes diarios', activo: true },
-    { id: 2, nombre: 'María García', email: 'maria.garcia@empresa.com', tipoNotificacion: 'Alertas de ventas', activo: true },
-    { id: 3, nombre: 'Carlos López', email: 'carlos.lopez@empresa.com', tipoNotificacion: 'Notificaciones de premios', activo: true },
-    { id: 4, nombre: 'Ana Martínez', email: 'ana.martinez@empresa.com', tipoNotificacion: 'Resumen semanal', activo: false },
-    { id: 5, nombre: 'Luis Rodríguez', email: 'luis.rodriguez@empresa.com', tipoNotificacion: 'Alertas de sistema', activo: true },
-    { id: 6, nombre: 'Sofia Hernández', email: 'sofia.hernandez@empresa.com', tipoNotificacion: 'Todas las notificaciones', activo: true },
-    { id: 7, nombre: 'Miguel Torres', email: 'miguel.torres@empresa.com', tipoNotificacion: 'Reportes diarios', activo: true },
-    { id: 8, nombre: 'Laura Díaz', email: 'laura.diaz@empresa.com', tipoNotificacion: 'Alertas de ventas', activo: false },
-    { id: 9, nombre: 'Pedro Ramírez', email: 'pedro.ramirez@empresa.com', tipoNotificacion: 'Resumen semanal', activo: true },
-    { id: 10, nombre: 'Carmen Flores', email: 'carmen.flores@empresa.com', tipoNotificacion: 'Todas las notificaciones', activo: true }
-  ]);
-
-  // Sorting logic
-  const handleSort = (key: SortKey): void => {
-    let direction: SortDirection = 'asc';
-    if (sortConfig.key === key && sortConfig.direction === 'asc') {
-      direction = 'desc';
-    }
-    setSortConfig({ key, direction });
+  const openPreview = (receiver: EmailReceiver | null) => {
+    setPreviewReceiver(receiver);
+    setPreviewOpen(true);
   };
 
-  // Filter and sort receivers
+  const loadReceivers = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await getEmailReceivers();
+      setReceivers(data);
+    } catch (err) {
+      console.error('Error loading email receivers:', err);
+      setError(t('emailReceiversAdmin.list.loadError', { defaultValue: 'Error al cargar los receptores.' }));
+      setReceivers([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [t]);
+
+  useEffect(() => {
+    loadReceivers();
+  }, [loadReceivers]);
+
+  const handleSort = (key: SortKey): void => {
+    setSortConfig(prev => ({
+      key,
+      direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc',
+    }));
+  };
+
   const filteredAndSortedReceivers = useMemo(() => {
     let filtered = [...receivers];
 
-    // Filter by search term
     if (searchTerm) {
-      filtered = filtered.filter(receiver =>
-        receiver.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        receiver.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        receiver.tipoNotificacion.toLowerCase().includes(searchTerm.toLowerCase())
+      const term = searchTerm.toLowerCase();
+      filtered = filtered.filter(r =>
+        r.name.toLowerCase().includes(term) ||
+        r.email.toLowerCase().includes(term) ||
+        labelForType(r.notificationType).toLowerCase().includes(term)
       );
     }
 
-    // Sort
     if (sortConfig.key) {
       const key = sortConfig.key;
       filtered.sort((a, b) => {
-        const aValue = a[key];
-        const bValue = b[key];
-
-        if (aValue < bValue) {
-          return sortConfig.direction === 'asc' ? -1 : 1;
+        const av = a[key];
+        const bv = b[key];
+        if (typeof av === 'number' && typeof bv === 'number') {
+          return sortConfig.direction === 'asc' ? av - bv : bv - av;
         }
-        if (aValue > bValue) {
-          return sortConfig.direction === 'asc' ? 1 : -1;
+        if (typeof av === 'boolean' && typeof bv === 'boolean') {
+          return sortConfig.direction === 'asc'
+            ? (av === bv ? 0 : av ? -1 : 1)
+            : (av === bv ? 0 : av ? 1 : -1);
         }
+        const as = String(av ?? '').toLowerCase();
+        const bs = String(bv ?? '').toLowerCase();
+        if (as < bs) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (as > bs) return sortConfig.direction === 'asc' ? 1 : -1;
         return 0;
       });
     }
@@ -106,47 +147,95 @@ const EmailReceiversList = (): React.ReactElement => {
     return filtered;
   }, [receivers, searchTerm, sortConfig]);
 
-  const handleEdit = (id: number): void => {
-    alert(t('emailReceiversAdmin.list.editAlert', { id }));
-  };
-
-  const handleDelete = (id: number): void => {
-    if (window.confirm(t('emailReceiversAdmin.list.deleteConfirm'))) {
-      alert(t('emailReceiversAdmin.list.deletedAlert', { id }));
+  const handleConfirmDelete = async () => {
+    if (!toDelete) return;
+    setDeleting(true);
+    try {
+      await deleteEmailReceiver(toDelete.emailReceiverId);
+      setToDelete(null);
+      await loadReceivers();
+    } catch (err) {
+      console.error('Error deleting email receiver:', err);
+      setError(t('emailReceiversAdmin.list.deleteError', { defaultValue: 'Error al eliminar el receptor.' }));
+    } finally {
+      setDeleting(false);
     }
   };
 
-  const handleInfo = (id: number): void => {
-    const receiver = receivers.find(r => r.id === id);
-    if (!receiver) return;
-    alert(t('emailReceiversAdmin.list.infoAlert', {
-      name: receiver.nombre,
-      email: receiver.email,
-      notificationType: receiver.tipoNotificacion,
-      status: receiver.activo ? t('common.active') : t('common.inactive')
-    }));
-  };
+  // Compact arrow indicator used in the sortable column headers.
+  const sortIndicator = (key: SortKey): string =>
+    sortConfig.key === key ? (sortConfig.direction === 'asc' ? ' ▲' : ' ▼') : '';
 
   return (
     <Box sx={{ p: { xs: 1, sm: 3 }, backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
       <Card sx={{ maxWidth: 1400, mx: 'auto' }}>
         <CardContent sx={{ p: { xs: 1.5, sm: 4 } }}>
-          {/* Título */}
-          <Typography
-            variant="h5"
-            sx={{
-              textAlign: 'center',
-              mb: { xs: 2, sm: 4 },
-              fontFamily: 'Montserrat, sans-serif',
-              fontWeight: 600,
-              color: '#2c2c2c',
-              fontSize: { xs: '1.1rem', sm: '1.5rem' },
-            }}
-          >
-            {t('emailReceiversAdmin.list.title')}
-          </Typography>
+          {/* Header: title + create button */}
+          <Box sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: 1,
+            flexWrap: 'wrap',
+            mb: { xs: 2, sm: 3 },
+          }}>
+            <Typography
+              variant="h5"
+              sx={{
+                fontFamily: 'Montserrat, sans-serif',
+                fontWeight: 600,
+                color: '#2c2c2c',
+                fontSize: { xs: '1.1rem', sm: '1.5rem' },
+              }}
+            >
+              {t('emailReceiversAdmin.list.title')}
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <Tooltip title={t('common.refresh', { defaultValue: 'Refrescar' })}>
+                <span>
+                  <IconButton onClick={loadReceivers} disabled={loading} color="primary">
+                    <RefreshIcon />
+                  </IconButton>
+                </span>
+              </Tooltip>
+              <Button
+                onClick={() => openPreview(null)}
+                variant="outlined"
+                startIcon={<VisibilityIcon />}
+                sx={{
+                  color: '#8b5cf6',
+                  borderColor: '#c4b5fd',
+                  '&:hover': { borderColor: '#8b5cf6', bgcolor: '#f5f3ff' },
+                  textTransform: 'none',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {t('emailReceiversAdmin.preview.button', { defaultValue: 'Vista previa' })}
+              </Button>
+              <Button
+                component={RouterLink}
+                to="/receivers/new"
+                variant="contained"
+                startIcon={<AddIcon />}
+                sx={{
+                  bgcolor: '#8b5cf6',
+                  '&:hover': { bgcolor: '#7c3aed' },
+                  textTransform: 'none',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {t('emailReceiversAdmin.list.newReceiver', { defaultValue: 'Nuevo receptor' })}
+              </Button>
+            </Box>
+          </Box>
 
-          {/* Filtro rápido */}
+          {error && (
+            <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
+              {error}
+            </Alert>
+          )}
+
+          {/* Quick filter */}
           <Box sx={{ mb: 3, maxWidth: { xs: '100%', sm: 400 } }}>
             <TextField
               fullWidth
@@ -160,93 +249,123 @@ const EmailReceiversList = (): React.ReactElement => {
                     <SearchIcon sx={{ color: '#999' }} />
                   </InputAdornment>
                 ),
-                sx: { fontSize: '14px', fontFamily: 'Montserrat, sans-serif' }
+                sx: { fontSize: '14px', fontFamily: 'Montserrat, sans-serif' },
               }}
             />
           </Box>
 
-          {/* Tabla */}
+          {/* Table */}
           <TableContainer component={Paper} variant="outlined" sx={{ overflowX: 'auto' }}>
             <Table sx={{ minWidth: 800 }}>
               <TableHead sx={{ bgcolor: '#f8f9fa' }}>
                 <TableRow>
                   <TableCell
-                    onClick={() => handleSort('id')}
-                    sx={{ cursor: 'pointer', userSelect: 'none', fontSize: '14px', fontFamily: 'Montserrat, sans-serif', fontWeight: 600 }}
+                    onClick={() => handleSort('emailReceiverId')}
+                    sx={{ cursor: 'pointer', userSelect: 'none', fontWeight: 600 }}
                   >
-                    # {sortConfig.key === 'id' && (sortConfig.direction === 'asc' ? '▲' : '▼')}
+                    #{sortIndicator('emailReceiverId')}
                   </TableCell>
                   <TableCell
-                    onClick={() => handleSort('nombre')}
-                    sx={{ cursor: 'pointer', userSelect: 'none', fontSize: '14px', fontFamily: 'Montserrat, sans-serif', fontWeight: 600 }}
+                    onClick={() => handleSort('name')}
+                    sx={{ cursor: 'pointer', userSelect: 'none', fontWeight: 600 }}
                   >
-                    {t('common.name')} {sortConfig.key === 'nombre' && (sortConfig.direction === 'asc' ? '▲' : '▼')}
+                    {t('common.name')}{sortIndicator('name')}
                   </TableCell>
                   <TableCell
                     onClick={() => handleSort('email')}
-                    sx={{ cursor: 'pointer', userSelect: 'none', fontSize: '14px', fontFamily: 'Montserrat, sans-serif', fontWeight: 600 }}
+                    sx={{ cursor: 'pointer', userSelect: 'none', fontWeight: 600 }}
                   >
-                    {t('emailReceiversAdmin.fields.email')} {sortConfig.key === 'email' && (sortConfig.direction === 'asc' ? '▲' : '▼')}
+                    {t('emailReceiversAdmin.fields.email')}{sortIndicator('email')}
                   </TableCell>
                   <TableCell
-                    onClick={() => handleSort('tipoNotificacion')}
-                    sx={{ cursor: 'pointer', userSelect: 'none', fontSize: '14px', fontFamily: 'Montserrat, sans-serif', fontWeight: 600 }}
+                    onClick={() => handleSort('notificationType')}
+                    sx={{ cursor: 'pointer', userSelect: 'none', fontWeight: 600 }}
                   >
-                    {t('emailReceiversAdmin.fields.notificationType')} {sortConfig.key === 'tipoNotificacion' && (sortConfig.direction === 'asc' ? '▲' : '▼')}
+                    {t('emailReceiversAdmin.fields.notificationType')}{sortIndicator('notificationType')}
+                  </TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>
+                    {t('emailReceiversAdmin.fields.zones', { defaultValue: 'Zonas' })}
                   </TableCell>
                   <TableCell
-                    onClick={() => handleSort('activo')}
-                    sx={{ cursor: 'pointer', userSelect: 'none', fontSize: '14px', fontFamily: 'Montserrat, sans-serif', fontWeight: 600, textAlign: 'center' }}
+                    onClick={() => handleSort('isActive')}
+                    align="center"
+                    sx={{ cursor: 'pointer', userSelect: 'none', fontWeight: 600 }}
                   >
-                    {t('common.status')} {sortConfig.key === 'activo' && (sortConfig.direction === 'asc' ? '▲' : '▼')}
+                    {t('common.status')}{sortIndicator('isActive')}
                   </TableCell>
-                  <TableCell sx={{ fontSize: '14px', fontFamily: 'Montserrat, sans-serif', fontWeight: 600, textAlign: 'center' }}>
+                  <TableCell align="center" sx={{ fontWeight: 600 }}>
                     {t('common.actions')}
                   </TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {filteredAndSortedReceivers.length === 0 ? (
+                {loading ? (
                   <TableRow>
-                    <TableCell colSpan={6} align="center" sx={{ py: 5, color: '#999', fontSize: '14px', fontFamily: 'Montserrat, sans-serif' }}>
-                      {t('emailReceiversAdmin.list.noResults')}
+                    <TableCell colSpan={7} align="center" sx={{ py: 6 }}>
+                      <CircularProgress size={28} />
+                    </TableCell>
+                  </TableRow>
+                ) : filteredAndSortedReceivers.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} align="center" sx={{ py: 5, color: '#999', fontSize: '14px' }}>
+                      {t('emailReceiversAdmin.list.noResults', { defaultValue: 'No hay receptores configurados.' })}
                     </TableCell>
                   </TableRow>
                 ) : (
                   filteredAndSortedReceivers.map((receiver) => (
-                    <TableRow key={receiver.id} hover>
-                      <TableCell sx={{ fontSize: '14px', fontFamily: 'Montserrat, sans-serif' }}>
-                        {receiver.id}
-                      </TableCell>
-                      <TableCell sx={{ fontSize: '14px', fontFamily: 'Montserrat, sans-serif' }}>
-                        {receiver.nombre}
-                      </TableCell>
-                      <TableCell sx={{ fontSize: '13px', fontFamily: 'Montserrat, sans-serif' }}>
-                        {receiver.email}
-                      </TableCell>
-                      <TableCell sx={{ fontSize: '14px', fontFamily: 'Montserrat, sans-serif' }}>
-                        {receiver.tipoNotificacion}
+                    <TableRow key={receiver.emailReceiverId} hover>
+                      <TableCell sx={{ fontSize: '14px' }}>{receiver.emailReceiverId}</TableCell>
+                      <TableCell sx={{ fontSize: '14px' }}>{receiver.name}</TableCell>
+                      <TableCell sx={{ fontSize: '13px' }}>{receiver.email}</TableCell>
+                      <TableCell sx={{ fontSize: '14px' }}>{labelForType(receiver.notificationType)}</TableCell>
+                      <TableCell sx={{ fontSize: '13px' }}>
+                        {receiver.zones.length === 0 ? (
+                          <Typography variant="caption" sx={{ color: '#999', fontStyle: 'italic' }}>
+                            {t('emailReceiversAdmin.list.noZones', { defaultValue: 'Sin zonas' })}
+                          </Typography>
+                        ) : (
+                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                            {receiver.zones.slice(0, 3).map((z) => (
+                              <Chip
+                                key={z.zoneId}
+                                label={z.zoneName}
+                                size="small"
+                                sx={{ fontSize: '11px', height: 22 }}
+                              />
+                            ))}
+                            {receiver.zones.length > 3 && (
+                              <Tooltip title={receiver.zones.slice(3).map(z => z.zoneName).join(', ')} arrow>
+                                <Chip
+                                  label={`+${receiver.zones.length - 3}`}
+                                  size="small"
+                                  sx={{ fontSize: '11px', height: 22, bgcolor: '#e0e0e0' }}
+                                />
+                              </Tooltip>
+                            )}
+                          </Box>
+                        )}
                       </TableCell>
                       <TableCell align="center">
                         <Chip
-                          label={receiver.activo ? t('common.active') : t('common.inactive')}
-                          color={receiver.activo ? 'success' : 'error'}
+                          label={receiver.isActive ? t('common.active') : t('common.inactive')}
+                          color={receiver.isActive ? 'success' : 'default'}
                           size="small"
-                          sx={{ fontSize: '12px', fontFamily: 'Montserrat, sans-serif' }}
+                          sx={{ fontSize: '12px' }}
                         />
                       </TableCell>
                       <TableCell align="center">
                         <IconButton
                           size="small"
-                          onClick={() => handleInfo(receiver.id)}
-                          sx={{ color: '#17a2b8', mr: 0.5 }}
-                          title={t('emailReceiversAdmin.list.viewInfo')}
+                          onClick={() => openPreview(receiver)}
+                          sx={{ color: '#8b5cf6', mr: 0.5 }}
+                          title={t('emailReceiversAdmin.preview.button', { defaultValue: 'Vista previa' })}
                         >
-                          <InfoIcon fontSize="small" />
+                          <VisibilityIcon fontSize="small" />
                         </IconButton>
                         <IconButton
                           size="small"
-                          onClick={() => handleEdit(receiver.id)}
+                          component={RouterLink}
+                          to={`/receivers/edit/${receiver.emailReceiverId}`}
                           sx={{ color: '#007bff', mr: 0.5 }}
                           title={t('common.edit')}
                         >
@@ -254,7 +373,7 @@ const EmailReceiversList = (): React.ReactElement => {
                         </IconButton>
                         <IconButton
                           size="small"
-                          onClick={() => handleDelete(receiver.id)}
+                          onClick={() => setToDelete(receiver)}
                           sx={{ color: '#dc3545' }}
                           title={t('common.delete')}
                         >
@@ -268,21 +387,52 @@ const EmailReceiversList = (): React.ReactElement => {
             </Table>
           </TableContainer>
 
-          {/* Footer */}
-          <Box
-            sx={{
-              mt: 3,
-              pt: 2,
-              borderTop: '1px solid #dee2e6',
-              fontSize: '14px',
-              color: '#666',
-              fontFamily: 'Montserrat, sans-serif'
-            }}
-          >
+          {/* Footer count */}
+          <Box sx={{ mt: 2, fontSize: '14px', color: '#666' }}>
             {t('common.showingEntries', { shown: filteredAndSortedReceivers.length, total: receivers.length })}
           </Box>
         </CardContent>
       </Card>
+
+      {/* Delete confirmation */}
+      <Dialog open={toDelete !== null} onClose={() => !deleting && setToDelete(null)}>
+        <DialogTitle>
+          {t('emailReceiversAdmin.list.deleteTitle', { defaultValue: 'Eliminar receptor' })}
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            {t('emailReceiversAdmin.list.deleteConfirm', {
+              defaultValue: '¿Seguro que quieres eliminar este receptor? Dejará de recibir correos automáticos.',
+            })}
+            {toDelete && (
+              <Box component="span" sx={{ display: 'block', mt: 1, fontWeight: 600, color: '#2c2c2c' }}>
+                {toDelete.name} ({toDelete.email})
+              </Box>
+            )}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setToDelete(null)} disabled={deleting}>
+            {t('common.cancel')}
+          </Button>
+          <Button
+            onClick={handleConfirmDelete}
+            color="error"
+            variant="contained"
+            disabled={deleting}
+            startIcon={deleting ? <CircularProgress size={16} color="inherit" /> : null}
+          >
+            {t('common.delete')}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Email preview */}
+      <PreviewDialog
+        open={previewOpen}
+        onClose={() => setPreviewOpen(false)}
+        receiver={previewReceiver}
+      />
     </Box>
   );
 };

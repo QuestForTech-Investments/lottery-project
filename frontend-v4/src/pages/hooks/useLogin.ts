@@ -167,6 +167,9 @@ const useLogin = () => {
       // forced password change / PIN must complete first.
       const params = new URLSearchParams(window.location.search);
       const redirectUrl = params.get('redirect');
+      // Only relative app paths are safe internal redirects. Reject "//host"
+      // and absolute URLs to avoid open-redirect attacks.
+      const isSafeInternal = !!redirectUrl && redirectUrl.startsWith('/') && !redirectUrl.startsWith('//');
       const isPos = response.role === 'POS';
       let target: string;
       if (redirectUrl && redirectUrl.startsWith('https://pos.lottobook.net')) {
@@ -175,6 +178,9 @@ const useLogin = () => {
         target = window.location.hostname.includes('lottobook.net')
           ? 'https://pos.lottobook.net'
           : 'http://localhost:5173';
+      } else if (isSafeInternal) {
+        // e.g. an email deep link to /tickets/plays?drawId=&date=
+        target = redirectUrl!;
       } else {
         target = '/dashboard';
       }

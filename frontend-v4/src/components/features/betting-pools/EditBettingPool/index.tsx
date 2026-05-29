@@ -32,6 +32,8 @@ import {
 } from '@mui/icons-material';
 import useEditBettingPoolForm from './hooks/useEditBettingPoolForm';
 import { buildPrefillFromGroupDefaults } from '@services/groupDefaultsHelper';
+import useUserPermissions from '@/hooks/useUserPermissions';
+import AuditLogTab from './tabs/AuditLogTab';
 
 interface FormErrors {
   submit?: string | null;
@@ -59,6 +61,9 @@ const EditBettingPoolMUI: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams(); // Get bettingPoolId from URL
   const [templateSectionOpen, setTemplateSectionOpen] = React.useState(true);
+  // Audit tab is gated: only users holding the dedicated permission see it.
+  const { hasPermission } = useUserPermissions();
+  const canViewAudit = hasPermission('VIEW_BANCA_AUDIT_LOG');
 
   const {
     formData,
@@ -168,6 +173,9 @@ const EditBettingPoolMUI: React.FC = () => {
               <Tab label={t('editBettingPool.tabs.users')} />
               <Tab label={t('editBettingPool.tabs.styles')} />
               <Tab label={t('editBettingPool.tabs.autoExpenses')} />
+              {canViewAudit && (
+                <Tab label={t('editBettingPool.tabs.audit', { defaultValue: 'Auditoría' })} />
+              )}
             </Tabs>
           </Box>
 
@@ -337,6 +345,10 @@ const EditBettingPoolMUI: React.FC = () => {
                 formData={formData as unknown as Parameters<typeof AutoExpensesTab>[0]['formData']}
                 handleChange={handleChange as unknown as Parameters<typeof AutoExpensesTab>[0]['handleChange']}
               />
+            )}
+
+            {activeTab === 10 && canViewAudit && id && (
+              <AuditLogTab bettingPoolId={parseInt(id)} />
             )}
           </Box>
 

@@ -127,6 +127,7 @@ const ExternalAgentsListMUI = lazy(() => import('@components/features/external-a
 
 // Email Receivers feature components
 const CreateEmailReceiverMUI = lazy(() => import('@components/features/email-receivers/CreateEmailReceiver'))
+const EditEmailReceiverMUI = lazy(() => import('@components/features/email-receivers/EditEmailReceiver'))
 const EmailReceiversListMUI = lazy(() => import('@components/features/email-receivers/EmailReceiversList'))
 
 function App() {
@@ -440,6 +441,11 @@ function App() {
                           <Route path="/receivers/new" element={
                             <PermissionGuard permission="MANAGE_EMAIL_RECIPIENTS">
                               <LazyRoute component={CreateEmailReceiverMUI} />
+                            </PermissionGuard>
+                          } />
+                          <Route path="/receivers/edit/:receiverId" element={
+                            <PermissionGuard permission="MANAGE_EMAIL_RECIPIENTS">
+                              <LazyRoute component={EditEmailReceiverMUI} />
                             </PermissionGuard>
                           } />
                           <Route path="/receivers/list" element={

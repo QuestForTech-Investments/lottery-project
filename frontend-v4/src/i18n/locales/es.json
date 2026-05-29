@@ -37,6 +37,7 @@
     "download": "Descargar",
     "upload": "Subir",
     "refresh": "Actualizar",
+    "searchMenu": "Buscar...",
     "reload": "Recargar",
     "view": "Ver",
     "details": "Detalles",
@@ -619,6 +620,10 @@
   "dashboard": {
     "title": "Dashboard",
     "poolsSelling": "Bancas vendiendo",
+    "totalSales": "Ventas",
+    "prizes": "Premios",
+    "commissions": "Comisiones",
+    "netTotal": "Neto",
     "noData": "Sin datos",
     "quickBlock": {
       "title": "Bloqueo rápido de números",
@@ -1563,7 +1568,86 @@
       "draws": "Sorteos",
       "users": "Usuarios",
       "styles": "Estilos",
-      "autoExpenses": "Gastos Automáticos"
+      "autoExpenses": "Gastos Automáticos",
+      "audit": "Auditoría"
+    },
+    "audit": {
+      "title": "Historial de cambios",
+      "loadError": "Error al cargar el historial de cambios.",
+      "empty": "Aún no hay cambios registrados para esta banca.",
+      "action": "Acción",
+      "user": "Usuario",
+      "changes": "Cambios",
+      "emptyValue": "(vacío)",
+      "passwordChanged": "(cambió)",
+      "yes": "Sí",
+      "no": "No",
+      "fields": {
+        "name": "Nombre",
+        "zoneId": "Zona",
+        "bankId": "Banco",
+        "address": "Dirección",
+        "phone": "Teléfono",
+        "location": "Ubicación",
+        "reference": "Referencia",
+        "comment": "Comentario",
+        "username": "Usuario",
+        "password": "Contraseña",
+        "isActive": "Activo",
+        "config": {
+          "fallType": "Tipo de caída",
+          "fallPercentage": "Porcentaje de caída",
+          "deactivationBalance": "Balance de desactivación",
+          "dailySaleLimit": "Límite de venta diaria",
+          "dailyBalanceLimit": "Límite de balance diario",
+          "temporaryAdditionalBalance": "Balance adicional temporal",
+          "enableTemporaryBalance": "Habilitar balance temporal",
+          "creditLimit": "Límite de crédito",
+          "isActive": "Activo",
+          "controlWinningTickets": "Control de tickets ganadores",
+          "allowJackpot": "Permitir jackpot",
+          "enableRecharges": "Habilitar recargas",
+          "allowPasswordChange": "Permitir cambio de contraseña",
+          "cancelMinutes": "Minutos de cancelación",
+          "dailyCancelTickets": "Tickets a cancelar por día",
+          "maxCancelAmount": "Monto máx. cancelación",
+          "maxTicketAmount": "Monto máx. por ticket",
+          "maxDailyRecharge": "Recarga máx. diaria",
+          "paymentMode": "Modo de pago",
+          "futureSalesMode": "Modo de ventas futuras",
+          "allowFutureSales": "Permitir ventas futuras",
+          "maxFutureDays": "Días máx. ventas futuras",
+          "defaultLanguage": "Idioma por defecto",
+          "useCentralLogo": "Usar logo central",
+          "showStatsPanel": "Mostrar panel de stats",
+          "statsPanelConfig": "Config. panel de stats",
+          "enableAutoLogout": "Habilitar auto-logout",
+          "autoLogoutMinutes": "Minutos de auto-logout"
+        },
+        "discount": {
+          "discountMode": "Modo de descuento",
+          "discountAmount": "Monto de descuento",
+          "discountPerEvery": "Descuento por cada"
+        },
+        "print": {
+          "printMode": "Modo de impresión",
+          "printEnabled": "Impresión habilitada",
+          "printTicketCopy": "Imprimir copia de ticket",
+          "printRechargeReceipt": "Imprimir recibo de recarga",
+          "smsOnly": "Solo SMS"
+        },
+        "footer": {
+          "autoFooter": "Pie automático",
+          "footerLine1": "Pie línea 1",
+          "footerLine2": "Pie línea 2",
+          "footerLine3": "Pie línea 3",
+          "footerLine4": "Pie línea 4",
+          "footerLine5": "Pie línea 5",
+          "footerLine6": "Pie línea 6",
+          "footerLine7": "Pie línea 7",
+          "footerLine8": "Pie línea 8"
+        }
+      }
     },
     "confirmGroupDefaults": "Esto sobrescribirá la configuración de esta banca con los valores predeterminados del grupo. ¿Continuar?",
     "applyGroupDefaults": "Aplicar defaults del grupo",
@@ -2430,6 +2514,15 @@
       "editAlert": "Editar receptor #{{id}} (mockup)",
       "deletedAlert": "Receptor #{{id}} eliminado (mockup)",
       "infoAlert": "Información del receptor:\n\nNombre: {{name}}\nEmail: {{email}}\nTipo de notificación: {{notificationType}}\nEstado: {{status}}"
+    },
+    "preview": {
+      "button": "Vista previa",
+      "title": "Vista previa del correo",
+      "date": "Fecha",
+      "draw": "Sorteo",
+      "allDraws": "Todos (vista del día)",
+      "allZones": "Todas las zonas",
+      "error": "No se pudo generar la vista previa."
     }
   },
   "myGroupAdmin": {
