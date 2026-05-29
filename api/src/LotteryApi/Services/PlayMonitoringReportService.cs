@@ -31,15 +31,15 @@ public class PlayMonitoringReportService
         List<int> zoneIds,
         int? drawId = null)
     {
-        var utcStart = DateTimeHelper.GetUtcStartOfDay(targetDate);
-        var utcEnd = DateTimeHelper.GetUtcEndOfDay(targetDate);
+        // Filter by DrawDate so plays sold as "venta futura" (CreatedAt earlier)
+        // still appear in the email of the draw day they target.
+        var targetDay = targetDate.Date;
 
         var query = _context.TicketLines
             .AsNoTracking()
             .Where(tl => !tl.Ticket!.IsCancelled
                 && tl.LineStatus != "cancelled"
-                && tl.Ticket.CreatedAt >= utcStart
-                && tl.Ticket.CreatedAt < utcEnd
+                && tl.DrawDate.Date == targetDay
                 && tl.BetTypeCode != null);
 
         if (drawId.HasValue)

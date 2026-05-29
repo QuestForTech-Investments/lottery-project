@@ -2066,7 +2066,8 @@ public class BettingPoolsController : ControllerBase
     [HttpGet("without-sales")]
     public async Task<ActionResult<object>> GetWithoutSales(
         [FromQuery] int minDays = 7,
-        [FromQuery] string? zoneIds = null)
+        [FromQuery] string? zoneIds = null,
+        [FromQuery] string status = "active")
     {
         var today = Helpers.DateTimeHelper.TodayInBusinessTimezone();
 
@@ -2079,9 +2080,20 @@ public class BettingPoolsController : ControllerBase
                 .ToList();
         }
 
+        // status: "all" | "active" | "inactive" — defaults to "active" to keep
+        // legacy callers stable. Soft-deleted bancas are always excluded.
+        var normalizedStatus = (status ?? "active").Trim().ToLowerInvariant();
         var bancasQuery = _context.BettingPools.AsNoTracking()
             .Include(bp => bp.Zone)
-            .Where(bp => bp.IsActive && bp.DeletedAt == null);
+            .Where(bp => bp.DeletedAt == null);
+        if (normalizedStatus == "active")
+        {
+            bancasQuery = bancasQuery.Where(bp => bp.IsActive);
+        }
+        else if (normalizedStatus == "inactive")
+        {
+            bancasQuery = bancasQuery.Where(bp => !bp.IsActive);
+        }
 
         // Zone scope — admin sees their assigned zones; POS sees only assigned bancas.
         var allowedBpIds = await _zoneScope.GetAllowedBettingPoolIdsAsync();
@@ -2103,6 +2115,7 @@ public class BettingPoolsController : ControllerBase
                 bp.Reference,
                 bp.ZoneId,
                 ZoneName = bp.Zone != null ? bp.Zone.ZoneName : null,
+                bp.IsActive,
                 bp.CreatedAt,
                 Balance = _context.Balances.Where(b => b.BettingPoolId == bp.BettingPoolId)
                     .Select(b => (decimal?)b.CurrentBalance).FirstOrDefault() ?? 0m
@@ -2144,12 +2157,16 @@ public class BettingPoolsController : ControllerBase
                     reference = bp.Reference,
                     zoneId = bp.ZoneId,
                     zoneName = bp.ZoneName,
+                    isActive = bp.IsActive,
                     daysWithoutSales = days,
                     balance = bp.Balance,
                     lastSaleDate = lastSaleLocal?.ToString("yyyy-MM-dd")
                 };
             })
-            .Where(x => x.daysWithoutSales >= minDays)
+            // Inactive bancas always pass — the fact that they're inactive is
+            // the relevant signal, regardless of how long since their last sale.
+            // Active bancas still need to meet the `minDays` threshold.
+            .Where(x => !x.isActive || x.daysWithoutSales >= minDays)
             .OrderByDescending(x => x.daysWithoutSales)
             .ToList();
 

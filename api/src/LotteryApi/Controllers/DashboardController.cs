@@ -54,35 +54,35 @@ public class DashboardController : ControllerBase
 
         var allowedBpIds = await _zoneScope.GetAllowedBettingPoolIdsAsync();
 
-        // Pull (DrawDate, TicketId, ticket totals) for lines in the range
-        // Filter by DrawDate to match daily sales report (future-sale tickets count on draw day)
-        var lineQuery = _context.TicketLines
+        // Aggregate by ticket CreatedAt (emission day): future-sale tickets
+        // are reported as sales on the day they were issued, not on the draw day.
+        var rangeStartUtc = DateTimeHelper.GetUtcStartOfDay(startDate);
+        var rangeEndUtc = DateTimeHelper.GetUtcEndOfDay(today);
+
+        var ticketQuery = _context.Tickets
             .AsNoTracking()
-            .Where(tl => tl.Ticket != null && !tl.Ticket.IsCancelled
-                && tl.DrawDate.Date >= startDate && tl.DrawDate.Date <= today);
+            .Where(t => !t.IsCancelled
+                && t.CreatedAt >= rangeStartUtc
+                && t.CreatedAt <= rangeEndUtc);
 
         if (allowedBpIds != null)
         {
-            lineQuery = lineQuery.Where(tl => tl.Ticket != null && allowedBpIds.Contains(tl.Ticket.BettingPoolId));
+            ticketQuery = ticketQuery.Where(t => allowedBpIds.Contains(t.BettingPoolId));
         }
 
-        var lineDays = await lineQuery
-            .Select(tl => new
+        var ticketRows = await ticketQuery
+            .Select(t => new
             {
-                DrawDate = tl.DrawDate.Date,
-                TicketId = tl.TicketId,
-                Bet = tl.Ticket!.TotalBetAmount,
-                Discount = tl.Ticket.TotalDiscount,
-                Commission = tl.Ticket.TotalCommission,
-                Prize = tl.Ticket.TotalPrize
+                t.CreatedAt,
+                Bet = t.TotalBetAmount,
+                Discount = t.TotalDiscount,
+                Commission = t.TotalCommission,
+                Prize = t.TotalPrize
             })
             .ToListAsync();
 
-        // Deduplicate so a ticket with multiple lines on the same day is only counted once per day
-        var grouped = lineDays
-            .GroupBy(x => new { x.DrawDate, x.TicketId })
-            .Select(g => g.First())
-            .GroupBy(x => x.DrawDate)
+        var grouped = ticketRows
+            .GroupBy(x => DateTimeHelper.ToBusinessTimezone(x.CreatedAt).Date)
             .ToDictionary(g => g.Key, g => new
             {
                 Ventas = g.Sum(x => x.Bet),
@@ -166,10 +166,11 @@ public class DashboardController : ControllerBase
         var utcEnd = DateTimeHelper.GetUtcEndOfDay(today);
 
         var allowedBpIds = await _zoneScope.GetAllowedBettingPoolIdsAsync();
+        // Sales-by-draw for today = lines from tickets ISSUED today, grouped by draw.
+        // Future-sale tickets emitted today appear here under their target draw.
         var lineQuery = _context.TicketLines.AsNoTracking()
             .Where(tl => tl.Ticket != null && !tl.Ticket.IsCancelled
-                && ((tl.Ticket.CreatedAt >= utcStart && tl.Ticket.CreatedAt < utcEnd)
-                    || tl.DrawDate.Date == today))
+                && tl.Ticket.CreatedAt >= utcStart && tl.Ticket.CreatedAt < utcEnd)
             .Where(tl => tl.Draw != null);
         if (allowedBpIds != null)
             lineQuery = lineQuery.Where(tl => tl.Ticket != null && allowedBpIds.Contains(tl.Ticket.BettingPoolId));

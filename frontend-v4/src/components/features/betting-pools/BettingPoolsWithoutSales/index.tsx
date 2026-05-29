@@ -4,6 +4,7 @@ import {
   Box,
   Card,
   CardContent,
+  Chip,
   Typography,
   TextField,
   Button,
@@ -54,12 +55,15 @@ interface BettingPool {
   zone?: { id?: number; name?: string };
   zoneId?: number;
   balance?: number;
+  isActive?: boolean;
 }
+
+type StatusFilter = 'all' | 'active' | 'inactive';
 
 interface PoolWithDaysData extends BettingPool {
   daysWithoutSales: number;
   lastSaleDate: string | null;
-  [key: string]: string | number | null | { id?: number; name?: string } | undefined;
+  [key: string]: string | number | boolean | null | { id?: number; name?: string } | undefined;
 }
 
 type OrderDirection = 'asc' | 'desc';
@@ -75,6 +79,7 @@ const BettingPoolsWithoutSales: React.FC = () => {
   const [daysWithoutSales, setDaysWithoutSales] = useState<number>(7);
   const [selectedZones, setSelectedZones] = useState<number[]>([]);
   const [searchTerm, setSearchTerm] = useState<string>('');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('active');
 
   // Sorting state
   const [orderBy, setOrderBy] = useState<string>('days');
@@ -105,7 +110,7 @@ const BettingPoolsWithoutSales: React.FC = () => {
         ? `&zoneIds=${selectedZones.join(',')}`
         : '';
       const data = await api.get(
-        `/betting-pools/without-sales?minDays=${daysWithoutSales}${zoneParam}`,
+        `/betting-pools/without-sales?minDays=${daysWithoutSales}&status=${statusFilter}${zoneParam}`,
       ) as PoolWithDaysData[];
       setResults(Array.isArray(data) ? data : []);
     } catch (err) {
@@ -118,11 +123,11 @@ const BettingPoolsWithoutSales: React.FC = () => {
     }
   };
 
-  // Auto-run on mount + whenever the days threshold changes (debounced is overkill — number input).
+  // Auto-run on mount + whenever the days threshold or status changes.
   useEffect(() => {
     if (zones.length > 0) handleSearch();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [zones.length, daysWithoutSales]);
+  }, [zones.length, daysWithoutSales, statusFilter]);
 
   const handleExportPdf = (): void => {
     if (filteredAndSortedData.length === 0) {
@@ -134,6 +139,8 @@ const BettingPoolsWithoutSales: React.FC = () => {
         getValue: (r) => String(r.bettingPoolCode ?? r.code ?? r.bettingPoolId ?? r.id ?? '') },
       { key: 'name', label: t('bettingPoolsAdmin.tableName'), align: 'left',
         getValue: (r) => String(r.bettingPoolName ?? r.name ?? '') },
+      { key: 'status', label: t('bettingPoolsAdmin.statusLabel'), align: 'left',
+        getValue: (r) => t((r.isActive ?? true) ? 'bettingPoolsAdmin.statusActive' : 'bettingPoolsAdmin.statusInactive') },
       { key: 'reference', label: t('bettingPoolsAdmin.tableReference'), align: 'left',
         getValue: (r) => String(r.reference ?? '-') },
       { key: 'days', label: t('bettingPoolsAdmin.tableDays'), align: 'right',
@@ -275,6 +282,19 @@ const BettingPoolsWithoutSales: React.FC = () => {
               <Typography>{t('bettingPoolsAdmin.days')}</Typography>
             </Box>
 
+            <FormControl sx={{ minWidth: { xs: '100%', sm: 160 } }} size="small">
+              <InputLabel>{t('bettingPoolsAdmin.statusLabel')}</InputLabel>
+              <Select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
+                input={<OutlinedInput label={t('bettingPoolsAdmin.statusLabel')} />}
+              >
+                <MenuItem value="all">{t('bettingPoolsAdmin.statusAll')}</MenuItem>
+                <MenuItem value="active">{t('bettingPoolsAdmin.statusActive')}</MenuItem>
+                <MenuItem value="inactive">{t('bettingPoolsAdmin.statusInactive')}</MenuItem>
+              </Select>
+            </FormControl>
+
             <FormControl sx={{ minWidth: { xs: '100%', sm: 200 } }} size="small">
               <InputLabel>{t('common.zones')}</InputLabel>
               <Select
@@ -352,6 +372,7 @@ const BettingPoolsWithoutSales: React.FC = () => {
                       {t('bettingPoolsAdmin.tableName')}
                     </TableSortLabel>
                   </TableCell>
+                  <TableCell>{t('bettingPoolsAdmin.statusLabel')}</TableCell>
                   <TableCell>
                     <TableSortLabel
                       active={orderBy === 'reference'}
@@ -402,7 +423,7 @@ const BettingPoolsWithoutSales: React.FC = () => {
               <TableBody>
                 {filteredAndSortedData.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} align="center">
+                    <TableCell colSpan={8} align="center">
                       {t('bettingPoolsAdmin.noBettingPoolsNoSalesInPeriod')}
                     </TableCell>
                   </TableRow>
@@ -411,10 +432,19 @@ const BettingPoolsWithoutSales: React.FC = () => {
                     const bal = pool.balance ?? 0;
                     // Green/red accent driven by the sign of the balance.
                     const balColor = bal > 0 ? '#2e7d32' : bal < 0 ? '#c62828' : 'inherit';
+                    const active = pool.isActive ?? true;
                     return (
                       <TableRow key={pool.bettingPoolId || pool.id} hover>
                         <TableCell>{pool.bettingPoolCode || pool.code || `#${pool.bettingPoolId || pool.id}`}</TableCell>
                         <TableCell>{pool.bettingPoolName || pool.name}</TableCell>
+                        <TableCell>
+                          <Chip
+                            size="small"
+                            label={t(active ? 'bettingPoolsAdmin.statusActive' : 'bettingPoolsAdmin.statusInactive')}
+                            color={active ? 'success' : 'default'}
+                            variant={active ? 'filled' : 'outlined'}
+                          />
+                        </TableCell>
                         <TableCell>{pool.reference || '-'}</TableCell>
                         <TableCell>{pool.daysWithoutSales}</TableCell>
                         <TableCell>{pool.lastSaleDate || t('bettingPoolsAdmin.never')}</TableCell>

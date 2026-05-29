@@ -270,20 +270,11 @@ export const useTicketMonitoring = (): UseTicketMonitoringReturn => {
 
         if (signal?.aborted) return;
 
-        const filterDate = fechaToUse; // YYYY-MM-DD format
-        const mappedTickets = (response.tickets || []).map((t) => {
-          const mapped = mapTicketResponse(t);
-          // Compute date indicators by comparing createdAt date with the filter date (draw date)
-          const createdAtDate = new Date(mapped.rawCreatedAt).toLocaleDateString('en-CA', {
-            timeZone: 'America/Santo_Domingo',
-          }); // returns YYYY-MM-DD
-          if (createdAtDate > filterDate) {
-            mapped.isPreviousDay = true;
-          } else if (createdAtDate < filterDate) {
-            mapped.isFutureDay = true;
-          }
-          return mapped;
-        });
+        // isFutureDay / isPreviousDay come from the backend (intrinsic to the
+        // ticket: any line drawing after / before creation date). This keeps the
+        // flag stable across views — a future ticket still shows the flag when
+        // viewed on its emission day.
+        const mappedTickets = (response.tickets || []).map((t) => mapTicketResponse(t));
 
         setTickets(mappedTickets);
         setCounts(calculateTicketCounts(mappedTickets));

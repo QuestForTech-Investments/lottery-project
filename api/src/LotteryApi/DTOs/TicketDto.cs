@@ -154,6 +154,28 @@ public class TicketListDto
     public int PrintCount { get; set; }
     public bool IsOutOfScheduleSale { get; set; }
     public bool IsCancelledOutOfTime { get; set; }
+
+    /// <summary>
+    /// True when any line's draw date is later than the ticket's creation date
+    /// (i.e. the ticket was sold as "venta futura"). Computed from line draw_date
+    /// vs ticket created_at so the flag is intrinsic to the ticket and stable
+    /// regardless of which day the monitoring view is filtered to.
+    /// </summary>
+    public bool IsFutureDay { get; set; }
+
+    /// <summary>
+    /// True when any line's draw date is earlier than the ticket's creation date
+    /// (ticket was sold as previous-day sale).
+    /// </summary>
+    public bool IsPreviousDay { get; set; }
+
+    /// <summary>Distinct draw dates the ticket targets that fall AFTER its
+    /// creation date — used by the UI to render "Venta futura para …" tooltips.</summary>
+    public List<DateTime>? FutureDrawDates { get; set; }
+
+    /// <summary>Distinct draw dates the ticket targets that fall BEFORE its
+    /// creation date — used for "Venta de día anterior para …" tooltips.</summary>
+    public List<DateTime>? PreviousDrawDates { get; set; }
 }
 
 /// <summary>

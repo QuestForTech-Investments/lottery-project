@@ -124,15 +124,19 @@ public class SalesReportsController : ControllerBase
                 bettingPoolsQuery = bettingPoolsQuery.Where(bp => filter.ZoneIds.Contains(bp.ZoneId));
             }
 
-            // Get betting pools with their tickets in the date range
+            // Sales filtered by ticket emission day (CreatedAt). Future-sale
+            // tickets count as revenue on the day they were issued.
+            var rangeStartUtc = DateTimeHelper.GetUtcStartOfDay(filter.StartDate.Date);
+            var rangeEndUtc = DateTimeHelper.GetUtcEndOfDay(filter.EndDate.Date);
+
             var salesData = await bettingPoolsQuery
                 .Select(bp => new
                 {
                     BettingPool = bp,
                     Tickets = bp.Tickets
                         .Where(t => !t.IsCancelled
-                            && t.TicketLines.Any(tl => tl.DrawDate.Date >= filter.StartDate.Date
-                                && tl.DrawDate.Date <= filter.EndDate.Date))
+                            && t.CreatedAt >= rangeStartUtc
+                            && t.CreatedAt <= rangeEndUtc)
                         .Where(t => filter.DrawIds == null || filter.DrawIds.Count == 0
                             || t.TicketLines.Any(tl => filter.DrawIds.Contains(tl.DrawId)))
                         .ToList()
@@ -253,11 +257,12 @@ public class SalesReportsController : ControllerBase
                 "Getting daily sales summary for {Date} (UTC: {UtcStart} to {UtcEnd}), BettingPoolId: {BettingPoolId}",
                 targetDate, utcStart, utcEnd, bettingPoolId);
 
-            // Include tickets created today OR tickets from previous days with draws for today
+            // Sales aggregated by emission day: include only tickets created on targetDate.
+            // Future-sale tickets count on the day they were issued, not on draw day.
             var query = _context.Tickets
                 .Where(t => !t.IsCancelled
-                    && ((t.CreatedAt >= utcStart && t.CreatedAt < utcEnd)
-                        || t.TicketLines.Any(tl => tl.DrawDate.Date == targetDate.Date)));
+                    && t.CreatedAt >= utcStart
+                    && t.CreatedAt < utcEnd);
 
             // Zone scope: admin only sees tickets from bancas in their assigned zones.
             var allowedBpIds = await _zoneScope.GetAllowedBettingPoolIdsAsync();
@@ -576,7 +581,11 @@ public class SalesReportsController : ControllerBase
                 .Where(bh => bh.BalanceDate == snapshotDate)
                 .ToDictionaryAsync(bh => bh.BettingPoolId, bh => bh.BalanceAmount);
 
-            // Filter by DrawDate — tickets count on the day of the draw (including future-sale tickets)
+            // Sales aggregated by ticket emission day (CreatedAt).
+            // Future-sale tickets count as revenue on the day they were issued.
+            var bpRangeStartUtc = DateTimeHelper.GetUtcStartOfDay(filterStartDate);
+            var bpRangeEndUtc = DateTimeHelper.GetUtcEndOfDay(filterEndDate);
+
             var salesData = await query
                 .Include(bp => bp.Balance)
                 .Select(bp => new
@@ -584,7 +593,8 @@ public class SalesReportsController : ControllerBase
                     BettingPool = bp,
                     Tickets = bp.Tickets
                         .Where(t => !t.IsCancelled
-                            && t.TicketLines.Any(tl => tl.DrawDate.Date >= filterStartDate && tl.DrawDate.Date <= filterEndDate))
+                            && t.CreatedAt >= bpRangeStartUtc
+                            && t.CreatedAt <= bpRangeEndUtc)
                         .Where(t => !lotteryId.HasValue || t.TicketLines.Any(tl => tl.Draw.LotteryId == lotteryId.Value))
                         .ToList()
                 })
@@ -742,13 +752,18 @@ public class SalesReportsController : ControllerBase
                     .ToList();
             }
 
-            // Get ticket lines grouped by draw
+            // Sales grouped by draw, filtered by ticket emission day (CreatedAt).
+            // Future-sale tickets emitted today appear under their target draw,
+            // even if the draw itself is in the future.
+            var drawRangeStartUtc = DateTimeHelper.GetUtcStartOfDay(rangeStart.Date);
+            var drawRangeEndUtc = DateTimeHelper.GetUtcEndOfDay(rangeEnd.Date);
+
             var query = _context.TicketLines
                 .Include(tl => tl.Ticket)
                 .Include(tl => tl.Draw)
                     .ThenInclude(d => d!.Lottery)
                 .Where(tl => tl.Ticket != null && !tl.Ticket.IsCancelled)
-                .Where(tl => tl.DrawDate.Date >= rangeStart.Date && tl.DrawDate.Date <= rangeEnd.Date);
+                .Where(tl => tl.Ticket!.CreatedAt >= drawRangeStartUtc && tl.Ticket.CreatedAt <= drawRangeEndUtc);
 
             // Zone scope.
             var allowedBpIds = await _zoneScope.GetAllowedBettingPoolIdsAsync();
@@ -890,13 +905,18 @@ public class SalesReportsController : ControllerBase
 
             var zoneSales = new List<ZoneSalesDto>();
 
+            // Sales filtered by ticket emission day (CreatedAt) — future-sale
+            // tickets are counted on the day they were issued.
+            var zoneRangeStartUtc = DateTimeHelper.GetUtcStartOfDay(rangeStart.Date);
+            var zoneRangeEndUtc = DateTimeHelper.GetUtcEndOfDay(rangeEnd.Date);
+
             foreach (var zone in zones)
             {
                 var tickets = await _context.Tickets
                     .Include(t => t.BettingPool)
                     .Include(t => t.TicketLines)
                     .Where(t => !t.IsCancelled)
-                    .Where(t => t.TicketLines.Any(tl => tl.DrawDate.Date >= rangeStart.Date && tl.DrawDate.Date <= rangeEnd.Date))
+                    .Where(t => t.CreatedAt >= zoneRangeStartUtc && t.CreatedAt <= zoneRangeEndUtc)
                     .Where(t => t.BettingPool != null && t.BettingPool.ZoneId == zone.ZoneId)
                     .ToListAsync();
 
@@ -910,9 +930,7 @@ public class SalesReportsController : ControllerBase
                 var loserCount = tickets.Count(t => t.TicketState == "L");
                 var winnerCount = tickets.Count(t => t.TicketState == "W");
 
-                var lineCount = tickets
-                    .SelectMany(t => t.TicketLines)
-                    .Count(tl => tl.DrawDate.Date >= rangeStart.Date && tl.DrawDate.Date <= rangeEnd.Date);
+                var lineCount = tickets.SelectMany(t => t.TicketLines).Count();
 
                 var zoneRiferoDiscount = tickets.Where(t => t.DiscountMode == "RIFERO").Sum(t => t.TotalDiscount);
                 var zoneTotalNet = tickets.Sum(t => t.GrandTotal) + zoneRiferoDiscount - tickets.Sum(t => t.TotalCommission) - tickets.Sum(t => t.TotalPrize);
@@ -1042,6 +1060,11 @@ public class SalesReportsController : ControllerBase
             var bettingPools = await bettingPoolsQuery.ToListAsync();
             var result = new List<BettingPoolDrawSalesDto>();
 
+            // Sales filtered by ticket emission day (CreatedAt). Future-sale
+            // tickets emitted in range appear here under their target draw.
+            var bpdRangeStartUtc = DateTimeHelper.GetUtcStartOfDay(rangeStart.Date);
+            var bpdRangeEndUtc = DateTimeHelper.GetUtcEndOfDay(rangeEnd.Date);
+
             foreach (var bp in bettingPools)
             {
                 var lines = await _context.TicketLines
@@ -1050,7 +1073,7 @@ public class SalesReportsController : ControllerBase
                         .ThenInclude(d => d!.Lottery)
                     .Where(tl => tl.Ticket != null && !tl.Ticket.IsCancelled)
                     .Where(tl => tl.Ticket!.BettingPoolId == bp.BettingPoolId)
-                    .Where(tl => tl.DrawDate.Date >= rangeStart.Date && tl.DrawDate.Date <= rangeEnd.Date)
+                    .Where(tl => tl.Ticket!.CreatedAt >= bpdRangeStartUtc && tl.Ticket.CreatedAt <= bpdRangeEndUtc)
                     .ToListAsync();
 
                 if (!lines.Any()) continue;

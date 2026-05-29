@@ -95,6 +95,7 @@ const CreateTickets: React.FC = () => {
     handleFutureDateChange,
     creatingTicket,
     cancelMinutes,
+    bancaAllowsFutureSales,
     allowSplitAmount,
     limitAvailable,
     limitChecking,
@@ -296,7 +297,7 @@ const CreateTickets: React.FC = () => {
         selectedFutureDate={selectedFutureDate}
         effectiveTicketDate={effectiveTicketDate}
         canPreviousDay={hasPermission('TICKET_PREVIOUS_DAY_SALE')}
-        canFutureDate={hasPermission('TICKET_FUTURE_SALE')}
+        canFutureDate={bancaAllowsFutureSales || hasPermission('TICKET_FUTURE_SALE')}
         onTogglePreviousDay={handleTogglePreviousDay}
         onToggleFutureDate={handleToggleFutureDate}
         onFutureDateChange={handleFutureDateChange}

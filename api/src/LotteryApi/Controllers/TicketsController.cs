@@ -560,15 +560,20 @@ public class TicketsController : ControllerBase
 
                 if (ticketDate > todayBusiness)
                 {
-                    // Server-side permission check for future sales
-                    var hasFutureDatePermission = await _context.UserPermissions
-                        .AnyAsync(up => up.UserId == dto.UserId
-                            && up.Permission!.PermissionCode == "TICKET_FUTURE_SALE"
-                            && up.IsActive);
-
-                    if (!hasFutureDatePermission)
+                    // For POS users (assigned to this banca) the banca config alone
+                    // gates future sales. For non-POS sellers (admin selling via
+                    // SELL_AS_ANY_BANK) require the explicit user permission as before.
+                    if (!isAssignedToBanca)
                     {
-                        return ApiErrorResult.Error(ErrorCodes.TicketDateFutureForbidden, "No tiene permiso para ventas futuras", 403);
+                        var hasFutureDatePermission = await _context.UserPermissions
+                            .AnyAsync(up => up.UserId == dto.UserId
+                                && up.Permission!.PermissionCode == "TICKET_FUTURE_SALE"
+                                && up.IsActive);
+
+                        if (!hasFutureDatePermission)
+                        {
+                            return ApiErrorResult.Error(ErrorCodes.TicketDateFutureForbidden, "No tiene permiso para ventas futuras", 403);
+                        }
                     }
 
                     var futureSalesMode = bpConfig?.FutureSalesMode ?? "OFF";
@@ -1354,11 +1359,17 @@ public class TicketsController : ControllerBase
                 var lotteryTimeZone = TimeZoneInfo.FindSystemTimeZoneById(timezoneId);
                 var localStartOfDay = new DateTime(filter.Date.Value.Year, filter.Date.Value.Month, filter.Date.Value.Day, 0, 0, 0, DateTimeKind.Unspecified);
                 var localEndOfDay = localStartOfDay.AddDays(1);
+                var utcStart = TimeZoneInfo.ConvertTimeToUtc(localStartOfDay, lotteryTimeZone);
+                var utcEnd = TimeZoneInfo.ConvertTimeToUtc(localEndOfDay, lotteryTimeZone);
 
-                // Filter by DrawDate (the date the ticket is FOR, not when it was created)
-                // A ticket appears on a date if ANY of its lines have that DrawDate
+                // A ticket appears in the day's monitoring if it was either issued
+                // that day (CreatedAt = emission) OR has a line drawing that day
+                // (DrawDate). Future-sale tickets surface on BOTH days: today (as
+                // newly issued) and the draw day (for winner/loser status).
                 var filterDate = filter.Date.Value.Date;
-                query = query.Where(t => t.TicketLines.Any(tl => tl.DrawDate.Date == filterDate));
+                query = query.Where(t =>
+                    (t.CreatedAt >= utcStart && t.CreatedAt < utcEnd)
+                    || t.TicketLines.Any(tl => tl.DrawDate.Date == filterDate));
             }
 
             if (filter.BettingPoolId.HasValue)
@@ -1447,43 +1458,74 @@ public class TicketsController : ControllerBase
             var cancelledTickets = await query.Where(t => t.IsCancelled).CountAsync();
 
             // Apply pagination
-            var tickets = await query
+            // Project min/max draw dates so we can compute the future/previous-day
+            // flag intrinsic to the ticket (independent of the filter date).
+            var ticketsRaw = await query
                 .OrderByDescending(t => t.CreatedAt)
                 .Skip((filter.PageNumber - 1) * filter.PageSize)
                 .Take(filter.PageSize)
-                .Select(t => new TicketListDto
+                .Select(t => new
                 {
-                    TicketId = t.TicketId,
-                    TicketCode = t.TicketCode,
-                    Barcode = t.Barcode,
-                    BettingPoolId = t.BettingPoolId,
-                    BettingPoolName = t.BettingPool != null ? t.BettingPool.BettingPoolName : null,
-                    UserId = t.UserId,
-                    UserName = t.User != null ? t.User.Username : null,
-                    CreatedAt = t.CreatedAt,
-                    TotalLines = t.TotalLines,
-                    GrandTotal = t.TotalBetAmount,
-                    TotalPrize = t.TotalPrize,
-                    WinningLines = t.WinningLines,
-                    Status = t.Status,
-                    TicketState = t.TicketState,
-                    IsCancelled = t.IsCancelled,
-                    CancelledAt = t.CancelledAt,
-                    CancelledBy = t.CancelledBy,
-                    CancelledByName = t.CancelledBy != null
-                        ? _context.Users.Where(u => u.UserId == t.CancelledBy).Select(u => u.Username).FirstOrDefault()
-                        : null,
-                    IsPaid = t.IsPaid,
-                    PaidAt = t.PaidAt,
-                    CustomerName = t.CustomerName,
-                    CustomerPhone = t.CustomerPhone,
-                    EarliestDrawTime = t.EarliestDrawTime,
-                    LatestDrawTime = t.LatestDrawTime,
-                    PrintCount = t.PrintCount,
-                    IsOutOfScheduleSale = t.SpecialFlags != null && t.SpecialFlags.Contains("OUT_OF_SCHEDULE"),
-                    IsCancelledOutOfTime = t.SpecialFlags != null && t.SpecialFlags.Contains("CANCELLED_OUT_OF_TIME")
+                    Dto = new TicketListDto
+                    {
+                        TicketId = t.TicketId,
+                        TicketCode = t.TicketCode,
+                        Barcode = t.Barcode,
+                        BettingPoolId = t.BettingPoolId,
+                        BettingPoolName = t.BettingPool != null ? t.BettingPool.BettingPoolName : null,
+                        UserId = t.UserId,
+                        UserName = t.User != null ? t.User.Username : null,
+                        CreatedAt = t.CreatedAt,
+                        TotalLines = t.TotalLines,
+                        GrandTotal = t.TotalBetAmount,
+                        TotalPrize = t.TotalPrize,
+                        WinningLines = t.WinningLines,
+                        Status = t.Status,
+                        TicketState = t.TicketState,
+                        IsCancelled = t.IsCancelled,
+                        CancelledAt = t.CancelledAt,
+                        CancelledBy = t.CancelledBy,
+                        CancelledByName = t.CancelledBy != null
+                            ? _context.Users.Where(u => u.UserId == t.CancelledBy).Select(u => u.Username).FirstOrDefault()
+                            : null,
+                        IsPaid = t.IsPaid,
+                        PaidAt = t.PaidAt,
+                        CustomerName = t.CustomerName,
+                        CustomerPhone = t.CustomerPhone,
+                        EarliestDrawTime = t.EarliestDrawTime,
+                        LatestDrawTime = t.LatestDrawTime,
+                        PrintCount = t.PrintCount,
+                        IsOutOfScheduleSale = t.SpecialFlags != null && t.SpecialFlags.Contains("OUT_OF_SCHEDULE"),
+                        IsCancelledOutOfTime = t.SpecialFlags != null && t.SpecialFlags.Contains("CANCELLED_OUT_OF_TIME")
+                    },
+                    DrawDates = t.TicketLines.Select(l => l.DrawDate).ToList(),
                 })
                 .ToListAsync();
+
+            var tickets = ticketsRaw.Select(r =>
+            {
+                var createdLocalDate = DateTimeHelper.ToBusinessTimezone(r.Dto.CreatedAt).Date;
+                var distinctDates = r.DrawDates
+                    .Select(d => d.Date)
+                    .Distinct()
+                    .OrderBy(d => d)
+                    .ToList();
+
+                var futureDates = distinctDates.Where(d => d > createdLocalDate).ToList();
+                if (futureDates.Count > 0)
+                {
+                    r.Dto.IsFutureDay = true;
+                    r.Dto.FutureDrawDates = futureDates;
+                }
+
+                var previousDates = distinctDates.Where(d => d < createdLocalDate).ToList();
+                if (previousDates.Count > 0)
+                {
+                    r.Dto.IsPreviousDay = true;
+                    r.Dto.PreviousDrawDates = previousDates;
+                }
+                return r.Dto;
+            }).ToList();
 
             var result = new TicketListResponseDto
             {

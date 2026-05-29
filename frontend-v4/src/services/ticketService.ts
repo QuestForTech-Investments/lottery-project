@@ -108,6 +108,17 @@ export interface TicketResponse {
   winningLines?: number;
   isOutOfScheduleSale?: boolean;
   isCancelledOutOfTime?: boolean;
+  // Set by the backend when the ticket has a line whose draw_date is later
+  // than (future) or earlier than (previous) the ticket's creation date.
+  // The flags are intrinsic to the ticket — they don't depend on which day
+  // the monitoring view is filtered to.
+  isFutureDay?: boolean;
+  isPreviousDay?: boolean;
+  // Distinct draw dates relative to the creation date (YYYY-MM-DD strings or
+  // ISO datetimes from the API) — used to render the tooltip with the target
+  // day of the future/previous sale.
+  futureDrawDates?: string[];
+  previousDrawDates?: string[];
   lines?: TicketLineResponse[];
 }
 
@@ -167,6 +178,8 @@ export interface MappedTicket {
   isFutureDay?: boolean;
   isOutOfScheduleSale?: boolean;
   isCancelledOutOfTime?: boolean;
+  futureDrawDates?: string[];
+  previousDrawDates?: string[];
   lines?: MappedTicketLine[];
 }
 
@@ -277,6 +290,10 @@ export const mapTicketResponse = (ticket: TicketResponse): MappedTicket => {
     estado,
     isOutOfScheduleSale: ticket.isOutOfScheduleSale || false,
     isCancelledOutOfTime: ticket.isCancelledOutOfTime || false,
+    isFutureDay: ticket.isFutureDay || false,
+    isPreviousDay: ticket.isPreviousDay || false,
+    futureDrawDates: ticket.futureDrawDates,
+    previousDrawDates: ticket.previousDrawDates,
   };
 };
 

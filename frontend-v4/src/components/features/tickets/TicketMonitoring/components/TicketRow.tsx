@@ -24,6 +24,22 @@ const STATUS_I18N_KEY: Record<string, string> = {
   'Bloqueado': 'ticketStatus.blocked',
 };
 
+// Extract the YYYY-MM-DD prefix from the backend payload and reformat as
+// DD/MM/YYYY. We intentionally avoid `new Date(...)` here — DrawDate is a
+// calendar date in the lottery's local TZ, so parsing it as a Date and then
+// converting to another TZ can shift the day (e.g. midnight in UTC becomes
+// the previous day in Santo Domingo).
+const formatDrawDateList = (dates?: string[]): string => {
+  if (!dates || dates.length === 0) return '';
+  return dates
+    .map((d) => {
+      const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(d);
+      if (m) return `${m[3]}/${m[2]}/${m[1]}`;
+      return d;
+    })
+    .join(', ');
+};
+
 const TicketRow: FC<TicketRowProps> = memo(({ ticket, isSelected, onRowClick, onPrint, onSend, onCancel }) => {
   const { t } = useTranslation();
   const handleRowClick = useCallback(() => {
@@ -84,12 +100,26 @@ const TicketRow: FC<TicketRowProps> = memo(({ ticket, isSelected, onRowClick, on
             </Tooltip>
           )}
           {ticket.isPreviousDay && (
-            <Tooltip title={t('tickets.monitoring.previousDaySale')} arrow>
+            <Tooltip
+              title={
+                ticket.previousDrawDates && ticket.previousDrawDates.length > 0
+                  ? t('tickets.monitoring.previousDaySaleFor', { date: formatDrawDateList(ticket.previousDrawDates) })
+                  : t('tickets.monitoring.previousDaySale')
+              }
+              arrow
+            >
               <ArrowBackIcon sx={{ fontSize: 18, color: '#ff9800' }} />
             </Tooltip>
           )}
           {ticket.isFutureDay && (
-            <Tooltip title={t('tickets.monitoring.futureDaySale')} arrow>
+            <Tooltip
+              title={
+                ticket.futureDrawDates && ticket.futureDrawDates.length > 0
+                  ? t('tickets.monitoring.futureDaySaleFor', { date: formatDrawDateList(ticket.futureDrawDates) })
+                  : t('tickets.monitoring.futureDaySale')
+              }
+              arrow
+            >
               <ArrowForwardIcon sx={{ fontSize: 18, color: '#2196f3' }} />
             </Tooltip>
           )}

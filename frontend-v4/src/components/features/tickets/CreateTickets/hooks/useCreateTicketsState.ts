@@ -97,6 +97,9 @@ interface UseCreateTicketsStateReturn {
   // Cancel config
   cancelMinutes: number;
 
+  // Future-sale config from selected banca
+  bancaAllowsFutureSales: boolean;
+
   // Limits
   limitAvailable: number | null; // null = not checked, -1 = unlimited, 0+ = amount
   // True while a limit-availability response is in flight — used to block adds.
@@ -275,10 +278,13 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
 
   // Cancel minutes from pool config
   const [cancelMinutes, setCancelMinutes] = useState<number>(5);
+  // Banca-level gate for future sales; mirrors backend bpConfig.futureSalesMode.
+  const [bancaAllowsFutureSales, setBancaAllowsFutureSales] = useState<boolean>(false);
 
   useEffect(() => {
     if (!selectedPool) {
       setCancelMinutes(5);
+      setBancaAllowsFutureSales(false);
       return;
     }
     const fetchConfig = async () => {
@@ -287,6 +293,9 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
         if (result.data?.config?.cancelMinutes != null) {
           setCancelMinutes(result.data.config.cancelMinutes);
         }
+        const mode = result.data?.config?.futureSalesMode;
+        const allow = result.data?.config?.allowFutureSales;
+        setBancaAllowsFutureSales(allow === true && !!mode && mode !== 'OFF');
       } catch {
         // Keep default
       }
@@ -1622,6 +1631,7 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
     handleAmountKeyDown,
     creatingTicket,
     cancelMinutes,
+    bancaAllowsFutureSales,
     allowSplitAmount,
     limitAvailable,
     limitChecking,
