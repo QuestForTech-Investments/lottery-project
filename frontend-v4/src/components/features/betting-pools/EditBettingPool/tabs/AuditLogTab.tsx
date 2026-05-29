@@ -29,6 +29,7 @@ interface AuditLogTabProps {
 const ACTION_COLOR: Record<string, 'success' | 'info' | 'warning' | 'error' | 'default'> = {
   CREATED: 'success',
   UPDATED: 'info',
+  BULK_UPDATED: 'warning',
   DELETED: 'error',
 };
 
@@ -173,7 +174,9 @@ const AuditLogTab: React.FC<AuditLogTabProps> = ({ bettingPoolId }) => {
                   </TableCell>
                   <TableCell sx={{ verticalAlign: 'top' }}>
                     <Chip
-                      label={entry.action}
+                      label={t(`editBettingPool.audit.actions.${entry.action}`, {
+                        defaultValue: entry.action,
+                      })}
                       size="small"
                       color={ACTION_COLOR[entry.action] ?? 'default'}
                       sx={{ fontSize: '11px', fontWeight: 600 }}

@@ -135,6 +135,16 @@ builder.Services.AddSingleton<ICacheService, MemoryCacheService>();
 builder.Services.AddSingleton<ILimitReservationService, LimitReservationService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 
+// SMTP / email — IONOS-backed transactional sender used by EmailReceivers.
+// Credentials live in the gitignored appsettings.{Environment}.json files.
+builder.Services.Configure<LotteryApi.Configuration.SmtpOptions>(
+    builder.Configuration.GetSection(LotteryApi.Configuration.SmtpOptions.SectionName));
+builder.Services.AddTransient<IEmailService, SmtpEmailService>();
+// Report builder shared by the preview endpoints and the publication-trigger
+// notifier — single source of truth for "what plays go into this email".
+builder.Services.AddScoped<PlayMonitoringReportService>();
+builder.Services.AddScoped<PlayMonitoringNotifier>();
+
 // Register External Results Services (lottery results fetching and ticket processing)
 builder.Services.AddExternalResultsServices(builder.Configuration);
 

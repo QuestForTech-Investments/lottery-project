@@ -23,6 +23,9 @@ public class ResultsController : ControllerBase
     private readonly IExternalResultsService _externalResultsService;
     private readonly IWarningService _warningService;
     private readonly IZoneScopeService _zoneScope;
+    // Used to spawn a fresh DI scope for the fire-and-forget email task —
+    // the controller's own services are disposed when the request ends.
+    private readonly IServiceScopeFactory _scopeFactory;
 
     /// <summary>
     /// Super Pale: source draw → (target composite draw, which field it contributes: num1 or num2).
@@ -55,13 +58,42 @@ public class ResultsController : ControllerBase
         ILogger<ResultsController> logger,
         IExternalResultsService externalResultsService,
         IWarningService warningService,
-        IZoneScopeService zoneScope)
+        IZoneScopeService zoneScope,
+        IServiceScopeFactory scopeFactory)
     {
         _context = context;
         _logger = logger;
         _externalResultsService = externalResultsService;
         _warningService = warningService;
         _zoneScope = zoneScope;
+        _scopeFactory = scopeFactory;
+    }
+
+    /// <summary>
+    /// Fires the "Monitoreo de Jugadas" email notification for a given
+    /// (drawId, resultDate) in the background — the controller's response
+    /// shouldn't block on SMTP. Uses its own DI scope because the request
+    /// scope (and its DbContext) is disposed once the action returns.
+    /// </summary>
+    private void FireMonitoringEmailAsync(int drawId, DateTime resultDate)
+    {
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                using var scope = _scopeFactory.CreateScope();
+                var notifier = scope.ServiceProvider
+                    .GetRequiredService<Services.PlayMonitoringNotifier>();
+                await notifier.NotifyResultPublishedAsync(drawId, resultDate);
+            }
+            catch (Exception ex)
+            {
+                // Surface to the regular logger; the notifier records
+                // per-receiver failures into email_send_log itself.
+                _logger.LogError(ex, "Monitoring email batch failed for draw {DrawId} on {Date}",
+                    drawId, resultDate.Date);
+            }
+        });
     }
 
     /// <summary>Returns true if the current user holds the given permission code.</summary>
@@ -234,6 +266,12 @@ public class ResultsController : ControllerBase
 
             _logger.LogInformation("Updated result {ResultId} for draw {DrawId}", existingResult.ResultId, dto.DrawId);
 
+            // Fire monitoring email — idempotent. If a SENT row already exists
+            // for this (receiver, draw, date), it's a no-op; otherwise it'll
+            // catch receivers that missed the original publish (e.g. SMTP was
+            // down before, or the notifier wasn't yet deployed).
+            FireMonitoringEmailAsync(dto.DrawId, dto.ResultDate);
+
             if (numberChanged)
             {
                 await _warningService.RecordAsync(
@@ -299,6 +337,11 @@ public class ResultsController : ControllerBase
         await _context.Entry(result).Reference(r => r.Draw).LoadAsync();
 
         _logger.LogInformation("Created result {ResultId} for draw {DrawId}", result.ResultId, dto.DrawId);
+
+        // Fire "Monitoreo de Jugadas" emails to subscribed receivers. Background
+        // task — idempotent inside the notifier, so a re-publish or an approve
+        // step later won't produce duplicate emails for the same (draw, date).
+        FireMonitoringEmailAsync(dto.DrawId, dto.ResultDate);
 
         // Clear the matching RESULT_PUBLICATION_LATE warning (if any) — the
         // result was just published, the issue is fixed.
@@ -472,6 +515,11 @@ public class ResultsController : ControllerBase
         await _context.SaveChangesAsync();
 
         _logger.LogInformation("Approved result {ResultId}", id);
+
+        // Fire-and-forget the monitoring email. The notifier checks
+        // email_send_log to skip receivers already notified at creation time,
+        // so this is a no-op in the common case (publish → approve quickly).
+        FireMonitoringEmailAsync(result.DrawId, result.ResultDate);
 
         return Ok(MapToDto(result));
     }

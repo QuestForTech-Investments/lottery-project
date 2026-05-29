@@ -30,6 +30,7 @@ public class LotteryDbContext : DbContext
     public DbSet<Result> Results { get; set; }
     public DbSet<ResultLog> ResultLogs { get; set; }
     public DbSet<BettingPoolAuditLog> BettingPoolAuditLogs { get; set; }
+    public DbSet<EmailSendLog> EmailSendLogs { get; set; }
 
     // User and Permissions
     public DbSet<Role> Roles { get; set; }

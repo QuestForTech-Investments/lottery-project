@@ -239,10 +239,44 @@ const ReceiverForm = ({
 
             <Divider sx={{ mb: 3 }} />
 
-            {/* Zones — multi-select Autocomplete with chip display */}
-            <Typography variant="body2" sx={{ mb: 1, color: '#666', fontWeight: 500 }}>
-              {t('emailReceiversAdmin.form.zonesLabel', { defaultValue: 'Zonas a monitorear' })}
-            </Typography>
+            {/* Zones — multi-select Autocomplete with chip display.
+                One-click "select all / clear all" toggle next to the label so
+                admins with many zones don't have to click N times. */}
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1, flexWrap: 'wrap', gap: 1 }}>
+              <Typography variant="body2" sx={{ color: '#666', fontWeight: 500 }}>
+                {t('emailReceiversAdmin.form.zonesLabel', { defaultValue: 'Zonas a monitorear' })}
+                {zones.length > 0 && (
+                  <Box component="span" sx={{ color: '#999', fontWeight: 400, ml: 1, fontSize: '12px' }}>
+                    ({values.zoneIds.length}/{zones.length})
+                  </Box>
+                )}
+              </Typography>
+              {zones.length > 0 && (() => {
+                const allSelected = values.zoneIds.length === zones.length;
+                return (
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    onClick={() =>
+                      setValues((prev) => ({
+                        ...prev,
+                        zoneIds: allSelected ? [] : zones.map((z) => z.zoneId),
+                      }))
+                    }
+                    sx={{
+                      color: '#8b5cf6',
+                      borderColor: '#c4b5fd',
+                      textTransform: 'none',
+                      '&:hover': { borderColor: '#8b5cf6', bgcolor: '#f5f3ff' },
+                    }}
+                  >
+                    {allSelected
+                      ? t('emailReceiversAdmin.form.clearAllZones', { defaultValue: 'Quitar todas' })
+                      : t('emailReceiversAdmin.form.selectAllZones', { defaultValue: 'Seleccionar todas' })}
+                  </Button>
+                );
+              })()}
+            </Box>
             <Autocomplete
               multiple
               options={zones}

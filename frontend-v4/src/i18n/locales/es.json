@@ -1585,6 +1585,12 @@
       "passwordChanged": "(cambió)",
       "yes": "Sí",
       "no": "No",
+      "actions": {
+        "CREATED": "Creado",
+        "UPDATED": "Actualizado",
+        "BULK_UPDATED": "Edición masiva",
+        "DELETED": "Eliminado"
+      },
       "fields": {
         "name": "Nombre",
         "zoneId": "Zona",
@@ -2493,6 +2499,13 @@
       "email": "Correo electrónico",
       "notificationType": "Tipo de notificación"
     },
+    "form": {
+      "zonesLabel": "Zonas a monitorear",
+      "zonesPlaceholder": "Selecciona una o más zonas…",
+      "zonesLoadError": "Error al cargar las zonas.",
+      "selectAllZones": "Seleccionar todas",
+      "clearAllZones": "Quitar todas"
+    },
     "types": {
       "dailyReports": "Reportes diarios",
       "salesAlerts": "Alertas de ventas",
@@ -2516,7 +2529,12 @@
       "deleteConfirm": "¿Está seguro de eliminar este receptor de correo?",
       "editAlert": "Editar receptor #{{id}} (mockup)",
       "deletedAlert": "Receptor #{{id}} eliminado (mockup)",
-      "infoAlert": "Información del receptor:\n\nNombre: {{name}}\nEmail: {{email}}\nTipo de notificación: {{notificationType}}\nEstado: {{status}}"
+      "infoAlert": "Información del receptor:\n\nNombre: {{name}}\nEmail: {{email}}\nTipo de notificación: {{notificationType}}\nEstado: {{status}}",
+      "testSend": "Probar envío",
+      "testSendTitle": "Enviar correo de prueba",
+      "testSendConfirm": "¿Enviar el correo de Monitoreo de Jugadas (hoy, todos los sorteos) a este receptor?",
+      "testSendSuccess": "Correo enviado a {{email}} ({{plays}} jugadas).",
+      "testSendError": "Error al enviar: {{error}}"
     },
     "preview": {
       "button": "Vista previa",

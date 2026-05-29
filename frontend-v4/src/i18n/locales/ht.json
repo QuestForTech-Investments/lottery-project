@@ -1585,6 +1585,12 @@
       "passwordChanged": "(chanje)",
       "yes": "Wi",
       "no": "Non",
+      "actions": {
+        "CREATED": "Kreye",
+        "UPDATED": "Mete ajou",
+        "BULK_UPDATED": "Modifikasyon an mas",
+        "DELETED": "Efase"
+      },
       "fields": {
         "name": "Non",
         "zoneId": "Zòn",
@@ -2559,6 +2565,13 @@
       "email": "Imèl",
       "notificationType": "Tip notifikasyon"
     },
+    "form": {
+      "zonesLabel": "Zòn pou monitore",
+      "zonesPlaceholder": "Chwazi youn oswa plis zòn…",
+      "zonesLoadError": "Erè lè w ap chaje zòn yo.",
+      "selectAllZones": "Chwazi tout",
+      "clearAllZones": "Retire tout"
+    },
     "types": {
       "dailyReports": "Rapò chak jou",
       "salesAlerts": "Alèt vant",
@@ -2582,7 +2595,12 @@
       "deleteConfirm": "Èske w sèten ou vle efase reseptè imèl sa a?",
       "editAlert": "Modifye reseptè #{{id}} (mockup)",
       "deletedAlert": "Reseptè #{{id}} efase (mockup)",
-      "infoAlert": "Enfòmasyon reseptè:\n\nNon: {{name}}\nImèl: {{email}}\nTip notifikasyon: {{notificationType}}\nEstati: {{status}}"
+      "infoAlert": "Enfòmasyon reseptè:\n\nNon: {{name}}\nImèl: {{email}}\nTip notifikasyon: {{notificationType}}\nEstati: {{status}}",
+      "testSend": "Eseye voye",
+      "testSendTitle": "Voye imèl tès",
+      "testSendConfirm": "Voye imèl Monitoreo Jwèt (jodi a, tout tiraj) bay reseptè sa a?",
+      "testSendSuccess": "Imèl voye bay {{email}} ({{plays}} jwèt).",
+      "testSendError": "Voye echwe: {{error}}"
     }
   },
   "myGroupAdmin": {

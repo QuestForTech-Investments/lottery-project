@@ -24,11 +24,19 @@ public class EmailReceiversController : ControllerBase
 {
     private readonly LotteryDbContext _context;
     private readonly ILogger<EmailReceiversController> _logger;
+    private readonly IEmailService _emailService;
+    private readonly PlayMonitoringReportService _reportService;
 
-    public EmailReceiversController(LotteryDbContext context, ILogger<EmailReceiversController> logger)
+    public EmailReceiversController(
+        LotteryDbContext context,
+        ILogger<EmailReceiversController> logger,
+        IEmailService emailService,
+        PlayMonitoringReportService reportService)
     {
         _context = context;
         _logger = logger;
+        _emailService = emailService;
+        _reportService = reportService;
     }
 
     /// <summary>Resolve the current user id from JWT claims (null if missing).</summary>
@@ -309,7 +317,7 @@ public class EmailReceiversController : ControllerBase
             .Distinct()
             .ToList();
 
-        var model = await BuildReportModelAsync(targetDate, parsedZoneIds, drawId);
+        var model = await _reportService.BuildAsync(targetDate, parsedZoneIds, drawId);
         var html = PlayMonitoringEmailBuilder.BuildHtml(model);
         return Content(html, "text/html");
     }
@@ -335,163 +343,68 @@ public class EmailReceiversController : ControllerBase
         var targetDate = (date ?? DateTime.Now).Date;
         var zoneIds = receiver.Zones.Select(z => z.ZoneId).ToList();
 
-        var model = await BuildReportModelAsync(targetDate, zoneIds, drawId);
+        var model = await _reportService.BuildAsync(targetDate, zoneIds, drawId);
         var html = PlayMonitoringEmailBuilder.BuildHtml(model);
         return Content(html, "text/html");
     }
 
+    // -----------------------------------------------------------------------
+    // Manual test send — useful to validate the SMTP setup and the receiver's
+    // address without waiting for the publication trigger. Uses the same
+    // builder + filtering the real send will use, so what shows up in the
+    // inbox is exactly the production email for the given date/draw.
+    // -----------------------------------------------------------------------
+
     /// <summary>
-    /// Aggregates active plays for the given date+zones, grouped
-    /// Draw → BetType → (number, amount), and packages them into the email
-    /// builder's model. Mirrors the BlackboardController filtering (cancelled
-    /// tickets/lines excluded) but additionally splits by draw.
+    /// Sends the "Monitoreo de Jugadas" email to a single receiver right now,
+    /// using their saved zones. Optional `drawId` filters to a single sorteo
+    /// (mirrors the real per-publication email). `date` defaults to today.
     /// </summary>
-    private async Task<PlayMonitoringEmailBuilder.ReportModel> BuildReportModelAsync(
-        DateTime targetDate, List<int> zoneIds, int? drawId = null)
+    [HttpPost("{id:int}/test-send")]
+    public async Task<ActionResult> TestSend(
+        int id,
+        [FromQuery] DateTime? date = null,
+        [FromQuery] int? drawId = null)
     {
-        var utcStart = DateTimeHelper.GetUtcStartOfDay(targetDate);
-        var utcEnd = DateTimeHelper.GetUtcEndOfDay(targetDate);
-
-        var query = _context.TicketLines
+        var receiver = await _context.EmailReceivers
             .AsNoTracking()
-            .Where(tl => !tl.Ticket!.IsCancelled
-                && tl.LineStatus != "cancelled"
-                && tl.Ticket.CreatedAt >= utcStart
-                && tl.Ticket.CreatedAt < utcEnd
-                && tl.BetTypeCode != null);
+            .Include(r => r.Zones)
+            .FirstOrDefaultAsync(r => r.EmailReceiverId == id);
 
-        // Scope to a single lottery when requested — this is the real per-draw
-        // email; without it the preview shows the whole day.
-        if (drawId.HasValue)
+        if (receiver == null)
         {
-            query = query.Where(tl => tl.DrawId == drawId.Value);
+            return NotFound(new { message = "Receptor no encontrado." });
         }
 
-        if (zoneIds.Count > 0)
+        if (!receiver.IsActive)
         {
-            var bpIds = await _context.BettingPools
-                .AsNoTracking()
-                .Where(bp => zoneIds.Contains(bp.ZoneId))
-                .Select(bp => bp.BettingPoolId)
-                .ToListAsync();
-
-            // No bancas in those zones → empty report.
-            if (bpIds.Count == 0)
-            {
-                return new PlayMonitoringEmailBuilder.ReportModel
-                {
-                    Date = targetDate,
-                    ZoneNames = await ZoneNamesAsync(zoneIds),
-                };
-            }
-            query = query.Where(tl => bpIds.Contains(tl.Ticket!.BettingPoolId));
+            return BadRequest(new { message = "El receptor está inactivo." });
         }
 
-        var grouped = await query
-            .GroupBy(tl => new { tl.DrawId, tl.BetTypeCode, tl.BetNumber })
-            .Select(g => new
+        var targetDate = (date ?? DateTime.Now).Date;
+        var zoneIds = receiver.Zones.Select(z => z.ZoneId).ToList();
+        var model = await _reportService.BuildAsync(targetDate, zoneIds, drawId);
+
+        var subject = PlayMonitoringEmailBuilder.BuildSubject(model);
+        var html = PlayMonitoringEmailBuilder.BuildHtml(model);
+
+        var result = await _emailService.SendAsync(receiver.Email, subject, html);
+        if (!result.Success)
+        {
+            _logger.LogWarning("Test send to {Email} failed: {Error}", receiver.Email, result.ErrorMessage);
+            return StatusCode(502, new
             {
-                g.Key.DrawId,
-                g.Key.BetTypeCode,
-                g.Key.BetNumber,
-                TotalAmount = g.Sum(x => x.BetAmount),
-            })
-            .ToListAsync();
-
-        var model = new PlayMonitoringEmailBuilder.ReportModel
-        {
-            Date = targetDate,
-            ZoneNames = await ZoneNamesAsync(zoneIds),
-        };
-
-        if (grouped.Count == 0)
-        {
-            return model;
+                message = "El servidor SMTP rechazó el envío.",
+                error = result.ErrorMessage,
+            });
         }
 
-        // Lookup tables for display names + ordering. Pulls the lottery icon so
-        // the email can show the draw's logo (with a colored-abbreviation fallback).
-        var drawIds = grouped.Select(g => g.DrawId).Distinct().ToList();
-        var drawMeta = await _context.Draws
-            .AsNoTracking()
-            .Where(d => drawIds.Contains(d.DrawId))
-            .Select(d => new
-            {
-                d.DrawId,
-                d.DrawName,
-                d.DisplayColor,
-                d.Abbreviation,
-                LogoUrl = d.Lottery!.ImageUrl,
-            })
-            .ToDictionaryAsync(d => d.DrawId);
-
-        var codes = grouped.Select(g => g.BetTypeCode!).Distinct().ToList();
-        var gameTypes = await _context.GameTypes
-            .AsNoTracking()
-            .Where(gt => codes.Contains(gt.GameTypeCode))
-            .ToDictionaryAsync(gt => gt.GameTypeCode, gt => new { gt.GameName, gt.DisplayOrder });
-
-        // Build the nested Draw → BetType → Plays structure.
-        var draws = grouped
-            .GroupBy(g => g.DrawId)
-            .Select(drawGroup =>
-            {
-                var betTypes = drawGroup
-                    .GroupBy(x => x.BetTypeCode!)
-                    .Select(btGroup =>
-                    {
-                        var meta = gameTypes.TryGetValue(btGroup.Key, out var m) ? m : null;
-                        return new PlayMonitoringEmailBuilder.ReportBetType
-                        {
-                            Code = btGroup.Key,
-                            Name = meta?.GameName ?? btGroup.Key,
-                            Total = btGroup.Sum(x => x.TotalAmount),
-                            Plays = btGroup
-                                .OrderBy(x => x.BetNumber)
-                                .Select(x => new PlayMonitoringEmailBuilder.ReportPlay
-                                {
-                                    BetNumber = x.BetNumber,
-                                    Amount = x.TotalAmount,
-                                })
-                                .ToList(),
-                            // Stash order for sorting below.
-                            DisplayOrder = meta?.DisplayOrder ?? 9999,
-                        };
-                    })
-                    .OrderBy(bt => bt.DisplayOrder)
-                    .ThenBy(bt => bt.Name)
-                    .ToList();
-
-                var meta = drawMeta.TryGetValue(drawGroup.Key, out var dm) ? dm : null;
-                return new PlayMonitoringEmailBuilder.ReportDraw
-                {
-                    DrawId = drawGroup.Key,
-                    DrawName = meta?.DrawName ?? $"Sorteo {drawGroup.Key}",
-                    LogoUrl = meta?.LogoUrl,
-                    Color = meta?.DisplayColor,
-                    Abbreviation = meta?.Abbreviation,
-                    Total = betTypes.Sum(bt => bt.Total),
-                    BetTypes = betTypes,
-                };
-            })
-            .OrderBy(d => d.DrawName)
-            .ToList();
-
-        model.Draws = draws;
-        model.GrandTotal = draws.Sum(d => d.Total);
-        model.TotalPlays = grouped.Count;
-        model.DistinctNumbers = grouped.Select(g => g.BetNumber).Distinct().Count();
-        return model;
-    }
-
-    private async Task<List<string>> ZoneNamesAsync(List<int> zoneIds)
-    {
-        if (zoneIds.Count == 0) return new List<string>();
-        return await _context.Zones
-            .AsNoTracking()
-            .Where(z => zoneIds.Contains(z.ZoneId))
-            .OrderBy(z => z.ZoneName)
-            .Select(z => z.ZoneName)
-            .ToListAsync();
+        return Ok(new
+        {
+            sentTo = receiver.Email,
+            subject,
+            drawsIncluded = model.Draws.Count,
+            totalPlays = model.TotalPlays,
+        });
     }
 }

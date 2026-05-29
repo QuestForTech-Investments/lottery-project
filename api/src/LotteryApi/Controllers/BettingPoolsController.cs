@@ -109,9 +109,13 @@ public class BettingPoolsController : ControllerBase
             if (Equals(oldVal, newVal)) continue;
 
             var camel = char.ToLowerInvariant(name[0]) + name[1..];
+            // Empty section ⇒ no prefix (used by direct-on-pool changes like
+            // the mass-update endpoint, whose fields share the same un-prefixed
+            // namespace as the single-pool UPDATE endpoint).
+            var fieldKey = string.IsNullOrEmpty(section) ? camel : section + "." + camel;
             yield return new
             {
-                field = section + "." + camel,
+                field = fieldKey,
                 oldValue = oldVal?.ToString(),
                 newValue = newVal?.ToString(),
             };
@@ -1745,6 +1749,11 @@ public class BettingPoolsController : ControllerBase
 
             var errors = new List<string>();
             var updatedIds = new List<int>();
+            // Per-pool change lists collected BEFORE SaveChangesAsync — EF's
+            // change tracker forgets `IsModified` after persisting, so we
+            // capture each pool's diff inline and write the audit rows in a
+            // second pass once the main update has committed.
+            var perPoolChanges = new Dictionary<int, List<object>>();
 
             // Validate zone if provided
             if (request.ZoneId.HasValue)
@@ -1780,6 +1789,22 @@ public class BettingPoolsController : ControllerBase
 
                     pool.UpdatedAt = DateTime.UtcNow;
                     updatedIds.Add(pool.BettingPoolId);
+
+                    // Diff against the originally-loaded values. Skipping
+                    // UpdatedAt avoids logging a meaningless "timestamp moved"
+                    // entry on pools that were touched but otherwise unchanged.
+                    var changes = ChangesFromTracker(pool, "")
+                        .Where(c =>
+                        {
+                            // anonymous type → reflect just the `field` prop
+                            var f = c.GetType().GetProperty("field")?.GetValue(c) as string;
+                            return f != null && f != "updatedAt";
+                        })
+                        .ToList();
+                    if (changes.Count > 0)
+                    {
+                        perPoolChanges[pool.BettingPoolId] = changes;
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -1834,6 +1859,29 @@ public class BettingPoolsController : ControllerBase
             }
 
             await _context.SaveChangesAsync();
+
+            // Audit pass — one BULK_UPDATED row per banca that actually changed.
+            // Action verb distinguishes the bulk from single-pool UPDATEs so
+            // the auditor can spot them in the per-banca history.
+            if (perPoolChanges.Count > 0)
+            {
+                var auditUserId = CurrentUserId();
+                var auditIp = HttpContext.Connection.RemoteIpAddress?.ToString();
+                var now = DateTime.UtcNow;
+                foreach (var (poolId, changes) in perPoolChanges)
+                {
+                    _context.BettingPoolAuditLogs.Add(new BettingPoolAuditLog
+                    {
+                        BettingPoolId = poolId,
+                        UserId = auditUserId,
+                        Action = "BULK_UPDATED",
+                        Details = JsonSerializer.Serialize(changes, AuditJsonOptions),
+                        IpAddress = auditIp,
+                        CreatedAt = now,
+                    });
+                }
+                await _context.SaveChangesAsync();
+            }
 
             var response = new MassUpdateResponseDto
             {

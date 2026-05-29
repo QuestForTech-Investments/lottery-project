@@ -31,7 +31,6 @@ import {
   Delete as DeleteIcon,
   Add as AddIcon,
   Refresh as RefreshIcon,
-  Visibility as VisibilityIcon,
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import { Link as RouterLink } from 'react-router-dom';
@@ -41,7 +40,6 @@ import {
   EMAIL_NOTIFICATION_TYPES,
   type EmailReceiver,
 } from '@services/emailReceiverService';
-import PreviewDialog from '../PreviewDialog';
 
 type SortKey = 'emailReceiverId' | 'name' | 'email' | 'notificationType' | 'isActive' | null;
 type SortDirection = 'asc' | 'desc';
@@ -76,14 +74,6 @@ const EmailReceiversList = (): React.ReactElement => {
   const [error, setError] = useState<string | null>(null);
   const [toDelete, setToDelete] = useState<EmailReceiver | null>(null);
   const [deleting, setDeleting] = useState<boolean>(false);
-  const [previewOpen, setPreviewOpen] = useState<boolean>(false);
-  // null = preview across all zones; otherwise preview using the receiver's zones.
-  const [previewReceiver, setPreviewReceiver] = useState<EmailReceiver | null>(null);
-
-  const openPreview = (receiver: EmailReceiver | null) => {
-    setPreviewReceiver(receiver);
-    setPreviewOpen(true);
-  };
 
   const loadReceivers = useCallback(async () => {
     setLoading(true);
@@ -198,20 +188,6 @@ const EmailReceiversList = (): React.ReactElement => {
                   </IconButton>
                 </span>
               </Tooltip>
-              <Button
-                onClick={() => openPreview(null)}
-                variant="outlined"
-                startIcon={<VisibilityIcon />}
-                sx={{
-                  color: '#8b5cf6',
-                  borderColor: '#c4b5fd',
-                  '&:hover': { borderColor: '#8b5cf6', bgcolor: '#f5f3ff' },
-                  textTransform: 'none',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {t('emailReceiversAdmin.preview.button', { defaultValue: 'Vista previa' })}
-              </Button>
               <Button
                 component={RouterLink}
                 to="/receivers/new"
@@ -356,14 +332,6 @@ const EmailReceiversList = (): React.ReactElement => {
                       <TableCell align="center">
                         <IconButton
                           size="small"
-                          onClick={() => openPreview(receiver)}
-                          sx={{ color: '#8b5cf6', mr: 0.5 }}
-                          title={t('emailReceiversAdmin.preview.button', { defaultValue: 'Vista previa' })}
-                        >
-                          <VisibilityIcon fontSize="small" />
-                        </IconButton>
-                        <IconButton
-                          size="small"
                           component={RouterLink}
                           to={`/receivers/edit/${receiver.emailReceiverId}`}
                           sx={{ color: '#007bff', mr: 0.5 }}
@@ -427,12 +395,6 @@ const EmailReceiversList = (): React.ReactElement => {
         </DialogActions>
       </Dialog>
 
-      {/* Email preview */}
-      <PreviewDialog
-        open={previewOpen}
-        onClose={() => setPreviewOpen(false)}
-        receiver={previewReceiver}
-      />
     </Box>
   );
 };

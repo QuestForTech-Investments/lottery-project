@@ -1585,6 +1585,12 @@
       "passwordChanged": "(modifié)",
       "yes": "Oui",
       "no": "Non",
+      "actions": {
+        "CREATED": "Créé",
+        "UPDATED": "Modifié",
+        "BULK_UPDATED": "Modification en masse",
+        "DELETED": "Supprimé"
+      },
       "fields": {
         "name": "Nom",
         "zoneId": "Zone",
@@ -2559,6 +2565,13 @@
       "email": "Adresse e-mail",
       "notificationType": "Type de notification"
     },
+    "form": {
+      "zonesLabel": "Zones à surveiller",
+      "zonesPlaceholder": "Sélectionnez une ou plusieurs zones…",
+      "zonesLoadError": "Erreur lors du chargement des zones.",
+      "selectAllZones": "Tout sélectionner",
+      "clearAllZones": "Tout effacer"
+    },
     "types": {
       "dailyReports": "Rapports quotidiens",
       "salesAlerts": "Alertes de ventes",
@@ -2582,7 +2595,12 @@
       "deleteConfirm": "Êtes-vous sûr de vouloir supprimer ce destinataire d'e-mail ?",
       "editAlert": "Modifier le destinataire #{{id}} (mockup)",
       "deletedAlert": "Destinataire #{{id}} supprimé (mockup)",
-      "infoAlert": "Informations sur le destinataire :\n\nNom : {{name}}\nEmail : {{email}}\nType de notification : {{notificationType}}\nStatut : {{status}}"
+      "infoAlert": "Informations sur le destinataire :\n\nNom : {{name}}\nEmail : {{email}}\nType de notification : {{notificationType}}\nStatut : {{status}}",
+      "testSend": "Tester l'envoi",
+      "testSendTitle": "Envoyer un email de test",
+      "testSendConfirm": "Envoyer l'email de suivi des jeux (aujourd'hui, tous les tirages) à ce destinataire ?",
+      "testSendSuccess": "Email envoyé à {{email}} ({{plays}} jeux).",
+      "testSendError": "Échec de l'envoi : {{error}}"
     }
   },
   "myGroupAdmin": {
