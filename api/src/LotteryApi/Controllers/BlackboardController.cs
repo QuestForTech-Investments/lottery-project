@@ -60,7 +60,7 @@ public class BlackboardController : ControllerBase
 
     /// <summary>
     /// Returns active plays grouped by (betTypeCode, betNumber) for the blackboard.
-    /// Filters: date (createdAt of ticket, business timezone), drawId, zoneIds, bettingPoolId.
+    /// Filters: date (line's DrawDate — the day the bet is FOR), drawId, zoneIds, bettingPoolId.
     /// All filters except `date` are optional. If zoneIds and bettingPoolId both null, all bancas.
     /// </summary>
     [HttpGet("plays-by-number")]
@@ -73,8 +73,6 @@ public class BlackboardController : ControllerBase
         if (!await HasPermissionAsync("TICKET_MONITORING")) return Forbid();
 
         var targetDate = date.Date;
-        var utcStart = DateTimeHelper.GetUtcStartOfDay(targetDate);
-        var utcEnd = DateTimeHelper.GetUtcEndOfDay(targetDate);
 
         var parsedZoneIds = (zoneIds ?? string.Empty)
             .Split(',', StringSplitOptions.RemoveEmptyEntries)
@@ -84,12 +82,13 @@ public class BlackboardController : ControllerBase
             .ToList();
 
         // Active plays = ticket not cancelled, line not cancelled.
+        // Filter by line.DrawDate so future-sale tickets emitted earlier appear
+        // on the day their draw runs (matches the play-monitoring email).
         var query = _context.TicketLines
             .AsNoTracking()
             .Where(tl => !tl.Ticket!.IsCancelled
                 && tl.LineStatus != "cancelled"
-                && tl.Ticket.CreatedAt >= utcStart
-                && tl.Ticket.CreatedAt < utcEnd
+                && tl.DrawDate.Date == targetDate
                 && tl.BetTypeCode != null);
 
         // Zone scope: clamp the user's requested zones/banca to what they're allowed to see.
@@ -184,8 +183,6 @@ public class BlackboardController : ControllerBase
         }
 
         var targetDate = date.Date;
-        var utcStart = DateTimeHelper.GetUtcStartOfDay(targetDate);
-        var utcEnd = DateTimeHelper.GetUtcEndOfDay(targetDate);
 
         var parsedZoneIds = (zoneIds ?? string.Empty)
             .Split(',', StringSplitOptions.RemoveEmptyEntries)
@@ -194,12 +191,13 @@ public class BlackboardController : ControllerBase
             .Distinct()
             .ToList();
 
+        // Same filter logic as plays-by-number: by line DrawDate, not ticket
+        // CreatedAt, so future sales surface on the draw day.
         var query = _context.TicketLines
             .AsNoTracking()
             .Where(tl => !tl.Ticket!.IsCancelled
                 && tl.LineStatus != "cancelled"
-                && tl.Ticket.CreatedAt >= utcStart
-                && tl.Ticket.CreatedAt < utcEnd
+                && tl.DrawDate.Date == targetDate
                 && tl.BetTypeCode == betTypeCode
                 && tl.BetNumber == betNumber);
 
