@@ -21,6 +21,8 @@ interface AuthResponse {
   mustSetPin?: boolean
   /** BCP-47: "es" | "en" | "fr" | "ht". Set i18n.language to this on login. */
   preferredLanguage?: string
+  /** Idle auto-logout minutes for this user. null/undefined → frontend default (15 min). */
+  autoLogoutMinutes?: number | null
   user?: Record<string, unknown>
 }
 
@@ -66,6 +68,14 @@ export const login = async (username: string, password: string): Promise<AuthRes
       logger.success('AUTH_LOGIN_SUCCESS', `Token stored for user: ${username}`, {
         expiresAt: response.expiresAt
       })
+    }
+
+    // Cache the user's auto-logout preference so the layout's inactivity timer
+    // can read it without an extra round-trip. Cleared on logout.
+    if (response.autoLogoutMinutes !== null && response.autoLogoutMinutes !== undefined) {
+      localStorage.setItem('autoLogoutMinutes', String(response.autoLogoutMinutes))
+    } else {
+      localStorage.removeItem('autoLogoutMinutes')
     }
 
     // Apply the user's preferred language right after login so the UI swaps
@@ -133,6 +143,7 @@ export const logout = (): void => {
   localStorage.removeItem('authToken')
   localStorage.removeItem('bettingPoolId')
   localStorage.removeItem('bettingPoolName')
+  localStorage.removeItem('autoLogoutMinutes')
   logger.success('AUTH_LOGOUT_SUCCESS', 'Token removed from localStorage')
 }
 

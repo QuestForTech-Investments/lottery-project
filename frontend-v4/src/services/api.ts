@@ -109,9 +109,12 @@ const apiFetch = async <T = unknown>(endpoint: string, options: ApiFetchOptions 
         logger.warn('AUTH_EXPIRED', 'Token expirado o inválido - cerrando sesión automáticamente')
         localStorage.removeItem('authToken')
 
-        // Redirect to login page (avoid redirect loop if already on login)
+        // Redirect to login page (avoid redirect loop if already on login).
+        // `?reason=session-expired` tells the login page to show the user-facing
+        // "your session expired" message — query params survive the full-page
+        // reload here, where location.state would be wiped.
         if (!window.location.pathname.includes('/login')) {
-          window.location.href = '/login'
+          window.location.href = '/login?reason=session-expired'
         }
       }
 

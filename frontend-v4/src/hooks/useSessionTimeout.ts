@@ -51,12 +51,12 @@ export function useSessionTimeout(options: UseSessionTimeoutOptions = {}) {
       onTimeout()
     }
 
-    // Logout and redirect
+    // Logout and redirect. Use a query param (instead of router state) so the
+    // "session expired" alert still appears if the navigation happens via a
+    // full-page reload elsewhere — and so all three logout paths share the
+    // same signal contract.
     authService.logout()
-    navigate('/login', {
-      state: { message: 'Sesión cerrada por inactividad' },
-      replace: true
-    })
+    navigate('/login?reason=session-expired', { replace: true })
   }, [navigate, onTimeout])
 
   // Reset the timeout timer
@@ -68,8 +68,11 @@ export function useSessionTimeout(options: UseSessionTimeoutOptions = {}) {
       clearTimeout(timeoutRef.current)
     }
 
-    // Set new timeout
-    timeoutRef.current = setTimeout(handleTimeout, timeoutMs)
+    // A non-positive timeout means "disabled" — caller passed 0 (or negative)
+    // to opt out of the inactivity check entirely.
+    if (timeoutMs > 0) {
+      timeoutRef.current = setTimeout(handleTimeout, timeoutMs)
+    }
   }, [handleTimeout, timeoutMs])
 
   // Handle user activity

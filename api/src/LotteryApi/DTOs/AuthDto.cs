@@ -21,6 +21,9 @@ public class LoginResponseDto
     public bool MustSetPin { get; set; }
     /// <summary>BCP-47 tag — frontend uses to set i18n.language on login. Null = es default.</summary>
     public string? PreferredLanguage { get; set; }
+    /// <summary>Idle auto-logout minutes for this user. Null → use the frontend
+    /// default (15 min). 0 → disable auto-logout. &gt;0 → log out after N idle minutes.</summary>
+    public int? AutoLogoutMinutes { get; set; }
 }
 
 public class RegisterDto

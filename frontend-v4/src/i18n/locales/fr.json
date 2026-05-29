@@ -724,6 +724,7 @@
     "usernameRequired": "Nom d'utilisateur requis",
     "passwordRequired": "Mot de passe requis",
     "passwordUpdated": "Mot de passe mis à jour. Connectez-vous avec votre nouveau mot de passe.",
+    "sessionExpired": "Votre session a expiré. Veuillez vous reconnecter.",
     "errors": {
       "invalid": "Nom d'utilisateur ou mot de passe incorrect.",
       "locked": "Utilisateur verrouillé. Contactez l'administrateur pour le déverrouiller.",
@@ -1018,6 +1019,8 @@
     "selectZonesPlaceholder": "Sélectionner des zones...",
     "selectBettingPoolPlaceholder": "Sélectionner un point de vente...",
     "assignBettingPool": "Assigner un point de vente",
+    "autoLogoutMinutes": "Déconnexion auto (minutes)",
+    "autoLogoutMinutesHint": "Vide = défaut (15 min). 0 = désactivé.",
     "privileges": "Privilèges",
     "createSuccessTitle": "Utilisateur créé avec succès",
     "createSuccessSubtitle": "L'utilisateur a été créé correctement dans le système",

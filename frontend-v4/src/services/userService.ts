@@ -101,6 +101,8 @@ interface UserUpdateData {
   clearBranch?: boolean;
   commissionRate?: number;
   isActive?: boolean;
+  /** Idle auto-logout in minutes. null = system default (15), 0 = disabled. */
+  autoLogoutMinutes?: number | null;
   permissionIds?: number[];
   [key: string]: unknown;
 }

@@ -724,6 +724,7 @@
     "usernameRequired": "Non itilizatè obligatwa",
     "passwordRequired": "Modpas obligatwa",
     "passwordUpdated": "Modpas mete ajou. Konekte ak nouvo modpas ou.",
+    "sessionExpired": "Sesyon ou ekspire. Tanpri konekte ankò.",
     "errors": {
       "invalid": "Non itilizatè oswa modpas pa kòrèk.",
       "locked": "Itilizatè bloke. Kontakte administratè a pou debloke li.",
@@ -1018,6 +1019,8 @@
     "selectZonesPlaceholder": "Chwazi zòn...",
     "selectBettingPoolPlaceholder": "Chwazi bankaj...",
     "assignBettingPool": "Asiyen Bankaj",
+    "autoLogoutMinutes": "Auto-dekoneksyon (minit)",
+    "autoLogoutMinutesHint": "Vid = default (15 min). 0 = dezaktive.",
     "privileges": "Privilèj",
     "createSuccessTitle": "Itilizatè Kreye Avèk Siksè",
     "createSuccessSubtitle": "Itilizatè a kreye kòrèkteman nan sistèm la",

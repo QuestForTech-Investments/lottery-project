@@ -42,7 +42,7 @@ const EditUserMUI = () => {
     loadingUser,
     errors,
     success,
-    handleChange: _handleChange,
+    handleChange,
     handleZoneChange,
     handleBranchChange,
     handleAssignBancaChange,
@@ -192,8 +192,22 @@ const EditUserMUI = () => {
                 />
               </Grid>
 
-              {/* Spacer */}
-              <Grid item xs={12} md={6} />
+              {/* Auto-logout (idle session timeout) — applies to admin users.
+                  Blank = system default, 0 = disabled. */}
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  type="number"
+                  name="autoLogoutMinutes"
+                  label={t('usersAdmin.autoLogoutMinutes', { defaultValue: 'Auto-logout (minutos)' })}
+                  value={formData.autoLogoutMinutes}
+                  onChange={handleChange}
+                  inputProps={{ min: 0, step: 1 }}
+                  helperText={t('usersAdmin.autoLogoutMinutesHint', {
+                    defaultValue: 'Vacío = predeterminado (15 min). 0 = deshabilitado.',
+                  })}
+                />
+              </Grid>
 
               {/* Divider */}
               <Grid item xs={12}>

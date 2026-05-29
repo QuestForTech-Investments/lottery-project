@@ -25,6 +25,8 @@ interface UserApiData {
   bettingPoolIds?: number[];
   RoleName?: string | null;
   roleName?: string | null;
+  AutoLogoutMinutes?: number | null;
+  autoLogoutMinutes?: number | null;
 }
 
 // Permissions response formats
@@ -44,6 +46,12 @@ interface EditUserFormData {
   zoneIds: number[];
   bettingPoolId: number | null;
   permissionIds: number[];
+  /**
+   * Idle auto-logout in minutes. Empty string means "use the system default";
+   * "0" means disabled. Kept as string in the form so the input stays
+   * controlled even while the user is mid-typing.
+   */
+  autoLogoutMinutes: string;
 }
 
 /**
@@ -60,6 +68,7 @@ const useEditUserForm = (userId: string | undefined) => {
     zoneIds: [],
     bettingPoolId: null,
     permissionIds: [],
+    autoLogoutMinutes: '',
   });
 
   // Permissions state
@@ -218,6 +227,12 @@ const useEditUserForm = (userId: string | undefined) => {
       const posUser = roleName === 'POS';
       setIsPosUser(posUser);
 
+      // Auto-logout minutes — empty string when null (renders blank input,
+      // which the backend treats as "use system default").
+      const autoLogoutRaw = user.AutoLogoutMinutes ?? user.autoLogoutMinutes;
+      const autoLogoutStr =
+        autoLogoutRaw === null || autoLogoutRaw === undefined ? '' : String(autoLogoutRaw);
+
       // Set basic user data
       setFormData(prev => ({
         ...prev,
@@ -225,6 +240,7 @@ const useEditUserForm = (userId: string | undefined) => {
         zoneIds: zoneIds,
         bettingPoolId: bettingPoolId || null,
         assignBanca: posUser || !!bettingPoolId,
+        autoLogoutMinutes: autoLogoutStr,
       }));
 
       // Load user permissions
@@ -407,7 +423,19 @@ const useEditUserForm = (userId: string | undefined) => {
     setLoading(true);
 
     try {
-      const updateData = {
+      // Auto-logout: empty input == "use system default" — send null so the
+      // backend stores NULL (not 0, which means "disabled"). Otherwise parse.
+      const autoLogoutTrim = formData.autoLogoutMinutes.trim();
+      const autoLogoutValue =
+        autoLogoutTrim === '' ? null : Number.parseInt(autoLogoutTrim, 10);
+
+      const updateData: {
+        permissionIds: number[];
+        zoneIds: number[];
+        bettingPoolId?: number;
+        clearBranch: boolean;
+        autoLogoutMinutes?: number | null;
+      } = {
         permissionIds: formData.permissionIds,
         // Always send the selected zones — zones scope an admin even when no
         // banca is assigned. assignBanca only gates the betting-pool assignment.
@@ -416,6 +444,9 @@ const useEditUserForm = (userId: string | undefined) => {
         // When the toggle is off, ask the backend to drop any existing assignment.
         clearBranch: !formData.assignBanca,
       };
+      if (autoLogoutValue === null || Number.isInteger(autoLogoutValue)) {
+        updateData.autoLogoutMinutes = autoLogoutValue;
+      }
 
       logger.info('EDIT_USER_MUI', 'Updating user', {
         userId,

@@ -724,6 +724,7 @@
     "usernameRequired": "Username required",
     "passwordRequired": "Password required",
     "passwordUpdated": "Password updated. Sign in with your new password.",
+    "sessionExpired": "Your session expired. Please log in again.",
     "errors": {
       "invalid": "Invalid username or password.",
       "locked": "User is locked. Contact the administrator to unlock it.",
@@ -1018,6 +1019,8 @@
     "selectZonesPlaceholder": "Select zones...",
     "selectBettingPoolPlaceholder": "Select betting pool...",
     "assignBettingPool": "Assign Betting Pool",
+    "autoLogoutMinutes": "Auto-logout (minutes)",
+    "autoLogoutMinutesHint": "Empty = default (15 min). 0 = disabled.",
     "privileges": "Privileges",
     "createSuccessTitle": "User Created Successfully",
     "createSuccessSubtitle": "The user has been created correctly in the system",

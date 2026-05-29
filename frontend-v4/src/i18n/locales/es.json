@@ -724,6 +724,7 @@
     "usernameRequired": "Usuario requerido",
     "passwordRequired": "Contraseña requerida",
     "passwordUpdated": "Contraseña actualizada. Inicia sesión con tu nueva clave.",
+    "sessionExpired": "Tu sesión expiró. Por favor inicia sesión nuevamente.",
     "errors": {
       "invalid": "Usuario o contraseña incorrectos.",
       "locked": "Usuario bloqueado. Contacte al administrador para desbloquearlo.",
@@ -1018,6 +1019,8 @@
     "selectZonesPlaceholder": "Seleccionar zonas...",
     "selectBettingPoolPlaceholder": "Seleccionar banca...",
     "assignBettingPool": "Asignar Banca",
+    "autoLogoutMinutes": "Auto-logout (minutos)",
+    "autoLogoutMinutesHint": "Vacío = predeterminado (15 min). 0 = deshabilitado.",
     "privileges": "Privilegios",
     "createSuccessTitle": "Usuario Creado Exitosamente",
     "createSuccessSubtitle": "El usuario ha sido creado correctamente en el sistema",

@@ -141,6 +141,7 @@ public class UsersController : ControllerBase
                 RoleName = u.Role != null ? u.Role.RoleName : null,
                 CommissionRate = u.CommissionRate,
                 IsActive = u.IsActive,
+                AutoLogoutMinutes = u.AutoLogoutMinutes,
                 LastLoginAt = u.LastLoginAt,
                 CreatedAt = u.CreatedAt,
                 UpdatedAt = u.UpdatedAt
@@ -284,6 +285,7 @@ public class UsersController : ControllerBase
             RoleName = user.Role?.RoleName,
             CommissionRate = user.CommissionRate,
             IsActive = user.IsActive,
+            AutoLogoutMinutes = user.AutoLogoutMinutes,
             LastLoginAt = user.LastLoginAt,
             CreatedAt = user.CreatedAt,
             UpdatedAt = user.UpdatedAt,
@@ -405,6 +407,7 @@ public class UsersController : ControllerBase
                 RoleName = u.Role != null ? u.Role.RoleName : null,
                 CommissionRate = u.CommissionRate,
                 IsActive = u.IsActive,
+                AutoLogoutMinutes = u.AutoLogoutMinutes,
                 LastLoginAt = u.LastLoginAt,
                 CreatedAt = u.CreatedAt,
                 UpdatedAt = u.UpdatedAt
@@ -436,6 +439,7 @@ public class UsersController : ControllerBase
                 RoleName = u.Role != null ? u.Role.RoleName : null,
                 CommissionRate = u.CommissionRate,
                 IsActive = u.IsActive,
+                AutoLogoutMinutes = u.AutoLogoutMinutes,
                 LastLoginAt = u.LastLoginAt,
                 CreatedAt = u.CreatedAt,
                 UpdatedAt = u.UpdatedAt
@@ -467,6 +471,7 @@ public class UsersController : ControllerBase
                 RoleName = u.Role != null ? u.Role.RoleName : null,
                 CommissionRate = u.CommissionRate,
                 IsActive = u.IsActive,
+                AutoLogoutMinutes = u.AutoLogoutMinutes,
                 LastLoginAt = u.LastLoginAt,
                 CreatedAt = u.CreatedAt,
                 UpdatedAt = u.UpdatedAt
@@ -498,6 +503,7 @@ public class UsersController : ControllerBase
                 RoleName = u.Role != null ? u.Role.RoleName : null,
                 CommissionRate = u.CommissionRate,
                 IsActive = u.IsActive,
+                AutoLogoutMinutes = u.AutoLogoutMinutes,
                 LastLoginAt = u.LastLoginAt,
                 CreatedAt = u.CreatedAt,
                 UpdatedAt = u.UpdatedAt
@@ -635,6 +641,7 @@ public class UsersController : ControllerBase
             RoleName = createdUser?.Role?.RoleName,
             CommissionRate = user.CommissionRate,
             IsActive = user.IsActive,
+            AutoLogoutMinutes = user.AutoLogoutMinutes,
             LastLoginAt = user.LastLoginAt,
             CreatedAt = user.CreatedAt,
             UpdatedAt = user.UpdatedAt,
@@ -681,6 +688,7 @@ public class UsersController : ControllerBase
         if (dto.RoleId.HasValue) user.RoleId = dto.RoleId;
         if (dto.CommissionRate.HasValue) user.CommissionRate = dto.CommissionRate.Value;
         if (dto.IsActive.HasValue) user.IsActive = dto.IsActive.Value;
+        if (dto.AutoLogoutMinutes.HasValue) user.AutoLogoutMinutes = dto.AutoLogoutMinutes.Value;
 
         user.UpdatedAt = DateTime.UtcNow;
         await _userRepository.UpdateAsync(user);
@@ -789,6 +797,11 @@ public class UsersController : ControllerBase
         if (dto.RoleId.HasValue) user.RoleId = dto.RoleId;
         if (dto.CommissionRate.HasValue) user.CommissionRate = dto.CommissionRate.Value;
         if (dto.IsActive.HasValue) user.IsActive = dto.IsActive.Value;
+        // Null is a valid value here ("use system default"), so HasValue isn't
+        // the right gate. We only update when the DTO is opted-in, which the
+        // dto.AutoLogoutMinutes.HasValue check still gives us — the frontend
+        // omits the field entirely when not editing the auto-logout setting.
+        if (dto.AutoLogoutMinutes.HasValue) user.AutoLogoutMinutes = dto.AutoLogoutMinutes.Value;
 
         user.UpdatedAt = DateTime.UtcNow;
         await _userRepository.UpdateAsync(user);

@@ -14,6 +14,8 @@ public class UserDto
     public string? RoleName { get; set; }
     public decimal CommissionRate { get; set; }
     public bool IsActive { get; set; }
+    /// <summary>Idle auto-logout minutes. Null = system default (15), 0 = disabled.</summary>
+    public int? AutoLogoutMinutes { get; set; }
     public DateTime? LastLoginAt { get; set; }
     public DateTime? CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
@@ -49,6 +51,8 @@ public class UpdateUserDto
     public int? RoleId { get; set; }
     public decimal? CommissionRate { get; set; }
     public bool? IsActive { get; set; }
+    /// <summary>Idle auto-logout minutes. Null = system default (15), 0 = disabled.</summary>
+    public int? AutoLogoutMinutes { get; set; }
 }
 
 /// <summary>
@@ -77,6 +81,8 @@ public class UpdateUserCompleteDto
     public bool? ClearBranch { get; set; }
     public decimal? CommissionRate { get; set; }
     public bool? IsActive { get; set; }
+    /// <summary>Idle auto-logout minutes. Null = system default (15), 0 = disabled.</summary>
+    public int? AutoLogoutMinutes { get; set; }
     public List<int>? PermissionIds { get; set; }
 }
 

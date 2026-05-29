@@ -55,9 +55,14 @@ const LoginMUI = () => {
   const showWhileHeld = () => setShowPassword(true);
   const hideOnRelease = () => setShowPassword(false);
 
-  const justChanged =
-    typeof window !== 'undefined' &&
-    new URLSearchParams(window.location.search).get('changed') === '1';
+  // Query-param signals from the various logout paths (api 401, expired-token
+  // guard, idle timeout). Query params survive the full-page reload that
+  // `window.location.href` does, unlike React Router's `location.state`.
+  const loginQuery = typeof window !== 'undefined'
+    ? new URLSearchParams(window.location.search)
+    : null;
+  const justChanged = loginQuery?.get('changed') === '1';
+  const sessionExpired = loginQuery?.get('reason') === 'session-expired';
 
   return (
     <Box
@@ -187,6 +192,14 @@ const LoginMUI = () => {
         {justChanged && !errors.general && (
           <Alert severity="success" sx={{ mb: 2.5, borderRadius: '12px' }}>
             {t('login.passwordUpdated')}
+          </Alert>
+        )}
+
+        {sessionExpired && !errors.general && !justChanged && (
+          <Alert severity="warning" sx={{ mb: 2.5, borderRadius: '12px' }}>
+            {t('login.sessionExpired', {
+              defaultValue: 'Tu sesión expiró. Por favor inicia sesión nuevamente.',
+            })}
           </Alert>
         )}
 

@@ -29,8 +29,16 @@ export default function MainLayout({ children }: MainLayoutProps) {
   // portrait — the sidebar collapses to a drawer below this width.
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
 
-  // Session timeout: logout after 15 minutes of inactivity
-  useSessionTimeout({ timeoutMs: 15 * 60 * 1000 })
+  // Idle auto-logout. Reads the per-user value cached on login (set by
+  // authService). Semantics:
+  //   missing / not a number → 15 min default (preserves prior behavior)
+  //   0                      → disabled (hook treats non-positive as off)
+  //   > 0                    → log out after that many idle minutes
+  const cachedAutoLogout = localStorage.getItem('autoLogoutMinutes')
+  const autoLogoutMinutes = cachedAutoLogout !== null && !Number.isNaN(Number(cachedAutoLogout))
+    ? Number(cachedAutoLogout)
+    : 15
+  useSessionTimeout({ timeoutMs: autoLogoutMinutes * 60 * 1000 })
 
   // sidebarPinned = false: modo automático (se expande/contrae con hover, contenido fijo en 60px)
   // sidebarPinned = true: modo fijo (sidebar expandido, contenido desplazado a 280px)

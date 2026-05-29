@@ -42,6 +42,15 @@ public class User
     [Column("is_active")]
     public bool IsActive { get; set; } = true;
 
+    /// <summary>
+    /// Idle auto-logout in minutes for this user.
+    ///   NULL  → use the system default (15 min).
+    ///   0     → disable auto-logout entirely.
+    ///   &gt; 0   → log out after that many idle minutes.
+    /// </summary>
+    [Column("auto_logout_minutes")]
+    public int? AutoLogoutMinutes { get; set; }
+
     [Column("last_login_at")]
     public DateTime? LastLoginAt { get; set; }
 

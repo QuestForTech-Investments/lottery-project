@@ -24,7 +24,11 @@ const PrivateRoute = ({ children }: PrivateRouteProps) => {
   const isExpired = token ? authService.isTokenExpired(token) : true
 
   if (!isAuthenticated || isExpired) {
-    if (isExpired && token) {
+    // Distinguish "session expired" (had a token, JWT is past its exp) from
+    // "never logged in" (deep link clicked without a session). Only the first
+    // case should surface the "your session expired" warning on the login page.
+    const wasLoggedIn = isExpired && !!token
+    if (wasLoggedIn) {
       logger.warn('PRIVATE_ROUTE', 'Token expired, redirecting to login')
       authService.logout() // Clear expired token
     } else {
@@ -35,9 +39,11 @@ const PrivateRoute = ({ children }: PrivateRouteProps) => {
     // /tickets/plays?drawId=&date=) so login can send them back there.
     const intended = location.pathname + location.search
     const isLoginPath = location.pathname === '/login' || location.pathname === '/'
-    const loginUrl = isLoginPath
-      ? '/login'
-      : `/login?redirect=${encodeURIComponent(intended)}`
+    const params = new URLSearchParams()
+    if (wasLoggedIn) params.set('reason', 'session-expired')
+    if (!isLoginPath) params.set('redirect', intended)
+    const qs = params.toString()
+    const loginUrl = qs ? `/login?${qs}` : '/login'
 
     return <Navigate to={loginUrl} replace />
   }

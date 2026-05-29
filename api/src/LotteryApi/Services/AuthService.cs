@@ -98,7 +98,8 @@ public class AuthService : IAuthService
                 ExpiresAt = DateTime.UtcNow.AddHours(12),
                 MustChangePassword = user.MustChangePassword,
                 MustSetPin = user.MustSetPin,
-                PreferredLanguage = user.PreferredLanguage
+                PreferredLanguage = user.PreferredLanguage,
+                AutoLogoutMinutes = user.AutoLogoutMinutes
             }
         };
     }
