@@ -44,10 +44,11 @@ END
 ELSE
 BEGIN
   -- Idempotent fix: the first run used the wrong category casing ('BANCAS'),
-  -- which created a separate section in the admin UI. Realign it to the
-  -- existing "Bancas" group.
+  -- which created a separate section in the admin UI. We can't filter with
+  -- `WHERE category <> 'Bancas'` because the default collation is
+  -- case-insensitive (so 'BANCAS' <> 'Bancas' evaluates to false). Forcing the
+  -- assignment unconditionally guarantees the row lands with the right casing.
   UPDATE permissions
   SET category = 'Bancas'
-  WHERE permission_code = 'VIEW_BANCA_AUDIT_LOG'
-    AND category <> 'Bancas';
+  WHERE permission_code = 'VIEW_BANCA_AUDIT_LOG';
 END;

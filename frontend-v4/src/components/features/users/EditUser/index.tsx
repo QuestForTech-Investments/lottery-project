@@ -193,7 +193,7 @@ const EditUserMUI = () => {
               </Grid>
 
               {/* Auto-logout (idle session timeout) — applies to admin users.
-                  Blank = system default, 0 = disabled. */}
+                  Blank = system default, 0 = disabled, max 60 min. */}
               <Grid item xs={12} md={6}>
                 <TextField
                   fullWidth
@@ -202,9 +202,9 @@ const EditUserMUI = () => {
                   label={t('usersAdmin.autoLogoutMinutes', { defaultValue: 'Auto-logout (minutos)' })}
                   value={formData.autoLogoutMinutes}
                   onChange={handleChange}
-                  inputProps={{ min: 0, step: 1 }}
+                  inputProps={{ min: 0, max: 60, step: 1 }}
                   helperText={t('usersAdmin.autoLogoutMinutesHint', {
-                    defaultValue: 'Vacío = predeterminado (15 min). 0 = deshabilitado.',
+                    defaultValue: 'Vacío = predeterminado (15 min). 0 = deshabilitado. Máx 60.',
                   })}
                 />
               </Grid>

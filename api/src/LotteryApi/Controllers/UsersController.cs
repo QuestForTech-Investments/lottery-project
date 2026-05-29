@@ -688,7 +688,17 @@ public class UsersController : ControllerBase
         if (dto.RoleId.HasValue) user.RoleId = dto.RoleId;
         if (dto.CommissionRate.HasValue) user.CommissionRate = dto.CommissionRate.Value;
         if (dto.IsActive.HasValue) user.IsActive = dto.IsActive.Value;
-        if (dto.AutoLogoutMinutes.HasValue) user.AutoLogoutMinutes = dto.AutoLogoutMinutes.Value;
+        if (dto.AutoLogoutMinutes.HasValue)
+        {
+            var v = dto.AutoLogoutMinutes.Value;
+            if (v < 0 || v > 60)
+            {
+                return ApiErrorResult.BadRequest(
+                    ErrorCodes.BadRequest,
+                    "Auto-logout debe estar entre 0 y 60 minutos.");
+            }
+            user.AutoLogoutMinutes = v;
+        }
 
         user.UpdatedAt = DateTime.UtcNow;
         await _userRepository.UpdateAsync(user);
@@ -801,7 +811,17 @@ public class UsersController : ControllerBase
         // the right gate. We only update when the DTO is opted-in, which the
         // dto.AutoLogoutMinutes.HasValue check still gives us — the frontend
         // omits the field entirely when not editing the auto-logout setting.
-        if (dto.AutoLogoutMinutes.HasValue) user.AutoLogoutMinutes = dto.AutoLogoutMinutes.Value;
+        if (dto.AutoLogoutMinutes.HasValue)
+        {
+            var v = dto.AutoLogoutMinutes.Value;
+            if (v < 0 || v > 60)
+            {
+                return ApiErrorResult.BadRequest(
+                    ErrorCodes.BadRequest,
+                    "Auto-logout debe estar entre 0 y 60 minutos.");
+            }
+            user.AutoLogoutMinutes = v;
+        }
 
         user.UpdatedAt = DateTime.UtcNow;
         await _userRepository.UpdateAsync(user);

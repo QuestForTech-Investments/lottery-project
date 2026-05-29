@@ -1020,7 +1020,7 @@
     "selectBettingPoolPlaceholder": "Seleccionar banca...",
     "assignBettingPool": "Asignar Banca",
     "autoLogoutMinutes": "Auto-logout (minutos)",
-    "autoLogoutMinutesHint": "Vacío = predeterminado (15 min). 0 = deshabilitado.",
+    "autoLogoutMinutesHint": "Vacío = predeterminado (15 min). 0 = deshabilitado. Máx 60.",
     "privileges": "Privilegios",
     "createSuccessTitle": "Usuario Creado Exitosamente",
     "createSuccessSubtitle": "El usuario ha sido creado correctamente en el sistema",

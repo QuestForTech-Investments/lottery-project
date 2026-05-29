@@ -1020,7 +1020,7 @@
     "selectBettingPoolPlaceholder": "Chwazi bankaj...",
     "assignBettingPool": "Asiyen Bankaj",
     "autoLogoutMinutes": "Auto-dekoneksyon (minit)",
-    "autoLogoutMinutesHint": "Vid = default (15 min). 0 = dezaktive.",
+    "autoLogoutMinutesHint": "Vid = default (15 min). 0 = dezaktive. Maks 60.",
     "privileges": "Privilèj",
     "createSuccessTitle": "Itilizatè Kreye Avèk Siksè",
     "createSuccessSubtitle": "Itilizatè a kreye kòrèkteman nan sistèm la",

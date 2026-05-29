@@ -1020,7 +1020,7 @@
     "selectBettingPoolPlaceholder": "Select betting pool...",
     "assignBettingPool": "Assign Betting Pool",
     "autoLogoutMinutes": "Auto-logout (minutes)",
-    "autoLogoutMinutesHint": "Empty = default (15 min). 0 = disabled.",
+    "autoLogoutMinutesHint": "Empty = default (15 min). 0 = disabled. Max 60.",
     "privileges": "Privileges",
     "createSuccessTitle": "User Created Successfully",
     "createSuccessSubtitle": "The user has been created correctly in the system",

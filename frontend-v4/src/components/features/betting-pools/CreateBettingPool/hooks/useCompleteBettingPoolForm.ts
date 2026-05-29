@@ -1575,7 +1575,8 @@ const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
                 defaultLanguage: formData.defaultLanguage || 'es',
                 useCentralLogo: formData.useCentralLogo || false,
                 enableAutoLogout: formData.enableAutoLogout || false,
-                autoLogoutMinutes: formData.autoLogoutMinutes ? parseInt(formData.autoLogoutMinutes) : 30,
+                // Clamp to [1, 60] — backend rejects anything outside this range.
+                autoLogoutMinutes: Math.min(60, Math.max(1, formData.autoLogoutMinutes ? parseInt(formData.autoLogoutMinutes) : 30)),
                 showStatsPanel: formData.showStatsPanel !== undefined ? formData.showStatsPanel : true,
                 statsPanelConfig: JSON.stringify({
                   credit: (parseFloat(formData.deactivationBalance || '0') > 0) && (formData.statCredit !== undefined ? formData.statCredit : true),

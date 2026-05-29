@@ -1175,6 +1175,15 @@ public class BettingPoolsController : ControllerBase
                 bettingPool.Config.ShowStatsPanel = dto.Config.ShowStatsPanel;
                 bettingPool.Config.StatsPanelConfig = dto.Config.StatsPanelConfig;
                 bettingPool.Config.EnableAutoLogout = dto.Config.EnableAutoLogout;
+                // Cap idle auto-logout at 60 minutes — anything longer is
+                // almost certainly a mistake (POS sessions on the cash register
+                // shouldn't stay open all day).
+                if (dto.Config.AutoLogoutMinutes < 1 || dto.Config.AutoLogoutMinutes > 60)
+                {
+                    return ApiErrorResult.BadRequest(
+                        ErrorCodes.BadRequest,
+                        "Auto-logout debe estar entre 1 y 60 minutos.");
+                }
                 bettingPool.Config.AutoLogoutMinutes = dto.Config.AutoLogoutMinutes;
                 bettingPool.Config.UpdatedAt = DateTime.UtcNow;
             }
@@ -1427,6 +1436,13 @@ public class BettingPoolsController : ControllerBase
             // Create configuration if provided
             if (dto.Config != null)
             {
+                // Same auto-logout cap as the update endpoint.
+                if (dto.Config.AutoLogoutMinutes < 1 || dto.Config.AutoLogoutMinutes > 60)
+                {
+                    return ApiErrorResult.BadRequest(
+                        ErrorCodes.BadRequest,
+                        "Auto-logout debe estar entre 1 y 60 minutos.");
+                }
                 var config = new BettingPoolConfig
                 {
                     BettingPoolId = bettingPool.BettingPoolId,

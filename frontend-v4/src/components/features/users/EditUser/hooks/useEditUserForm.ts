@@ -424,10 +424,16 @@ const useEditUserForm = (userId: string | undefined) => {
 
     try {
       // Auto-logout: empty input == "use system default" — send null so the
-      // backend stores NULL (not 0, which means "disabled"). Otherwise parse.
+      // backend stores NULL (not 0, which means "disabled"). Otherwise parse
+      // and clamp to [0, 60] so a typed-in 999 doesn't slip past the input cap.
       const autoLogoutTrim = formData.autoLogoutMinutes.trim();
-      const autoLogoutValue =
-        autoLogoutTrim === '' ? null : Number.parseInt(autoLogoutTrim, 10);
+      let autoLogoutValue: number | null = null;
+      if (autoLogoutTrim !== '') {
+        const parsed = Number.parseInt(autoLogoutTrim, 10);
+        if (Number.isInteger(parsed)) {
+          autoLogoutValue = Math.min(60, Math.max(0, parsed));
+        }
+      }
 
       const updateData: {
         permissionIds: number[];

@@ -1020,7 +1020,7 @@
     "selectBettingPoolPlaceholder": "Sélectionner un point de vente...",
     "assignBettingPool": "Assigner un point de vente",
     "autoLogoutMinutes": "Déconnexion auto (minutes)",
-    "autoLogoutMinutesHint": "Vide = défaut (15 min). 0 = désactivé.",
+    "autoLogoutMinutesHint": "Vide = défaut (15 min). 0 = désactivé. Max 60.",
     "privileges": "Privilèges",
     "createSuccessTitle": "Utilisateur créé avec succès",
     "createSuccessSubtitle": "L'utilisateur a été créé correctement dans le système",
