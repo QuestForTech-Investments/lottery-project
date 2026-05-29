@@ -140,10 +140,14 @@ builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.Configure<LotteryApi.Configuration.SmtpOptions>(
     builder.Configuration.GetSection(LotteryApi.Configuration.SmtpOptions.SectionName));
 builder.Services.AddTransient<IEmailService, SmtpEmailService>();
-// Report builder shared by the preview endpoints and the publication-trigger
-// notifier — single source of truth for "what plays go into this email".
+// Report builder shared by the preview endpoints and the scheduled notifier —
+// single source of truth for "what plays go into this email".
 builder.Services.AddScoped<PlayMonitoringReportService>();
 builder.Services.AddScoped<PlayMonitoringNotifier>();
+// Worker fires the email automatically N seconds after a draw closes.
+builder.Services.Configure<PlayMonitoringScheduledSettings>(
+    builder.Configuration.GetSection(PlayMonitoringScheduledSettings.SectionName));
+builder.Services.AddHostedService<PlayMonitoringScheduledWorker>();
 
 // Register External Results Services (lottery results fetching and ticket processing)
 builder.Services.AddExternalResultsServices(builder.Configuration);
