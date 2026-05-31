@@ -204,6 +204,15 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
   // Queue of betIds waiting for reservationId from server
   const pendingReservationsRef = useRef<Map<string, number>>(new Map()); // "drawId-gameTypeId" -> betId
 
+  // True when the user pressed Enter while a limit-availability check was in
+  // flight. The websocket callback drains it once the response lands, so the
+  // user can mash Enter and the bet adds the moment availability returns — no
+  // "Esperando disponibilidad" message needed.
+  const pendingAddRef = useRef<boolean>(false);
+  // Late-bound handler so the WS callback (registered once at mount) can call
+  // the latest handleAddBet without triggering re-registration.
+  const handleAddBetRef = useRef<() => void>(() => {});
+
   // Register SignalR callbacks
   useEffect(() => {
     onLimitAvailability((data: LimitAvailability) => {
@@ -214,6 +223,13 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
 
       // Response arrived — the add button can re-enable.
       setLimitChecking(false);
+      // If the user pressed Enter while we were waiting, trigger the add now.
+      // Defer to the next tick so React applies the limitChecking=false update
+      // before handleAddBet's closure reads it.
+      if (pendingAddRef.current) {
+        pendingAddRef.current = false;
+        setTimeout(() => handleAddBetRef.current(), 0);
+      }
       setLimitAvailable(prev => {
         if (prev === null) return data.availableAmount;
         if (data.availableAmount === -1) return prev === -1 ? -1 : prev;
@@ -1051,11 +1067,13 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
       }
     }
 
-    // Wait for the in-flight limit-availability response before allowing the
-    // bet down. Otherwise a fast typer could bypass the check.
+    // The availability response usually lands in ~tens of ms, so instead of
+    // blocking the user with an "Esperando disponibilidad" message we just
+    // queue the Enter. onLimitAvailability re-fires handleAddBet once it
+    // arrives, so the user can mash Enter and the bet adds as soon as the
+    // server replies — the limit check is still enforced.
     if (limitChecking) {
-      setBetError('Esperando disponibilidad...');
-      setTimeout(() => amountInputRef.current?.focus(), 100);
+      pendingAddRef.current = true;
       return;
     }
 
@@ -1516,10 +1534,14 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
     setBetWarning('');
     setBetError('');
     setLimitChecking(false);
+    // The user is editing a new number — drop any queued add from the previous one.
+    pendingAddRef.current = false;
   }, [betNumber]);
 
   // Keep ref in sync for use by delete handlers
   recheckLimitRef.current = handleBetNumberBlur;
+  // Same pattern for the WS callback to retry queued Enter presses.
+  handleAddBetRef.current = handleAddBet;
 
   const handlePoolChange = useCallback((pool: BettingPool | null): void => {
     setSelectedPool(pool);
