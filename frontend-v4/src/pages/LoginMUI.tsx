@@ -21,7 +21,8 @@ import {
   VisibilityOff as VisibilityOffIcon,
 } from '@mui/icons-material';
 import backgroundImage from '@/assets/images/login-background.jpg';
-import logoImage from '@/assets/images/lottobook-logo.png';
+import tenantLogo from '@tenant/assets/logo.png';
+import { tenantConfig } from '@/tenant';
 // Card background image from public folder
 const cardBackgroundImage = '/images/bannerlotto-02.jpg';
 import useLogin from './hooks/useLogin';
@@ -129,8 +130,8 @@ const LoginMUI = () => {
         {/* Logo */}
         <Box
           component="img"
-          src={logoImage}
-          alt="Lottobook"
+          src={tenantLogo}
+          alt={tenantConfig.login.logoAlt}
           sx={{
             width: { xs: 140, sm: 241 },
             height: { xs: 140, sm: 241 },
@@ -483,7 +484,7 @@ const LoginMUI = () => {
             letterSpacing: '0.02em',
           }}
         >
-          Lottobook Version 777
+          {tenantConfig.versionLabel}
         </Typography>
       </Box>
 

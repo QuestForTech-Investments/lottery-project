@@ -15,6 +15,7 @@ import {
   LocationOn,
   Warning as WarningIcon
 } from '@mui/icons-material';
+import type { TenantFeatureFlags } from '../tenant.types'
 
 export interface MenuItem {
   id: string
@@ -35,6 +36,13 @@ export interface MenuItem {
    *   - string[] → user must hold AT LEAST ONE of the codes (OR-logic).
    */
   permission?: string | string[]
+  /**
+   * Optional tenant feature flag. When set, the item is hidden unless
+   * `tenantConfig.features[feature] === true`. Used for entries that only
+   * apply to certain tenants (e.g. partner admin for tenants that have
+   * `externalTenantsAdmin = true`).
+   */
+  feature?: keyof TenantFeatureFlags
 }
 
 export const MENU_ITEMS: MenuItem[] = [

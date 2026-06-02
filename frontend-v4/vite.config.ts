@@ -5,6 +5,12 @@ import { fileURLToPath } from 'url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
+// Tenant resolution for the multi-deployment build. The build command sets
+// VITE_TENANT (e.g. `VITE_TENANT=lacentral npm run build`) and the @tenant
+// alias resolves to that folder so per-tenant assets, theme overrides, and
+// config get baked into the bundle. Defaults to 'lottobook' for local dev.
+const tenant = process.env.VITE_TENANT ?? 'lottobook'
+
 export default defineConfig({
   plugins: [react()],
   resolve: {
@@ -21,6 +27,7 @@ export default defineConfig({
       '@theme': path.resolve(__dirname, './src/theme'),
       '@features': path.resolve(__dirname, './src/features'),
       '@assets': path.resolve(__dirname, './src/assets'),
+      '@tenant': path.resolve(__dirname, `./src/themes/${tenant}`),
     }
   },
   optimizeDeps: {

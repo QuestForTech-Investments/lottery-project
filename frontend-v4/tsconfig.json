@@ -30,7 +30,8 @@
       "@config/*": ["src/config/*"],
       "@theme/*": ["src/theme/*"],
       "@features/*": ["src/features/*"],
-      "@assets/*": ["src/assets/*"]
+      "@assets/*": ["src/assets/*"],
+      "@tenant/*": ["src/themes/lottobook/*"]
     },
     "types": ["vite/client", "vitest/globals", "node"]
   },
