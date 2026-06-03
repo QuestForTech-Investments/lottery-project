@@ -89,7 +89,12 @@ const LoginMUI = () => {
           content: '""',
           position: 'absolute',
           inset: 0,
-          background: 'linear-gradient(135deg, rgba(15, 25, 35, 0.7) 0%, rgba(20, 40, 50, 0.5) 100%)',
+          // Bare-layout tenants get a radial vignette on top of the linear
+          // gradient — concentrates focus on the form while keeping the
+          // peripheral background (lottery balls / video) visible.
+          background: tenantConfig.login.bareLayout
+            ? 'radial-gradient(ellipse 65% 75% at center, rgba(0, 0, 0, 0.65) 0%, rgba(0, 0, 0, 0.45) 35%, rgba(0, 0, 0, 0.15) 65%, rgba(0, 0, 0, 0) 90%), linear-gradient(135deg, rgba(15, 25, 35, 0.4) 0%, rgba(20, 40, 50, 0.3) 100%)'
+            : 'linear-gradient(135deg, rgba(15, 25, 35, 0.7) 0%, rgba(20, 40, 50, 0.5) 100%)',
           zIndex: 1,
         },
       }}
@@ -151,10 +156,12 @@ const LoginMUI = () => {
           border: tenantConfig.login.bareLayout
             ? 'none'
             : { xs: '3px solid #2d3748', sm: 'none' },
-          px: { xs: 2.5, sm: 5 },
+          px: tenantConfig.login.bareLayout ? { xs: 2, sm: 3 } : { xs: 2.5, sm: 5 },
           py: { xs: 3, sm: 5 },
           width: '100%',
-          maxWidth: { xs: 340, sm: 400 },
+          // Bare layout needs more room so the larger logo fits centered with
+          // the inputs (instead of overflowing and clipping on the right).
+          maxWidth: tenantConfig.login.bareLayout ? { xs: 320, sm: 540 } : { xs: 340, sm: 400 },
           textAlign: 'center',
           boxShadow: tenantConfig.login.bareLayout ? 'none' : {
             xs: '0 10px 40px rgba(0, 0, 0, 0.3)',
@@ -183,12 +190,21 @@ const LoginMUI = () => {
           src={tenantLogo}
           alt={tenantConfig.login.logoAlt}
           sx={{
-            width: { xs: 140, sm: 241 },
-            height: { xs: 140, sm: 241 },
+            // Bare-layout tenants (e.g. La Central) get a noticeably larger
+            // logo since the card chrome is gone and the logo carries more
+            // of the visual weight.
+            width: tenantConfig.login.bareLayout ? { xs: 220, sm: 400 } : { xs: 140, sm: 241 },
+            height: tenantConfig.login.bareLayout ? { xs: 220, sm: 400 } : { xs: 140, sm: 241 },
             mb: { xs: 1.5, sm: 2 },
             mx: 'auto',
             objectFit: 'contain',
-            filter: 'drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15))',
+            // Bare-layout tenants (La Central) layer a deeper drop shadow with
+            // a soft white halo + faint navy glow — anchors the logo over the
+            // video background without a card chrome. Classic tenants keep the
+            // light card-style shadow.
+            filter: tenantConfig.login.bareLayout
+              ? 'drop-shadow(0 10px 28px rgba(0, 0, 0, 0.45)) drop-shadow(0 0 32px rgba(255, 255, 255, 0.12)) drop-shadow(0 0 60px rgba(59, 130, 246, 0.08))'
+              : 'drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15))',
             animation: 'fadeIn 0.8s ease-out 0.2s both',
             '@keyframes fadeIn': {
               from: { opacity: 0 },
@@ -266,6 +282,12 @@ const LoginMUI = () => {
             display: 'flex',
             flexDirection: 'column',
             gap: 2,
+            // Cap input width independently of the Paper. Bare-layout tenants
+            // use a wider Paper to fit the larger logo, but the inputs should
+            // stay at a comfortable form width.
+            width: '100%',
+            maxWidth: tenantConfig.login.bareLayout ? 460 : 'none',
+            mx: 'auto',
           }}
         >
           {/* Username Field */}
@@ -303,9 +325,7 @@ const LoginMUI = () => {
                 },
                 '& input': {
                   py: { xs: 1.2, sm: 1.5 },
-                  // iOS auto-zooms on focus when font-size < 16px. Use 1rem
-                  // (16px) on xs to prevent the page from zooming in.
-                  fontSize: { xs: '1rem', sm: '0.95rem' },
+                  fontSize: { xs: '18px', sm: '30px' },
                 },
                 '& input::placeholder': {
                   color: '#94a3b8',
@@ -394,9 +414,7 @@ const LoginMUI = () => {
                 },
                 '& input': {
                   py: { xs: 1.2, sm: 1.5 },
-                  // iOS auto-zooms on focus when font-size < 16px. Use 1rem
-                  // (16px) on xs to prevent the page from zooming in.
-                  fontSize: { xs: '1rem', sm: '0.95rem' },
+                  fontSize: { xs: '18px', sm: '30px' },
                 },
                 '& input::placeholder': {
                   color: '#94a3b8',
@@ -444,30 +462,58 @@ const LoginMUI = () => {
               )
             }
             sx={{
-              mt: { xs: 1.5, sm: 1 },
+              mt: { xs: 1.5, sm: 1.5 },
               py: { xs: 1.3, sm: 1.6 },
               px: 4,
               // More rounded on mobile like original app
               borderRadius: { xs: '25px', sm: '14px' },
-              fontSize: { xs: '0.9rem', sm: '0.95rem' },
-              fontWeight: 600,
+              fontSize: { xs: '0.95rem', sm: '1rem' },
+              fontWeight: 700,
               textTransform: 'uppercase',
-              letterSpacing: '0.05em',
-              background: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
+              letterSpacing: '0.08em',
               color: 'white',
-              boxShadow: '0 4px 14px rgba(220, 38, 38, 0.4)',
-              transition: 'all 0.25s ease',
+              transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+              // Bare-layout tenants (La Central) get a richer multi-stop
+              // gradient with an inset highlight, brand-tinted drop shadow,
+              // and a subtle white border so the CTA reads as premium
+              // against the glass inputs and dark video background.
+              background: tenantConfig.login.bareLayout
+                ? 'linear-gradient(180deg, #ef4444 0%, #dc2626 50%, #991b1b 100%)'
+                : 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
+              border: tenantConfig.login.bareLayout
+                ? '1px solid rgba(255, 255, 255, 0.18)'
+                : 'none',
+              boxShadow: tenantConfig.login.bareLayout
+                ? '0 12px 32px rgba(220, 38, 38, 0.5), 0 2px 6px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.25)'
+                : '0 4px 14px rgba(220, 38, 38, 0.4)',
               '&:hover': {
-                background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
-                boxShadow: '0 6px 20px rgba(220, 38, 38, 0.5)',
-                transform: 'translateY(-1px)',
+                background: tenantConfig.login.bareLayout
+                  ? 'linear-gradient(180deg, #f87171 0%, #ef4444 50%, #b91c1c 100%)'
+                  : 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                boxShadow: tenantConfig.login.bareLayout
+                  ? '0 16px 40px rgba(220, 38, 38, 0.6), 0 2px 8px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.35)'
+                  : '0 6px 20px rgba(220, 38, 38, 0.5)',
+                borderColor: tenantConfig.login.bareLayout
+                  ? 'rgba(255, 255, 255, 0.28)'
+                  : undefined,
+                transform: 'translateY(-2px)',
               },
               '&:active': {
                 transform: 'translateY(0)',
+                boxShadow: tenantConfig.login.bareLayout
+                  ? '0 6px 16px rgba(220, 38, 38, 0.4), inset 0 2px 4px rgba(0, 0, 0, 0.2)'
+                  : undefined,
               },
               '&.Mui-disabled': {
-                background: '#cbd5e1',
-                color: 'rgba(255, 255, 255, 0.7)',
+                background: tenantConfig.login.bareLayout
+                  ? 'rgba(255, 255, 255, 0.08)'
+                  : '#cbd5e1',
+                color: tenantConfig.login.bareLayout
+                  ? 'rgba(255, 255, 255, 0.4)'
+                  : 'rgba(255, 255, 255, 0.7)',
+                border: tenantConfig.login.bareLayout
+                  ? '1px solid rgba(255, 255, 255, 0.12)'
+                  : 'none',
                 boxShadow: 'none',
               },
             }}
@@ -504,11 +550,24 @@ const LoginMUI = () => {
               backgroundColor: 'rgba(0,0,0,0.35)',
               backdropFilter: 'blur(4px)',
               border: '1px solid rgba(255,255,255,0.4)',
-              width: { xs: 36, sm: 40 },
-              height: { xs: 36, sm: 40 },
+              // Size + border-radius match the version chip on the right
+              // (~48px tall, 14px corners) so the bottom row reads as a set.
+              width: { xs: 40, sm: 48 },
+              height: { xs: 40, sm: 48 },
+              borderRadius: '14px',
+              // Inset top highlight mirrors the SignIn button — adds depth
+              // and ties the bottom row visually to the CTA.
+              boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.18)',
+              transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
               '&:hover': {
                 backgroundColor: 'rgba(0,0,0,0.55)',
-                borderColor: '#fff',
+                borderColor: 'rgba(255,255,255,0.7)',
+                transform: 'translateY(-2px)',
+                boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.28), 0 6px 18px rgba(0, 0, 0, 0.35)',
+              },
+              '&:active': {
+                transform: 'translateY(0)',
+                boxShadow: 'inset 0 2px 4px rgba(0, 0, 0, 0.25)',
               },
             }}
           >
@@ -536,21 +595,46 @@ const LoginMUI = () => {
             sx={{
               display: 'inline-flex',
               flexDirection: 'column',
-              alignItems: 'center',
+              alignItems: 'flex-start',
               color: '#fff',
               textDecoration: 'none',
-              textAlign: 'center',
-              px: 1.75,
+              textAlign: 'left',
+              // Extra left padding to make room for the brand accent stripe.
+              pl: 2,
+              pr: 1.75,
               py: 0.85,
               borderRadius: '14px',
               backgroundColor: 'rgba(0,0,0,0.35)',
               backdropFilter: 'blur(4px)',
               border: '1px solid rgba(255,255,255,0.4)',
-              transition: 'background-color 0.2s ease, border-color 0.2s ease',
+              // Inset top highlight matches the icon buttons + SignIn — bottom
+              // row reads as a coordinated set.
+              boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.18)',
+              transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
               cursor: 'pointer',
+              position: 'relative',
+              overflow: 'hidden',
+              // Vertical brand accent — picks up the red from the SignIn
+              // button and the logo's shield, tying the corner to the CTA.
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                left: 0,
+                top: 0,
+                bottom: 0,
+                width: '4px',
+                background: 'linear-gradient(180deg, #ef4444 0%, #dc2626 50%, #991b1b 100%)',
+                borderTopLeftRadius: '14px',
+                borderBottomLeftRadius: '14px',
+              },
               '&:hover': {
                 backgroundColor: 'rgba(0,0,0,0.55)',
-                borderColor: '#fff',
+                borderColor: 'rgba(255,255,255,0.7)',
+                transform: 'translateY(-2px)',
+                boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.28), 0 6px 18px rgba(0, 0, 0, 0.35)',
+              },
+              '&:active': {
+                transform: 'translateY(0)',
               },
             }}
           >
