@@ -167,7 +167,10 @@ const LoginMUI = () => {
             xs: '0 10px 40px rgba(0, 0, 0, 0.3)',
             sm: '0 25px 50px -12px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1)'
           },
-          my: 'auto',
+          // Bare-layout tenants sit higher in the viewport so the brand
+          // breathes from the top half; classic tenants stay centered.
+          mt: tenantConfig.login.bareLayout ? { xs: 3, sm: 6 } : 'auto',
+          mb: 'auto',
           maxHeight: { xs: 'calc(100vh - 32px)', sm: 'calc(100vh - 48px)' },
           overflowY: 'auto',
           overflow: 'hidden',
@@ -193,8 +196,8 @@ const LoginMUI = () => {
             // Bare-layout tenants (e.g. La Central) get a noticeably larger
             // logo since the card chrome is gone and the logo carries more
             // of the visual weight.
-            width: tenantConfig.login.bareLayout ? { xs: 220, sm: 400 } : { xs: 140, sm: 241 },
-            height: tenantConfig.login.bareLayout ? { xs: 220, sm: 400 } : { xs: 140, sm: 241 },
+            width: tenantConfig.login.bareLayout ? { xs: 200, sm: 360 } : { xs: 140, sm: 241 },
+            height: tenantConfig.login.bareLayout ? { xs: 200, sm: 360 } : { xs: 140, sm: 241 },
             mb: { xs: 1.5, sm: 2 },
             mx: 'auto',
             objectFit: 'contain',
@@ -325,7 +328,7 @@ const LoginMUI = () => {
                 },
                 '& input': {
                   py: { xs: 1.2, sm: 1.5 },
-                  fontSize: { xs: '18px', sm: '30px' },
+                  fontSize: { xs: '16px', sm: '24px' },
                 },
                 '& input::placeholder': {
                   color: '#94a3b8',
@@ -414,7 +417,7 @@ const LoginMUI = () => {
                 },
                 '& input': {
                   py: { xs: 1.2, sm: 1.5 },
-                  fontSize: { xs: '18px', sm: '30px' },
+                  fontSize: { xs: '16px', sm: '24px' },
                 },
                 '& input::placeholder': {
                   color: '#94a3b8',
