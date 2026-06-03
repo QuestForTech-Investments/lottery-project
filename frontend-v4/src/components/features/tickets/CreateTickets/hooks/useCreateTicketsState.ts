@@ -319,22 +319,28 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
     fetchConfig();
   }, [selectedPool?.bettingPoolId]);
 
-  // Load betting pools on mount (paginated — fetches all pages)
+  // Load betting pools on mount (paginated — fetches all pages).
+  // pageSize is large enough to return everything in one request when the
+  // API cap allows (5000), but the loop still works correctly against an
+  // older API that caps at a lower value.
   useEffect(() => {
     const loadPools = async () => {
       try {
-        const pageSize = 100;
+        const pageSize = 5000;
         const all: BettingPool[] = [];
         let page = 1;
         // eslint-disable-next-line no-constant-condition
         while (true) {
           const response = await api.get(`/betting-pools?page=${page}&pageSize=${pageSize}`) as
-            | { items?: BettingPool[]; totalCount?: number }
+            | { items?: BettingPool[]; totalCount?: number; pageSize?: number }
             | BettingPool[];
           const items: BettingPool[] = Array.isArray(response) ? response : (response.items || []);
           all.push(...items);
           if (Array.isArray(response)) break;
-          if (items.length < pageSize) break;
+          // Use the API's effective pageSize (which may be smaller than the
+          // requested 5000 due to clamping) to decide if there are more pages.
+          const effectivePageSize = response.pageSize ?? pageSize;
+          if (items.length < effectivePageSize) break;
           if (typeof response.totalCount === 'number' && all.length >= response.totalCount) break;
           page += 1;
         }
