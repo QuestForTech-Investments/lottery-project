@@ -144,7 +144,7 @@ public class BettingPoolsController : ControllerBase
     /// Get all betting pools with pagination and filtering
     /// </summary>
     /// <param name="page">Page number (default: 1)</param>
-    /// <param name="pageSize">Page size (default: 20, max: 100)</param>
+    /// <param name="pageSize">Page size (default: 20, max: 5000)</param>
     /// <param name="search">Search by name or code</param>
     /// <param name="zoneId">Filter by zone</param>
     /// <param name="isActive">Filter by active status</param>
@@ -160,9 +160,11 @@ public class BettingPoolsController : ControllerBase
         if (!await HasPermissionAsync("BANK_ACCESS")) return Forbid();
         try
         {
-            // Validate pagination parameters
+            // Validate pagination parameters. Cap raised to 5000 so tenants
+            // with several hundred bancas (e.g. La Central with 600) can load
+            // the full list for client-side filtering on the list page.
             page = Math.Max(1, page);
-            pageSize = Math.Clamp(pageSize, 1, 100);
+            pageSize = Math.Clamp(pageSize, 1, 5000);
 
             // Build query - No Include needed, EF will optimize with Select projection
             var query = _context.BettingPools.AsQueryable();
