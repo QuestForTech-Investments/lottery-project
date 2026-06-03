@@ -47,10 +47,12 @@ const DrawsGrid: React.FC<DrawsGridProps> = memo(({
   // a searchable Autocomplete that supports the same single/multi selection
   // and disabled states as the desktop grid.
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  // Filter draws based on betting pool restrictions
+  // Filter draws based on betting pool restrictions. When a banca is selected
+  // we ONLY show its assigned draws — including the "no draws assigned" case,
+  // which must render the empty state instead of every available draw.
+  // Loading state is handled separately via `loadingAllowedDraws`.
   const filteredDraws = draws.filter((draw) => {
     if (!selectedPool) return true;
-    if (allowedDrawIds.size === 0) return true;
     return allowedDrawIds.has(draw.id);
   });
 
