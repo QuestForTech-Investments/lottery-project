@@ -157,7 +157,9 @@ const LoginMUI = () => {
             ? 'none'
             : { xs: '3px solid #2d3748', sm: 'none' },
           px: tenantConfig.login.bareLayout ? { xs: 2, sm: 3 } : { xs: 2.5, sm: 5 },
-          py: { xs: 3, sm: 5 },
+          // Bare layout uses tighter vertical padding so the taller content
+          // (big logo + larger inputs) still fits viewports without scroll.
+          py: tenantConfig.login.bareLayout ? { xs: 2, sm: 3 } : { xs: 3, sm: 5 },
           width: '100%',
           // Bare layout needs more room so the larger logo fits centered with
           // the inputs (instead of overflowing and clipping on the right).
@@ -172,7 +174,10 @@ const LoginMUI = () => {
           mt: tenantConfig.login.bareLayout ? { xs: 0, sm: 1 } : 'auto',
           mb: 'auto',
           maxHeight: { xs: 'calc(100vh - 32px)', sm: 'calc(100vh - 48px)' },
-          overflowY: 'auto',
+          // Bare layout shrinks content (via vh-capped logo) instead of
+          // scrolling — anything that doesn't fit just gets clipped, which
+          // never happens in practice because the logo scales down first.
+          overflowY: tenantConfig.login.bareLayout ? 'hidden' : 'auto',
           overflow: 'hidden',
           animation: 'fadeInUp 0.6s ease-out',
           '@keyframes fadeInUp': {
@@ -196,8 +201,15 @@ const LoginMUI = () => {
             // Bare-layout tenants (e.g. La Central) get a noticeably larger
             // logo since the card chrome is gone and the logo carries more
             // of the visual weight.
-            width: tenantConfig.login.bareLayout ? { xs: 200, sm: 360 } : { xs: 140, sm: 241 },
-            height: tenantConfig.login.bareLayout ? { xs: 200, sm: 360 } : { xs: 140, sm: 241 },
+            // Bare layout: cap the logo size against viewport height so it
+            // shrinks automatically on short screens (laptop, half-height
+            // windows) and never forces the form to scroll.
+            width: tenantConfig.login.bareLayout
+              ? { xs: 'min(200px, 28vh)', sm: 'min(360px, 38vh)' }
+              : { xs: 140, sm: 241 },
+            height: tenantConfig.login.bareLayout
+              ? { xs: 'min(200px, 28vh)', sm: 'min(360px, 38vh)' }
+              : { xs: 140, sm: 241 },
             mb: { xs: 1.5, sm: 2 },
             mx: 'auto',
             objectFit: 'contain',
