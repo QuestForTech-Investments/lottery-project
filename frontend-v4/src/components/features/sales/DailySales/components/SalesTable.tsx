@@ -22,7 +22,7 @@ import type { SalesTableProps, SalesRow } from '../types';
 
 type SortOrder = 'asc' | 'desc';
 
-const SalesTable: FC<SalesTableProps> = memo(({ data, totals, columns, onCodeClick }) => {
+const SalesTable: FC<SalesTableProps> = memo(({ data, totals, columns, onCodeClick, disableCodeClick = false }) => {
   const { t } = useTranslation();
   // Default sort matches the previous static order (by code asc).
   const [sortBy, setSortBy] = useState<keyof SalesRow>('code');
@@ -94,19 +94,23 @@ const SalesTable: FC<SalesTableProps> = memo(({ data, totals, columns, onCodeCli
                   ref: <TableCell key="ref" sx={{ whiteSpace: 'nowrap' }}>{row.ref}</TableCell>,
                   code: (
                     <TableCell key="code" sx={{ whiteSpace: 'nowrap' }}>
-                      <Link
-                        component="button"
-                        variant="body2"
-                        onClick={() => onCodeClick(row.id)}
-                        sx={{
-                          cursor: 'pointer',
-                          color: '#1976d2',
-                          textDecoration: 'none',
-                          '&:hover': { textDecoration: 'underline' },
-                        }}
-                      >
-                        {row.code}
-                      </Link>
+                      {disableCodeClick ? (
+                        <span style={{ color: 'inherit' }}>{row.code}</span>
+                      ) : (
+                        <Link
+                          component="button"
+                          variant="body2"
+                          onClick={() => onCodeClick(row.id)}
+                          sx={{
+                            cursor: 'pointer',
+                            color: '#1976d2',
+                            textDecoration: 'none',
+                            '&:hover': { textDecoration: 'underline' },
+                          }}
+                        >
+                          {row.code}
+                        </Link>
+                      )}
                     </TableCell>
                   ),
                   p: <TableCell key="p" align="center">{row.p}</TableCell>,

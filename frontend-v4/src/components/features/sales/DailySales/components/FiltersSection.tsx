@@ -45,26 +45,6 @@ const FiltersSection: FC<FiltersSectionProps> = memo(({
       alignItems: 'flex-end',
       flexDirection: { xs: 'column', sm: 'row' },
     }}>
-      {/* Group Filter — only when there are partners */}
-      {showGroupSelector && (
-        <Box sx={{ width: { xs: '100%', sm: 'auto' } }}>
-          <Typography variant="caption" sx={{ color: 'text.secondary', mb: 0.5, display: 'block' }}>
-            {t('sales.daily.group', { defaultValue: 'Grupo' })}
-          </Typography>
-          <FormControl sx={{ width: { xs: '100%', sm: 200 }, minWidth: { sm: 200 }, ...COMPACT_SELECT_STYLE }} size="small">
-            <Select
-              value={selectedGroupId}
-              onChange={(e) => onGroupChange(String(e.target.value))}
-              input={<OutlinedInput />}
-            >
-              {groupOptions.map(opt => (
-                <MenuItem key={opt.id} value={opt.id}>{opt.label}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        </Box>
-      )}
-
       {/* Date Filter */}
       <Box sx={{ width: { xs: '100%', sm: 'auto' } }}>
         <Typography variant="caption" sx={{ color: 'text.secondary', mb: 0.5, display: 'block' }}>
@@ -128,6 +108,28 @@ const FiltersSection: FC<FiltersSectionProps> = memo(({
           </Select>
         </FormControl>
       </Box>
+
+      {/* Group Filter — last in the row, only shown when there are partners
+          with can_view_today_sales=true. The group selector is the most
+          "context-switching" filter, so it sits at the end. */}
+      {showGroupSelector && (
+        <Box sx={{ width: { xs: '100%', sm: 'auto' } }}>
+          <Typography variant="caption" sx={{ color: 'text.secondary', mb: 0.5, display: 'block' }}>
+            {t('sales.daily.group', { defaultValue: 'Grupo' })}
+          </Typography>
+          <FormControl sx={{ width: { xs: '100%', sm: 200 }, minWidth: { sm: 200 }, ...COMPACT_SELECT_STYLE }} size="small">
+            <Select
+              value={selectedGroupId}
+              onChange={(e) => onGroupChange(String(e.target.value))}
+              input={<OutlinedInput />}
+            >
+              {groupOptions.map(opt => (
+                <MenuItem key={opt.id} value={opt.id}>{opt.label}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Box>
+      )}
     </Box>
   );
 });

@@ -152,18 +152,22 @@ const DailySales = (): React.ReactElement => {
       const rows = await getExternalTenantTodaySalesByBanca(externalId, date);
       const mappedData: SalesRow[] = (rows || []).map((r) => ({
         id: r.bettingPoolId,
-        ref: '',
+        // `ref` renders as "Banca" in the UI — use the partner's reference label.
+        ref: r.reference ?? r.bettingPoolName ?? '',
         code: r.bettingPoolCode,
-        p: 0, l: 0, w: 0, total: r.ticketCount,
+        p: r.pendingCount,
+        l: r.loserCount,
+        w: r.winnerCount,
+        total: r.ticketCount,
         sales: r.totalSold,
         commissions: r.totalCommissions,
-        discounts: 0,
+        discounts: r.totalDiscounts,
         prizes: r.totalPrizes,
         net: r.totalNet,
-        fall: 0,
-        final: r.totalNet,
-        balance: 0,
-        accumulatedFall: 0,
+        fall: r.fall,
+        final: r.totalNet - (r.fall || 0),
+        balance: r.balance,
+        accumulatedFall: r.accumulatedFall,
       }));
       setSalesData(mappedData);
     } catch (err) {
@@ -481,6 +485,9 @@ const DailySales = (): React.ReactElement => {
                   totals={totals}
                   columns={tableColumns}
                   onCodeClick={handleCodeClick}
+                  // No tiene sentido abrir el detalle de una banca de otro
+                  // tenant — su id no existe en este sistema.
+                  disableCodeClick={viewingExternal}
                 />
 
                 {/* Entry Counter */}
