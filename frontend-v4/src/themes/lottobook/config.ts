@@ -9,6 +9,10 @@ const config: TenantConfig = {
   login: {
     logoAlt: 'Lottobook',
   },
+  sidebar: {
+    title: 'LOTTOBOOK',
+    subtitle: 'LOTTERY SYSTEM',
+  },
   // Feature flags. Default ON for everything Lottobook currently has.
   // La Central's config can mirror or differ.
   features: {

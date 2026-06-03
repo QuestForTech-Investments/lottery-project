@@ -135,6 +135,24 @@ builder.Services.AddSingleton<ICacheService, MemoryCacheService>();
 builder.Services.AddSingleton<ILimitReservationService, LimitReservationService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 
+// Public cross-tenant API (consumed by La Central et al). Key + tenant
+// identity live in the gitignored appsettings.{Environment}.json files.
+builder.Services.Configure<LotteryApi.Configuration.PublicApiOptions>(
+    builder.Configuration.GetSection(LotteryApi.Configuration.PublicApiOptions.SectionName));
+// HTTP client for ExternalTenantsController proxy calls. Short timeout so a
+// dead partner doesn't stall the user-facing request.
+builder.Services.AddHttpClient("ExternalTenantsProxy", c =>
+{
+    c.Timeout = TimeSpan.FromSeconds(5);
+});
+// HTTP client for outbound result-sync pushes. Same short timeout — the push
+// is fire-and-forget; if the partner is slow the operator can re-push later.
+builder.Services.AddHttpClient(ResultSyncService.HttpClientName, c =>
+{
+    c.Timeout = TimeSpan.FromSeconds(5);
+});
+builder.Services.AddScoped<ResultSyncService>();
+
 // SMTP / email — IONOS-backed transactional sender used by EmailReceivers.
 // Credentials live in the gitignored appsettings.{Environment}.json files.
 builder.Services.Configure<LotteryApi.Configuration.SmtpOptions>(
@@ -253,13 +271,19 @@ builder.Services.AddCors(options =>
     }
     else
     {
-        // Production: Restrictivo para seguridad
-        var allowedOrigins = new[] {
-            "https://lotto-app.azurewebsites.net",
-            "https://pos.lottobook.net",
-            "https://lottobook.net",
-            "https://proud-coast-0a06d9c1e.4.azurestaticapps.net"
-        };
+        // Production: read allowed origins from configuration so each tenant
+        // can supply its own list via appsettings (CorsOrigins array). The
+        // hardcoded fallback keeps Lottobook working if config is missing.
+        var configuredOrigins = builder.Configuration
+            .GetSection("CorsOrigins").Get<string[]>();
+        var allowedOrigins = (configuredOrigins != null && configuredOrigins.Length > 0)
+            ? configuredOrigins
+            : new[] {
+                "https://lotto-app.azurewebsites.net",
+                "https://pos.lottobook.net",
+                "https://lottobook.net",
+                "https://proud-coast-0a06d9c1e.4.azurestaticapps.net"
+            };
 
         options.AddPolicy("DefaultPolicy", policy =>
         {

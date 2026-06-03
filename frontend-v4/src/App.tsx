@@ -115,6 +115,10 @@ const EditAccountableEntityMUI = lazy(() => import('@components/features/account
 // My Group feature components
 const GroupConfigurationMUI = lazy(() => import('@components/features/my-group/GroupConfiguration'))
 
+// External tenants (multi-tenant: cross-tenant sales view + result sync)
+const ExternalTenantsAdminMUI = lazy(() => import('@components/features/external-tenants/ExternalTenantsAdmin'))
+const ResultSyncLogMUI = lazy(() => import('@components/features/external-tenants/ResultSyncLogPage'))
+
 // Warnings feature components
 const WarningsListMUI = lazy(() => import('@components/features/warnings/WarningsList'))
 
@@ -424,6 +428,18 @@ function App() {
                           <Route path="/my-group/configuration" element={
                             <PermissionGuard permission="MANAGE_MY_GROUP">
                               <LazyRoute component={GroupConfigurationMUI} />
+                            </PermissionGuard>
+                          } />
+
+                          {/* External Tenants (multi-tenant pairing) */}
+                          <Route path="/external-tenants" element={
+                            <PermissionGuard permission="VIEW_EXTERNAL_TENANTS">
+                              <LazyRoute component={ExternalTenantsAdminMUI} />
+                            </PermissionGuard>
+                          } />
+                          <Route path="/external-tenants/sync-log" element={
+                            <PermissionGuard permission="VIEW_RESULT_SYNC">
+                              <LazyRoute component={ResultSyncLogMUI} />
                             </PermissionGuard>
                           } />
 

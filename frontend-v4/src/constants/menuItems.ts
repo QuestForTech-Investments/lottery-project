@@ -175,6 +175,19 @@ export const MENU_ITEMS: MenuItem[] = [
       { id: 'group-configuration', label: 'menu.myGroupConfig', shortcut: 'C', path: '/my-group/configuration', permission: 'MANAGE_MY_GROUP' }
     ]
   },
+  // Multi-tenant: partner registry + sync controls. Gated by feature flag so
+  // tenants that never pair with anyone don't see the entry.
+  {
+    id: 'external-tenants',
+    label: 'menu.externalTenants',
+    icon: Store,
+    feature: 'externalTenantsAdmin',
+    permission: ['VIEW_EXTERNAL_TENANTS', 'VIEW_RESULT_SYNC'],
+    submenu: [
+      { id: 'external-tenants-list', label: 'menu.externalTenantsList', path: '/external-tenants', permission: 'VIEW_EXTERNAL_TENANTS' },
+      { id: 'external-tenants-sync-log', label: 'menu.externalTenantsSyncLog', path: '/external-tenants/sync-log', permission: 'VIEW_RESULT_SYNC' },
+    ],
+  },
   { id: 'warnings', label: 'menu.warnings', icon: WarningIcon, path: '/warnings', permission: 'VIEW_ANOMALIES' },
   {
     id: 'zones',

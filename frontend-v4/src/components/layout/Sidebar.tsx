@@ -231,7 +231,7 @@ function Sidebar({ collapsed, hovered, onHoverChange, isMobile = false, mobileOp
                 lineHeight: 1.1,
               }}
             >
-              LOTTOBOOK
+              {tenantConfig.sidebar.title ?? tenantConfig.systemName.toUpperCase()}
             </Typography>
             <Typography
               sx={{
@@ -246,7 +246,7 @@ function Sidebar({ collapsed, hovered, onHoverChange, isMobile = false, mobileOp
                 letterSpacing: '0.5px',
               }}
             >
-              LOTTERY SYSTEM
+              {tenantConfig.sidebar.subtitle}
             </Typography>
           </Box>
         </Box>
@@ -514,7 +514,7 @@ function Sidebar({ collapsed, hovered, onHoverChange, isMobile = false, mobileOp
                 whiteSpace: 'nowrap',
               }}
             >
-              LOTTOBOOK
+              {tenantConfig.sidebar.title ?? tenantConfig.systemName.toUpperCase()}
             </Typography>
             <Typography
               sx={{
@@ -530,7 +530,7 @@ function Sidebar({ collapsed, hovered, onHoverChange, isMobile = false, mobileOp
                 whiteSpace: 'nowrap',
               }}
             >
-              LOTTERY SYSTEM
+              {tenantConfig.sidebar.subtitle}
             </Typography>
           </Box>
         )}

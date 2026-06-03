@@ -18,6 +18,16 @@ public class Draw
     [Column("draw_name")]
     public string DrawName { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Immutable cross-tenant identifier for this draw (e.g. "REAL_TARDE").
+    /// Backfilled at migration time from <see cref="DrawName"/>. Stable across
+    /// renames so the result-sync push/inbound can match draws between
+    /// paired tenants.
+    /// </summary>
+    [MaxLength(50)]
+    [Column("draw_code")]
+    public string? DrawCode { get; set; }
+
     [Required]
     [Column("draw_time")]
     public TimeSpan DrawTime { get; set; }

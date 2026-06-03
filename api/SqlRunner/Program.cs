@@ -1,6 +1,10 @@
 using Microsoft.Data.SqlClient;
 
-var connectionString = "Server=lottery-sql-1505.database.windows.net,1433;Initial Catalog=lottery-db;User ID=lotteryAdmin;Password=NewLottery2025;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;";
+// 2nd CLI arg overrides the target database name (everything else stays the
+// same — same server, same admin). Useful for running migrations against
+// peer tenant DBs like lottery-db-lacentral without forking this tool.
+var dbName = args.Length > 1 ? args[1] : "lottery-db";
+var connectionString = $"Server=lottery-sql-1505.database.windows.net,1433;Initial Catalog={dbName};User ID=lotteryAdmin;Password=NewLottery2025;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;";
 
 // Get SQL script path from command line arguments or use default
 var scriptPath = args.Length > 0 ? args[0] : "../fix-footer-table.sql";
@@ -8,7 +12,8 @@ var scriptPath = args.Length > 0 ? args[0] : "../fix-footer-table.sql";
 Console.WriteLine("========================================");
 Console.WriteLine("  SQL Script Runner");
 Console.WriteLine("========================================");
-Console.WriteLine($"Script: {scriptPath}");
+Console.WriteLine($"Script:   {scriptPath}");
+Console.WriteLine($"Database: {dbName}");
 Console.WriteLine();
 
 if (!File.Exists(scriptPath))

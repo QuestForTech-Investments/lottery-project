@@ -41,8 +41,19 @@ import ResultadosSubTab from './tabs/ResultadosSubTab';
 import { FiltersSection, ActionButtons, FilterToggles, SalesTable } from './components';
 
 // Local types and constants
-import type { Zone, BettingPool, SalesRow, BettingPoolSalesDto, SalesTotals } from './types';
+import type { Zone, BettingPool, SalesRow, BettingPoolSalesDto, SalesTotals, GroupOption } from './types';
 import { TABLE_COLUMNS, TABLE_COLUMNS_MOBILE, MAIN_TABS, INITIAL_TOTALS } from './constants';
+
+// External tenants (cross-tenant "Grupo" filter)
+import {
+  listExternalTenants,
+  getExternalTenantTodaySalesByBanca,
+  type ExternalTenantDto,
+} from '@services/externalTenantsService';
+import { tenantConfig } from '@/tenant';
+
+const SELF_GROUP_ID = 'self';
+const EXTERNAL_GROUP_PREFIX = 'ext-';
 
 // ============================================================================
 // Main Component
@@ -77,46 +88,111 @@ const DailySales = (): React.ReactElement => {
   // Sales data
   const [salesData, setSalesData] = useState<SalesRow[]>([]);
 
-  // Load sales data
-  const loadSalesData = useCallback(async (date: string) => {
-    try {
-      const response = await api.get<BettingPoolSalesDto[]>(
-        `/reports/sales/by-betting-pool?startDate=${date}&endDate=${date}`
-      );
+  // External tenants ("Grupo" dropdown). Loaded once at mount; only partners
+  // with can_view_today_sales=true become selectable options.
+  const [externalTenants, setExternalTenants] = useState<ExternalTenantDto[]>([]);
+  const [selectedGroupId, setSelectedGroupId] = useState<string>(SELF_GROUP_ID);
 
-      const mappedData: SalesRow[] = (response || []).map((item) => ({
-        id: item.bettingPoolId,
-        ref: item.reference || '',
-        code: item.bettingPoolCode,
-        p: item.pendingCount || 0,
-        l: item.loserCount || 0,
-        w: item.winnerCount || 0,
-        total: (item.pendingCount || 0) + (item.loserCount || 0) + (item.winnerCount || 0),
-        sales: item.totalSold,
-        commissions: item.totalCommissions,
-        discounts: item.totalDiscounts,
-        prizes: item.totalPrizes,
-        net: item.totalNet,
-        fall: item.fall || 0,
-        final: item.totalNet - (item.fall || 0),
-        balance: item.balance || 0,
-        accumulatedFall: item.accumulatedFall || 0,
+  const groupOptions: GroupOption[] = useMemo(() => {
+    const opts: GroupOption[] = [{ id: SELF_GROUP_ID, label: tenantConfig.systemName }];
+    externalTenants
+      .filter(t => t.isActive && t.canViewTodaySales)
+      .sort((a, b) => (a.sortOrder - b.sortOrder) || a.displayName.localeCompare(b.displayName))
+      .forEach(t => opts.push({
+        id: `${EXTERNAL_GROUP_PREFIX}${t.externalTenantId}`,
+        label: t.displayName,
+        externalTenantId: t.externalTenantId,
       }));
+    return opts;
+  }, [externalTenants]);
 
+  // Are we currently viewing a partner's data (vs our own)?
+  const viewingExternal = selectedGroupId.startsWith(EXTERNAL_GROUP_PREFIX);
+
+  // Load sales data. Routes to either the local SalesReports endpoint or a
+  // partner proxy depending on the selected group. Partner data only fills
+  // the subset of SalesRow fields the public endpoint exposes — internal
+  // fields (P/L/W counts, fall, balance) render as 0 in the external view.
+  const loadSalesData = useCallback(async (date: string, groupId: string) => {
+    try {
+      if (groupId === SELF_GROUP_ID) {
+        const response = await api.get<BettingPoolSalesDto[]>(
+          `/reports/sales/by-betting-pool?startDate=${date}&endDate=${date}`
+        );
+
+        const mappedData: SalesRow[] = (response || []).map((item) => ({
+          id: item.bettingPoolId,
+          ref: item.reference || '',
+          code: item.bettingPoolCode,
+          p: item.pendingCount || 0,
+          l: item.loserCount || 0,
+          w: item.winnerCount || 0,
+          total: (item.pendingCount || 0) + (item.loserCount || 0) + (item.winnerCount || 0),
+          sales: item.totalSold,
+          commissions: item.totalCommissions,
+          discounts: item.totalDiscounts,
+          prizes: item.totalPrizes,
+          net: item.totalNet,
+          fall: item.fall || 0,
+          final: item.totalNet - (item.fall || 0),
+          balance: item.balance || 0,
+          accumulatedFall: item.accumulatedFall || 0,
+        }));
+
+        setSalesData(mappedData);
+        return;
+      }
+
+      // External tenant proxy.
+      const externalId = parseInt(groupId.slice(EXTERNAL_GROUP_PREFIX.length), 10);
+      if (Number.isNaN(externalId)) {
+        setSalesData([]);
+        return;
+      }
+      const rows = await getExternalTenantTodaySalesByBanca(externalId, date);
+      const mappedData: SalesRow[] = (rows || []).map((r) => ({
+        id: r.bettingPoolId,
+        ref: '',
+        code: r.bettingPoolCode,
+        p: 0, l: 0, w: 0, total: r.ticketCount,
+        sales: r.totalSold,
+        commissions: r.totalCommissions,
+        discounts: 0,
+        prizes: r.totalPrizes,
+        net: r.totalNet,
+        fall: 0,
+        final: r.totalNet,
+        balance: 0,
+        accumulatedFall: 0,
+      }));
       setSalesData(mappedData);
     } catch (err) {
       console.error('[DATA] Error loading sales:', err);
+      setSalesData([]);
     }
   }, []);
+
+  const handleGroupChange = useCallback(async (id: string) => {
+    setSelectedGroupId(id);
+    setLoading(true);
+    try {
+      await loadSalesData(selectedDate, id);
+    } finally {
+      setLoading(false);
+    }
+  }, [loadSalesData, selectedDate]);
 
   // Load initial data
   const loadInitialData = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const [poolsData, zonesData] = await Promise.all([
+      const [poolsData, zonesData, externalsResult] = await Promise.all([
         api.get<{ items?: BettingPool[] } | BettingPool[]>('/betting-pools?pageSize=1000'),
-        api.get<{ items?: Zone[] } | Zone[]>('/zones')
+        api.get<{ items?: Zone[] } | Zone[]>('/zones'),
+        // Allow failure (e.g. user without VIEW_EXTERNAL_TENANTS perm) without
+        // breaking the page — the dropdown just won't show.
+        listExternalTenants().catch(() => [] as ExternalTenantDto[]),
       ]);
 
       const poolsArray = (poolsData && typeof poolsData === 'object' && 'items' in poolsData)
@@ -128,11 +204,12 @@ const DailySales = (): React.ReactElement => {
 
       setBettingPools(poolsArray);
       setZones(zonesArray);
+      setExternalTenants(externalsResult || []);
 
       const allZoneIds = zonesArray.map((z) => z.zoneId || z.id).filter((id): id is number => id !== undefined);
       setSelectedZones(allZoneIds);
 
-      await loadSalesData(getTodayDate());
+      await loadSalesData(getTodayDate(), SELF_GROUP_ID);
     } catch (err) {
       console.error('[DATA] Error loading data:', err);
       setError(err instanceof Error ? err.message : 'Error loading data');
@@ -149,11 +226,11 @@ const DailySales = (): React.ReactElement => {
   const handleSearch = useCallback(async () => {
     setLoading(true);
     try {
-      await loadSalesData(selectedDate);
+      await loadSalesData(selectedDate, selectedGroupId);
     } finally {
       setLoading(false);
     }
-  }, [loadSalesData, selectedDate]);
+  }, [loadSalesData, selectedDate, selectedGroupId]);
 
 
   const handleProcessTodayTickets = useCallback(() => {
@@ -327,6 +404,9 @@ const DailySales = (): React.ReactElement => {
               selectedZones={selectedZones}
               onDateChange={setSelectedDate}
               onZoneChange={handleZoneChange}
+              groupOptions={groupOptions}
+              selectedGroupId={selectedGroupId}
+              onGroupChange={handleGroupChange}
             />
 
             {/* Action Buttons */}

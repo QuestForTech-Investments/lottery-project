@@ -27,8 +27,15 @@ const FiltersSection: FC<FiltersSectionProps> = memo(({
   selectedZones,
   onDateChange,
   onZoneChange,
+  groupOptions,
+  selectedGroupId,
+  onGroupChange,
 }) => {
   const { t } = useTranslation();
+  // The "Grupo" dropdown only appears when there's more than one option
+  // (i.e., at least one partner with can_view_today_sales=true is
+  // configured). Tenants without partners see exactly the legacy UI.
+  const showGroupSelector = groupOptions.length > 1;
   return (
     <Box sx={{
       display: 'flex',
@@ -38,6 +45,26 @@ const FiltersSection: FC<FiltersSectionProps> = memo(({
       alignItems: 'flex-end',
       flexDirection: { xs: 'column', sm: 'row' },
     }}>
+      {/* Group Filter — only when there are partners */}
+      {showGroupSelector && (
+        <Box sx={{ width: { xs: '100%', sm: 'auto' } }}>
+          <Typography variant="caption" sx={{ color: 'text.secondary', mb: 0.5, display: 'block' }}>
+            {t('sales.daily.group', { defaultValue: 'Grupo' })}
+          </Typography>
+          <FormControl sx={{ width: { xs: '100%', sm: 200 }, minWidth: { sm: 200 }, ...COMPACT_SELECT_STYLE }} size="small">
+            <Select
+              value={selectedGroupId}
+              onChange={(e) => onGroupChange(String(e.target.value))}
+              input={<OutlinedInput />}
+            >
+              {groupOptions.map(opt => (
+                <MenuItem key={opt.id} value={opt.id}>{opt.label}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Box>
+      )}
+
       {/* Date Filter */}
       <Box sx={{ width: { xs: '100%', sm: 'auto' } }}>
         <Typography variant="caption" sx={{ color: 'text.secondary', mb: 0.5, display: 'block' }}>
