@@ -118,14 +118,8 @@ public class PublicController : ControllerBase
         var utcStart = DateTimeHelper.GetUtcStartOfDay(targetDate);
         var utcEnd = DateTimeHelper.GetUtcEndOfDay(targetDate);
 
-<<<<<<< Updated upstream
-        // Aggregate ticket-level totals + P/L/W counts in one pass (parity
-        // with SalesReportsController.GetSalesByBettingPool — the partner
-        // tenant uses these to render the same Daily Sales table).
-=======
         // Step 1 — ticket-level aggregation per banca (P/L/W counts +
         // currency totals). Matches SalesReportsController.GetSalesByBettingPool.
->>>>>>> Stashed changes
         var ticketAgg = await _context.Tickets
             .AsNoTracking()
             .Where(t => !t.IsCancelled
@@ -135,11 +129,7 @@ public class PublicController : ControllerBase
             .Select(g => new
             {
                 BettingPoolId = g.Key,
-<<<<<<< Updated upstream
-                TotalSold = g.Sum(t => t.TotalBetAmount),
-=======
                 TotalSold = g.Sum(t => t.GrandTotal),
->>>>>>> Stashed changes
                 TotalPrizes = g.Sum(t => t.TotalPrize),
                 TotalCommissions = g.Sum(t => t.TotalCommission),
                 TotalDiscounts = g.Sum(t => t.TotalDiscount),
@@ -169,23 +159,6 @@ public class PublicController : ControllerBase
             })
             .ToDictionaryAsync(bp => bp.BettingPoolId);
 
-<<<<<<< Updated upstream
-        // Current balance per banca (single roundtrip lookup).
-        var balances = await _context.Balances
-            .AsNoTracking()
-            .Where(b => bpIds.Contains(b.BettingPoolId))
-            .Select(b => new { b.BettingPoolId, b.CurrentBalance })
-            .ToDictionaryAsync(b => b.BettingPoolId, b => b.CurrentBalance);
-
-        // Caída snapshot from the history table for this date. The realtime
-        // caída service is excluded here on purpose — it requires per-banca
-        // config and is a partial mirror at best across tenants.
-        var caidaSnapshot = await _context.CaidaHistory
-            .AsNoTracking()
-            .Where(h => bpIds.Contains(h.BettingPoolId) && h.CalculationDate == targetDate)
-            .Select(h => new { h.BettingPoolId, h.CaidaAmount })
-            .ToDictionaryAsync(h => h.BettingPoolId, h => h.CaidaAmount);
-=======
         // Step 2 — balance snapshot date: use today's if it exists, otherwise
         // yesterday's. Mirrors SalesReportsController logic.
         var hasSnapshot = await _context.BalanceHistories
@@ -238,20 +211,14 @@ public class PublicController : ControllerBase
             var (f, a) = await _caidaService.GetRealtimeCaidaAsync(bpId, targetDate);
             caidaValues[bpId] = (f, a);
         }
->>>>>>> Stashed changes
 
         var rows = ticketAgg
             .Select(a =>
             {
                 pools.TryGetValue(a.BettingPoolId, out var bp);
-<<<<<<< Updated upstream
-                balances.TryGetValue(a.BettingPoolId, out var balance);
-                caidaSnapshot.TryGetValue(a.BettingPoolId, out var fall);
-=======
                 var snapBal = snapshots.TryGetValue(a.BettingPoolId, out var s) ? s : 0m;
                 txAdjustmentMap.TryGetValue(a.BettingPoolId, out var txAdj);
                 caidaValues.TryGetValue(a.BettingPoolId, out var caida);
->>>>>>> Stashed changes
                 var totalNet = a.TotalSold + a.RiferoDiscount - a.TotalCommissions - a.TotalPrizes;
                 return new PublicTodaySalesByBancaRow
                 {
@@ -270,15 +237,9 @@ public class PublicController : ControllerBase
                     PendingCount = a.PendingCount,
                     WinnerCount = a.WinnerCount,
                     LoserCount = a.LoserCount,
-<<<<<<< Updated upstream
-                    Balance = balance,
-                    Fall = fall,
-                    AccumulatedFall = 0m,  // Not exposed cross-tenant in V1.
-=======
                     Balance = snapBal + totalNet + txAdj,
                     Fall = caida.fall,
                     AccumulatedFall = caida.acc,
->>>>>>> Stashed changes
                 };
             })
             .OrderByDescending(r => r.TotalSold)

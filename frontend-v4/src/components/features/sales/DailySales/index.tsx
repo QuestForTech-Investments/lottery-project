@@ -152,12 +152,8 @@ const DailySales = (): React.ReactElement => {
       const rows = await getExternalTenantTodaySalesByBanca(externalId, date);
       const mappedData: SalesRow[] = (rows || []).map((r) => ({
         id: r.bettingPoolId,
-<<<<<<< Updated upstream
-        // `ref` renders as "Banca" in the UI — use the partner's reference label.
-=======
         // `ref` renders as "Banca" in the UI — use the partner's reference
         // label, fall back to the betting pool name if not set.
->>>>>>> Stashed changes
         ref: r.reference ?? r.bettingPoolName ?? '',
         code: r.bettingPoolCode,
         p: r.pendingCount,

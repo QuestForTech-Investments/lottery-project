@@ -22,24 +22,15 @@ public class PublicTodaySalesDto
 }
 
 /// <summary>Banca-level breakdown for the cross-tenant "Grupo" view.
-<<<<<<< Updated upstream
 /// Field set mirrors <c>BettingPoolSalesDto</c> so the consumer can render
 /// the same table as the local view (P/L/W counts, balance, caída).
 /// </summary>
-=======
-/// Field set mirrors <c>BettingPoolSalesDto</c> so the partner can render
-/// the same Daily Sales table (P/L/W counts, balance, caída).</summary>
->>>>>>> Stashed changes
 public class PublicTodaySalesByBancaRow
 {
     public int BettingPoolId { get; set; }
     public string BettingPoolCode { get; set; } = string.Empty;
     public string BettingPoolName { get; set; } = string.Empty;
-<<<<<<< Updated upstream
     /// <summary>The "ref" / "Banca" label most tenants use as the human-friendly identifier.</summary>
-=======
-    /// <summary>Human-friendly "Banca" label rendered in the ref column.</summary>
->>>>>>> Stashed changes
     public string? Reference { get; set; }
     public int? ZoneId { get; set; }
     public string? ZoneName { get; set; }
@@ -49,21 +40,13 @@ public class PublicTodaySalesByBancaRow
     public decimal TotalDiscounts { get; set; }
     public decimal TotalNet { get; set; }
     public int TicketCount { get; set; }
-<<<<<<< Updated upstream
     // Ticket-state counts (P=pending, W=winner, L=loser).
-    public int PendingCount { get; set; }
-    public int WinnerCount { get; set; }
-    public int LoserCount { get; set; }
-    public decimal Balance { get; set; }
-=======
-    // Ticket-state counts.
     public int PendingCount { get; set; }
     public int WinnerCount { get; set; }
     public int LoserCount { get; set; }
     // Balance computed as snapshot + net + transaction adjustments (same as local view).
     public decimal Balance { get; set; }
     // Real-time caída (matches CaidaCalculationService output).
->>>>>>> Stashed changes
     public decimal Fall { get; set; }
     public decimal AccumulatedFall { get; set; }
 }
