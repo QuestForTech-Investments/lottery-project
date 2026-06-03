@@ -86,13 +86,21 @@ export interface ExternalTodaySalesByBancaRow {
   bettingPoolId: number
   bettingPoolCode: string
   bettingPoolName: string
+  reference?: string | null
   zoneId?: number | null
   zoneName?: string | null
   totalSold: number
   totalPrizes: number
   totalCommissions: number
+  totalDiscounts: number
   totalNet: number
   ticketCount: number
+  pendingCount: number
+  winnerCount: number
+  loserCount: number
+  balance: number
+  fall: number
+  accumulatedFall: number
 }
 
 export interface ExternalTodaySalesByDrawRow {

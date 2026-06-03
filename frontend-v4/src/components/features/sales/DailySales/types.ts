@@ -146,4 +146,8 @@ export interface SalesTableProps {
   totals: SalesTotals;
   columns: TableColumn[];
   onCodeClick: (bettingPoolId: number) => void;
+  /** When true the código column renders as plain text instead of a clickable
+   *  link. Used when viewing a partner tenant's data — the local ticket
+   *  detail view has no idea what to do with another tenant's bettingPoolId. */
+  disableCodeClick?: boolean;
 }

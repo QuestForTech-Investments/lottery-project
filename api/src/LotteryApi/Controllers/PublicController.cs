@@ -114,29 +114,95 @@ public class PublicController : ControllerBase
         var utcStart = DateTimeHelper.GetUtcStartOfDay(targetDate);
         var utcEnd = DateTimeHelper.GetUtcEndOfDay(targetDate);
 
-        var rows = await _context.Tickets
+        // Aggregate ticket-level totals + P/L/W counts in one pass (parity
+        // with SalesReportsController.GetSalesByBettingPool — the partner
+        // tenant uses these to render the same Daily Sales table).
+        var ticketAgg = await _context.Tickets
             .AsNoTracking()
-            .Include(t => t.BettingPool)
-                .ThenInclude(bp => bp!.Zone)
             .Where(t => !t.IsCancelled
                 && t.CreatedAt >= utcStart
                 && t.CreatedAt <= utcEnd)
             .GroupBy(t => t.BettingPoolId)
-            .Select(g => new PublicTodaySalesByBancaRow
+            .Select(g => new
             {
                 BettingPoolId = g.Key,
-                BettingPoolCode = g.Select(t => t.BettingPool!.BettingPoolCode).FirstOrDefault() ?? string.Empty,
-                BettingPoolName = g.Select(t => t.BettingPool!.BettingPoolName).FirstOrDefault() ?? string.Empty,
-                ZoneId = g.Select(t => (int?)t.BettingPool!.ZoneId).FirstOrDefault(),
-                ZoneName = g.Select(t => t.BettingPool!.Zone != null ? t.BettingPool.Zone.ZoneName : null).FirstOrDefault(),
                 TotalSold = g.Sum(t => t.TotalBetAmount),
                 TotalPrizes = g.Sum(t => t.TotalPrize),
                 TotalCommissions = g.Sum(t => t.TotalCommission),
-                TotalNet = g.Sum(t => t.TotalBetAmount - t.TotalDiscount - t.TotalCommission - t.TotalPrize),
+                TotalDiscounts = g.Sum(t => t.TotalDiscount),
+                RiferoDiscount = g.Where(t => t.DiscountMode == "RIFERO").Sum(t => t.TotalDiscount),
                 TicketCount = g.Count(),
+                PendingCount = g.Count(t => t.TicketState == "P"),
+                WinnerCount = g.Count(t => t.TicketState == "W"),
+                LoserCount = g.Count(t => t.TicketState == "L"),
+            })
+            .ToListAsync();
+
+        if (ticketAgg.Count == 0) return Ok(new List<PublicTodaySalesByBancaRow>());
+
+        var bpIds = ticketAgg.Select(a => a.BettingPoolId).ToList();
+        var pools = await _context.BettingPools
+            .AsNoTracking()
+            .Include(bp => bp.Zone)
+            .Where(bp => bpIds.Contains(bp.BettingPoolId))
+            .Select(bp => new
+            {
+                bp.BettingPoolId,
+                bp.BettingPoolCode,
+                bp.BettingPoolName,
+                bp.Reference,
+                bp.ZoneId,
+                ZoneName = bp.Zone != null ? bp.Zone.ZoneName : null,
+            })
+            .ToDictionaryAsync(bp => bp.BettingPoolId);
+
+        // Current balance per banca (single roundtrip lookup).
+        var balances = await _context.Balances
+            .AsNoTracking()
+            .Where(b => bpIds.Contains(b.BettingPoolId))
+            .Select(b => new { b.BettingPoolId, b.CurrentBalance })
+            .ToDictionaryAsync(b => b.BettingPoolId, b => b.CurrentBalance);
+
+        // Caída snapshot from the history table for this date. The realtime
+        // caída service is excluded here on purpose — it requires per-banca
+        // config and is a partial mirror at best across tenants.
+        var caidaSnapshot = await _context.CaidaHistory
+            .AsNoTracking()
+            .Where(h => bpIds.Contains(h.BettingPoolId) && h.CalculationDate == targetDate)
+            .Select(h => new { h.BettingPoolId, h.CaidaAmount })
+            .ToDictionaryAsync(h => h.BettingPoolId, h => h.CaidaAmount);
+
+        var rows = ticketAgg
+            .Select(a =>
+            {
+                pools.TryGetValue(a.BettingPoolId, out var bp);
+                balances.TryGetValue(a.BettingPoolId, out var balance);
+                caidaSnapshot.TryGetValue(a.BettingPoolId, out var fall);
+                var totalNet = a.TotalSold + a.RiferoDiscount - a.TotalCommissions - a.TotalPrizes;
+                return new PublicTodaySalesByBancaRow
+                {
+                    BettingPoolId = a.BettingPoolId,
+                    BettingPoolCode = bp?.BettingPoolCode ?? string.Empty,
+                    BettingPoolName = bp?.BettingPoolName ?? string.Empty,
+                    Reference = bp?.Reference,
+                    ZoneId = bp?.ZoneId,
+                    ZoneName = bp?.ZoneName,
+                    TotalSold = a.TotalSold,
+                    TotalPrizes = a.TotalPrizes,
+                    TotalCommissions = a.TotalCommissions,
+                    TotalDiscounts = a.TotalDiscounts,
+                    TotalNet = totalNet,
+                    TicketCount = a.TicketCount,
+                    PendingCount = a.PendingCount,
+                    WinnerCount = a.WinnerCount,
+                    LoserCount = a.LoserCount,
+                    Balance = balance,
+                    Fall = fall,
+                    AccumulatedFall = 0m,  // Not exposed cross-tenant in V1.
+                };
             })
             .OrderByDescending(r => r.TotalSold)
-            .ToListAsync();
+            .ToList();
 
         return Ok(rows);
     }
