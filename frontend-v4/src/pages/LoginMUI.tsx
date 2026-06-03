@@ -618,13 +618,11 @@ const LoginMUI = () => {
             sx={{
               display: 'inline-flex',
               flexDirection: 'column',
-              alignItems: 'flex-start',
+              alignItems: 'center',
               color: '#fff',
               textDecoration: 'none',
-              textAlign: 'left',
-              // Extra left padding to make room for the brand accent stripe.
-              pl: 2,
-              pr: 1.75,
+              textAlign: 'center',
+              px: 1.75,
               py: 0.85,
               borderRadius: '14px',
               backgroundColor: 'rgba(0,0,0,0.35)',
@@ -635,21 +633,6 @@ const LoginMUI = () => {
               boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.18)',
               transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
               cursor: 'pointer',
-              position: 'relative',
-              overflow: 'hidden',
-              // Vertical brand accent — picks up the red from the SignIn
-              // button and the logo's shield, tying the corner to the CTA.
-              '&::before': {
-                content: '""',
-                position: 'absolute',
-                left: 0,
-                top: 0,
-                bottom: 0,
-                width: '4px',
-                background: 'linear-gradient(180deg, #ef4444 0%, #dc2626 50%, #991b1b 100%)',
-                borderTopLeftRadius: '14px',
-                borderBottomLeftRadius: '14px',
-              },
               '&:hover': {
                 backgroundColor: 'rgba(0,0,0,0.55)',
                 borderColor: 'rgba(255,255,255,0.7)',
@@ -664,7 +647,7 @@ const LoginMUI = () => {
             <Box
               component="span"
               sx={{
-                fontSize: { xs: '0.95rem', sm: '1.05rem' },
+                fontSize: { xs: '0.7rem', sm: '0.78rem' },
                 fontWeight: 500,
                 letterSpacing: '0.05em',
                 textTransform: 'uppercase',
@@ -677,7 +660,7 @@ const LoginMUI = () => {
               <Box
                 component="span"
                 sx={{
-                  fontSize: { xs: '0.65rem', sm: '0.72rem' },
+                  fontSize: { xs: '0.55rem', sm: '0.62rem' },
                   fontWeight: 500,
                   letterSpacing: '0.05em',
                   textTransform: 'uppercase',
