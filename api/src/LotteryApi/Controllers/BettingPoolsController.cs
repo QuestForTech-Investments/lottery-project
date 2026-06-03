@@ -20,12 +20,17 @@ public class BettingPoolsController : ControllerBase
     private readonly LotteryDbContext _context;
     private readonly ILogger<BettingPoolsController> _logger;
     private readonly IZoneScopeService _zoneScope;
+    // Tenant-aware code prefix. Read once from configuration so the same
+    // codebase can issue LB-XXXX for Lottobook and LC-XXXX for La Central
+    // by setting BettingPool__CodePrefix on each tenant's App Service.
+    private readonly string _codePrefix;
 
-    public BettingPoolsController(LotteryDbContext context, ILogger<BettingPoolsController> logger, IZoneScopeService zoneScope)
+    public BettingPoolsController(LotteryDbContext context, ILogger<BettingPoolsController> logger, IZoneScopeService zoneScope, IConfiguration configuration)
     {
         _context = context;
         _logger = logger;
         _zoneScope = zoneScope;
+        _codePrefix = configuration["BettingPool:CodePrefix"] ?? "LB-";
     }
 
     /// <summary>
@@ -312,16 +317,16 @@ public class BettingPoolsController : ControllerBase
     }
 
     /// <summary>
-    /// Get next available betting pool code (format: LB-XXXX)
+    /// Get next available betting pool code (format: {prefix}XXXX, e.g. LB-XXXX or LC-XXXX)
     /// </summary>
     [HttpGet("next-code")]
     public async Task<ActionResult<NextBettingPoolCodeDto>> GetNextCode()
     {
         try
         {
-            // Get all betting pool codes that start with "LB-" and extract the highest number
+            // Get all betting pool codes that start with the tenant prefix and extract the highest number
             var lbCodes = await _context.BettingPools
-                .Where(bp => bp.BettingPoolCode.StartsWith("LB-"))
+                .Where(bp => bp.BettingPoolCode.StartsWith(_codePrefix))
                 .Select(bp => bp.BettingPoolCode)
                 .ToListAsync();
 
@@ -329,7 +334,7 @@ public class BettingPoolsController : ControllerBase
             foreach (var code in lbCodes)
             {
                 // Extract number from code (e.g., "LB-0013" -> 13)
-                if (code.Length > 3 && int.TryParse(code.Substring(3), out int num))
+                if (code.Length > _codePrefix.Length && int.TryParse(code.Substring(_codePrefix.Length), out int num))
                 {
                     if (num > maxNumber) maxNumber = num;
                 }
@@ -338,8 +343,8 @@ public class BettingPoolsController : ControllerBase
             // Next number is max + 1
             int nextNumber = maxNumber + 1;
 
-            // Generate code with format LB-XXXX (e.g., LB-0001, LB-0014, etc.)
-            string nextCode = $"LB-{nextNumber:D4}";
+            // Generate code with format {prefix}XXXX (e.g., LB-0001, LC-0014, etc.)
+            string nextCode = $"{_codePrefix}{nextNumber:D4}";
 
             return Ok(new NextBettingPoolCodeDto
             {
@@ -437,25 +442,25 @@ public class BettingPoolsController : ControllerBase
             _context.BettingPools.Add(bettingPool);
             await _context.SaveChangesAsync();
 
-            // After saving, update the code if it doesn't match LB-XXXX format
-            // Generate next sequential code based on existing LB- codes
-            if (!dto.BettingPoolCode.StartsWith("LB-"))
+            // After saving, update the code if it doesn't match the tenant prefix format
+            // Generate next sequential code based on existing codes for this tenant
+            if (!dto.BettingPoolCode.StartsWith(_codePrefix))
             {
                 var lbCodes = await _context.BettingPools
-                    .Where(bp => bp.BettingPoolCode.StartsWith("LB-"))
+                    .Where(bp => bp.BettingPoolCode.StartsWith(_codePrefix))
                     .Select(bp => bp.BettingPoolCode)
                     .ToListAsync();
 
                 int maxNumber = 0;
                 foreach (var code in lbCodes)
                 {
-                    if (code.Length > 3 && int.TryParse(code.Substring(3), out int num))
+                    if (code.Length > _codePrefix.Length && int.TryParse(code.Substring(_codePrefix.Length), out int num))
                     {
                         if (num > maxNumber) maxNumber = num;
                     }
                 }
 
-                bettingPool.BettingPoolCode = $"LB-{(maxNumber + 1):D4}";
+                bettingPool.BettingPoolCode = $"{_codePrefix}{(maxNumber + 1):D4}";
                 await _context.SaveChangesAsync();
             }
 
@@ -1366,24 +1371,24 @@ public class BettingPoolsController : ControllerBase
             _context.BettingPools.Add(bettingPool);
             await _context.SaveChangesAsync();
 
-            // Update code if needed - generate next sequential LB- code
-            if (!dto.BettingPoolCode.StartsWith("LB-"))
+            // Update code if needed - generate next sequential code for this tenant
+            if (!dto.BettingPoolCode.StartsWith(_codePrefix))
             {
                 var lbCodes = await _context.BettingPools
-                    .Where(bp => bp.BettingPoolCode.StartsWith("LB-"))
+                    .Where(bp => bp.BettingPoolCode.StartsWith(_codePrefix))
                     .Select(bp => bp.BettingPoolCode)
                     .ToListAsync();
 
                 int maxNumber = 0;
                 foreach (var code in lbCodes)
                 {
-                    if (code.Length > 3 && int.TryParse(code.Substring(3), out int num))
+                    if (code.Length > _codePrefix.Length && int.TryParse(code.Substring(_codePrefix.Length), out int num))
                     {
                         if (num > maxNumber) maxNumber = num;
                     }
                 }
 
-                bettingPool.BettingPoolCode = $"LB-{(maxNumber + 1):D4}";
+                bettingPool.BettingPoolCode = $"{_codePrefix}{(maxNumber + 1):D4}";
                 await _context.SaveChangesAsync();
             }
 
