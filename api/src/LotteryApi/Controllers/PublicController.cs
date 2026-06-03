@@ -5,6 +5,7 @@ using LotteryApi.Data;
 using LotteryApi.DTOs;
 using LotteryApi.Helpers;
 using LotteryApi.Services;
+using LotteryApi.Services.Caida;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -28,17 +29,20 @@ public class PublicController : ControllerBase
     private readonly LotteryDbContext _context;
     private readonly PublicApiOptions _options;
     private readonly ResultSyncService _resultSync;
+    private readonly ICaidaCalculationService _caidaService;
     private readonly ILogger<PublicController> _logger;
 
     public PublicController(
         LotteryDbContext context,
         IOptions<PublicApiOptions> options,
         ResultSyncService resultSync,
+        ICaidaCalculationService caidaService,
         ILogger<PublicController> logger)
     {
         _context = context;
         _options = options.Value;
         _resultSync = resultSync;
+        _caidaService = caidaService;
         _logger = logger;
     }
 
@@ -114,9 +118,14 @@ public class PublicController : ControllerBase
         var utcStart = DateTimeHelper.GetUtcStartOfDay(targetDate);
         var utcEnd = DateTimeHelper.GetUtcEndOfDay(targetDate);
 
+<<<<<<< Updated upstream
         // Aggregate ticket-level totals + P/L/W counts in one pass (parity
         // with SalesReportsController.GetSalesByBettingPool — the partner
         // tenant uses these to render the same Daily Sales table).
+=======
+        // Step 1 — ticket-level aggregation per banca (P/L/W counts +
+        // currency totals). Matches SalesReportsController.GetSalesByBettingPool.
+>>>>>>> Stashed changes
         var ticketAgg = await _context.Tickets
             .AsNoTracking()
             .Where(t => !t.IsCancelled
@@ -126,7 +135,11 @@ public class PublicController : ControllerBase
             .Select(g => new
             {
                 BettingPoolId = g.Key,
+<<<<<<< Updated upstream
                 TotalSold = g.Sum(t => t.TotalBetAmount),
+=======
+                TotalSold = g.Sum(t => t.GrandTotal),
+>>>>>>> Stashed changes
                 TotalPrizes = g.Sum(t => t.TotalPrize),
                 TotalCommissions = g.Sum(t => t.TotalCommission),
                 TotalDiscounts = g.Sum(t => t.TotalDiscount),
@@ -156,6 +169,7 @@ public class PublicController : ControllerBase
             })
             .ToDictionaryAsync(bp => bp.BettingPoolId);
 
+<<<<<<< Updated upstream
         // Current balance per banca (single roundtrip lookup).
         var balances = await _context.Balances
             .AsNoTracking()
@@ -171,13 +185,73 @@ public class PublicController : ControllerBase
             .Where(h => bpIds.Contains(h.BettingPoolId) && h.CalculationDate == targetDate)
             .Select(h => new { h.BettingPoolId, h.CaidaAmount })
             .ToDictionaryAsync(h => h.BettingPoolId, h => h.CaidaAmount);
+=======
+        // Step 2 — balance snapshot date: use today's if it exists, otherwise
+        // yesterday's. Mirrors SalesReportsController logic.
+        var hasSnapshot = await _context.BalanceHistories
+            .AsNoTracking()
+            .AnyAsync(bh => bh.BalanceDate == targetDate);
+        var snapshotDate = hasSnapshot ? targetDate : targetDate.AddDays(-1);
+        var snapshots = await _context.BalanceHistories
+            .AsNoTracking()
+            .Where(bh => bh.BalanceDate == snapshotDate && bpIds.Contains(bh.BettingPoolId))
+            .ToDictionaryAsync(bh => bh.BettingPoolId, bh => bh.BalanceAmount);
+
+        // Step 3 — today's approved transaction adjustments (PAGOs, COBROs).
+        var entity1Adjustments = await _context.TransactionGroupLines
+            .AsNoTracking()
+            .Where(l => l.Entity1Type == "bettingPool"
+                && bpIds.Contains(l.Entity1Id)
+                && l.Group!.Status == "Aprobado"
+                && l.Group!.CreatedAt >= utcStart
+                && l.Group!.CreatedAt <= utcEnd)
+            .GroupBy(l => l.Entity1Id)
+            .Select(g => new { BettingPoolId = g.Key, Net = g.Sum(l => l.Debit - l.Credit) })
+            .ToListAsync();
+        var entity2Adjustments = await _context.TransactionGroupLines
+            .AsNoTracking()
+            .Where(l => l.Entity2Type == "bettingPool"
+                && l.Entity2Id != null && bpIds.Contains(l.Entity2Id.Value)
+                && l.Group!.Status == "Aprobado"
+                && l.Group!.CreatedAt >= utcStart
+                && l.Group!.CreatedAt <= utcEnd)
+            .GroupBy(l => l.Entity2Id!.Value)
+            .Select(g => new { BettingPoolId = g.Key, Net = g.Sum(l => l.Credit - l.Debit) })
+            .ToListAsync();
+        var txAdjustmentMap = new Dictionary<int, decimal>();
+        foreach (var adj in entity1Adjustments)
+        {
+            txAdjustmentMap.TryGetValue(adj.BettingPoolId, out var current);
+            txAdjustmentMap[adj.BettingPoolId] = current + adj.Net;
+        }
+        foreach (var adj in entity2Adjustments)
+        {
+            txAdjustmentMap.TryGetValue(adj.BettingPoolId, out var current);
+            txAdjustmentMap[adj.BettingPoolId] = current + adj.Net;
+        }
+
+        // Step 4 — real-time caida for each banca (same service the local view
+        // uses, so cross-tenant numbers match exactly).
+        var caidaValues = new Dictionary<int, (decimal fall, decimal acc)>();
+        foreach (var bpId in bpIds)
+        {
+            var (f, a) = await _caidaService.GetRealtimeCaidaAsync(bpId, targetDate);
+            caidaValues[bpId] = (f, a);
+        }
+>>>>>>> Stashed changes
 
         var rows = ticketAgg
             .Select(a =>
             {
                 pools.TryGetValue(a.BettingPoolId, out var bp);
+<<<<<<< Updated upstream
                 balances.TryGetValue(a.BettingPoolId, out var balance);
                 caidaSnapshot.TryGetValue(a.BettingPoolId, out var fall);
+=======
+                var snapBal = snapshots.TryGetValue(a.BettingPoolId, out var s) ? s : 0m;
+                txAdjustmentMap.TryGetValue(a.BettingPoolId, out var txAdj);
+                caidaValues.TryGetValue(a.BettingPoolId, out var caida);
+>>>>>>> Stashed changes
                 var totalNet = a.TotalSold + a.RiferoDiscount - a.TotalCommissions - a.TotalPrizes;
                 return new PublicTodaySalesByBancaRow
                 {
@@ -196,9 +270,15 @@ public class PublicController : ControllerBase
                     PendingCount = a.PendingCount,
                     WinnerCount = a.WinnerCount,
                     LoserCount = a.LoserCount,
+<<<<<<< Updated upstream
                     Balance = balance,
                     Fall = fall,
                     AccumulatedFall = 0m,  // Not exposed cross-tenant in V1.
+=======
+                    Balance = snapBal + totalNet + txAdj,
+                    Fall = caida.fall,
+                    AccumulatedFall = caida.acc,
+>>>>>>> Stashed changes
                 };
             })
             .OrderByDescending(r => r.TotalSold)

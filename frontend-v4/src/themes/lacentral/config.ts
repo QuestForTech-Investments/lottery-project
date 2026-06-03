@@ -3,9 +3,14 @@ import type { TenantConfig } from '../../tenant.types'
 const config: TenantConfig = {
   tenantCode: 'lacentral',
   systemName: 'La Central',
-  versionLabel: 'La Central v1.0',
+  versionLabel: 'La Central',
+  versionSubLabel: 'Lottery System',
+  versionLink: 'https://lacentralrd.com',
+  defaultLanguage: 'en',
   login: {
     logoAlt: 'La Central',
+    // Bare layout: video shows through; no card chrome, no welcome heading.
+    bareLayout: true,
   },
   sidebar: {
     title: 'LA CENTRAL',

@@ -14,6 +14,13 @@ export interface TenantFeatureFlags {
 export interface TenantLoginConfig {
   /** alt text for the logo on the login screen */
   logoAlt: string
+  /**
+   * When true, the login screen drops the card chrome (background image,
+   * border, shadow) and the welcome heading. Just the logo + inputs sit
+   * over the page background — useful for tenants whose background is the
+   * focal point (e.g. La Central's video).
+   */
+  bareLayout?: boolean
 }
 
 export interface TenantSidebarConfig {
@@ -33,8 +40,25 @@ export interface TenantConfig {
   tenantCode: string
   /** Human-readable name shown in headers, titles, copy. */
   systemName: string
-  /** String rendered at the bottom of the login screen. */
+  /** Primary line rendered at the bottom-right of the login screen. */
   versionLabel: string
+  /**
+   * Optional second line under <see cref="versionLabel"/>, styled smaller
+   * (used as a tagline). When unset, only the primary line shows.
+   */
+  versionSubLabel?: string
+  /**
+   * Optional external URL. When set, the version block becomes a clickable
+   * chip (matching the Printer/Android buttons) that opens this URL in a
+   * new tab. When unset, it stays as plain text.
+   */
+  versionLink?: string
+  /**
+   * Default UI language for first-time visitors (the login screen and
+   * anyone without a saved preference in localStorage). Falls back to
+   * 'es' if unset. The user can always switch and the choice is cached.
+   */
+  defaultLanguage?: 'es' | 'en' | 'fr' | 'ht'
   login: TenantLoginConfig
   sidebar: TenantSidebarConfig
   features: TenantFeatureFlags

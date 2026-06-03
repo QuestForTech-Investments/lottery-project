@@ -18,6 +18,8 @@ import {
   Lock as LockIcon,
   Visibility as VisibilityIcon,
   VisibilityOff as VisibilityOffIcon,
+  Print as PrintIcon,
+  Android as AndroidIcon,
 } from '@mui/icons-material';
 import tenantLogo from '@tenant/assets/logo.png';
 import tenantLoginBackground from '@tenant/loginBackground';
@@ -133,21 +135,28 @@ const LoginMUI = () => {
           position: 'relative',
           // z-stack: video=0, gradient overlay (::before)=1, card=2.
           zIndex: 2,
-          // Mobile: white background with dark border like original
-          // Desktop: image background
-          backgroundImage: { xs: 'none', sm: `url(${cardBackgroundImage})` },
-          backgroundColor: { xs: 'rgba(255, 255, 255, 0.97)', sm: 'transparent' },
+          // Bare layout (e.g. La Central): no card chrome — logo + inputs
+          // float directly over the video background. Default layout keeps
+          // the white/translucent card with the desktop banner image.
+          backgroundImage: tenantConfig.login.bareLayout
+            ? 'none'
+            : { xs: 'none', sm: `url(${cardBackgroundImage})` },
+          backgroundColor: tenantConfig.login.bareLayout
+            ? 'transparent'
+            : { xs: 'rgba(255, 255, 255, 0.97)', sm: 'transparent' },
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           borderRadius: { xs: '16px', sm: '28px' },
-          // Mobile: dark blue border like original app
-          border: { xs: '3px solid #2d3748', sm: 'none' },
+          // Mobile: dark blue border like original app (skip when bare).
+          border: tenantConfig.login.bareLayout
+            ? 'none'
+            : { xs: '3px solid #2d3748', sm: 'none' },
           px: { xs: 2.5, sm: 5 },
           py: { xs: 3, sm: 5 },
           width: '100%',
           maxWidth: { xs: 340, sm: 400 },
           textAlign: 'center',
-          boxShadow: {
+          boxShadow: tenantConfig.login.bareLayout ? 'none' : {
             xs: '0 10px 40px rgba(0, 0, 0, 0.3)',
             sm: '0 25px 50px -12px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1)'
           },
@@ -191,29 +200,33 @@ const LoginMUI = () => {
           }}
         />
 
-        {/* Welcome Text */}
-        <Typography
-          variant="h6"
-          sx={{
-            color: '#1e293b',
-            fontWeight: 600,
-            mb: 0.5,
-            fontSize: { xs: '1.1rem', sm: '1.25rem' },
-            letterSpacing: '-0.02em',
-          }}
-        >
-          {t('login.welcome')}
-        </Typography>
-        <Typography
-          variant="body2"
-          sx={{
-            color: '#64748b',
-            mb: { xs: 2, sm: 3 },
-            fontSize: { xs: '0.85rem', sm: '0.9rem' },
-          }}
-        >
-          {t('login.subtitle')}
-        </Typography>
+        {/* Welcome Text — hidden in bare layout */}
+        {!tenantConfig.login.bareLayout && (
+          <>
+            <Typography
+              variant="h6"
+              sx={{
+                color: '#1e293b',
+                fontWeight: 600,
+                mb: 0.5,
+                fontSize: { xs: '1.1rem', sm: '1.25rem' },
+                letterSpacing: '-0.02em',
+              }}
+            >
+              {t('login.welcome')}
+            </Typography>
+            <Typography
+              variant="body2"
+              sx={{
+                color: '#64748b',
+                mb: { xs: 2, sm: 3 },
+                fontSize: { xs: '0.85rem', sm: '0.9rem' },
+              }}
+            >
+              {t('login.subtitle')}
+            </Typography>
+          </>
+        )}
 
         {/* Error Alert */}
         {errors.general && (
@@ -464,6 +477,46 @@ const LoginMUI = () => {
         </Box>
       </Paper>
 
+      {/* Bottom-left action buttons — Printer + Android. Click is a no-op
+          for now; handlers will be wired to native bridges later. */}
+      <Box
+        sx={{
+          position: 'absolute',
+          bottom: { xs: 12, sm: 20 },
+          left: { xs: 12, sm: 24 },
+          display: 'flex',
+          gap: 1,
+          zIndex: 2,
+        }}
+      >
+        {[
+          { key: 'printer', Icon: PrintIcon, title: 'Printer' },
+          { key: 'android', Icon: AndroidIcon, title: 'Android' },
+        ].map(({ key, Icon, title }) => (
+          <IconButton
+            key={key}
+            size="small"
+            title={title}
+            aria-label={title}
+            onClick={() => { /* TODO: wire up handler */ }}
+            sx={{
+              color: '#fff',
+              backgroundColor: 'rgba(0,0,0,0.35)',
+              backdropFilter: 'blur(4px)',
+              border: '1px solid rgba(255,255,255,0.4)',
+              width: { xs: 36, sm: 40 },
+              height: { xs: 36, sm: 40 },
+              '&:hover': {
+                backgroundColor: 'rgba(0,0,0,0.55)',
+                borderColor: '#fff',
+              },
+            }}
+          >
+            <Icon fontSize="small" />
+          </IconButton>
+        ))}
+      </Box>
+
       {/* Version - Bottom Right */}
       <Box
         sx={{
@@ -474,16 +527,90 @@ const LoginMUI = () => {
           zIndex: 1,
         }}
       >
-        <Typography
-          sx={{
-            color: 'rgba(255, 255, 255, 0.7)',
-            fontSize: { xs: '0.75rem', sm: '0.85rem' },
-            fontWeight: 500,
-            letterSpacing: '0.02em',
-          }}
-        >
-          {tenantConfig.versionLabel}
-        </Typography>
+        {tenantConfig.versionLink ? (
+          <Box
+            component="a"
+            href={tenantConfig.versionLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            sx={{
+              display: 'inline-flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              color: '#fff',
+              textDecoration: 'none',
+              textAlign: 'center',
+              px: 1.75,
+              py: 0.85,
+              borderRadius: '14px',
+              backgroundColor: 'rgba(0,0,0,0.35)',
+              backdropFilter: 'blur(4px)',
+              border: '1px solid rgba(255,255,255,0.4)',
+              transition: 'background-color 0.2s ease, border-color 0.2s ease',
+              cursor: 'pointer',
+              '&:hover': {
+                backgroundColor: 'rgba(0,0,0,0.55)',
+                borderColor: '#fff',
+              },
+            }}
+          >
+            <Box
+              component="span"
+              sx={{
+                fontSize: { xs: '0.95rem', sm: '1.05rem' },
+                fontWeight: 700,
+                letterSpacing: '0.02em',
+                lineHeight: 1.1,
+              }}
+            >
+              {tenantConfig.versionLabel}
+            </Box>
+            {tenantConfig.versionSubLabel && (
+              <Box
+                component="span"
+                sx={{
+                  fontSize: { xs: '0.65rem', sm: '0.72rem' },
+                  fontWeight: 500,
+                  letterSpacing: '0.05em',
+                  textTransform: 'uppercase',
+                  opacity: 0.85,
+                  mt: 0.2,
+                  lineHeight: 1.1,
+                }}
+              >
+                {tenantConfig.versionSubLabel}
+              </Box>
+            )}
+          </Box>
+        ) : (
+          <Box sx={{ textAlign: 'right' }}>
+            <Typography
+              sx={{
+                color: 'rgba(255, 255, 255, 0.7)',
+                fontSize: { xs: '0.75rem', sm: '0.85rem' },
+                fontWeight: 500,
+                letterSpacing: '0.02em',
+                lineHeight: 1.2,
+              }}
+            >
+              {tenantConfig.versionLabel}
+            </Typography>
+            {tenantConfig.versionSubLabel && (
+              <Typography
+                sx={{
+                  color: 'rgba(255, 255, 255, 0.6)',
+                  fontSize: { xs: '0.65rem', sm: '0.72rem' },
+                  fontWeight: 500,
+                  letterSpacing: '0.05em',
+                  textTransform: 'uppercase',
+                  lineHeight: 1.2,
+                }}
+              >
+                {tenantConfig.versionSubLabel}
+              </Typography>
+            )}
+          </Box>
+        )}
       </Box>
 
       <ForcePasswordChangeModal

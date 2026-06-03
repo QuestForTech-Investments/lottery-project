@@ -109,9 +109,15 @@ const FiltersSection: FC<FiltersSectionProps> = memo(({
         </FormControl>
       </Box>
 
+<<<<<<< Updated upstream
       {/* Group Filter — last in the row, only shown when there are partners
           with can_view_today_sales=true. The group selector is the most
           "context-switching" filter, so it sits at the end. */}
+=======
+      {/* Group Filter — last in the row, only when there are partners with
+          can_view_today_sales=true. The group selector is the most "context
+          switching" filter so it sits at the end. */}
+>>>>>>> Stashed changes
       {showGroupSelector && (
         <Box sx={{ width: { xs: '100%', sm: 'auto' } }}>
           <Typography variant="caption" sx={{ color: 'text.secondary', mb: 0.5, display: 'block' }}>

@@ -6,6 +6,7 @@ import es from './locales/es.json'
 import en from './locales/en.json'
 import fr from './locales/fr.json'
 import ht from './locales/ht.json'
+import { tenantConfig } from '../tenant'
 
 const resources = {
   es: { translation: es },
@@ -14,22 +15,29 @@ const resources = {
   ht: { translation: ht }
 }
 
+// Default language is tenant-specific (set in themes/<tenant>/config.ts).
+// localStorage still wins when present, so a user's manual choice survives
+// across visits regardless of the tenant default.
+const defaultLng = tenantConfig.defaultLanguage ?? 'es'
+
 i18n
-  .use(LanguageDetector) // Detecta el idioma del navegador
-  .use(initReactI18next) // Pasa i18n a react-i18next
+  .use(LanguageDetector)
+  .use(initReactI18next)
   .init({
     resources,
-    lng: 'es', // Idioma inicial by default
-    fallbackLng: 'es', // Idioma de respaldo
-    supportedLngs: ['es', 'en', 'fr', 'ht'], // Idiomas soportados
+    lng: defaultLng,
+    fallbackLng: defaultLng,
+    supportedLngs: ['es', 'en', 'fr', 'ht'],
     interpolation: {
-      escapeValue: false // React ya protege contra XSS
+      escapeValue: false // React already escapes against XSS
     },
     detection: {
-      // Orden de detection: localStorage > español by default
-      order: ['localStorage', 'navigator'],
-      caches: ['localStorage'], // Guarda la preferencia del usuario
-      lookupLocalStorage: 'i18nextLng' // Clave para localStorage
+      // localStorage > tenant default. Browser navigator is intentionally
+      // omitted so visitors hitting La Central from a non-English browser
+      // still land on the tenant's English default.
+      order: ['localStorage'],
+      caches: ['localStorage'],
+      lookupLocalStorage: 'i18nextLng'
     }
   })
 
