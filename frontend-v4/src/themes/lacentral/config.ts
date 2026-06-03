@@ -3,6 +3,7 @@ import type { TenantConfig } from '../../tenant.types'
 const config: TenantConfig = {
   tenantCode: 'lacentral',
   systemName: 'La Central',
+  documentTitle: 'La Central - Lottery System',
   versionLabel: 'La Central',
   versionSubLabel: 'Lottery System',
   versionLink: 'https://lacentralrd.com',

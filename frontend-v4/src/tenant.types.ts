@@ -40,6 +40,12 @@ export interface TenantConfig {
   tenantCode: string
   /** Human-readable name shown in headers, titles, copy. */
   systemName: string
+  /**
+   * Browser tab title. When unset, falls back to <see cref="systemName"/>.
+   * Use this when the full product name (e.g. "X Lottery System") reads
+   * better in the tab than the short brand name used elsewhere in the UI.
+   */
+  documentTitle?: string
   /** Primary line rendered at the bottom-right of the login screen. */
   versionLabel: string
   /**

@@ -20,8 +20,12 @@ let appTitle = tenant
 try {
   const configSrc = fs.readFileSync(
     path.resolve(__dirname, `./src/themes/${tenant}/config.ts`), 'utf8')
+  // Prefer documentTitle when present (e.g. "X Lottery System"); fall back
+  // to the short systemName otherwise.
+  const docM = configSrc.match(/documentTitle:\s*['"]([^'"]+)['"]/)
   const m = configSrc.match(/systemName:\s*['"]([^'"]+)['"]/)
-  if (m) appTitle = m[1]
+  if (docM) appTitle = docM[1]
+  else if (m) appTitle = m[1]
 } catch { /* fall back to tenant slug */ }
 process.env.VITE_APP_TITLE = appTitle
 
