@@ -169,7 +169,7 @@ const LoginMUI = () => {
           },
           // Bare-layout tenants sit higher in the viewport so the brand
           // breathes from the top half; classic tenants stay centered.
-          mt: tenantConfig.login.bareLayout ? { xs: 3, sm: 6 } : 'auto',
+          mt: tenantConfig.login.bareLayout ? { xs: 0, sm: 1 } : 'auto',
           mb: 'auto',
           maxHeight: { xs: 'calc(100vh - 32px)', sm: 'calc(100vh - 48px)' },
           overflowY: 'auto',
@@ -539,27 +539,34 @@ const LoginMUI = () => {
         }}
       >
         {[
-          { key: 'printer', Icon: PrintIcon, title: 'Printer' },
-          { key: 'android', Icon: AndroidIcon, title: 'Android' },
-        ].map(({ key, Icon, title }) => (
-          <IconButton
+          { key: 'printer', Icon: PrintIcon, label: 'Printer' },
+          { key: 'android', Icon: AndroidIcon, label: 'Android' },
+        ].map(({ key, Icon, label }) => (
+          <Box
             key={key}
-            size="small"
-            title={title}
-            aria-label={title}
+            component="button"
+            type="button"
+            aria-label={label}
             onClick={() => { /* TODO: wire up handler */ }}
             sx={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 0.85,
               color: '#fff',
               backgroundColor: 'rgba(0,0,0,0.35)',
               backdropFilter: 'blur(4px)',
               border: '1px solid rgba(255,255,255,0.4)',
-              // Size + border-radius match the version chip on the right
-              // (~48px tall, 14px corners) so the bottom row reads as a set.
-              width: { xs: 40, sm: 48 },
-              height: { xs: 40, sm: 48 },
+              // Padding + border-radius mirror the version chip — bottom row
+              // reads as a coordinated set of pills.
+              px: 1.75,
+              py: 1.05,
               borderRadius: '14px',
-              // Inset top highlight mirrors the SignIn button — adds depth
-              // and ties the bottom row visually to the CTA.
+              fontFamily: 'inherit',
+              fontSize: { xs: '0.7rem', sm: '0.78rem' },
+              fontWeight: 500,
+              letterSpacing: '0.05em',
+              textTransform: 'uppercase',
+              cursor: 'pointer',
               boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.18)',
               transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
               '&:hover': {
@@ -574,8 +581,9 @@ const LoginMUI = () => {
               },
             }}
           >
-            <Icon fontSize="small" />
-          </IconButton>
+            <Icon sx={{ fontSize: { xs: '1.1rem', sm: '1.25rem' } }} />
+            {label}
+          </Box>
         ))}
       </Box>
 
@@ -645,8 +653,9 @@ const LoginMUI = () => {
               component="span"
               sx={{
                 fontSize: { xs: '0.95rem', sm: '1.05rem' },
-                fontWeight: 700,
-                letterSpacing: '0.02em',
+                fontWeight: 500,
+                letterSpacing: '0.05em',
+                textTransform: 'uppercase',
                 lineHeight: 1.1,
               }}
             >
