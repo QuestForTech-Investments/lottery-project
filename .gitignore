@@ -77,3 +77,10 @@ ehthumbs.db
 captures/
 *.png
 .playwright-mcp/
+
+# But always commit tenant theme assets + bundled images used by the app
+!frontend-v4/src/themes/lottobook/assets/*.png
+!frontend-v4/src/themes/lacentral/assets/*.png
+!frontend-v4/src/assets/images/*.png
+!frontend-v4/public/*.png
+!frontend-v4/public/images/sorteos/*.png
