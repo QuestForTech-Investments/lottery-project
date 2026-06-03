@@ -8,10 +8,24 @@ on:
       - 'frontend-v4/**'
   workflow_dispatch:
 
+# Matrix builds: one job per tenant. Each tenant has its own Vite build flags
+# (theme + API URL) and its own SWA target. The token secret is selected per
+# tenant via `secrets[matrix.token_secret_name]` — add a new entry in `include`
+# to onboard a future tenant.
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    name: Build and Deploy
+    name: Build & Deploy ${{ matrix.tenant }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - tenant: lottobook
+            api_url: https://lottery-api-prod.azurewebsites.net/api
+            token_secret_name: AZURE_STATIC_WEB_APPS_API_TOKEN
+          - tenant: lacentral
+            api_url: https://api.lacentralnumbers.com/api
+            token_secret_name: AZURE_SWA_LACENTRAL_TOKEN
 
     steps:
       - name: Checkout code
@@ -28,16 +42,17 @@ jobs:
         run: npm ci
         working-directory: frontend-v4
 
-      - name: Build
+      - name: Build (tenant=${{ matrix.tenant }})
         run: npm run build
         working-directory: frontend-v4
         env:
-          VITE_API_BASE_URL: https://lottery-api-prod.azurewebsites.net/api
+          VITE_TENANT: ${{ matrix.tenant }}
+          VITE_API_BASE_URL: ${{ matrix.api_url }}
 
-      - name: Deploy to Azure Static Web Apps
+      - name: Deploy to Azure Static Web Apps (${{ matrix.tenant }})
         uses: Azure/static-web-apps-deploy@v1
         with:
-          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          azure_static_web_apps_api_token: ${{ secrets[matrix.token_secret_name] }}
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           action: 'upload'
           app_location: 'frontend-v4/dist'

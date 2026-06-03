@@ -101,12 +101,30 @@ export interface FilterOption {
 // Component Props Types
 // ============================================================================
 
+/**
+ * Entries for the "Grupo" dropdown in Ventas del Día.
+ *   - id="self"  → render local data
+ *   - id="ext-<n>" → proxy through /api/external-tenants/<n>/today-sales*
+ * The dropdown only appears when there's at least one partner; otherwise the
+ * page behaves exactly like the single-tenant version.
+ */
+export interface GroupOption {
+  id: string;
+  label: string;
+  /** External tenant id when id starts with "ext-"; undefined for self. */
+  externalTenantId?: number;
+}
+
 export interface FiltersSectionProps {
   selectedDate: string;
   zones: Zone[];
   selectedZones: number[];
   onDateChange: (date: string) => void;
   onZoneChange: (event: SelectChangeEvent<number[]>) => void;
+  /** Hide the dropdown when there's only one option (no partners configured). */
+  groupOptions: GroupOption[];
+  selectedGroupId: string;
+  onGroupChange: (id: string) => void;
 }
 
 export interface ActionButtonsProps {

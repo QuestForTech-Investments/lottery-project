@@ -18,6 +18,15 @@ public class Lottery
     [Column("lottery_name")]
     public string LotteryName { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Immutable cross-tenant identifier (e.g. "LOTEKA", "REAL"). Backfilled
+    /// at migration time from <see cref="LotteryName"/>; must stay consistent
+    /// across paired tenants for result-sync to match draws.
+    /// </summary>
+    [MaxLength(50)]
+    [Column("lottery_code")]
+    public string? LotteryCode { get; set; }
+
     [MaxLength(50)]
     [Column("lottery_type")]
     public string? LotteryType { get; set; }

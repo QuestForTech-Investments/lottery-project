@@ -15,6 +15,7 @@ import {
   LocationOn,
   Warning as WarningIcon
 } from '@mui/icons-material';
+import type { TenantFeatureFlags } from '../tenant.types'
 
 export interface MenuItem {
   id: string
@@ -35,6 +36,13 @@ export interface MenuItem {
    *   - string[] → user must hold AT LEAST ONE of the codes (OR-logic).
    */
   permission?: string | string[]
+  /**
+   * Optional tenant feature flag. When set, the item is hidden unless
+   * `tenantConfig.features[feature] === true`. Used for entries that only
+   * apply to certain tenants (e.g. partner admin for tenants that have
+   * `externalTenantsAdmin = true`).
+   */
+  feature?: keyof TenantFeatureFlags
 }
 
 export const MENU_ITEMS: MenuItem[] = [
@@ -166,6 +174,19 @@ export const MENU_ITEMS: MenuItem[] = [
     submenu: [
       { id: 'group-configuration', label: 'menu.myGroupConfig', shortcut: 'C', path: '/my-group/configuration', permission: 'MANAGE_MY_GROUP' }
     ]
+  },
+  // Multi-tenant: partner registry + sync controls. Gated by feature flag so
+  // tenants that never pair with anyone don't see the entry.
+  {
+    id: 'external-tenants',
+    label: 'menu.externalTenants',
+    icon: Store,
+    feature: 'externalTenantsAdmin',
+    permission: ['VIEW_EXTERNAL_TENANTS', 'VIEW_RESULT_SYNC'],
+    submenu: [
+      { id: 'external-tenants-list', label: 'menu.externalTenantsList', path: '/external-tenants', permission: 'VIEW_EXTERNAL_TENANTS' },
+      { id: 'external-tenants-sync-log', label: 'menu.externalTenantsSyncLog', path: '/external-tenants/sync-log', permission: 'VIEW_RESULT_SYNC' },
+    ],
   },
   { id: 'warnings', label: 'menu.warnings', icon: WarningIcon, path: '/warnings', permission: 'VIEW_ANOMALIES' },
   {

@@ -32,6 +32,11 @@ public class LotteryDbContext : DbContext
     public DbSet<BettingPoolAuditLog> BettingPoolAuditLogs { get; set; }
     public DbSet<EmailSendLog> EmailSendLogs { get; set; }
 
+    // Multi-tenant: partner registry + result-sync auxiliary tables.
+    public DbSet<ExternalTenant> ExternalTenants { get; set; }
+    public DbSet<ResultSyncLog> ResultSyncLogs { get; set; }
+    public DbSet<ResultSyncConflict> ResultSyncConflicts { get; set; }
+
     // User and Permissions
     public DbSet<Role> Roles { get; set; }
     public DbSet<Permission> Permissions { get; set; }

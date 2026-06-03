@@ -5,8 +5,47 @@ import { fileURLToPath } from 'url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
+// Tenant resolution for the multi-deployment build. The build command sets
+// VITE_TENANT (e.g. `VITE_TENANT=lacentral npm run build`) and the @tenant
+// alias resolves to that folder so per-tenant assets, theme overrides, and
+// config get baked into the bundle. Defaults to 'lottobook' for local dev.
+const tenant = process.env.VITE_TENANT ?? 'lottobook'
+
+// Inject the tenant's systemName into index.html as %VITE_APP_TITLE% so the
+// browser tab uses the right product name. Vite substitutes %VITE_*% at
+// build time. We parse the tenant's config.ts string (cheap) instead of
+// importing it (would require TS loader at config-time).
+import fs from 'fs'
+let appTitle = tenant
+try {
+  const configSrc = fs.readFileSync(
+    path.resolve(__dirname, `./src/themes/${tenant}/config.ts`), 'utf8')
+  const m = configSrc.match(/systemName:\s*['"]([^'"]+)['"]/)
+  if (m) appTitle = m[1]
+} catch { /* fall back to tenant slug */ }
+process.env.VITE_APP_TITLE = appTitle
+
+// Copy the active tenant's favicon + staticwebapp.config.json to dist/.
+// index.html keeps the static `/favicon.png` href and the SWA picks up the
+// config at deploy time — the build swaps both files underneath per tenant
+// so each deployment ships its own CSP and brand asset.
+const tenantAssetsPlugin = {
+  name: 'tenant-assets',
+  closeBundle() {
+    const tenantDir = path.resolve(__dirname, `./src/themes/${tenant}`)
+    const distDir = path.resolve(__dirname, './dist')
+    const copies: Array<[string, string]> = [
+      [path.join(tenantDir, 'assets/favicon.png'), path.join(distDir, 'favicon.png')],
+      [path.join(tenantDir, 'staticwebapp.config.json'), path.join(distDir, 'staticwebapp.config.json')],
+    ]
+    for (const [src, dest] of copies) {
+      if (fs.existsSync(src)) fs.copyFileSync(src, dest)
+    }
+  },
+}
+
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), tenantAssetsPlugin],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
@@ -21,6 +60,7 @@ export default defineConfig({
       '@theme': path.resolve(__dirname, './src/theme'),
       '@features': path.resolve(__dirname, './src/features'),
       '@assets': path.resolve(__dirname, './src/assets'),
+      '@tenant': path.resolve(__dirname, `./src/themes/${tenant}`),
     }
   },
   optimizeDeps: {

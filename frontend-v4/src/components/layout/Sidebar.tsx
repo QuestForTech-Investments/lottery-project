@@ -1,7 +1,8 @@
 import React, { useState, useCallback, memo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import lottobookLogo from '@/assets/images/lottobook-logo.png';
+import tenantLogo from '@tenant/assets/logo.png';
+import { tenantConfig } from '@/tenant';
 import {
   Drawer,
   List,
@@ -64,6 +65,7 @@ function Sidebar({ collapsed, hovered, onHoverChange, isMobile = false, mobileOp
   }, [hasPermission]);
 
   const isItemVisible = useCallback((item: MenuItem): boolean => {
+    if (item.feature && !tenantConfig.features[item.feature]) return false;
     if (!holdsPermission(item.permission)) return false;
     if (item.submenu && item.submenu.length > 0) {
       return item.submenu.some(isItemVisible);
@@ -212,8 +214,8 @@ function Sidebar({ collapsed, hovered, onHoverChange, isMobile = false, mobileOp
         >
           <Box
             component="img"
-            src={lottobookLogo}
-            alt="Lottobook"
+            src={tenantLogo}
+            alt={tenantConfig.systemName}
             sx={{ width: 60, height: 60, objectFit: 'contain', marginRight: 2 }}
           />
           <Box sx={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1 }}>
@@ -229,7 +231,7 @@ function Sidebar({ collapsed, hovered, onHoverChange, isMobile = false, mobileOp
                 lineHeight: 1.1,
               }}
             >
-              LOTTOBOOK
+              {tenantConfig.sidebar.title ?? tenantConfig.systemName.toUpperCase()}
             </Typography>
             <Typography
               sx={{
@@ -244,7 +246,7 @@ function Sidebar({ collapsed, hovered, onHoverChange, isMobile = false, mobileOp
                 letterSpacing: '0.5px',
               }}
             >
-              LOTTERY SYSTEM
+              {tenantConfig.sidebar.subtitle}
             </Typography>
           </Box>
         </Box>
@@ -487,8 +489,8 @@ function Sidebar({ collapsed, hovered, onHoverChange, isMobile = false, mobileOp
       >
         <Box
           component="img"
-          src={lottobookLogo}
-          alt="Lottobook"
+          src={tenantLogo}
+          alt={tenantConfig.systemName}
           sx={{
             width: 56,
             height: 56,
@@ -512,7 +514,7 @@ function Sidebar({ collapsed, hovered, onHoverChange, isMobile = false, mobileOp
                 whiteSpace: 'nowrap',
               }}
             >
-              LOTTOBOOK
+              {tenantConfig.sidebar.title ?? tenantConfig.systemName.toUpperCase()}
             </Typography>
             <Typography
               sx={{
@@ -528,7 +530,7 @@ function Sidebar({ collapsed, hovered, onHoverChange, isMobile = false, mobileOp
                 whiteSpace: 'nowrap',
               }}
             >
-              LOTTERY SYSTEM
+              {tenantConfig.sidebar.subtitle}
             </Typography>
           </Box>
         )}

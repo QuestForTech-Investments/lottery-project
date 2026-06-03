@@ -8,7 +8,6 @@ import {
   Typography,
   InputAdornment,
   IconButton,
-  Link,
   CircularProgress,
   Alert,
 } from '@mui/material';
@@ -20,8 +19,9 @@ import {
   Visibility as VisibilityIcon,
   VisibilityOff as VisibilityOffIcon,
 } from '@mui/icons-material';
-import backgroundImage from '@/assets/images/login-background.jpg';
-import logoImage from '@/assets/images/lottobook-logo.png';
+import tenantLogo from '@tenant/assets/logo.png';
+import tenantLoginBackground from '@tenant/loginBackground';
+import { tenantConfig } from '@/tenant';
 // Card background image from public folder
 const cardBackgroundImage = '/images/bannerlotto-02.jpg';
 import useLogin from './hooks/useLogin';
@@ -64,6 +64,8 @@ const LoginMUI = () => {
   const justChanged = loginQuery?.get('changed') === '1';
   const sessionExpired = loginQuery?.get('reason') === 'session-expired';
 
+  const isVideoBg = tenantLoginBackground.type === 'video';
+
   return (
     <Box
       sx={{
@@ -71,10 +73,14 @@ const LoginMUI = () => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundImage: `url(${backgroundImage})`,
+        // Image background goes here directly; video gets rendered as a
+        // <video> element underneath (sx can't take a media source).
+        backgroundImage: isVideoBg ? 'none' : `url(${tenantLoginBackground.src})`,
+        backgroundColor: isVideoBg ? '#0f172a' : undefined, // fallback while video loads
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         position: 'relative',
+        overflow: 'hidden',
         p: { xs: 2, sm: 3 },
         boxSizing: 'border-box',
         '&::before': {
@@ -82,15 +88,51 @@ const LoginMUI = () => {
           position: 'absolute',
           inset: 0,
           background: 'linear-gradient(135deg, rgba(15, 25, 35, 0.7) 0%, rgba(20, 40, 50, 0.5) 100%)',
-          zIndex: 0,
+          zIndex: 1,
         },
       }}
     >
+      {isVideoBg && (
+        <Box
+          component="video"
+          src={tenantLoginBackground.src}
+          autoPlay
+          muted
+          playsInline
+          // Avoid taking focus on iOS — purely decorative.
+          aria-hidden="true"
+          // Seamless loop: instead of the native `loop` attribute (which
+          // flashes any black frame at end/start), we rewind just before
+          // the last frame and skip the very first one. Imperceptible jump,
+          // no black flash. The native `onEnded` is a safety net in case
+          // timeupdate fires too sparsely.
+          onTimeUpdate={(e) => {
+            const v = e.currentTarget as HTMLVideoElement
+            if (v.duration && v.duration - v.currentTime < 0.2) {
+              v.currentTime = 0.05
+            }
+          }}
+          onEnded={(e) => {
+            const v = e.currentTarget as HTMLVideoElement
+            v.currentTime = 0.05
+            void v.play()
+          }}
+          sx={{
+            position: 'absolute',
+            inset: 0,
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            zIndex: 0,
+          }}
+        />
+      )}
       <Paper
         elevation={0}
         sx={{
           position: 'relative',
-          zIndex: 1,
+          // z-stack: video=0, gradient overlay (::before)=1, card=2.
+          zIndex: 2,
           // Mobile: white background with dark border like original
           // Desktop: image background
           backgroundImage: { xs: 'none', sm: `url(${cardBackgroundImage})` },
@@ -129,8 +171,8 @@ const LoginMUI = () => {
         {/* Logo */}
         <Box
           component="img"
-          src={logoImage}
-          alt="Lottobook"
+          src={tenantLogo}
+          alt={tenantConfig.login.logoAlt}
           sx={{
             width: { xs: 140, sm: 241 },
             height: { xs: 140, sm: 241 },
@@ -422,49 +464,6 @@ const LoginMUI = () => {
         </Box>
       </Paper>
 
-      {/* Footer Link - Bottom Left */}
-      <Box
-        sx={{
-          position: 'absolute',
-          bottom: { xs: 12, sm: 20 },
-          left: { xs: 12, sm: 24 },
-          textAlign: 'left',
-          zIndex: 1,
-        }}
-      >
-        <Link
-          href="https://printers.apk.lol"
-          target="_blank"
-          rel="noopener noreferrer"
-          sx={{
-            color: 'rgba(255, 255, 255, 0.85)',
-            fontSize: { xs: '0.7rem', sm: '0.8rem' },
-            textDecoration: 'none',
-            fontWeight: 500,
-            transition: 'color 0.2s ease',
-            '&:hover': {
-              color: '#fff',
-              textDecoration: 'underline',
-            },
-          }}
-        >
-          Download Printer Drivers
-        </Link>
-        <Typography
-          sx={{
-            color: 'rgba(255, 255, 255, 0.6)',
-            mt: 0.5,
-            fontSize: { xs: '0.6rem', sm: '0.7rem' },
-            display: { xs: 'none', sm: 'block' },
-          }}
-        >
-          Firefox Silent Print:{' '}
-          <Box component="span" sx={{ fontWeight: 600, fontStyle: 'italic' }}>
-            print.always_print_silent
-          </Box>
-        </Typography>
-      </Box>
-
       {/* Version - Bottom Right */}
       <Box
         sx={{
@@ -483,7 +482,7 @@ const LoginMUI = () => {
             letterSpacing: '0.02em',
           }}
         >
-          Lottobook Version 777
+          {tenantConfig.versionLabel}
         </Typography>
       </Box>
 

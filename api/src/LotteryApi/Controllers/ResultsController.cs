@@ -23,6 +23,9 @@ public class ResultsController : ControllerBase
     private readonly IExternalResultsService _externalResultsService;
     private readonly IWarningService _warningService;
     private readonly IZoneScopeService _zoneScope;
+    // Spawn a fresh DI scope for the fire-and-forget result-sync push — the
+    // controller's request scope is disposed once the action returns.
+    private readonly IServiceScopeFactory _scopeFactory;
 
     /// <summary>
     /// Super Pale: source draw → (target composite draw, which field it contributes: num1 or num2).
@@ -55,13 +58,36 @@ public class ResultsController : ControllerBase
         ILogger<ResultsController> logger,
         IExternalResultsService externalResultsService,
         IWarningService warningService,
-        IZoneScopeService zoneScope)
+        IZoneScopeService zoneScope,
+        IServiceScopeFactory scopeFactory)
     {
         _context = context;
         _logger = logger;
         _externalResultsService = externalResultsService;
         _warningService = warningService;
         _zoneScope = zoneScope;
+        _scopeFactory = scopeFactory;
+    }
+
+    /// <summary>
+    /// Fires <see cref="ResultSyncService.PushResultAsync"/> in the background
+    /// so the controller response doesn't block on a partner being slow.
+    /// </summary>
+    private void FireResultSyncPushAsync(int resultId)
+    {
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                using var scope = _scopeFactory.CreateScope();
+                var sync = scope.ServiceProvider.GetRequiredService<Services.ResultSyncService>();
+                await sync.PushResultAsync(resultId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Background result-sync push failed for result {ResultId}", resultId);
+            }
+        });
     }
 
     /// <summary>Returns true if the current user holds the given permission code.</summary>
@@ -237,6 +263,10 @@ public class ResultsController : ControllerBase
             // Monitoring email is fired by PlayMonitoringScheduledWorker N seconds
             // after the draw closes — not from result publication.
 
+            // Cross-tenant: push the (possibly updated) result to partners with
+            // share_results=true. Idempotent on the partner side.
+            FireResultSyncPushAsync(existingResult.ResultId);
+
             if (numberChanged)
             {
                 await _warningService.RecordAsync(
@@ -302,6 +332,9 @@ public class ResultsController : ControllerBase
         await _context.Entry(result).Reference(r => r.Draw).LoadAsync();
 
         _logger.LogInformation("Created result {ResultId} for draw {DrawId}", result.ResultId, dto.DrawId);
+
+        // Cross-tenant: push to partners with share_results=true.
+        FireResultSyncPushAsync(result.ResultId);
 
         // Clear the matching RESULT_PUBLICATION_LATE warning (if any) — the
         // result was just published, the issue is fixed.
@@ -377,6 +410,9 @@ public class ResultsController : ControllerBase
         await _context.SaveChangesAsync();
 
         _logger.LogInformation("Updated result {ResultId}", id);
+
+        // Cross-tenant: re-push so partners see the update.
+        FireResultSyncPushAsync(result.ResultId);
 
         if (numberChanged)
         {
@@ -477,6 +513,28 @@ public class ResultsController : ControllerBase
         _logger.LogInformation("Approved result {ResultId}", id);
 
         return Ok(MapToDto(result));
+    }
+
+    /// <summary>
+    /// Manually re-push a result to all partners with share_results=true.
+    /// Used from the UI when the original push failed (network blip, partner
+    /// was down, etc.) — the operator clicks "Reenviar" on the result row.
+    /// </summary>
+    [HttpPost("{id}/resync")]
+    public async Task<IActionResult> ResyncResult(int id)
+    {
+        // Same gate as approve/publish — only operators with full result
+        // permissions can re-emit cross-tenant pushes.
+        if (!await IsSuperAdminAsync()) return Forbid();
+
+        var exists = await _context.Results.AsNoTracking().AnyAsync(r => r.ResultId == id);
+        if (!exists)
+        {
+            return ApiErrorResult.NotFound(ErrorCodes.ResultNotFound, $"Result with ID {id} not found");
+        }
+
+        FireResultSyncPushAsync(id);
+        return Accepted(new { resultId = id, status = "push_queued" });
     }
 
     /// <summary>

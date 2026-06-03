@@ -9,14 +9,16 @@ on:
   workflow_dispatch:
 
 env:
-  AZURE_WEBAPP_NAME: lottery-api-prod
   AZURE_WEBAPP_PACKAGE_PATH: './api/src/LotteryApi'
   DOTNET_VERSION: '8.0.x'
 
+# The API binary is identical across tenants — only appsettings differ. We
+# build once, then push the SAME publish output to both App Services in a
+# matrix. Each tenant supplies its own publish profile secret. Add a new
+# entry in `include` to onboard a future tenant.
 jobs:
-  build-and-deploy:
+  build:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -35,9 +37,37 @@ jobs:
       - name: Publish
         run: dotnet publish ${{ env.AZURE_WEBAPP_PACKAGE_PATH }} --configuration Release --no-build --output ./publish
 
-      - name: Deploy to Azure App Service
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-publish
+          path: ./publish
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    name: Deploy ${{ matrix.tenant }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - tenant: lottobook
+            app_name: lottery-api-prod
+            publish_profile_secret: AZURE_WEBAPP_PUBLISH_PROFILE
+          - tenant: lacentral
+            app_name: lacentral-api-prod
+            publish_profile_secret: AZURE_WEBAPP_PUBLISH_PROFILE_LACENTRAL
+
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: api-publish
+          path: ./publish
+
+      - name: Deploy to ${{ matrix.app_name }}
         uses: azure/webapps-deploy@v3
         with:
-          app-name: ${{ env.AZURE_WEBAPP_NAME }}
-          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          app-name: ${{ matrix.app_name }}
+          publish-profile: ${{ secrets[matrix.publish_profile_secret] }}
           package: ./publish
