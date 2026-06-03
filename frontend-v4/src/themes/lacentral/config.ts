@@ -9,7 +9,7 @@ const config: TenantConfig = {
   },
   sidebar: {
     title: 'LA CENTRAL',
-    subtitle: 'NUMBERS',
+    subtitle: 'LOTTERY SYSTEM',
   },
   features: {
     // La Central is the V1 hub that pairs with Lottobook — both visibility
