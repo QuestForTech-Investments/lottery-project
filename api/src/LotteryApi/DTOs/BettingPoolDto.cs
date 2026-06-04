@@ -528,7 +528,7 @@ public class MassUpdateBettingPoolsDto
     public int? ZoneId { get; set; }
 
     /// <summary>
-    /// Active status: "on" = activate, "off" = deactivate, "no_change" = keep current
+    /// Active status: "on" = activate, "off" = deactivate, "no_change"|null = keep current
     /// </summary>
     public string? IsActive { get; set; } = "no_change";
 
@@ -536,6 +536,90 @@ public class MassUpdateBettingPoolsDto
     /// List of draw/sortition IDs to enable for selected betting pools
     /// </summary>
     public List<int>? DrawIds { get; set; }
+
+    // -------------------------------------------------------------------
+    // Configuration tab fields (BettingPoolConfig + related). Any field
+    // left null is skipped per banca — the existing value stays untouched.
+    // Tri-state booleans use "on"/"off" strings; null|"no_change" = skip.
+    // -------------------------------------------------------------------
+
+    /// <summary>Fall type: "OFF" | "PERCENTAGE" | etc. Null = no change.</summary>
+    public string? FallType { get; set; }
+
+    /// <summary>Fall percentage applied when FallType != "OFF". Null = no change.</summary>
+    public decimal? FallPercentage { get; set; }
+
+    /// <summary>Balance threshold below which the banca is auto-disabled. Null = no change.</summary>
+    public decimal? DeactivationBalance { get; set; }
+
+    /// <summary>Daily sale ceiling. Null = no change.</summary>
+    public decimal? DailySaleLimit { get; set; }
+
+    /// <summary>Minutes after issue during which a ticket can be cancelled. Null = no change.</summary>
+    public int? CancelMinutes { get; set; }
+
+    /// <summary>Max tickets that can be cancelled per day. Null = no change.</summary>
+    public int? DailyCancelTickets { get; set; }
+
+    /// <summary>UI default language: "es" | "en" | "fr" | "ht". Null = no change.</summary>
+    public string? DefaultLanguage { get; set; }
+
+    /// <summary>Discount mode: "OFF" | "GRUPO" | "RIFERO". Null = no change.</summary>
+    public string? DiscountMode { get; set; }
+
+    /// <summary>Print mode: "DRIVER" | "GENÉRICO". Null = no change.</summary>
+    public string? PrintMode { get; set; }
+
+    /// <summary>Print a copy of the ticket. "on"/"off"/null|"no_change".</summary>
+    public string? PrintTicketCopy { get; set; }
+
+    /// <summary>Winning-ticket control flag. "on"/"off"/null|"no_change".</summary>
+    public string? ControlWinningTickets { get; set; }
+
+    /// <summary>Allow the banca user to change their own password. "on"/"off"/null|"no_change".</summary>
+    public string? AllowPasswordChange { get; set; }
+
+    // -------------------------------------------------------------------
+    // Footers tab fields (BettingPoolFooter). Each footer slot is its own
+    // optional field — pass an empty string explicitly to clear a slot, or
+    // omit/null to skip. AutoFooter follows the tri-state convention.
+    // -------------------------------------------------------------------
+
+    /// <summary>Generate the footer automatically from system metadata. "on"/"off"/null|"no_change".</summary>
+    public string? AutoFooter { get; set; }
+
+    public string? Footer1 { get; set; }
+    public string? Footer2 { get; set; }
+    public string? Footer3 { get; set; }
+    public string? Footer4 { get; set; }
+    public string? Footer5 { get; set; }
+    public string? Footer6 { get; set; }
+    public string? Footer7 { get; set; }
+    public string? Footer8 { get; set; }
+
+    // -------------------------------------------------------------------
+    // Prizes & Commissions tab (BettingPoolPrizesCommission). Mass edit
+    // currently only supports the "general" overrides (no per-lottery/draw
+    // targeting) — granular edits stay on the single-banca form.
+    // -------------------------------------------------------------------
+
+    /// <summary>Default commission applied across all bet types. Null = no change.</summary>
+    public decimal? GeneralCommission { get; set; }
+
+    /// <summary>
+    /// Per-bet-type commission override. Key = bet-type code (e.g. "QUINIELA"),
+    /// value = commission percentage. Empty/missing entries are skipped.
+    /// </summary>
+    public Dictionary<string, decimal?>? CommissionsByBetType { get; set; }
+
+    /// <summary>
+    /// Per-bet-type, per-prize-field override. Key format:
+    /// <c>betTypeCode__fieldCode</c> (double-underscore separator). Value =
+    /// prize payment multiplier. Field codes map to prize_payment_1..4 in
+    /// the order they appear in the bet-type definition; non-mapping codes
+    /// are skipped.
+    /// </summary>
+    public Dictionary<string, decimal?>? PrizeFieldsByBetType { get; set; }
 }
 
 /// <summary>

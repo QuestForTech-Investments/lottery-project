@@ -1793,6 +1793,28 @@ public class BettingPoolsController : ControllerBase
                 }
             }
 
+            // Pre-load related configs for all pools in one round-trip to avoid
+            // an N+1 — the loop applies in-memory.
+            var poolIdsList = existingPools.Select(p => p.BettingPoolId).ToList();
+            var configsByPool = await _context.BettingPoolConfigs
+                .Where(c => poolIdsList.Contains(c.BettingPoolId))
+                .ToDictionaryAsync(c => c.BettingPoolId);
+            var discountConfigsByPool = await _context.BettingPoolDiscountConfigs
+                .Where(c => poolIdsList.Contains(c.BettingPoolId))
+                .ToDictionaryAsync(c => c.BettingPoolId);
+            var printConfigsByPool = await _context.BettingPoolPrintConfigs
+                .Where(c => poolIdsList.Contains(c.BettingPoolId))
+                .ToDictionaryAsync(c => c.BettingPoolId);
+
+            // Tri-state helper: "on" → true, "off" → false, anything else → null (skip).
+            static bool? ParseTriState(string? v)
+            {
+                if (string.IsNullOrWhiteSpace(v) || v == "no_change") return null;
+                if (v == "on") return true;
+                if (v == "off") return false;
+                return null;
+            }
+
             // Update each betting pool
             foreach (var pool in existingPools)
             {
@@ -1808,6 +1830,63 @@ public class BettingPoolsController : ControllerBase
                     if (!string.IsNullOrEmpty(request.IsActive) && request.IsActive != "no_change")
                     {
                         pool.IsActive = request.IsActive == "on";
+                    }
+
+                    // ----- BettingPoolConfig (most fields land here) -----
+                    if (!configsByPool.TryGetValue(pool.BettingPoolId, out var cfg))
+                    {
+                        cfg = new BettingPoolConfig
+                        {
+                            BettingPoolId = pool.BettingPoolId,
+                            CreatedAt = DateTime.UtcNow,
+                        };
+                        _context.BettingPoolConfigs.Add(cfg);
+                        configsByPool[pool.BettingPoolId] = cfg;
+                    }
+                    var cfgTouched = false;
+                    if (request.FallType != null) { cfg.FallType = request.FallType; cfgTouched = true; }
+                    if (request.FallPercentage.HasValue) { cfg.FallPercentage = request.FallPercentage.Value; cfgTouched = true; }
+                    if (request.DeactivationBalance.HasValue) { cfg.DeactivationBalance = request.DeactivationBalance.Value; cfgTouched = true; }
+                    if (request.DailySaleLimit.HasValue) { cfg.DailySaleLimit = request.DailySaleLimit.Value; cfgTouched = true; }
+                    if (request.CancelMinutes.HasValue) { cfg.CancelMinutes = request.CancelMinutes.Value; cfgTouched = true; }
+                    if (request.DailyCancelTickets.HasValue) { cfg.DailyCancelTickets = request.DailyCancelTickets.Value; cfgTouched = true; }
+                    if (!string.IsNullOrEmpty(request.DefaultLanguage)) { cfg.DefaultLanguage = request.DefaultLanguage; cfgTouched = true; }
+                    var winCtl = ParseTriState(request.ControlWinningTickets);
+                    if (winCtl.HasValue) { cfg.ControlWinningTickets = winCtl.Value; cfgTouched = true; }
+                    var allowPwd = ParseTriState(request.AllowPasswordChange);
+                    if (allowPwd.HasValue) { cfg.AllowPasswordChange = allowPwd.Value; cfgTouched = true; }
+                    if (cfgTouched) cfg.UpdatedAt = DateTime.UtcNow;
+
+                    // ----- BettingPoolDiscountConfig -----
+                    if (!string.IsNullOrEmpty(request.DiscountMode))
+                    {
+                        if (!discountConfigsByPool.TryGetValue(pool.BettingPoolId, out var dc))
+                        {
+                            dc = new BettingPoolDiscountConfig
+                            {
+                                BettingPoolId = pool.BettingPoolId,
+                            };
+                            _context.BettingPoolDiscountConfigs.Add(dc);
+                            discountConfigsByPool[pool.BettingPoolId] = dc;
+                        }
+                        dc.DiscountMode = request.DiscountMode;
+                    }
+
+                    // ----- BettingPoolPrintConfig -----
+                    var printCopy = ParseTriState(request.PrintTicketCopy);
+                    if (!string.IsNullOrEmpty(request.PrintMode) || printCopy.HasValue)
+                    {
+                        if (!printConfigsByPool.TryGetValue(pool.BettingPoolId, out var pc))
+                        {
+                            pc = new BettingPoolPrintConfig
+                            {
+                                BettingPoolId = pool.BettingPoolId,
+                            };
+                            _context.BettingPoolPrintConfigs.Add(pc);
+                            printConfigsByPool[pool.BettingPoolId] = pc;
+                        }
+                        if (!string.IsNullOrEmpty(request.PrintMode)) pc.PrintMode = request.PrintMode;
+                        if (printCopy.HasValue) pc.PrintTicketCopy = printCopy.Value;
                     }
 
                     pool.UpdatedAt = DateTime.UtcNow;
@@ -1832,6 +1911,178 @@ public class BettingPoolsController : ControllerBase
                 catch (Exception ex)
                 {
                     errors.Add($"Error actualizando banca {pool.BettingPoolId}: {ex.Message}");
+                }
+            }
+
+            // ----- BettingPoolFooter (single row per banca; 8 lines + auto flag) -----
+            var hasFooterChanges = request.AutoFooter != null
+                || request.Footer1 != null || request.Footer2 != null
+                || request.Footer3 != null || request.Footer4 != null
+                || request.Footer5 != null || request.Footer6 != null
+                || request.Footer7 != null || request.Footer8 != null;
+            if (hasFooterChanges)
+            {
+                var footersByPool = await _context.BettingPoolFooters
+                    .Where(f => poolIdsList.Contains(f.BettingPoolId))
+                    .ToDictionaryAsync(f => f.BettingPoolId);
+                var autoFooter = ParseTriState(request.AutoFooter);
+                var now = DateTime.UtcNow;
+                foreach (var pool in existingPools)
+                {
+                    if (!footersByPool.TryGetValue(pool.BettingPoolId, out var f))
+                    {
+                        f = new BettingPoolFooter
+                        {
+                            BettingPoolId = pool.BettingPoolId,
+                            CreatedAt = now,
+                        };
+                        _context.BettingPoolFooters.Add(f);
+                        footersByPool[pool.BettingPoolId] = f;
+                    }
+                    if (autoFooter.HasValue) f.AutoFooter = autoFooter.Value;
+                    if (request.Footer1 != null) f.FooterLine1 = request.Footer1;
+                    if (request.Footer2 != null) f.FooterLine2 = request.Footer2;
+                    if (request.Footer3 != null) f.FooterLine3 = request.Footer3;
+                    if (request.Footer4 != null) f.FooterLine4 = request.Footer4;
+                    if (request.Footer5 != null) f.FooterLine5 = request.Footer5;
+                    if (request.Footer6 != null) f.FooterLine6 = request.Footer6;
+                    if (request.Footer7 != null) f.FooterLine7 = request.Footer7;
+                    if (request.Footer8 != null) f.FooterLine8 = request.Footer8;
+                    f.UpdatedAt = now;
+                }
+            }
+
+            // ----- BettingPoolPrizesCommission (general + per-bet-type) -----
+            // The lookup priority in TicketsController is (banca, draw) →
+            // (banca, lottery) → (banca, NULL). Mass edit only targets the
+            // banca-level row (lottery=NULL, draw=NULL) so changes apply as
+            // the default that more-specific overrides can still trump.
+            var hasGeneralCommission = request.GeneralCommission.HasValue;
+            var hasPerBetTypeCommissions = request.CommissionsByBetType != null && request.CommissionsByBetType.Count > 0;
+            var hasPrizeFields = request.PrizeFieldsByBetType != null && request.PrizeFieldsByBetType.Count > 0;
+            if (hasGeneralCommission || hasPerBetTypeCommissions || hasPrizeFields)
+            {
+                // Collect every game type we might need to upsert. "general"
+                // is a virtual key; the real upserts use per-bet-type codes.
+                var gameTypeKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                if (hasPerBetTypeCommissions)
+                {
+                    foreach (var k in request.CommissionsByBetType!.Keys) gameTypeKeys.Add(k);
+                }
+                if (hasPrizeFields)
+                {
+                    foreach (var k in request.PrizeFieldsByBetType!.Keys)
+                    {
+                        // Keys are "<betTypeCode>__<fieldCode>" — strip the suffix.
+                        var sep = k.IndexOf("__", StringComparison.Ordinal);
+                        if (sep > 0) gameTypeKeys.Add(k.Substring(0, sep));
+                    }
+                }
+
+                // Pre-load existing banca-level rows (lottery=null, draw=null)
+                // to upsert without N+1 queries.
+                var existingRows = await _context.BettingPoolPrizesCommissions
+                    .Where(pc => poolIdsList.Contains(pc.BettingPoolId)
+                        && pc.LotteryId == null
+                        && pc.DrawId == null)
+                    .ToListAsync();
+                var rowsByPoolAndGame = existingRows
+                    .GroupBy(r => r.BettingPoolId)
+                    .ToDictionary(g => g.Key, g => g.ToDictionary(r => r.GameType, StringComparer.OrdinalIgnoreCase));
+
+                // Apply a single prize-field update to the first available
+                // prize_payment_N slot. Bet-type definitions don't yet expose
+                // which "fieldCode" maps to which slot 1..4; we use insertion
+                // order, which mirrors how the UI lists fields per bet type.
+                static void ApplyPrizeSlot(BettingPoolPrizesCommission row, int slot, decimal? value)
+                {
+                    if (!value.HasValue) return;
+                    switch (slot)
+                    {
+                        case 1: row.PrizePayment1 = value; break;
+                        case 2: row.PrizePayment2 = value; break;
+                        case 3: row.PrizePayment3 = value; break;
+                        case 4: row.PrizePayment4 = value; break;
+                    }
+                }
+
+                // Group prize-field payloads by bet type so we can fill slots
+                // 1..4 in order.
+                var prizeFieldsByGameType = new Dictionary<string, List<decimal?>>(StringComparer.OrdinalIgnoreCase);
+                if (hasPrizeFields)
+                {
+                    // Preserve original key order; Dictionary<TKey,TValue> in
+                    // .NET preserves insertion order for enumeration.
+                    foreach (var kv in request.PrizeFieldsByBetType!)
+                    {
+                        var sep = kv.Key.IndexOf("__", StringComparison.Ordinal);
+                        if (sep <= 0) continue;
+                        var gt = kv.Key.Substring(0, sep);
+                        if (!prizeFieldsByGameType.TryGetValue(gt, out var list))
+                        {
+                            list = new List<decimal?>();
+                            prizeFieldsByGameType[gt] = list;
+                        }
+                        list.Add(kv.Value);
+                    }
+                }
+
+                var nowPC = DateTime.UtcNow;
+                foreach (var pool in existingPools)
+                {
+                    var byGame = rowsByPoolAndGame.GetValueOrDefault(pool.BettingPoolId)
+                                 ?? new Dictionary<string, BettingPoolPrizesCommission>(StringComparer.OrdinalIgnoreCase);
+
+                    // General commission applies to every game type the user
+                    // touched (or all existing rows if no per-type values).
+                    var targetGameTypes = gameTypeKeys.Count > 0
+                        ? gameTypeKeys
+                        : new HashSet<string>(byGame.Keys, StringComparer.OrdinalIgnoreCase);
+                    if (hasGeneralCommission && targetGameTypes.Count == 0)
+                    {
+                        // No bet-type rows yet AND no per-type info → nothing
+                        // to attach the general commission to. Skip silently
+                        // rather than guessing game types.
+                    }
+
+                    foreach (var gt in targetGameTypes)
+                    {
+                        if (!byGame.TryGetValue(gt, out var row))
+                        {
+                            row = new BettingPoolPrizesCommission
+                            {
+                                BettingPoolId = pool.BettingPoolId,
+                                GameType = gt,
+                                LotteryId = null,
+                                DrawId = null,
+                                IsActive = true,
+                                CreatedAt = nowPC,
+                            };
+                            _context.BettingPoolPrizesCommissions.Add(row);
+                            byGame[gt] = row;
+                        }
+
+                        // Commission: per-type override beats general.
+                        if (hasPerBetTypeCommissions && request.CommissionsByBetType!.TryGetValue(gt, out var perTypeCom) && perTypeCom.HasValue)
+                        {
+                            row.CommissionDiscount1 = perTypeCom.Value;
+                        }
+                        else if (hasGeneralCommission)
+                        {
+                            row.CommissionDiscount1 = request.GeneralCommission!.Value;
+                        }
+
+                        // Prize fields — fill slots 1..N in input order.
+                        if (prizeFieldsByGameType.TryGetValue(gt, out var slots))
+                        {
+                            for (int i = 0; i < slots.Count && i < 4; i++)
+                            {
+                                ApplyPrizeSlot(row, i + 1, slots[i]);
+                            }
+                        }
+
+                        row.UpdatedAt = nowPC;
+                    }
                 }
             }
 

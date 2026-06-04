@@ -163,12 +163,123 @@ const MassEditBettingPools: React.FC = () => {
 
     setSaving(true);
     try {
-      const payload = {
+      // Build the typed payload. Each field is only included when the user
+      // actually set a value — empty strings, null, 'no_change' all signal
+      // "skip this field per banca" so partial edits work as expected
+      // (e.g. changing only "minutos para cancelar" leaves the other 13
+      // configuration fields untouched on every selected banca).
+      const payload: Record<string, unknown> = {
         bettingPoolIds: selectedBettingPools,
-        drawIds: selectedDraws,
-        zoneIds: selectedZones,
-        configuration: formData
       };
+
+      // Draws — pass-through (existing behavior)
+      if (selectedDraws.length > 0) payload.drawIds = selectedDraws;
+
+      // Zone (single id, from configuration tab dropdown)
+      const zoneNum = parseInt(String(formData.zoneId ?? ''), 10);
+      if (!Number.isNaN(zoneNum) && zoneNum > 0) payload.zoneId = zoneNum;
+
+      // Tri-state booleans — only send "on"/"off"; "no_change" is dropped.
+      const triStateFields: Array<[keyof FormData, string]> = [
+        ['isActive', 'isActive'],
+        ['printTicketCopy', 'printTicketCopy'],
+        ['winningTicketControl', 'controlWinningTickets'],
+        ['canChangePassword', 'allowPasswordChange'],
+      ];
+      for (const [src, dest] of triStateFields) {
+        const v = formData[src];
+        if (v === 'on' || v === 'off') payload[dest] = v;
+      }
+
+      // Strings — only send when non-empty/non-null.
+      const stringFields: Array<[keyof FormData, string]> = [
+        ['fallType', 'fallType'],
+        ['language', 'defaultLanguage'],
+        ['printMode', 'printMode'],
+        ['discountMode', 'discountMode'],
+      ];
+      for (const [src, dest] of stringFields) {
+        const v = formData[src];
+        if (typeof v === 'string' && v.trim() !== '') payload[dest] = v;
+      }
+
+      // Numbers — parse and skip if empty/NaN. Decimals vs integers vary
+      // per field, but JSON.stringify handles either fine.
+      const numericFields: Array<[keyof FormData, string]> = [
+        ['fallPercentage', 'fallPercentage'],
+        ['deactivationBalance', 'deactivationBalance'],
+        ['dailySaleLimit', 'dailySaleLimit'],
+        ['minutesToCancelTicket', 'cancelMinutes'],
+        ['ticketsToCancelPerDay', 'dailyCancelTickets'],
+      ];
+      for (const [src, dest] of numericFields) {
+        const raw = formData[src];
+        if (raw === '' || raw === null || raw === undefined) continue;
+        const n = Number(raw);
+        if (!Number.isNaN(n)) payload[dest] = n;
+      }
+
+      // Footers — only send the block when the user touched a footer line.
+      // Sending autoFooter standalone would force the switch position onto
+      // every banca, which is the same gotcha we're trying to avoid for
+      // the configuration fields.
+      const footerKeys = ['footer1', 'footer2', 'footer3', 'footer4', 'footer5', 'footer6', 'footer7', 'footer8'] as const;
+      const anyFooterTouched = footerKeys.some(k => {
+        const v = formData[k];
+        return typeof v === 'string' && v.trim() !== '';
+      });
+      if (anyFooterTouched) {
+        for (const k of footerKeys) {
+          const v = formData[k];
+          if (typeof v === 'string') {
+            // Match DTO names: footer1 → Footer1
+            const dest = k.charAt(0).toUpperCase() + k.slice(1);
+            payload[dest] = v;
+          }
+        }
+        // autoFooter is a Switch (boolean) — encode as the same tri-state
+        // string the backend expects.
+        payload.autoFooter = formData.autoFooter ? 'on' : 'off';
+      }
+
+      // Prizes & commissions — iterate dynamic formData keys.
+      // `commission_<betTypeCode>` and `prize_<betTypeCode>_<fieldCode>`.
+      const commissionsByBetType: Record<string, number> = {};
+      const prizeFieldsByBetType: Record<string, number> = {};
+      for (const [key, raw] of Object.entries(formData)) {
+        if (typeof raw !== 'string' || raw.trim() === '') continue;
+        const n = Number(raw);
+        if (Number.isNaN(n)) continue;
+        if (key.startsWith('commission_')) {
+          const betType = key.substring('commission_'.length);
+          if (betType) commissionsByBetType[betType] = n;
+        } else if (key.startsWith('prize_')) {
+          // prize_<betTypeCode>_<fieldCode>. Convert to the backend's
+          // double-underscore separator so the DTO can split cleanly.
+          const rest = key.substring('prize_'.length);
+          const firstUnderscore = rest.indexOf('_');
+          if (firstUnderscore > 0) {
+            const betType = rest.substring(0, firstUnderscore);
+            const fieldCode = rest.substring(firstUnderscore + 1);
+            if (betType && fieldCode) {
+              prizeFieldsByBetType[`${betType}__${fieldCode}`] = n;
+            }
+          }
+        }
+      }
+      if (Object.keys(commissionsByBetType).length > 0) {
+        payload.commissionsByBetType = commissionsByBetType;
+      }
+      if (Object.keys(prizeFieldsByBetType).length > 0) {
+        payload.prizeFieldsByBetType = prizeFieldsByBetType;
+      }
+      if (typeof formData.generalCommission === 'string' && formData.generalCommission.trim() !== '') {
+        const n = Number(formData.generalCommission);
+        if (!Number.isNaN(n)) payload.generalCommission = n;
+      }
+
+      // Useful for debugging the "edit dropped silently" class of bug.
+      // Only keys present in `payload` will actually be applied.
 
       await api.patch('/betting-pools/mass-update', payload);
       alert(t('massEditBettingPools.successUpdated'));
@@ -178,7 +289,7 @@ const MassEditBettingPools: React.FC = () => {
     } finally {
       setSaving(false);
     }
-  }, [selectedBettingPools, selectedDraws, selectedZones, formData, t]);
+  }, [selectedBettingPools, selectedDraws, formData, t]);
 
   if (loading) {
     return (
