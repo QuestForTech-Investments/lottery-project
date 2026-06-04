@@ -1014,7 +1014,7 @@
     "rowsPerPage": "Lignes par page :",
     "loadingUserData": "Chargement des données de l'utilisateur...",
     "formLoadError": "Erreur lors du chargement du formulaire",
-    "apiRunningHint": "Vérifiez que l'API est en cours d'exécution sur http://localhost:5000",
+    "apiRunningHint": "Vérifiez que l'API est en cours d'exécution sur http://localhost:5001",
     "backToList": "Retour à la liste",
     "redirectingToList": "Vous serez redirigé vers la liste des utilisateurs dans quelques secondes...",
     "updateUser": "Mettre à jour l'utilisateur",

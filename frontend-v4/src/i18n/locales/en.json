@@ -1014,7 +1014,7 @@
     "rowsPerPage": "Rows per page:",
     "loadingUserData": "Loading user data...",
     "formLoadError": "Error loading the form",
-    "apiRunningHint": "Check that the API is running at http://localhost:5000",
+    "apiRunningHint": "Check that the API is running at http://localhost:5001",
     "backToList": "Back to list",
     "redirectingToList": "You'll be redirected to the users list in a few seconds...",
     "updateUser": "Update User",

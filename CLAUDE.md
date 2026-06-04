@@ -101,7 +101,7 @@ lottery-project/
 | Componente | Tecnología | Puerto |
 |------------|------------|--------|
 | Frontend | React 18 + Vite + TypeScript + Material-UI | 4001 |
-| API Backend | .NET 8.0 + EF Core 8.0 | 5000 |
+| API Backend | .NET 8.0 + EF Core 8.0 | 5001 |
 | Database | Azure SQL Server | 1433 |
 
 ---
@@ -125,7 +125,7 @@ lottery-project/
 | **🚀 Producción** | **https://lottobook.net** | Frontend desplegado en Azure |
 | **📱 App Original** | https://la-numbers.apk.lol | Vue.js (referencia/scraping) |
 | **💻 Local Frontend** | http://localhost:4001 | Desarrollo local |
-| **💻 Local API** | http://localhost:5000 | Desarrollo local |
+| **💻 Local API** | http://localhost:5001 | Desarrollo local |
 
 ---
 
@@ -321,7 +321,7 @@ Los datos de resultados de lotería se obtienen mediante **web scraping de la ap
 cd api/src/LotteryApi
 export DOTNET_ROOT=$HOME/.dotnet
 export PATH=$PATH:$HOME/.dotnet:$HOME/.dotnet/tools
-dotnet run --urls "http://0.0.0.0:5000"
+dotnet run --urls "http://0.0.0.0:5001"
 
 # Frontend
 cd frontend-v4 && npm install && npm run dev
@@ -444,8 +444,8 @@ npx playwright install
 
 ### API Testing
 ```bash
-curl http://localhost:5000/health
-curl -H "Authorization: Bearer $TOKEN" http://localhost:5000/api/draws
+curl http://localhost:5001/health
+curl -H "Authorization: Bearer $TOKEN" http://localhost:5001/api/draws
 ```
 
 ---

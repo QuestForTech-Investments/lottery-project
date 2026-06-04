@@ -57,7 +57,7 @@ export type ApiFetchOptions = Omit<RequestInit, 'body'> & {
 // Log API configuration on load
 logger.info('API_CONFIG', `API Base URL: ${API_BASE_URL}`, {
   env: import.meta.env.VITE_API_BASE_URL,
-  fallback: 'http://localhost:5000/api'
+  fallback: 'http://localhost:5001/api'
 })
 
 /**

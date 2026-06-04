@@ -19,7 +19,7 @@ lottery-project/
 ### API (.NET)
 ```bash
 cd api/src/LotteryApi
-dotnet run --urls "http://0.0.0.0:5000"
+dotnet run --urls "http://0.0.0.0:5001"
 ```
 
 ### Frontend
@@ -32,7 +32,7 @@ npm run dev
 ### Verificar puertos
 ```bash
 lsof -ti:4001  # Frontend
-lsof -ti:5000  # API
+lsof -ti:5001  # API
 ```
 
 ## 🔑 Credenciales de Prueba
@@ -43,8 +43,8 @@ lsof -ti:5000  # API
 ## 🌐 URLs de Acceso
 
 - **Frontend:** http://localhost:4001
-- **API:** http://localhost:5000
-- **Swagger:** http://localhost:5000/swagger
+- **API:** http://localhost:5001
+- **Swagger:** http://localhost:5001/swagger
 
 ## 📚 Módulos Implementados
 
