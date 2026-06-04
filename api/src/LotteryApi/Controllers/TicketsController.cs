@@ -2646,11 +2646,17 @@ public class TicketsController : ControllerBase
 
             if (maxLimit <= 0) continue;
 
+            // Lookup must use the same key set as the DB's UQ_limit_consumption,
+            // which is (limit_rule, draw, draw_date, bet_number, banca) — no
+            // game_type_id. Including gameTypeId in the match caused multi-line
+            // tickets that bet the same number under different game types to
+            // attempt two INSERTs on the same unique key and crash with a
+            // duplicate-key error. The aggregation is intentional: per-game-type
+            // limits live on LimitRuleAmounts, not on the consumption row.
             var consumption = _context.LimitConsumptions.Local
                 .FirstOrDefault(lc => lc.LimitRuleId == rule.LimitRuleId
                     && lc.DrawId == drawId
                     && lc.DrawDate == today
-                    && lc.GameTypeId == gameTypeId
                     && lc.BetNumber == betNumber
                     && lc.BettingPoolId == bettingPoolId);
 
@@ -2658,7 +2664,6 @@ public class TicketsController : ControllerBase
                 .Where(lc => lc.LimitRuleId == rule.LimitRuleId
                     && lc.DrawId == drawId
                     && lc.DrawDate == today
-                    && lc.GameTypeId == gameTypeId
                     && lc.BetNumber == betNumber
                     && lc.BettingPoolId == bettingPoolId)
                 .FirstOrDefaultAsync();
