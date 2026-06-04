@@ -1243,7 +1243,10 @@ public class ResultsController : ControllerBase
     }
 
     /// <summary>
-    /// Validate winning number format to prevent date-like patterns (e.g., "202512" which looks like YYYYMM)
+    /// Validate winning number format. Only enforces digits-only — date-like
+    /// pattern checks were removed because legitimate lottery results can
+    /// coincidentally match dates (e.g. "782025" was being rejected as MMYYYY
+    /// despite "78" not being a valid month).
     /// </summary>
     private (bool IsValid, string? ErrorMessage) ValidateWinningNumber(string? winningNumber)
     {
@@ -1256,24 +1259,6 @@ public class ResultsController : ControllerBase
         if (!System.Text.RegularExpressions.Regex.IsMatch(winningNumber, @"^\d+$"))
         {
             return (false, "Winning number must contain only digits");
-        }
-
-        // Check for YYYYMM patterns like "202512" (2025-12) - likely a date mistakenly entered
-        if (System.Text.RegularExpressions.Regex.IsMatch(winningNumber, @"^202[45]\d{2}$"))
-        {
-            return (false, $"Winning number '{winningNumber}' looks like a date (YYYYMM format). Please enter valid lottery numbers.");
-        }
-
-        // Check for MMYYYY patterns
-        if (System.Text.RegularExpressions.Regex.IsMatch(winningNumber, @"^\d{2}202[45]$"))
-        {
-            return (false, $"Winning number '{winningNumber}' looks like a date (MMYYYY format). Please enter valid lottery numbers.");
-        }
-
-        // Check for YYYYMMDD patterns
-        if (System.Text.RegularExpressions.Regex.IsMatch(winningNumber, @"^202[45](0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])$"))
-        {
-            return (false, $"Winning number '{winningNumber}' looks like a date (YYYYMMDD format). Please enter valid lottery numbers.");
         }
 
         return (true, null);
