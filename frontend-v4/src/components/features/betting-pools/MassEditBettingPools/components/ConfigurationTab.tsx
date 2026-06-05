@@ -232,6 +232,14 @@ const ConfigurationTab: FC<ConfigurationTabProps> = memo(({ formData, zones, onI
               onChange={(val) => onInputChange('canChangePassword', val)}
             />
           </Box>
+
+          <Box sx={{ display: 'flex', alignItems: { xs: 'stretch', sm: 'center' }, flexDirection: { xs: 'column', sm: 'row' }, mb: 2, gap: { xs: 0.5, sm: 2 } }}>
+            <Typography sx={{ minWidth: { xs: 'auto', sm: 200 } }}>{t('massEditBettingPools.allowViewCommission')}</Typography>
+            <TriStateToggle
+              value={formData.allowViewCommission}
+              onChange={(val) => onInputChange('allowViewCommission', val)}
+            />
+          </Box>
         </Grid>
       </Grid>
     </Box>

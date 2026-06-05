@@ -50,6 +50,7 @@ interface ConfigFormData {
   printRechargeReceipt: boolean;
   dailyPhoneRechargeLimit: string;
   allowPasswordChange: boolean;
+  allowViewCommission: boolean;
   maxTicketAmount: string;
   printerType: string;
   discountMode: string;
@@ -430,6 +431,19 @@ const ConfigurationTab: React.FC<ConfigTabProps> = ({ formData, handleChange, be
               />
             }
             label={t('createBettingPool.config.allowPasswordChange')}
+          />
+        </Grid>
+
+        <Grid item xs={12} md={6}>
+          <FormControlLabel
+            control={
+              <Switch
+                checked={formData.allowViewCommission}
+                onChange={handleChange}
+                name="allowViewCommission"
+              />
+            }
+            label={t('createBettingPool.config.allowViewCommission')}
           />
         </Grid>
 

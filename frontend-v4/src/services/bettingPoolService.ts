@@ -79,6 +79,7 @@ export interface BettingPoolConfigData {
     allowJackpot?: boolean;
     enableRecharges?: boolean;
     allowPasswordChange?: boolean;
+    allowViewCommission?: boolean;
     cancelMinutes?: number;
     dailyCancelTickets?: number | null;
     maxCancelAmount?: number | null;

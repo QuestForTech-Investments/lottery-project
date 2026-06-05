@@ -61,6 +61,7 @@ export const mapConfigToFormData = (configResponse: ConfigResponse): Partial<For
     allowJackpot: config.allowJackpot !== undefined ? config.allowJackpot : true,
     enableRecharges: config.enableRecharges !== undefined ? config.enableRecharges : true,
     allowPasswordChange: config.allowPasswordChange !== undefined ? config.allowPasswordChange : true,
+    allowViewCommission: config.allowViewCommission !== undefined ? config.allowViewCommission : false,
     minutesToCancelTicket: String(config.cancelMinutes ?? 30),
     ticketsToCancelPerDay: String(config.dailyCancelTickets ?? ''),
     maximumCancelTicketAmount: String(config.maxCancelAmount ?? ''),

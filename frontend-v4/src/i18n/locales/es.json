@@ -1495,6 +1495,7 @@
       "comingSoon": "Próximamente — Esta funcionalidad estará disponible en una futura actualización.",
       "otherSettingsTitle": "Otras Configuraciones",
       "allowPasswordChange": "Permitir Cambiar Contraseña",
+      "allowViewCommission": "Permitir Ver Comisión",
       "maxTicketAmount": "Monto Máximo de Tickets",
       "maxTicketAmountHelper": "Monto máximo permitido por ticket",
       "discountsTitle": "Descuentos",
@@ -1626,6 +1627,7 @@
           "allowJackpot": "Permitir jackpot",
           "enableRecharges": "Habilitar recargas",
           "allowPasswordChange": "Permitir cambio de contraseña",
+          "allowViewCommission": "Permitir ver comisión",
           "cancelMinutes": "Minutos de cancelación",
           "dailyCancelTickets": "Tickets a cancelar por día",
           "maxCancelAmount": "Monto máx. cancelación",
@@ -1779,7 +1781,8 @@
       "group": "GRUPO",
       "rifero": "RIFERO"
     },
-    "canChangePassword": "Permitir cambiar contraseña"
+    "canChangePassword": "Permitir cambiar contraseña",
+    "allowViewCommission": "Permitir ver comisión"
   },
   "drawsAdmin": {
     "list": {

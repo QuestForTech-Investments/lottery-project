@@ -1147,6 +1147,7 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
           allowJackpot: formData.allowJackpot !== undefined ? formData.allowJackpot : true,
           enableRecharges: formData.enableRecharges !== undefined ? formData.enableRecharges : true,
           allowPasswordChange: formData.allowPasswordChange !== undefined ? formData.allowPasswordChange : true,
+          allowViewCommission: formData.allowViewCommission !== undefined ? formData.allowViewCommission : false,
           cancelMinutes: formData.minutesToCancelTicket ? parseInt(formData.minutesToCancelTicket) : 30,
           dailyCancelTickets: formData.ticketsToCancelPerDay ? parseInt(formData.ticketsToCancelPerDay) : null,
           maxCancelAmount: formData.maximumCancelTicketAmount ? parseFloat(formData.maximumCancelTicketAmount) : null,

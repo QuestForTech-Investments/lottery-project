@@ -63,6 +63,7 @@ export interface FormData {
   useNormalizedPrizes: string;
   allowPassingPlays: string;
   canChangePassword: string;
+  allowViewCommission: string;
   language: string | null;
   printMode: string | null;
   discountMode: string | null;

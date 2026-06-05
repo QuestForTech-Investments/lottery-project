@@ -19,6 +19,7 @@ export const INITIAL_FORM_DATA: FormData = {
   useNormalizedPrizes: 'no_change',
   allowPassingPlays: 'no_change',
   canChangePassword: 'no_change',
+  allowViewCommission: 'no_change',
   language: null,
   printMode: null,
   discountMode: null,

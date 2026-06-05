@@ -248,6 +248,7 @@ const MassEditBettingPools: React.FC = () => {
         ['printTicketCopy', 'printTicketCopy'],
         ['winningTicketControl', 'controlWinningTickets'],
         ['canChangePassword', 'allowPasswordChange'],
+        ['allowViewCommission', 'allowViewCommission'],
       ];
       for (const [src, dest] of triStateFields) {
         const v = formData[src];

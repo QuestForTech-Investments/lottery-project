@@ -74,7 +74,7 @@ const toConfigs = (prizes: PrizesData, commissions: CommissionsData): GroupDefau
 const BP_BOOLEAN_KEYS = new Set([
   'enableTemporaryBalance', 'controlWinningTickets', 'allowJackpot',
   'printEnabled', 'printTicketCopy', 'smsOnly', 'enableRecharges',
-  'printRechargeReceipt', 'allowPasswordChange', 'useCentralLogo',
+  'printRechargeReceipt', 'allowPasswordChange', 'allowViewCommission', 'useCentralLogo',
   'enableAutoLogout', 'showStatsPanel',
   'statCredit', 'statSales', 'statPercentage', 'statPrize', 'statNet',
   'statDiscount', 'statFinal', 'statBalance', 'statFall', 'statAccumulatedFall',

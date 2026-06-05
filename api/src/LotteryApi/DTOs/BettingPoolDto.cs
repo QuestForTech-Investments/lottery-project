@@ -163,6 +163,8 @@ public class BettingPoolConfigDto
     public bool AllowJackpot { get; set; } = true;
     public bool EnableRecharges { get; set; } = true;
     public bool AllowPasswordChange { get; set; } = true;
+    /// <summary>Whether POS / banca user is allowed to see commission columns.</summary>
+    public bool AllowViewCommission { get; set; } = false;
     public int CancelMinutes { get; set; } = 30;
     public int? DailyCancelTickets { get; set; }
     public decimal? MaxCancelAmount { get; set; }
@@ -578,6 +580,9 @@ public class MassUpdateBettingPoolsDto
 
     /// <summary>Allow the banca user to change their own password. "on"/"off"/null|"no_change".</summary>
     public string? AllowPasswordChange { get; set; }
+
+    /// <summary>Allow the banca user / POS to view commission amounts. "on"/"off"/null|"no_change".</summary>
+    public string? AllowViewCommission { get; set; }
 
     // -------------------------------------------------------------------
     // Footers tab fields (BettingPoolFooter). Each footer slot is its own

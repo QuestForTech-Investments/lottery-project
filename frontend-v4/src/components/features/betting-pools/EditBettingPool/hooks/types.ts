@@ -48,6 +48,7 @@ export interface FormData {
   enableRecharges: boolean;
   printRechargeReceipt: boolean;
   allowPasswordChange: boolean;
+  allowViewCommission: boolean;
   printerType: string;
   discountMode: string;
   discountAmount: string;
@@ -244,6 +245,7 @@ export interface ConfigResponse {
     allowJackpot?: boolean;
     enableRecharges?: boolean;
     allowPasswordChange?: boolean;
+    allowViewCommission?: boolean;
     cancelMinutes?: number;
     dailyCancelTickets?: number;
     maxCancelAmount?: number;

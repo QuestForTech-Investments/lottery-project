@@ -54,6 +54,14 @@ public class BettingPoolConfig
     [Column("allow_password_change")]
     public bool AllowPasswordChange { get; set; } = true;
 
+    /// <summary>
+    /// Whether banca-side UI (POS) is allowed to display commission
+    /// amounts/columns. When false, the POS hides them from operator views.
+    /// Default false — opt-in per banca.
+    /// </summary>
+    [Column("allow_view_commission")]
+    public bool AllowViewCommission { get; set; } = false;
+
     [Column("cancel_minutes")]
     public int CancelMinutes { get; set; } = 30;
 

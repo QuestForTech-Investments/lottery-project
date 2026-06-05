@@ -40,6 +40,8 @@ export const INITIAL_FORM_DATA: FormData = {
   enableRecharges: true,
   printRechargeReceipt: true,
   allowPasswordChange: true,
+  // Default false — bancas opt-in to seeing commission columns in the POS.
+  allowViewCommission: false,
   printerType: '1',
   discountMode: '1',
   discountAmount: '',

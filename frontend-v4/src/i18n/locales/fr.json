@@ -1495,6 +1495,7 @@
       "comingSoon": "Bientôt disponible — Cette fonctionnalité sera disponible dans une future mise à jour.",
       "otherSettingsTitle": "Autres paramètres",
       "allowPasswordChange": "Autoriser le changement de mot de passe",
+      "allowViewCommission": "Autoriser la visualisation des commissions",
       "maxTicketAmount": "Montant maximum par ticket",
       "maxTicketAmountHelper": "Montant maximum autorisé par ticket",
       "discountsTitle": "Remises",
@@ -1626,6 +1627,7 @@
           "allowJackpot": "Autoriser jackpot",
           "enableRecharges": "Activer les recharges",
           "allowPasswordChange": "Autoriser le changement de mot de passe",
+          "allowViewCommission": "Autoriser la visualisation des commissions",
           "cancelMinutes": "Minutes d'annulation",
           "dailyCancelTickets": "Tickets à annuler par jour",
           "maxCancelAmount": "Montant max. annulation",
@@ -1779,7 +1781,8 @@
       "group": "GROUPE",
       "rifero": "VENDEUR"
     },
-    "canChangePassword": "Autoriser le changement de mot de passe"
+    "canChangePassword": "Autoriser le changement de mot de passe",
+    "allowViewCommission": "Autoriser la visualisation des commissions"
   },
   "drawsAdmin": {
     "list": {

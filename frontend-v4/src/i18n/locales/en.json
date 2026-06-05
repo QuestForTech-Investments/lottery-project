@@ -1495,6 +1495,7 @@
       "comingSoon": "Coming soon — This feature will be available in a future update.",
       "otherSettingsTitle": "Other Settings",
       "allowPasswordChange": "Allow Password Change",
+      "allowViewCommission": "Allow View Commission",
       "maxTicketAmount": "Maximum Ticket Amount",
       "maxTicketAmountHelper": "Maximum amount allowed per ticket",
       "discountsTitle": "Discounts",
@@ -1626,6 +1627,7 @@
           "allowJackpot": "Allow jackpot",
           "enableRecharges": "Enable recharges",
           "allowPasswordChange": "Allow password change",
+          "allowViewCommission": "Allow view commission",
           "cancelMinutes": "Cancellation minutes",
           "dailyCancelTickets": "Daily cancellable tickets",
           "maxCancelAmount": "Max cancel amount",
@@ -1779,7 +1781,8 @@
       "group": "GROUP",
       "rifero": "SELLER"
     },
-    "canChangePassword": "Allow password change"
+    "canChangePassword": "Allow password change",
+    "allowViewCommission": "Allow view commission"
   },
   "drawsAdmin": {
     "list": {

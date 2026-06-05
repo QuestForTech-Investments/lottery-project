@@ -1495,6 +1495,7 @@
       "comingSoon": "Pral disponib byento — Fonksyonalite sa a pral disponib nan yon mizajou alavni.",
       "otherSettingsTitle": "Lòt Konfigirasyon",
       "allowPasswordChange": "Pèmèt Chanjman Modpas",
+      "allowViewCommission": "Pèmèt Wè Komisyon",
       "maxTicketAmount": "Montan Maksimòm Tikè",
       "maxTicketAmountHelper": "Montan maksimòm pèmèt pa tikè",
       "discountsTitle": "Rabè",
@@ -1626,6 +1627,7 @@
           "allowJackpot": "Pèmèt jackpot",
           "enableRecharges": "Aktive rechaj",
           "allowPasswordChange": "Pèmèt chanjman modpas",
+          "allowViewCommission": "Pèmèt wè komisyon",
           "cancelMinutes": "Minit anilasyon",
           "dailyCancelTickets": "Tikè pou anile pa jou",
           "maxCancelAmount": "Montan maks. anilasyon",
@@ -1779,7 +1781,8 @@
       "group": "GWOUP",
       "rifero": "VANDÈ"
     },
-    "canChangePassword": "Pèmèt chanje modpas"
+    "canChangePassword": "Pèmèt chanje modpas",
+    "allowViewCommission": "Pèmèt wè komisyon"
   },
   "drawsAdmin": {
     "list": {

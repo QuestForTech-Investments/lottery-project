@@ -1061,6 +1061,7 @@ public class BettingPoolsController : ControllerBase
                     AllowJackpot = bettingPool.Config.AllowJackpot,
                     EnableRecharges = bettingPool.Config.EnableRecharges,
                     AllowPasswordChange = bettingPool.Config.AllowPasswordChange,
+                    AllowViewCommission = bettingPool.Config.AllowViewCommission,
                     CancelMinutes = bettingPool.Config.CancelMinutes,
                     DailyCancelTickets = bettingPool.Config.DailyCancelTickets,
                     MaxCancelAmount = bettingPool.Config.MaxCancelAmount,
@@ -1168,6 +1169,7 @@ public class BettingPoolsController : ControllerBase
                 bettingPool.Config.AllowJackpot = dto.Config.AllowJackpot;
                 bettingPool.Config.EnableRecharges = dto.Config.EnableRecharges;
                 bettingPool.Config.AllowPasswordChange = dto.Config.AllowPasswordChange;
+                bettingPool.Config.AllowViewCommission = dto.Config.AllowViewCommission;
                 bettingPool.Config.CancelMinutes = dto.Config.CancelMinutes;
                 bettingPool.Config.DailyCancelTickets = dto.Config.DailyCancelTickets;
                 bettingPool.Config.MaxCancelAmount = dto.Config.MaxCancelAmount;
@@ -1465,6 +1467,7 @@ public class BettingPoolsController : ControllerBase
                     AllowJackpot = dto.Config.AllowJackpot,
                     EnableRecharges = dto.Config.EnableRecharges,
                     AllowPasswordChange = dto.Config.AllowPasswordChange,
+                    AllowViewCommission = dto.Config.AllowViewCommission,
                     CancelMinutes = dto.Config.CancelMinutes,
                     DailyCancelTickets = dto.Config.DailyCancelTickets,
                     MaxCancelAmount = dto.Config.MaxCancelAmount,
@@ -1855,6 +1858,8 @@ public class BettingPoolsController : ControllerBase
                     if (winCtl.HasValue) { cfg.ControlWinningTickets = winCtl.Value; cfgTouched = true; }
                     var allowPwd = ParseTriState(request.AllowPasswordChange);
                     if (allowPwd.HasValue) { cfg.AllowPasswordChange = allowPwd.Value; cfgTouched = true; }
+                    var allowViewCom = ParseTriState(request.AllowViewCommission);
+                    if (allowViewCom.HasValue) { cfg.AllowViewCommission = allowViewCom.Value; cfgTouched = true; }
                     if (cfgTouched) cfg.UpdatedAt = DateTime.UtcNow;
 
                     // ----- BettingPoolDiscountConfig -----

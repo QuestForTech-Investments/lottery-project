@@ -45,6 +45,7 @@ interface FormData {
   enableRecharges: boolean;
   printRechargeReceipt: boolean;
   allowPasswordChange: boolean;
+  allowViewCommission: boolean;
   printerType: string;
   discountMode: string;
   discountAmount: string;
@@ -215,6 +216,8 @@ const getInitialFormData = (branchCode = ''): FormData => ({
   enableRecharges: true,
   printRechargeReceipt: true,
   allowPasswordChange: true,
+  // Default false — bancas opt-in to seeing commission columns in the POS.
+  allowViewCommission: false,
   printerType: '1', // 1=Driver, 2=Genérico
   discountMode: '1', // 1=Off, 2=Grupo, 3=Rifero
   discountAmount: '',
@@ -701,6 +704,7 @@ const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
             updates.dailyPhoneRechargeLimit = String(configData.config.maxDailyRecharge ?? '');
             updates.enableRecharges = configData.config.enableRecharges !== undefined ? configData.config.enableRecharges : true;
             updates.allowPasswordChange = configData.config.allowPasswordChange !== undefined ? configData.config.allowPasswordChange : true;
+            updates.allowViewCommission = configData.config.allowViewCommission !== undefined ? configData.config.allowViewCommission : false;
             updates.futureSalesMode = configData.config.futureSalesMode || (configData.config.allowFutureSales ? 'DAYS' : 'OFF');
             updates.maxFutureDays = String(configData.config.maxFutureDays ?? 7);
             updates.creditLimit = String(configData.config.creditLimit ?? '');
@@ -1574,6 +1578,7 @@ const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
                 allowJackpot: formData.allowJackpot !== undefined ? formData.allowJackpot : true,
                 enableRecharges: formData.enableRecharges !== undefined ? formData.enableRecharges : true,
                 allowPasswordChange: formData.allowPasswordChange !== undefined ? formData.allowPasswordChange : true,
+                allowViewCommission: formData.allowViewCommission !== undefined ? formData.allowViewCommission : false,
                 cancelMinutes: formData.minutesToCancelTicket ? parseInt(formData.minutesToCancelTicket) : 30,
                 dailyCancelTickets: formData.ticketsToCancelPerDay ? parseInt(formData.ticketsToCancelPerDay) : null,
                 maxCancelAmount: formData.maximumCancelTicketAmount ? parseFloat(formData.maximumCancelTicketAmount) : null,
