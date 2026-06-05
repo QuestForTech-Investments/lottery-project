@@ -148,18 +148,37 @@ const useLogin = () => {
         localStorage.removeItem('bettingPoolName');
       }
 
-      // Set cookie on parent domain for cross-subdomain auth
-      // This allows POS subdomain to read the same token
+      // Set cookie on parent domain for cross-subdomain auth so the POS
+      // subdomain can read the same token. Parent domain is derived from
+      // the tenant's posUrl (e.g. `https://pos.lacentralnumbers.com` →
+      // `.lacentralnumbers.com`), so adding a new tenant works without
+      // touching this file. Falls back to a host-scoped cookie in dev.
       if (response.token) {
-        const isProduction = window.location.hostname.includes('lottobook.net');
         const expiresInSeconds = 86400; // 24 hours
         const expires = new Date(Date.now() + expiresInSeconds * 1000).toUTCString();
 
-        if (isProduction) {
-          // Production: set cookie on parent domain so all subdomains can access it
-          document.cookie = `lottery_auth_token=${response.token}; domain=.lottobook.net; path=/; expires=${expires}; secure; samesite=lax`;
+        let parentDomain: string | null = null;
+        if (tenantConfig.posUrl) {
+          try {
+            const posHost = new URL(tenantConfig.posUrl).hostname;
+            // Strip a leading `pos.` to get the registrable parent. Works
+            // for `pos.lottobook.net` → `.lottobook.net` and
+            // `pos.lacentralnumbers.com` → `.lacentralnumbers.com`.
+            if (posHost.includes('.')) {
+              parentDomain = '.' + posHost.replace(/^pos\./, '');
+            }
+          } catch { /* malformed URL — fall back to host-scoped cookie */ }
+        }
+
+        // Only set domain= when we're actually on that tenant's domain —
+        // otherwise (dev, preview, etc.) the browser silently drops the
+        // cookie because the domain attribute must match the current host.
+        const onTenantDomain = parentDomain
+          && window.location.hostname.endsWith(parentDomain.slice(1));
+
+        if (onTenantDomain) {
+          document.cookie = `lottery_auth_token=${response.token}; domain=${parentDomain}; path=/; expires=${expires}; secure; samesite=lax`;
         } else {
-          // Development: set cookie without domain restriction
           document.cookie = `lottery_auth_token=${response.token}; path=/; expires=${expires}; samesite=lax`;
         }
       }
@@ -172,15 +191,19 @@ const useLogin = () => {
       // and absolute URLs to avoid open-redirect attacks.
       const isSafeInternal = !!redirectUrl && redirectUrl.startsWith('/') && !redirectUrl.startsWith('//');
       const isPos = response.role === 'POS';
-      // Tenant-aware POS URL. Local dev (no posUrl on config or no match)
-      // falls back to the Vite default port.
+      // Tenant-aware POS URL. When running on localhost we always point at
+      // the local Vite POS dev server instead of the prod tenant URL so
+      // dev → prod hops don't happen accidentally.
+      const isLocalDev = window.location.hostname === 'localhost'
+        || window.location.hostname === '127.0.0.1';
       const tenantPosUrl = tenantConfig.posUrl;
+      const posTarget = isLocalDev ? 'http://localhost:5173' : (tenantPosUrl ?? 'http://localhost:5173');
       let target: string;
       if (redirectUrl && tenantPosUrl && redirectUrl.startsWith(tenantPosUrl)) {
         // Email/deep link that points back into THIS tenant's POS — accept it.
         target = redirectUrl;
       } else if (isPos) {
-        target = tenantPosUrl ?? 'http://localhost:5173';
+        target = posTarget;
       } else if (isSafeInternal) {
         // e.g. an email deep link to /tickets/plays?drawId=&date=
         target = redirectUrl!;
