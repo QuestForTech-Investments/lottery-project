@@ -30,6 +30,7 @@ public static class ErrorCodes
     // Database
     public const string DbUniqueConstraint = "DB_UNIQUE_CONSTRAINT";
     public const string DbForeignKeyInUse = "DB_FK_IN_USE";
+    public const string DbCheckConstraint = "DB_CHECK_CONSTRAINT";
     public const string DbMissingRequired = "DB_MISSING_REQUIRED";
     public const string DbTimeout = "DB_TIMEOUT";
     public const string DbGeneric = "DB_GENERIC";

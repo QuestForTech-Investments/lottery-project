@@ -1422,10 +1422,13 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
   const loadTemplateBettingPools = useCallback(async (): Promise<void> => {
     setLoadingTemplates(true);
     try {
-      // Use large pageSize to get all betting pools
-      const response = await getBettingPools({ pageSize: 500 });
+      // Use large pageSize to get all betting pools — tenants with several
+      // hundred bancas (La Central has 600+) need more than the old 500 cap.
+      const response = await getBettingPools({ pageSize: 5000 });
       if (response && response.items) {
-        // Exclude current betting pool from template list
+        // Numeric-aware sort so "LC-2" comes before "LC-10". Sort by code
+        // first (the user-visible identifier) and fall back to name.
+        const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
         const filteredPools = response.items
           .filter(pool => String(pool.bettingPoolId) !== id)
           .map(pool => ({
@@ -1434,7 +1437,11 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
             bettingPoolCode: pool.bettingPoolCode,
             zoneId: pool.zoneId,
             zoneName: pool.zoneName,
-          }));
+          }))
+          .sort((a, b) => collator.compare(
+            a.bettingPoolCode ?? a.bettingPoolName ?? '',
+            b.bettingPoolCode ?? b.bettingPoolName ?? '',
+          ));
         setTemplateBettingPools(filteredPools);
       }
     } catch (error) {

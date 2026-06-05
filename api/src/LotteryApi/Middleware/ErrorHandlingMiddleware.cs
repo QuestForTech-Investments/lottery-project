@@ -111,12 +111,24 @@ public class ErrorHandlingMiddleware
 
     private static (int statusCode, string errorCode, string message) HandleSqlException(SqlException sqlEx)
     {
+        // SQL Server number 547 covers BOTH foreign key and CHECK constraint
+        // violations. The message text differs ("FOREIGN KEY constraint" vs
+        // "CHECK constraint"), so we peek at it to surface the right code +
+        // user message instead of always saying "FK in use".
+        if (sqlEx.Number == 547)
+        {
+            var msg = sqlEx.Message ?? string.Empty;
+            if (msg.Contains("CHECK constraint", StringComparison.OrdinalIgnoreCase))
+            {
+                return (409, "DB_CHECK_CONSTRAINT", "Un valor no cumple con las reglas de validación de la base de datos");
+            }
+            return (409, "DB_FK_IN_USE", "No se puede eliminar el registro porque está siendo utilizado");
+        }
+
         return sqlEx.Number switch
         {
             // Unique constraint violation
             2601 or 2627 => (409, "DB_UNIQUE_CONSTRAINT", "Ya existe un registro con estos datos"),
-            // Foreign key violation
-            547 => (409, "DB_FK_IN_USE", "No se puede eliminar el registro porque está siendo utilizado"),
             // Cannot insert NULL
             515 => (400, "DB_MISSING_REQUIRED", "Faltan datos requeridos"),
             // Timeout

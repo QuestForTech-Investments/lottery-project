@@ -566,15 +566,25 @@ const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
   const loadTemplateBettingPools = useCallback(async (): Promise<void> => {
     try {
       setLoadingTemplates(true);
-      const response = await getBettingPools({ pageSize: 1000 });
+      // Tenants with several hundred bancas (La Central has 600+) need more
+      // than the previous 1000 cap; backend clamps to its own ceiling.
+      const response = await getBettingPools({ pageSize: 5000 });
       if (response && response.items) {
-        const pools: TemplateBettingPool[] = response.items.map((pool: BettingPool) => ({
-          bettingPoolId: pool.bettingPoolId,
-          bettingPoolName: pool.bettingPoolName,
-          bettingPoolCode: pool.bettingPoolCode || pool.branchCode,
-          zoneId: pool.zoneId,
-          zoneName: pool.zoneName,
-        }));
+        // Numeric-aware sort so "LC-2" comes before "LC-10". Sort by code
+        // first (the user-visible identifier) and fall back to name.
+        const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+        const pools: TemplateBettingPool[] = response.items
+          .map((pool: BettingPool) => ({
+            bettingPoolId: pool.bettingPoolId,
+            bettingPoolName: pool.bettingPoolName,
+            bettingPoolCode: pool.bettingPoolCode || pool.branchCode,
+            zoneId: pool.zoneId,
+            zoneName: pool.zoneName,
+          }))
+          .sort((a, b) => collator.compare(
+            a.bettingPoolCode ?? a.bettingPoolName ?? '',
+            b.bettingPoolCode ?? b.bettingPoolName ?? '',
+          ));
         setTemplateBettingPools(pools);
       }
     } catch (error) {
