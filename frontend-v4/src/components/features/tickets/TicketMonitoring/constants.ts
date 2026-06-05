@@ -138,15 +138,15 @@ export const STYLES = {
 // Column widths — keyed by the i18n key (stable across locales) so the layout
 // stays the same regardless of how long the translated label is.
 export const COLUMN_WIDTHS: Record<string, number> = {
-  'common.number': 165,
-  '': 40,
-  'common.date': 135,
-  'common.user': 110,
-  'common.amount': 80,
-  'common.prize': 60,
-  'tickets.anomalies.cancellationDate': 210,
-  'common.status': 70,
-  'common.actions': 60,
+  'common.number': 180,
+  '': 48,
+  'common.date': 155,
+  'common.user': 115,
+  'common.amount': 95,
+  'common.prize': 95,
+  'tickets.anomalies.cancellationDate': 220,
+  'common.status': 100,
+  'common.actions': 82,
 };
 
 // ============================================================================

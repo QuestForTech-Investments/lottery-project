@@ -292,23 +292,25 @@ const TicketMonitoring: FC = () => {
 
         {/* Table and Detail Panel — side-by-side on md+, stacked on mobile so
             the detail panel shows BELOW the table instead of competing for
-            horizontal space at narrow widths. */}
+            horizontal space at narrow widths. Both columns use FIXED widths
+            so the table doesn't visually shrink when a ticket is selected —
+            empty space stays on the right when the detail panel is closed. */}
         <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 2, alignItems: 'flex-start' }}>
           {/* Left (top on mobile): Quick Search and Table */}
-          <Box sx={{ flexShrink: { xs: 1, md: 0 }, width: { xs: '100%', md: 'auto' }, minWidth: 0 }}>
+          <Box sx={{ flexShrink: 0, width: { xs: '100%', md: 1100 }, maxWidth: '100%', minWidth: 0 }}>
             {/* Quick Search */}
             <TextField
               placeholder={t('common.filterQuick')}
               value={filtroRapido}
               onChange={handleFiltroRapidoChange}
               size="small"
-              sx={{ ...STYLES.quickSearch, mt: { xs: 0, sm: '-30px' }, mb: 1, position: 'relative', zIndex: 1, maxWidth: { xs: '100%', sm: 200 } }}
+              sx={{ ...STYLES.quickSearch, mb: 1, maxWidth: { xs: '100%', sm: 260 } }}
             />
 
             {/* Tickets Table */}
-            <Box sx={{ height: { xs: 400, sm: isCompactView ? 400 : 'calc(100vh - 380px)' }, mt: { xs: 0, sm: '-11px' } }}>
-              <TableContainer component={Paper} variant="outlined" sx={{ ...STYLES.tableContainer, height: '100%', overflow: 'auto', maxWidth: { xs: '100%', sm: 920 } }}>
-                <Table size="small" stickyHeader sx={{ tableLayout: 'fixed', width: '100%', minWidth: { xs: 880, sm: '100%' } }}>
+            <Box sx={{ height: { xs: 400, sm: isCompactView ? 400 : 'calc(100vh - 380px)' } }}>
+              <TableContainer component={Paper} variant="outlined" sx={{ ...STYLES.tableContainer, height: '100%', overflow: 'auto', maxWidth: '100%' }}>
+                <Table size="small" stickyHeader sx={{ tableLayout: 'fixed', width: '100%', minWidth: 1090 }}>
                   <TableHead sx={STYLES.tableHeader}>
                     <TableRow>
                       {TABLE_COLUMNS.map((col, idx) => {
@@ -346,12 +348,18 @@ const TicketMonitoring: FC = () => {
               naturally below the table. */}
           {selectedTicket && (
             <Box sx={{
+              // Table has a fixed width; the detail panel grows to absorb
+              // whatever horizontal space is left over instead of leaving
+              // an empty band to the right.
               flexGrow: 1,
               width: { xs: '100%', md: 'auto' },
-              minWidth: { xs: 0, md: 350 },
+              minWidth: { xs: 0, md: 520 },
               position: { xs: 'static', md: 'sticky' },
               top: { md: 16 },
-              mt: { xs: 1, md: '10px' },
+              // Align the top of the detail card with the top of the table
+              // by skipping past the quick-filter input that sits above the
+              // table on the left column. Header height (40px) + mb (8px).
+              mt: { xs: 1, md: '48px' },
             }}>
               <TicketDetailPanel ticket={selectedTicket} onClose={handleCloseDetail} />
             </Box>

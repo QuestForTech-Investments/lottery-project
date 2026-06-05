@@ -1,11 +1,12 @@
 /**
  * TicketDetailPanel Component
  *
- * Side panel showing detailed ticket information including plays/lines.
- * Styled to match the original Vue.js application exactly.
+ * Side panel showing detailed ticket information. Redesigned as a card with
+ * a clean header, status chip, meta key/values, quick-stat chips, and a
+ * proper MUI Table for plays — replacing the legacy Vue-mimicking grey UI.
  */
 
-import { memo, useMemo, useState, useCallback, type FC } from 'react';
+import { memo, useMemo, useState, useCallback, type FC, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Box,
@@ -18,6 +19,16 @@ import {
   Button,
   TextField,
   Alert,
+  Chip,
+  Stack,
+  Card,
+  Table,
+  TableHead,
+  TableBody,
+  TableRow,
+  TableCell,
+  Divider,
+  Tooltip,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import EditIcon from '@mui/icons-material/Edit';
@@ -25,6 +36,11 @@ import CancelIcon from '@mui/icons-material/Cancel';
 import ScheduleIcon from '@mui/icons-material/Schedule';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import ConfirmationNumberOutlinedIcon from '@mui/icons-material/ConfirmationNumberOutlined';
+import TagOutlinedIcon from '@mui/icons-material/TagOutlined';
+import AccessTimeOutlinedIcon from '@mui/icons-material/AccessTimeOutlined';
+import PrintOutlinedIcon from '@mui/icons-material/PrintOutlined';
+import EmojiEventsOutlinedIcon from '@mui/icons-material/EmojiEventsOutlined';
 import { formatCurrency } from '../../../../../utils/formatCurrency';
 import ticketService from '../../../../../services/ticketService';
 import type { LinePrizeMultipliers } from '../../../../../services/ticketService';
@@ -32,7 +48,7 @@ import type { TicketDetailPanelProps } from '../types';
 import type { MappedTicketLine } from '../../../../../services/ticketService';
 
 // ============================================================================
-// Prize Edit Modal Types
+// Prize Edit Modal (unchanged behavior, kept inline for cohesion)
 // ============================================================================
 
 interface PrizeMultipliers {
@@ -50,146 +66,12 @@ interface PrizeEditModalProps {
   onSave: (multipliers: PrizeMultipliers) => void;
 }
 
-// ============================================================================
-// Style Constants - Extracted from original Vue.js app
-// ============================================================================
-
-const PANEL_STYLES = {
-  container: {
-    backgroundColor: '#e3e3e3',
-    borderRadius: '12px',
-    boxShadow: 'rgba(0, 0, 0, 0.15) 0px 6px 10px -4px',
-    fontFamily: 'Montserrat, "Helvetica Neue", Arial, sans-serif',
-    overflow: 'hidden',
-    maxHeight: 'none',
-    overflowY: 'auto' as const,
-  },
-  header: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: '6px 15px 2px 15px',
-  },
-  headerTitle: {
-    fontSize: '14px',
-    fontWeight: 400,
-    color: 'rgb(37, 36, 34)',
-    flex: 1,
-    textAlign: 'center' as const,
-  },
-  closeButton: {
-    backgroundColor: '#dc3545',
-    width: 24,
-    height: 24,
-    marginTop: '4px',
-    '&:hover': {
-      backgroundColor: '#c82333',
-    },
-  },
-  closeIcon: {
-    fontSize: '14px',
-    color: '#fff',
-  },
-  infoSection: {
-    textAlign: 'center' as const,
-    padding: '0px 15px',
-  },
-  infoText: {
-    fontSize: '12px',
-    color: 'rgb(102, 97, 91)',
-    marginBottom: '0px',
-    lineHeight: 1.5,
-  },
-  legendTitle: {
-    fontSize: '13px',
-    fontWeight: 400,
-    color: 'rgb(37, 36, 34)',
-    textAlign: 'center' as const,
-    marginBottom: '2px',
-    marginTop: '0px',
-  },
-  legendContainer: {
-    display: 'flex',
-    justifyContent: 'center',
-    gap: 0,
-    marginBottom: '0px',
-  },
-  legendItem: {
-    padding: '2px 12px',
-    fontSize: '11px',
-    color: 'rgb(37, 36, 34)',
-    textAlign: 'center' as const,
-  },
-  totalsLine: {
-    fontSize: '13px',
-    fontWeight: 400,
-    color: 'rgb(37, 36, 34)',
-    padding: '4px 15px',
-    borderBottom: '1px solid #ccc',
-  },
-  lotteryHeader: {
-    fontSize: '12px',
-    fontWeight: 400,
-    color: 'rgb(102, 97, 91)',
-    padding: '2px 8px',
-    borderBottom: '1px solid #ccc',
-    backgroundColor: '#e3e3e3',
-    textAlign: 'center' as const,
-  },
-  tableHeader: {
-    display: 'flex',
-    backgroundColor: 'transparent',
-    borderBottom: '1px solid #ccc',
-  },
-  tableHeaderCell: {
-    fontSize: '12px',
-    fontWeight: 400,
-    color: 'rgb(37, 36, 34)',
-    padding: '2px 4px',
-    textAlign: 'center' as const,
-    flex: 1,
-  },
-  tableRow: {
-    display: 'flex',
-    alignItems: 'center',
-  },
-  tableCell: {
-    fontSize: '12px',
-    color: 'rgb(37, 36, 34)',
-    padding: '2px 4px',
-    textAlign: 'center' as const,
-    flex: 1,
-  },
-};
-
-// Row background colors based on status - alternating shades for better visualization
-const ROW_COLORS = {
-  winnerEven: 'rgb(153, 221, 255)',    // Light blue
-  winnerOdd: 'rgb(180, 232, 255)',     // Lighter blue
-  loserEven: 'rgb(255, 152, 146)',     // Salmon
-  loserOdd: 'rgb(255, 186, 182)',      // Lighter salmon
-  pendingEven: 'rgb(210, 208, 209)',   // Light gray
-  pendingOdd: 'rgb(225, 224, 224)',    // Lighter gray
-};
-
-// Legend colors
-const LEGEND_COLORS = {
-  ganadora: 'rgb(153, 221, 255)',    // Light blue
-  perdedora: 'rgb(255, 152, 146)',   // Salmon
-  pendiente: 'rgb(210, 208, 209)',   // Light gray
-};
-
-// Default prize multipliers (typical values from original app)
 const DEFAULT_MULTIPLIERS: PrizeMultipliers = {
   firstPrize: 56,
   secondPrize: 12,
   thirdPrize: 4,
   doubles: 56,
 };
-
-// ============================================================================
-// Prize Edit Modal Component
-// ============================================================================
 
 const PrizeEditModal: FC<PrizeEditModalProps> = memo(({
   open,
@@ -215,83 +97,26 @@ const PrizeEditModal: FC<PrizeEditModalProps> = memo(({
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle sx={{ fontFamily: 'Montserrat, sans-serif', fontSize: '16px' }}>
+      <DialogTitle sx={{ fontSize: '16px' }}>
         {t('tickets.detail.modifyPrizes', { number: betNumber })}
-        <IconButton
-          onClick={onClose}
-          sx={{ position: 'absolute', right: 8, top: 8 }}
-        >
+        <IconButton onClick={onClose} sx={{ position: 'absolute', right: 8, top: 8 }}>
           <CloseIcon />
         </IconButton>
       </DialogTitle>
       <DialogContent>
-        <Alert
-          severity="warning"
-          sx={{
-            mb: 2,
-            backgroundColor: '#f0ad4e',
-            color: '#fff',
-            '& .MuiAlert-icon': { color: '#fff' },
-          }}
-        >
+        <Alert severity="warning" sx={{ mb: 2 }}>
           {t('tickets.detail.prizeChangeWarning')}
         </Alert>
         <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
-          <TextField
-            label={t('tickets.detail.firstPrize')}
-            type="number"
-            value={formData.firstPrize}
-            onChange={handleChange('firstPrize')}
-            size="small"
-            fullWidth
-          />
-          <TextField
-            label={t('tickets.detail.secondPrize')}
-            type="number"
-            value={formData.secondPrize}
-            onChange={handleChange('secondPrize')}
-            size="small"
-            fullWidth
-          />
-          <TextField
-            label={t('tickets.detail.thirdPrize')}
-            type="number"
-            value={formData.thirdPrize}
-            onChange={handleChange('thirdPrize')}
-            size="small"
-            fullWidth
-          />
-          <TextField
-            label={t('tickets.detail.doubles')}
-            type="number"
-            value={formData.doubles}
-            onChange={handleChange('doubles')}
-            size="small"
-            fullWidth
-          />
+          <TextField label={t('tickets.detail.firstPrize')} type="number" value={formData.firstPrize} onChange={handleChange('firstPrize')} size="small" fullWidth />
+          <TextField label={t('tickets.detail.secondPrize')} type="number" value={formData.secondPrize} onChange={handleChange('secondPrize')} size="small" fullWidth />
+          <TextField label={t('tickets.detail.thirdPrize')} type="number" value={formData.thirdPrize} onChange={handleChange('thirdPrize')} size="small" fullWidth />
+          <TextField label={t('tickets.detail.doubles')} type="number" value={formData.doubles} onChange={handleChange('doubles')} size="small" fullWidth />
         </Box>
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button
-          onClick={onClose}
-          sx={{
-            bgcolor: '#666',
-            color: '#fff',
-            '&:hover': { bgcolor: '#555' },
-            textTransform: 'uppercase',
-          }}
-        >
-          {t('common.cancel')}
-        </Button>
-        <Button
-          onClick={handleSave}
-          sx={{
-            bgcolor: '#8b5cf6',
-            color: '#fff',
-            '&:hover': { bgcolor: '#7c3aed' },
-            textTransform: 'uppercase',
-          }}
-        >
+        <Button onClick={onClose} variant="outlined">{t('common.cancel')}</Button>
+        <Button onClick={handleSave} variant="contained" sx={{ bgcolor: '#6366f1', '&:hover': { bgcolor: '#4f46e5' } }}>
           {t('tickets.detail.updatePlay')}
         </Button>
       </DialogActions>
@@ -302,12 +127,67 @@ const PrizeEditModal: FC<PrizeEditModalProps> = memo(({
 PrizeEditModal.displayName = 'PrizeEditModal';
 
 // ============================================================================
-// Helper Components
+// Style + color tokens
 // ============================================================================
+
+const STATUS_THEME: Record<string, { color: string; bg: string; label: string }> = {
+  Ganador:   { color: '#047857', bg: '#d1fae5', label: 'ticketStatus.winner' },
+  Pendiente: { color: '#92400e', bg: '#fef3c7', label: 'ticketStatus.pending' },
+  Perdedor:  { color: '#9f1239', bg: '#fee2e2', label: 'ticketStatus.loser' },
+  Cancelado: { color: '#475569', bg: '#e2e8f0', label: 'ticketStatus.cancelled' },
+  Pagado:    { color: '#1e3a8a', bg: '#dbeafe', label: 'ticketStatus.paid' },
+};
+
+// Left-border accent + saturated row tint per play state. Brighter than
+// the original pastels so winners / losers / pending pop at a glance.
+const ROW_THEME = {
+  winner:    { accent: '#047857', bg: '#a7f3d0' }, // emerald-200 over emerald-700 stripe
+  loser:     { accent: '#b91c1c', bg: '#fecaca' }, // red-200 over red-700 stripe
+  pending:   { accent: '#475569', bg: '#cbd5e1' }, // slate-300 over slate-600 stripe
+  cancelled: { accent: '#64748b', bg: '#e2e8f0' }, // softer slate, same family
+};
+
+// ============================================================================
+// Sub-components
+// ============================================================================
+
+const MetaRow: FC<{ icon: ReactNode; label: string; value: ReactNode }> = ({ icon, label, value }) => (
+  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 0.5 }}>
+    <Box sx={{ color: '#94a3b8', display: 'flex', alignItems: 'center' }}>{icon}</Box>
+    <Typography sx={{ fontSize: '0.78rem', color: '#64748b', minWidth: 90 }}>{label}</Typography>
+    <Typography sx={{ fontSize: '0.78rem', color: '#1e293b', fontWeight: 500, fontFamily: 'monospace' }}>{value}</Typography>
+  </Box>
+);
+
+const QuickStat: FC<{ label: string; value: string; tint?: string }> = ({ label, value, tint = '#64748b' }) => (
+  <Box
+    sx={{
+      flex: 1,
+      minWidth: 0,
+      px: 1.25,
+      py: 1,
+      borderRadius: '10px',
+      border: '1px solid #e6e8ec',
+      backgroundColor: '#fff',
+      // Reserve a 2-line height for the label so single-word and two-word
+      // labels (e.g. "Pending Payment") line up vertically across all
+      // sibling QuickStats.
+      display: 'flex',
+      flexDirection: 'column',
+      justifyContent: 'space-between',
+    }}
+  >
+    <Typography sx={{ fontSize: '0.65rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', color: '#94a3b8', lineHeight: 1.1, mb: 0.4, minHeight: '1.72em' }}>
+      {label}
+    </Typography>
+    <Typography sx={{ fontSize: '0.95rem', fontWeight: 700, color: tint, lineHeight: 1.1 }} noWrap>
+      {value}
+    </Typography>
+  </Box>
+);
 
 interface PlayRowProps {
   line: MappedTicketLine;
-  index: number;
   isWinner: boolean;
   isPending: boolean;
   isCancelled?: boolean;
@@ -326,50 +206,62 @@ const formatBetNumber = (num: string, betTypeName?: string): string => {
   return num;
 };
 
-const PlayRow: FC<PlayRowProps> = memo(({ line, index, isWinner, isPending, isCancelled, onEditPrize, isOutOfScheduleSale, isPreviousDay, isFutureDay }) => {
-  const backgroundColor = useMemo(() => {
-    const isEven = index % 2 === 0;
-    if (isCancelled) return isEven ? ROW_COLORS.pendingEven : ROW_COLORS.pendingOdd;
-    if (isWinner) return isEven ? ROW_COLORS.winnerEven : ROW_COLORS.winnerOdd;
-    if (isPending) return isEven ? ROW_COLORS.pendingEven : ROW_COLORS.pendingOdd;
-    return isEven ? ROW_COLORS.loserEven : ROW_COLORS.loserOdd;
-  }, [isWinner, isPending, isCancelled, index]);
+const PlayRow: FC<PlayRowProps> = memo(({ line, isWinner, isPending, isCancelled, onEditPrize, isOutOfScheduleSale, isPreviousDay, isFutureDay }) => {
+  const theme = isCancelled ? ROW_THEME.cancelled
+    : isWinner ? ROW_THEME.winner
+    : isPending ? ROW_THEME.pending
+    : ROW_THEME.loser;
 
   const handleEditClick = useCallback(() => {
     onEditPrize(line.betNumber);
   }, [onEditPrize, line.betNumber]);
 
   return (
-    <Box sx={{ ...PANEL_STYLES.tableRow, backgroundColor }}>
-      <Box sx={{ ...PANEL_STYLES.tableCell, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.3 }}>
-        <Typography component="span" sx={{ fontSize: 'inherit' }}>{formatBetNumber(line.betNumber, line.betTypeName)}</Typography>
-        {isOutOfScheduleSale && <ScheduleIcon sx={{ fontSize: 14, color: '#e53935' }} />}
-        {isPreviousDay && <><ArrowBackIcon sx={{ fontSize: 14, color: '#ff9800', mr: -0.3 }} /><ScheduleIcon sx={{ fontSize: 14, color: '#ff9800' }} /></>}
-        {isFutureDay && <><ScheduleIcon sx={{ fontSize: 14, color: '#2196f3' }} /><ArrowForwardIcon sx={{ fontSize: 14, color: '#2196f3', ml: -0.3 }} /></>}
-      </Box>
-      <Typography sx={PANEL_STYLES.tableCell}>{line.betTypeName || '-'}</Typography>
-      <Typography sx={PANEL_STYLES.tableCell}>{formatCurrency(line.betAmount)}</Typography>
-      <Box sx={{ ...PANEL_STYLES.tableCell, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
-        <Typography component="span" sx={{ fontSize: 'inherit' }}>
-          {line.prizeAmount > 0 ? formatCurrency(line.prizeAmount) : '-'}
-        </Typography>
-        <IconButton
-          size="small"
-          onClick={handleEditClick}
-          sx={{
-            p: 0.25,
-            color: 'rgb(102, 97, 91)',
-            '&:hover': { color: 'rgb(37, 36, 34)' },
-          }}
-        >
-          <EditIcon sx={{ fontSize: 14 }} />
-        </IconButton>
-      </Box>
-      <Typography sx={PANEL_STYLES.tableCell}>
-        {/* Pagado icon placeholder - would be a check/x icon */}
-        -
-      </Typography>
-    </Box>
+    <TableRow
+      sx={{
+        backgroundColor: theme.bg,
+        // Accent stripe on the left edge encodes status without colorizing
+        // the whole row.
+        boxShadow: `inset 3px 0 0 ${theme.accent}`,
+        '& td': { fontSize: '0.78rem', py: 0.6, color: '#1e293b' },
+      }}
+    >
+      <TableCell sx={{ pl: 1.5 }}>
+        <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.4 }}>
+          <Typography component="span" sx={{ fontSize: '0.85rem', fontWeight: 600, fontFamily: 'monospace' }}>
+            {formatBetNumber(line.betNumber, line.betTypeName)}
+          </Typography>
+          {isOutOfScheduleSale && (
+            <Tooltip title="Fuera de horario" arrow>
+              <ScheduleIcon sx={{ fontSize: 14, color: '#e53935' }} />
+            </Tooltip>
+          )}
+          {isPreviousDay && (
+            <Tooltip title="Venta del día anterior" arrow>
+              <ArrowBackIcon sx={{ fontSize: 14, color: '#ff9800' }} />
+            </Tooltip>
+          )}
+          {isFutureDay && (
+            <Tooltip title="Venta futura" arrow>
+              <ArrowForwardIcon sx={{ fontSize: 14, color: '#2196f3' }} />
+            </Tooltip>
+          )}
+        </Box>
+      </TableCell>
+      <TableCell>{line.betTypeName || '-'}</TableCell>
+      <TableCell align="right">{formatCurrency(line.betAmount)}</TableCell>
+      <TableCell align="right">
+        <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, justifyContent: 'flex-end' }}>
+          <Typography component="span" sx={{ fontSize: 'inherit', fontWeight: isWinner ? 700 : 400, color: isWinner ? '#047857' : 'inherit' }}>
+            {line.prizeAmount > 0 ? formatCurrency(line.prizeAmount) : '—'}
+          </Typography>
+          <IconButton size="small" onClick={handleEditClick} sx={{ p: 0.25, color: '#94a3b8', '&:hover': { color: '#475569' } }}>
+            <EditIcon sx={{ fontSize: 13 }} />
+          </IconButton>
+        </Box>
+      </TableCell>
+      <TableCell align="center">—</TableCell>
+    </TableRow>
   );
 });
 
@@ -381,14 +273,12 @@ PlayRow.displayName = 'PlayRow';
 
 const TicketDetailPanel: FC<TicketDetailPanelProps> = memo(({ ticket, onClose }) => {
   const { t } = useTranslation();
-  // Modal state for prize editing
   const [prizeModalOpen, setPrizeModalOpen] = useState(false);
   const [selectedBetNumber, setSelectedBetNumber] = useState('');
 
-  // Group lines by draw/lottery
+  // Group lines by draw/lottery for the per-draw sub-tables.
   const linesByDraw = useMemo(() => {
     if (!ticket.lines || ticket.lines.length === 0) return new Map<string, MappedTicketLine[]>();
-
     const grouped = new Map<string, MappedTicketLine[]>();
     for (const line of ticket.lines) {
       const drawName = line.drawName || t('tickets.detail.noDraw');
@@ -396,215 +286,237 @@ const TicketDetailPanel: FC<TicketDetailPanelProps> = memo(({ ticket, onClose })
       grouped.set(drawName, [...existing, line]);
     }
     return grouped;
-  }, [ticket.lines]);
+  }, [ticket.lines, t]);
 
-  // Calculate totals from lines
-  const { totalMonto, totalPremios, totalPendiente } = useMemo(() => {
-    if (!ticket.lines) return { totalMonto: ticket.monto, totalPremios: ticket.premio, totalPendiente: 0 };
-
+  // Roll-up stats from lines; fall back to ticket-level fields when lines
+  // weren't loaded (slim mode).
+  const { totalMonto, totalPremios, totalPendiente, playCount } = useMemo(() => {
+    if (!ticket.lines || ticket.lines.length === 0) {
+      return { totalMonto: ticket.monto, totalPremios: ticket.premio, totalPendiente: 0, playCount: 0 };
+    }
     const monto = ticket.lines.reduce((sum, line) => sum + line.betAmount, 0);
     const premios = ticket.lines.reduce((sum, line) => sum + line.prizeAmount, 0);
-    // Pending is the prize amount for lines with prize > 0 but ticket not paid
     const pendiente = ticket.estado === 'Ganador' || ticket.estado === 'Pendiente' ? premios : 0;
-
-    return { totalMonto: monto || ticket.monto, totalPremios: premios || ticket.premio, totalPendiente: pendiente };
+    return { totalMonto: monto || ticket.monto, totalPremios: premios || ticket.premio, totalPendiente: pendiente, playCount: ticket.lines.length };
   }, [ticket]);
 
-  // Handle opening prize edit modal
   const handleEditPrize = useCallback((betNumber: string) => {
     setSelectedBetNumber(betNumber);
     setPrizeModalOpen(true);
   }, []);
 
-  // Handle closing prize edit modal
   const handleClosePrizeModal = useCallback(() => {
     setPrizeModalOpen(false);
     setSelectedBetNumber('');
   }, []);
 
-  // Handle saving prize multipliers
   const handleSavePrizeMultipliers = useCallback(async (multipliers: PrizeMultipliers) => {
     try {
-      // Find the line to get its ID
       const line = ticket.lines?.find(l => l.betNumber === selectedBetNumber);
-      const lineId = line?.drawId || 0; // Using drawId as a proxy for lineId
-
+      const lineId = line?.drawId || 0;
       const apiMultipliers: LinePrizeMultipliers = {
         firstPrize: multipliers.firstPrize,
         secondPrize: multipliers.secondPrize,
         thirdPrize: multipliers.thirdPrize,
         doubles: multipliers.doubles,
       };
-
-      const result = await ticketService.updateLinePrizeMultipliers(
-        ticket.id,
-        lineId,
-        selectedBetNumber,
-        apiMultipliers
-      );
-
-      if (result.success) {
-        // Show success feedback (could add a snackbar in the future)
-        console.log('Prize multipliers updated:', result.message);
-      }
+      const result = await ticketService.updateLinePrizeMultipliers(ticket.id, lineId, selectedBetNumber, apiMultipliers);
+      if (result.success) console.log('Prize multipliers updated:', result.message);
     } catch (error) {
       console.error('Error saving prize multipliers:', error);
-      // Could show error feedback (snackbar) in the future
     } finally {
       handleClosePrizeModal();
     }
   }, [ticket.id, ticket.lines, selectedBetNumber, handleClosePrizeModal]);
 
+  const statusInfo = STATUS_THEME[ticket.estado];
+
   return (
-    <Box sx={PANEL_STYLES.container}>
-      {/* Header with ticket number and close button */}
-      <Box sx={PANEL_STYLES.header}>
-        <Box sx={{ width: 24 }} /> {/* Spacer for centering */}
-        <Typography sx={PANEL_STYLES.headerTitle}>
+    <Card
+      elevation={0}
+      sx={{
+        borderRadius: '16px',
+        border: '1px solid #e6e8ec',
+        backgroundColor: '#fff',
+        overflow: 'hidden',
+      }}
+    >
+      {/* Header — ticket code + status chip + close */}
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1,
+          px: 2,
+          py: 1.5,
+          borderBottom: '1px solid #f1f5f9',
+        }}
+      >
+        <ConfirmationNumberOutlinedIcon sx={{ color: '#6366f1', fontSize: 22 }} />
+        <Typography sx={{ flex: 1, fontSize: '0.95rem', fontWeight: 700, fontFamily: 'monospace', color: '#1e293b', minWidth: 0 }} noWrap>
           {ticket.id}-{ticket.numero}
         </Typography>
-        <IconButton size="small" onClick={onClose} sx={PANEL_STYLES.closeButton}>
-          <CloseIcon sx={PANEL_STYLES.closeIcon} />
+        {statusInfo && (
+          <Chip
+            label={t(statusInfo.label)}
+            size="small"
+            sx={{
+              fontWeight: 600,
+              fontSize: '0.7rem',
+              color: statusInfo.color,
+              backgroundColor: statusInfo.bg,
+              border: 'none',
+              '& .MuiChip-label': { px: 1 },
+            }}
+          />
+        )}
+        <IconButton size="small" onClick={onClose} sx={{ color: '#94a3b8', '&:hover': { color: '#ef4444' } }}>
+          <CloseIcon fontSize="small" />
         </IconButton>
       </Box>
 
-      {/* Info section */}
-      <Box sx={PANEL_STYLES.infoSection}>
-        <Typography sx={PANEL_STYLES.infoText}>
-          ({t('tickets.detail.magicNumber')}: {ticket.numero.replace(/-/g, '').toUpperCase()})
-        </Typography>
-        <Typography sx={PANEL_STYLES.infoText}>
-          {t('tickets.detail.firstPlayDate')}: {ticket.fecha}
-        </Typography>
-        <Typography sx={PANEL_STYLES.infoText}>
-          {t('tickets.detail.printDate')}: {ticket.fecha}
-        </Typography>
+      {/* Meta info */}
+      <Box sx={{ px: 2, py: 1.25 }}>
+        <MetaRow
+          icon={<TagOutlinedIcon sx={{ fontSize: 16 }} />}
+          label={t('tickets.detail.magicNumber')}
+          value={ticket.numero.replace(/-/g, '').toUpperCase()}
+        />
+        <MetaRow
+          icon={<AccessTimeOutlinedIcon sx={{ fontSize: 16 }} />}
+          label={t('tickets.detail.firstPlayDate')}
+          value={ticket.fecha}
+        />
+        <MetaRow
+          icon={<PrintOutlinedIcon sx={{ fontSize: 16 }} />}
+          label={t('tickets.detail.printDate')}
+          value={ticket.fecha}
+        />
       </Box>
 
-      {/* Cancelled out of time flag */}
+      {/* Cancelled-out-of-time banner */}
       {ticket.isCancelledOutOfTime && (
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, py: 0.5 }}>
-          <CancelIcon sx={{ fontSize: 16, color: '#e65100' }} />
-          <ScheduleIcon sx={{ fontSize: 16, color: '#e65100' }} />
-          <Typography sx={{ fontSize: '12px', color: '#e65100', fontWeight: 'bold' }}>
+        <Box sx={{ mx: 2, mb: 1.5 }}>
+          <Alert
+            icon={<CancelIcon fontSize="small" />}
+            severity="warning"
+            sx={{ py: 0.5, '& .MuiAlert-message': { fontSize: '0.78rem', fontWeight: 600 } }}
+          >
             {t('tickets.monitoring.cancelledOutOfTime')}
-          </Typography>
+          </Alert>
         </Box>
       )}
 
-      {/* Legend */}
-      <Box sx={{ padding: '2px 15px' }}>
-        <Typography sx={PANEL_STYLES.legendTitle}>{t('tickets.detail.legend')}</Typography>
-        <Box sx={PANEL_STYLES.legendContainer}>
-          <Box sx={{ ...PANEL_STYLES.legendItem, backgroundColor: LEGEND_COLORS.ganadora }}>
-            {t('tickets.detail.winningPlay')}
-          </Box>
-          <Box sx={{ ...PANEL_STYLES.legendItem, backgroundColor: LEGEND_COLORS.perdedora }}>
-            {t('tickets.detail.losingPlay')}
-          </Box>
-          <Box sx={{ ...PANEL_STYLES.legendItem, backgroundColor: LEGEND_COLORS.pendiente }}>
-            {t('ticketStatus.pending')}
-          </Box>
-        </Box>
+      {/* Quick stats — 4 mini cards */}
+      <Box sx={{ px: 2, pb: 1.5 }}>
+        <Stack direction="row" spacing={1}>
+          <QuickStat label={t('common.plays')} value={String(playCount)} tint="#6366f1" />
+          <QuickStat label={t('common.amount')} value={formatCurrency(totalMonto)} tint="#1e293b" />
+          <QuickStat label={t('common.prize')} value={formatCurrency(totalPremios)} tint={totalPremios > 0 ? '#10b981' : '#1e293b'} />
+          <QuickStat label={t('tickets.detail.pendingPayment')} value={formatCurrency(totalPendiente)} tint={totalPendiente > 0 ? '#f59e0b' : '#1e293b'} />
+        </Stack>
+        {ticket.descuento > 0 && (
+          <Typography sx={{ mt: 1, fontSize: '0.75rem', color: '#64748b', textAlign: 'right' }}>
+            {t('tickets.detail.discount')}: <strong>{formatCurrency(ticket.descuento)}</strong>
+          </Typography>
+        )}
       </Box>
 
-      {/* Totals line */}
-      <Typography sx={PANEL_STYLES.totalsLine}>
-        {t('common.plays')} ({t('common.amount')}: {formatCurrency(totalMonto)}) ({t('tickets.detail.pendingPayment')}: {formatCurrency(totalPendiente)}) ({t('tickets.detail.totalPrizes')}: {formatCurrency(totalPremios)}){ticket.descuento > 0 && ` (${t('tickets.detail.discount')}: ${formatCurrency(ticket.descuento)})`}
-      </Typography>
+      {/* Legend — 3 equal-width vivid cards (winner / loser / pending). */}
+      <Box sx={{ px: 2, pb: 1.5 }}>
+        <Stack direction="row" spacing={1}>
+          {[
+            { label: t('tickets.detail.winningPlay'), icon: <EmojiEventsOutlinedIcon sx={{ fontSize: 16 }} />, bg: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' },
+            { label: t('tickets.detail.losingPlay'),  icon: <CancelIcon            sx={{ fontSize: 16 }} />, bg: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)' },
+            { label: t('ticketStatus.pending'),       icon: <ScheduleIcon          sx={{ fontSize: 16 }} />, bg: 'linear-gradient(135deg, #94a3b8 0%, #64748b 100%)' },
+          ].map((item) => (
+            <Box
+              key={item.label}
+              sx={{
+                flex: 1,
+                minWidth: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 0.6,
+                px: 1,
+                py: 0.85,
+                borderRadius: '10px',
+                background: item.bg,
+                color: '#fff',
+                fontSize: '0.72rem',
+                fontWeight: 700,
+                letterSpacing: '0.02em',
+                textTransform: 'uppercase',
+                boxShadow: '0 1px 3px rgba(15,23,42,0.12), inset 0 1px 0 rgba(255,255,255,0.25)',
+              }}
+            >
+              {item.icon}
+              <Box component="span" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.label}</Box>
+            </Box>
+          ))}
+        </Stack>
+      </Box>
 
-      {/* Plays grouped by lottery/draw */}
+      <Divider />
+
+      {/* Plays per draw */}
       {linesByDraw.size > 0 ? (
         Array.from(linesByDraw.entries()).map(([drawName, lines]) => (
           <Box key={drawName}>
-            {/* Lottery header */}
-            <Typography sx={PANEL_STYLES.lotteryHeader}>{drawName}</Typography>
-
-            {/* Table header - only show for first lottery */}
-            {Array.from(linesByDraw.keys())[0] === drawName && (
-              <Box sx={PANEL_STYLES.tableHeader}>
-                <Typography sx={PANEL_STYLES.tableHeaderCell}>{t('common.play')}</Typography>
-                <Typography sx={PANEL_STYLES.tableHeaderCell}>{t('tickets.plays.playType')}</Typography>
-                <Typography sx={PANEL_STYLES.tableHeaderCell}>{t('common.amount')}</Typography>
-                <Typography sx={PANEL_STYLES.tableHeaderCell}>{t('common.prize')}</Typography>
-                <Typography sx={PANEL_STYLES.tableHeaderCell}>{t('ticketStatus.paid')}</Typography>
-              </Box>
-            )}
-
-            {/* Play rows */}
-            {lines.map((line, index) => (
-              <PlayRow
-                key={`${drawName}-${line.betNumber}-${index}`}
-                line={line}
-                index={index}
-                isWinner={line.prizeAmount > 0}
-                isPending={line.lineStatus === 'pending' || (!line.lineStatus && ticket.estado === 'Pendiente')}
-                isCancelled={ticket.estado === 'Cancelado'}
-                onEditPrize={handleEditPrize}
-                isOutOfScheduleSale={line.isOutOfScheduleSale}
-                isPreviousDay={ticket.isPreviousDay}
-                isFutureDay={ticket.isFutureDay}
-              />
-            ))}
+            <Box sx={{ px: 2, py: 1, backgroundColor: '#f8fafc', borderBottom: '1px solid #f1f5f9', borderTop: '1px solid #f1f5f9' }}>
+              <Typography sx={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#475569' }}>
+                {drawName}
+              </Typography>
+            </Box>
+            <Table size="small" sx={{ '& th': { fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', color: '#64748b', py: 0.75, borderBottom: '1px solid #f1f5f9' } }}>
+              <TableHead>
+                <TableRow>
+                  <TableCell sx={{ pl: 1.5 }}>{t('common.play')}</TableCell>
+                  <TableCell>{t('tickets.plays.playType')}</TableCell>
+                  <TableCell align="right">{t('common.amount')}</TableCell>
+                  <TableCell align="right">{t('common.prize')}</TableCell>
+                  <TableCell align="center">{t('ticketStatus.paid')}</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {lines.map((line, index) => (
+                  <PlayRow
+                    key={`${drawName}-${line.betNumber}-${index}`}
+                    line={line}
+                    isWinner={line.prizeAmount > 0}
+                    isPending={line.lineStatus === 'pending' || (!line.lineStatus && ticket.estado === 'Pendiente')}
+                    isCancelled={ticket.estado === 'Cancelado'}
+                    onEditPrize={handleEditPrize}
+                    isOutOfScheduleSale={line.isOutOfScheduleSale}
+                    isPreviousDay={ticket.isPreviousDay}
+                    isFutureDay={ticket.isFutureDay}
+                  />
+                ))}
+              </TableBody>
+            </Table>
           </Box>
         ))
       ) : (
-        // Fallback when no lines data - show ticket info
-        <Box sx={{ padding: '20px 15px', textAlign: 'center' }}>
-          <Typography sx={{ fontSize: '14px', color: 'rgb(102, 97, 91)', mb: 2 }}>
+        // Slim mode — no lines loaded, show summary cards
+        <Box sx={{ px: 2, py: 2.5 }}>
+          <Typography sx={{ fontSize: '0.85rem', color: '#64748b', mb: 1.5, textAlign: 'center' }}>
             {t('tickets.detail.ticketInfo')}
           </Typography>
-          <Box sx={{ display: 'flex', justifyContent: 'space-around', mb: 2 }}>
-            <Box>
-              <Typography sx={{ fontSize: '12px', color: 'rgb(102, 97, 91)' }}>{t('common.user')}</Typography>
-              <Typography sx={{ fontSize: '14px', fontWeight: 500 }}>{ticket.usuario}</Typography>
-            </Box>
-            <Box>
-              <Typography sx={{ fontSize: '12px', color: 'rgb(102, 97, 91)' }}>{t('common.status')}</Typography>
-              <Typography
-                sx={{
-                  fontSize: '14px',
-                  fontWeight: 500,
-                  color:
-                    ticket.estado === 'Ganador' ? 'success.main' :
-                    ticket.estado === 'Cancelado' ? 'error.main' :
-                    ticket.estado === 'Perdedor' ? 'rgb(255, 152, 146)' : 'inherit',
-                }}
-              >
-                {ticket.estado === 'Ganador' ? t('ticketStatus.winner') :
-                 ticket.estado === 'Cancelado' ? t('ticketStatus.cancelled') :
-                 ticket.estado === 'Perdedor' ? t('ticketStatus.loser') :
-                 ticket.estado === 'Pendiente' ? t('ticketStatus.pending') :
-                 ticket.estado === 'Pagado' ? t('ticketStatus.paid') : ticket.estado}
-              </Typography>
-            </Box>
-          </Box>
-          <Box sx={{ display: 'flex', justifyContent: 'space-around' }}>
-            <Box>
-              <Typography sx={{ fontSize: '12px', color: 'rgb(102, 97, 91)' }}>{t('common.amount')}</Typography>
-              <Typography sx={{ fontSize: '14px', fontWeight: 500, color: 'primary.main' }}>
-                {formatCurrency(ticket.monto)}
-              </Typography>
-            </Box>
-            <Box>
-              <Typography sx={{ fontSize: '12px', color: 'rgb(102, 97, 91)' }}>{t('common.prize')}</Typography>
-              <Typography
-                sx={{
-                  fontSize: '14px',
-                  fontWeight: 500,
-                  color: ticket.premio > 0 ? 'success.main' : 'inherit',
-                }}
-              >
-                {formatCurrency(ticket.premio)}
-              </Typography>
-            </Box>
-          </Box>
+          <Stack direction="row" spacing={1} sx={{ mb: 1 }}>
+            <QuickStat label={t('common.user')} value={ticket.usuario || '-'} />
+            <QuickStat
+              label={t('common.status')}
+              value={statusInfo ? t(statusInfo.label) : ticket.estado}
+              tint={statusInfo?.color}
+            />
+          </Stack>
           {ticket.fechaCancelacion && (
-            <Box sx={{ mt: 2 }}>
-              <Typography sx={{ fontSize: '12px', color: 'rgb(102, 97, 91)' }}>
+            <Box sx={{ mt: 1.5, p: 1.25, borderRadius: '10px', backgroundColor: '#fef2f2', border: '1px solid #fecaca' }}>
+              <Typography sx={{ fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', color: '#9f1239', letterSpacing: '0.05em', mb: 0.3 }}>
                 {t('tickets.anomalies.cancellationDate')}
               </Typography>
-              <Typography sx={{ fontSize: '14px', color: 'error.main' }}>
+              <Typography sx={{ fontSize: '0.85rem', color: '#7f1d1d', fontFamily: 'monospace' }}>
                 {ticket.fechaCancelacion}
               </Typography>
             </Box>
@@ -620,7 +532,7 @@ const TicketDetailPanel: FC<TicketDetailPanelProps> = memo(({ ticket, onClose })
         onClose={handleClosePrizeModal}
         onSave={handleSavePrizeMultipliers}
       />
-    </Box>
+    </Card>
   );
 });
 
