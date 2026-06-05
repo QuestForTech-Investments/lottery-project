@@ -65,9 +65,11 @@ const MassEditBettingPools: React.FC = () => {
     setLoading(true);
     try {
       const [zonesData, drawsData, poolsData] = await Promise.all([
-        api.get('/zones') as Promise<{ items?: Zone[] } | Zone[]>,
+        api.get('/zones?pageSize=1000') as Promise<{ items?: Zone[] } | Zone[]>,
         api.get('/draws?pageSize=200') as Promise<{ items?: Draw[] } | Draw[]>,
-        api.get('/betting-pools') as Promise<{ items?: BettingPool[] } | BettingPool[]>
+        // pageSize=5000 so tenants with several hundred bancas (La Central
+        // has 600+) get the full list. API clamps the request.
+        api.get('/betting-pools?pageSize=5000') as Promise<{ items?: BettingPool[] } | BettingPool[]>
       ]);
       setZones(Array.isArray(zonesData) ? zonesData : (zonesData?.items || []));
       setDraws(Array.isArray(drawsData) ? drawsData : (drawsData?.items || []));
@@ -100,12 +102,73 @@ const MassEditBettingPools: React.FC = () => {
   }, []);
 
   const handleZoneToggle = useCallback((zoneId: number): void => {
+    const isCurrentlySelected = selectedZones.includes(zoneId);
+    // Bancas belonging to this zone — used to sync the banca selection
+    // alongside the zone toggle. A banca might miss its zoneId in older
+    // API responses; those just don't auto-toggle.
+    const bancaIdsInZone = bettingPools
+      .filter(bp => bp.zoneId === zoneId)
+      .map(bp => bp.bettingPoolId ?? bp.id)
+      .filter((id): id is number => typeof id === 'number');
+
     setSelectedZones(prev =>
-      prev.includes(zoneId)
+      isCurrentlySelected
         ? prev.filter(id => id !== zoneId)
         : [...prev, zoneId]
     );
+
+    setSelectedBettingPools(prev => {
+      if (isCurrentlySelected) {
+        // Zone going OFF — drop every banca that belonged to it. If the user
+        // had hand-picked one of those, they can re-click it after.
+        const drop = new Set(bancaIdsInZone);
+        return prev.filter(id => !drop.has(id));
+      }
+      // Zone going ON — union the banca ids into the existing selection.
+      const merged = new Set([...prev, ...bancaIdsInZone]);
+      return Array.from(merged);
+    });
+  }, [selectedZones, bettingPools]);
+
+  // Bulk "select all / clear all" handlers. Each receives the ids currently
+  // visible in the chip group (search-filtered) and a flag.
+  const handleDrawsBulkSelect = useCallback((ids: number[], shouldSelect: boolean): void => {
+    setSelectedDraws(prev => {
+      if (shouldSelect) return Array.from(new Set([...prev, ...ids]));
+      const drop = new Set(ids);
+      return prev.filter(id => !drop.has(id));
+    });
   }, []);
+
+  const handlePoolsBulkSelect = useCallback((ids: number[], shouldSelect: boolean): void => {
+    setSelectedBettingPools(prev => {
+      if (shouldSelect) return Array.from(new Set([...prev, ...ids]));
+      const drop = new Set(ids);
+      return prev.filter(id => !drop.has(id));
+    });
+  }, []);
+
+  const handleZonesBulkSelect = useCallback((zoneIds: number[], shouldSelect: boolean): void => {
+    // Mirrors handleZoneToggle but for many zones at once — keeps the banca
+    // auto-selection logic consistent so "Seleccionar todos" on zones picks
+    // up every banca in those zones too.
+    const bancaIdsInZones = bettingPools
+      .filter(bp => typeof bp.zoneId === 'number' && zoneIds.includes(bp.zoneId))
+      .map(bp => bp.bettingPoolId ?? bp.id)
+      .filter((id): id is number => typeof id === 'number');
+
+    setSelectedZones(prev => {
+      if (shouldSelect) return Array.from(new Set([...prev, ...zoneIds]));
+      const drop = new Set(zoneIds);
+      return prev.filter(id => !drop.has(id));
+    });
+
+    setSelectedBettingPools(prev => {
+      if (shouldSelect) return Array.from(new Set([...prev, ...bancaIdsInZones]));
+      const drop = new Set(bancaIdsInZones);
+      return prev.filter(id => !drop.has(id));
+    });
+  }, [bettingPools]);
 
   // Load bet types when Premios & Comisiones tab is activated
   const loadBetTypes = useCallback(async (): Promise<void> => {
@@ -242,40 +305,60 @@ const MassEditBettingPools: React.FC = () => {
         payload.autoFooter = formData.autoFooter ? 'on' : 'off';
       }
 
-      // Prizes & commissions — iterate dynamic formData keys.
-      // `commission_<betTypeCode>` and `prize_<betTypeCode>_<fieldCode>`.
+      // Prizes & commissions — iterate `betTypes` directly instead of scanning
+      // formData keys. Scanning was prone to two bugs:
+      //   1. `prize_<betTypeCode>_<fieldCode>` split at the FIRST underscore
+      //      broke when betTypeCode itself contained one (e.g. "SUPER_PALE").
+      //   2. General commission was sent as a separate field, but the backend
+      //      had no list of bet types to attach it to — so for fresh bancas
+      //      with no existing prize_commission rows, the General edit was a
+      //      silent no-op.
+      // Iterating betTypes fixes both: codes can't collide with the separator,
+      // and General is expanded into per-type entries client-side.
       const commissionsByBetType: Record<string, number> = {};
       const prizeFieldsByBetType: Record<string, number> = {};
-      for (const [key, raw] of Object.entries(formData)) {
-        if (typeof raw !== 'string' || raw.trim() === '') continue;
-        const n = Number(raw);
-        if (Number.isNaN(n)) continue;
-        if (key.startsWith('commission_')) {
-          const betType = key.substring('commission_'.length);
-          if (betType) commissionsByBetType[betType] = n;
-        } else if (key.startsWith('prize_')) {
-          // prize_<betTypeCode>_<fieldCode>. Convert to the backend's
-          // double-underscore separator so the DTO can split cleanly.
-          const rest = key.substring('prize_'.length);
-          const firstUnderscore = rest.indexOf('_');
-          if (firstUnderscore > 0) {
-            const betType = rest.substring(0, firstUnderscore);
-            const fieldCode = rest.substring(firstUnderscore + 1);
-            if (betType && fieldCode) {
-              prizeFieldsByBetType[`${betType}__${fieldCode}`] = n;
+
+      for (const bt of betTypes) {
+        const code = bt.betTypeCode;
+        if (!code) continue;
+
+        // Per-bet-type commission.
+        const commissionRaw = formData[`commission_${code}`];
+        if (typeof commissionRaw === 'string' && commissionRaw.trim() !== '') {
+          const n = Number(commissionRaw);
+          if (!Number.isNaN(n)) commissionsByBetType[code] = n;
+        }
+
+        // Per-prize-field multipliers.
+        for (const field of bt.prizeFields ?? []) {
+          const raw = formData[`prize_${code}_${field.fieldCode}`];
+          if (typeof raw !== 'string' || raw.trim() === '') continue;
+          const n = Number(raw);
+          if (Number.isNaN(n)) continue;
+          prizeFieldsByBetType[`${code}__${field.fieldCode}`] = n;
+        }
+      }
+
+      // Expand General commission → fill any bet type that doesn't already
+      // have a per-type override. Backend never sees a separate "general"
+      // value, which avoids the empty-bancas silent-skip path.
+      if (typeof formData.generalCommission === 'string' && formData.generalCommission.trim() !== '') {
+        const n = Number(formData.generalCommission);
+        if (!Number.isNaN(n)) {
+          for (const bt of betTypes) {
+            const code = bt.betTypeCode;
+            if (code && !(code in commissionsByBetType)) {
+              commissionsByBetType[code] = n;
             }
           }
         }
       }
+
       if (Object.keys(commissionsByBetType).length > 0) {
         payload.commissionsByBetType = commissionsByBetType;
       }
       if (Object.keys(prizeFieldsByBetType).length > 0) {
         payload.prizeFieldsByBetType = prizeFieldsByBetType;
-      }
-      if (typeof formData.generalCommission === 'string' && formData.generalCommission.trim() !== '') {
-        const n = Number(formData.generalCommission);
-        if (!Number.isNaN(n)) payload.generalCommission = n;
       }
 
       // Useful for debugging the "edit dropped silently" class of bug.
@@ -289,7 +372,7 @@ const MassEditBettingPools: React.FC = () => {
     } finally {
       setSaving(false);
     }
-  }, [selectedBettingPools, selectedDraws, formData, t]);
+  }, [selectedBettingPools, selectedDraws, formData, betTypes, t]);
 
   if (loading) {
     return (
@@ -375,6 +458,9 @@ const MassEditBettingPools: React.FC = () => {
               onDrawToggle={handleDrawToggle}
               onPoolToggle={handlePoolToggle}
               onZoneToggle={handleZoneToggle}
+              onDrawsBulkSelect={handleDrawsBulkSelect}
+              onPoolsBulkSelect={handlePoolsBulkSelect}
+              onZonesBulkSelect={handleZonesBulkSelect}
               onUpdateGeneralValuesChange={(checked) => handleInputChange('updateGeneralValues', checked)}
             />
 

@@ -27,6 +27,8 @@ export interface BettingPool {
   id?: number;
   bettingPoolName?: string;
   name?: string;
+  // Needed so the zone selector can auto-select every banca in a zone.
+  zoneId?: number;
 }
 
 export interface PrizeField {
@@ -127,5 +129,11 @@ export interface SelectionSectionProps {
   onDrawToggle: (drawId: number) => void;
   onPoolToggle: (poolId: number) => void;
   onZoneToggle: (zoneId: number) => void;
+  // Bulk variants — used by the "Seleccionar todos / Limpiar selección"
+  // button in each chip group. shouldSelect=true unions the ids into the
+  // current selection, false removes them.
+  onDrawsBulkSelect: (drawIds: number[], shouldSelect: boolean) => void;
+  onPoolsBulkSelect: (poolIds: number[], shouldSelect: boolean) => void;
+  onZonesBulkSelect: (zoneIds: number[], shouldSelect: boolean) => void;
   onUpdateGeneralValuesChange: (checked: boolean) => void;
 }

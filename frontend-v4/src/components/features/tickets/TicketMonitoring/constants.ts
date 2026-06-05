@@ -141,7 +141,7 @@ export const COLUMN_WIDTHS: Record<string, number> = {
   'common.number': 165,
   '': 40,
   'common.date': 135,
-  'common.user': 60,
+  'common.user': 110,
   'common.amount': 80,
   'common.prize': 60,
   'tickets.anomalies.cancellationDate': 210,

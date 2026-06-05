@@ -126,7 +126,13 @@ const TicketRow: FC<TicketRowProps> = memo(({ ticket, isSelected, onRowClick, on
         </Box>
       </TableCell>
       <TableCell>{ticket.fecha}</TableCell>
-      <TableCell>{ticket.usuario}</TableCell>
+      <TableCell sx={{ overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 110 }}>
+        <Tooltip title={ticket.usuario || ''} arrow>
+          <Box component="span" sx={{ display: 'inline-block', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', verticalAlign: 'middle' }}>
+            {ticket.usuario}
+          </Box>
+        </Tooltip>
+      </TableCell>
       <TableCell>{formatCurrency(ticket.monto)}</TableCell>
       <TableCell>{formatCurrency(ticket.premio)}</TableCell>
       <TableCell sx={{ whiteSpace: 'nowrap' }}>
