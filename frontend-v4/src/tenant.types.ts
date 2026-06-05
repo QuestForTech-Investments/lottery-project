@@ -41,6 +41,13 @@ export interface TenantConfig {
   /** Human-readable name shown in headers, titles, copy. */
   systemName: string
   /**
+   * Absolute URL of the POS (point-of-sale) frontend for this tenant.
+   * A logged-in user whose role is POS is redirected here after auth.
+   * Falls back to the local dev POS URL when unset (only relevant during
+   * local development).
+   */
+  posUrl?: string
+  /**
    * Browser tab title. When unset, falls back to <see cref="systemName"/>.
    * Use this when the full product name (e.g. "X Lottery System") reads
    * better in the tab than the short brand name used elsewhere in the UI.

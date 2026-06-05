@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import * as authService from '../../services/authService';
 import * as logger from '../../utils/logger';
+import { tenantConfig } from '../../tenant';
 
 interface LoginErrors {
   username: string;
@@ -171,13 +172,15 @@ const useLogin = () => {
       // and absolute URLs to avoid open-redirect attacks.
       const isSafeInternal = !!redirectUrl && redirectUrl.startsWith('/') && !redirectUrl.startsWith('//');
       const isPos = response.role === 'POS';
+      // Tenant-aware POS URL. Local dev (no posUrl on config or no match)
+      // falls back to the Vite default port.
+      const tenantPosUrl = tenantConfig.posUrl;
       let target: string;
-      if (redirectUrl && redirectUrl.startsWith('https://pos.lottobook.net')) {
+      if (redirectUrl && tenantPosUrl && redirectUrl.startsWith(tenantPosUrl)) {
+        // Email/deep link that points back into THIS tenant's POS — accept it.
         target = redirectUrl;
       } else if (isPos) {
-        target = window.location.hostname.includes('lottobook.net')
-          ? 'https://pos.lottobook.net'
-          : 'http://localhost:5173';
+        target = tenantPosUrl ?? 'http://localhost:5173';
       } else if (isSafeInternal) {
         // e.g. an email deep link to /tickets/plays?drawId=&date=
         target = redirectUrl!;

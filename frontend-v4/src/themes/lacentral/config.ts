@@ -4,6 +4,7 @@ const config: TenantConfig = {
   tenantCode: 'lacentral',
   systemName: 'La Central',
   documentTitle: 'Lacentralnumbers',
+  posUrl: 'https://pos.lacentralnumbers.com',
   versionLabel: 'La Central',
   versionSubLabel: 'Lottery System',
   versionLink: 'https://lacentralrd.com',
