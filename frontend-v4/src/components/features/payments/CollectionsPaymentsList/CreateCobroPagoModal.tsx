@@ -115,7 +115,7 @@ const CreateCobroPagoModal = ({ open, onClose, onCreated }: Props): React.ReactE
     const load = async () => {
       try {
         const [bpResponse, entities, historicalBalances] = await Promise.all([
-          api.get('/betting-pools?isActive=true&pageSize=500') as Promise<{
+          api.get('/betting-pools?isActive=true&pageSize=5000') as Promise<{
             items: Array<{
               bettingPoolId: number;
               bettingPoolCode: string;

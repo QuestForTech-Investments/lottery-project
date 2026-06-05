@@ -71,7 +71,7 @@ const AccountableEntities = (): React.ReactElement => {
     setLoading(true);
     try {
       const [bpResponse, entities] = await Promise.all([
-        api.get('/betting-pools?isActive=true&pageSize=500') as Promise<{
+        api.get('/betting-pools?isActive=true&pageSize=5000') as Promise<{
           items: Array<{
             bettingPoolId: number;
             bettingPoolCode: string;

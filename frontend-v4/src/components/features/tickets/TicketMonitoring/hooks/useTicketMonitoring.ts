@@ -133,8 +133,11 @@ export const useTicketMonitoring = (): UseTicketMonitoringReturn => {
   // Load betting pools from API
   const loadBancas = useCallback(async (signal?: AbortSignal): Promise<BettingPool[]> => {
     try {
+      // pageSize=5000 to fit tenants with up to a few thousand bancas
+      // (La Central has 600+). Backend caps the request so this never
+      // pulls absurd amounts.
       const response = await api.get<{ items?: BettingPoolApiResponse[] } | BettingPoolApiResponse[]>(
-        '/betting-pools?page=1&pageSize=100'
+        '/betting-pools?page=1&pageSize=5000'
       );
 
       if (signal?.aborted) return [];

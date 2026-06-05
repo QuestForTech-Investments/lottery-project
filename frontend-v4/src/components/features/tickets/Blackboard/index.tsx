@@ -430,17 +430,22 @@ const Blackboard: React.FC = () => {
     let cancelled = false
     ;(async () => {
       try {
-        const pageSize = 100
+        // Large page so a single call fits all bancas (La Central has 600+).
+        // API clamps to its cap; use the response's effective pageSize to
+        // decide whether more pages remain — using the requested size would
+        // break early when the API clamped to a smaller value.
+        const pageSize = 5000
         const all: BettingPool[] = []
         let page = 1
         while (true) {
           const resp = (await api.get(`/betting-pools?page=${page}&pageSize=${pageSize}`)) as
-            | { items?: BettingPool[]; totalCount?: number }
+            | { items?: BettingPool[]; totalCount?: number; pageSize?: number }
             | BettingPool[]
           const items = Array.isArray(resp) ? resp : resp?.items ?? []
           all.push(...items)
           if (Array.isArray(resp)) break
-          if (items.length < pageSize) break
+          const effective = resp.pageSize ?? pageSize
+          if (items.length < effective) break
           if (typeof resp.totalCount === 'number' && all.length >= resp.totalCount) break
           page += 1
         }

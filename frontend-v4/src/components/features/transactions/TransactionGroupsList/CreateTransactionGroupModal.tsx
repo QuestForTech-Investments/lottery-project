@@ -151,7 +151,7 @@ const CreateTransactionGroupModal = ({ open, onClose, onCreated, allowedTypes }:
       try {
         const [zonesResponse, bpResponse, entities, historicalBalances] = await Promise.all([
           getAllZones({ isActive: true, pageSize: 200 }),
-          api.get('/betting-pools?isActive=true&pageSize=500') as Promise<{
+          api.get('/betting-pools?isActive=true&pageSize=5000') as Promise<{
             items: Array<{
               bettingPoolId: number;
               bettingPoolCode: string;
