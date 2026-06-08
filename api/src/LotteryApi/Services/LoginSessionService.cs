@@ -40,10 +40,21 @@ public class LoginSessionService : ILoginSessionService
             .Where(ls => ls.LoginAt >= startOfDay && ls.LoginAt < endOfDay)
             .AsQueryable();
 
-        // Filter by zones if provided
+        // Filter by zones if provided. login_sessions historically saved
+        // ZoneId = null for most rows, so we resolve "zone of the session"
+        // dynamically — match on whichever of these maps into the requested
+        // set:
+        //   1) the session's own ZoneId (when populated)
+        //   2) the banca's ZoneId (POS user logged in via a banca)
+        //   3) any of the user's UserZones (admin user with explicit scope)
         if (query.ZoneIds != null && query.ZoneIds.Any())
         {
-            sessionsQuery = sessionsQuery.Where(ls => ls.ZoneId.HasValue && query.ZoneIds.Contains(ls.ZoneId.Value));
+            var zoneFilter = query.ZoneIds;
+            sessionsQuery = sessionsQuery.Where(ls =>
+                (ls.ZoneId.HasValue && zoneFilter.Contains(ls.ZoneId.Value))
+                || (!ls.ZoneId.HasValue && ls.BettingPool != null && zoneFilter.Contains(ls.BettingPool.ZoneId))
+                || (!ls.ZoneId.HasValue && ls.BettingPool == null && ls.User != null
+                    && ls.User.UserZones.Any(uz => uz.IsActive && zoneFilter.Contains(uz.ZoneId))));
         }
 
         // Filter by betting pool if provided

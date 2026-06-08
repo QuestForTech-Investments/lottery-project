@@ -136,6 +136,18 @@ public class AuthService : IAuthService
             {
                 zoneId = userZone.ZoneId;
             }
+            // Fall back to the banca's zone when the user itself isn't scoped
+            // to one (POS users live under a banca, not a zone). Without this
+            // the login history page filters POS sessions out of every
+            // zone-scoped admin's view.
+            if (zoneId == null && bettingPoolId.HasValue)
+            {
+                zoneId = await _context.BettingPools
+                    .AsNoTracking()
+                    .Where(bp => bp.BettingPoolId == bettingPoolId.Value)
+                    .Select(bp => (int?)bp.ZoneId)
+                    .FirstOrDefaultAsync();
+            }
 
             var loginSession = new LoginSession
             {

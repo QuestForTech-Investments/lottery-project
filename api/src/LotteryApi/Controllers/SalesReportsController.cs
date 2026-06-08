@@ -323,8 +323,30 @@ public class SalesReportsController : ControllerBase
                     .Select(b => b.CurrentBalance)
                     .FirstOrDefaultAsync();
 
+                // POS-facing balance reconciliation: when the banca isn't allowed
+                // to see commission, the deductions baked into its real balance
+                // would still betray the commission's existence (banca does the
+                // math: balance_change ≠ sold − prizes − discount, the "extra"
+                // is the hidden commission). To hide that, add the banca's
+                // lifetime commission back to the displayed balance so day-over-
+                // day deltas come out to sold − prizes − discount cleanly. The
+                // real balance in DB is unchanged — only the displayed value
+                // shifts. Admin reports and deactivation logic keep using the
+                // real balance, which is the source of truth.
+                if (excludeCommissionFromNet)
+                {
+                    var lifetimeCommission = await _context.Tickets
+                        .AsNoTracking()
+                        .Where(t => !t.IsCancelled && t.BettingPoolId == bettingPoolId.Value)
+                        .SumAsync(t => (decimal?)t.TotalCommission) ?? 0m;
+                    balance += lifetimeCommission;
+                }
+
                 // Credito = DeactivationBalance - CurrentBalance (remaining room until banca gets disabled)
-                // DeactivationBalance == 0 or null means "not configured" (no credit limit)
+                // DeactivationBalance == 0 or null means "not configured" (no credit limit).
+                // Uses the (possibly-adjusted) balance above so the POS sees a
+                // credit value that matches the displayed balance — keeps the
+                // user from spotting the discrepancy via this field either.
                 var deactivation = await _context.BettingPoolConfigs
                     .AsNoTracking()
                     .Where(c => c.BettingPoolId == bettingPoolId.Value)
