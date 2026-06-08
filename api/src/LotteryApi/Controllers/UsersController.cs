@@ -286,6 +286,7 @@ public class UsersController : ControllerBase
             CommissionRate = user.CommissionRate,
             IsActive = user.IsActive,
             AutoLogoutMinutes = user.AutoLogoutMinutes,
+            PreferredLanguage = user.PreferredLanguage,
             LastLoginAt = user.LastLoginAt,
             CreatedAt = user.CreatedAt,
             UpdatedAt = user.UpdatedAt,
@@ -544,6 +545,12 @@ public class UsersController : ControllerBase
             ? PasswordHelper.GenerateNumeric6()
             : PasswordHelper.GenerateAdminTempPassword();
 
+        // Validate preferred language if provided; silently drop unknown
+        // codes rather than 400 — it's an opt-in convenience field.
+        var allowedLangs = new[] { "es", "en", "fr", "ht" };
+        var normalizedLang = dto.PreferredLanguage?.Trim().ToLowerInvariant();
+        if (normalizedLang != null && Array.IndexOf(allowedLangs, normalizedLang) < 0) normalizedLang = null;
+
         var user = new User
         {
             Username = dto.Username,
@@ -554,6 +561,7 @@ public class UsersController : ControllerBase
             RoleId = dto.RoleId,
             CommissionRate = dto.CommissionRate,
             IsActive = dto.IsActive,
+            PreferredLanguage = normalizedLang,
             MustChangePassword = true,
             MustSetPin = !isPosUser,
             CreatedAt = DateTime.UtcNow,
@@ -642,6 +650,7 @@ public class UsersController : ControllerBase
             CommissionRate = user.CommissionRate,
             IsActive = user.IsActive,
             AutoLogoutMinutes = user.AutoLogoutMinutes,
+            PreferredLanguage = user.PreferredLanguage,
             LastLoginAt = user.LastLoginAt,
             CreatedAt = user.CreatedAt,
             UpdatedAt = user.UpdatedAt,
@@ -688,6 +697,12 @@ public class UsersController : ControllerBase
         if (dto.RoleId.HasValue) user.RoleId = dto.RoleId;
         if (dto.CommissionRate.HasValue) user.CommissionRate = dto.CommissionRate.Value;
         if (dto.IsActive.HasValue) user.IsActive = dto.IsActive.Value;
+        if (dto.PreferredLanguage != null)
+        {
+            var allowed = new[] { "es", "en", "fr", "ht" };
+            var v = dto.PreferredLanguage.Trim().ToLowerInvariant();
+            user.PreferredLanguage = Array.IndexOf(allowed, v) >= 0 ? v : null;
+        }
         if (dto.AutoLogoutMinutes.HasValue)
         {
             var v = dto.AutoLogoutMinutes.Value;
@@ -807,6 +822,12 @@ public class UsersController : ControllerBase
         if (dto.RoleId.HasValue) user.RoleId = dto.RoleId;
         if (dto.CommissionRate.HasValue) user.CommissionRate = dto.CommissionRate.Value;
         if (dto.IsActive.HasValue) user.IsActive = dto.IsActive.Value;
+        if (dto.PreferredLanguage != null)
+        {
+            var allowed = new[] { "es", "en", "fr", "ht" };
+            var v = dto.PreferredLanguage.Trim().ToLowerInvariant();
+            user.PreferredLanguage = Array.IndexOf(allowed, v) >= 0 ? v : null;
+        }
         // Null is a valid value here ("use system default"), so HasValue isn't
         // the right gate. We only update when the DTO is opted-in, which the
         // dto.AutoLogoutMinutes.HasValue check still gives us — the frontend

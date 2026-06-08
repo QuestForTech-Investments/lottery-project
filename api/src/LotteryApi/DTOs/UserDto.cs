@@ -16,6 +16,8 @@ public class UserDto
     public bool IsActive { get; set; }
     /// <summary>Idle auto-logout minutes. Null = system default (15), 0 = disabled.</summary>
     public int? AutoLogoutMinutes { get; set; }
+    /// <summary>Default UI language for this user: es | en | fr | ht. Null = follow tenant default.</summary>
+    public string? PreferredLanguage { get; set; }
     public DateTime? LastLoginAt { get; set; }
     public DateTime? CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
@@ -36,6 +38,8 @@ public class CreateUserDto
     public int? BranchId { get; set; }
     public decimal CommissionRate { get; set; } = 0.00m;
     public bool IsActive { get; set; } = true;
+    /// <summary>Initial UI language for this user: es | en | fr | ht. Null = follow tenant default.</summary>
+    public string? PreferredLanguage { get; set; }
     public List<int>? PermissionIds { get; set; }
 }
 
@@ -53,6 +57,8 @@ public class UpdateUserDto
     public bool? IsActive { get; set; }
     /// <summary>Idle auto-logout minutes. Null = system default (15), 0 = disabled.</summary>
     public int? AutoLogoutMinutes { get; set; }
+    /// <summary>Default UI language for this user: es | en | fr | ht. Omit to leave unchanged.</summary>
+    public string? PreferredLanguage { get; set; }
 }
 
 /// <summary>
@@ -83,6 +89,8 @@ public class UpdateUserCompleteDto
     public bool? IsActive { get; set; }
     /// <summary>Idle auto-logout minutes. Null = system default (15), 0 = disabled.</summary>
     public int? AutoLogoutMinutes { get; set; }
+    /// <summary>Default UI language for this user: es | en | fr | ht. Omit to leave unchanged.</summary>
+    public string? PreferredLanguage { get; set; }
     public List<int>? PermissionIds { get; set; }
 }
 

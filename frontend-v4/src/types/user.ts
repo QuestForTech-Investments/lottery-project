@@ -55,6 +55,8 @@ export interface UserFormData {
   zoneIds: number[];
   assignBanca: boolean;
   bettingPoolId: number | null;
+  /** Initial UI language: '' (system default) | 'es' | 'en' | 'fr' | 'ht'. */
+  preferredLanguage: string;
 }
 
 /**

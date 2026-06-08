@@ -27,6 +27,8 @@ interface UserApiData {
   roleName?: string | null;
   AutoLogoutMinutes?: number | null;
   autoLogoutMinutes?: number | null;
+  PreferredLanguage?: string | null;
+  preferredLanguage?: string | null;
 }
 
 // Permissions response formats
@@ -52,6 +54,8 @@ interface EditUserFormData {
    * controlled even while the user is mid-typing.
    */
   autoLogoutMinutes: string;
+  /** Default UI language: '' (system default) | 'es' | 'en' | 'fr' | 'ht'. */
+  preferredLanguage: string;
 }
 
 /**
@@ -69,6 +73,7 @@ const useEditUserForm = (userId: string | undefined) => {
     bettingPoolId: null,
     permissionIds: [],
     autoLogoutMinutes: '',
+    preferredLanguage: '',
   });
 
   // Permissions state
@@ -233,6 +238,10 @@ const useEditUserForm = (userId: string | undefined) => {
       const autoLogoutStr =
         autoLogoutRaw === null || autoLogoutRaw === undefined ? '' : String(autoLogoutRaw);
 
+      // Preferred UI language — empty string when null (renders the
+      // "(system default)" option, which the backend treats as "no override").
+      const preferredLanguageRaw = user.PreferredLanguage ?? user.preferredLanguage ?? '';
+
       // Set basic user data
       setFormData(prev => ({
         ...prev,
@@ -241,6 +250,7 @@ const useEditUserForm = (userId: string | undefined) => {
         bettingPoolId: bettingPoolId || null,
         assignBanca: posUser || !!bettingPoolId,
         autoLogoutMinutes: autoLogoutStr,
+        preferredLanguage: preferredLanguageRaw,
       }));
 
       // Load user permissions
@@ -441,6 +451,7 @@ const useEditUserForm = (userId: string | undefined) => {
         bettingPoolId?: number;
         clearBranch: boolean;
         autoLogoutMinutes?: number | null;
+        preferredLanguage?: string | null;
       } = {
         permissionIds: formData.permissionIds,
         // Always send the selected zones — zones scope an admin even when no
@@ -453,6 +464,9 @@ const useEditUserForm = (userId: string | undefined) => {
       if (autoLogoutValue === null || Number.isInteger(autoLogoutValue)) {
         updateData.autoLogoutMinutes = autoLogoutValue;
       }
+      // Preferred language — empty string is treated as "system default" (null).
+      const langTrim = formData.preferredLanguage.trim().toLowerCase();
+      updateData.preferredLanguage = langTrim === '' ? null : langTrim;
 
       logger.info('EDIT_USER_MUI', 'Updating user', {
         userId,

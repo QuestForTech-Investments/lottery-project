@@ -16,7 +16,7 @@ public interface IAuthService
 public class LoginResult
 {
     public LoginResponseDto? Data { get; set; }
-    public string? Reason { get; set; }  // null = success, "invalid" | "locked" | "ip_blocked"
+    public string? Reason { get; set; }  // null = success, "invalid" | "locked" | "ip_blocked" | "no_access"
 }
 
 /// <summary>

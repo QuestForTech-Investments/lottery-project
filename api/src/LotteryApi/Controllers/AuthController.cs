@@ -45,6 +45,7 @@ public class AuthController : ControllerBase
             {
                 "locked" => ApiErrorResult.Unauthorized(ErrorCodes.AccountBlocked, "Usuario bloqueado. Contacte al administrador."),
                 "ip_blocked" => ApiErrorResult.Unauthorized(ErrorCodes.AccountBlocked, "Dirección IP bloqueada. Contacte al administrador."),
+                "no_access" => ApiErrorResult.Forbidden(ErrorCodes.Forbidden, "Tu usuario no tiene permiso para acceder al sistema. Contacte al administrador."),
                 _ => ApiErrorResult.Unauthorized(ErrorCodes.InvalidCredentials, "Invalid username or password")
             };
         }

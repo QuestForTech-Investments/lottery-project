@@ -27,7 +27,8 @@ const useUserForm = () => {
     permissionIds: [],
     zoneIds: [],
     assignBanca: false,
-    bettingPoolId: null
+    bettingPoolId: null,
+    preferredLanguage: '',
   })
 
   // Temp credential dialog state
@@ -262,11 +263,14 @@ const useUserForm = () => {
 
     try {
       // Server auto-generates the temp password. Don't send one.
+      const langTrim = formData.preferredLanguage.trim().toLowerCase();
       const userData = {
         username: formData.username,
         permissionIds: formData.permissionIds,
         zoneIds: formData.zoneIds,
-        bettingPoolId: formData.assignBanca && formData.bettingPoolId ? formData.bettingPoolId : undefined
+        bettingPoolId: formData.assignBanca && formData.bettingPoolId ? formData.bettingPoolId : undefined,
+        // Empty string → omit the field (server treats absent as no override).
+        preferredLanguage: langTrim === '' ? undefined : langTrim,
       }
 
       logger.info('CREATE_USER_MUI', 'Sending user data to API', {
@@ -324,7 +328,8 @@ const useUserForm = () => {
       permissionIds: [],
       zoneIds: [],
       assignBanca: false,
-      bettingPoolId: null
+      bettingPoolId: null,
+      preferredLanguage: '',
     })
     setErrors({})
     setSuccessMessage('')

@@ -32,6 +32,12 @@ export interface TicketRowProps {
 export interface TicketDetailPanelProps {
   ticket: MappedTicket;
   onClose: () => void;
+  /** Navigate to the previous ticket in the filtered list, if any. */
+  onPrev?: () => void;
+  /** Navigate to the next ticket in the filtered list, if any. */
+  onNext?: () => void;
+  /** Position indicator shown between the arrows, e.g. "3 / 12". */
+  positionLabel?: string;
 }
 
 export interface FiltersSectionProps {

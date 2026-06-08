@@ -293,7 +293,25 @@ public class SalesReportsController : ControllerBase
             var totalCommissions = tickets.Sum(t => t.TotalCommission);
             var totalDiscounts = tickets.Sum(t => t.TotalDiscount);
             var riferoDiscount = tickets.Where(t => t.DiscountMode == "RIFERO").Sum(t => t.TotalDiscount);
-            var totalNet = totalSold - totalDiscounts - totalCommissions - totalPrizes;
+
+            // When the queried banca has commission hidden (allow_view_commission = false)
+            // the POS should display a "final" amount that doesn't deduct commission —
+            // otherwise the operator would see a net lower than what they expect with
+            // no visible explanation. Only applies to single-banca queries; aggregate
+            // admin queries keep the canonical net (sold − disc − com − prizes).
+            bool excludeCommissionFromNet = false;
+            if (bettingPoolId.HasValue)
+            {
+                excludeCommissionFromNet = await _context.BettingPoolConfigs
+                    .AsNoTracking()
+                    .Where(c => c.BettingPoolId == bettingPoolId.Value)
+                    .Select(c => !c.AllowViewCommission)
+                    .FirstOrDefaultAsync();
+            }
+
+            var totalNet = excludeCommissionFromNet
+                ? totalSold - totalDiscounts - totalPrizes
+                : totalSold - totalDiscounts - totalCommissions - totalPrizes;
 
             // Get balance for the betting pool(s)
             decimal balance = 0m;

@@ -59,6 +59,19 @@ public class AuthService : IAuthService
             return new LoginResult { Reason = "invalid" };
         }
 
+        // Credentials are valid — now gate on the ACCESS_SYSTEM permission.
+        // Without it the user is effectively suspended even though the row
+        // is active; previously the JWT was minted anyway and only the
+        // frontend hid pages, so anyone with creds could still touch the
+        // raw API. Block at the source.
+        var permissions = await _userRepository.GetUserPermissionsAsync(user.UserId);
+        var hasAccess = permissions.Any(p =>
+            p.IsActive && string.Equals(p.PermissionCode, "ACCESS_SYSTEM", StringComparison.OrdinalIgnoreCase));
+        if (!hasAccess)
+        {
+            return new LoginResult { Reason = "no_access" };
+        }
+
         // Success — clear any pending failed-attempts counter for this user.
         await ClearFailedAttemptsAsync(user.UserId, "password");
 

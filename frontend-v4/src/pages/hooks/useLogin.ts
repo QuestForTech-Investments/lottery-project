@@ -249,6 +249,12 @@ const useLogin = () => {
         general = t('login.errors.ipBlocked');
       } else if (status === 401) {
         general = t('login.errors.invalid');
+      } else if (status === 403) {
+        // Auth succeeded but the user lacks ACCESS_SYSTEM. Show the API's
+        // detail string when it's there (already localized to Spanish) so
+        // we don't conflict with whatever message the backend chose.
+        general = apiMessage
+          || t('login.errors.noAccess', { defaultValue: 'Tu usuario no tiene permiso para acceder al sistema. Contacte al administrador.' });
       } else if (status === 400) {
         // ASP.NET model validation (e.g. empty body, unparseable JSON).
         // For login, treat any 400 as "invalid credentials" so we don't leak

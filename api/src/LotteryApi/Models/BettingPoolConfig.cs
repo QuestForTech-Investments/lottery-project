@@ -57,10 +57,11 @@ public class BettingPoolConfig
     /// <summary>
     /// Whether banca-side UI (POS) is allowed to display commission
     /// amounts/columns. When false, the POS hides them from operator views.
-    /// Default false — opt-in per banca.
+    /// Default true — most bancas want commission visible; flip off per
+    /// banca for the minority that shouldn't see it.
     /// </summary>
     [Column("allow_view_commission")]
-    public bool AllowViewCommission { get; set; } = false;
+    public bool AllowViewCommission { get; set; } = true;
 
     [Column("cancel_minutes")]
     public int CancelMinutes { get; set; } = 30;

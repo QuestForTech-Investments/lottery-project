@@ -164,7 +164,7 @@ public class BettingPoolConfigDto
     public bool EnableRecharges { get; set; } = true;
     public bool AllowPasswordChange { get; set; } = true;
     /// <summary>Whether POS / banca user is allowed to see commission columns.</summary>
-    public bool AllowViewCommission { get; set; } = false;
+    public bool AllowViewCommission { get; set; } = true;
     public int CancelMinutes { get; set; } = 30;
     public int? DailyCancelTickets { get; set; }
     public decimal? MaxCancelAmount { get; set; }

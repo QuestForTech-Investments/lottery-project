@@ -27,6 +27,7 @@ import {
   TableBody,
   TableRow,
   TableCell,
+  TableContainer,
   Divider,
   Tooltip,
 } from '@mui/material';
@@ -37,10 +38,13 @@ import ScheduleIcon from '@mui/icons-material/Schedule';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import ConfirmationNumberOutlinedIcon from '@mui/icons-material/ConfirmationNumberOutlined';
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import TagOutlinedIcon from '@mui/icons-material/TagOutlined';
 import AccessTimeOutlinedIcon from '@mui/icons-material/AccessTimeOutlined';
 import PrintOutlinedIcon from '@mui/icons-material/PrintOutlined';
 import EmojiEventsOutlinedIcon from '@mui/icons-material/EmojiEventsOutlined';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import { formatCurrency } from '../../../../../utils/formatCurrency';
 import ticketService from '../../../../../services/ticketService';
 import type { LinePrizeMultipliers } from '../../../../../services/ticketService';
@@ -130,12 +134,31 @@ PrizeEditModal.displayName = 'PrizeEditModal';
 // Style + color tokens
 // ============================================================================
 
-const STATUS_THEME: Record<string, { color: string; bg: string; label: string }> = {
-  Ganador:   { color: '#047857', bg: '#d1fae5', label: 'ticketStatus.winner' },
-  Pendiente: { color: '#92400e', bg: '#fef3c7', label: 'ticketStatus.pending' },
-  Perdedor:  { color: '#9f1239', bg: '#fee2e2', label: 'ticketStatus.loser' },
-  Cancelado: { color: '#475569', bg: '#e2e8f0', label: 'ticketStatus.cancelled' },
-  Pagado:    { color: '#1e3a8a', bg: '#dbeafe', label: 'ticketStatus.paid' },
+// Vivid gradient backgrounds + white text for the header status chip so the
+// outcome of the ticket pops at first glance. Cancelled uses red too (per
+// product feedback) since a cancellation is effectively a "not valid" state
+// — visually grouping with Loser is clearer than a neutral grey.
+interface StatusStyle {
+  bg: string;
+  /** Solid color used in non-gradient contexts (e.g. text tint). */
+  tint: string;
+  label: string;
+  icon: 'trophy' | 'clock' | 'cancel' | 'check';
+  shadow: string;
+}
+const STATUS_THEME: Record<string, StatusStyle> = {
+  Ganador:   { bg: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', tint: '#047857', label: 'ticketStatus.winner',    icon: 'trophy', shadow: 'rgba(16, 185, 129, 0.35)' },
+  Pendiente: { bg: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', tint: '#b45309', label: 'ticketStatus.pending',   icon: 'clock',  shadow: 'rgba(245, 158, 11, 0.35)' },
+  Perdedor:  { bg: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)', tint: '#b91c1c', label: 'ticketStatus.loser',     icon: 'cancel', shadow: 'rgba(239, 68, 68, 0.35)' },
+  Cancelado: { bg: 'linear-gradient(135deg, #f43f5e 0%, #be123c 100%)', tint: '#be123c', label: 'ticketStatus.cancelled', icon: 'cancel', shadow: 'rgba(244, 63, 94, 0.35)' },
+  Pagado:    { bg: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)', tint: '#1d4ed8', label: 'ticketStatus.paid',      icon: 'check',  shadow: 'rgba(59, 130, 246, 0.35)' },
+};
+
+const STATUS_ICONS: Record<StatusStyle['icon'], ReactNode> = {
+  trophy: <EmojiEventsOutlinedIcon sx={{ fontSize: 14 }} />,
+  clock:  <ScheduleIcon            sx={{ fontSize: 14 }} />,
+  cancel: <CancelIcon              sx={{ fontSize: 14 }} />,
+  check:  <CheckCircleOutlineIcon  sx={{ fontSize: 14 }} />,
 };
 
 // Left-border accent + saturated row tint per play state. Brighter than
@@ -271,7 +294,7 @@ PlayRow.displayName = 'PlayRow';
 // Main Component
 // ============================================================================
 
-const TicketDetailPanel: FC<TicketDetailPanelProps> = memo(({ ticket, onClose }) => {
+const TicketDetailPanel: FC<TicketDetailPanelProps> = memo(({ ticket, onClose, onPrev, onNext, positionLabel }) => {
   const { t } = useTranslation();
   const [prizeModalOpen, setPrizeModalOpen] = useState(false);
   const [selectedBetNumber, setSelectedBetNumber] = useState('');
@@ -356,17 +379,84 @@ const TicketDetailPanel: FC<TicketDetailPanelProps> = memo(({ ticket, onClose })
         <Typography sx={{ flex: 1, fontSize: '0.95rem', fontWeight: 700, fontFamily: 'monospace', color: '#1e293b', minWidth: 0 }} noWrap>
           {ticket.id}-{ticket.numero}
         </Typography>
+
+        {/* Prev / position / Next — only render when handlers are supplied
+            so the panel still works in isolation (e.g. embedded views). */}
+        {(onPrev || onNext) && (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25, mr: 0.5 }}>
+            <Tooltip title={t('common.previous', { defaultValue: 'Anterior' })} arrow>
+              <span>
+                <IconButton
+                  size="small"
+                  onClick={onPrev}
+                  disabled={!onPrev}
+                  sx={{
+                    color: '#475569',
+                    bgcolor: '#f1f5f9',
+                    width: 28,
+                    height: 28,
+                    '&:hover': { bgcolor: '#e2e8f0', color: '#1e293b' },
+                    '&.Mui-disabled': { bgcolor: '#f8fafc', color: '#cbd5e1' },
+                  }}
+                >
+                  <ChevronLeftIcon fontSize="small" />
+                </IconButton>
+              </span>
+            </Tooltip>
+            {positionLabel && (
+              <Typography
+                sx={{
+                  fontSize: '0.7rem',
+                  fontWeight: 600,
+                  color: '#64748b',
+                  px: 0.5,
+                  minWidth: 36,
+                  textAlign: 'center',
+                  fontVariantNumeric: 'tabular-nums',
+                }}
+              >
+                {positionLabel}
+              </Typography>
+            )}
+            <Tooltip title={t('common.next', { defaultValue: 'Siguiente' })} arrow>
+              <span>
+                <IconButton
+                  size="small"
+                  onClick={onNext}
+                  disabled={!onNext}
+                  sx={{
+                    color: '#475569',
+                    bgcolor: '#f1f5f9',
+                    width: 28,
+                    height: 28,
+                    '&:hover': { bgcolor: '#e2e8f0', color: '#1e293b' },
+                    '&.Mui-disabled': { bgcolor: '#f8fafc', color: '#cbd5e1' },
+                  }}
+                >
+                  <ChevronRightIcon fontSize="small" />
+                </IconButton>
+              </span>
+            </Tooltip>
+          </Box>
+        )}
+
         {statusInfo && (
           <Chip
+            icon={STATUS_ICONS[statusInfo.icon] as React.ReactElement}
             label={t(statusInfo.label)}
             size="small"
             sx={{
-              fontWeight: 600,
-              fontSize: '0.7rem',
-              color: statusInfo.color,
-              backgroundColor: statusInfo.bg,
+              height: 26,
+              fontWeight: 700,
+              fontSize: '0.72rem',
+              letterSpacing: '0.04em',
+              textTransform: 'uppercase',
+              color: '#fff',
+              background: statusInfo.bg,
               border: 'none',
-              '& .MuiChip-label': { px: 1 },
+              boxShadow: `0 2px 6px ${statusInfo.shadow}, inset 0 1px 0 rgba(255,255,255,0.25)`,
+              '& .MuiChip-icon': { color: '#fff', ml: 0.75, mr: -0.25 },
+              '& .MuiChip-label': { px: 1.1 },
             }}
           />
         )}
@@ -469,32 +559,37 @@ const TicketDetailPanel: FC<TicketDetailPanelProps> = memo(({ ticket, onClose })
                 {drawName}
               </Typography>
             </Box>
-            <Table size="small" sx={{ '& th': { fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', color: '#64748b', py: 0.75, borderBottom: '1px solid #f1f5f9' } }}>
-              <TableHead>
-                <TableRow>
-                  <TableCell sx={{ pl: 1.5 }}>{t('common.play')}</TableCell>
-                  <TableCell>{t('tickets.plays.playType')}</TableCell>
-                  <TableCell align="right">{t('common.amount')}</TableCell>
-                  <TableCell align="right">{t('common.prize')}</TableCell>
-                  <TableCell align="center">{t('ticketStatus.paid')}</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {lines.map((line, index) => (
-                  <PlayRow
-                    key={`${drawName}-${line.betNumber}-${index}`}
-                    line={line}
-                    isWinner={line.prizeAmount > 0}
-                    isPending={line.lineStatus === 'pending' || (!line.lineStatus && ticket.estado === 'Pendiente')}
-                    isCancelled={ticket.estado === 'Cancelado'}
-                    onEditPrize={handleEditPrize}
-                    isOutOfScheduleSale={line.isOutOfScheduleSale}
-                    isPreviousDay={ticket.isPreviousDay}
-                    isFutureDay={ticket.isFutureDay}
-                  />
-                ))}
-              </TableBody>
-            </Table>
+            {/* Horizontal scroll when the detail panel gets narrow — keeps
+                the rightmost columns (Prize, Paid) reachable instead of
+                clipping under the Card's overflow: hidden. */}
+            <TableContainer sx={{ overflowX: 'auto' }}>
+              <Table size="small" sx={{ minWidth: 380, '& th': { fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', color: '#64748b', py: 0.75, borderBottom: '1px solid #f1f5f9' } }}>
+                <TableHead>
+                  <TableRow>
+                    <TableCell sx={{ pl: 1.5 }}>{t('common.play')}</TableCell>
+                    <TableCell>{t('tickets.plays.playType')}</TableCell>
+                    <TableCell align="right">{t('common.amount')}</TableCell>
+                    <TableCell align="right">{t('common.prize')}</TableCell>
+                    <TableCell align="center">{t('ticketStatus.paid')}</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {lines.map((line, index) => (
+                    <PlayRow
+                      key={`${drawName}-${line.betNumber}-${index}`}
+                      line={line}
+                      isWinner={line.prizeAmount > 0}
+                      isPending={line.lineStatus === 'pending' || (!line.lineStatus && ticket.estado === 'Pendiente')}
+                      isCancelled={ticket.estado === 'Cancelado'}
+                      onEditPrize={handleEditPrize}
+                      isOutOfScheduleSale={line.isOutOfScheduleSale}
+                      isPreviousDay={ticket.isPreviousDay}
+                      isFutureDay={ticket.isFutureDay}
+                    />
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
           </Box>
         ))
       ) : (
@@ -508,7 +603,7 @@ const TicketDetailPanel: FC<TicketDetailPanelProps> = memo(({ ticket, onClose })
             <QuickStat
               label={t('common.status')}
               value={statusInfo ? t(statusInfo.label) : ticket.estado}
-              tint={statusInfo?.color}
+              tint={statusInfo?.tint}
             />
           </Stack>
           {ticket.fechaCancelacion && (

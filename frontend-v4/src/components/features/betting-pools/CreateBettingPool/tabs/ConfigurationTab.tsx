@@ -635,7 +635,18 @@ const ConfigurationTab: React.FC<ConfigTabProps> = ({ formData, handleChange, be
                 </Grid>
                 <Grid item xs={6} sm={4} md={3}>
                   <FormControlLabel
-                    control={<Switch checked={formData.statPercentage} onChange={handleChange} name="statPercentage" size="small" />}
+                    control={
+                      <Switch
+                        // Force off + disabled when the banca isn't allowed
+                        // to see commission anywhere. Mirrors the statCredit
+                        // pattern that gates on deactivationBalance.
+                        checked={formData.allowViewCommission && formData.statPercentage}
+                        onChange={handleChange}
+                        name="statPercentage"
+                        size="small"
+                        disabled={!formData.allowViewCommission}
+                      />
+                    }
                     label={t('createBettingPool.config.statPercentage')}
                   />
                 </Grid>
@@ -647,7 +658,18 @@ const ConfigurationTab: React.FC<ConfigTabProps> = ({ formData, handleChange, be
                 </Grid>
                 <Grid item xs={6} sm={4} md={3}>
                   <FormControlLabel
-                    control={<Switch checked={formData.statNet} onChange={handleChange} name="statNet" size="small" />}
+                    control={
+                      <Switch
+                        // Net only makes sense once a fall scheme is in play —
+                        // without a fall there's nothing to subtract to derive
+                        // the net.
+                        checked={formData.fallType !== '1' && formData.statNet}
+                        onChange={handleChange}
+                        name="statNet"
+                        size="small"
+                        disabled={formData.fallType === '1'}
+                      />
+                    }
                     label={t('createBettingPool.config.statNet')}
                   />
                 </Grid>
@@ -671,13 +693,40 @@ const ConfigurationTab: React.FC<ConfigTabProps> = ({ formData, handleChange, be
                 </Grid>
                 <Grid item xs={6} sm={4} md={3}>
                   <FormControlLabel
-                    control={<Switch checked={formData.statFall} onChange={handleChange} name="statFall" size="small" />}
+                    control={
+                      <Switch
+                        // fall stats only make sense when fall tracking is on
+                        // (fallType '1' === OFF). Gating mirrors statPercentage
+                        // gated on allowViewCommission and statCredit gated
+                        // on deactivationBalance.
+                        checked={formData.fallType !== '1' && formData.statFall}
+                        onChange={handleChange}
+                        name="statFall"
+                        size="small"
+                        disabled={formData.fallType === '1'}
+                      />
+                    }
                     label={t('createBettingPool.config.statFall')}
                   />
                 </Grid>
                 <Grid item xs={6} sm={4} md={3}>
                   <FormControlLabel
-                    control={<Switch checked={formData.statAccumulatedFall} onChange={handleChange} name="statAccumulatedFall" size="small" />}
+                    control={
+                      <Switch
+                        // Accumulated fall is meaningless when fall is OFF ('1')
+                        // OR when the schema is "weekly non-cumulative" ('6'),
+                        // which by definition doesn't accumulate.
+                        checked={
+                          formData.fallType !== '1'
+                          && formData.fallType !== '6'
+                          && formData.statAccumulatedFall
+                        }
+                        onChange={handleChange}
+                        name="statAccumulatedFall"
+                        size="small"
+                        disabled={formData.fallType === '1' || formData.fallType === '6'}
+                      />
+                    }
                     label={t('createBettingPool.config.statAccumulatedFall')}
                   />
                 </Grid>

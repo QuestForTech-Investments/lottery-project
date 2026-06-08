@@ -1147,7 +1147,7 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
           allowJackpot: formData.allowJackpot !== undefined ? formData.allowJackpot : true,
           enableRecharges: formData.enableRecharges !== undefined ? formData.enableRecharges : true,
           allowPasswordChange: formData.allowPasswordChange !== undefined ? formData.allowPasswordChange : true,
-          allowViewCommission: formData.allowViewCommission !== undefined ? formData.allowViewCommission : false,
+          allowViewCommission: formData.allowViewCommission !== undefined ? formData.allowViewCommission : true,
           cancelMinutes: formData.minutesToCancelTicket ? parseInt(formData.minutesToCancelTicket) : 30,
           dailyCancelTickets: formData.ticketsToCancelPerDay ? parseInt(formData.ticketsToCancelPerDay) : null,
           maxCancelAmount: formData.maximumCancelTicketAmount ? parseFloat(formData.maximumCancelTicketAmount) : null,
@@ -1168,14 +1168,22 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
           statsPanelConfig: JSON.stringify({
             credit: (parseFloat(formData.deactivationBalance || '0') > 0) && (formData.statCredit !== undefined ? formData.statCredit : true),
             sales: formData.statSales !== undefined ? formData.statSales : true,
-            percentage: formData.statPercentage !== undefined ? formData.statPercentage : true,
+            // Force percentage off when the banca isn't allowed to see commission;
+            // keeps the saved stats-panel config consistent with the parent toggle.
+            percentage: formData.allowViewCommission && (formData.statPercentage !== undefined ? formData.statPercentage : true),
             prize: formData.statPrize !== undefined ? formData.statPrize : true,
-            net: formData.statNet !== undefined ? formData.statNet : true,
+            // Net is meaningless without a fall scheme; force off when fallType
+            // is OFF ('1') to keep the saved stats-panel config consistent.
+            net: formData.fallType !== '1' && (formData.statNet !== undefined ? formData.statNet : true),
             discount: formData.statDiscount !== undefined ? formData.statDiscount : true,
             final: formData.statFinal !== undefined ? formData.statFinal : true,
             balance: formData.statBalance !== undefined ? formData.statBalance : true,
-            fall: formData.statFall !== undefined ? formData.statFall : true,
-            accumulatedFall: formData.statAccumulatedFall !== undefined ? formData.statAccumulatedFall : true,
+            // Force fall stats off when fallType is OFF ('1'); keeps the saved
+            // stats-panel config consistent with the parent toggle.
+            fall: formData.fallType !== '1' && (formData.statFall !== undefined ? formData.statFall : true),
+            // Accumulated fall is also forced off for fallType '6' (weekly
+            // non-cumulative) since by definition no accumulation happens.
+            accumulatedFall: formData.fallType !== '1' && formData.fallType !== '6' && (formData.statAccumulatedFall !== undefined ? formData.statAccumulatedFall : true),
           })
         },
         discountConfig: {

@@ -5,7 +5,7 @@
  * Refactored to use useTicketMonitoring hook for state management.
  */
 
-import { useMemo, type FC } from 'react';
+import { useMemo, useCallback, useEffect, useRef, type FC } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Box,
@@ -107,6 +107,48 @@ const TicketMonitoring: FC = () => {
     (row, key) => (row as unknown as Record<string, string | number>)[key],
     { sortBy: 'rawCreatedAt', sortOrder: 'desc' },
   );
+
+  // Prev/next navigation in the detail panel — walk through sortedTickets in
+  // the order they're displayed in the table.
+  const selectedIndex = useMemo(() => {
+    if (!selectedTicket) return -1;
+    return sortedTickets.findIndex(t => t.id === selectedTicket.id);
+  }, [sortedTickets, selectedTicket]);
+
+  const prevTicketId = selectedIndex > 0 ? sortedTickets[selectedIndex - 1].id : null;
+  const nextTicketId = selectedIndex >= 0 && selectedIndex < sortedTickets.length - 1
+    ? sortedTickets[selectedIndex + 1].id
+    : null;
+
+  const handlePrevTicket = useCallback(() => {
+    if (prevTicketId != null) handleRowClick(prevTicketId);
+  }, [prevTicketId, handleRowClick]);
+
+  const handleNextTicket = useCallback(() => {
+    if (nextTicketId != null) handleRowClick(nextTicketId);
+  }, [nextTicketId, handleRowClick]);
+
+  const detailPositionLabel = selectedIndex >= 0
+    ? `${selectedIndex + 1} / ${sortedTickets.length}`
+    : undefined;
+
+  // Scroll the detail panel into view whenever the selected ticket changes
+  // (row click OR prev/next button). On stacked layouts the panel sits
+  // below the table so without this the user wouldn't see the new ticket
+  // after navigating. On side-by-side it brings the panel header back to
+  // the top of the viewport when the previous ticket had been scrolled
+  // past — useful for tall tickets with many plays.
+  const detailRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!selectedTicket || !detailRef.current) return;
+    const rect = detailRef.current.getBoundingClientRect();
+    const isFullyVisible = rect.top >= 0 && rect.bottom <= window.innerHeight;
+    // Only scroll when the panel isn't already fully in view — avoids the
+    // page jumping in side-by-side mode where it's usually visible.
+    if (!isFullyVisible) {
+      detailRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [selectedTicket?.id]);
 
   // Render table content
   const renderTableContent = useMemo(() => {
@@ -290,14 +332,33 @@ const TicketMonitoring: FC = () => {
         {/* Totals Panel */}
         <TotalsPanel totals={totals} />
 
-        {/* Table and Detail Panel — side-by-side on md+, stacked on mobile so
-            the detail panel shows BELOW the table instead of competing for
-            horizontal space at narrow widths. Both columns use FIXED widths
-            so the table doesn't visually shrink when a ticket is selected —
-            empty space stays on the right when the detail panel is closed. */}
-        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 2, alignItems: 'flex-start' }}>
-          {/* Left (top on mobile): Quick Search and Table */}
-          <Box sx={{ flexShrink: 0, width: { xs: '100%', md: 1100 }, maxWidth: '100%', minWidth: 0 }}>
+        {/* Table and Detail Panel — responsive layout that prefers
+            compression over stacking.
+            • <900px viewport: stacked vertically (typical phones/tablets).
+            • ≥900px: side-by-side. Table aims for 1100, detail aims for 460
+              but BOTH shrink as the viewport tightens. The detail floor is
+              380px; below that the table absorbs further shrinkage by
+              scrolling its inner columns horizontally. Stacking only kicks
+              in below 900 because narrower than that there's not enough
+              room to keep the detail readable. */}
+        <Box sx={{
+          display: 'flex',
+          flexDirection: { xs: 'column', md: 'row' },
+          gap: 2,
+          alignItems: 'flex-start',
+        }}>
+          {/* Left (top when stacked): Quick Search and Table */}
+          <Box sx={{
+            width: '100%',
+            maxWidth: 1100,
+            minWidth: 0,
+            // In side-by-side mode the table column gives up space FIRST
+            // (its inner content scrolls horizontally when needed), so the
+            // detail panel stays at a readable size.
+            flexGrow: 0,
+            flexShrink: 1,
+            flexBasis: { md: 1100 },
+          }}>
             {/* Quick Search */}
             <TextField
               placeholder={t('common.filterQuick')}
@@ -347,21 +408,38 @@ const TicketMonitoring: FC = () => {
               `position: sticky` is desktop-only — on mobile the panel scrolls
               naturally below the table. */}
           {selectedTicket && (
-            <Box sx={{
-              // Table has a fixed width; the detail panel grows to absorb
-              // whatever horizontal space is left over instead of leaving
-              // an empty band to the right.
-              flexGrow: 1,
-              width: { xs: '100%', md: 'auto' },
-              minWidth: { xs: 0, md: 520 },
-              position: { xs: 'static', md: 'sticky' },
-              top: { md: 16 },
-              // Align the top of the detail card with the top of the table
-              // by skipping past the quick-filter input that sits above the
-              // table on the left column. Header height (40px) + mb (8px).
-              mt: { xs: 1, md: '48px' },
+            <Box ref={detailRef} sx={{
+              // Stacked (<md): full width below the table, capped.
+              // Side-by-side (md+): grows into leftover space (so it gets
+              //   ~560px at 1920 viewport, ~460 at 1600, etc.) but never
+              //   shrinks below 380px so the inner quick-stat cards and
+              //   the per-draw table stay legible.
+              width: '100%',
+              maxWidth: 1100,
+              minWidth: 0,
+              mt: 1,
+              [`@media (min-width: 900px)`]: {
+                flexGrow: 1,
+                flexShrink: 1,
+                flexBasis: 460,
+                minWidth: 380,
+                maxWidth: 'none',
+                width: 'auto',
+                position: 'sticky',
+                top: 16,
+                // Align the top of the detail card with the top of the table
+                // by skipping past the quick-filter input that sits above the
+                // table on the left column. Header height (40px) + mb (8px).
+                mt: '48px',
+              },
             }}>
-              <TicketDetailPanel ticket={selectedTicket} onClose={handleCloseDetail} />
+              <TicketDetailPanel
+                ticket={selectedTicket}
+                onClose={handleCloseDetail}
+                onPrev={prevTicketId != null ? handlePrevTicket : undefined}
+                onNext={nextTicketId != null ? handleNextTicket : undefined}
+                positionLabel={detailPositionLabel}
+              />
             </Box>
           )}
         </Box>

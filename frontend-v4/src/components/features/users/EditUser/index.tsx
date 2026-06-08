@@ -13,6 +13,7 @@ import {
   Switch,
   FormControlLabel,
   Divider,
+  MenuItem,
 } from '@mui/material';
 import {
   Save as SaveIcon,
@@ -21,6 +22,7 @@ import {
 } from '@mui/icons-material';
 import useEditUserForm from './hooks/useEditUserForm';
 import PermissionsSelector from '@components/features/users/CreateUser/PermissionsSelector';
+import { FlagES, FlagUS, FlagFR, FlagHT } from '@components/common/LanguageFlags';
 import ReactMultiselect from '@components/common/ReactMultiselect';
 import BettingPoolSelector from '@components/common/BettingPoolSelector';
 
@@ -207,6 +209,44 @@ const EditUserMUI = () => {
                     defaultValue: 'Vacío = predeterminado (15 min). 0 = deshabilitado. Máx 60.',
                   })}
                 />
+              </Grid>
+
+              {/* Default UI language for this user. Empty = follow tenant
+                  default; otherwise persists across devices. */}
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  select
+                  name="preferredLanguage"
+                  label={t('usersAdmin.preferredLanguage', { defaultValue: 'Idioma predeterminado' })}
+                  value={formData.preferredLanguage}
+                  onChange={handleChange}
+                  helperText={t('usersAdmin.preferredLanguageHint', {
+                    defaultValue: 'Idioma inicial de la interfaz. El usuario puede cambiarlo después.',
+                  })}
+                >
+                  <MenuItem value="">{t('usersAdmin.preferredLanguageDefault', { defaultValue: '(predeterminado del sistema)' })}</MenuItem>
+                  <MenuItem value="es">
+                    <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 1 }}>
+                      <FlagES size={14} /> Español
+                    </Box>
+                  </MenuItem>
+                  <MenuItem value="en">
+                    <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 1 }}>
+                      <FlagUS size={14} /> English
+                    </Box>
+                  </MenuItem>
+                  <MenuItem value="fr">
+                    <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 1 }}>
+                      <FlagFR size={14} /> Français
+                    </Box>
+                  </MenuItem>
+                  <MenuItem value="ht">
+                    <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 1 }}>
+                      <FlagHT size={14} /> Kreyòl
+                    </Box>
+                  </MenuItem>
+                </TextField>
               </Grid>
 
               {/* Divider */}
