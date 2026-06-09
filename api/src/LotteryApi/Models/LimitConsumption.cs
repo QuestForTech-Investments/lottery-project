@@ -44,6 +44,15 @@ public class LimitConsumption
     [Column("is_at_limit")]
     public bool IsAtLimit { get; set; }
 
+    /// <summary>
+    /// Discriminates the consumption bucket. False = same-day sales,
+    /// true = future-day reservations. Two rows for the same (rule, draw,
+    /// date, number, banca) can coexist — one per bucket — and they're
+    /// validated against separate caps (max_amount vs future_max_amount).
+    /// </summary>
+    [Column("is_future_sale")]
+    public bool IsFutureSale { get; set; } = false;
+
     [Column("created_at")]
     public DateTime? CreatedAt { get; set; }
 

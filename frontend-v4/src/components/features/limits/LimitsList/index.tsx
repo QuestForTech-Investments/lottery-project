@@ -366,6 +366,7 @@ const LimitsList = (): React.ReactElement => {
                 <TableCell>{t('limitsAdmin.list.tableGameType')}</TableCell>
                 <TableCell>{t('limitsAdmin.list.tableNumber')}</TableCell>
                 <TableCell>{t('limitsAdmin.list.tableAmount')}</TableCell>
+                <TableCell>{t('limitsAdmin.list.tableFutureAmount')}</TableCell>
                 <TableCell>{t('limitsAdmin.list.tableExpiration')}</TableCell>
                 <TableCell align="right" width={50}></TableCell>
               </TableRow>
@@ -398,6 +399,20 @@ const LimitsList = (): React.ReactElement => {
                             inputProps={{ min: 0 }}
                           />
                         </TableCell>
+                        <TableCell sx={styles.tableCell}>
+                          {amt.futureAmount && amt.futureAmount > 0 ? (
+                            <Typography sx={{ fontSize: '14px', fontWeight: 500, color: '#2c2c2c' }}>
+                              {amt.futureAmount.toLocaleString()}
+                            </Typography>
+                          ) : (
+                            <Typography
+                              sx={{ fontSize: '12px', color: '#bbb', fontStyle: 'italic' }}
+                              title={t('limitsAdmin.list.futureProhibitedHint') as string}
+                            >
+                              {t('limitsAdmin.list.futureProhibited')}
+                            </Typography>
+                          )}
+                        </TableCell>
                         <TableCell sx={styles.tableCell}>{formatDate(limit.effectiveTo)}</TableCell>
                         <TableCell align="right">
                           <IconButton size="small" sx={{ color: '#ef8157' }} onClick={() => handleDeleteAmount(limit.limitRuleId, amt.gameTypeId)}>
@@ -418,6 +433,9 @@ const LimitsList = (): React.ReactElement => {
                       <TextField type="number" defaultValue={limit.maxBetPerNumber || 0} size="small" disabled
                         sx={{ width: 120, '& .MuiOutlinedInput-root': { fontSize: '14px', height: '36px' } }} />
                     </TableCell>
+                    <TableCell sx={styles.tableCell}>
+                      <Typography sx={{ fontSize: '12px', color: '#bbb', fontStyle: 'italic' }}>—</Typography>
+                    </TableCell>
                     <TableCell sx={styles.tableCell}>{formatDate(limit.effectiveTo)}</TableCell>
                     <TableCell align="right">
                       <IconButton size="small" sx={{ color: '#ef8157' }} onClick={() => handleDeleteClick(limit.limitRuleId)}>
@@ -428,7 +446,7 @@ const LimitsList = (): React.ReactElement => {
                 );
               }) : (
                 <TableRow>
-                  <TableCell colSpan={4} align="center" sx={{ py: 3, color: '#999' }}>{t('limitsAdmin.list.noLimitsForDraw')}</TableCell>
+                  <TableCell colSpan={6} align="center" sx={{ py: 3, color: '#999' }}>{t('limitsAdmin.list.noLimitsForDraw')}</TableCell>
                 </TableRow>
               )}
             </TableBody>

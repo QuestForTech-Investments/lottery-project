@@ -20,6 +20,16 @@ public class LimitRuleAmount
     [Column("max_amount", TypeName = "decimal(18,2)")]
     public decimal MaxAmount { get; set; }
 
+    /// <summary>
+    /// Cap for FUTURE sales (lines whose draw_date is greater than today).
+    /// Tracked in a separate consumption bucket so future reservations don't
+    /// eat into the same-day limit. NULL or 0 = future sales prohibited
+    /// under this rule (opt-in policy — admin must configure a positive
+    /// value to allow future sales).
+    /// </summary>
+    [Column("future_max_amount", TypeName = "decimal(10,2)")]
+    public decimal? FutureMaxAmount { get; set; }
+
     // Navigation
     [ForeignKey("LimitRuleId")]
     public virtual LimitRule? LimitRule { get; set; }

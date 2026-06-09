@@ -663,6 +663,16 @@ public class LimitsController : ControllerBase
 
                         var existingAmount = existingAmounts.FirstOrDefault(a => a.GameTypeId == gameTypeId);
 
+                        // Resolve the optional future-sales cap for this game
+                        // type. Null/missing/0/negative → future sales prohibited.
+                        decimal? futureAmount = null;
+                        if (dto.FutureAmounts != null
+                            && dto.FutureAmounts.TryGetValue(feKey, out var rawFuture)
+                            && rawFuture.HasValue && rawFuture.Value > 0)
+                        {
+                            futureAmount = rawFuture.Value;
+                        }
+
                         if (amount <= 0)
                         {
                             // Remove this game type if it exists
@@ -673,6 +683,7 @@ public class LimitsController : ControllerBase
                         {
                             // Update existing amount
                             existingAmount.MaxAmount = amount;
+                            existingAmount.FutureMaxAmount = futureAmount;
                         }
                         else
                         {
@@ -681,7 +692,8 @@ public class LimitsController : ControllerBase
                             {
                                 LimitRuleId = rule.LimitRuleId,
                                 GameTypeId = gameTypeId,
-                                MaxAmount = amount
+                                MaxAmount = amount,
+                                FutureMaxAmount = futureAmount
                             });
                         }
                         processedGameTypes.Add(gameTypeId);
@@ -1743,7 +1755,8 @@ public class LimitsController : ControllerBase
                 {
                     GameTypeId = a.GameTypeId,
                     GameTypeName = a.GameType?.GameName ?? $"GameType#{a.GameTypeId}",
-                    Amount = a.MaxAmount
+                    Amount = a.MaxAmount,
+                    FutureAmount = a.FutureMaxAmount
                 }).ToList());
 
         foreach (var dto in dtos)

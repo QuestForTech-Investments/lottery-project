@@ -89,6 +89,15 @@ public class CreateLimitDto
     public Dictionary<string, decimal>? Amounts { get; set; }
 
     /// <summary>
+    /// Optional per-game-type caps for FUTURE-day sales (lines whose draw_date
+    /// is greater than today). Keyed the same way as <see cref="Amounts"/>.
+    /// NULL/missing/0 → future sales prohibited under this rule. Positive
+    /// values enable future sales up to that cap, tracked in a separate
+    /// consumption bucket so they don't eat into the same-day limit.
+    /// </summary>
+    public Dictionary<string, decimal?>? FutureAmounts { get; set; }
+
+    /// <summary>
     /// Direct amount for max bet per number (if Amounts is not used)
     /// </summary>
     public decimal? MaxBetPerNumber { get; set; }

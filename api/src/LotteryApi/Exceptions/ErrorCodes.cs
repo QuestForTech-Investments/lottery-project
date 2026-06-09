@@ -92,6 +92,9 @@ public static class ErrorCodes
     // Limits
     public const string LimitNotFound = "LIMIT_NOT_FOUND";
     public const string LimitTypeInvalid = "LIMIT_TYPE_INVALID";
+    public const string LimitExceeded = "LIMIT_EXCEEDED";
+    public const string FutureLimitExceeded = "FUTURE_LIMIT_EXCEEDED";
+    public const string FutureSalesDisabledForLimit = "FUTURE_SALES_DISABLED_FOR_LIMIT";
     public const string LimitMissingNumber = "LIMIT_MISSING_NUMBER";
     public const string LimitGlobalRequiredFirst = "LIMIT_GLOBAL_REQUIRED_FIRST";
     public const string LimitZoneRequiredFirst = "LIMIT_ZONE_REQUIRED_FIRST";

@@ -217,6 +217,11 @@ const CreateLimit = (): React.ReactElement => {
     BetTypes.forEach(bt => { initial[bt.key] = ''; });
     return initial;
   });
+  const [futureAmounts, setFutureAmounts] = useState<Amounts>(() => {
+    const initial: Amounts = {};
+    BetTypes.forEach(bt => { initial[bt.key] = ''; });
+    return initial;
+  });
 
   // Allowed game types for selected draws
   const [allowedGameTypes, setAllowedGameTypes] = useState<string[] | null>(null); // null = all allowed
@@ -285,6 +290,7 @@ const CreateLimit = (): React.ReactElement => {
     setBetNumberInput('');
     // Reset amounts when switching to/from ByNumber
     setAmounts(() => { const initial: Amounts = {}; BetTypes.forEach(bt => { initial[bt.key] = ''; }); return initial; });
+    setFutureAmounts(() => { const initial: Amounts = {}; BetTypes.forEach(bt => { initial[bt.key] = ''; }); return initial; });
     setSelectedZones([]);
     setSelectedBettingPool(null);
     setBancaSelectionMode('specific');
@@ -310,6 +316,10 @@ const CreateLimit = (): React.ReactElement => {
 
   const handleAmountChange = useCallback((key: string, value: string) => {
     setAmounts(prev => ({ ...prev, [key]: value }));
+  }, []);
+
+  const handleFutureAmountChange = useCallback((key: string, value: string) => {
+    setFutureAmounts(prev => ({ ...prev, [key]: value }));
   }, []);
 
   const validateForm = (): boolean => {
@@ -359,6 +369,18 @@ const CreateLimit = (): React.ReactElement => {
           amountsPayload[key] = parseFloat(value);
         }
       });
+
+      // Future amounts: only included for keys with a same-day amount.
+      // NULL/0 / missing key → future sales prohibited under this rule.
+      const futureAmountsPayload: BetTypeAmounts = {};
+      Object.entries(futureAmounts).forEach(([key, value]) => {
+        if (!amountsPayload[key]) return;
+        const parsed = parseFloat(value);
+        if (value && !Number.isNaN(parsed) && parsed > 0) {
+          futureAmountsPayload[key] = parsed;
+        }
+      });
+      const hasFutureAmounts = Object.keys(futureAmountsPayload).length > 0;
 
       // Parent validation for child limit types
       if (limitTypeNum !== LimitType.GeneralForGroup && selectedDraws.length > 0) {
@@ -416,9 +438,11 @@ const CreateLimit = (): React.ReactElement => {
         for (const [gameTypeKey, numbers] of groups) {
           const amt = parseFloat(amounts[gameTypeKey] || '0');
           if (amt <= 0) continue;
+          const futureAmt = futureAmountsPayload[gameTypeKey];
           await limitService.createLimit({
             ...baseRequest,
             amounts: { [gameTypeKey]: amt },
+            futureAmounts: futureAmt ? { [gameTypeKey]: futureAmt } : undefined,
             betNumberPatterns: numbers,
           } as CreateLimitRequest);
         }
@@ -426,6 +450,7 @@ const CreateLimit = (): React.ReactElement => {
         await limitService.createLimit({
           ...baseRequest,
           amounts: amountsPayload,
+          futureAmounts: hasFutureAmounts ? futureAmountsPayload : undefined,
         } as CreateLimitRequest);
       }
 
@@ -719,23 +744,53 @@ const CreateLimit = (): React.ReactElement => {
             <Typography sx={styles.columnHeader}>{t('limitsAdmin.create.columnAmount')}</Typography>
 
             <Box sx={{ maxHeight: '400px', overflowY: 'auto' }}>
+              {/* Header row */}
+              <Box sx={{ ...styles.amountField, mb: 0.5, alignItems: 'flex-end' }}>
+                <Box sx={{ minWidth: '150px' }} />
+                <Typography sx={{ flex: 1, fontSize: '11px', fontWeight: 600, color: '#888', textTransform: 'uppercase', textAlign: 'center' }}>
+                  {t('limitsAdmin.create.sameDayHeader')}
+                </Typography>
+                <Box sx={{ width: 8 }} />
+                <Typography
+                  sx={{ flex: 1, fontSize: '11px', fontWeight: 600, color: '#888', textTransform: 'uppercase', textAlign: 'center' }}
+                  title={t('limitsAdmin.create.futureAmountHint') as string}
+                >
+                  {t('limitsAdmin.create.futureHeader')}
+                </Typography>
+              </Box>
               {BetTypes.filter(({ key }) => {
                 if (!allowedGameTypes) return true;
                 const dbCode = BET_TYPE_CODE_MAP[key as string];
                 return dbCode ? allowedGameTypes.includes(dbCode) : true;
-              }).map(({ key, label }) => (
-                <Box key={key} sx={styles.amountField}>
-                  <Typography sx={styles.amountLabel}>{label}</Typography>
-                  <TextField
-                    type="number"
-                    size="small"
-                    value={amounts[key as string]}
-                    onChange={(e) => handleAmountChange(key as string, e.target.value)}
-                    sx={{ ...styles.amountInput, flex: 1 }}
-                    inputProps={{ min: 0, step: 0.01 }}
-                  />
-                </Box>
-              ))}
+              }).map(({ key, label }) => {
+                const sameDayValue = amounts[key as string];
+                const sameDaySet = !!sameDayValue && parseFloat(sameDayValue) > 0;
+                return (
+                  <Box key={key} sx={styles.amountField}>
+                    <Typography sx={styles.amountLabel}>{label}</Typography>
+                    <TextField
+                      type="number"
+                      size="small"
+                      value={sameDayValue}
+                      onChange={(e) => handleAmountChange(key as string, e.target.value)}
+                      sx={{ ...styles.amountInput, flex: 1 }}
+                      inputProps={{ min: 0, step: 0.01 }}
+                    />
+                    <Box sx={{ width: 8 }} />
+                    <TextField
+                      type="number"
+                      size="small"
+                      value={futureAmounts[key as string]}
+                      onChange={(e) => handleFutureAmountChange(key as string, e.target.value)}
+                      disabled={!sameDaySet}
+                      placeholder={t('limitsAdmin.create.futurePlaceholder') as string}
+                      title={t('limitsAdmin.create.futureAmountHint') as string}
+                      sx={{ ...styles.amountInput, flex: 1 }}
+                      inputProps={{ min: 0, step: 0.01 }}
+                    />
+                  </Box>
+                );
+              })}
             </Box>
 
             <Divider sx={{ my: 2 }} />

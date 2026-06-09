@@ -41,4 +41,11 @@ public class LimitAmountDto
     public int GameTypeId { get; set; }
     public string GameTypeName { get; set; } = string.Empty;
     public decimal Amount { get; set; }
+    /// <summary>
+    /// Cap for future-day sales (lines whose draw_date > today). NULL or 0
+    /// means future sales are prohibited under this rule. Positive values
+    /// enable future sales up to that cap, consumed in a separate bucket
+    /// from same-day sales.
+    /// </summary>
+    public decimal? FutureAmount { get; set; }
 }

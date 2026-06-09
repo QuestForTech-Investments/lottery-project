@@ -951,7 +951,11 @@ public class TicketsController : ControllerBase
 
                     ticket.TicketLines.Add(line);
 
-                    // Update limit consumption for this line (use full bet amount, not net)
+                    // Update limit consumption for this line (use full bet amount, not net).
+                    // The future-sale flag routes the consumption to a separate bucket and
+                    // checks against the rule's future_max_amount instead of max_amount.
+                    var businessTodayForLimit = Helpers.DateTimeHelper.TodayInBusinessTimezone().Date;
+                    var lineIsFuture = line.DrawDate.Date > businessTodayForLimit;
                     await UpdateLimitConsumption(
                         lineDto.DrawId,
                         ticketDate,
@@ -959,7 +963,8 @@ public class TicketsController : ControllerBase
                         dto.BettingPoolId,
                         line.BetAmount,
                         now,
-                        line.BetTypeId);
+                        line.BetTypeId,
+                        lineIsFuture);
                 } else
                 {
                     line.ExceedsLimit = true;
@@ -1804,20 +1809,34 @@ public class TicketsController : ControllerBase
 
 
             // 8.2 Reverse limit consumption for each line
+            // Important: revert against the correct bucket. A line that was
+            // sold as a future-day reservation must restore future-bucket
+            // capacity, not same-day. Determine the original bucket by
+            // comparing line.DrawDate to the date the ticket was created.
+            var businessTodayForRevert = Helpers.DateTimeHelper.TodayInBusinessTimezone().Date;
             foreach (var line in ticket.TicketLines)
             {
                 // Use the actual bet type stored on the line — inferring from bet number
                 // length is wrong (PICK2 and DIRECTO are both 2 digits, etc.).
                 var gameTypeId = line.BetTypeId;
                 var drawDate = DateOnly.FromDateTime(line.DrawDate.Date);
+                // The line was a future sale if its draw_date was after the
+                // ticket's creation date. Using the ticket's CreatedAt date
+                // (in business TZ) is more correct than "today" — a ticket
+                // cancelled the day-of the future draw should still revert
+                // the future bucket since that's where the row lives.
+                var ticketCreationDate = ticket.CreatedAt.Date;
+                var lineWasFuture = line.DrawDate.Date > ticketCreationDate;
 
-                // Find all consumption records for this line across all rule levels
+                // Find consumption records for this line in the correct bucket
+                // across all rule levels.
                 var consumptions = await _context.LimitConsumptions
                     .Where(lc => lc.DrawId == line.DrawId
                         && lc.DrawDate == drawDate
                         && lc.GameTypeId == gameTypeId
                         && lc.BetNumber == line.BetNumber
-                        && lc.BettingPoolId == ticket.BettingPoolId)
+                        && lc.BettingPoolId == ticket.BettingPoolId
+                        && lc.IsFutureSale == lineWasFuture)
                     .ToListAsync();
 
                 foreach (var lc in consumptions)
@@ -2526,7 +2545,8 @@ public class TicketsController : ControllerBase
         int bettingPoolId,
         decimal betAmount,
         DateTime timestamp,
-        int gameTypeId)
+        int gameTypeId,
+        bool isFutureSale)
     {
         var today = DateOnly.FromDateTime(drawDate);
 
@@ -2639,33 +2659,55 @@ public class TicketsController : ControllerBase
         // Record consumption at EVERY applicable level
         foreach (var rule in applicableRules)
         {
-            var maxLimit = await _context.LimitRuleAmounts.AsNoTracking()
+            // Pick the cap for the right bucket — same-day uses MaxAmount,
+            // future sales use FutureMaxAmount (NULL/0 = future prohibited
+            // under this rule). When prohibited, throw so the whole ticket
+            // is rejected with a clear error code.
+            var amountRow = await _context.LimitRuleAmounts.AsNoTracking()
                 .Where(a => a.LimitRuleId == rule.LimitRuleId && a.GameTypeId == gameTypeId)
-                .Select(a => a.MaxAmount)
+                .Select(a => new { a.MaxAmount, a.FutureMaxAmount })
                 .FirstOrDefaultAsync();
 
-            if (maxLimit <= 0) continue;
+            if (amountRow == null) continue;
+
+            decimal maxLimit;
+            if (isFutureSale)
+            {
+                if (!amountRow.FutureMaxAmount.HasValue || amountRow.FutureMaxAmount.Value <= 0)
+                {
+                    throw new Exceptions.BusinessException(
+                        Exceptions.ErrorCodes.FutureSalesDisabledForLimit,
+                        $"La regla de límite (id {rule.LimitRuleId}) no permite ventas futuras para el número {betNumber}.",
+                        422);
+                }
+                maxLimit = amountRow.FutureMaxAmount.Value;
+            }
+            else
+            {
+                if (amountRow.MaxAmount <= 0) continue;
+                maxLimit = amountRow.MaxAmount;
+            }
 
             // Lookup must use the same key set as the DB's UQ_limit_consumption,
-            // which is (limit_rule, draw, draw_date, bet_number, banca) — no
-            // game_type_id. Including gameTypeId in the match caused multi-line
-            // tickets that bet the same number under different game types to
-            // attempt two INSERTs on the same unique key and crash with a
-            // duplicate-key error. The aggregation is intentional: per-game-type
-            // limits live on LimitRuleAmounts, not on the consumption row.
+            // which is (limit_rule, draw, draw_date, bet_number, banca,
+            // is_future_sale). The `is_future_sale` discriminator was added so
+            // a same-day and a future-day reservation for the same number on
+            // the same draw_date coexist as two independent buckets.
             var consumption = _context.LimitConsumptions.Local
                 .FirstOrDefault(lc => lc.LimitRuleId == rule.LimitRuleId
                     && lc.DrawId == drawId
                     && lc.DrawDate == today
                     && lc.BetNumber == betNumber
-                    && lc.BettingPoolId == bettingPoolId);
+                    && lc.BettingPoolId == bettingPoolId
+                    && lc.IsFutureSale == isFutureSale);
 
             consumption ??= await _context.LimitConsumptions
                 .Where(lc => lc.LimitRuleId == rule.LimitRuleId
                     && lc.DrawId == drawId
                     && lc.DrawDate == today
                     && lc.BetNumber == betNumber
-                    && lc.BettingPoolId == bettingPoolId)
+                    && lc.BettingPoolId == bettingPoolId
+                    && lc.IsFutureSale == isFutureSale)
                 .FirstOrDefaultAsync();
 
             if (consumption == null)
@@ -2683,6 +2725,7 @@ public class TicketsController : ControllerBase
                     LastBetAt = timestamp,
                     IsNearLimit = false,
                     IsAtLimit = false,
+                    IsFutureSale = isFutureSale,
                     CreatedAt = timestamp,
                     UpdatedAt = timestamp
                 };
@@ -2694,6 +2737,20 @@ public class TicketsController : ControllerBase
                 consumption.BetCount += 1;
                 consumption.LastBetAt = timestamp;
                 consumption.UpdatedAt = timestamp;
+            }
+
+            // Reject if the post-update consumption exceeds the bucket cap.
+            // Same-day uses MaxAmount, future uses FutureMaxAmount.
+            if (consumption.CurrentAmount > maxLimit)
+            {
+                throw new Exceptions.BusinessException(
+                    isFutureSale
+                        ? Exceptions.ErrorCodes.FutureLimitExceeded
+                        : Exceptions.ErrorCodes.LimitExceeded,
+                    isFutureSale
+                        ? $"Límite de ventas futuras excedido para {betNumber} (máx: {maxLimit}, actual: {consumption.CurrentAmount})"
+                        : $"Límite excedido para {betNumber} (máx: {maxLimit}, actual: {consumption.CurrentAmount})",
+                    422);
             }
 
             _logger.LogDebug(

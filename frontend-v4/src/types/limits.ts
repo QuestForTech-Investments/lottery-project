@@ -111,6 +111,8 @@ export interface LimitAmountItem {
   gameTypeId: number;
   gameTypeName: string;
   amount: number;
+  /** Cap for future-day sales. NULL/0 = future sales prohibited under this rule. */
+  futureAmount?: number | null;
 }
 
 /**
@@ -161,6 +163,7 @@ export interface CreateLimitRequest {
   betNumberPattern?: string;
   betNumberPatterns?: string[];
   amounts?: BetTypeAmounts;
+  futureAmounts?: BetTypeAmounts;
   daysOfWeek?: number;
   effectiveFrom?: string;
   effectiveTo?: string;
