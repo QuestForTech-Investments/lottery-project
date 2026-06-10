@@ -1500,6 +1500,7 @@
       "otherSettingsTitle": "Autres paramètres",
       "allowPasswordChange": "Autoriser le changement de mot de passe",
       "allowViewCommission": "Autoriser la visualisation des commissions",
+      "allowViewCommissionDisabledHint": "Cette banca n'a pas de commissions configurées. Configurez les commissions dans l'onglet « Prix et Commissions » avant d'activer cette option.",
       "maxTicketAmount": "Montant maximum par ticket",
       "maxTicketAmountHelper": "Montant maximum autorisé par ticket",
       "discountsTitle": "Remises",

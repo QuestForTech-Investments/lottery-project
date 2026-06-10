@@ -23,6 +23,7 @@ import {
   Select,
   MenuItem,
   InputLabel,
+  Tooltip,
   type SelectChangeEvent,
 } from '@mui/material';
 import { DeleteSweep as DeleteSweepIcon } from '@mui/icons-material';
@@ -81,13 +82,17 @@ interface ConfigTabProps {
   formData: ConfigFormData;
   handleChange: (e: ChangeEvent<HTMLInputElement>) => void;
   bettingPoolId?: number;
+  /** True only when this banca has at least one commission row configured. When
+   * absent (Create flow) or false, the "ver comisiones" toggle is forced off
+   * and disabled — there's nothing for the user to view yet. */
+  hasCommissions?: boolean;
 }
 
 /**
  * ConfigurationTab Component
  * Contains ALL configuration fields from V1 with Material-UI styling
  */
-const ConfigurationTab: React.FC<ConfigTabProps> = ({ formData, handleChange, bettingPoolId }) => {
+const ConfigurationTab: React.FC<ConfigTabProps> = ({ formData, handleChange, bettingPoolId, hasCommissions = false }) => {
   const { t } = useTranslation();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [clearing, setClearing] = useState(false);
@@ -435,16 +440,25 @@ const ConfigurationTab: React.FC<ConfigTabProps> = ({ formData, handleChange, be
         </Grid>
 
         <Grid item xs={12} md={6}>
-          <FormControlLabel
-            control={
-              <Switch
-                checked={formData.allowViewCommission}
-                onChange={handleChange}
-                name="allowViewCommission"
+          <Tooltip
+            title={!hasCommissions ? t('createBettingPool.config.allowViewCommissionDisabledHint') : ''}
+            placement="top"
+            arrow
+          >
+            <span>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={formData.allowViewCommission}
+                    onChange={handleChange}
+                    name="allowViewCommission"
+                    disabled={!hasCommissions}
+                  />
+                }
+                label={t('createBettingPool.config.allowViewCommission')}
               />
-            }
-            label={t('createBettingPool.config.allowViewCommission')}
-          />
+            </span>
+          </Tooltip>
         </Grid>
 
         <Grid item xs={12} md={6}>

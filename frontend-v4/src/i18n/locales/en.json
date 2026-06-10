@@ -1500,6 +1500,7 @@
       "otherSettingsTitle": "Other Settings",
       "allowPasswordChange": "Allow Password Change",
       "allowViewCommission": "Allow View Commission",
+      "allowViewCommissionDisabledHint": "This banca has no commissions configured. Configure commissions in the \"Prizes & Commissions\" tab before enabling this option.",
       "maxTicketAmount": "Maximum Ticket Amount",
       "maxTicketAmountHelper": "Maximum amount allowed per ticket",
       "discountsTitle": "Discounts",

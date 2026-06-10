@@ -1500,6 +1500,7 @@
       "otherSettingsTitle": "Otras Configuraciones",
       "allowPasswordChange": "Permitir Cambiar Contraseña",
       "allowViewCommission": "Permitir Ver Comisión",
+      "allowViewCommissionDisabledHint": "Esta banca no tiene comisiones configuradas. Configura las comisiones en la pestaña «Premios y Comisiones» antes de habilitar esta opción.",
       "maxTicketAmount": "Monto Máximo de Tickets",
       "maxTicketAmountHelper": "Monto máximo permitido por ticket",
       "discountsTitle": "Descuentos",

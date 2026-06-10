@@ -190,6 +190,7 @@ export interface UseEditBettingPoolFormReturn {
   zones: Zone[];
   draws: Draw[];
   prizesDraws: PrizesDraw[];
+  hasCommissions: boolean;
   drawValuesCache: DrawValuesCache;
   activeTab: number;
   handleChange: (e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement> | SyntheticEventLike) => void;

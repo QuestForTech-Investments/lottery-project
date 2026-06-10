@@ -1500,6 +1500,7 @@
       "otherSettingsTitle": "Lòt Konfigirasyon",
       "allowPasswordChange": "Pèmèt Chanjman Modpas",
       "allowViewCommission": "Pèmèt Wè Komisyon",
+      "allowViewCommissionDisabledHint": "Banca sa a pa gen komisyon konfigire. Konfigire komisyon yo nan tab « Pri ak Komisyon » anvan w aktive opsyon sa a.",
       "maxTicketAmount": "Montan Maksimòm Tikè",
       "maxTicketAmountHelper": "Montan maksimòm pèmèt pa tikè",
       "discountsTitle": "Rabè",

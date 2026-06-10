@@ -274,7 +274,7 @@ public class LotteryDbContext : DbContext
             .IsUnique();
 
         modelBuilder.Entity<BettingPoolPrizesCommission>()
-            .HasIndex(bpc => new { bpc.BettingPoolId, bpc.LotteryId, bpc.GameType })
+            .HasIndex(bpc => new { bpc.BettingPoolId, bpc.LotteryId, bpc.GameType, bpc.DrawId })
             .IsUnique();
 
         modelBuilder.Entity<BettingPoolSortition>()

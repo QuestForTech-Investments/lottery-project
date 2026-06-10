@@ -61,6 +61,7 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
   const [zones, setZones] = useState<Zone[]>([]);
   const [draws, setDraws] = useState<Draw[]>([]); // ⚡ PERFORMANCE: Load once, share between tabs
   const [prizesDraws, setPrizesDraws] = useState<PrizesDraw[]>([]); // Formatted draws for PrizesTab
+  const [hasCommissions, setHasCommissions] = useState<boolean>(false); // Banca has at least one commission row configured
   const [drawValuesCache, setDrawValuesCache] = useState<DrawValuesCache>({}); // ⚡ PERFORMANCE: Cache draw-specific values by lotteryId
   const [activeTab, setActiveTab] = useState<number>(0);
 
@@ -706,8 +707,17 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
 
       const commissions = await response.json();
       if (!Array.isArray(commissions) || commissions.length === 0) {
+        setHasCommissions(false);
         return {};
       }
+      // The same table stores prize-payment rows and commission rows. A banca
+      // can have prize config without commissions, so check for real commission
+      // values rather than just row presence.
+      const hasAnyCommissionValue = commissions.some((r: { commissionDiscount1?: number | null; commission2Discount1?: number | null }) =>
+        (r.commissionDiscount1 != null && r.commissionDiscount1 !== 0) ||
+        (r.commission2Discount1 != null && r.commission2Discount1 !== 0)
+      );
+      setHasCommissions(hasAnyCommissionValue);
 
       const commissionFormData: Record<string, string | number> = {};
 
@@ -1842,6 +1852,7 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
     zones,
     draws, // ⚡ PERFORMANCE: Draws for DrawsTab (loaded once)
     prizesDraws, // ⚡ PERFORMANCE: Formatted draws for PrizesTab (loaded once)
+    hasCommissions, // True when the banca has at least one commission row configured
     drawValuesCache, // ⚡ PERFORMANCE: Cached draw-specific values by lotteryId
     activeTab,
     handleChange,

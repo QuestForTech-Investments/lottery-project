@@ -121,14 +121,13 @@ function DataTableInner<T extends object>({
         size={size}
         stickyHeader={stickyHeader}
         sx={{
-          // `width: auto` makes each column size to its natural content width
-          // instead of stretching to fill the container. Without this, on
-          // mobile the browser distributes leftover horizontal space across
-          // columns and produces visible gaps between cells with short values.
-          width: 'auto',
-          // Centre the table when it ends up narrower than the container so
-          // narrow tables don't sit flush-left with empty space on the right.
-          mx: 'auto',
+          // On mobile, `width: auto` keeps columns at natural content width so
+          // short values don't get spread apart by leftover container space.
+          // On desktop (≥md), stretch to the full container so a sparse table
+          // doesn't sit as a small island inside a wide card.
+          width: { xs: 'auto', md: '100%' },
+          // Centre the (narrower-than-container) table on mobile only.
+          mx: { xs: 'auto', md: 0 },
         }}
       >
         <TableHead sx={{ backgroundColor: '#e3e3e3' }}>
