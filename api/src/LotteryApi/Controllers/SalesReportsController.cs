@@ -329,10 +329,14 @@ public class SalesReportsController : ControllerBase
                 // balance stable across days without new activity (so the POS
                 // sees the same closing balance until the next sales day) and
                 // matches the user's expectation that yesterday's closing
-                // balance persists. Lifetime would over-shoot (re-adding
-                // commission of every prior period); the current-period only
-                // would fluctuate on days without sales.
-                if (excludeCommissionFromNet)
+                // balance persists.
+                //
+                // Only apply the offset when balance > 0 (i.e. the banca still
+                // owes from a pending sale). If the balance is 0 or negative
+                // the banca has been settled, so re-adding commission would
+                // surface a phantom amount that doesn't correspond to any
+                // outstanding debt.
+                if (excludeCommissionFromNet && balance > 0)
                 {
                     var bpTickets = await _context.Tickets
                         .AsNoTracking()
@@ -769,11 +773,13 @@ public class SalesReportsController : ControllerBase
                     var displayBalance = hasSnapshot ? snapBal : snapBal + txAdj;
 
                     // When commission is hidden, add back the commission of
-                    // the banca's most recent business-timezone day with sales
-                    // (NOT lifetime, NOT just-the-period). This keeps the POS
-                    // balance stable across idle days. See daily-summary for
-                    // matching logic.
-                    if (hideCommission && commissionLastDayByBp.TryGetValue(bpId, out var lastDayCommission))
+                    // the banca's most recent business-timezone day with sales.
+                    // Only when displayBalance > 0 — if the banca has been
+                    // settled (0 or negative) there's no commission deduction
+                    // left to compensate for, and the offset would surface a
+                    // phantom amount. See daily-summary for matching logic.
+                    if (hideCommission && displayBalance > 0
+                        && commissionLastDayByBp.TryGetValue(bpId, out var lastDayCommission))
                     {
                         displayBalance += lastDayCommission;
                     }
