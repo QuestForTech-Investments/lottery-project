@@ -299,8 +299,11 @@ public class SalesReportsController : ControllerBase
             // otherwise the operator would see a net lower than what they expect with
             // no visible explanation. Only applies to single-banca queries; aggregate
             // admin queries keep the canonical net (sold − disc − com − prizes).
+            // Hide commission ONLY for POS callers (no VIEW_SALES permission).
+            // Admin views must always show commission for reporting/audit, even
+            // when the queried banca has allow_view_commission=false.
             bool excludeCommissionFromNet = false;
-            if (bettingPoolId.HasValue)
+            if (!hasAdminView && bettingPoolId.HasValue)
             {
                 excludeCommissionFromNet = await _context.BettingPoolConfigs
                     .AsNoTracking()
@@ -699,14 +702,16 @@ public class SalesReportsController : ControllerBase
                 txAdjustmentMap[adj.BettingPoolId] = current + adj.Net;
             }
 
-            // Per-banca commission-visibility flag. Bancas with AllowViewCommission=false
-            // (or no config row) should display Net/Balance with commission excluded,
-            // mirroring the daily-summary endpoint's behaviour.
+            // Per-banca commission-visibility flag. Hide ONLY for POS callers
+            // (no VIEW_SALES). Admins consuming this endpoint for reports must
+            // always see commission, regardless of the per-banca flag.
             var bpWithSales = salesData.Where(x => x.Tickets.Any()).Select(x => x.BettingPool.BettingPoolId).ToList();
-            var hideCommissionByBp = await _context.BettingPoolConfigs
-                .AsNoTracking()
-                .Where(c => bpWithSales.Contains(c.BettingPoolId))
-                .ToDictionaryAsync(c => c.BettingPoolId, c => !c.AllowViewCommission);
+            var hideCommissionByBp = !hasAdminView
+                ? await _context.BettingPoolConfigs
+                    .AsNoTracking()
+                    .Where(c => bpWithSales.Contains(c.BettingPoolId))
+                    .ToDictionaryAsync(c => c.BettingPoolId, c => !c.AllowViewCommission)
+                : new Dictionary<int, bool>();
 
             // For bancas that hide commission, compute the commission of each
             // one's most-recent business-timezone day with sales — that's the
@@ -908,11 +913,11 @@ public class SalesReportsController : ControllerBase
 
             var lines = await query.ToListAsync();
 
-            // Single-banca query: respect AllowViewCommission. Aggregate (multi-
-            // banca) queries keep the canonical net, since the report is for
-            // admins who can see commission across the org.
+            // Single-banca query from a POS caller (no VIEW_SALES): respect
+            // AllowViewCommission. Admin queries (with VIEW_SALES) always keep
+            // the canonical net so reporting matches the rest of the admin UI.
             bool hideCommission = false;
-            if (bettingPoolId.HasValue)
+            if (!hasAdminView && bettingPoolId.HasValue)
             {
                 hideCommission = await _context.BettingPoolConfigs
                     .AsNoTracking()
