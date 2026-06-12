@@ -98,6 +98,13 @@ const ConfigurationTab: React.FC<ConfigTabProps> = ({ formData, handleChange, be
   const [clearing, setClearing] = useState(false);
   const [clearResult, setClearResult] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
+  // Effective value used by everything gated on commission visibility. If the
+  // banca has no commission rows, treat the flag as false regardless of what's
+  // stored on the form — the stored value may be stale from before the
+  // commissions were removed, and any feature that depends on it should behave
+  // as if commission visibility is off.
+  const effectiveAllowViewCommission = hasCommissions && formData.allowViewCommission;
+
   const handleClearContacts = async () => {
     if (!bettingPoolId) return;
     setClearing(true);
@@ -628,18 +635,26 @@ const ConfigurationTab: React.FC<ConfigTabProps> = ({ formData, handleChange, be
               </Typography>
               <Grid container spacing={1}>
                 <Grid item xs={6} sm={4} md={3}>
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={parseFloat(formData.deactivationBalance || '0') > 0 && formData.statCredit}
-                        onChange={handleChange}
-                        name="statCredit"
-                        size="small"
-                        disabled={!(parseFloat(formData.deactivationBalance || '0') > 0)}
+                  <Tooltip
+                    title={!(parseFloat(formData.deactivationBalance || '0') > 0) ? t('createBettingPool.config.statCreditDisabledHint') : ''}
+                    placement="top"
+                    arrow
+                  >
+                    <span>
+                      <FormControlLabel
+                        control={
+                          <Switch
+                            checked={parseFloat(formData.deactivationBalance || '0') > 0 && formData.statCredit}
+                            onChange={handleChange}
+                            name="statCredit"
+                            size="small"
+                            disabled={!(parseFloat(formData.deactivationBalance || '0') > 0)}
+                          />
+                        }
+                        label={t('createBettingPool.config.statCredit')}
                       />
-                    }
-                    label={t('createBettingPool.config.statCredit')}
-                  />
+                    </span>
+                  </Tooltip>
                 </Grid>
                 <Grid item xs={6} sm={4} md={3}>
                   <FormControlLabel
@@ -648,21 +663,26 @@ const ConfigurationTab: React.FC<ConfigTabProps> = ({ formData, handleChange, be
                   />
                 </Grid>
                 <Grid item xs={6} sm={4} md={3}>
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        // Force off + disabled when the banca isn't allowed
-                        // to see commission anywhere. Mirrors the statCredit
-                        // pattern that gates on deactivationBalance.
-                        checked={formData.allowViewCommission && formData.statPercentage}
-                        onChange={handleChange}
-                        name="statPercentage"
-                        size="small"
-                        disabled={!formData.allowViewCommission}
+                  <Tooltip
+                    title={!effectiveAllowViewCommission ? t('createBettingPool.config.statPercentageDisabledHint') : ''}
+                    placement="top"
+                    arrow
+                  >
+                    <span>
+                      <FormControlLabel
+                        control={
+                          <Switch
+                            checked={effectiveAllowViewCommission && formData.statPercentage}
+                            onChange={handleChange}
+                            name="statPercentage"
+                            size="small"
+                            disabled={!effectiveAllowViewCommission}
+                          />
+                        }
+                        label={t('createBettingPool.config.statPercentage')}
                       />
-                    }
-                    label={t('createBettingPool.config.statPercentage')}
-                  />
+                    </span>
+                  </Tooltip>
                 </Grid>
                 <Grid item xs={6} sm={4} md={3}>
                   <FormControlLabel
@@ -671,27 +691,48 @@ const ConfigurationTab: React.FC<ConfigTabProps> = ({ formData, handleChange, be
                   />
                 </Grid>
                 <Grid item xs={6} sm={4} md={3}>
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        // Net only makes sense once a fall scheme is in play —
-                        // without a fall there's nothing to subtract to derive
-                        // the net.
-                        checked={formData.fallType !== '1' && formData.statNet}
-                        onChange={handleChange}
-                        name="statNet"
-                        size="small"
-                        disabled={formData.fallType === '1'}
+                  <Tooltip
+                    title={formData.fallType === '1' ? t('createBettingPool.config.statNetDisabledHint') : ''}
+                    placement="top"
+                    arrow
+                  >
+                    <span>
+                      <FormControlLabel
+                        control={
+                          <Switch
+                            checked={formData.fallType !== '1' && formData.statNet}
+                            onChange={handleChange}
+                            name="statNet"
+                            size="small"
+                            disabled={formData.fallType === '1'}
+                          />
+                        }
+                        label={t('createBettingPool.config.statNet')}
                       />
-                    }
-                    label={t('createBettingPool.config.statNet')}
-                  />
+                    </span>
+                  </Tooltip>
                 </Grid>
                 <Grid item xs={6} sm={4} md={3}>
-                  <FormControlLabel
-                    control={<Switch checked={formData.statDiscount} onChange={handleChange} name="statDiscount" size="small" />}
-                    label={t('createBettingPool.config.statDiscount')}
-                  />
+                  <Tooltip
+                    title={formData.discountMode === '1' ? t('createBettingPool.config.statDiscountDisabledHint') : ''}
+                    placement="top"
+                    arrow
+                  >
+                    <span>
+                      <FormControlLabel
+                        control={
+                          <Switch
+                            checked={formData.statDiscount}
+                            onChange={handleChange}
+                            name="statDiscount"
+                            size="small"
+                            disabled={formData.discountMode === '1'}
+                          />
+                        }
+                        label={t('createBettingPool.config.statDiscount')}
+                      />
+                    </span>
+                  </Tooltip>
                 </Grid>
                 <Grid item xs={6} sm={4} md={3}>
                   <FormControlLabel
@@ -706,43 +747,52 @@ const ConfigurationTab: React.FC<ConfigTabProps> = ({ formData, handleChange, be
                   />
                 </Grid>
                 <Grid item xs={6} sm={4} md={3}>
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        // fall stats only make sense when fall tracking is on
-                        // (fallType '1' === OFF). Gating mirrors statPercentage
-                        // gated on allowViewCommission and statCredit gated
-                        // on deactivationBalance.
-                        checked={formData.fallType !== '1' && formData.statFall}
-                        onChange={handleChange}
-                        name="statFall"
-                        size="small"
-                        disabled={formData.fallType === '1'}
+                  <Tooltip
+                    title={formData.fallType === '1' ? t('createBettingPool.config.statFallDisabledHint') : ''}
+                    placement="top"
+                    arrow
+                  >
+                    <span>
+                      <FormControlLabel
+                        control={
+                          <Switch
+                            checked={formData.fallType !== '1' && formData.statFall}
+                            onChange={handleChange}
+                            name="statFall"
+                            size="small"
+                            disabled={formData.fallType === '1'}
+                          />
+                        }
+                        label={t('createBettingPool.config.statFall')}
                       />
-                    }
-                    label={t('createBettingPool.config.statFall')}
-                  />
+                    </span>
+                  </Tooltip>
                 </Grid>
                 <Grid item xs={6} sm={4} md={3}>
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        // Accumulated fall is meaningless when fall is OFF ('1')
-                        // OR when the schema is "weekly non-cumulative" ('6'),
-                        // which by definition doesn't accumulate.
-                        checked={
-                          formData.fallType !== '1'
-                          && formData.fallType !== '6'
-                          && formData.statAccumulatedFall
+                  <Tooltip
+                    title={(formData.fallType === '1' || formData.fallType === '6') ? t('createBettingPool.config.statAccumulatedFallDisabledHint') : ''}
+                    placement="top"
+                    arrow
+                  >
+                    <span>
+                      <FormControlLabel
+                        control={
+                          <Switch
+                            checked={
+                              formData.fallType !== '1'
+                              && formData.fallType !== '6'
+                              && formData.statAccumulatedFall
+                            }
+                            onChange={handleChange}
+                            name="statAccumulatedFall"
+                            size="small"
+                            disabled={formData.fallType === '1' || formData.fallType === '6'}
+                          />
                         }
-                        onChange={handleChange}
-                        name="statAccumulatedFall"
-                        size="small"
-                        disabled={formData.fallType === '1' || formData.fallType === '6'}
+                        label={t('createBettingPool.config.statAccumulatedFall')}
                       />
-                    }
-                    label={t('createBettingPool.config.statAccumulatedFall')}
-                  />
+                    </span>
+                  </Tooltip>
                 </Grid>
               </Grid>
             </Box>

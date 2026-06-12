@@ -1317,10 +1317,25 @@ public class LimitsController : ControllerBase
                 return Forbid();
             }
 
-            amount.MaxAmount = dto.Amount;
+            if (dto.Amount.HasValue)
+            {
+                amount.MaxAmount = dto.Amount.Value;
+            }
+            if (dto.FutureAmountProvided)
+            {
+                // null or <= 0 → clear (future sales prohibited under this row).
+                amount.FutureMaxAmount = (dto.FutureAmount.HasValue && dto.FutureAmount.Value > 0)
+                    ? dto.FutureAmount.Value
+                    : null;
+            }
             await _context.SaveChangesAsync();
 
-            return Ok(new { message = "Monto actualizado", amount = amount.MaxAmount });
+            return Ok(new
+            {
+                message = "Monto actualizado",
+                amount = amount.MaxAmount,
+                futureAmount = amount.FutureMaxAmount
+            });
         }
         catch (Exception ex)
         {

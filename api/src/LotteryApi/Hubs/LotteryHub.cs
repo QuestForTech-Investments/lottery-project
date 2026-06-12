@@ -311,10 +311,23 @@ public class LotteryHub : Hub<ILotteryHubClient>
         var betNumber = request.BetNumber.Trim();
         var gameTypeId = request.GameTypeId;
         var drawId = request.DrawId;
-        var today = DateOnly.FromDateTime(DateTime.Today);
         var now = DateTime.UtcNow;
-        var todayDow = (int)now.DayOfWeek; // 0=Sun, 1=Mon...6=Sat
-        var dayBit = todayDow switch
+        var businessToday = Helpers.DateTimeHelper.TodayInBusinessTimezone().Date;
+        var targetDateValue = request.DrawDate?.Date ?? businessToday;
+        var isFutureSale = targetDateValue > businessToday;
+        // Echo the client's DrawDate string in every response so the client can
+        // discard stale responses that arrive after switching ticket-date modes.
+        var drawDateEcho = request.DrawDate?.ToString("yyyy-MM-dd");
+        var targetDate = DateOnly.FromDateTime(targetDateValue);
+        // Legacy variable kept for downstream callers — points to the date the
+        // rules and consumption queries should use (draw date for futures,
+        // today for same-day).
+        var today = targetDate;
+        // Day-of-week bit is derived from the target draw date so future-sale
+        // checks evaluate the rules that apply on the actual draw's weekday,
+        // not on today's.
+        var dow = (int)targetDateValue.DayOfWeek; // 0=Sun, 1=Mon...6=Sat
+        var dayBit = dow switch
         {
             1 => 1, 2 => 2, 3 => 4, 4 => 8, 5 => 16, 6 => 32, 0 => 64, _ => 0
         };
@@ -352,7 +365,8 @@ public class LotteryHub : Hub<ILotteryHubClient>
             {
                 BetNumber = betNumber,
                 GameTypeId = gameTypeId,
-                DrawId = drawId
+                DrawId = drawId,
+                DrawDate = drawDateEcho
             });
             return;
         }
@@ -365,6 +379,7 @@ public class LotteryHub : Hub<ILotteryHubClient>
                 GameTypeId = gameTypeId,
                 DrawId = drawId,
                 DrawName = draw.DrawName,
+                DrawDate = drawDateEcho,
                 AvailableAmount = 0,
                 LimitAmount = 0,
                 CurrentAmount = 0,
@@ -394,7 +409,7 @@ public class LotteryHub : Hub<ILotteryHubClient>
             r.LimitType == LimitType.GeneralForZone || r.LimitType == LimitType.ByNumberForZone);
 
         var maxAmountsTask = PrefetchMaxAmounts(ruleIds, gameTypeId);
-        var consumptionsTask = PrefetchConsumptions(ruleIds, drawId, today, gameTypeId, betNumber);
+        var consumptionsTask = PrefetchConsumptions(ruleIds, drawId, today, gameTypeId, betNumber, isFutureSale);
         var zonePoolsTask = hasZoneRule && zoneId > 0
             ? PrefetchZonePoolIds(zoneId)
             : Task.FromResult<HashSet<int>>(new HashSet<int>());
@@ -419,7 +434,33 @@ public class LotteryHub : Hub<ILotteryHubClient>
 
         foreach (var rule in rulesToCheck)
         {
-            if (!maxAmounts.TryGetValue(rule.LimitRuleId, out var ruleMax) || ruleMax <= 0)
+            if (!maxAmounts.TryGetValue(rule.LimitRuleId, out var cap))
+            {
+                blocked = true;
+                blockedBy = GetBlockedByLabel(rule.LimitType);
+                break;
+            }
+
+            // For future-sale lines, pick FutureMaxAmount. NULL/0 = future
+            // sales prohibited under this rule (matches the REST API's
+            // FUTURE_SALES_DISABLED_FOR_LIMIT error).
+            decimal ruleMax;
+            if (isFutureSale)
+            {
+                if (cap.FutureMaxAmount == null || cap.FutureMaxAmount.Value <= 0)
+                {
+                    blocked = true;
+                    blockedBy = "future_sales_disabled";
+                    break;
+                }
+                ruleMax = cap.FutureMaxAmount.Value;
+            }
+            else
+            {
+                ruleMax = cap.MaxAmount;
+            }
+
+            if (ruleMax <= 0)
             {
                 blocked = true;
                 blockedBy = GetBlockedByLabel(rule.LimitType);
@@ -514,7 +555,11 @@ public class LotteryHub : Hub<ILotteryHubClient>
             }
         }
 
-        if (canBypassLimits && blocked)
+        // PLAY_WITHOUT_AVAILABILITY lets the user push past a CAP that's been
+        // exhausted (a limit decision). "future_sales_disabled" is a
+        // configuration POLICY ("no future sales under this rule, period"), not
+        // a cap — bypass must not silently override it.
+        if (canBypassLimits && blocked && blockedBy != "future_sales_disabled")
         {
             blocked = false;
             blockedBy = null;
@@ -526,6 +571,7 @@ public class LotteryHub : Hub<ILotteryHubClient>
             GameTypeId = gameTypeId,
             DrawId = drawId,
             DrawName = draw.DrawName,
+            DrawDate = drawDateEcho,
             AvailableAmount = finalAvailable,
             LimitAmount = reportLimitAmount,
             CurrentAmount = reportCurrentAmount,
@@ -645,13 +691,13 @@ public class LotteryHub : Hub<ILotteryHubClient>
             .ToListAsync();
     }
 
-    private async Task<Dictionary<int, decimal>> PrefetchMaxAmounts(List<int> ruleIds, int gameTypeId)
+    private async Task<Dictionary<int, RuleCap>> PrefetchMaxAmounts(List<int> ruleIds, int gameTypeId)
     {
-        if (ruleIds.Count == 0) return new Dictionary<int, decimal>();
+        if (ruleIds.Count == 0) return new Dictionary<int, RuleCap>();
         await using var ctx = await _contextFactory.CreateDbContextAsync();
         return await ctx.LimitRuleAmounts.AsNoTracking()
             .Where(a => ruleIds.Contains(a.LimitRuleId) && a.GameTypeId == gameTypeId)
-            .ToDictionaryAsync(a => a.LimitRuleId, a => a.MaxAmount);
+            .ToDictionaryAsync(a => a.LimitRuleId, a => new RuleCap(a.MaxAmount, a.FutureMaxAmount));
     }
 
     /// <summary>
@@ -662,14 +708,15 @@ public class LotteryHub : Hub<ILotteryHubClient>
     /// non-nullable.
     /// </summary>
     private async Task<Dictionary<(int RuleId, int BettingPoolId), decimal>> PrefetchConsumptions(
-        List<int> ruleIds, int drawId, DateOnly date, int gameTypeId, string betNumber)
+        List<int> ruleIds, int drawId, DateOnly date, int gameTypeId, string betNumber, bool isFutureSale)
     {
         if (ruleIds.Count == 0) return new();
         await using var ctx = await _contextFactory.CreateDbContextAsync();
         var rows = await ctx.LimitConsumptions.AsNoTracking()
             .Where(lc => ruleIds.Contains(lc.LimitRuleId)
                 && lc.DrawId == drawId && lc.DrawDate == date
-                && lc.GameTypeId == gameTypeId && lc.BetNumber == betNumber)
+                && lc.GameTypeId == gameTypeId && lc.BetNumber == betNumber
+                && lc.IsFutureSale == isFutureSale)
             .GroupBy(lc => new { lc.LimitRuleId, lc.BettingPoolId })
             .Select(g => new { g.Key.LimitRuleId, g.Key.BettingPoolId, Total = g.Sum(x => x.CurrentAmount) })
             .ToListAsync();
@@ -808,6 +855,14 @@ public class CheckPlayLimitRequest
 
     /// <summary>Betting pool ID making the request</summary>
     public int BettingPoolId { get; set; }
+
+    /// <summary>
+    /// Draw date for this play. When greater than today (in business timezone)
+    /// the check uses the future-sale bucket and <c>future_max_amount</c> cap
+    /// from the matching limit rule. When null or &lt;= today, behaves as
+    /// same-day (legacy behaviour preserved for older clients).
+    /// </summary>
+    public DateTime? DrawDate { get; set; }
 }
 
 // Lightweight projections used by the parallel CheckPlayLimit prefetches so we
@@ -823,3 +878,9 @@ internal sealed class BettingPoolConfigSnapshot
     public decimal? DailySaleLimit { get; set; }
     public decimal? DeactivationBalance { get; set; }
 }
+
+/// <summary>
+/// Per-rule cap pair: same-day + future-sale. FutureMaxAmount=null/0 means
+/// futures are prohibited under that rule.
+/// </summary>
+internal sealed record RuleCap(decimal MaxAmount, decimal? FutureMaxAmount);

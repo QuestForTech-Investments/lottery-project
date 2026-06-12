@@ -353,12 +353,18 @@ public class PlayLimitAvailabilityResponse : BaseNotification
     public int GameTypeId { get; set; }
     public int DrawId { get; set; }
     public string DrawName { get; set; } = string.Empty;
+    /// <summary>
+    /// Draw date this check evaluated against. Echoed back so the client can
+    /// discard responses that arrive after the user switched ticket-date
+    /// modes (future ↔ same-day). Null = same-day check.
+    /// </summary>
+    public string? DrawDate { get; set; }
     public decimal AvailableAmount { get; set; }
     public decimal LimitAmount { get; set; }
     public decimal CurrentAmount { get; set; }
     public decimal PercentageUsed { get; set; }
     public bool IsBlocked { get; set; }
-    public string? BlockedBy { get; set; } // "global", "zona", "banca", "local_banca", "no_limit", "daily_sale_limit", "credit_limit"
+    public string? BlockedBy { get; set; } // "global", "zona", "banca", "local_banca", "no_limit", "daily_sale_limit", "credit_limit", "future_sales_disabled"
 
     // Daily sale limit info
     public decimal? DailySaleLimit { get; set; }

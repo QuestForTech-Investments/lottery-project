@@ -261,12 +261,12 @@ const LimitsList = (): React.ReactElement => {
     } catch (err) { setSnackbar({ open: true, message: handleLimitError(err, t('limitsAdmin.list.errDeleteAmount')), severity: 'error' }); }
   }, [t]);
 
-  // Update a single amount inline
+  // Update a single amount inline (same-day cap)
   const handleUpdateAmount = useCallback(async (ruleId: number, gameTypeId: number, newAmount: number) => {
     const key = `${ruleId}-${gameTypeId}`;
     setUpdatingAmount(key);
     try {
-      await limitService.updateAmount(ruleId, gameTypeId, newAmount);
+      await limitService.updateAmount(ruleId, gameTypeId, { amount: newAmount });
       setAllLimits(prev => prev.map(l => {
         if (l.limitRuleId !== ruleId) return l;
         return { ...l, amounts: l.amounts?.map(a => a.gameTypeId === gameTypeId ? { ...a, amount: newAmount } : a) };
@@ -274,6 +274,31 @@ const LimitsList = (): React.ReactElement => {
       setSnackbar({ open: true, message: t('limitsAdmin.list.msgAmountUpdated'), severity: 'success' });
     } catch (err) { setSnackbar({ open: true, message: handleLimitError(err, t('limitsAdmin.list.errUpdateAmount')), severity: 'error' }); }
     finally { setUpdatingAmount(null); }
+  }, [t]);
+
+  // Update the future-sale cap inline. Empty/0 → clear (future sales
+  // prohibited under this row); positive → set.
+  const handleUpdateFutureAmount = useCallback(async (ruleId: number, gameTypeId: number, raw: string) => {
+    const key = `${ruleId}-${gameTypeId}`;
+    setUpdatingAmount(key);
+    try {
+      const parsed = raw.trim() === '' ? null : parseFloat(raw);
+      const futureAmount = parsed !== null && !Number.isNaN(parsed) && parsed > 0 ? parsed : null;
+      await limitService.updateAmount(ruleId, gameTypeId, {
+        futureAmount,
+        futureAmountProvided: true,
+      });
+      setAllLimits(prev => prev.map(l => {
+        if (l.limitRuleId !== ruleId) return l;
+        return {
+          ...l,
+          amounts: l.amounts?.map(a => a.gameTypeId === gameTypeId ? { ...a, futureAmount } : a),
+        };
+      }));
+      setSnackbar({ open: true, message: t('limitsAdmin.list.msgAmountUpdated'), severity: 'success' });
+    } catch (err) {
+      setSnackbar({ open: true, message: handleLimitError(err, t('limitsAdmin.list.errUpdateAmount')), severity: 'error' });
+    } finally { setUpdatingAmount(null); }
   }, [t]);
 
   // Delete entire rule
@@ -400,18 +425,29 @@ const LimitsList = (): React.ReactElement => {
                           />
                         </TableCell>
                         <TableCell sx={styles.tableCell}>
-                          {amt.futureAmount && amt.futureAmount > 0 ? (
-                            <Typography sx={{ fontSize: '14px', fontWeight: 500, color: '#2c2c2c' }}>
-                              {amt.futureAmount.toLocaleString()}
-                            </Typography>
-                          ) : (
-                            <Typography
-                              sx={{ fontSize: '12px', color: '#bbb', fontStyle: 'italic' }}
-                              title={t('limitsAdmin.list.futureProhibitedHint') as string}
-                            >
-                              {t('limitsAdmin.list.futureProhibited')}
-                            </Typography>
-                          )}
+                          <TextField
+                            type="number"
+                            // `key` makes the input reset to the new prop value
+                            // after a successful save (otherwise defaultValue
+                            // sticks to the value present at first render).
+                            key={`${amtKey}-fut-${amt.futureAmount ?? 'null'}`}
+                            defaultValue={amt.futureAmount ?? ''}
+                            size="small"
+                            disabled={updatingAmount === amtKey}
+                            placeholder={t('limitsAdmin.list.futureProhibited') as string}
+                            title={t('limitsAdmin.list.futureProhibitedHint') as string}
+                            onBlur={(e) => {
+                              const raw = e.target.value.trim();
+                              const parsed = raw === '' ? null : parseFloat(raw);
+                              const next = parsed !== null && !Number.isNaN(parsed) && parsed > 0 ? parsed : null;
+                              const current = amt.futureAmount ?? null;
+                              if (next !== current) {
+                                handleUpdateFutureAmount(limit.limitRuleId, amt.gameTypeId, raw);
+                              }
+                            }}
+                            sx={{ width: 120, '& .MuiOutlinedInput-root': { fontSize: '14px', height: '36px' } }}
+                            inputProps={{ min: 0 }}
+                          />
                         </TableCell>
                         <TableCell sx={styles.tableCell}>{formatDate(limit.effectiveTo)}</TableCell>
                         <TableCell align="right">

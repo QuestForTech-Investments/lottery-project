@@ -184,6 +184,10 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
   // applies to the input the user is looking at. Stops late responses from
   // resurrecting cleared error/warning state.
   const currentBetNumberRef = useRef<string>('');
+  // Mirror of `effectiveTicketDate` updated synchronously so the SignalR
+  // callback (registered once on mount) can compare incoming response dates
+  // against the user's current selection and drop stale ones.
+  const effectiveTicketDateRef = useRef<string | null>(null);
   // Token bumped on every change to betNumber. The latest pending-warning
   // timeout captures it and only clears the warning if no newer change has
   // happened — otherwise an old 5-second timer would clobber a freshly-set
@@ -220,6 +224,12 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
       // Without this, a slow round-trip for "12" can clobber state for the
       // "13" the user is now editing.
       if (data.betNumber !== currentBetNumberRef.current.trim()) return;
+      // Drop late responses that evaluated against a draw date the user has
+      // since changed. Compares the echoed DrawDate (yyyy-MM-dd or null for
+      // same-day) against the current effectiveTicketDate ref.
+      const expectedDate = effectiveTicketDateRef.current ?? null;
+      const responseDate = data.drawDate ?? null;
+      if (expectedDate !== responseDate) return;
 
       // Response arrived — the add button can re-enable.
       setLimitChecking(false);
@@ -248,6 +258,7 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
           banca: 'Límite de Banca alcanzado',
           local_banca: 'Límite Local de Banca alcanzado',
           no_limit: 'Banca no tiene límites configurados',
+          future_sales_disabled: 'Venta futura no permitida bajo el límite actual',
         };
         setBetWarning(labels[data.blockedBy] || 'Límite alcanzado');
         const tokenAtSet = betNumberTokenRef.current;
@@ -1524,11 +1535,14 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
     setPlayStats(null);
     setLimitChecking(true);
     for (const draw of drawsToCheck) {
-      checkPlayLimit(betNumber.trim(), detection.gameTypeId, draw.id, selectedPool.bettingPoolId);
+      // Future-date tickets need to route the check through the future-sale
+      // bucket so the hub uses future_max_amount instead of max_amount.
+      // effectiveTicketDate is null for "today" → hub falls back to same-day.
+      checkPlayLimit(betNumber.trim(), detection.gameTypeId, draw.id, selectedPool.bettingPoolId, effectiveTicketDate ?? undefined);
     }
     // Get play stats for the first draw
     getPlayStats(betNumber.trim(), detection.gameTypeId, firstDraw.id, selectedPool.bettingPoolId);
-  }, [betNumber, selectedPool, multiLotteryMode, selectedDraws, selectedDraw, selectedBetType, drawGameTypes, determineBetType, detectCompoundPlay, checkPlayLimit, getCachedLimit, getPlayStats]);
+  }, [betNumber, selectedPool, multiLotteryMode, selectedDraws, selectedDraw, selectedBetType, drawGameTypes, determineBetType, detectCompoundPlay, checkPlayLimit, getCachedLimit, getPlayStats, effectiveTicketDate]);
 
   // Clear warnings/errors and stale limit-check status when bet number changes.
   // Bumps `betNumberTokenRef` so any in-flight 5s-clear timers for the old
@@ -1548,6 +1562,26 @@ export const useCreateTicketsState = (): UseCreateTicketsStateReturn => {
   recheckLimitRef.current = handleBetNumberBlur;
   // Same pattern for the WS callback to retry queued Enter presses.
   handleAddBetRef.current = handleAddBet;
+
+  // When the ticket date mode flips (today ↔ future ↔ previous day), re-run
+  // the availability check so the hub evaluates against the right bucket
+  // (same-day vs future_max_amount). Reads current number/pool through refs
+  // so that typing into the number input doesn't itself re-trigger this
+  // effect — that would fire a check on every keystroke instead of on blur.
+  const betNumberLatestRef = useRef(betNumber);
+  const selectedPoolLatestRef = useRef(selectedPool);
+  betNumberLatestRef.current = betNumber;
+  selectedPoolLatestRef.current = selectedPool;
+  effectiveTicketDateRef.current = effectiveTicketDate;
+  useEffect(() => {
+    // Clear any stale "result" the user is looking at — a fresh check fires
+    // below and onLimitAvailability will populate the new value once it lands.
+    setLimitAvailable(null);
+    setBetWarning('');
+    if (betNumberLatestRef.current.trim() && selectedPoolLatestRef.current) {
+      recheckLimitRef.current?.();
+    }
+  }, [effectiveTicketDate]);
 
   const handlePoolChange = useCallback((pool: BettingPool | null): void => {
     setSelectedPool(pool);

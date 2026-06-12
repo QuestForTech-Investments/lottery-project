@@ -136,7 +136,7 @@ const LimitsTab: React.FC<LimitsTabProps> = ({ bettingPoolId, bettingPoolName })
     const key = `${ruleId}-${gameTypeId}`;
     setUpdatingAmount(key);
     try {
-      await limitService.updateAmount(ruleId, gameTypeId, newAmount);
+      await limitService.updateAmount(ruleId, gameTypeId, { amount: newAmount });
       const updateRule = (l: LimitRule): LimitRule =>
         l.limitRuleId !== ruleId ? l : { ...l, amounts: l.amounts?.map(a => a.gameTypeId === gameTypeId ? { ...a, amount: newAmount } : a) };
       setLimits(prev => prev.map(updateRule));

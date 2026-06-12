@@ -16,17 +16,26 @@ const getHubUrl = (): string => {
 const limitCacheKey = (drawId: number, gameTypeId: number, betNumber: string) =>
   `${drawId}_${gameTypeId}_${betNumber.trim()}`;
 
+// Same shape used by the inflight-dedup set — must include the drawDate so that
+// same-day and future-sale checks for the same (number, draw) don't collapse
+// into one entry, and so the "in-flight" entry actually gets cleared when the
+// matching response lands.
+const inflightKey = (drawId: number, gameTypeId: number, betNumber: string, drawDate?: string | null) =>
+  `${limitCacheKey(drawId, gameTypeId, betNumber)}|${drawDate ?? ''}`;
+
 export interface LimitAvailability {
   betNumber: string;
   gameTypeId: number;
   drawId: number;
   drawName: string;
+  /** Draw date this check evaluated against. Echoed by the hub. Null = same-day. */
+  drawDate?: string | null;
   availableAmount: number;
   limitAmount: number;
   currentAmount: number;
   percentageUsed: number;
   isBlocked: boolean;
-  blockedBy?: string | null; // "global", "zona", "banca", "local_banca", "no_limit"
+  blockedBy?: string | null; // "global", "zona", "banca", "local_banca", "no_limit", "future_sales_disabled"
 }
 
 export interface PlayStats {
@@ -41,7 +50,7 @@ export interface PlayStats {
 
 export interface UseSignalRReturn {
   connected: boolean;
-  checkPlayLimit: (betNumber: string, gameTypeId: number, drawId: number, bettingPoolId: number) => void;
+  checkPlayLimit: (betNumber: string, gameTypeId: number, drawId: number, bettingPoolId: number, drawDate?: string) => void;
   /**
    * Read the most recent <see cref="LimitAvailability"/> for a key without
    * dispatching a new request. Useful for showing a cached value instantly
@@ -91,7 +100,10 @@ export const useSignalR = (): UseSignalRReturn => {
     // Listen for limit availability responses
     connection.on('PlayLimitAvailability', (data: LimitAvailability) => {
       limitCacheRef.current.set(limitCacheKey(data.drawId, data.gameTypeId, data.betNumber), data);
-      inFlightChecksRef.current.delete(limitCacheKey(data.drawId, data.gameTypeId, data.betNumber));
+      // Use the same key shape the invoke used (with drawDate echo) so the
+      // in-flight entry actually gets cleared and the next invoke for that
+      // (number, draw, drawDate) is allowed through.
+      inFlightChecksRef.current.delete(inflightKey(data.drawId, data.gameTypeId, data.betNumber, data.drawDate));
       limitCallbackRef.current?.(data);
     });
 
@@ -135,16 +147,19 @@ export const useSignalR = (): UseSignalRReturn => {
       .catch(err => console.warn('[SignalR] GetPlayStats error:', err));
   }, []);
 
-  const checkPlayLimit = useCallback((betNumber: string, gameTypeId: number, drawId: number, bettingPoolId: number) => {
+  const checkPlayLimit = useCallback((betNumber: string, gameTypeId: number, drawId: number, bettingPoolId: number, drawDate?: string) => {
     const conn = connectionRef.current;
     if (!conn || conn.state !== signalR.HubConnectionState.Connected) return;
 
-    // Skip duplicate inflight requests so rapid typing doesn't fan out to the hub.
-    const key = limitCacheKey(drawId, gameTypeId, betNumber);
+    // Skip duplicate inflight requests so rapid typing doesn't fan out to the
+    // hub. The key includes drawDate so future-sale and same-day checks for
+    // the same number stay independent — and the matching response handler
+    // clears the entry using the exact same key shape.
+    const key = inflightKey(drawId, gameTypeId, betNumber, drawDate);
     if (inFlightChecksRef.current.has(key)) return;
     inFlightChecksRef.current.add(key);
 
-    conn.invoke('CheckPlayLimit', { betNumber, gameTypeId, drawId, bettingPoolId })
+    conn.invoke('CheckPlayLimit', { betNumber, gameTypeId, drawId, bettingPoolId, drawDate })
       .catch(err => {
         inFlightChecksRef.current.delete(key);
         console.warn('[SignalR] CheckPlayLimit error:', err);

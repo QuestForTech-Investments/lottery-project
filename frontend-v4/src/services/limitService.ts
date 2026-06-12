@@ -289,10 +289,16 @@ export const limitService = {
   },
 
   /**
-   * Update a single game type amount on a limit rule
+   * Update a single game type amount on a limit rule. Pass `amount` to change
+   * the same-day cap. Pass `futureAmount` (with `futureAmountProvided=true`)
+   * to set/clear the future-sale cap — null/0 means "future sales prohibited".
    */
-  async updateAmount(ruleId: number, gameTypeId: number, amount: number): Promise<void> {
-    await api.put(`${BASE_URL}/${ruleId}/amounts/${gameTypeId}`, { amount });
+  async updateAmount(
+    ruleId: number,
+    gameTypeId: number,
+    payload: { amount?: number; futureAmount?: number | null; futureAmountProvided?: boolean }
+  ): Promise<void> {
+    await api.put(`${BASE_URL}/${ruleId}/amounts/${gameTypeId}`, payload);
   },
 
   /**

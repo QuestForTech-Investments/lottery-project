@@ -1298,6 +1298,12 @@ public class TicketsController : ControllerBase
             };
             return CreatedAtAction(nameof(GetTicket), new { id = ticket.TicketId }, createdTicket);
         }
+        catch (Exceptions.BusinessException bex)
+        {
+            await transaction.RollbackAsync();
+            _logger.LogWarning(bex, "Business rule rejected ticket for bettingPool {BettingPoolId}: {Code}", dto.BettingPoolId, bex.ErrorCode);
+            return ApiErrorResult.Error(bex.ErrorCode ?? ErrorCodes.InternalError, bex.Message, bex.StatusCode > 0 ? bex.StatusCode : 400);
+        }
         catch (Exception ex)
         {
             await transaction.RollbackAsync();
@@ -2743,13 +2749,22 @@ public class TicketsController : ControllerBase
             // Same-day uses MaxAmount, future uses FutureMaxAmount.
             if (consumption.CurrentAmount > maxLimit)
             {
+                // Break out the components so the message is unambiguous:
+                //   alreadyConsumed = total consumed before this bet
+                //   thisBet         = the amount the user is trying to add now
+                //   wouldTotal      = alreadyConsumed + thisBet (= current after the +=)
+                var alreadyConsumed = consumption.CurrentAmount - betAmount;
+                var thisBet = betAmount;
+                var wouldTotal = consumption.CurrentAmount;
+                var scopeLabel = isFutureSale ? "ventas futuras" : "ventas";
+                var msg =
+                    $"Límite de {scopeLabel} excedido para {betNumber}. "
+                    + $"Cap: {maxLimit:0.##} · Ya consumido: {alreadyConsumed:0.##} · Esta jugada: {thisBet:0.##} · Total: {wouldTotal:0.##}";
                 throw new Exceptions.BusinessException(
                     isFutureSale
                         ? Exceptions.ErrorCodes.FutureLimitExceeded
                         : Exceptions.ErrorCodes.LimitExceeded,
-                    isFutureSale
-                        ? $"Límite de ventas futuras excedido para {betNumber} (máx: {maxLimit}, actual: {consumption.CurrentAmount})"
-                        : $"Límite excedido para {betNumber} (máx: {maxLimit}, actual: {consumption.CurrentAmount})",
+                    msg,
                     422);
             }
 

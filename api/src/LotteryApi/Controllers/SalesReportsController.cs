@@ -324,22 +324,30 @@ public class SalesReportsController : ControllerBase
                     .FirstOrDefaultAsync();
 
                 // POS-facing balance reconciliation: when the banca isn't allowed
-                // to see commission, the deductions baked into its real balance
-                // would still betray the commission's existence (banca does the
-                // math: balance_change ≠ sold − prizes − discount, the "extra"
-                // is the hidden commission). To hide that, add the banca's
-                // lifetime commission back to the displayed balance so day-over-
-                // day deltas come out to sold − prizes − discount cleanly. The
-                // real balance in DB is unchanged — only the displayed value
-                // shifts. Admin reports and deactivation logic keep using the
-                // real balance, which is the source of truth.
+                // to see commission, add back the commission of its MOST RECENT
+                // business-timezone day with sales. This keeps the displayed
+                // balance stable across days without new activity (so the POS
+                // sees the same closing balance until the next sales day) and
+                // matches the user's expectation that yesterday's closing
+                // balance persists. Lifetime would over-shoot (re-adding
+                // commission of every prior period); the current-period only
+                // would fluctuate on days without sales.
                 if (excludeCommissionFromNet)
                 {
-                    var lifetimeCommission = await _context.Tickets
+                    var bpTickets = await _context.Tickets
                         .AsNoTracking()
                         .Where(t => !t.IsCancelled && t.BettingPoolId == bettingPoolId.Value)
-                        .SumAsync(t => (decimal?)t.TotalCommission) ?? 0m;
-                    balance += lifetimeCommission;
+                        .Select(t => new { t.CreatedAt, t.TotalCommission })
+                        .ToListAsync();
+                    if (bpTickets.Count > 0)
+                    {
+                        var lastBusinessDate = bpTickets
+                            .Select(t => TimeZoneInfo.ConvertTimeFromUtc(t.CreatedAt, businessTimezone).Date)
+                            .Max();
+                        balance += bpTickets
+                            .Where(t => TimeZoneInfo.ConvertTimeFromUtc(t.CreatedAt, businessTimezone).Date == lastBusinessDate)
+                            .Sum(t => t.TotalCommission);
+                    }
                 }
 
                 // Credito = DeactivationBalance - CurrentBalance (remaining room until banca gets disabled)
@@ -687,6 +695,42 @@ public class SalesReportsController : ControllerBase
                 txAdjustmentMap[adj.BettingPoolId] = current + adj.Net;
             }
 
+            // Per-banca commission-visibility flag. Bancas with AllowViewCommission=false
+            // (or no config row) should display Net/Balance with commission excluded,
+            // mirroring the daily-summary endpoint's behaviour.
+            var bpWithSales = salesData.Where(x => x.Tickets.Any()).Select(x => x.BettingPool.BettingPoolId).ToList();
+            var hideCommissionByBp = await _context.BettingPoolConfigs
+                .AsNoTracking()
+                .Where(c => bpWithSales.Contains(c.BettingPoolId))
+                .ToDictionaryAsync(c => c.BettingPoolId, c => !c.AllowViewCommission);
+
+            // For bancas that hide commission, compute the commission of each
+            // one's most-recent business-timezone day with sales — that's the
+            // offset added to the displayed balance to keep it stable across
+            // idle days. See daily-summary for the same reasoning.
+            var hidingBpIds = hideCommissionByBp.Where(kv => kv.Value).Select(kv => kv.Key).ToList();
+            var commissionLastDayByBp = new Dictionary<int, decimal>();
+            if (hidingBpIds.Count > 0)
+            {
+                var businessTz = TimeZoneInfo.FindSystemTimeZoneById("America/Santo_Domingo");
+                var ticketsForHiding = await _context.Tickets
+                    .AsNoTracking()
+                    .Where(t => !t.IsCancelled && hidingBpIds.Contains(t.BettingPoolId))
+                    .Select(t => new { t.BettingPoolId, t.CreatedAt, t.TotalCommission })
+                    .ToListAsync();
+                commissionLastDayByBp = ticketsForHiding
+                    .GroupBy(t => t.BettingPoolId)
+                    .ToDictionary(g => g.Key, g =>
+                    {
+                        var lastDate = g
+                            .Select(t => TimeZoneInfo.ConvertTimeFromUtc(t.CreatedAt, businessTz).Date)
+                            .Max();
+                        return g
+                            .Where(t => TimeZoneInfo.ConvertTimeFromUtc(t.CreatedAt, businessTz).Date == lastDate)
+                            .Sum(t => t.TotalCommission);
+                    });
+            }
+
             var result = salesData
                 .Where(x => x.Tickets.Any())
                 .Select(x =>
@@ -695,7 +739,12 @@ public class SalesReportsController : ControllerBase
                     var totalPrizes = x.Tickets.Sum(t => t.TotalPrize);
                     var totalCommissions = x.Tickets.Sum(t => t.TotalCommission);
                     var totalDiscounts = x.Tickets.Sum(t => t.TotalDiscount);
-                    var totalNet = totalSold - totalDiscounts - totalCommissions - totalPrizes;
+
+                    var bpId = x.BettingPool.BettingPoolId;
+                    var hideCommission = hideCommissionByBp.TryGetValue(bpId, out var hc) && hc;
+                    var totalNet = hideCommission
+                        ? totalSold - totalDiscounts - totalPrizes
+                        : totalSold - totalDiscounts - totalCommissions - totalPrizes;
 
                     // Count tickets by state
                     var pendingCount = x.Tickets.Count(t => t.TicketState == "P");
@@ -703,14 +752,35 @@ public class SalesReportsController : ControllerBase
                     var loserCount = x.Tickets.Count(t => t.TicketState == "L");
                     var pendingTicketsAmount = x.Tickets.Where(t => t.TicketState == "P").Sum(t => t.TotalBetAmount);
 
-                    bpCaidaValues.TryGetValue(x.BettingPool.BettingPoolId, out var caida);
+                    bpCaidaValues.TryGetValue(bpId, out var caida);
 
-                    var snapBal = snapshots.TryGetValue(x.BettingPool.BettingPoolId, out var s) ? s : 0m;
-                    txAdjustmentMap.TryGetValue(x.BettingPool.BettingPoolId, out var txAdj);
+                    var snapBal = snapshots.TryGetValue(bpId, out var s) ? s : 0m;
+                    txAdjustmentMap.TryGetValue(bpId, out var txAdj);
+
+                    // The snapshot for `snapshotDate` already reflects all of
+                    // that day's sales and transactions. When the snapshot for
+                    // filterEndDate exists, it IS the closing balance — don't
+                    // re-add today's sales/tx (that would double-count). Only
+                    // when the cutoff hasn't run yet (no snapshot for the day)
+                    // do we project from the prior day's snapshot by adding
+                    // today's tx. We mirror BalancesController's logic; sales
+                    // are not added separately because the live `balances`
+                    // table reflects them, and snapshots subsume them.
+                    var displayBalance = hasSnapshot ? snapBal : snapBal + txAdj;
+
+                    // When commission is hidden, add back the commission of
+                    // the banca's most recent business-timezone day with sales
+                    // (NOT lifetime, NOT just-the-period). This keeps the POS
+                    // balance stable across idle days. See daily-summary for
+                    // matching logic.
+                    if (hideCommission && commissionLastDayByBp.TryGetValue(bpId, out var lastDayCommission))
+                    {
+                        displayBalance += lastDayCommission;
+                    }
 
                     return new BettingPoolSalesDto
                     {
-                        BettingPoolId = x.BettingPool.BettingPoolId,
+                        BettingPoolId = bpId,
                         BettingPoolName = x.BettingPool.BettingPoolName,
                         BettingPoolCode = x.BettingPool.BettingPoolCode,
                         Reference = x.BettingPool.Reference,
@@ -718,7 +788,7 @@ public class SalesReportsController : ControllerBase
                         ZoneName = x.BettingPool.Zone != null ? x.BettingPool.Zone.ZoneName : string.Empty,
                         TotalSold = totalSold,
                         TotalPrizes = totalPrizes,
-                        TotalCommissions = totalCommissions,
+                        TotalCommissions = hideCommission ? 0m : totalCommissions,
                         TotalDiscounts = totalDiscounts,
                         TotalNet = totalNet,
                         Fall = caida.fall,
@@ -726,7 +796,7 @@ public class SalesReportsController : ControllerBase
                         PendingCount = pendingCount,
                         WinnerCount = winnerCount,
                         LoserCount = loserCount,
-                        Balance = snapBal + totalNet + txAdj,
+                        Balance = displayBalance,
                         BalanceOfTheDay = snapBal,
                         PendingTicketsAmount = pendingTicketsAmount,
                     };
@@ -832,6 +902,19 @@ public class SalesReportsController : ControllerBase
 
             var lines = await query.ToListAsync();
 
+            // Single-banca query: respect AllowViewCommission. Aggregate (multi-
+            // banca) queries keep the canonical net, since the report is for
+            // admins who can see commission across the org.
+            bool hideCommission = false;
+            if (bettingPoolId.HasValue)
+            {
+                hideCommission = await _context.BettingPoolConfigs
+                    .AsNoTracking()
+                    .Where(c => c.BettingPoolId == bettingPoolId.Value)
+                    .Select(c => !c.AllowViewCommission)
+                    .FirstOrDefaultAsync();
+            }
+
             var drawSales = lines
                 .GroupBy(tl => tl.DrawId)
                 .Select(g =>
@@ -839,6 +922,13 @@ public class SalesReportsController : ControllerBase
                     var firstLine = g.First();
                     var draw = firstLine.Draw;
                     var ticketIds = g.Select(tl => tl.TicketId).Distinct().ToList();
+                    var sold = g.Sum(tl => tl.BetAmount);
+                    var prizes = g.Sum(tl => tl.PrizeAmount);
+                    var commissions = g.Sum(tl => tl.CommissionAmount);
+                    var discounts = g.Sum(tl => tl.DiscountAmount);
+                    var net = hideCommission
+                        ? sold - discounts - prizes
+                        : sold - discounts - commissions - prizes;
 
                     return new DrawSalesDto
                     {
@@ -852,11 +942,11 @@ public class SalesReportsController : ControllerBase
                         TicketCount = ticketIds.Count,
                         LineCount = g.Count(),
                         WinnerCount = g.Count(tl => tl.IsWinner),
-                        TotalSold = g.Sum(tl => tl.BetAmount),
-                        TotalPrizes = g.Sum(tl => tl.PrizeAmount),
-                        TotalCommissions = g.Sum(tl => tl.CommissionAmount),
-                        TotalDiscounts = g.Sum(tl => tl.DiscountAmount),
-                        TotalNet = g.Sum(tl => tl.BetAmount) - g.Sum(tl => tl.DiscountAmount) - g.Sum(tl => tl.CommissionAmount) - g.Sum(tl => tl.PrizeAmount)
+                        TotalSold = sold,
+                        TotalPrizes = prizes,
+                        TotalCommissions = hideCommission ? 0m : commissions,
+                        TotalDiscounts = discounts,
+                        TotalNet = net
                     };
                 })
                 .OrderBy(d => d.DrawTime)

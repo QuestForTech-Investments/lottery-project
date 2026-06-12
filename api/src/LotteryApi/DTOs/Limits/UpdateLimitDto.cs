@@ -103,5 +103,23 @@ public class UpdateLimitDto
 
 public class UpdateAmountDto
 {
-    public decimal Amount { get; set; }
+    /// <summary>Same-day cap. Optional in the request — when null the existing value is kept.</summary>
+    public decimal? Amount { get; set; }
+
+    /// <summary>
+    /// Future-sale cap. Optional in the request.
+    ///   - omitted (no field at all) → not touched
+    ///   - present with a numeric value → set
+    ///   - explicitly null → cleared (future sales prohibited under this row)
+    /// Use <see cref="FutureAmountProvided"/> to know whether the caller meant
+    /// to set it; with C# we can't distinguish "null in JSON" from "missing".
+    /// </summary>
+    public decimal? FutureAmount { get; set; }
+
+    /// <summary>
+    /// Set to true when the request explicitly carried a FutureAmount field
+    /// (even if its value is null, meaning "clear it"). Lets the controller
+    /// differentiate "leave alone" from "set/clear".
+    /// </summary>
+    public bool FutureAmountProvided { get; set; }
 }
