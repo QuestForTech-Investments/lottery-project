@@ -625,6 +625,13 @@ public class SalesReportsController : ControllerBase
 
             var filterStartDate = startDate.Date;
             var filterEndDate = endDate.Date;
+            var businessToday = Helpers.DateTimeHelper.TodayInBusinessTimezone().Date;
+            // When the query targets today (or the future) we read the live
+            // current_balance — the daily cutoff snapshot for today is often
+            // a stale carry-over from yesterday until the job runs at end-of-
+            // day, so using it would freeze the displayed balance and ignore
+            // the day's sales in progress. Past dates still use the snapshot.
+            var useLiveBalance = filterEndDate >= businessToday;
 
             // Resolve snapshot date for BalanceOfTheDay (same logic as BalancesController)
             var hasSnapshot = await _context.BalanceHistories
@@ -635,6 +642,14 @@ public class SalesReportsController : ControllerBase
             var snapshots = await _context.BalanceHistories
                 .Where(bh => bh.BalanceDate == snapshotDate)
                 .ToDictionaryAsync(bh => bh.BettingPoolId, bh => bh.BalanceAmount);
+
+            // For today-or-future queries also preload the live balance per
+            // banca so we can use it instead of the (possibly stale) snapshot.
+            var liveBalances = useLiveBalance
+                ? await _context.Balances
+                    .AsNoTracking()
+                    .ToDictionaryAsync(b => b.BettingPoolId, b => b.CurrentBalance)
+                : new Dictionary<int, decimal>();
 
             // Sales aggregated by ticket emission day (CreatedAt).
             // Future-sale tickets count as revenue on the day they were issued.
@@ -766,16 +781,26 @@ public class SalesReportsController : ControllerBase
                     var snapBal = snapshots.TryGetValue(bpId, out var s) ? s : 0m;
                     txAdjustmentMap.TryGetValue(bpId, out var txAdj);
 
-                    // The snapshot for `snapshotDate` already reflects all of
-                    // that day's sales and transactions. When the snapshot for
-                    // filterEndDate exists, it IS the closing balance — don't
-                    // re-add today's sales/tx (that would double-count). Only
-                    // when the cutoff hasn't run yet (no snapshot for the day)
-                    // do we project from the prior day's snapshot by adding
-                    // today's tx. We mirror BalancesController's logic; sales
-                    // are not added separately because the live `balances`
-                    // table reflects them, and snapshots subsume them.
-                    var displayBalance = hasSnapshot ? snapBal : snapBal + txAdj;
+                    // Real closing balance for the queried day (no commission
+                    // offset yet). For today we use the live balance because
+                    // the snapshot row may still be a stale carry-over from
+                    // yesterday until the cutoff job runs.
+                    decimal closingBalance;
+                    if (useLiveBalance)
+                    {
+                        closingBalance = liveBalances.TryGetValue(bpId, out var live) ? live : 0m;
+                    }
+                    else if (hasSnapshot)
+                    {
+                        closingBalance = snapBal;
+                    }
+                    else
+                    {
+                        // Past date without snapshot (rare gap): project from
+                        // the prior day plus any tx that landed on the target.
+                        closingBalance = snapBal + txAdj;
+                    }
+                    var displayBalance = closingBalance;
 
                     // When commission is hidden, add back the commission of
                     // the banca's most recent business-timezone day with sales.
@@ -808,7 +833,10 @@ public class SalesReportsController : ControllerBase
                         WinnerCount = winnerCount,
                         LoserCount = loserCount,
                         Balance = displayBalance,
-                        BalanceOfTheDay = snapBal,
+                        // Same closing-balance fact, exposed without the
+                        // commission offset. Lets the frontend show both
+                        // sides if it wants (admin + audit view).
+                        BalanceOfTheDay = closingBalance,
                         PendingTicketsAmount = pendingTicketsAmount,
                     };
                 })
