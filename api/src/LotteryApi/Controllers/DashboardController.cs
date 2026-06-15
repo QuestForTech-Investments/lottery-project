@@ -197,64 +197,88 @@ public class DashboardController : ControllerBase
 
     /// <summary>
     /// Top N bancas with most positive balance (owe the most to the system).
+    /// The reported balance excludes today's in-progress sales so it matches
+    /// the value shown in <c>/balances/betting-pools</c> — the closing balance
+    /// from yesterday adjusted by any approved transactions today.
     /// </summary>
     [HttpGet("top-positive-bancas")]
     public async Task<ActionResult> GetTopPositiveBancas([FromQuery] int limit = 10)
     {
         if (!await HasDashboardPermissionAsync()) return Forbid();
-
-        var allowedBpIds = await _zoneScope.GetAllowedBettingPoolIdsAsync();
-        var q = _context.Balances.AsNoTracking()
-            .Include(b => b.BettingPool)
-            .Where(b => b.BettingPool != null && b.BettingPool.IsActive && b.BettingPool.DeletedAt == null
-                && b.CurrentBalance > 0);
-        if (allowedBpIds != null) q = q.Where(b => allowedBpIds.Contains(b.BettingPoolId));
-
-        var data = await q
-            .OrderByDescending(b => b.CurrentBalance)
-            .Take(limit)
-            .Select(b => new
-            {
-                BettingPoolId = b.BettingPoolId,
-                Code = b.BettingPool!.BettingPoolCode,
-                Name = b.BettingPool.BettingPoolName,
-                Reference = b.BettingPool.Reference,
-                Balance = b.CurrentBalance
-            })
-            .ToListAsync();
-
+        var data = await GetAdjustedBalancesAsync(positiveOnly: true, limit);
         return Ok(data);
     }
 
     /// <summary>
-    /// Top N bancas with most negative balance.
+    /// Top N bancas with most negative balance. Uses the same adjusted balance
+    /// formula as <see cref="GetTopPositiveBancas"/> so the dashboard and the
+    /// balances page agree.
     /// </summary>
     [HttpGet("top-negative-bancas")]
     public async Task<ActionResult> GetTopNegativeBancas([FromQuery] int limit = 10)
     {
         if (!await HasDashboardPermissionAsync()) return Forbid();
+        var data = await GetAdjustedBalancesAsync(positiveOnly: false, limit);
+        return Ok(data);
+    }
 
+    /// <summary>
+    /// Pulls live balances and subtracts today's net sales so the figure
+    /// represents "yesterday's closing balance + today's transactions" —
+    /// matching the cashier-facing balances page. Today's in-progress sales
+    /// are intentionally left out until tomorrow's cutoff.
+    /// </summary>
+    private async Task<List<object>> GetAdjustedBalancesAsync(bool positiveOnly, int limit)
+    {
+        var today = DateTimeHelper.TodayInBusinessTimezone();
+        var todayStartUtc = DateTimeHelper.GetUtcStartOfDay(today);
+        var todayEndUtc = DateTimeHelper.GetUtcEndOfDay(today);
         var allowedBpIds = await _zoneScope.GetAllowedBettingPoolIdsAsync();
-        var q = _context.Balances.AsNoTracking()
-            .Include(b => b.BettingPool)
-            .Where(b => b.BettingPool != null && b.BettingPool.IsActive && b.BettingPool.DeletedAt == null
-                && b.CurrentBalance < 0);
-        if (allowedBpIds != null) q = q.Where(b => allowedBpIds.Contains(b.BettingPoolId));
 
-        var data = await q
-            .OrderBy(b => b.CurrentBalance)
-            .Take(limit)
+        var balancesQuery = _context.Balances.AsNoTracking()
+            .Include(b => b.BettingPool)
+            .Where(b => b.BettingPool != null && b.BettingPool.IsActive && b.BettingPool.DeletedAt == null);
+        if (allowedBpIds != null) balancesQuery = balancesQuery.Where(b => allowedBpIds.Contains(b.BettingPoolId));
+
+        var balances = await balancesQuery
             .Select(b => new
             {
-                BettingPoolId = b.BettingPoolId,
+                b.BettingPoolId,
                 Code = b.BettingPool!.BettingPoolCode,
                 Name = b.BettingPool.BettingPoolName,
                 Reference = b.BettingPool.Reference,
-                Balance = b.CurrentBalance
+                CurrentBalance = b.CurrentBalance
             })
             .ToListAsync();
 
-        return Ok(data);
+        var bpIds = balances.Select(b => b.BettingPoolId).ToList();
+        var todayNetByBp = await _context.Tickets.AsNoTracking()
+            .Where(t => !t.IsCancelled
+                && bpIds.Contains(t.BettingPoolId)
+                && t.CreatedAt >= todayStartUtc
+                && t.CreatedAt <= todayEndUtc)
+            .GroupBy(t => t.BettingPoolId)
+            .Select(g => new
+            {
+                BettingPoolId = g.Key,
+                Net = g.Sum(t => t.TotalBetAmount - t.TotalPrize - t.TotalDiscount - t.TotalCommission)
+            })
+            .ToDictionaryAsync(x => x.BettingPoolId, x => x.Net);
+
+        IEnumerable<object> ranked = balances
+            .Select(b => new
+            {
+                b.BettingPoolId,
+                b.Code,
+                b.Name,
+                b.Reference,
+                Balance = b.CurrentBalance - (todayNetByBp.TryGetValue(b.BettingPoolId, out var n) ? n : 0m)
+            })
+            .Where(x => positiveOnly ? x.Balance > 0 : x.Balance < 0)
+            .OrderBy(x => positiveOnly ? -x.Balance : x.Balance) // pos desc, neg asc
+            .Take(limit)
+            .Cast<object>();
+        return ranked.ToList();
     }
 
     /// <summary>
@@ -266,9 +290,13 @@ public class DashboardController : ControllerBase
         if (!await HasDashboardPermissionAsync()) return Forbid();
 
         var today = DateTimeHelper.TodayInBusinessTimezone();
+        var todayStartUtc = DateTimeHelper.GetUtcStartOfDay(today);
+        var todayEndUtc = DateTimeHelper.GetUtcEndOfDay(today);
         var allowedBpIds = await _zoneScope.GetAllowedBettingPoolIdsAsync();
 
-        // Get all active bancas with their balance
+        // Get all active bancas with their live balance. We'll adjust to
+        // "yesterday's closing + today's tx" below so the figure matches the
+        // balances page and top-positive/negative widgets.
         var bancasQuery = _context.BettingPools.AsNoTracking()
             .Where(bp => bp.IsActive && bp.DeletedAt == null);
         if (allowedBpIds != null) bancasQuery = bancasQuery.Where(bp => allowedBpIds.Contains(bp.BettingPoolId));
@@ -281,9 +309,25 @@ public class DashboardController : ControllerBase
                 bp.BettingPoolName,
                 bp.Reference,
                 bp.CreatedAt,
-                Balance = _context.Balances.Where(b => b.BettingPoolId == bp.BettingPoolId).Select(b => (decimal?)b.CurrentBalance).FirstOrDefault() ?? 0m
+                CurrentBalance = _context.Balances.Where(b => b.BettingPoolId == bp.BettingPoolId).Select(b => (decimal?)b.CurrentBalance).FirstOrDefault() ?? 0m
             })
             .ToListAsync();
+
+        // Today's net sales per banca — used to back out in-progress sales
+        // so the reported balance matches /balances/betting-pools.
+        var bpIds = bancas.Select(b => b.BettingPoolId).ToList();
+        var todayNetByBp = await _context.Tickets.AsNoTracking()
+            .Where(t => !t.IsCancelled
+                && bpIds.Contains(t.BettingPoolId)
+                && t.CreatedAt >= todayStartUtc
+                && t.CreatedAt <= todayEndUtc)
+            .GroupBy(t => t.BettingPoolId)
+            .Select(g => new
+            {
+                BettingPoolId = g.Key,
+                Net = g.Sum(t => t.TotalBetAmount - t.TotalPrize - t.TotalDiscount - t.TotalCommission)
+            })
+            .ToDictionaryAsync(x => x.BettingPoolId, x => x.Net);
 
         // Find last sale (ticket creation) per banca
         var lastSaleByBanca = await _context.Tickets
@@ -314,6 +358,7 @@ public class DashboardController : ControllerBase
                     days = (today - createdLocal).Days;
                 }
 
+                var todayNet = todayNetByBp.TryGetValue(bp.BettingPoolId, out var n) ? n : 0m;
                 return new
                 {
                     BettingPoolId = bp.BettingPoolId,
@@ -321,7 +366,7 @@ public class DashboardController : ControllerBase
                     Name = bp.BettingPoolName,
                     Reference = bp.Reference,
                     DaysWithoutSales = days,
-                    Balance = bp.Balance,
+                    Balance = bp.CurrentBalance - todayNet,
                     LastSaleDate = lastSaleLocal?.ToString("yyyy-MM-dd")
                 };
             })

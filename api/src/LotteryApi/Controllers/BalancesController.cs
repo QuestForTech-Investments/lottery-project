@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -29,6 +30,16 @@ public class BalancesController : ControllerBase
         _logger = logger;
         _cutoffService = cutoffService;
         _zoneScope = zoneScope;
+    }
+
+    // Produces a sort key for codes that mix letters and digits so the
+    // natural order is preserved (LC-0009, LC-0010, LC-0011, …, LC-0100).
+    // Each digit run is left-padded with zeros so the alphabetic comparison
+    // ends up doing a numeric compare on those runs.
+    private static string NaturalSortKey(string? code)
+    {
+        if (string.IsNullOrEmpty(code)) return string.Empty;
+        return Regex.Replace(code, @"\d+", m => m.Value.PadLeft(20, '0'));
     }
 
     /// <summary>
@@ -93,7 +104,10 @@ public class BalancesController : ControllerBase
                 .SelectMany(
                     x => x.histories.DefaultIfEmpty(),
                     (x, bh) => new { x.bp, bh })
-                .OrderBy(x => x.bp.BettingPoolName)
+                // Defer ordering — alphabetical sorts make e.g. LC-0010,
+                // LC-0100, LC-0011 jump around. We re-sort after materializing
+                // with a natural-number-aware comparer below.
+                .OrderBy(x => x.bp.BettingPoolId)
                 .Select(x => new BettingPoolBalanceDto
                 {
                     BettingPoolId = x.bp.BettingPoolId,
@@ -112,19 +126,46 @@ public class BalancesController : ControllerBase
                 })
                 .ToListAsync();
 
-            // For today: overwrite the snapshot-derived balance with the live
-            // current_balance so sales in progress are reflected. This is the
-            // value cashiers should see when registering a payment.
+            // For today: the snapshot for today is often a stale carry-over
+            // from yesterday (cutoff job hasn't run) so its value can't be
+            // trusted. Instead we compute the closing balance for yesterday
+            // dynamically as `current_balance - today's net sales` — this
+            // sidesteps the stale snapshot, naturally includes any tx the
+            // admin approved earlier today (they're already in current_balance
+            // and aren't subtracted), and excludes the still-in-progress
+            // sales of the current day (which the user wants invisible until
+            // tomorrow's cutoff). The result is the balance the cashier
+            // should see when registering a new payment.
             if (useLiveBalance)
             {
                 var liveBalances = await _context.Balances
                     .AsNoTracking()
                     .ToDictionaryAsync(b => b.BettingPoolId, b => b.CurrentBalance);
+
+                // Net sales of today (sold − prize − discount − commission)
+                // per banca. This is exactly the amount that moves
+                // current_balance against snapshot[yesterday].
+                var bpRangeStartUtc = DateTimeHelper.GetUtcStartOfDay(today);
+                var bpRangeEndUtc = DateTimeHelper.GetUtcEndOfDay(today);
+                var todaySales = await _context.Tickets
+                    .AsNoTracking()
+                    .Where(t => !t.IsCancelled
+                        && t.CreatedAt >= bpRangeStartUtc
+                        && t.CreatedAt <= bpRangeEndUtc)
+                    .GroupBy(t => t.BettingPoolId)
+                    .Select(g => new
+                    {
+                        BettingPoolId = g.Key,
+                        Net = g.Sum(t => t.TotalBetAmount - t.TotalPrize - t.TotalDiscount - t.TotalCommission)
+                    })
+                    .ToDictionaryAsync(x => x.BettingPoolId, x => x.Net);
+
                 foreach (var r in results)
                 {
                     if (liveBalances.TryGetValue(r.BettingPoolId, out var live))
                     {
-                        r.Balance = live;
+                        var todayNet = todaySales.TryGetValue(r.BettingPoolId, out var n) ? n : 0m;
+                        r.Balance = live - todayNet;
                     }
                 }
             }
@@ -192,6 +233,13 @@ public class BalancesController : ControllerBase
                     result.Loans = loanBalance;
                 }
             }
+
+            // Natural sort by code so LC-0010 sits between LC-0009 and LC-0011
+            // rather than next to LC-0100 (default string ordering puts the
+            // 3-digit codes before the rest of the 4-digit ones).
+            results = results
+                .OrderBy(r => NaturalSortKey(r.BettingPoolCode))
+                .ToList();
 
             return Ok(results);
         }

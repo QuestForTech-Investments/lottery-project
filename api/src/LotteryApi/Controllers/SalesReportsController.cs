@@ -651,6 +651,30 @@ public class SalesReportsController : ControllerBase
                     .ToDictionaryAsync(b => b.BettingPoolId, b => b.CurrentBalance)
                 : new Dictionary<int, decimal>();
 
+            // For BalanceOfTheDay we want the figure that matches
+            // /balances/betting-pools and the dashboard widgets — i.e.
+            // yesterday's closing balance plus any tx approved today,
+            // explicitly excluding today's in-progress sales. We compute it
+            // dynamically as `current_balance − today's net sales` to avoid
+            // relying on the snapshot row for today (which is often a stale
+            // carry-over until the cutoff job runs).
+            var todayBusinessDate = Helpers.DateTimeHelper.TodayInBusinessTimezone().Date;
+            var todayStartUtc = DateTimeHelper.GetUtcStartOfDay(todayBusinessDate);
+            var todayEndUtc = DateTimeHelper.GetUtcEndOfDay(todayBusinessDate);
+            var todayNetByBp = useLiveBalance
+                ? await _context.Tickets.AsNoTracking()
+                    .Where(t => !t.IsCancelled
+                        && t.CreatedAt >= todayStartUtc
+                        && t.CreatedAt <= todayEndUtc)
+                    .GroupBy(t => t.BettingPoolId)
+                    .Select(g => new
+                    {
+                        BettingPoolId = g.Key,
+                        Net = g.Sum(t => t.TotalBetAmount - t.TotalPrize - t.TotalDiscount - t.TotalCommission)
+                    })
+                    .ToDictionaryAsync(x => x.BettingPoolId, x => x.Net)
+                : new Dictionary<int, decimal>();
+
             // Sales aggregated by ticket emission day (CreatedAt).
             // Future-sale tickets count as revenue on the day they were issued.
             var bpRangeStartUtc = DateTimeHelper.GetUtcStartOfDay(filterStartDate);
@@ -833,10 +857,15 @@ public class SalesReportsController : ControllerBase
                         WinnerCount = winnerCount,
                         LoserCount = loserCount,
                         Balance = displayBalance,
-                        // Same closing-balance fact, exposed without the
-                        // commission offset. Lets the frontend show both
-                        // sides if it wants (admin + audit view).
-                        BalanceOfTheDay = closingBalance,
+                        // "Balance del día anterior" — matches /balances/betting-pools
+                        // and the dashboard top-positive/negative widgets.
+                        // For today: current_balance − today's net sales
+                        // (excludes in-progress sales, includes approved tx).
+                        // For past dates: the closing snapshot of that day.
+                        BalanceOfTheDay = useLiveBalance
+                            ? (liveBalances.TryGetValue(bpId, out var liveBal) ? liveBal : 0m)
+                              - (todayNetByBp.TryGetValue(bpId, out var todayNet) ? todayNet : 0m)
+                            : closingBalance,
                         PendingTicketsAmount = pendingTicketsAmount,
                     };
                 })
