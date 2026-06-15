@@ -395,6 +395,31 @@ public class SalesReportsController : ControllerBase
                     .SumAsync(h => (decimal?)h.CaidaAmount) ?? 0;
             }
 
+            // "Balance del día anterior" — yesterday's closing balance plus
+            // today's approved transactions, with today's in-progress sales
+            // backed out. Computed from the live current_balance to bypass the
+            // (often stale) snapshot row. Only populated for single-banca
+            // queries; aggregate views leave it at 0.
+            decimal balanceOfTheDay = 0m;
+            if (bettingPoolId.HasValue)
+            {
+                var liveBalance = await _context.Balances
+                    .AsNoTracking()
+                    .Where(b => b.BettingPoolId == bettingPoolId.Value)
+                    .Select(b => (decimal?)b.CurrentBalance)
+                    .FirstOrDefaultAsync() ?? 0m;
+                var todayBusinessDate = Helpers.DateTimeHelper.TodayInBusinessTimezone().Date;
+                var todayStartUtc = DateTimeHelper.GetUtcStartOfDay(todayBusinessDate);
+                var todayEndUtc = DateTimeHelper.GetUtcEndOfDay(todayBusinessDate);
+                var todayNet = await _context.Tickets.AsNoTracking()
+                    .Where(t => !t.IsCancelled
+                        && t.BettingPoolId == bettingPoolId.Value
+                        && t.CreatedAt >= todayStartUtc
+                        && t.CreatedAt <= todayEndUtc)
+                    .SumAsync(t => (decimal?)(t.TotalBetAmount - t.TotalPrize - t.TotalDiscount - t.TotalCommission)) ?? 0m;
+                balanceOfTheDay = liveBalance - todayNet;
+            }
+
             var summary = new SalesSummaryDto
             {
                 TotalSold = totalSold,
@@ -405,6 +430,7 @@ public class SalesReportsController : ControllerBase
                 AccumulatedFall = accumulatedFall,
                 TotalNet = totalNet,
                 Balance = balance,
+                BalanceOfTheDay = balanceOfTheDay,
                 Credits = credito,
                 BenefitPercentage = totalSold > 0 ? (totalNet / totalSold) * 100 : 0
             };
@@ -574,7 +600,8 @@ public class SalesReportsController : ControllerBase
         [FromQuery] DateTime endDate,
         [FromQuery] int? zoneId = null,
         [FromQuery] string? zoneIds = null,
-        [FromQuery] int? lotteryId = null)
+        [FromQuery] int? lotteryId = null,
+        [FromQuery] int? bettingPoolId = null)
     {
         var hasAdminView = await HasPermissionAsync("VIEW_SALES");
         List<int>? posAllowedBpIds = null;
@@ -609,6 +636,15 @@ public class SalesReportsController : ControllerBase
             if (allowedZones != null)
             {
                 query = query.Where(bp => allowedZones.Contains(bp.ZoneId));
+            }
+
+            // Single-banca filter (used by /sales/day per-banca view + admin
+            // payment flow). When set, we return ONE row for that banca even
+            // if it has no sales today — so the cashier still gets the
+            // current BalanceOfTheDay to decide a payment.
+            if (bettingPoolId.HasValue)
+            {
+                query = query.Where(bp => bp.BettingPoolId == bettingPoolId.Value);
             }
 
             // Apply zone filter if specified
@@ -744,7 +780,13 @@ public class SalesReportsController : ControllerBase
             // Per-banca commission-visibility flag. Hide ONLY for POS callers
             // (no VIEW_SALES). Admins consuming this endpoint for reports must
             // always see commission, regardless of the per-banca flag.
-            var bpWithSales = salesData.Where(x => x.Tickets.Any()).Select(x => x.BettingPool.BettingPoolId).ToList();
+            // Include the explicitly-requested banca even when it has no
+            // sales today so its commission flag (and downstream offsets)
+            // still apply.
+            var bpWithSales = salesData
+                .Where(x => x.Tickets.Any() || bettingPoolId.HasValue)
+                .Select(x => x.BettingPool.BettingPoolId)
+                .ToList();
             var hideCommissionByBp = !hasAdminView
                 ? await _context.BettingPoolConfigs
                     .AsNoTracking()
@@ -780,7 +822,11 @@ public class SalesReportsController : ControllerBase
             }
 
             var result = salesData
-                .Where(x => x.Tickets.Any())
+                // When a specific betting pool is requested we keep the row
+                // even if it has no sales today — the caller needs the
+                // current balance/BalanceOfTheDay regardless. Aggregate views
+                // still hide bancas with no activity to avoid empty rows.
+                .Where(x => x.Tickets.Any() || bettingPoolId.HasValue)
                 .Select(x =>
                 {
                     var totalSold = x.Tickets.Sum(t => t.TotalBetAmount);
