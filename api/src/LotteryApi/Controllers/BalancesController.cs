@@ -46,6 +46,15 @@ public class BalancesController : ControllerBase
         {
             var today = DateTimeHelper.TodayInBusinessTimezone();
             var requestedDate = date?.Date ?? today;
+            // When the user is looking at today, the snapshot row for today is
+            // often a stale carry-over from yesterday's cutoff (rows are
+            // pre-created but only get the real closing amount when the daily
+            // job runs at end-of-day). That means the snapshot doesn't reflect
+            // today's in-progress sales — and the cashier issuing a payment
+            // sees an outdated balance. For today we read the live
+            // current_balance instead, which the trigger keeps up-to-date as
+            // tickets land. Past dates keep using the snapshot.
+            var useLiveBalance = requestedDate >= today;
 
             // If snapshot exists for requested date, use it; otherwise fall back to previous day
             var hasTodaySnapshot = await _context.BalanceHistories
@@ -103,6 +112,23 @@ public class BalancesController : ControllerBase
                 })
                 .ToListAsync();
 
+            // For today: overwrite the snapshot-derived balance with the live
+            // current_balance so sales in progress are reflected. This is the
+            // value cashiers should see when registering a payment.
+            if (useLiveBalance)
+            {
+                var liveBalances = await _context.Balances
+                    .AsNoTracking()
+                    .ToDictionaryAsync(b => b.BettingPoolId, b => b.CurrentBalance);
+                foreach (var r in results)
+                {
+                    if (liveBalances.TryGetValue(r.BettingPoolId, out var live))
+                    {
+                        r.Balance = live;
+                    }
+                }
+            }
+
             // Adjust balances with today's transactions (after the snapshot)
             var todayUtcStart = DateTimeHelper.GetUtcStartOfDay(today);
             var todayUtcEnd = DateTimeHelper.GetUtcEndOfDay(today);
@@ -151,10 +177,13 @@ public class BalancesController : ControllerBase
                 .ToListAsync();
             var loanMap = loanBalances.ToDictionary(x => x.BettingPoolId, x => x.TotalRemaining);
 
-            // Apply transaction adjustments and loan balances to snapshot
+            // Apply transaction adjustments and loan balances to snapshot.
+            // SKIP the tx adjustment for `useLiveBalance` rows: live current_balance
+            // already reflects today's transactions, so re-adding them would
+            // double-count.
             foreach (var result in results)
             {
-                if (adjustmentMap.TryGetValue(result.BettingPoolId, out var adjustment))
+                if (!useLiveBalance && adjustmentMap.TryGetValue(result.BettingPoolId, out var adjustment))
                 {
                     result.Balance += adjustment;
                 }
