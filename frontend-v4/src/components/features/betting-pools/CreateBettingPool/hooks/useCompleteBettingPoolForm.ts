@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef, type ChangeEvent, type SyntheticEvent } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { createBettingPool, getNextBettingPoolCode, handleBettingPoolError, getBettingPools, getBettingPoolById, getBettingPoolConfig, updateBettingPoolConfig, type BettingPool, type BettingPoolConfigData } from '@/services/bettingPoolService';
+import { createBettingPool, getNextBettingPoolCode, handleBettingPoolError, getBettingPools, getBettingPoolById, getBettingPoolConfig, updateBettingPoolConfig, saveAutoExpenses, type BettingPool, type BettingPoolConfigData } from '@/services/bettingPoolService';
 import { getActiveZones } from '@/services/zoneService';
 import { savePrizeConfig, getAllBetTypesWithFields, getBettingPoolPrizeConfigs } from '@/services/prizeService';
 import { saveBettingPoolSchedules, transformSchedulesToApiFormat, getBettingPoolSchedules } from '@/services/scheduleService';
@@ -11,10 +11,16 @@ interface Zone {
   name: string;
 }
 
+// Matches the shape used by AutoExpensesTab + EditBettingPool so the form
+// can round-trip items between the tab UI and the create/edit save flows.
 interface AutoExpense {
-  id: string;
+  id?: string;
   description: string;
-  amount: number;
+  amount: string;
+  frequency: string;
+  dayOfWeek?: number;
+  dayOfMonth?: number;
+  active: boolean;
 }
 
 interface FormData {
@@ -1740,6 +1746,26 @@ const useCompleteBettingPoolForm = (): UseCompleteBettingPoolFormReturn => {
             console.error('Error saving draws:', drawsError);
             // Don't fail the whole operation if draws fail to save
             // The betting pool was created successfully
+          }
+
+          // Save automatic expenses — mirrors the EditBettingPool flow.
+          // Without this, items added in the AutoExpenses tab on a new banca
+          // stay only in local state and never reach the backend.
+          try {
+            const expensesToSave = (formData.autoExpenses || []).map(e => ({
+              description: e.description,
+              amount: parseFloat(e.amount) || 0,
+              frequency: e.frequency,
+              dayOfWeek: e.dayOfWeek ?? null,
+              dayOfMonth: e.dayOfMonth ?? null,
+              isActive: e.active,
+            }));
+            if (expensesToSave.length > 0 && createdBettingPoolId) {
+              await saveAutoExpenses(String(createdBettingPoolId), expensesToSave);
+            }
+          } catch (autoExpError) {
+            console.error('Error saving auto expenses:', autoExpError);
+            // Banca was created — don't fail the whole flow for this.
           }
         }
 

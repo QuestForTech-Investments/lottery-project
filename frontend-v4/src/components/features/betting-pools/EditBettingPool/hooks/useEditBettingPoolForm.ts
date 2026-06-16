@@ -251,19 +251,24 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
             // Don't fail the whole form if draws fail to load
           }
 
-          // ✅ Merge basic data + configuration data + schedule data + draws data
-          const completeFormData: FormData = {
-            ...formData,
-            ...basicFormData,
-            ...configFormData,
-            ...scheduleFormData,
-            ...drawsFormData
-          } as FormData;
-
-          setFormData(completeFormData);
-
-          // ⚡ DIRTY TRACKING: Save initial state for comparison
-          setInitialFormData(completeFormData);
+          // ✅ Merge basic data + configuration data + schedule data + draws data.
+          // CRITICAL: use a functional update so we don't blow away fields
+          // that an earlier setState (e.g. autoExpenses above) already wrote.
+          // Reading `formData` here would return the stale closure value and
+          // overwrite those updates with their initial-empty defaults.
+          setFormData(prev => {
+            const merged = {
+              ...prev,
+              ...basicFormData,
+              ...configFormData,
+              ...scheduleFormData,
+              ...drawsFormData
+            } as FormData;
+            // Mirror the same merged value into the dirty-tracking snapshot so
+            // change detection compares against what the user actually sees.
+            setInitialFormData(merged);
+            return merged;
+          });
 
           const processingEndTime = performance.now();
           const processingDuration = processingEndTime - processingStartTime;
@@ -1286,17 +1291,32 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
         // 🎯 PASO 5.5: SAVE AUTO EXPENSES
         // ========================================
         try {
-          const expensesToSave = (formData.autoExpenses || []).map(e => ({
-            description: e.description,
-            amount: parseFloat(e.amount) || 0,
-            frequency: e.frequency,
-            dayOfWeek: e.dayOfWeek ?? null,
-            dayOfMonth: e.dayOfMonth ?? null,
-            isActive: e.active,
-          }));
-          await saveAutoExpenses(id || '', expensesToSave);
+          if (!id) {
+            throw new Error('Missing betting pool id when saving auto-expenses');
+          }
+          const expensesToSave = (formData.autoExpenses || [])
+            // Drop empty/invalid rows so the backend doesn't reject the whole
+            // batch — ExpenseType and Frequency are Required + MaxLength(50)
+            // in the DB, so an unfilled row would 500 the request.
+            .filter(e => (e.description || '').trim() !== '' && (e.frequency || '').trim() !== '')
+            .map(e => ({
+              description: (e.description || '').trim().slice(0, 50),
+              amount: parseFloat(e.amount) || 0,
+              frequency: (e.frequency || '').trim().slice(0, 50),
+              dayOfWeek: e.dayOfWeek ?? null,
+              dayOfMonth: e.dayOfMonth ?? null,
+              isActive: e.active,
+            }));
+          console.log('[autoExpenses] saving', { bettingPoolId: id, count: expensesToSave.length, payload: expensesToSave });
+          await saveAutoExpenses(id, expensesToSave);
+          console.log('[autoExpenses] saved OK');
         } catch (autoExpError) {
           console.error('[ERROR] Error saving auto expenses:', autoExpError);
+          // Surface the failure so the user knows the expense didn't persist.
+          setErrors(prev => ({
+            ...prev,
+            autoExpenses: 'Error al guardar gastos automáticos. Verifica que la descripción y la frecuencia estén configuradas.'
+          }));
         }
 
         // ========================================
