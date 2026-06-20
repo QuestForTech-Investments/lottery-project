@@ -141,14 +141,17 @@ public class LoanPaymentWorker : BackgroundService
                     loan.Status = "completed";
                 }
 
-                // Deduct installment from banca balance (banca is paying back what they owe)
+                // Credit the installment to the banca's balance. This is a
+                // disbursement (the system is releasing the next chunk of
+                // the loan to the banca), not a repayment — so the balance
+                // goes UP, mirroring the manual /payments endpoint.
                 if (loan.EntityType == "bettingPool")
                 {
                     var balance = await context.Balances
                         .FirstOrDefaultAsync(b => b.BettingPoolId == loan.EntityId, stoppingToken);
                     if (balance != null)
                     {
-                        balance.CurrentBalance -= amountToPay;
+                        balance.CurrentBalance += amountToPay;
                         balance.LastUpdated = DateTime.UtcNow;
                     }
                 }

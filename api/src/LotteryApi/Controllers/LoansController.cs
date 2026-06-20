@@ -244,8 +244,12 @@ public class LoansController : ControllerBase
 
             _context.Loans.Add(loan);
 
-            // Deduct from entity balance
-            await UpdateEntityBalance(dto.EntityType, dto.EntityId, -dto.PrincipalAmount);
+            // Creating a loan is configuration only — the entity balance is
+            // NOT touched here. The borrower receives the principal in
+            // installments: each scheduled payment day, LoanPaymentWorker
+            // (and the manual /payments endpoint) credits the installment
+            // back to the balance. Once total_paid == principal_amount the
+            // loan auto-completes.
 
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
@@ -322,8 +326,11 @@ public class LoansController : ControllerBase
                 loan.Status = "completed";
             }
 
-            // Deduct installment from banca balance (banca is paying back what they owe)
-            await UpdateEntityBalance(loan.EntityType, loan.EntityId, -dto.AmountPaid);
+            // Credit the installment to the entity balance — each payment
+            // represents a disbursement from the system to the borrower,
+            // not a repayment. Matches the loan model documented on
+            // CreateLoan above.
+            await UpdateEntityBalance(loan.EntityType, loan.EntityId, dto.AmountPaid);
 
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
@@ -397,28 +404,19 @@ public class LoansController : ControllerBase
             if (loan.Status != "active")
                 return ApiErrorResult.BadRequest(ErrorCodes.LoanOnlyActiveCancellable, "Solo se pueden cancelar préstamos activos");
 
-            // Refund the still-owed portion to the entity balance. CreateLoan
-            // deducted the full principal up-front; payments deducted more on
-            // each installment. The only thing that hasn't been "consumed" by
-            // the entity is RemainingBalance, so that's what we refund. If the
-            // borrower already paid the loan back in full, RemainingBalance is
-            // 0 (and the loan should be in 'completed' status anyway, blocked
-            // by the active-only check above).
-            var refund = loan.RemainingBalance;
-
+            // No balance reversal: under the disbursement model, CreateLoan
+            // doesn't touch the balance, and each payment day credits one
+            // installment to it. Cancelling simply stops future disbursements
+            // — installments that already landed in the balance stay there
+            // (the borrower actually received that money).
             loan.Status = "cancelled";
             loan.UpdatedAt = DateTime.UtcNow;
             loan.UpdatedBy = GetCurrentUserId();
 
-            if (refund > 0)
-            {
-                await UpdateEntityBalance(loan.EntityType, loan.EntityId, refund);
-            }
-
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
 
-            return Ok(new { message = "Préstamo cancelado exitosamente", refunded = refund });
+            return Ok(new { message = "Préstamo cancelado exitosamente" });
         }
         catch (Exception ex)
         {
