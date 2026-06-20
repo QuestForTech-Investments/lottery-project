@@ -40,7 +40,10 @@ export const getBettingPoolBalances = async (date?: string): Promise<BettingPool
   const params = date ? `?date=${date}` : '';
   const [apiData, caidaData] = await Promise.all([
     api.get(`/balances/betting-pools${params}`) as Promise<BettingPoolBalanceAPI[]>,
-    getCaidaStatus().catch((): CaidaStatusItem[] => [])
+    // Pass the same date so the accumulated_fall column matches the day
+    // shown in the balance column. Without the date, /caida/status returns
+    // the live value, which is wrong when the user is viewing a past date.
+    getCaidaStatus(undefined, date).catch((): CaidaStatusItem[] => [])
   ]);
 
   // Build caída map: bettingPoolId -> accumulatedFall (only for bancas with caída enabled)

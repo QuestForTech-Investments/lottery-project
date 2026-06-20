@@ -111,10 +111,13 @@ public class CaidaController : ControllerBase
     }
 
     /// <summary>
-    /// Get caída status for all bancas (current accumulated_fall and config).
+    /// Get caída status for all bancas. When <paramref name="date"/> is in
+    /// the past, returns the accumulated_fall as it stood at the close of that
+    /// day (last caida_history record on or before that date). When omitted
+    /// or today, returns the live value from BettingPoolConfig.
     /// </summary>
     [HttpGet("status")]
-    public async Task<ActionResult> GetStatus([FromQuery] int? zoneId)
+    public async Task<ActionResult> GetStatus([FromQuery] int? zoneId, [FromQuery] DateTime? date)
     {
         var query = _context.BettingPoolConfigs
             .AsNoTracking()
@@ -132,7 +135,7 @@ public class CaidaController : ControllerBase
         if (zoneId.HasValue)
             query = query.Where(c => c.BettingPool != null && c.BettingPool.ZoneId == zoneId.Value);
 
-        var items = await query
+        var configs = await query
             .Select(c => new
             {
                 c.BettingPoolId,
@@ -140,10 +143,50 @@ public class CaidaController : ControllerBase
                 BettingPoolCode = c.BettingPool != null ? c.BettingPool.BettingPoolCode : "",
                 c.FallType,
                 c.FallPercentage,
-                c.AccumulatedFall
+                LiveAccumulatedFall = c.AccumulatedFall
             })
             .OrderBy(c => c.BettingPoolCode)
             .ToListAsync();
+
+        var today = Helpers.DateTimeHelper.TodayInBusinessTimezone().Date;
+        var useHistorical = date.HasValue && date.Value.Date < today;
+
+        // Historical: replace AccumulatedFall with the last caida_history record
+        // whose calculation_date is on or before the requested date. Bancas
+        // without any history at that point fall back to 0 (no caída yet).
+        Dictionary<int, decimal>? historicalByBp = null;
+        if (useHistorical)
+        {
+            var bpIds = configs.Select(c => c.BettingPoolId).ToList();
+            var queryDate = date!.Value.Date;
+            // Pull the most-recent history row per banca up to queryDate.
+            var rows = await _context.CaidaHistory.AsNoTracking()
+                .Where(h => bpIds.Contains(h.BettingPoolId) && h.CalculationDate <= queryDate)
+                .GroupBy(h => h.BettingPoolId)
+                .Select(g => new
+                {
+                    BettingPoolId = g.Key,
+                    AccumulatedFall = g
+                        .OrderByDescending(h => h.CalculationDate)
+                        .ThenByDescending(h => h.CaidaId)
+                        .Select(h => h.AccumulatedFallAfter)
+                        .FirstOrDefault()
+                })
+                .ToListAsync();
+            historicalByBp = rows.ToDictionary(r => r.BettingPoolId, r => r.AccumulatedFall);
+        }
+
+        var items = configs.Select(c => new
+        {
+            c.BettingPoolId,
+            c.BettingPoolName,
+            c.BettingPoolCode,
+            c.FallType,
+            c.FallPercentage,
+            AccumulatedFall = useHistorical
+                ? (historicalByBp!.TryGetValue(c.BettingPoolId, out var h) ? h : 0m)
+                : c.LiveAccumulatedFall
+        }).ToList();
 
         return Ok(items);
     }

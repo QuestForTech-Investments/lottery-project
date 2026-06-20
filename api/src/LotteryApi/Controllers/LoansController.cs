@@ -385,6 +385,7 @@ public class LoansController : ControllerBase
     public async Task<ActionResult> CancelLoan(int id)
     {
         if (!await HasPermissionAsync("MANAGE_LOANS")) return Forbid();
+        using var transaction = await _context.Database.BeginTransactionAsync();
         try
         {
             var loan = await _context.Loans.FirstOrDefaultAsync(l => l.LoanId == id);
@@ -396,16 +397,32 @@ public class LoansController : ControllerBase
             if (loan.Status != "active")
                 return ApiErrorResult.BadRequest(ErrorCodes.LoanOnlyActiveCancellable, "Solo se pueden cancelar préstamos activos");
 
+            // Refund the still-owed portion to the entity balance. CreateLoan
+            // deducted the full principal up-front; payments deducted more on
+            // each installment. The only thing that hasn't been "consumed" by
+            // the entity is RemainingBalance, so that's what we refund. If the
+            // borrower already paid the loan back in full, RemainingBalance is
+            // 0 (and the loan should be in 'completed' status anyway, blocked
+            // by the active-only check above).
+            var refund = loan.RemainingBalance;
+
             loan.Status = "cancelled";
             loan.UpdatedAt = DateTime.UtcNow;
             loan.UpdatedBy = GetCurrentUserId();
 
-            await _context.SaveChangesAsync();
+            if (refund > 0)
+            {
+                await UpdateEntityBalance(loan.EntityType, loan.EntityId, refund);
+            }
 
-            return Ok(new { message = "Préstamo cancelado exitosamente" });
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+
+            return Ok(new { message = "Préstamo cancelado exitosamente", refunded = refund });
         }
         catch (Exception ex)
         {
+            await transaction.RollbackAsync();
             _logger.LogError(ex, "Error cancelling loan {LoanId}", id);
             return StatusCode(500, new { error = "Error al cancelar préstamo" });
         }
