@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, type ChangeEvent, type SyntheticEvent } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef, type ChangeEvent, type SyntheticEvent } from 'react';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -1860,6 +1860,25 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
     setFormData(prev => ({ ...prev, ...updates }) as FormData);
   };
 
+  // Effective commission presence — drives the "Permitir ver comisión"
+  // switch. Derived from the live formData so unsaved edits flip the
+  // switch state immediately: typing a non-zero commission unlocks the
+  // switch, clearing it back to 0 re-locks it. Mirrors the server's
+  // own criterion (only the level-1 commission slots — `_COMMISSION_DISCOUNT_1`
+  // and `_COMMISSION_2_DISCOUNT_1` — count as "having a commission").
+  // While prize/commission data is still loading we fall back to the
+  // server-loaded flag so the switch doesn't blink off and on.
+  const hasCommissionsEffective = useMemo(() => {
+    if (loadingPrizes) return hasCommissions;
+    for (const [key, value] of Object.entries(formData)) {
+      const isLevel1 = key.endsWith('_COMMISSION_DISCOUNT_1') || key.endsWith('_COMMISSION_2_DISCOUNT_1');
+      if (!isLevel1) continue;
+      const num = typeof value === 'number' ? value : parseFloat(String(value ?? ''));
+      if (!Number.isNaN(num) && num !== 0) return true;
+    }
+    return false;
+  }, [hasCommissions, loadingPrizes, formData]);
+
   return {
     formData,
     loading,
@@ -1872,7 +1891,7 @@ const useEditBettingPoolForm = (): UseEditBettingPoolFormReturn => {
     zones,
     draws, // ⚡ PERFORMANCE: Draws for DrawsTab (loaded once)
     prizesDraws, // ⚡ PERFORMANCE: Formatted draws for PrizesTab (loaded once)
-    hasCommissions, // True when the banca has at least one commission row configured
+    hasCommissions: hasCommissionsEffective, // Includes unsaved commission edits, so the ver-comisión switch unlocks immediately when the user types a value.
     drawValuesCache, // ⚡ PERFORMANCE: Cached draw-specific values by lotteryId
     activeTab,
     handleChange,

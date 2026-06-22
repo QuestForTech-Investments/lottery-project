@@ -56,4 +56,10 @@ public class BettingPoolSalesDto
     /// Sum of bet amounts of tickets still pending in the period.
     /// </summary>
     public decimal PendingTicketsAmount { get; set; }
+
+    /// <summary>
+    /// Sum of <c>remaining_balance</c> across the banca's active loans.
+    /// Zero when the banca has no active loans.
+    /// </summary>
+    public decimal Loans { get; set; }
 }

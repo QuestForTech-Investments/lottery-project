@@ -182,6 +182,12 @@ builder.Services.AddAutoExpenseServices(builder.Configuration);
 // Register Caída (Cashback) Services (scheduled caída calculations)
 builder.Services.AddCaidaServices(builder.Configuration);
 
+// Audit recorder for automatic balance movements (caída, loan installments,
+// auto-expenses). Writes an approved transaction_group + line per event so
+// the existing /api/transaction-groups endpoints surface them like manual ops.
+builder.Services.AddScoped<LotteryApi.Services.Transactions.IAutomaticTransactionService,
+    LotteryApi.Services.Transactions.AutomaticTransactionService>();
+
 // Register Warning Services (audit warnings + late-result worker)
 builder.Services.AddWarningServices(builder.Configuration);
 

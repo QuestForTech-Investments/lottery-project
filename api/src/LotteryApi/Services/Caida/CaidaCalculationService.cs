@@ -1,6 +1,7 @@
 using LotteryApi.Data;
 using LotteryApi.Helpers;
 using LotteryApi.Models;
+using LotteryApi.Services.Transactions;
 using Microsoft.EntityFrameworkCore;
 
 namespace LotteryApi.Services.Caida;
@@ -9,11 +10,16 @@ public class CaidaCalculationService : ICaidaCalculationService
 {
     private readonly LotteryDbContext _context;
     private readonly ILogger<CaidaCalculationService> _logger;
+    private readonly IAutomaticTransactionService _autoTx;
 
-    public CaidaCalculationService(LotteryDbContext context, ILogger<CaidaCalculationService> logger)
+    public CaidaCalculationService(
+        LotteryDbContext context,
+        ILogger<CaidaCalculationService> logger,
+        IAutomaticTransactionService autoTx)
     {
         _context = context;
         _logger = logger;
+        _autoTx = autoTx;
     }
 
     public async Task ProcessScheduledCaidaAsync(DateTime date, CancellationToken ct = default)
@@ -82,7 +88,21 @@ public class CaidaCalculationService : ICaidaCalculationService
             caidaAmount = potentialCaida;
 
             // Debit the caída from the banca balance (central's share).
-            await DebitEntityBalanceAsync(bettingPoolId, caidaAmount, ct);
+            var (caidaBefore, caidaAfter) = await DebitEntityBalanceAsync(bettingPoolId, caidaAmount, ct);
+
+            // Audit row visible from /api/transaction-groups.
+            if (caidaAmount > 0)
+            {
+                await _autoTx.RecordAsync(
+                    bettingPoolId,
+                    "Cobro",
+                    debit: 0m,
+                    credit: caidaAmount,
+                    initialBalance: caidaBefore,
+                    finalBalance: caidaAfter,
+                    notes: $"Caída automática (COBRO ${cobroAmount:F2} × {config.FallPercentage}%)",
+                    ct: ct);
+            }
         }
         // If accumulated < 0, caidaAmount stays 0 and accumulated is not modified
 
@@ -198,10 +218,22 @@ public class CaidaCalculationService : ICaidaCalculationService
             accumulatedAfter = 0; // never accumulates
         }
 
-        // Debit caída from entity balance (central's share).
+        // Debit caída from entity balance (central's share) and emit an
+        // approved-automatic transaction_group so the same movement shows
+        // up in /api/transaction-groups alongside manual cobros.
         if (caidaAmount > 0)
         {
-            await DebitEntityBalanceAsync(bpId, caidaAmount, ct);
+            var (caidaBefore, caidaAfter) = await DebitEntityBalanceAsync(bpId, caidaAmount, ct);
+
+            await _autoTx.RecordAsync(
+                bpId,
+                "Cobro",
+                debit: 0m,
+                credit: caidaAmount,
+                initialBalance: caidaBefore,
+                finalBalance: caidaAfter,
+                notes: $"Caída automática {periodType} ({periodStart:yyyy-MM-dd}–{periodEnd:yyyy-MM-dd})",
+                ct: ct);
         }
 
         // Record history
@@ -238,7 +270,12 @@ public class CaidaCalculationService : ICaidaCalculationService
     // Caída is the share the central takes from the banca, so it reduces
     // the banca's running balance. Callers pass a positive `amount` (the
     // caída value) and this method subtracts it from both balance tables.
-    private async Task DebitEntityBalanceAsync(int bettingPoolId, decimal amount, CancellationToken ct)
+    // Returns the banca's balance before/after the debit (from the
+    // <c>balances</c> table — the source of truth for display) so the
+    // caller can record an audit transaction with matching initial/final
+    // figures. Returns (0, 0) if the banca has no row in <c>balances</c>.
+    private async Task<(decimal initial, decimal final)> DebitEntityBalanceAsync(
+        int bettingPoolId, decimal amount, CancellationToken ct)
     {
         var entity = await _context.AccountableEntities
             .FirstOrDefaultAsync(e => e.EntityType == "bettingPool" && e.EntityId == bettingPoolId, ct);
@@ -253,11 +290,12 @@ public class CaidaCalculationService : ICaidaCalculationService
         var balance = await _context.Balances
             .FirstOrDefaultAsync(b => b.BettingPoolId == bettingPoolId, ct);
 
-        if (balance != null)
-        {
-            balance.CurrentBalance -= amount;
-            balance.LastUpdated = DateTime.UtcNow;
-        }
+        if (balance == null) return (0m, 0m);
+
+        var before = balance.CurrentBalance;
+        balance.CurrentBalance -= amount;
+        balance.LastUpdated = DateTime.UtcNow;
+        return (before, balance.CurrentBalance);
     }
 
     private static (bool shouldProcess, string periodType, DateTime periodStart, DateTime periodEnd) ShouldProcessForDate(

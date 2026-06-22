@@ -831,6 +831,26 @@ public class SalesReportsController : ControllerBase
                     });
             }
 
+            // Active-loan remaining balances per banca (only for rows the
+            // result will actually contain — bancas with sales in the
+            // period, plus the explicitly-requested banca). The frontend
+            // shows this next to the balance so the cashier knows how
+            // much of the running debt is loan-backed.
+            var loanScopeBpIds = salesData
+                .Where(x => x.Tickets.Any() || bettingPoolId.HasValue)
+                .Select(x => x.BettingPool.BettingPoolId)
+                .ToList();
+            var loanBalanceByBp = loanScopeBpIds.Count > 0
+                ? await _context.Loans
+                    .AsNoTracking()
+                    .Where(l => l.EntityType == "bettingPool"
+                        && l.Status == "active"
+                        && loanScopeBpIds.Contains(l.EntityId))
+                    .GroupBy(l => l.EntityId)
+                    .Select(g => new { BettingPoolId = g.Key, Remaining = g.Sum(l => l.RemainingBalance) })
+                    .ToDictionaryAsync(x => x.BettingPoolId, x => x.Remaining)
+                : new Dictionary<int, decimal>();
+
             var result = salesData
                 // When a specific betting pool is requested we keep the row
                 // even if it has no sales today — the caller needs the
@@ -925,6 +945,7 @@ public class SalesReportsController : ControllerBase
                               - (todayDeltaByBp.TryGetValue(bpId, out var todayDelta) ? todayDelta : 0m)
                             : closingBalance,
                         PendingTicketsAmount = pendingTicketsAmount,
+                        Loans = loanBalanceByBp.TryGetValue(bpId, out var loanRem) ? loanRem : 0m,
                     };
                 })
                 .OrderBy(x => x.BettingPoolCode)

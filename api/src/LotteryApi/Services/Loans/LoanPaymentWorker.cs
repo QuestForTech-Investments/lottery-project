@@ -2,6 +2,7 @@ using LotteryApi.Helpers;
 using Microsoft.EntityFrameworkCore;
 using LotteryApi.Data;
 using LotteryApi.Models;
+using LotteryApi.Services.Transactions;
 
 namespace LotteryApi.Services.Loans;
 
@@ -87,6 +88,7 @@ public class LoanPaymentWorker : BackgroundService
     {
         using var scope = _serviceProvider.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<LotteryDbContext>();
+        var autoTx = scope.ServiceProvider.GetRequiredService<IAutomaticTransactionService>();
 
         var today = DateTimeHelper.TodayInBusinessTimezone();
         var dayOfWeek = (int)today.DayOfWeek; // 0=Sunday, 1=Monday, ... 6=Saturday
@@ -151,8 +153,21 @@ public class LoanPaymentWorker : BackgroundService
                         .FirstOrDefaultAsync(b => b.BettingPoolId == loan.EntityId, stoppingToken);
                     if (balance != null)
                     {
+                        var before = balance.CurrentBalance;
                         balance.CurrentBalance += amountToPay;
                         balance.LastUpdated = DateTime.UtcNow;
+
+                        // Audit row so the disbursement surfaces in
+                        // /api/transaction-groups alongside manual Pagos.
+                        await autoTx.RecordAsync(
+                            loan.EntityId,
+                            "Pago",
+                            debit: amountToPay,
+                            credit: 0m,
+                            initialBalance: before,
+                            finalBalance: balance.CurrentBalance,
+                            notes: $"Cuota automática de préstamo {loan.LoanNumber} ({loan.Frequency})",
+                            ct: stoppingToken);
                     }
                 }
 

@@ -2,6 +2,7 @@ using LotteryApi.Helpers;
 using Microsoft.EntityFrameworkCore;
 using LotteryApi.Data;
 using LotteryApi.Models;
+using LotteryApi.Services.Transactions;
 
 namespace LotteryApi.Services.AutoExpenses;
 
@@ -83,6 +84,7 @@ public class AutoExpenseWorker : BackgroundService
     {
         using var scope = _serviceProvider.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<LotteryDbContext>();
+        var autoTx = scope.ServiceProvider.GetRequiredService<IAutomaticTransactionService>();
 
         var today = DateTimeHelper.TodayInBusinessTimezone();
         var todayDate = DateOnly.FromDateTime(today);
@@ -122,8 +124,23 @@ public class AutoExpenseWorker : BackgroundService
 
                 if (balance != null)
                 {
+                    var before = balance.CurrentBalance;
                     balance.CurrentBalance -= amount;
                     balance.LastUpdated = DateTime.UtcNow;
+
+                    // Audit row so the deduction shows in /api/transaction-groups
+                    // alongside manual Retiros, with the expense type tagged
+                    // in expense_category for downstream reporting filters.
+                    await autoTx.RecordAsync(
+                        expense.BettingPoolId,
+                        "Retiro",
+                        debit: 0m,
+                        credit: amount,
+                        initialBalance: before,
+                        finalBalance: balance.CurrentBalance,
+                        notes: $"Gasto automático {expense.Frequency}: {expense.ExpenseType}",
+                        expenseCategory: expense.ExpenseType,
+                        ct: stoppingToken);
                 }
 
                 // Record history
