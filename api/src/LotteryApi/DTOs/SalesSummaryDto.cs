@@ -9,6 +9,13 @@ public class SalesSummaryDto
     public decimal Fall { get; set; }
     public decimal AccumulatedFall { get; set; }
     public decimal TotalNet { get; set; }
+
+    /// <summary>
+    /// Net after deducting the caída (central's share) — `TotalNet − Fall`.
+    /// This is what the banca actually keeps for the period.
+    /// </summary>
+    public decimal Final { get; set; }
+
     public decimal BenefitPercentage { get; set; }
     public decimal Credits { get; set; }
     public decimal Balance { get; set; }

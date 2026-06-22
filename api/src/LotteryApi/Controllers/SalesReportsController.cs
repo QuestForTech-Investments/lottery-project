@@ -434,7 +434,9 @@ public class SalesReportsController : ControllerBase
                     select (decimal?)p.AmountPaid
                 ).SumAsync() ?? 0m;
 
-                balanceOfTheDay = liveBalance - todayNet - todayCaida - todayLoanPaid;
+                // Caída was subtracted from current_balance (central's share),
+                // so we add it back to recover yesterday's closing balance.
+                balanceOfTheDay = liveBalance - todayNet + todayCaida - todayLoanPaid;
             }
 
             var summary = new SalesSummaryDto
@@ -446,6 +448,7 @@ public class SalesReportsController : ControllerBase
                 Fall = totalFall,
                 AccumulatedFall = accumulatedFall,
                 TotalNet = totalNet,
+                Final = totalNet - totalFall,
                 Balance = balance,
                 BalanceOfTheDay = balanceOfTheDay,
                 Credits = credito,
@@ -2297,11 +2300,12 @@ public class SalesReportsController : ControllerBase
     }
 
     /// <summary>
-    /// Per-banca sum of today's automatic movements — sales, caída credits
-    /// and loan installments — that current_balance picked up. Subtracting
-    /// this from current_balance yields "yesterday's closing balance +
-    /// approved transaction_groups of today", which is exactly the figure
-    /// /balances/betting-pools and the dashboard widgets show.
+    /// Signed per-banca delta of today's automatic movements that
+    /// current_balance has absorbed: +net sales, −caída (central's share),
+    /// +loan installment disbursements. Subtracting this from
+    /// current_balance yields "yesterday's closing balance + approved
+    /// transaction_groups of today" — the figure /balances/betting-pools
+    /// and the dashboard widgets show.
     /// </summary>
     private async Task<Dictionary<int, decimal>> ComputeTodayAutomaticDeltasAsync(
         DateTime todayBusinessDate, DateTime todayStartUtc, DateTime todayEndUtc)
@@ -2334,13 +2338,17 @@ public class SalesReportsController : ControllerBase
             select new { BettingPoolId = g.Key, Amount = g.Sum(x => x.AmountPaid) }
         ).ToDictionaryAsync(x => x.BettingPoolId, x => x.Amount);
 
+        // Sales and loan payments push current_balance up; caída pulls it
+        // down. The signed delta below is exactly what current_balance has
+        // moved today due to automatic activity — subtract it from
+        // current_balance to recover yesterday's closing balance.
         var totals = new Dictionary<int, decimal>();
         foreach (var bpId in sales.Keys.Concat(caida.Keys).Concat(loanPaid.Keys).Distinct())
         {
             var s = sales.TryGetValue(bpId, out var sv) ? sv : 0m;
             var c = caida.TryGetValue(bpId, out var cv) ? cv : 0m;
             var lp = loanPaid.TryGetValue(bpId, out var lv) ? lv : 0m;
-            totals[bpId] = s + c + lp;
+            totals[bpId] = s - c + lp;
         }
         return totals;
     }

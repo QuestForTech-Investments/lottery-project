@@ -161,8 +161,8 @@ public class BalancesController : ControllerBase
                     })
                     .ToDictionaryAsync(x => x.BettingPoolId, x => x.Net);
 
-                // Today's caída credits per banca (the Sunday/period-end
-                // accrual the CaidaCalculationService adds to current_balance).
+                // Today's caída debits per banca (the Sunday/period-end
+                // share CaidaCalculationService subtracts from current_balance).
                 var todayCaida = await _context.CaidaHistory
                     .AsNoTracking()
                     .Where(h => h.CalculationDate == today.Date)
@@ -195,7 +195,11 @@ public class BalancesController : ControllerBase
                         var sales = todaySales.TryGetValue(r.BettingPoolId, out var s) ? s : 0m;
                         var caida = todayCaida.TryGetValue(r.BettingPoolId, out var c) ? c : 0m;
                         var loanPaid = todayLoanPayments.TryGetValue(r.BettingPoolId, out var lp) ? lp : 0m;
-                        r.Balance = live - sales - caida - loanPaid;
+                        // Back out today's automatic movements to expose
+                        // yesterday's closing balance. Caída was subtracted
+                        // from current_balance, so we add it back; sales and
+                        // loan payments were added, so we subtract them.
+                        r.Balance = live - sales + caida - loanPaid;
                     }
                 }
             }

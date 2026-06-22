@@ -311,13 +311,17 @@ public class DashboardController : ControllerBase
             select new { BettingPoolId = g.Key, Amount = g.Sum(x => x.AmountPaid) }
         ).ToDictionaryAsync(x => x.BettingPoolId, x => x.Amount);
 
+        // Net automatic movement that current_balance has absorbed today.
+        // Sales and loan payments push current_balance up; caída pulls it
+        // down. Subtracting this delta from current_balance reconstructs
+        // yesterday's closing balance.
         var totals = new Dictionary<int, decimal>();
         foreach (var id in bpIds)
         {
             var s = sales.TryGetValue(id, out var sv) ? sv : 0m;
             var c = caida.TryGetValue(id, out var cv) ? cv : 0m;
             var lp = loanPaid.TryGetValue(id, out var lv) ? lv : 0m;
-            var total = s + c + lp;
+            var total = s - c + lp;
             if (total != 0) totals[id] = total;
         }
         return totals;

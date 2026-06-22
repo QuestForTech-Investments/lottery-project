@@ -81,8 +81,8 @@ public class CaidaCalculationService : ICaidaCalculationService
         {
             caidaAmount = potentialCaida;
 
-            // Credit to entity balance
-            await CreditEntityBalanceAsync(bettingPoolId, caidaAmount, ct);
+            // Debit the caída from the banca balance (central's share).
+            await DebitEntityBalanceAsync(bettingPoolId, caidaAmount, ct);
         }
         // If accumulated < 0, caidaAmount stays 0 and accumulated is not modified
 
@@ -198,10 +198,10 @@ public class CaidaCalculationService : ICaidaCalculationService
             accumulatedAfter = 0; // never accumulates
         }
 
-        // Credit cashback to entity balance
+        // Debit caída from entity balance (central's share).
         if (caidaAmount > 0)
         {
-            await CreditEntityBalanceAsync(bpId, caidaAmount, ct);
+            await DebitEntityBalanceAsync(bpId, caidaAmount, ct);
         }
 
         // Record history
@@ -235,14 +235,17 @@ public class CaidaCalculationService : ICaidaCalculationService
             periodType, bpId, netAmount, caidaAmount, accumulatedBefore, accumulatedAfter);
     }
 
-    private async Task CreditEntityBalanceAsync(int bettingPoolId, decimal amount, CancellationToken ct)
+    // Caída is the share the central takes from the banca, so it reduces
+    // the banca's running balance. Callers pass a positive `amount` (the
+    // caída value) and this method subtracts it from both balance tables.
+    private async Task DebitEntityBalanceAsync(int bettingPoolId, decimal amount, CancellationToken ct)
     {
         var entity = await _context.AccountableEntities
             .FirstOrDefaultAsync(e => e.EntityType == "bettingPool" && e.EntityId == bettingPoolId, ct);
 
         if (entity != null)
         {
-            entity.CurrentBalance += amount;
+            entity.CurrentBalance -= amount;
             entity.UpdatedAt = DateTime.UtcNow;
         }
 
@@ -252,7 +255,7 @@ public class CaidaCalculationService : ICaidaCalculationService
 
         if (balance != null)
         {
-            balance.CurrentBalance += amount;
+            balance.CurrentBalance -= amount;
             balance.LastUpdated = DateTime.UtcNow;
         }
     }
