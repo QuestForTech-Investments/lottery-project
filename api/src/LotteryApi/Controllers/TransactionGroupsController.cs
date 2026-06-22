@@ -487,14 +487,19 @@ public class TransactionGroupsController : ControllerBase
     }
 
     /// <summary>
-    /// Get transaction lines for a specific betting pool on a specific day (business timezone).
-    /// Returns lines where the banca is either entity1 or entity2.
+    /// Get transaction lines for a specific betting pool. The optional
+    /// <c>date</c> parameter is kept for backwards compatibility but no
+    /// longer prunes the result — we always return the banca's 20 most
+    /// recent lines (across all dates) so the per-banca activity panel
+    /// keeps context even on days with no movement. Lines on
+    /// Eliminado/Rechazado groups stay excluded.
     /// </summary>
     [HttpGet("by-betting-pool")]
     public async Task<ActionResult<List<TransactionLineReportDto>>> GetByBettingPool(
         [FromQuery] int bettingPoolId,
         [FromQuery] DateTime? date = null)
     {
+        _ = date; // kept for the existing frontend call signature; no longer filters
         // Admins need MANAGE_TRANSACTIONS. POS users can read transactions of their own banca.
         if (!await HasPermissionCodeAsync("MANAGE_TRANSACTIONS")
             && !await IsAssignedToBettingPoolAsync(bettingPoolId))
@@ -506,21 +511,19 @@ public class TransactionGroupsController : ControllerBase
                 return ApiErrorResult.BadRequest(ErrorCodes.TransactionBettingPoolRequired, "bettingPoolId es requerido");
             }
 
-            var targetDate = (date ?? Helpers.DateTimeHelper.TodayInBusinessTimezone()).Date;
-            var utcStart = Helpers.DateTimeHelper.GetUtcStartOfDay(targetDate);
-            var utcEnd = Helpers.DateTimeHelper.GetUtcEndOfDay(targetDate);
+            const int RecentLimit = 20;
 
             var results = await _context.TransactionGroupLines
                 .AsNoTracking()
                 .Include(l => l.Group)
                     .ThenInclude(g => g!.CreatedByUser)
                 .Where(l => l.Group!.Status != "Eliminado" && l.Group!.Status != "Rechazado")
-                .Where(l => l.Group!.CreatedAt >= utcStart && l.Group!.CreatedAt < utcEnd)
                 .Where(l =>
                     (l.Entity1Type == "bettingPool" && l.Entity1Id == bettingPoolId) ||
                     (l.Entity2Type == "bettingPool" && l.Entity2Id == bettingPoolId))
                 .OrderByDescending(l => l.Group!.CreatedAt)
-                .ThenBy(l => l.LineId)
+                .ThenByDescending(l => l.LineId)
+                .Take(RecentLimit)
                 .Select(l => new TransactionLineReportDto
                 {
                     LineId = l.LineId,
