@@ -396,9 +396,10 @@ public class SalesReportsController : ControllerBase
             }
 
             // "Balance del día anterior" — yesterday's closing balance plus
-            // today's approved transactions, with today's in-progress sales
-            // backed out. Computed from the live current_balance to bypass the
-            // (often stale) snapshot row. Only populated for single-banca
+            // today's approved transaction_groups, with every automatic
+            // movement (sales-in-progress, caída credits and loan
+            // installments) backed out. Same rule as /balances/betting-pools
+            // and the dashboard widgets. Only populated for single-banca
             // queries; aggregate views leave it at 0.
             decimal balanceOfTheDay = 0m;
             if (bettingPoolId.HasValue)
@@ -411,13 +412,29 @@ public class SalesReportsController : ControllerBase
                 var todayBusinessDate = Helpers.DateTimeHelper.TodayInBusinessTimezone().Date;
                 var todayStartUtc = DateTimeHelper.GetUtcStartOfDay(todayBusinessDate);
                 var todayEndUtc = DateTimeHelper.GetUtcEndOfDay(todayBusinessDate);
+
                 var todayNet = await _context.Tickets.AsNoTracking()
                     .Where(t => !t.IsCancelled
                         && t.BettingPoolId == bettingPoolId.Value
                         && t.CreatedAt >= todayStartUtc
                         && t.CreatedAt <= todayEndUtc)
                     .SumAsync(t => (decimal?)(t.TotalBetAmount - t.TotalPrize - t.TotalDiscount - t.TotalCommission)) ?? 0m;
-                balanceOfTheDay = liveBalance - todayNet;
+
+                var todayCaida = await _context.CaidaHistory.AsNoTracking()
+                    .Where(h => h.BettingPoolId == bettingPoolId.Value && h.CalculationDate == todayBusinessDate)
+                    .SumAsync(h => (decimal?)h.CaidaAmount) ?? 0m;
+
+                var todayLoanPaid = await (
+                    from p in _context.LoanPayments.AsNoTracking()
+                    join l in _context.Loans.AsNoTracking() on p.LoanId equals l.LoanId
+                    where l.EntityType == "bettingPool"
+                        && l.EntityId == bettingPoolId.Value
+                        && p.PaymentDate >= todayStartUtc
+                        && p.PaymentDate <= todayEndUtc
+                    select (decimal?)p.AmountPaid
+                ).SumAsync() ?? 0m;
+
+                balanceOfTheDay = liveBalance - todayNet - todayCaida - todayLoanPaid;
             }
 
             var summary = new SalesSummaryDto
@@ -687,28 +704,18 @@ public class SalesReportsController : ControllerBase
                     .ToDictionaryAsync(b => b.BettingPoolId, b => b.CurrentBalance)
                 : new Dictionary<int, decimal>();
 
-            // For BalanceOfTheDay we want the figure that matches
-            // /balances/betting-pools and the dashboard widgets — i.e.
-            // yesterday's closing balance plus any tx approved today,
-            // explicitly excluding today's in-progress sales. We compute it
-            // dynamically as `current_balance − today's net sales` to avoid
-            // relying on the snapshot row for today (which is often a stale
-            // carry-over until the cutoff job runs).
+            // For BalanceOfTheDay we want "yesterday's closing balance +
+            // approved transaction_groups of today" — same rule the
+            // /balances/betting-pools page uses. To get there from
+            // current_balance we strip every automatic delta the system
+            // added today: net sales, caída credits, and loan installments.
+            // Manual transaction_groups already sit in current_balance and
+            // stay because we don't subtract them.
             var todayBusinessDate = Helpers.DateTimeHelper.TodayInBusinessTimezone().Date;
             var todayStartUtc = DateTimeHelper.GetUtcStartOfDay(todayBusinessDate);
             var todayEndUtc = DateTimeHelper.GetUtcEndOfDay(todayBusinessDate);
-            var todayNetByBp = useLiveBalance
-                ? await _context.Tickets.AsNoTracking()
-                    .Where(t => !t.IsCancelled
-                        && t.CreatedAt >= todayStartUtc
-                        && t.CreatedAt <= todayEndUtc)
-                    .GroupBy(t => t.BettingPoolId)
-                    .Select(g => new
-                    {
-                        BettingPoolId = g.Key,
-                        Net = g.Sum(t => t.TotalBetAmount - t.TotalPrize - t.TotalDiscount - t.TotalCommission)
-                    })
-                    .ToDictionaryAsync(x => x.BettingPoolId, x => x.Net)
+            var todayDeltaByBp = useLiveBalance
+                ? await ComputeTodayAutomaticDeltasAsync(todayBusinessDate, todayStartUtc, todayEndUtc)
                 : new Dictionary<int, decimal>();
 
             // Sales aggregated by ticket emission day (CreatedAt).
@@ -905,12 +912,14 @@ public class SalesReportsController : ControllerBase
                         Balance = displayBalance,
                         // "Balance del día anterior" — matches /balances/betting-pools
                         // and the dashboard top-positive/negative widgets.
-                        // For today: current_balance − today's net sales
-                        // (excludes in-progress sales, includes approved tx).
+                        // For today: current_balance minus every automatic
+                        // movement of today (sales + caída + loan payments).
+                        // Manual transaction_groups stay in because they're
+                        // already in current_balance and aren't subtracted.
                         // For past dates: the closing snapshot of that day.
                         BalanceOfTheDay = useLiveBalance
                             ? (liveBalances.TryGetValue(bpId, out var liveBal) ? liveBal : 0m)
-                              - (todayNetByBp.TryGetValue(bpId, out var todayNet) ? todayNet : 0m)
+                              - (todayDeltaByBp.TryGetValue(bpId, out var todayDelta) ? todayDelta : 0m)
                             : closingBalance,
                         PendingTicketsAmount = pendingTicketsAmount,
                     };
@@ -2285,5 +2294,54 @@ public class SalesReportsController : ControllerBase
             _logger.LogError(ex, "Error getting combinations");
             return ApiErrorResult.Error(ErrorCodes.InternalError, "Error al obtener las combinaciones", 500);
         }
+    }
+
+    /// <summary>
+    /// Per-banca sum of today's automatic movements — sales, caída credits
+    /// and loan installments — that current_balance picked up. Subtracting
+    /// this from current_balance yields "yesterday's closing balance +
+    /// approved transaction_groups of today", which is exactly the figure
+    /// /balances/betting-pools and the dashboard widgets show.
+    /// </summary>
+    private async Task<Dictionary<int, decimal>> ComputeTodayAutomaticDeltasAsync(
+        DateTime todayBusinessDate, DateTime todayStartUtc, DateTime todayEndUtc)
+    {
+        var sales = await _context.Tickets.AsNoTracking()
+            .Where(t => !t.IsCancelled
+                && t.CreatedAt >= todayStartUtc
+                && t.CreatedAt <= todayEndUtc)
+            .GroupBy(t => t.BettingPoolId)
+            .Select(g => new
+            {
+                BettingPoolId = g.Key,
+                Net = g.Sum(t => t.TotalBetAmount - t.TotalPrize - t.TotalDiscount - t.TotalCommission)
+            })
+            .ToDictionaryAsync(x => x.BettingPoolId, x => x.Net);
+
+        var caida = await _context.CaidaHistory.AsNoTracking()
+            .Where(h => h.CalculationDate == todayBusinessDate)
+            .GroupBy(h => h.BettingPoolId)
+            .Select(g => new { BettingPoolId = g.Key, Amount = g.Sum(h => h.CaidaAmount) })
+            .ToDictionaryAsync(x => x.BettingPoolId, x => x.Amount);
+
+        var loanPaid = await (
+            from p in _context.LoanPayments.AsNoTracking()
+            join l in _context.Loans.AsNoTracking() on p.LoanId equals l.LoanId
+            where l.EntityType == "bettingPool"
+                && p.PaymentDate >= todayStartUtc
+                && p.PaymentDate <= todayEndUtc
+            group p by l.EntityId into g
+            select new { BettingPoolId = g.Key, Amount = g.Sum(x => x.AmountPaid) }
+        ).ToDictionaryAsync(x => x.BettingPoolId, x => x.Amount);
+
+        var totals = new Dictionary<int, decimal>();
+        foreach (var bpId in sales.Keys.Concat(caida.Keys).Concat(loanPaid.Keys).Distinct())
+        {
+            var s = sales.TryGetValue(bpId, out var sv) ? sv : 0m;
+            var c = caida.TryGetValue(bpId, out var cv) ? cv : 0m;
+            var lp = loanPaid.TryGetValue(bpId, out var lv) ? lv : 0m;
+            totals[bpId] = s + c + lp;
+        }
+        return totals;
     }
 }

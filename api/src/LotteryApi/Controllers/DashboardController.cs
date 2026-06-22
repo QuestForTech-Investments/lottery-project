@@ -252,7 +252,36 @@ public class DashboardController : ControllerBase
             .ToListAsync();
 
         var bpIds = balances.Select(b => b.BettingPoolId).ToList();
-        var todayNetByBp = await _context.Tickets.AsNoTracking()
+        var todayDeltas = await GetTodayAutomaticDeltasAsync(bpIds, today, todayStartUtc, todayEndUtc);
+
+        IEnumerable<object> ranked = balances
+            .Select(b => new
+            {
+                b.BettingPoolId,
+                b.Code,
+                b.Name,
+                b.Reference,
+                Balance = b.CurrentBalance - (todayDeltas.TryGetValue(b.BettingPoolId, out var delta) ? delta : 0m)
+            })
+            .Where(x => positiveOnly ? x.Balance > 0 : x.Balance < 0)
+            .OrderBy(x => positiveOnly ? -x.Balance : x.Balance) // pos desc, neg asc
+            .Take(limit)
+            .Cast<object>();
+        return ranked.ToList();
+    }
+
+    /// <summary>
+    /// Per-banca sum of every "automatic" amount that current_balance picked
+    /// up today: net sales, the Sunday/period-end caída credit and any loan
+    /// installment the worker (or the manual /payments endpoint) credited.
+    /// We strip these from current_balance to show "yesterday's closing
+    /// balance + manual transactions of today" — matching the rule used in
+    /// BalancesController.GetBettingPoolBalances.
+    /// </summary>
+    private async Task<Dictionary<int, decimal>> GetTodayAutomaticDeltasAsync(
+        List<int> bpIds, DateTime today, DateTime todayStartUtc, DateTime todayEndUtc)
+    {
+        var sales = await _context.Tickets.AsNoTracking()
             .Where(t => !t.IsCancelled
                 && bpIds.Contains(t.BettingPoolId)
                 && t.CreatedAt >= todayStartUtc
@@ -265,20 +294,33 @@ public class DashboardController : ControllerBase
             })
             .ToDictionaryAsync(x => x.BettingPoolId, x => x.Net);
 
-        IEnumerable<object> ranked = balances
-            .Select(b => new
-            {
-                b.BettingPoolId,
-                b.Code,
-                b.Name,
-                b.Reference,
-                Balance = b.CurrentBalance - (todayNetByBp.TryGetValue(b.BettingPoolId, out var n) ? n : 0m)
-            })
-            .Where(x => positiveOnly ? x.Balance > 0 : x.Balance < 0)
-            .OrderBy(x => positiveOnly ? -x.Balance : x.Balance) // pos desc, neg asc
-            .Take(limit)
-            .Cast<object>();
-        return ranked.ToList();
+        var caida = await _context.CaidaHistory.AsNoTracking()
+            .Where(h => bpIds.Contains(h.BettingPoolId) && h.CalculationDate == today.Date)
+            .GroupBy(h => h.BettingPoolId)
+            .Select(g => new { BettingPoolId = g.Key, Amount = g.Sum(h => h.CaidaAmount) })
+            .ToDictionaryAsync(x => x.BettingPoolId, x => x.Amount);
+
+        var loanPaid = await (
+            from p in _context.LoanPayments.AsNoTracking()
+            join l in _context.Loans.AsNoTracking() on p.LoanId equals l.LoanId
+            where l.EntityType == "bettingPool"
+                && bpIds.Contains(l.EntityId)
+                && p.PaymentDate >= todayStartUtc
+                && p.PaymentDate <= todayEndUtc
+            group p by l.EntityId into g
+            select new { BettingPoolId = g.Key, Amount = g.Sum(x => x.AmountPaid) }
+        ).ToDictionaryAsync(x => x.BettingPoolId, x => x.Amount);
+
+        var totals = new Dictionary<int, decimal>();
+        foreach (var id in bpIds)
+        {
+            var s = sales.TryGetValue(id, out var sv) ? sv : 0m;
+            var c = caida.TryGetValue(id, out var cv) ? cv : 0m;
+            var lp = loanPaid.TryGetValue(id, out var lv) ? lv : 0m;
+            var total = s + c + lp;
+            if (total != 0) totals[id] = total;
+        }
+        return totals;
     }
 
     /// <summary>
@@ -313,21 +355,12 @@ public class DashboardController : ControllerBase
             })
             .ToListAsync();
 
-        // Today's net sales per banca — used to back out in-progress sales
-        // so the reported balance matches /balances/betting-pools.
+        // Pull every "automatic" delta that current_balance picked up today
+        // (sales + caída + loan installments) so the displayed balance
+        // matches /balances/betting-pools — "yesterday's closing + manual
+        // transactions of today".
         var bpIds = bancas.Select(b => b.BettingPoolId).ToList();
-        var todayNetByBp = await _context.Tickets.AsNoTracking()
-            .Where(t => !t.IsCancelled
-                && bpIds.Contains(t.BettingPoolId)
-                && t.CreatedAt >= todayStartUtc
-                && t.CreatedAt <= todayEndUtc)
-            .GroupBy(t => t.BettingPoolId)
-            .Select(g => new
-            {
-                BettingPoolId = g.Key,
-                Net = g.Sum(t => t.TotalBetAmount - t.TotalPrize - t.TotalDiscount - t.TotalCommission)
-            })
-            .ToDictionaryAsync(x => x.BettingPoolId, x => x.Net);
+        var todayDeltas = await GetTodayAutomaticDeltasAsync(bpIds, today, todayStartUtc, todayEndUtc);
 
         // Find last sale (ticket creation) per banca
         var lastSaleByBanca = await _context.Tickets
@@ -358,7 +391,7 @@ public class DashboardController : ControllerBase
                     days = (today - createdLocal).Days;
                 }
 
-                var todayNet = todayNetByBp.TryGetValue(bp.BettingPoolId, out var n) ? n : 0m;
+                var delta = todayDeltas.TryGetValue(bp.BettingPoolId, out var d) ? d : 0m;
                 return new
                 {
                     BettingPoolId = bp.BettingPoolId,
@@ -366,7 +399,7 @@ public class DashboardController : ControllerBase
                     Name = bp.BettingPoolName,
                     Reference = bp.Reference,
                     DaysWithoutSales = days,
-                    Balance = bp.CurrentBalance - todayNet,
+                    Balance = bp.CurrentBalance - delta,
                     LastSaleDate = lastSaleLocal?.ToString("yyyy-MM-dd")
                 };
             })

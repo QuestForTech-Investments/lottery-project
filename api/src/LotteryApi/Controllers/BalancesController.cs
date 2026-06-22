@@ -127,26 +127,27 @@ public class BalancesController : ControllerBase
                 .ToListAsync();
 
             // For today: the snapshot for today is often a stale carry-over
-            // from yesterday (cutoff job hasn't run) so its value can't be
-            // trusted. Instead we compute the closing balance for yesterday
-            // dynamically as `current_balance - today's net sales` — this
-            // sidesteps the stale snapshot, naturally includes any tx the
-            // admin approved earlier today (they're already in current_balance
-            // and aren't subtracted), and excludes the still-in-progress
-            // sales of the current day (which the user wants invisible until
-            // tomorrow's cutoff). The result is the balance the cashier
-            // should see when registering a new payment.
+            // from yesterday (cutoff job hasn't run yet), so we compute
+            // yesterday's closing balance dynamically from current_balance.
+            //
+            // The user-facing rule is: "show yesterday's closing balance and
+            // only reflect MANUAL transactions the admin approved today —
+            // never sales-in-progress, the Sunday caída credit, or automatic
+            // loan disbursements." So we subtract every category that the
+            // system added to current_balance today EXCEPT approved
+            // transaction_groups (those are the manual ones we want to keep
+            // visible — and they stay in because they're already in current
+            // and we don't subtract them).
             if (useLiveBalance)
             {
                 var liveBalances = await _context.Balances
                     .AsNoTracking()
                     .ToDictionaryAsync(b => b.BettingPoolId, b => b.CurrentBalance);
 
-                // Net sales of today (sold − prize − discount − commission)
-                // per banca. This is exactly the amount that moves
-                // current_balance against snapshot[yesterday].
                 var bpRangeStartUtc = DateTimeHelper.GetUtcStartOfDay(today);
                 var bpRangeEndUtc = DateTimeHelper.GetUtcEndOfDay(today);
+
+                // Today's net sales per banca (sold − prize − discount − commission).
                 var todaySales = await _context.Tickets
                     .AsNoTracking()
                     .Where(t => !t.IsCancelled
@@ -160,12 +161,41 @@ public class BalancesController : ControllerBase
                     })
                     .ToDictionaryAsync(x => x.BettingPoolId, x => x.Net);
 
+                // Today's caída credits per banca (the Sunday/period-end
+                // accrual the CaidaCalculationService adds to current_balance).
+                var todayCaida = await _context.CaidaHistory
+                    .AsNoTracking()
+                    .Where(h => h.CalculationDate == today.Date)
+                    .GroupBy(h => h.BettingPoolId)
+                    .Select(g => new
+                    {
+                        BettingPoolId = g.Key,
+                        Amount = g.Sum(h => h.CaidaAmount)
+                    })
+                    .ToDictionaryAsync(x => x.BettingPoolId, x => x.Amount);
+
+                // Today's automatic-loan disbursements per banca (worker +
+                // manual /payments endpoint both write to loan_payments and
+                // bump current_balance — we don't want either to leak into
+                // the "yesterday's balance" column).
+                var todayLoanPayments = await (
+                    from p in _context.LoanPayments.AsNoTracking()
+                    join l in _context.Loans.AsNoTracking() on p.LoanId equals l.LoanId
+                    where l.EntityType == "bettingPool"
+                        && p.PaymentDate >= bpRangeStartUtc
+                        && p.PaymentDate <= bpRangeEndUtc
+                    group p by l.EntityId into g
+                    select new { BettingPoolId = g.Key, Amount = g.Sum(x => x.AmountPaid) }
+                ).ToDictionaryAsync(x => x.BettingPoolId, x => x.Amount);
+
                 foreach (var r in results)
                 {
                     if (liveBalances.TryGetValue(r.BettingPoolId, out var live))
                     {
-                        var todayNet = todaySales.TryGetValue(r.BettingPoolId, out var n) ? n : 0m;
-                        r.Balance = live - todayNet;
+                        var sales = todaySales.TryGetValue(r.BettingPoolId, out var s) ? s : 0m;
+                        var caida = todayCaida.TryGetValue(r.BettingPoolId, out var c) ? c : 0m;
+                        var loanPaid = todayLoanPayments.TryGetValue(r.BettingPoolId, out var lp) ? lp : 0m;
+                        r.Balance = live - sales - caida - loanPaid;
                     }
                 }
             }
