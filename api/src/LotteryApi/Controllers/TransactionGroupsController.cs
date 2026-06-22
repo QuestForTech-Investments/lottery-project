@@ -489,7 +489,7 @@ public class TransactionGroupsController : ControllerBase
     /// <summary>
     /// Get transaction lines for a specific betting pool. The optional
     /// <c>date</c> parameter is kept for backwards compatibility but no
-    /// longer prunes the result — we always return the banca's 20 most
+    /// longer prunes the result — we always return the banca's 40 most
     /// recent lines (across all dates) so the per-banca activity panel
     /// keeps context even on days with no movement. Lines on
     /// Eliminado/Rechazado groups stay excluded.
@@ -511,7 +511,7 @@ public class TransactionGroupsController : ControllerBase
                 return ApiErrorResult.BadRequest(ErrorCodes.TransactionBettingPoolRequired, "bettingPoolId es requerido");
             }
 
-            const int RecentLimit = 20;
+            const int RecentLimit = 40;
 
             var results = await _context.TransactionGroupLines
                 .AsNoTracking()
