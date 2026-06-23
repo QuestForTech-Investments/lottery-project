@@ -65,6 +65,7 @@ const LoginMUI = () => {
     : null;
   const justChanged = loginQuery?.get('changed') === '1';
   const sessionExpired = loginQuery?.get('reason') === 'session-expired';
+  const notAdmin = loginQuery?.get('reason') === 'not-admin';
 
   const isVideoBg = tenantLoginBackground.type === 'video';
 
@@ -281,10 +282,18 @@ const LoginMUI = () => {
           </Alert>
         )}
 
-        {sessionExpired && !errors.general && !justChanged && (
+        {sessionExpired && !errors.general && !justChanged && !notAdmin && (
           <Alert severity="warning" sx={{ mb: 2.5, borderRadius: '12px' }}>
             {t('login.sessionExpired', {
               defaultValue: 'Tu sesión expiró. Por favor inicia sesión nuevamente.',
+            })}
+          </Alert>
+        )}
+
+        {notAdmin && !errors.general && !justChanged && (
+          <Alert severity="error" sx={{ mb: 2.5, borderRadius: '12px' }}>
+            {t('login.notAdmin', {
+              defaultValue: 'Este usuario no tiene acceso de administrador. Inicia sesión con una cuenta autorizada.',
             })}
           </Alert>
         )}

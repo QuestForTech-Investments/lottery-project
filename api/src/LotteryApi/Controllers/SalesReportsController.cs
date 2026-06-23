@@ -699,13 +699,17 @@ public class SalesReportsController : ControllerBase
                 .Where(bh => bh.BalanceDate == snapshotDate)
                 .ToDictionaryAsync(bh => bh.BettingPoolId, bh => bh.BalanceAmount);
 
-            // For today-or-future queries also preload the live balance per
-            // banca so we can use it instead of the (possibly stale) snapshot.
-            var liveBalances = useLiveBalance
-                ? await _context.Balances
-                    .AsNoTracking()
-                    .ToDictionaryAsync(b => b.BettingPoolId, b => b.CurrentBalance)
-                : new Dictionary<int, decimal>();
+            // Preload the live balance per banca. We use it for today (the
+            // snapshot row is often a stale carry-over until cutoff) and we
+            // also use it for past dates: snapshots can land mid-day if the
+            // cutoff service runs early or is invoked manually, so we don't
+            // trust them as the closing figure either. Past-date closings
+            // are derived by backing out every balance-affecting movement
+            // that landed after filterEndDate (see <c>afterDeltaByBp</c>
+            // below).
+            var liveBalances = await _context.Balances
+                .AsNoTracking()
+                .ToDictionaryAsync(b => b.BettingPoolId, b => b.CurrentBalance);
 
             // For BalanceOfTheDay we want "yesterday's closing balance +
             // approved transaction_groups of today" — same rule the
@@ -720,6 +724,19 @@ public class SalesReportsController : ControllerBase
             var todayDeltaByBp = useLiveBalance
                 ? await ComputeTodayAutomaticDeltasAsync(todayBusinessDate, todayStartUtc, todayEndUtc)
                 : new Dictionary<int, decimal>();
+
+            // For past-date queries we reconstruct the closing balance from
+            // <c>current_balance</c> minus everything that landed AFTER the
+            // queried day — same idea as <c>todayDeltaByBp</c> but with the
+            // range extended from <c>filterEndDate+1</c> through "now".
+            // Includes automatic sources (sales, caída, loan installments,
+            // auto-expenses) and signed approved manual transaction lines.
+            // Automatic transaction_group rows are skipped because the
+            // underlying tables (caida_history, loan_payments, etc.) already
+            // account for the same movement.
+            var afterDeltaByBp = useLiveBalance
+                ? new Dictionary<int, decimal>()
+                : await ComputeMovementsAfterAsync(filterEndDate);
 
             // Sales aggregated by ticket emission day (CreatedAt).
             // Future-sale tickets count as revenue on the day they were issued.
@@ -882,24 +899,18 @@ public class SalesReportsController : ControllerBase
                     txAdjustmentMap.TryGetValue(bpId, out var txAdj);
 
                     // Real closing balance for the queried day (no commission
-                    // offset yet). For today we use the live balance because
-                    // the snapshot row may still be a stale carry-over from
-                    // yesterday until the cutoff job runs.
-                    decimal closingBalance;
-                    if (useLiveBalance)
-                    {
-                        closingBalance = liveBalances.TryGetValue(bpId, out var live) ? live : 0m;
-                    }
-                    else if (hasSnapshot)
-                    {
-                        closingBalance = snapBal;
-                    }
-                    else
-                    {
-                        // Past date without snapshot (rare gap): project from
-                        // the prior day plus any tx that landed on the target.
-                        closingBalance = snapBal + txAdj;
-                    }
+                    // offset yet). Snapshots are unreliable — the cutoff
+                    // service can fire mid-day or be invoked manually, so
+                    // the row for the queried date may not reflect the
+                    // actual end-of-day. We compute the closing balance
+                    // from the live <c>current_balance</c> by backing out
+                    // every balance-affecting movement that landed after
+                    // the queried day's end. For today, "after-deltas" is
+                    // empty so this collapses to the live balance.
+                    var liveBalance = liveBalances.TryGetValue(bpId, out var lb) ? lb : 0m;
+                    var afterDelta = afterDeltaByBp.TryGetValue(bpId, out var ad) ? ad : 0m;
+                    var closingBalance = liveBalance - afterDelta;
+                    _ = snapBal; _ = txAdj; // historical snapshot/tx adjustment fields, kept for diagnostics
                     var displayBalance = closingBalance;
 
                     // When commission is hidden, add back the commission of
@@ -2370,6 +2381,99 @@ public class SalesReportsController : ControllerBase
             var c = caida.TryGetValue(bpId, out var cv) ? cv : 0m;
             var lp = loanPaid.TryGetValue(bpId, out var lv) ? lv : 0m;
             totals[bpId] = s - c + lp;
+        }
+        return totals;
+    }
+
+    /// <summary>
+    /// Signed per-banca delta of every balance-affecting movement that
+    /// landed STRICTLY AFTER <paramref name="afterDate"/>'s end-of-day
+    /// (business timezone) and up to now. Subtract this from the live
+    /// <c>current_balance</c> to reconstruct the closing balance for
+    /// <paramref name="afterDate"/> — used when the cutoff snapshot is
+    /// unreliable (e.g. created before the day actually closed). Sources:
+    /// tickets (+bet−prize−disc−com), caída (−amount), loan payments
+    /// (+amount), auto-expenses (−amount), manual approved
+    /// transaction_group_lines (entity1: +debit−credit, entity2:
+    /// +credit−debit). Automatic transaction_group rows are skipped to
+    /// avoid double-counting the events the native tables already cover.
+    /// </summary>
+    private async Task<Dictionary<int, decimal>> ComputeMovementsAfterAsync(DateTime afterDate)
+    {
+        var afterStartUtc = DateTimeHelper.GetUtcStartOfDay(afterDate.Date.AddDays(1));
+        var afterDateOnly = afterDate.Date;
+
+        var sales = await _context.Tickets.AsNoTracking()
+            .Where(t => !t.IsCancelled && t.CreatedAt >= afterStartUtc)
+            .GroupBy(t => t.BettingPoolId)
+            .Select(g => new
+            {
+                BettingPoolId = g.Key,
+                Net = g.Sum(t => t.TotalBetAmount - t.TotalPrize - t.TotalDiscount - t.TotalCommission)
+            })
+            .ToDictionaryAsync(x => x.BettingPoolId, x => x.Net);
+
+        var caida = await _context.CaidaHistory.AsNoTracking()
+            .Where(h => h.CalculationDate > afterDateOnly)
+            .GroupBy(h => h.BettingPoolId)
+            .Select(g => new { BettingPoolId = g.Key, Amount = g.Sum(h => h.CaidaAmount) })
+            .ToDictionaryAsync(x => x.BettingPoolId, x => x.Amount);
+
+        var loanPaid = await (
+            from p in _context.LoanPayments.AsNoTracking()
+            join l in _context.Loans.AsNoTracking() on p.LoanId equals l.LoanId
+            where l.EntityType == "bettingPool" && p.PaymentDate >= afterStartUtc
+            group p by l.EntityId into g
+            select new { BettingPoolId = g.Key, Amount = g.Sum(x => x.AmountPaid) }
+        ).ToDictionaryAsync(x => x.BettingPoolId, x => x.Amount);
+
+        var autoExpense = await _context.AutoExpenseHistories.AsNoTracking()
+            .Where(h => h.ChargeDate > afterDateOnly)
+            .GroupBy(h => h.BettingPoolId)
+            .Select(g => new { BettingPoolId = g.Key, Amount = g.Sum(h => h.Amount) })
+            .ToDictionaryAsync(x => x.BettingPoolId, x => x.Amount);
+
+        // Manual approved transaction_group_lines after the cutoff. The
+        // automatic ones are excluded because their underlying tables
+        // (caida_history / loan_payments / auto_expense_history) already
+        // contribute the same movement above.
+        var manualEntity1 = await _context.TransactionGroupLines.AsNoTracking()
+            .Where(l => l.Entity1Type == "bettingPool"
+                && l.Group!.Status == "Aprobado"
+                && !l.Group!.IsAutomatic
+                && l.Group!.CreatedAt >= afterStartUtc)
+            .GroupBy(l => l.Entity1Id)
+            .Select(g => new { BettingPoolId = g.Key, Net = g.Sum(l => l.Debit - l.Credit) })
+            .ToDictionaryAsync(x => x.BettingPoolId, x => x.Net);
+
+        var manualEntity2 = await _context.TransactionGroupLines.AsNoTracking()
+            .Where(l => l.Entity2Type == "bettingPool"
+                && l.Group!.Status == "Aprobado"
+                && !l.Group!.IsAutomatic
+                && l.Group!.CreatedAt >= afterStartUtc)
+            .GroupBy(l => l.Entity2Id!.Value)
+            .Select(g => new { BettingPoolId = g.Key, Net = g.Sum(l => l.Credit - l.Debit) })
+            .ToDictionaryAsync(x => x.BettingPoolId, x => x.Net);
+
+        var totals = new Dictionary<int, decimal>();
+        var allBpIds = sales.Keys
+            .Concat(caida.Keys)
+            .Concat(loanPaid.Keys)
+            .Concat(autoExpense.Keys)
+            .Concat(manualEntity1.Keys)
+            .Concat(manualEntity2.Keys)
+            .Distinct();
+
+        foreach (var bpId in allBpIds)
+        {
+            var s = sales.TryGetValue(bpId, out var sv) ? sv : 0m;
+            var c = caida.TryGetValue(bpId, out var cv) ? cv : 0m;
+            var lp = loanPaid.TryGetValue(bpId, out var lv) ? lv : 0m;
+            var ax = autoExpense.TryGetValue(bpId, out var av) ? av : 0m;
+            var m1 = manualEntity1.TryGetValue(bpId, out var m1v) ? m1v : 0m;
+            var m2 = manualEntity2.TryGetValue(bpId, out var m2v) ? m2v : 0m;
+            // Sales/loan/manual push balance up; caída/auto-expense pull it down.
+            totals[bpId] = s - c + lp - ax + m1 + m2;
         }
         return totals;
     }
