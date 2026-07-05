@@ -95,6 +95,13 @@ export interface BettingPoolSalesDto {
   totalPrizes: number;
   totalCommissions: number;
   totalNet: number;
+  totalDiscounts?: number;
+  fall?: number;
+  pendingCount?: number;
+  winnerCount?: number;
+  loserCount?: number;
+  /** Automatic expenses charged within the queried range. */
+  expenses?: number;
 }
 
 export interface DrawSalesDto {

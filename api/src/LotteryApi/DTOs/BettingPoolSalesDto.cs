@@ -62,4 +62,10 @@ public class BettingPoolSalesDto
     /// Zero when the banca has no active loans.
     /// </summary>
     public decimal Loans { get; set; }
+
+    /// <summary>
+    /// Automatic expenses charged to the banca within the queried date
+    /// range (from <c>auto_expense_history</c>).
+    /// </summary>
+    public decimal Expenses { get; set; }
 }

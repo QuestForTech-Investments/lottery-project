@@ -177,7 +177,7 @@ export const useHistoricalSales = (): UseHistoricalSalesReturn => {
         premios: item.totalPrizes,
         neto: item.totalNet,
         caida: item.fall || 0,
-        gastos: 0,
+        gastos: item.expenses || 0,
         final: item.totalNet - (item.fall || 0)
       }));
 

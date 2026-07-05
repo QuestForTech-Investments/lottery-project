@@ -868,6 +868,20 @@ public class SalesReportsController : ControllerBase
                     .ToDictionaryAsync(x => x.BettingPoolId, x => x.Remaining)
                 : new Dictionary<int, decimal>();
 
+            // Automatic expenses charged within the queried range (Gastos
+            // column of the sales reports). ChargeDate is already a business
+            // date, so it compares directly against the filter dates.
+            var expensesByBp = loanScopeBpIds.Count > 0
+                ? await _context.AutoExpenseHistories
+                    .AsNoTracking()
+                    .Where(h => loanScopeBpIds.Contains(h.BettingPoolId)
+                        && h.ChargeDate >= filterStartDate
+                        && h.ChargeDate <= filterEndDate)
+                    .GroupBy(h => h.BettingPoolId)
+                    .Select(g => new { BettingPoolId = g.Key, Amount = g.Sum(h => h.Amount) })
+                    .ToDictionaryAsync(x => x.BettingPoolId, x => x.Amount)
+                : new Dictionary<int, decimal>();
+
             var result = salesData
                 // When a specific betting pool is requested we keep the row
                 // even if it has no sales today — the caller needs the
@@ -957,6 +971,7 @@ public class SalesReportsController : ControllerBase
                             : closingBalance,
                         PendingTicketsAmount = pendingTicketsAmount,
                         Loans = loanBalanceByBp.TryGetValue(bpId, out var loanRem) ? loanRem : 0m,
+                        Expenses = expensesByBp.TryGetValue(bpId, out var exp) ? exp : 0m,
                     };
                 })
                 .OrderBy(x => x.BettingPoolCode)
