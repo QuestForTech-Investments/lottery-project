@@ -155,7 +155,7 @@ const TicketMonitoring: FC = () => {
     if (isLoading) {
       return (
         <TableRow>
-          <TableCell colSpan={8} align="center" sx={STYLES.loadingCell}>
+          <TableCell colSpan={9} align="center" sx={STYLES.loadingCell}>
             <CircularProgress size={40} />
             <Typography variant="body2" sx={{ mt: 2, color: 'text.secondary' }}>
               {t('common.loading')}
@@ -168,7 +168,7 @@ const TicketMonitoring: FC = () => {
     if (sortedTickets.length === 0) {
       return (
         <TableRow>
-          <TableCell colSpan={8} align="center" sx={STYLES.emptyCell}>
+          <TableCell colSpan={9} align="center" sx={STYLES.emptyCell}>
             {t('common.showingEntries', { shown: 0, total: 0 })}
           </TableCell>
         </TableRow>

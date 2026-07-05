@@ -421,6 +421,8 @@
       "previousDaySaleFor": "Venta día anterior para {{date}}",
       "futureDaySale": "Venta futura",
       "futureDaySaleFor": "Venta futura para {{date}}",
+      "channelWeb": "Web",
+      "channelApp": "Móvil",
       "printTicket": "Imprimir ticket",
       "sendTicket": "Enviar ticket",
       "totalAmount": "Monto total",

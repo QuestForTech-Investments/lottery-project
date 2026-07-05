@@ -34,6 +34,11 @@ public class Ticket
     [Column("ip_address")]
     public string? IpAddress { get; set; }
 
+    /// <summary>Sale origin: "WEB" (browser frontend) or "APP" (Android app).</summary>
+    [MaxLength(10)]
+    [Column("sale_channel")]
+    public string SaleChannel { get; set; } = "WEB";
+
     [Column("created_at")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 

@@ -130,6 +130,8 @@ public class TicketListDto
     public string? BettingPoolName { get; set; }
     public int UserId { get; set; }
     public string? UserName { get; set; }
+    /// <summary>"WEB" or "APP" — where the ticket was sold from.</summary>
+    public string SaleChannel { get; set; } = "WEB";
     public DateTime CreatedAt { get; set; }
     public int TotalLines { get; set; }
     public decimal GrandTotal { get; set; }
@@ -193,6 +195,8 @@ public class TicketDetailDto
     public string? UserName { get; set; }
     public string? TerminalId { get; set; }
     public string? IpAddress { get; set; }
+    /// <summary>"WEB" or "APP" — where the ticket was sold from.</summary>
+    public string SaleChannel { get; set; } = "WEB";
     public DateTime CreatedAt { get; set; }
     public decimal GlobalMultiplier { get; set; }
     public decimal GlobalDiscount { get; set; }

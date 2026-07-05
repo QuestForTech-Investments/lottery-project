@@ -421,6 +421,8 @@
       "previousDaySaleFor": "Vant jou anvan pou {{date}}",
       "futureDaySale": "Vant nan tan kap vini",
       "futureDaySaleFor": "Vant nan tan kap vini pou {{date}}",
+      "channelWeb": "Web",
+      "channelApp": "Mobil",
       "printTicket": "Enprime tikè",
       "sendTicket": "Voye tikè",
       "totalAmount": "Kantite total",

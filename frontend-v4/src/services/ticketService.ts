@@ -94,6 +94,8 @@ export interface TicketResponse {
   ticketCode: string;
   createdAt: string;
   userName: string;
+  /** "WEB" | "APP" — where the ticket was sold from. */
+  saleChannel?: string;
   grandTotal: number;
   totalDiscount: number;
   totalPrize: number;
@@ -168,6 +170,8 @@ export interface MappedTicket {
   fecha: string;
   rawCreatedAt: string;
   usuario: string;
+  /** "WEB" | "APP" — sale origin, shown as Web/Móvil in the monitoring table. */
+  saleChannel: string;
   monto: number;
   descuento: number;
   premio: number;
@@ -280,6 +284,7 @@ export const mapTicketResponse = (ticket: TicketResponse): MappedTicket => {
     fecha: formatDateToSantoDomingo(ticket.createdAt),
     rawCreatedAt: ticket.createdAt,
     usuario: ticket.userName || 'N/A',
+    saleChannel: ticket.saleChannel || 'WEB',
     monto: ticket.grandTotal,
     descuento: ticket.totalDiscount || 0,
     premio: ticket.totalPrize || 0,

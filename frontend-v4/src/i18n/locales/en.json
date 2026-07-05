@@ -421,6 +421,8 @@
       "previousDaySaleFor": "Previous day sale for {{date}}",
       "futureDaySale": "Future sale",
       "futureDaySaleFor": "Future sale for {{date}}",
+      "channelWeb": "Web",
+      "channelApp": "Mobile",
       "printTicket": "Print ticket",
       "sendTicket": "Send ticket",
       "totalAmount": "Total amount",

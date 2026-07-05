@@ -421,6 +421,8 @@
       "previousDaySaleFor": "Vente de la veille pour {{date}}",
       "futureDaySale": "Vente future",
       "futureDaySaleFor": "Vente future pour {{date}}",
+      "channelWeb": "Web",
+      "channelApp": "Mobile",
       "printTicket": "Imprimer le ticket",
       "sendTicket": "Envoyer le ticket",
       "totalAmount": "Montant total",

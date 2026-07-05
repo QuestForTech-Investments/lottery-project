@@ -125,6 +125,7 @@ public class TicketsController : ControllerBase
                 UserName = t.User!.Username,
                 TerminalId = t.TerminalId,
                 IpAddress = t.IpAddress,
+                SaleChannel = t.SaleChannel,
                 CreatedAt = t.CreatedAt,
                 GlobalMultiplier = t.GlobalMultiplier,
                 GlobalDiscount = t.GlobalDiscount,
@@ -830,6 +831,7 @@ public class TicketsController : ControllerBase
                 UserId = dto.UserId,
                 TerminalId = dto.TerminalId,
                 IpAddress = dto.IpAddress,
+                SaleChannel = ResolveSaleChannel(),
                 CreatedAt = now,
                 GlobalMultiplier = dto.GlobalMultiplier,
                 CurrencyCode = "DOP",
@@ -1209,6 +1211,7 @@ public class TicketsController : ControllerBase
                 UserName = user.FullName,
                 TerminalId = ticket.TerminalId,
                 IpAddress = ticket.IpAddress,
+                SaleChannel = ticket.SaleChannel,
                 CreatedAt = ticket.CreatedAt,
                 GlobalMultiplier = ticket.GlobalMultiplier,
                 GlobalDiscount = ticket.GlobalDiscount,
@@ -1486,6 +1489,7 @@ public class TicketsController : ControllerBase
                         BettingPoolName = t.BettingPool != null ? t.BettingPool.BettingPoolName : null,
                         UserId = t.UserId,
                         UserName = t.User != null ? t.User.Username : null,
+                        SaleChannel = t.SaleChannel,
                         CreatedAt = t.CreatedAt,
                         TotalLines = t.TotalLines,
                         GrandTotal = t.TotalBetAmount,
@@ -2255,6 +2259,7 @@ public class TicketsController : ControllerBase
             UserName = ticket.User?.FullName,
             TerminalId = ticket.TerminalId,
             IpAddress = ticket.IpAddress,
+            SaleChannel = ticket.SaleChannel,
             CreatedAt = ticket.CreatedAt,
             GlobalMultiplier = ticket.GlobalMultiplier,
             GlobalDiscount = ticket.GlobalDiscount,
@@ -2485,6 +2490,24 @@ public class TicketsController : ControllerBase
             _logger.LogError(ex, "Error resetting commissions");
             return ApiErrorResult.Error(ErrorCodes.InternalError, "Error al resetear las comisiones", 500);
         }
+    }
+
+    /// <summary>
+    /// Determine the sale channel for a ticket being created.
+    /// Primary signal: explicit <c>X-Client-Platform</c> header sent by the
+    /// Android app ("APP" / "ANDROID"). Fallback: User-Agent sniffing for
+    /// mobile HTTP clients (okhttp is Android's default stack). Anything
+    /// else — including the web frontend, which sends no header — is WEB.
+    /// </summary>
+    private string ResolveSaleChannel()
+    {
+        var platform = Request.Headers["X-Client-Platform"].FirstOrDefault()?.Trim().ToUpperInvariant();
+        if (platform is "APP" or "ANDROID" or "MOBILE") return "APP";
+
+        var ua = Request.Headers["User-Agent"].ToString().ToLowerInvariant();
+        if (ua.Contains("okhttp") || ua.Contains("lotteryapp") || ua.Contains("lottery-app")) return "APP";
+
+        return "WEB";
     }
 
     /// <summary>

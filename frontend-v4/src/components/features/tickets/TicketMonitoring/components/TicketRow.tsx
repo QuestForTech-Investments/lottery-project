@@ -7,7 +7,7 @@
 import { memo, useCallback, type FC } from 'react';
 import { useTranslation } from 'react-i18next';
 import { TableRow, TableCell, Box, IconButton, Tooltip } from '@mui/material';
-import { Print as PrintIcon, Cancel as CancelIcon, Send as SendIcon, Schedule as ScheduleIcon, ArrowBack as ArrowBackIcon, ArrowForward as ArrowForwardIcon, Visibility as VisibilityIcon } from '@mui/icons-material';
+import { Print as PrintIcon, Cancel as CancelIcon, Send as SendIcon, Schedule as ScheduleIcon, ArrowBack as ArrowBackIcon, ArrowForward as ArrowForwardIcon, Visibility as VisibilityIcon, DesktopWindows as DesktopWindowsIcon, PhoneAndroid as PhoneAndroidIcon } from '@mui/icons-material';
 import { formatCurrency } from '../../../../../utils/formatCurrency';
 import { getEstadoColor } from '../constants';
 import type { TicketRowProps } from '../types';
@@ -73,7 +73,20 @@ const TicketRow: FC<TicketRowProps> = memo(({ ticket, isSelected, onRowClick, on
       }}
       onClick={handleRowClick}
     >
-      <TableCell>{ticket.numero}</TableCell>
+      <TableCell>
+        <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+          {ticket.saleChannel === 'APP' ? (
+            <Tooltip title={t('tickets.monitoring.channelApp')} arrow>
+              <PhoneAndroidIcon sx={{ fontSize: 15, color: '#8b5cf6', verticalAlign: 'middle' }} />
+            </Tooltip>
+          ) : (
+            <Tooltip title={t('tickets.monitoring.channelWeb')} arrow>
+              <DesktopWindowsIcon sx={{ fontSize: 15, color: '#94a3b8', verticalAlign: 'middle' }} />
+            </Tooltip>
+          )}
+          {ticket.numero}
+        </Box>
+      </TableCell>
       <TableCell sx={{ px: 0 }}>
         <Box sx={{ display: 'flex', justifyContent: 'center', gap: 0.25 }}>
           {ticket.isOutOfScheduleSale && ticket.estado === 'Ganador' && (
