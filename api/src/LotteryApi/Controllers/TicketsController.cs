@@ -831,7 +831,7 @@ public class TicketsController : ControllerBase
                 UserId = dto.UserId,
                 TerminalId = dto.TerminalId,
                 IpAddress = dto.IpAddress,
-                SaleChannel = ResolveSaleChannel(),
+                SaleChannel = ResolveSaleChannel(dto.SaleChannel),
                 CreatedAt = now,
                 GlobalMultiplier = dto.GlobalMultiplier,
                 CurrencyCode = "DOP",
@@ -2494,19 +2494,30 @@ public class TicketsController : ControllerBase
 
     /// <summary>
     /// Determine the sale channel for a ticket being created.
-    /// Primary signal: explicit <c>X-Client-Platform</c> header sent by the
-    /// Android app ("APP" / "ANDROID"). Fallback: User-Agent sniffing for
+    /// Priority: explicit <c>saleChannel</c> field in the request body
+    /// (proxies can strip custom headers, the body always survives), then
+    /// the <c>X-Client-Platform</c> header, then User-Agent sniffing for
     /// mobile HTTP clients (okhttp is Android's default stack). Anything
-    /// else — including the web frontend, which sends no header — is WEB.
+    /// else — including the web frontend, which sends none of these — is WEB.
     /// </summary>
-    private string ResolveSaleChannel()
+    private string ResolveSaleChannel(string? bodyChannel)
     {
+        var fromBody = bodyChannel?.Trim().ToUpperInvariant();
+        if (fromBody is "APP" or "ANDROID" or "MOBILE") return "APP";
+
         var platform = Request.Headers["X-Client-Platform"].FirstOrDefault()?.Trim().ToUpperInvariant();
         if (platform is "APP" or "ANDROID" or "MOBILE") return "APP";
 
         var ua = Request.Headers["User-Agent"].ToString().ToLowerInvariant();
         if (ua.Contains("okhttp") || ua.Contains("lotteryapp") || ua.Contains("lottery-app")) return "APP";
 
+        // Diagnostic trail for channel-attribution issues: lets us see what
+        // actually reached the API when a client claims to have sent APP.
+        _logger.LogInformation(
+            "Ticket channel resolved as WEB. body={Body}, header={Header}, ua={UserAgent}",
+            bodyChannel ?? "(null)",
+            Request.Headers["X-Client-Platform"].FirstOrDefault() ?? "(none)",
+            Request.Headers["User-Agent"].ToString());
         return "WEB";
     }
 

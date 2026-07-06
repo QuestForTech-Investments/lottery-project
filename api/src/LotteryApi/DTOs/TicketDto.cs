@@ -68,6 +68,13 @@ public class CreateTicketDto
     public string? TerminalId { get; set; }
     public string? IpAddress { get; set; }
 
+    /// <summary>
+    /// Sale origin sent by the client: "APP" (Android app) or "WEB".
+    /// Takes precedence over the X-Client-Platform header — bodies survive
+    /// proxies that strip custom headers. Omitted/unknown → header → UA → WEB.
+    /// </summary>
+    public string? SaleChannel { get; set; }
+
     // Customer information (optional)
     public string? CustomerName { get; set; }
     public string? CustomerPhone { get; set; }
