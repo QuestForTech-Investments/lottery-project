@@ -506,25 +506,28 @@ public class TicketsController : ControllerBase
                 return UnprocessableEntity(new { message = "La banca no está activa" });
             }
 
+            // 1.3 Fetch ALL of the selling user's permission codes in one
+            // round-trip. The endpoint used to issue a separate EXISTS query
+            // per permission (5 in the worst case); resolving membership
+            // from this set is behaviorally identical and saves the trips.
+            var userPerms = (await _context.UserPermissions.AsNoTracking()
+                .Where(up => up.UserId == dto.UserId
+                    && up.IsActive
+                    && up.Permission != null
+                    && up.Permission.IsActive)
+                .Select(up => up.Permission!.PermissionCode)
+                .ToListAsync())
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
             // 1.4 Banca attribution: user must be assigned to this banca unless they hold SELL_AS_ANY_BANK
             var isAssignedToBanca = await _context.UserBettingPools.AsNoTracking()
                 .AnyAsync(ubp => ubp.UserId == dto.UserId
                     && ubp.BettingPoolId == dto.BettingPoolId
                     && ubp.IsActive);
 
-            if (!isAssignedToBanca)
+            if (!isAssignedToBanca && !userPerms.Contains("SELL_AS_ANY_BANK"))
             {
-                var canSellAsAnyBanca = await _context.UserPermissions.AsNoTracking()
-                    .AnyAsync(up => up.UserId == dto.UserId
-                        && up.IsActive
-                        && up.Permission != null
-                        && up.Permission.IsActive
-                        && up.Permission.PermissionCode == "SELL_AS_ANY_BANK");
-
-                if (!canSellAsAnyBanca)
-                {
-                    return ApiErrorResult.Error(ErrorCodes.TicketSellBancaDenied, "No tiene permiso para vender en esta banca", 403);
-                }
+                return ApiErrorResult.Error(ErrorCodes.TicketSellBancaDenied, "No tiene permiso para vender en esta banca", 403);
             }
 
             // 1.5 Validate ticket date for future sales
@@ -548,12 +551,7 @@ public class TicketsController : ControllerBase
                     }
 
                     // Server-side permission check for previous-day sales
-                    var hasPastDatePermission = await _context.UserPermissions
-                        .AnyAsync(up => up.UserId == dto.UserId
-                            && up.Permission!.PermissionCode == "TICKET_PREVIOUS_DAY_SALE"
-                            && up.IsActive);
-
-                    if (!hasPastDatePermission)
+                    if (!userPerms.Contains("TICKET_PREVIOUS_DAY_SALE"))
                     {
                         return ApiErrorResult.Error(ErrorCodes.TicketPreviousDayDenied, "No tiene permiso para ventas de dia anterior", 403);
                     }
@@ -564,17 +562,9 @@ public class TicketsController : ControllerBase
                     // For POS users (assigned to this banca) the banca config alone
                     // gates future sales. For non-POS sellers (admin selling via
                     // SELL_AS_ANY_BANK) require the explicit user permission as before.
-                    if (!isAssignedToBanca)
+                    if (!isAssignedToBanca && !userPerms.Contains("TICKET_FUTURE_SALE"))
                     {
-                        var hasFutureDatePermission = await _context.UserPermissions
-                            .AnyAsync(up => up.UserId == dto.UserId
-                                && up.Permission!.PermissionCode == "TICKET_FUTURE_SALE"
-                                && up.IsActive);
-
-                        if (!hasFutureDatePermission)
-                        {
-                            return ApiErrorResult.Error(ErrorCodes.TicketDateFutureForbidden, "No tiene permiso para ventas futuras", 403);
-                        }
+                        return ApiErrorResult.Error(ErrorCodes.TicketDateFutureForbidden, "No tiene permiso para ventas futuras", 403);
                     }
 
                     var futureSalesMode = bpConfig?.FutureSalesMode ?? "OFF";
@@ -610,10 +600,7 @@ public class TicketsController : ControllerBase
             }
 
             // Check if user can bypass availability limits (admin permission)
-            var canBypassLimits = await _context.UserPermissions
-                .AnyAsync(up => up.UserId == dto.UserId
-                    && up.Permission!.PermissionCode == "PLAY_WITHOUT_AVAILABILITY"
-                    && up.IsActive);
+            var canBypassLimits = userPerms.Contains("PLAY_WITHOUT_AVAILABILITY");
 
             // Tracks whether canBypassLimits actually saved the ticket from being blocked.
             // Only when this is true do we record TICKET_BYPASS_VALIDATION.
@@ -691,10 +678,7 @@ public class TicketsController : ControllerBase
                 .ToDictionaryAsync(bpd => bpd.DrawId, bpd => bpd.AnticipatedClosingMinutes);
 
             // Pre-check if user has SELL_OUT_OF_HOURS permission (used to skip closing validation)
-            var canSellClosedDraws = await _context.UserPermissions
-                .AnyAsync(up => up.UserId == dto.UserId
-                    && up.Permission!.PermissionCode == "SELL_OUT_OF_HOURS"
-                    && up.IsActive);
+            var canSellClosedDraws = userPerms.Contains("SELL_OUT_OF_HOURS");
 
             var betTypesDict = await _context.GameTypes
                 .Where(gt => betTypeIds.Contains(gt.GameTypeId))
@@ -941,7 +925,8 @@ public class TicketsController : ControllerBase
                 totalNet += line.NetAmount;
 
                 var limitCheck = await CheckIfPlayIsOnLimitsDetailed(
-                    line.DrawId, dto.BettingPoolId, line.BetNumber, line.BetAmount, line.BetTypeId);
+                    line.DrawId, dto.BettingPoolId, line.BetNumber, line.BetAmount, line.BetTypeId,
+                    knownZoneId: bettingPool.ZoneId);
 
                 if (limitCheck.Passed || canBypassLimits)
                 {
@@ -966,7 +951,8 @@ public class TicketsController : ControllerBase
                         line.BetAmount,
                         now,
                         line.BetTypeId,
-                        lineIsFuture);
+                        lineIsFuture,
+                        knownZoneId: bettingPool.ZoneId);
                 } else
                 {
                     line.ExceedsLimit = true;
@@ -1152,17 +1138,30 @@ public class TicketsController : ControllerBase
                 _logger.LogWarning(ex, "Failed to update real-time caída for banca {Id}", dto.BettingPoolId);
             }
 
-            // 10.1 Check if any draws already have results and process ticket immediately
+            // 10.1 Check if any draws already have results and process ticket immediately.
+            // Match on (DrawId, ResultDate) — filtering by draw alone would pull
+            // EVERY historical result row for these draws and reprocess each one,
+            // a cost that grows daily as results accumulate.
             try
             {
+                var ticketDrawIds = ticket.TicketLines.Select(l => l.DrawId).Distinct().ToList();
+                var ticketDates = ticket.TicketLines.Select(l => l.DrawDate.Date).Distinct().ToList();
                 var ticketDrawDates = ticket.TicketLines
                     .Select(l => (l.DrawId, l.DrawDate.Date))
                     .Distinct()
-                    .ToList();
+                    .ToHashSet();
 
-                var existingResults = await _context.Results
-                    .Where(r => ticketDrawDates.Select(td => td.DrawId).Contains(r.DrawId))
+                // SQL narrows to the ticket's draws and dates; the exact
+                // (draw, date) pairing is applied in memory afterwards.
+                var candidateResults = await _context.Results
+                    .AsNoTracking()
+                    .Where(r => ticketDrawIds.Contains(r.DrawId) && ticketDates.Contains(r.ResultDate.Date))
+                    .Select(r => new { r.DrawId, r.ResultDate })
                     .ToListAsync();
+
+                var existingResults = candidateResults
+                    .Where(r => ticketDrawDates.Contains((r.DrawId, r.ResultDate.Date)))
+                    .ToList();
 
                 if (existingResults.Any())
                 {
@@ -1184,7 +1183,10 @@ public class TicketsController : ControllerBase
                         }
                     }
 
-                    // Reload ticket to get updated values
+                    // Reload ticket to get updated values. This path only
+                    // runs when the ticket's draw already has today's result
+                    // loaded (late sale), so the 1+N reload cost is rare and
+                    // bounded by the ticket's own line count.
                     await _context.Entry(ticket).ReloadAsync();
                     foreach (var line in ticket.TicketLines)
                     {
@@ -2586,15 +2588,17 @@ public class TicketsController : ControllerBase
         decimal betAmount,
         DateTime timestamp,
         int gameTypeId,
-        bool isFutureSale)
+        bool isFutureSale,
+        int? knownZoneId = null)
     {
         var today = DateOnly.FromDateTime(drawDate);
 
-        var bettingPool = await _context.BettingPools.AsNoTracking()
+        // Caller can pass the banca's zone to skip the lookup — CreateTicket
+        // invokes this once per line and already has the banca loaded.
+        var zoneId = knownZoneId ?? (await _context.BettingPools.AsNoTracking()
             .Where(bp => bp.BettingPoolId == bettingPoolId)
-            .Select(bp => new { bp.BettingPoolId, bp.ZoneId })
-            .FirstOrDefaultAsync();
-        var zoneId = bettingPool?.ZoneId ?? 0;
+            .Select(bp => (int?)bp.ZoneId)
+            .FirstOrDefaultAsync()) ?? 0;
 
         var todayDow = (int)timestamp.DayOfWeek;
         var dayBit = todayDow switch
@@ -2844,16 +2848,17 @@ public class TicketsController : ControllerBase
     /// Inferring it from the bet number length is wrong — many draws have 2-digit
     /// game types that are not DIRECTO (Pick2 variants, etc.).
     /// </summary>
-    private async Task<LimitCheckDetail> CheckIfPlayIsOnLimitsDetailed(int drawId, int bettingPoolId, string betNumber, decimal bet, int gameTypeId)
+    private async Task<LimitCheckDetail> CheckIfPlayIsOnLimitsDetailed(int drawId, int bettingPoolId, string betNumber, decimal bet, int gameTypeId, int? knownZoneId = null)
     {
         var now = DateTime.UtcNow;
         var today = DateOnly.FromDateTime(Helpers.DateTimeHelper.TodayInBusinessTimezone());
 
-        var bettingPool = await _context.BettingPools.AsNoTracking()
+        // Caller can pass the banca's zone to skip the lookup — CreateTicket
+        // invokes this once per line and already has the banca loaded.
+        var zoneId = knownZoneId ?? (await _context.BettingPools.AsNoTracking()
             .Where(bp => bp.BettingPoolId == bettingPoolId)
-            .Select(bp => new { bp.BettingPoolId, bp.ZoneId })
-            .FirstOrDefaultAsync();
-        var zoneId = bettingPool?.ZoneId ?? 0;
+            .Select(bp => (int?)bp.ZoneId)
+            .FirstOrDefaultAsync()) ?? 0;
 
         // Day bitmask
         var todayDow = (int)now.DayOfWeek;
