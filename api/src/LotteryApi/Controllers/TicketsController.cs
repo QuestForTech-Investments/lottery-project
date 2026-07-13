@@ -695,6 +695,37 @@ public class TicketsController : ControllerBase
             var validCombinations = new HashSet<(int DrawId, int GameTypeId)>(
                 drawGameCompatibilities.Select(dgc => (dgc.DrawId, dgc.GameTypeId)));
 
+            // Pre-fetch every commission config row this ticket could resolve
+            // to — per-draw, per-lottery and general tiers for the banca and
+            // the ticket's game types — in ONE query. Per-line resolution
+            // (draw → lottery → general) then happens in memory, replacing
+            // up to 4 round-trips per line.
+            var ticketGameTypeCodes = betTypesDict.Values
+                .Select(gt => gt.GameTypeCode)
+                .Where(code => code != null)
+                .Distinct()
+                .ToList();
+            var ticketLotteryIds = draws.Select(d => d.LotteryId).Distinct().ToList();
+            var commissionConfigs = await _context.Set<Models.BettingPoolPrizesCommission>()
+                .AsNoTracking()
+                .Where(c => c.BettingPoolId == dto.BettingPoolId
+                    && c.IsActive == true
+                    && ticketGameTypeCodes.Contains(c.GameType)
+                    && ((c.DrawId != null && drawIds.Contains(c.DrawId.Value))
+                        || (c.DrawId == null && (c.LotteryId == null || ticketLotteryIds.Contains(c.LotteryId.Value)))))
+                .ToListAsync();
+
+            // Same lookup priority as GetCommissionPercentageAsync: per-draw
+            // config wins, then per-lottery, then the banca-wide fallback.
+            decimal ResolveCommissionPercentage(string? gameTypeCode, int lotteryId, int drawId)
+            {
+                if (gameTypeCode == null) return 0.00m;
+                var cfg = commissionConfigs.FirstOrDefault(c => c.GameType == gameTypeCode && c.DrawId == drawId)
+                    ?? commissionConfigs.FirstOrDefault(c => c.GameType == gameTypeCode && c.DrawId == null && c.LotteryId == lotteryId)
+                    ?? commissionConfigs.FirstOrDefault(c => c.GameType == gameTypeCode && c.DrawId == null && c.LotteryId == null);
+                return cfg?.CommissionDiscount1 ?? 0.00m;
+            }
+
             // Pre-fetch active blocked numbers for the draws in this ticket.
             // A block applies if it's global (zone_id IS NULL) or scoped to this banca's zone.
             var drawIdsInTicket = dto.Lines.Select(l => l.DrawId).Distinct().ToList();
@@ -709,6 +740,54 @@ public class TicketsController : ControllerBase
                 .ToListAsync();
             var blockedSet = new HashSet<(int, int, string)>(
                 blockedLookup.Select(b => (b.DrawId, b.GameTypeId, b.BetNumber)));
+
+            // Pre-fetch every limit rule that could apply to any line of this
+            // ticket — banca-scoped, zone-scoped and global, general and
+            // by-number — with their amounts, in ONE query.
+            // CheckIfPlayIsOnLimitsDetailed and UpdateLimitConsumption used
+            // to re-query the same rules for every line (up to ~12 queries
+            // per line); they now resolve applicability from this list.
+            var ticketLimitRules = await _context.LimitRules
+                .AsNoTracking()
+                .Include(lr => lr.LimitRuleAmounts)
+                .Where(lr => lr.IsActive && lr.DrawId != null && drawIds.Contains(lr.DrawId.Value))
+                .Where(lr =>
+                    ((lr.LimitType == Models.Enums.LimitType.GeneralForBettingPool
+                        || lr.LimitType == Models.Enums.LimitType.LocalForBettingPool
+                        || lr.LimitType == Models.Enums.LimitType.ByNumberForBettingPool)
+                        && lr.BettingPoolId == dto.BettingPoolId)
+                    || ((lr.LimitType == Models.Enums.LimitType.GeneralForZone
+                        || lr.LimitType == Models.Enums.LimitType.ByNumberForZone)
+                        && lr.ZoneId == bpZoneId)
+                    || lr.LimitType == Models.Enums.LimitType.GeneralForGroup
+                    || lr.LimitType == Models.Enums.LimitType.ByNumberForGroup)
+                .ToListAsync();
+
+            // Snapshot of today's consumption rows for the limit CHECK —
+            // cross-banca because zone/global limits sum every banca's
+            // consumption. Safe to read once: nothing in this request writes
+            // consumption to the DB until the final SaveChanges, so the
+            // per-line queries this replaces saw the same values.
+            var betNumbersInTicket = dto.Lines.Select(l => l.BetNumber).Distinct().ToList();
+            var businessTodayDateOnly = DateOnly.FromDateTime(todayBusiness);
+            var checkConsumptionSnapshot = await _context.LimitConsumptions
+                .AsNoTracking()
+                .Where(lc => drawIds.Contains(lc.DrawId)
+                    && lc.DrawDate == businessTodayDateOnly
+                    && betNumbersInTicket.Contains(lc.BetNumber)
+                    && lc.GameTypeId != null && betTypeIds.Contains(lc.GameTypeId.Value))
+                .ToListAsync();
+
+            // Warm the change tracker with this banca's consumption rows for
+            // the ticket's draw date so UpdateLimitConsumption finds them in
+            // .Local and never falls back to a per-rule DB query.
+            var ticketDateOnly = DateOnly.FromDateTime(ticketDate);
+            await _context.LimitConsumptions
+                .Where(lc => drawIds.Contains(lc.DrawId)
+                    && lc.DrawDate == ticketDateOnly
+                    && lc.BettingPoolId == dto.BettingPoolId
+                    && betNumbersInTicket.Contains(lc.BetNumber))
+                .LoadAsync();
 
             List<object> invalidBets = new List<object>();
             bool hasClosedDraw = false;
@@ -908,9 +987,9 @@ public class TicketsController : ControllerBase
 
                 // Get commission percentage from betting pool configuration.
                 // Lookup priority: per-draw → per-lottery → general (commission_discount_1 only).
-                var commissionPercentage = await GetCommissionPercentageAsync(
-                    dto.BettingPoolId,
-                    lineDto.BetTypeId,
+                // Resolved from the pre-fetched config set — no DB round-trip per line.
+                var commissionPercentage = ResolveCommissionPercentage(
+                    betType?.GameTypeCode,
                     draw.LotteryId,
                     lineDto.DrawId);
 
@@ -926,7 +1005,9 @@ public class TicketsController : ControllerBase
 
                 var limitCheck = await CheckIfPlayIsOnLimitsDetailed(
                     line.DrawId, dto.BettingPoolId, line.BetNumber, line.BetAmount, line.BetTypeId,
-                    knownZoneId: bettingPool.ZoneId);
+                    knownZoneId: bettingPool.ZoneId,
+                    prefetchedRules: ticketLimitRules,
+                    prefetchedConsumptions: checkConsumptionSnapshot);
 
                 if (limitCheck.Passed || canBypassLimits)
                 {
@@ -952,7 +1033,9 @@ public class TicketsController : ControllerBase
                         now,
                         line.BetTypeId,
                         lineIsFuture,
-                        knownZoneId: bettingPool.ZoneId);
+                        knownZoneId: bettingPool.ZoneId,
+                        prefetchedRules: ticketLimitRules,
+                        consumptionsPreloaded: true);
                 } else
                 {
                     line.ExceedsLimit = true;
@@ -2589,7 +2672,9 @@ public class TicketsController : ControllerBase
         DateTime timestamp,
         int gameTypeId,
         bool isFutureSale,
-        int? knownZoneId = null)
+        int? knownZoneId = null,
+        List<LimitRule>? prefetchedRules = null,
+        bool consumptionsPreloaded = false)
     {
         var today = DateOnly.FromDateTime(drawDate);
 
@@ -2606,98 +2691,69 @@ public class TicketsController : ControllerBase
             1 => 1, 2 => 2, 3 => 4, 4 => 8, 5 => 16, 6 => 32, 0 => 64, _ => 0
         };
 
+        // Shared base predicate — mirrors the WHERE every per-level query
+        // below applies. Used both against the prefetched in-memory list
+        // (CreateTicket path) and to keep the fallback SQL in sync.
+        bool MatchesBase(LimitRule lr) =>
+            lr.IsActive && lr.DrawId == drawId
+            && (lr.DaysOfWeek & dayBit) != 0
+            && (lr.EffectiveFrom == null || lr.EffectiveFrom <= timestamp)
+            && (lr.EffectiveTo == null || lr.EffectiveTo >= timestamp)
+            && lr.LimitRuleAmounts.Any(a => a.GameTypeId == gameTypeId);
+
+        async Task<LimitRule?> FindRuleAsync(
+            Models.Enums.LimitType type, bool bancaScoped, bool zoneScoped, string? numberPattern)
+        {
+            if (prefetchedRules != null)
+            {
+                return prefetchedRules.FirstOrDefault(lr => MatchesBase(lr)
+                    && lr.LimitType == type
+                    && (!bancaScoped || lr.BettingPoolId == bettingPoolId)
+                    && (!zoneScoped || lr.ZoneId == zoneId)
+                    && (numberPattern == null || lr.BetNumberPattern == numberPattern));
+            }
+
+            return await _context.LimitRules.AsNoTracking()
+                .Where(lr => lr.IsActive && lr.DrawId == drawId
+                    && lr.LimitType == type
+                    && (!bancaScoped || lr.BettingPoolId == bettingPoolId)
+                    && (!zoneScoped || lr.ZoneId == zoneId)
+                    && (numberPattern == null || lr.BetNumberPattern == numberPattern)
+                    && (lr.DaysOfWeek & dayBit) != 0
+                    && (lr.EffectiveFrom == null || lr.EffectiveFrom <= timestamp)
+                    && (lr.EffectiveTo == null || lr.EffectiveTo >= timestamp)
+                    && lr.LimitRuleAmounts.Any(a => a.GameTypeId == gameTypeId))
+                .FirstOrDefaultAsync();
+        }
+
         // Find ALL applicable limit rules at every level (not just the most specific)
         var applicableRules = new List<LimitRule>();
 
-        // Banca limit
-        var bancaRule = await _context.LimitRules.AsNoTracking()
-            .Where(lr => lr.IsActive && lr.DrawId == drawId
-                && lr.LimitType == Models.Enums.LimitType.GeneralForBettingPool
-                && lr.BettingPoolId == bettingPoolId
-                && (lr.DaysOfWeek & dayBit) != 0
-                && (lr.EffectiveFrom == null || lr.EffectiveFrom <= timestamp)
-                && (lr.EffectiveTo == null || lr.EffectiveTo >= timestamp)
-                && lr.LimitRuleAmounts.Any(a => a.GameTypeId == gameTypeId))
-            .FirstOrDefaultAsync();
+        var bancaRule = await FindRuleAsync(Models.Enums.LimitType.GeneralForBettingPool, bancaScoped: true, zoneScoped: false, numberPattern: null);
         if (bancaRule != null) applicableRules.Add(bancaRule);
 
-        // Local Banca limit
-        var localBancaRule = await _context.LimitRules.AsNoTracking()
-            .Where(lr => lr.IsActive && lr.DrawId == drawId
-                && lr.LimitType == Models.Enums.LimitType.LocalForBettingPool
-                && lr.BettingPoolId == bettingPoolId
-                && (lr.DaysOfWeek & dayBit) != 0
-                && (lr.EffectiveFrom == null || lr.EffectiveFrom <= timestamp)
-                && (lr.EffectiveTo == null || lr.EffectiveTo >= timestamp)
-                && lr.LimitRuleAmounts.Any(a => a.GameTypeId == gameTypeId))
-            .FirstOrDefaultAsync();
+        var localBancaRule = await FindRuleAsync(Models.Enums.LimitType.LocalForBettingPool, bancaScoped: true, zoneScoped: false, numberPattern: null);
         if (localBancaRule != null) applicableRules.Add(localBancaRule);
 
-        // Zona limit
         if (zoneId > 0)
         {
-            var zonaRule = await _context.LimitRules.AsNoTracking()
-                .Where(lr => lr.IsActive && lr.DrawId == drawId
-                    && lr.LimitType == Models.Enums.LimitType.GeneralForZone
-                    && lr.ZoneId == zoneId
-                    && (lr.DaysOfWeek & dayBit) != 0
-                    && (lr.EffectiveFrom == null || lr.EffectiveFrom <= timestamp)
-                    && (lr.EffectiveTo == null || lr.EffectiveTo >= timestamp)
-                    && lr.LimitRuleAmounts.Any(a => a.GameTypeId == gameTypeId))
-                .FirstOrDefaultAsync();
+            var zonaRule = await FindRuleAsync(Models.Enums.LimitType.GeneralForZone, bancaScoped: false, zoneScoped: true, numberPattern: null);
             if (zonaRule != null) applicableRules.Add(zonaRule);
         }
 
-        // Global limit
-        var globalRule = await _context.LimitRules.AsNoTracking()
-            .Where(lr => lr.IsActive && lr.DrawId == drawId
-                && lr.LimitType == Models.Enums.LimitType.GeneralForGroup
-                && (lr.DaysOfWeek & dayBit) != 0
-                && (lr.EffectiveFrom == null || lr.EffectiveFrom <= timestamp)
-                && (lr.EffectiveTo == null || lr.EffectiveTo >= timestamp)
-                && lr.LimitRuleAmounts.Any(a => a.GameTypeId == gameTypeId))
-            .FirstOrDefaultAsync();
+        var globalRule = await FindRuleAsync(Models.Enums.LimitType.GeneralForGroup, bancaScoped: false, zoneScoped: false, numberPattern: null);
         if (globalRule != null) applicableRules.Add(globalRule);
 
-        // ByNumber Banca limit
-        var byNumBancaRule = await _context.LimitRules.AsNoTracking()
-            .Where(lr => lr.IsActive && lr.DrawId == drawId
-                && lr.LimitType == Models.Enums.LimitType.ByNumberForBettingPool
-                && lr.BettingPoolId == bettingPoolId
-                && lr.BetNumberPattern == betNumber
-                && (lr.DaysOfWeek & dayBit) != 0
-                && (lr.EffectiveFrom == null || lr.EffectiveFrom <= timestamp)
-                && (lr.EffectiveTo == null || lr.EffectiveTo >= timestamp)
-                && lr.LimitRuleAmounts.Any(a => a.GameTypeId == gameTypeId))
-            .FirstOrDefaultAsync();
+        var byNumBancaRule = await FindRuleAsync(Models.Enums.LimitType.ByNumberForBettingPool, bancaScoped: true, zoneScoped: false, numberPattern: betNumber);
         if (byNumBancaRule != null) applicableRules.Add(byNumBancaRule);
 
-        // ByNumber Zona limit
         if (zoneId > 0)
         {
-            var byNumZonaRule = await _context.LimitRules.AsNoTracking()
-                .Where(lr => lr.IsActive && lr.DrawId == drawId
-                    && lr.LimitType == Models.Enums.LimitType.ByNumberForZone
-                    && lr.ZoneId == zoneId
-                    && lr.BetNumberPattern == betNumber
-                    && (lr.DaysOfWeek & dayBit) != 0
-                    && (lr.EffectiveFrom == null || lr.EffectiveFrom <= timestamp)
-                    && (lr.EffectiveTo == null || lr.EffectiveTo >= timestamp)
-                    && lr.LimitRuleAmounts.Any(a => a.GameTypeId == gameTypeId))
-                .FirstOrDefaultAsync();
+            var byNumZonaRule = await FindRuleAsync(Models.Enums.LimitType.ByNumberForZone, bancaScoped: false, zoneScoped: true, numberPattern: betNumber);
             if (byNumZonaRule != null) applicableRules.Add(byNumZonaRule);
         }
 
-        // ByNumber Global limit
-        var byNumGlobalRule = await _context.LimitRules.AsNoTracking()
-            .Where(lr => lr.IsActive && lr.DrawId == drawId
-                && lr.LimitType == Models.Enums.LimitType.ByNumberForGroup
-                && lr.BetNumberPattern == betNumber
-                && (lr.DaysOfWeek & dayBit) != 0
-                && (lr.EffectiveFrom == null || lr.EffectiveFrom <= timestamp)
-                && (lr.EffectiveTo == null || lr.EffectiveTo >= timestamp)
-                && lr.LimitRuleAmounts.Any(a => a.GameTypeId == gameTypeId))
-            .FirstOrDefaultAsync();
+        var byNumGlobalRule = await FindRuleAsync(Models.Enums.LimitType.ByNumberForGroup, bancaScoped: false, zoneScoped: false, numberPattern: betNumber);
         if (byNumGlobalRule != null) applicableRules.Add(byNumGlobalRule);
 
         // Record consumption at EVERY applicable level
@@ -2707,29 +2763,43 @@ public class TicketsController : ControllerBase
             // future sales use FutureMaxAmount (NULL/0 = future prohibited
             // under this rule). When prohibited, throw so the whole ticket
             // is rejected with a clear error code.
-            var amountRow = await _context.LimitRuleAmounts.AsNoTracking()
-                .Where(a => a.LimitRuleId == rule.LimitRuleId && a.GameTypeId == gameTypeId)
-                .Select(a => new { a.MaxAmount, a.FutureMaxAmount })
-                .FirstOrDefaultAsync();
+            // Prefetched rules carry their amounts (Include), so no extra query.
+            (decimal MaxAmount, decimal? FutureMaxAmount)? amountRow;
+            if (prefetchedRules != null)
+            {
+                amountRow = rule.LimitRuleAmounts
+                    .Where(a => a.GameTypeId == gameTypeId)
+                    .Select(a => ((decimal, decimal?)?)(a.MaxAmount, a.FutureMaxAmount))
+                    .FirstOrDefault();
+            }
+            else
+            {
+                var row = await _context.LimitRuleAmounts.AsNoTracking()
+                    .Where(a => a.LimitRuleId == rule.LimitRuleId && a.GameTypeId == gameTypeId)
+                    .Select(a => new { a.MaxAmount, a.FutureMaxAmount })
+                    .FirstOrDefaultAsync();
+                amountRow = row == null ? null : (row.MaxAmount, row.FutureMaxAmount);
+            }
 
             if (amountRow == null) continue;
+            var amounts = amountRow.Value;
 
             decimal maxLimit;
             if (isFutureSale)
             {
-                if (!amountRow.FutureMaxAmount.HasValue || amountRow.FutureMaxAmount.Value <= 0)
+                if (!amounts.FutureMaxAmount.HasValue || amounts.FutureMaxAmount.Value <= 0)
                 {
                     throw new Exceptions.BusinessException(
                         Exceptions.ErrorCodes.FutureSalesDisabledForLimit,
                         $"La regla de límite (id {rule.LimitRuleId}) no permite ventas futuras para el número {betNumber}.",
                         422);
                 }
-                maxLimit = amountRow.FutureMaxAmount.Value;
+                maxLimit = amounts.FutureMaxAmount.Value;
             }
             else
             {
-                if (amountRow.MaxAmount <= 0) continue;
-                maxLimit = amountRow.MaxAmount;
+                if (amounts.MaxAmount <= 0) continue;
+                maxLimit = amounts.MaxAmount;
             }
 
             // Lookup must use the same key set as the DB's UQ_limit_consumption,
@@ -2745,14 +2815,21 @@ public class TicketsController : ControllerBase
                     && lc.BettingPoolId == bettingPoolId
                     && lc.IsFutureSale == isFutureSale);
 
-            consumption ??= await _context.LimitConsumptions
-                .Where(lc => lc.LimitRuleId == rule.LimitRuleId
-                    && lc.DrawId == drawId
-                    && lc.DrawDate == today
-                    && lc.BetNumber == betNumber
-                    && lc.BettingPoolId == bettingPoolId
-                    && lc.IsFutureSale == isFutureSale)
-                .FirstOrDefaultAsync();
+            // When the caller preloaded this banca's consumption rows into
+            // the change tracker (CreateTicket does, one query per ticket),
+            // a Local miss means the row genuinely doesn't exist — skip the
+            // per-rule DB fallback.
+            if (!consumptionsPreloaded)
+            {
+                consumption ??= await _context.LimitConsumptions
+                    .Where(lc => lc.LimitRuleId == rule.LimitRuleId
+                        && lc.DrawId == drawId
+                        && lc.DrawDate == today
+                        && lc.BetNumber == betNumber
+                        && lc.BettingPoolId == bettingPoolId
+                        && lc.IsFutureSale == isFutureSale)
+                    .FirstOrDefaultAsync();
+            }
 
             if (consumption == null)
             {
@@ -2848,7 +2925,11 @@ public class TicketsController : ControllerBase
     /// Inferring it from the bet number length is wrong — many draws have 2-digit
     /// game types that are not DIRECTO (Pick2 variants, etc.).
     /// </summary>
-    private async Task<LimitCheckDetail> CheckIfPlayIsOnLimitsDetailed(int drawId, int bettingPoolId, string betNumber, decimal bet, int gameTypeId, int? knownZoneId = null)
+    private async Task<LimitCheckDetail> CheckIfPlayIsOnLimitsDetailed(
+        int drawId, int bettingPoolId, string betNumber, decimal bet, int gameTypeId,
+        int? knownZoneId = null,
+        List<LimitRule>? prefetchedRules = null,
+        List<LimitConsumption>? prefetchedConsumptions = null)
     {
         var now = DateTime.UtcNow;
         var today = DateOnly.FromDateTime(Helpers.DateTimeHelper.TodayInBusinessTimezone());
@@ -2867,27 +2948,32 @@ public class TicketsController : ControllerBase
             1 => 1, 2 => 2, 3 => 4, 4 => 8, 5 => 16, 6 => 32, 0 => 64, _ => 0
         };
 
-        // Find limit: Banca > Local Banca > Zona (no global fallback)
-        LimitRule? limitRule = null;
+        // Same base predicate as the SQL below — used to resolve rules from
+        // the prefetched in-memory list (CreateTicket passes one list for
+        // the whole ticket instead of re-querying per line).
+        bool MatchesBase(LimitRule lr) =>
+            lr.IsActive && lr.DrawId == drawId
+            && (lr.DaysOfWeek & dayBit) != 0
+            && (lr.EffectiveFrom == null || lr.EffectiveFrom <= now)
+            && (lr.EffectiveTo == null || lr.EffectiveTo >= now)
+            && lr.LimitRuleAmounts.Any(a => a.GameTypeId == gameTypeId);
 
-        // 1. Limite Banca
-        limitRule = await _context.LimitRules.AsNoTracking()
-            .Where(lr => lr.IsActive && lr.DrawId == drawId
-                && lr.LimitType == Models.Enums.LimitType.GeneralForBettingPool
-                && lr.BettingPoolId == bettingPoolId
-                && (lr.DaysOfWeek & dayBit) != 0
-                && (lr.EffectiveFrom == null || lr.EffectiveFrom <= now)
-                && (lr.EffectiveTo == null || lr.EffectiveTo >= now)
-                && lr.LimitRuleAmounts.Any(a => a.GameTypeId == gameTypeId))
-            .FirstOrDefaultAsync();
-
-        // 2. Limite Local Banca
-        if (limitRule == null)
+        async Task<LimitRule?> FindRuleAsync(
+            Models.Enums.LimitType type, bool bancaScoped, bool zoneScoped)
         {
-            limitRule = await _context.LimitRules.AsNoTracking()
+            if (prefetchedRules != null)
+            {
+                return prefetchedRules.FirstOrDefault(lr => MatchesBase(lr)
+                    && lr.LimitType == type
+                    && (!bancaScoped || lr.BettingPoolId == bettingPoolId)
+                    && (!zoneScoped || lr.ZoneId == zoneId));
+            }
+
+            return await _context.LimitRules.AsNoTracking()
                 .Where(lr => lr.IsActive && lr.DrawId == drawId
-                    && lr.LimitType == Models.Enums.LimitType.LocalForBettingPool
-                    && lr.BettingPoolId == bettingPoolId
+                    && lr.LimitType == type
+                    && (!bancaScoped || lr.BettingPoolId == bettingPoolId)
+                    && (!zoneScoped || lr.ZoneId == zoneId)
                     && (lr.DaysOfWeek & dayBit) != 0
                     && (lr.EffectiveFrom == null || lr.EffectiveFrom <= now)
                     && (lr.EffectiveTo == null || lr.EffectiveTo >= now)
@@ -2895,18 +2981,12 @@ public class TicketsController : ControllerBase
                 .FirstOrDefaultAsync();
         }
 
-        // 3. Limite Zona
+        // Find limit: Banca > Local Banca > Zona (no global fallback)
+        var limitRule = await FindRuleAsync(Models.Enums.LimitType.GeneralForBettingPool, bancaScoped: true, zoneScoped: false)
+            ?? await FindRuleAsync(Models.Enums.LimitType.LocalForBettingPool, bancaScoped: true, zoneScoped: false);
         if (limitRule == null && zoneId > 0)
         {
-            limitRule = await _context.LimitRules.AsNoTracking()
-                .Where(lr => lr.IsActive && lr.DrawId == drawId
-                    && lr.LimitType == Models.Enums.LimitType.GeneralForZone
-                    && lr.ZoneId == zoneId
-                    && (lr.DaysOfWeek & dayBit) != 0
-                    && (lr.EffectiveFrom == null || lr.EffectiveFrom <= now)
-                    && (lr.EffectiveTo == null || lr.EffectiveTo >= now)
-                    && lr.LimitRuleAmounts.Any(a => a.GameTypeId == gameTypeId))
-                .FirstOrDefaultAsync();
+            limitRule = await FindRuleAsync(Models.Enums.LimitType.GeneralForZone, bancaScoped: false, zoneScoped: true);
         }
 
         // No banca or zona limit = blocked (can't sell without limits)
@@ -2922,14 +3002,7 @@ public class TicketsController : ControllerBase
         }
 
         // Also find global limit (must check separately)
-        var globalRule = await _context.LimitRules.AsNoTracking()
-            .Where(lr => lr.IsActive && lr.DrawId == drawId
-                && lr.LimitType == Models.Enums.LimitType.GeneralForGroup
-                && (lr.DaysOfWeek & dayBit) != 0
-                && (lr.EffectiveFrom == null || lr.EffectiveFrom <= now)
-                && (lr.EffectiveTo == null || lr.EffectiveTo >= now)
-                && lr.LimitRuleAmounts.Any(a => a.GameTypeId == gameTypeId))
-            .FirstOrDefaultAsync();
+        var globalRule = await FindRuleAsync(Models.Enums.LimitType.GeneralForGroup, bancaScoped: false, zoneScoped: false);
 
         // Check all applicable limits: the specific one (banca/zona) AND global AND per-number
         var rulesToCheck = new List<(LimitRule rule, bool isGlobal)> { (limitRule, false) };
@@ -2937,21 +3010,35 @@ public class TicketsController : ControllerBase
             rulesToCheck.Add((globalRule, true));
 
         // Add per-number limits (most specific — tighter constraints)
-        var byNumberRules = await _context.LimitRules.AsNoTracking()
-            .Where(lr => lr.IsActive && lr.DrawId == drawId
-                && lr.BetNumberPattern == betNumber
-                && (lr.LimitType == Models.Enums.LimitType.ByNumberForBettingPool
-                    || lr.LimitType == Models.Enums.LimitType.ByNumberForZone
+        List<LimitRule> byNumberRules;
+        if (prefetchedRules != null)
+        {
+            byNumberRules = prefetchedRules
+                .Where(lr => MatchesBase(lr)
+                    && lr.BetNumberPattern == betNumber
+                    && ((lr.LimitType == Models.Enums.LimitType.ByNumberForBettingPool && lr.BettingPoolId == bettingPoolId)
+                        || (lr.LimitType == Models.Enums.LimitType.ByNumberForZone && lr.ZoneId == zoneId)
+                        || lr.LimitType == Models.Enums.LimitType.ByNumberForGroup))
+                .ToList();
+        }
+        else
+        {
+            byNumberRules = await _context.LimitRules.AsNoTracking()
+                .Where(lr => lr.IsActive && lr.DrawId == drawId
+                    && lr.BetNumberPattern == betNumber
+                    && (lr.LimitType == Models.Enums.LimitType.ByNumberForBettingPool
+                        || lr.LimitType == Models.Enums.LimitType.ByNumberForZone
+                        || lr.LimitType == Models.Enums.LimitType.ByNumberForGroup)
+                    && (lr.DaysOfWeek & dayBit) != 0
+                    && (lr.EffectiveFrom == null || lr.EffectiveFrom <= now)
+                    && (lr.EffectiveTo == null || lr.EffectiveTo >= now)
+                    && lr.LimitRuleAmounts.Any(a => a.GameTypeId == gameTypeId))
+                .Where(lr =>
+                    (lr.LimitType == Models.Enums.LimitType.ByNumberForBettingPool && lr.BettingPoolId == bettingPoolId)
+                    || (lr.LimitType == Models.Enums.LimitType.ByNumberForZone && lr.ZoneId == zoneId)
                     || lr.LimitType == Models.Enums.LimitType.ByNumberForGroup)
-                && (lr.DaysOfWeek & dayBit) != 0
-                && (lr.EffectiveFrom == null || lr.EffectiveFrom <= now)
-                && (lr.EffectiveTo == null || lr.EffectiveTo >= now)
-                && lr.LimitRuleAmounts.Any(a => a.GameTypeId == gameTypeId))
-            .Where(lr =>
-                (lr.LimitType == Models.Enums.LimitType.ByNumberForBettingPool && lr.BettingPoolId == bettingPoolId)
-                || (lr.LimitType == Models.Enums.LimitType.ByNumberForZone && lr.ZoneId == zoneId)
-                || lr.LimitType == Models.Enums.LimitType.ByNumberForGroup)
-            .ToListAsync();
+                .ToListAsync();
+        }
 
         foreach (var byNumRule in byNumberRules)
         {
@@ -2961,10 +3048,15 @@ public class TicketsController : ControllerBase
 
         foreach (var (rule, isGlobal) in rulesToCheck)
         {
-            var maxLimit = await _context.LimitRuleAmounts.AsNoTracking()
-                .Where(a => a.LimitRuleId == rule.LimitRuleId && a.GameTypeId == gameTypeId)
-                .Select(a => a.MaxAmount)
-                .FirstOrDefaultAsync();
+            var maxLimit = prefetchedRules != null
+                ? rule.LimitRuleAmounts
+                    .Where(a => a.GameTypeId == gameTypeId)
+                    .Select(a => a.MaxAmount)
+                    .FirstOrDefault()
+                : await _context.LimitRuleAmounts.AsNoTracking()
+                    .Where(a => a.LimitRuleId == rule.LimitRuleId && a.GameTypeId == gameTypeId)
+                    .Select(a => a.MaxAmount)
+                    .FirstOrDefaultAsync();
 
             if (maxLimit <= 0)
             {
@@ -2982,25 +3074,43 @@ public class TicketsController : ControllerBase
                 };
             }
 
-            // Consumption for THIS specific number + game type
-            var consumptionQuery = _context.LimitConsumptions
-                .Where(lc => lc.LimitRuleId == rule.LimitRuleId
-                    && lc.DrawId == drawId
-                    && lc.DrawDate == today
-                    && lc.GameTypeId == gameTypeId
-                    && lc.BetNumber == betNumber);
+            // Consumption for THIS specific number + game type.
+            // Banca limits: only this banca's consumption.
+            // Zona limits: all bancas in the zone. Global: all bancas.
+            var bancaScopedConsumption = rule.LimitType == Models.Enums.LimitType.GeneralForBettingPool
+                || rule.LimitType == Models.Enums.LimitType.LocalForBettingPool;
 
-            // Banca limits: only this banca's consumption
-            // Zona limits: all bancas in the zone
-            // Global limits: all bancas (no filter)
-            if (rule.LimitType == Models.Enums.LimitType.GeneralForBettingPool
-                || rule.LimitType == Models.Enums.LimitType.LocalForBettingPool)
+            decimal currentAmount;
+            if (prefetchedConsumptions != null)
             {
-                consumptionQuery = consumptionQuery.Where(lc => lc.BettingPoolId == bettingPoolId);
+                // In-memory sum over the snapshot the caller took at ticket
+                // start — equivalent to the per-line query it replaces since
+                // nothing persists consumption changes mid-request.
+                currentAmount = prefetchedConsumptions
+                    .Where(lc => lc.LimitRuleId == rule.LimitRuleId
+                        && lc.DrawId == drawId
+                        && lc.DrawDate == today
+                        && lc.GameTypeId == gameTypeId
+                        && lc.BetNumber == betNumber
+                        && (!bancaScopedConsumption || lc.BettingPoolId == bettingPoolId))
+                    .Sum(lc => lc.CurrentAmount);
             }
-            // Zona and Global: sum across all bancas (no bettingPoolId filter)
+            else
+            {
+                var consumptionQuery = _context.LimitConsumptions
+                    .Where(lc => lc.LimitRuleId == rule.LimitRuleId
+                        && lc.DrawId == drawId
+                        && lc.DrawDate == today
+                        && lc.GameTypeId == gameTypeId
+                        && lc.BetNumber == betNumber);
 
-            var currentAmount = await consumptionQuery.SumAsync(lc => (decimal?)lc.CurrentAmount) ?? 0;
+                if (bancaScopedConsumption)
+                {
+                    consumptionQuery = consumptionQuery.Where(lc => lc.BettingPoolId == bettingPoolId);
+                }
+
+                currentAmount = await consumptionQuery.SumAsync(lc => (decimal?)lc.CurrentAmount) ?? 0;
+            }
             var totalUsed = currentAmount;
 
             _logger.LogDebug(
