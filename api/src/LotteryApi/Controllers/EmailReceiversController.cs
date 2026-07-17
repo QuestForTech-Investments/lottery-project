@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using LotteryApi.Configuration;
 using LotteryApi.Data;
 using LotteryApi.DTOs;
 using LotteryApi.Helpers;
@@ -26,17 +28,20 @@ public class EmailReceiversController : ControllerBase
     private readonly ILogger<EmailReceiversController> _logger;
     private readonly IEmailService _emailService;
     private readonly PlayMonitoringReportService _reportService;
+    private readonly PublicApiOptions _tenant;
 
     public EmailReceiversController(
         LotteryDbContext context,
         ILogger<EmailReceiversController> logger,
         IEmailService emailService,
-        PlayMonitoringReportService reportService)
+        PlayMonitoringReportService reportService,
+        IOptions<PublicApiOptions> tenantOptions)
     {
         _context = context;
         _logger = logger;
         _emailService = emailService;
         _reportService = reportService;
+        _tenant = tenantOptions.Value;
     }
 
     /// <summary>Resolve the current user id from JWT claims (null if missing).</summary>
@@ -318,7 +323,7 @@ public class EmailReceiversController : ControllerBase
             .ToList();
 
         var model = await _reportService.BuildAsync(targetDate, parsedZoneIds, drawId);
-        var html = PlayMonitoringEmailBuilder.BuildHtml(model);
+        var html = PlayMonitoringEmailBuilder.BuildHtml(model, _tenant.TenantName, _tenant.FrontendBaseUrl);
         return Content(html, "text/html");
     }
 
@@ -344,7 +349,7 @@ public class EmailReceiversController : ControllerBase
         var zoneIds = receiver.Zones.Select(z => z.ZoneId).ToList();
 
         var model = await _reportService.BuildAsync(targetDate, zoneIds, drawId);
-        var html = PlayMonitoringEmailBuilder.BuildHtml(model);
+        var html = PlayMonitoringEmailBuilder.BuildHtml(model, _tenant.TenantName, _tenant.FrontendBaseUrl);
         return Content(html, "text/html");
     }
 
@@ -386,7 +391,7 @@ public class EmailReceiversController : ControllerBase
         var model = await _reportService.BuildAsync(targetDate, zoneIds, drawId);
 
         var subject = PlayMonitoringEmailBuilder.BuildSubject(model);
-        var html = PlayMonitoringEmailBuilder.BuildHtml(model);
+        var html = PlayMonitoringEmailBuilder.BuildHtml(model, _tenant.TenantName, _tenant.FrontendBaseUrl);
 
         var result = await _emailService.SendAsync(receiver.Email, subject, html);
         if (!result.Success)

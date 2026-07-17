@@ -30,4 +30,13 @@ public class PublicApiOptions
 
     /// <summary>ISO 4217 currency for monetary totals.</summary>
     public string Currency { get; set; } = "USD";
+
+    /// <summary>
+    /// This tenant's admin frontend base URL — used to build deep links in
+    /// automated emails ("Ver en …" buttons). Defaults to the Lottobook
+    /// production domain so the original tenant needs no extra config;
+    /// other tenants set PublicApi__FrontendBaseUrl on their App Service
+    /// (e.g. https://lacentralnumbers.com).
+    /// </summary>
+    public string FrontendBaseUrl { get; set; } = "https://lottobook.net";
 }

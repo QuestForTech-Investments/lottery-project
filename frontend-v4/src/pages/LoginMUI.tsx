@@ -547,8 +547,9 @@ const LoginMUI = () => {
         </Box>
       </Paper>
 
-      {/* Bottom-left action buttons — Printer + Android. Click is a no-op
-          for now; handlers will be wired to native bridges later. */}
+      {/* Bottom-left action buttons — Printer + Android. Android opens the
+          tenant's app download page; Printer stays a no-op until its native
+          bridge is wired. */}
       <Box
         sx={{
           position: 'absolute',
@@ -560,15 +561,17 @@ const LoginMUI = () => {
         }}
       >
         {[
-          { key: 'printer', Icon: PrintIcon, label: 'Printer' },
-          { key: 'android', Icon: AndroidIcon, label: 'Android' },
-        ].map(({ key, Icon, label }) => (
+          { key: 'printer', Icon: PrintIcon, label: 'Printer', href: undefined as string | undefined },
+          { key: 'android', Icon: AndroidIcon, label: 'Android', href: tenantConfig.androidAppUrl },
+        ].map(({ key, Icon, label, href }) => (
           <Box
             key={key}
             component="button"
             type="button"
             aria-label={label}
-            onClick={() => { /* TODO: wire up handler */ }}
+            onClick={() => {
+              if (href) window.open(href, '_blank', 'noopener,noreferrer');
+            }}
             sx={{
               display: 'inline-flex',
               alignItems: 'center',

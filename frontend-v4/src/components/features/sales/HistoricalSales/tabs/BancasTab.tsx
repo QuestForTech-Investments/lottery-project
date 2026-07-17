@@ -137,11 +137,13 @@ export const BancasTab: FC<BancasTabProps> = memo(({
         <Box
           component="span"
           sx={{
-            backgroundColor: '#e0f7fa',
+            // Same signal convention as DailySales' headline: green when
+            // positive, red when negative, blue at exactly zero.
+            backgroundColor: totals.final > 0 ? '#e8f5e9' : totals.final < 0 ? '#ffebee' : '#e3f2fd',
             px: 2,
             py: 0.5,
             borderRadius: 1,
-            color: '#00838f',
+            color: totals.final > 0 ? '#2e7d32' : totals.final < 0 ? '#c62828' : '#1565c0',
           }}
         >
           {formatCurrency(totals.final)}

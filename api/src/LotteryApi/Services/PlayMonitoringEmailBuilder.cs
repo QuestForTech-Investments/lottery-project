@@ -71,8 +71,10 @@ public static class PlayMonitoringEmailBuilder
     private const string Line = "#e2e8f0";
     private const string SoftBg = "#f5f3ff";
 
-    // Production frontend — the "Ver en Lottobook" button deep-links here.
-    private const string AppBaseUrl = "https://lottobook.net";
+    // Fallback branding when the caller doesn't pass tenant values —
+    // keeps pre-multi-tenant behavior for the original tenant.
+    private const string DefaultBrandName = "Lottobook";
+    private const string DefaultAppBaseUrl = "https://lottobook.net";
 
     private static readonly CultureInfo Money = CultureInfo.GetCultureInfo("en-US");
 
@@ -131,8 +133,16 @@ public static class PlayMonitoringEmailBuilder
         return $"Monitoreo de Jugadas — {d}";
     }
 
-    public static string BuildHtml(ReportModel model)
+    /// <param name="model">Report data.</param>
+    /// <param name="brandName">Tenant display name for the CTA button and
+    /// footer ("Ver en {brandName}"). Null/empty → Lottobook.</param>
+    /// <param name="frontendBaseUrl">Tenant admin frontend the deep links
+    /// point at. Null/empty → https://lottobook.net.</param>
+    public static string BuildHtml(ReportModel model, string? brandName = null, string? frontendBaseUrl = null)
     {
+        var brand = string.IsNullOrWhiteSpace(brandName) ? DefaultBrandName : brandName.Trim();
+        var appBaseUrl = (string.IsNullOrWhiteSpace(frontendBaseUrl) ? DefaultAppBaseUrl : frontendBaseUrl.Trim()).TrimEnd('/');
+
         var sb = new StringBuilder(8192);
         var dateStr = model.Date.ToString("dd/MM/yyyy", Money);
         var zones = model.ZoneNames.Count > 0 ? string.Join(", ", model.ZoneNames) : "Todas las zonas";
@@ -189,12 +199,13 @@ public static class PlayMonitoringEmailBuilder
   </tr></table>
 </td></tr>");
 
-        // 2b. "Ver en Lottobook" call-to-action — opens the play monitoring view.
+        // 2b. "Ver en {tenant}" call-to-action — opens the play monitoring view
+        // on this tenant's own frontend.
         var datePart = model.Date.ToString("yyyy-MM-dd", Money);
         var linkUrl = singleDraw
-            ? $"{AppBaseUrl}/tickets/plays?drawId={model.Draws[0].DrawId}&date={datePart}"
-            : $"{AppBaseUrl}/tickets/plays?date={datePart}";
-        sb.Append(CtaButton(linkUrl, "Ver en Lottobook"));
+            ? $"{appBaseUrl}/tickets/plays?drawId={model.Draws[0].DrawId}&date={datePart}"
+            : $"{appBaseUrl}/tickets/plays?date={datePart}";
+        sb.Append(CtaButton(linkUrl, $"Ver en {Esc(brand)}"));
 
         // 3. Per-draw cards
         if (model.Draws.Count == 0)
@@ -217,7 +228,7 @@ public static class PlayMonitoringEmailBuilder
         // Footer
         sb.Append($@"
 <tr><td style=""padding:18px 28px;border-top:1px solid {Line};color:{Muted};font-size:12px;text-align:center;"">
-  Generado automáticamente por Lottobook el {Esc(DateTime.Now.ToString("dd/MM/yyyy hh:mm tt", Money))}.<br>
+  Generado automáticamente por {Esc(brand)} el {Esc(DateTime.Now.ToString("dd/MM/yyyy hh:mm tt", Money))}.<br>
   Este es un correo de solo lectura, no responda a este mensaje.
 </td></tr>");
 

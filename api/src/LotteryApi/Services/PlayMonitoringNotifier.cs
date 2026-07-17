@@ -1,6 +1,8 @@
+using LotteryApi.Configuration;
 using LotteryApi.Data;
 using LotteryApi.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace LotteryApi.Services;
 
@@ -20,17 +22,20 @@ public class PlayMonitoringNotifier
     private readonly PlayMonitoringReportService _reportService;
     private readonly IEmailService _emailService;
     private readonly ILogger<PlayMonitoringNotifier> _logger;
+    private readonly PublicApiOptions _tenant;
 
     public PlayMonitoringNotifier(
         LotteryDbContext context,
         PlayMonitoringReportService reportService,
         IEmailService emailService,
-        ILogger<PlayMonitoringNotifier> logger)
+        ILogger<PlayMonitoringNotifier> logger,
+        IOptions<PublicApiOptions> tenantOptions)
     {
         _context = context;
         _reportService = reportService;
         _emailService = emailService;
         _logger = logger;
+        _tenant = tenantOptions.Value;
     }
 
     public async Task NotifyResultPublishedAsync(
@@ -111,7 +116,7 @@ public class PlayMonitoringNotifier
         }
 
         var subject = PlayMonitoringEmailBuilder.BuildSubject(model);
-        var html = PlayMonitoringEmailBuilder.BuildHtml(model);
+        var html = PlayMonitoringEmailBuilder.BuildHtml(model, _tenant.TenantName, _tenant.FrontendBaseUrl);
 
         var result = await _emailService.SendAsync(receiver.Email, subject, html, cancellationToken);
 

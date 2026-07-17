@@ -22,6 +22,10 @@ export PublicApi__TenantCode="lacentral"
 export PublicApi__TenantName="La Central"
 export PublicApi__Currency="USD"
 
+# Admin frontend for this tenant — automated emails deep-link here
+# ("Ver en La Central" button).
+export PublicApi__FrontendBaseUrl="https://lacentralnumbers.com"
+
 # Shared secret partners use to authenticate cross-tenant pushes (X-Central-Key
 # header). Must match the value Lottobook has registered for this partner.
 export PublicApi__CentralKey="ad77b0654dec5f15705eb09f24e8dfbe589ec7cc2e0e1d2ee773139c6563c69c"

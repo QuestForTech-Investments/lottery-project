@@ -156,11 +156,13 @@ export const PorSorteoTab: FC<PorSorteoTabProps> = memo(({
         <Box
           component="span"
           sx={{
-            backgroundColor: '#e0f7fa',
+            // Same signal convention as DailySales' headline: green when
+            // positive, red when negative, blue at exactly zero.
+            backgroundColor: totals.neto > 0 ? '#e8f5e9' : totals.neto < 0 ? '#ffebee' : '#e3f2fd',
             px: 2,
             py: 0.5,
             borderRadius: 1,
-            color: '#00838f',
+            color: totals.neto > 0 ? '#2e7d32' : totals.neto < 0 ? '#c62828' : '#1565c0',
           }}
         >
           {formatCurrency(totals.neto)}

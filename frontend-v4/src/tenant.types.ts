@@ -48,6 +48,12 @@ export interface TenantConfig {
    */
   posUrl?: string
   /**
+   * Absolute URL of the Android app download page for this tenant. The
+   * "Android" button on the login screen opens it in a new tab. When
+   * unset, the button stays a no-op.
+   */
+  androidAppUrl?: string
+  /**
    * Browser tab title. When unset, falls back to <see cref="systemName"/>.
    * Use this when the full product name (e.g. "X Lottery System") reads
    * better in the tab than the short brand name used elsewhere in the UI.

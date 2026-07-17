@@ -5,6 +5,7 @@ const config: TenantConfig = {
   systemName: 'La Central',
   documentTitle: 'Lacentralnumbers',
   posUrl: 'https://pos.lacentralnumbers.com',
+  androidAppUrl: 'https://app.lacentralnumbers.com',
   versionLabel: 'La Central',
   versionSubLabel: 'Lottery System',
   versionLink: 'https://lacentralrd.com',
