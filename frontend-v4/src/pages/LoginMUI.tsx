@@ -547,9 +547,8 @@ const LoginMUI = () => {
         </Box>
       </Paper>
 
-      {/* Bottom-left action buttons — Printer + Android. Android opens the
-          tenant's app download page; Printer stays a no-op until its native
-          bridge is wired. */}
+      {/* Bottom-left action buttons — Printer + Android. Each opens the
+          tenant's corresponding download/utility page in a new tab. */}
       <Box
         sx={{
           position: 'absolute',
@@ -561,7 +560,7 @@ const LoginMUI = () => {
         }}
       >
         {[
-          { key: 'printer', Icon: PrintIcon, label: 'Printer', href: undefined as string | undefined },
+          { key: 'printer', Icon: PrintIcon, label: 'Printer', href: tenantConfig.printerUrl },
           { key: 'android', Icon: AndroidIcon, label: 'Android', href: tenantConfig.androidAppUrl },
         ].map(({ key, Icon, label, href }) => (
           <Box

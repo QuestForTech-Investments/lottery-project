@@ -5,6 +5,7 @@ const config: TenantConfig = {
   systemName: 'Lottobook',
   posUrl: 'https://pos.lottobook.net',
   androidAppUrl: 'https://app.lottobook.net',
+  printerUrl: 'https://printer.lottobook.com',
   versionLabel: 'Lottobook Version 777',
   // Per-tenant copy for the login screen — La Central will override these
   // without needing its own Login.tsx component.
